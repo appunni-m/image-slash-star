@@ -1,0 +1,112 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "bmp"
+  },
+  "cases": [
+    {
+      "id": "enc_8bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_8bit.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_8bit.bin",
+      "encoded_ref_bytes": 17342
+    },
+    {
+      "id": "enc_24bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_24bit.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_24bit.bin",
+      "encoded_ref_bytes": 49206
+    },
+    {
+      "id": "enc_32bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_32bit.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_32bit.bin",
+      "encoded_ref_bytes": 65590
+    },
+    {
+      "id": "enc_bi_rgb",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_rgb.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_rgb.bin",
+      "encoded_ref_bytes": 49206
+    },
+    {
+      "id": "enc_bottom_up",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bottom_up.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bottom_up.bin",
+      "encoded_ref_bytes": 49206
+    },
+    {
+      "id": "enc_v3_header",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v3_header.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v3_header.bin",
+      "encoded_ref_bytes": 49206
+    },
+    {
+      "id": "enc_1x1",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_1x1.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_1x1.bin",
+      "encoded_ref_bytes": 58
+    },
+    {
+      "id": "enc_odd_width",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_odd_width.bin",
+      "ref_bytes": 867,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        17
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_odd_width.bin",
+      "encoded_ref_bytes": 938
+    }
+  ]
+}

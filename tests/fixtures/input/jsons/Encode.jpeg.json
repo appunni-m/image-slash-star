@@ -1,0 +1,543 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "jpeg"
+  },
+  "cases": [
+    {
+      "id": "enc_q100",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 100
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 100
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_q85",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 85
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_q75",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 75
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 75
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_q50",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 50
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 50
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_q25",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 25
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 25
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_q10",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 10
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 10
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_q1",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sub_444",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "subsampling": "444"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sub_422",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "subsampling": "422"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "subsampling": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sub_420",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_baseline",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "progressive": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "progressive": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale",
+      "source_asset": "baseline_gray.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "grayscale": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_gray.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgb",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "grayscale": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_1x1",
+      "source_asset": "1x1.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "size": [
+          1,
+          1
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/1x1.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_8x8",
+      "source_asset": "8x8.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "size": [
+          8,
+          8
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/8x8.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_odd_size",
+      "source_asset": "17x17.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "size": [
+          17,
+          17
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/17x17.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_no_exif",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "exif": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "exif": {
+            "type": "bytes",
+            "hex": ""
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_no_restart",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "restart_interval": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "restart_marker_rows": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_no_optimize",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "optimize": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_quality_100",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 100
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 100
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_quality_85",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 85
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_quality_50",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 50
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 50
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_quality_10",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "quality": 10
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 10
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_subsample_444",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "subsampling": "444"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_subsample_420",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

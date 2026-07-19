@@ -1,0 +1,382 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "tiff"
+  },
+  "cases": [
+    {
+      "id": "enc_compress_none",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_lzw",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_deflate",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "deflate"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_adobe_deflate"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_packbits",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "packbits"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "packbits"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_byte_le",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "byte_order": "le"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale",
+      "source_asset": "gray.tiff",
+      "source_format": "tiff",
+      "params": {
+        "color": "gray"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgb",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "color": "rgb"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba",
+      "source_asset": "rgba.tiff",
+      "source_format": "tiff",
+      "params": {
+        "color": "rgba"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgba.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_8bit",
+      "source_asset": "8bit.tiff",
+      "source_format": "tiff",
+      "params": {
+        "bit_depth": 8
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/8bit.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_stripped",
+      "source_asset": "stripped.tiff",
+      "source_format": "tiff",
+      "params": {
+        "organization": "stripped"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/stripped.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_single_page",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "pages": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_predictor_none",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "predictor": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_predictor_horiz",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "predictor": "horizontal"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "tiffinfo": {
+            "type": "ImageFileDirectory_v2",
+            "tags": {
+              "317": 2
+            }
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          1,
+          1
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_uncompressed",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lzw",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_deflate",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "deflate"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_adobe_deflate"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_le",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "byte_order": "le"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

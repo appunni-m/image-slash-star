@@ -1,0 +1,94 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Decode",
+    "target": "ico"
+  },
+  "cases": [
+    {
+      "id": "single_icon",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_single_ico.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "multi_res",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_multi_ico.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "png_entry",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_png_entry_ico.bin",
+      "ref_bytes": 4096,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "bmp_entry",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_entry_ico.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "size_16x16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_16x16_ico.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "size_256x256",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_256x256_ico.bin",
+      "ref_bytes": 196608,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        256,
+        256
+      ]
+    }
+  ]
+}

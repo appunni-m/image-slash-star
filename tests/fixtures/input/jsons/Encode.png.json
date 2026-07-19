@@ -1,0 +1,541 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "png"
+  },
+  "cases": [
+    {
+      "id": "enc_compress_0",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_3",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": 3
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_6",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": 6
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_9",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": 9
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 9
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_l8",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "L"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_la8",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "LA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgb8",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "RGB"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba8",
+      "source_asset": "rgba.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "RGBA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_no_interlace",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "interlace": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_8bit",
+      "source_asset": "8bit.png",
+      "source_format": "png",
+      "params": {
+        "bit_depth": 8
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/8bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_chunk_text",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "text_chunks": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "pnginfo": {
+            "type": "PngInfo",
+            "chunks": [
+              {
+                "chunk_type": "tEXt",
+                "data_hex": "436f6d6d656e740070696c6c6f772d7273",
+                "after_idat": false
+              }
+            ]
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_chunk_gamma",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "gamma": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "pnginfo": {
+            "type": "PngInfo",
+            "chunks": [
+              {
+                "chunk_type": "gAMA",
+                "data_hex": "0000b18f",
+                "after_idat": false
+              }
+            ]
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_chunk_srgb",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "srgb": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "pnginfo": {
+            "type": "PngInfo",
+            "chunks": [
+              {
+                "chunk_type": "sRGB",
+                "data_hex": "00",
+                "after_idat": false
+              }
+            ]
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_chunk_phys",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "physical": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "dpi": [
+            72,
+            72
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_chunk_time",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "time": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "pnginfo": {
+            "type": "PngInfo",
+            "chunks": [
+              {
+                "chunk_type": "tIME",
+                "data_hex": "07ea0704000000",
+                "after_idat": false
+              }
+            ]
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          1,
+          1
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_odd_size",
+      "source_asset": "odd_size.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          17,
+          17
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/odd_size.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_default",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": "default"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": -1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_max",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": "max"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 9
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_none",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgb",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "color": "rgb"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba",
+      "source_asset": "rgba.png",
+      "source_format": "png",
+      "params": {
+        "color": "rgba"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {
+        "color": "gray"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_alpha",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "params": {
+        "color": "gray_alpha"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

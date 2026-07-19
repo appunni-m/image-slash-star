@@ -1,0 +1,51 @@
+[package]
+name = "pillow-rs-image"
+version = "0.1.0"
+edition = "2024"
+description = "Bit-exact Rust image codecs with no external codec dependencies"
+
+[dependencies]
+bytemuck = { version = "1", features = ["derive"] }
+
+[features]
+default = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico"]
+jpeg = []
+png = []
+gif = []
+bmp = []
+tiff = []
+webp = []
+ico = ["bmp", "png"]
+avif = []
+
+[dev-dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+
+[lints.rust]
+future-incompatible = { level = "deny", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+unused = { level = "deny", priority = -1 }
+unsafe_code = "deny"
+unused_crate_dependencies = "warn"
+dead_code = "deny"
+deprecated = "allow"
+missing_docs = "warn"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+unwrap_in_result = "deny"
+todo = "deny"
+redundant_clone = "deny"
+large_enum_variant = "deny"
+needless_collect = "deny"
+clone_on_copy = "deny"
+unnecessary_to_owned = "deny"
+needless_borrow = "deny"
+map_unwrap_or = "deny"
+needless_range_loop = "deny"
+unnecessary_cast = "deny"
+cast_possible_truncation = "warn"
+cast_sign_loss = "warn"
+arithmetic_side_effects = "warn"

@@ -1,0 +1,289 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Decode",
+    "target": "bmp"
+  },
+  "cases": [
+    {
+      "id": "depth_1",
+      "asset": "1bit.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/1bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_4",
+      "asset": "4bit.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/4bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_8",
+      "asset": "8bit.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/8bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_16",
+      "asset": "16bit.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/16bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_24",
+      "asset": "24bit.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_32",
+      "asset": "32bit.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/32bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_none",
+      "asset": "uncompressed.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/uncompressed.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_rle8",
+      "asset": "rle8.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_rle4",
+      "asset": "rle4.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_bitfields",
+      "asset": "bitfields.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bitfields.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down",
+      "asset": "top_down.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bottom_up",
+      "asset": "bottom_up.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bottom_up.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "os2_v1",
+      "asset": "os2v1.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/os2v1.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "v4_header",
+      "asset": "v4header.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/v4header.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "v5_header",
+      "asset": "v5header.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/v5header.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_1x1",
+      "asset": "1x1.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/1x1.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd",
+      "asset": "odd_width.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/odd_width.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd_width2",
+      "asset": "width2.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/width2.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd_width3",
+      "asset": "width3.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/width3.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd_width31",
+      "asset": "width31.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/width31.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_not_bmp",
+      "asset": "not_bmp.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/not_bmp.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

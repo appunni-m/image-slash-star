@@ -1,0 +1,160 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "gif"
+  },
+  "cases": [
+    {
+      "id": "enc_static",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_static.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_static.bin",
+      "encoded_ref_bytes": 14540
+    },
+    {
+      "id": "enc_animated",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated.bin",
+      "encoded_ref_bytes": 14567
+    },
+    {
+      "id": "enc_animated_loop",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_loop.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_loop.bin",
+      "encoded_ref_bytes": 25731
+    },
+    {
+      "id": "enc_opaque",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_opaque.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_opaque.bin",
+      "encoded_ref_bytes": 14540
+    },
+    {
+      "id": "enc_transparent",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_transparent.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_transparent.bin",
+      "encoded_ref_bytes": 14548
+    },
+    {
+      "id": "enc_interlaced",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_interlaced.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_interlaced.bin",
+      "encoded_ref_bytes": 14540
+    },
+    {
+      "id": "enc_non_interlaced",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_non_interlaced.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_non_interlaced.bin",
+      "encoded_ref_bytes": 12819
+    },
+    {
+      "id": "enc_dispose_none",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_dispose_none.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_dispose_none.bin",
+      "encoded_ref_bytes": 14540
+    },
+    {
+      "id": "enc_dispose_background",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_dispose_background.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_dispose_background.bin",
+      "encoded_ref_bytes": 14548
+    },
+    {
+      "id": "enc_dispose_previous",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_dispose_previous.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_dispose_previous.bin",
+      "encoded_ref_bytes": 14548
+    },
+    {
+      "id": "enc_global_ct",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_global_ct.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_global_ct.bin",
+      "encoded_ref_bytes": 14540
+    },
+    {
+      "id": "enc_1x1",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_1x1.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_1x1.bin",
+      "encoded_ref_bytes": 43
+    }
+  ]
+}

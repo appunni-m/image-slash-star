@@ -1,0 +1,6 @@
+# CPython 3.12, macOS 11+ arm64 only. These hashes intentionally bind fixture
+# generation to one Pillow binary distribution.
+Pillow==12.2.0 \
+    --hash=sha256:f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421
+PyYAML==6.0.3 \
+    --hash=sha256:fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0

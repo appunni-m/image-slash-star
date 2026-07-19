@@ -1,0 +1,277 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "gif"
+  },
+  "cases": [
+    {
+      "id": "enc_static",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "animated": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated",
+      "source_asset": "animated.gif",
+      "source_format": "gif",
+      "params": {
+        "animated": true,
+        "frames": 2
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/animated.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_loop",
+      "source_asset": "animated_3frame.gif",
+      "source_format": "gif",
+      "params": {
+        "animated": true,
+        "frames": 3,
+        "loop": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/animated_3frame.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "loop": 0,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_opaque",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "transparency": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_transparent",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "transparency": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "transparency": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_interlaced",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "interlace": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "interlace": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_non_interlaced",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "interlace": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "interlace": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_dispose_none",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "disposal": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "disposal": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_dispose_background",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "disposal": "background"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "disposal": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_dispose_previous",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "disposal": "previous"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "disposal": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_global_ct",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "color_table": "global"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_1x1",
+      "source_asset": "1x1.gif",
+      "source_format": "gif",
+      "params": {
+        "size": [
+          1,
+          1
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/1x1.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

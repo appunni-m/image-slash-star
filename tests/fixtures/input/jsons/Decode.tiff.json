@@ -1,0 +1,276 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Decode",
+    "target": "tiff"
+  },
+  "cases": [
+    {
+      "id": "byte_order_le",
+      "asset": "le.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/le.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "byte_order_be",
+      "asset": "be.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/be.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_none",
+      "asset": "uncompressed.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/uncompressed.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw",
+      "asset": "lzw.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw_gray_lzw",
+      "asset": "gray_lzw.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray_lzw.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw_rgba_lzw",
+      "asset": "rgba_lzw.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgba_lzw.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_deflate",
+      "asset": "deflate.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_deflate_gray_deflate",
+      "asset": "gray_deflate.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray_deflate.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_packbits",
+      "asset": "packbits.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/packbits.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bilevel",
+      "asset": "bilevel.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/bilevel.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "grayscale",
+      "asset": "gray.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "rgb",
+      "asset": "rgb.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "rgba",
+      "asset": "rgba.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgba.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_1",
+      "asset": "1bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/1bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_8",
+      "asset": "8bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/8bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "stripped",
+      "asset": "stripped.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/stripped.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "tiled",
+      "asset": "tiled.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/tiled.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "single_page",
+      "asset": "single.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/single.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "multi_page",
+      "asset": "multipage.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd",
+      "asset": "bad_ifd.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/bad_ifd.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

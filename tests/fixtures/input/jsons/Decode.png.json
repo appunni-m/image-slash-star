@@ -1,0 +1,627 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Decode",
+    "target": "png"
+  },
+  "cases": [
+    {
+      "id": "color_gray",
+      "asset": "gray.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_gray_alpha",
+      "asset": "gray_alpha.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_rgb",
+      "asset": "rgb.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_rgba",
+      "asset": "rgba.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_rgba_alpha_checker",
+      "asset": "alpha_checker.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/alpha_checker.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_rgba_alpha_partial",
+      "asset": "alpha_partial.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/alpha_partial.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_indexed",
+      "asset": "indexed.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_indexed_palette_2color",
+      "asset": "palette_2color.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_2color.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_indexed_palette_256color",
+      "asset": "palette_256color.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_256color.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_indexed_alpha",
+      "asset": "indexed_alpha.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed_alpha.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_1",
+      "asset": "1bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_2",
+      "asset": "2bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_4",
+      "asset": "4bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/4bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_8",
+      "asset": "8bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/8bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_16",
+      "asset": "16bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/16bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "no_interlace",
+      "asset": "no_interlace.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/no_interlace.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "interlace_adam7",
+      "asset": "adam7.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/adam7.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "filter_none",
+      "asset": "filter_none.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/filter_none.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "filter_sub",
+      "asset": "filter_sub.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/filter_sub.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "filter_up",
+      "asset": "filter_up.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/filter_up.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "filter_average",
+      "asset": "filter_average.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/filter_average.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "filter_paeth",
+      "asset": "filter_paeth.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/filter_paeth.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "filter_mixed",
+      "asset": "filter_mixed.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/filter_mixed.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compress_default",
+      "asset": "compress_default.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/compress_default.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compress_default_compress_fast",
+      "asset": "compress_fast.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/compress_fast.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compress_default_compress_mid",
+      "asset": "compress_mid.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/compress_mid.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compress_none",
+      "asset": "compress_none.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/compress_none.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compress_max",
+      "asset": "compress_max.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/compress_max.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_gama",
+      "asset": "gama.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gama.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_srgb",
+      "asset": "srgb.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/srgb.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_iccp",
+      "asset": "iccp.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/iccp.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_text",
+      "asset": "text_chunks.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/text_chunks.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_time",
+      "asset": "time_chunk.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/time_chunk.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_background",
+      "asset": "bkgd.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/bkgd.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "chunk_phys",
+      "asset": "phys.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/phys.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_1x1",
+      "asset": "1x1.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_small",
+      "asset": "16x16.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/16x16.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_large",
+      "asset": "large.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd",
+      "asset": "odd_size.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/odd_size.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd_2x3",
+      "asset": "2x3.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd_1x255",
+      "asset": "1x255.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x255.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "size_odd_255x1",
+      "asset": "255x1.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/255x1.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_truncated",
+      "asset": "truncated.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/truncated.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_corrupt_crc",
+      "asset": "bad_crc.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/bad_crc.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_wrong_magic",
+      "asset": "not_a_png.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/not_a_png.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "apng_static",
+      "asset": "apng_static.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/apng_static.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "apng_animated",
+      "asset": "apng_animated.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/apng_animated.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

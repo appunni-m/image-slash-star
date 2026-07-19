@@ -1,0 +1,569 @@
+#!/usr/bin/env python3
+"""Generate deterministic image test assets for manifest.yaml edge cases.
+
+Creates compact images covering decoder and encoder edge cases:
+JPEG: subsampling, quality, progressive, etc.
+PNG: color types, bit depths, interlacing, filters, chunks, etc.
+BMP: bit depths, compression, etc.
+GIF: animated, transparent, etc.
+TIFF: compression, byte order, color types, etc.
+WebP: lossy, lossless, alpha, etc.
+ICO: single, multi-res, PNG/BMP entries
+AVIF: baseline, etc.
+
+Output: tests/fixtures/input/images/{format}/ — committed to repo
+"""
+import argparse
+import binascii
+import struct
+import zlib
+from pathlib import Path
+
+from PIL import Image, ImageDraw
+
+ROOT = Path(__file__).parent.parent
+OUT = ROOT / "tests" / "fixtures" / "input" / "images"
+SIZE = (128, 128)
+
+
+def pattern_img(mode="RGB", size=SIZE):
+    """Create a high-signal pattern with gradients, hard edges, and alpha."""
+    base = Image.new("RGBA", size)
+    pixels = base.load()
+    width, height = size
+    for y in range(height):
+        for x in range(width):
+            checker = 48 if ((x // 8) + (y // 8)) % 2 else 0
+            r = (x * 255 // max(1, width - 1)) ^ checker
+            g = (y * 255 // max(1, height - 1)) ^ checker
+            b = ((x * 3 + y * 5) % 256)
+            a = 255 if x < width // 2 else (x * 255 // max(1, width - 1))
+            pixels[x, y] = (r, g, b, a)
+
+    draw = ImageDraw.Draw(base)
+    draw.rectangle([0, 0, width - 1, height - 1], outline=(255, 255, 255, 255))
+    draw.line([0, height - 1, width - 1, 0], fill=(0, 0, 0, 255), width=3)
+    draw.ellipse([width // 4, height // 4, width * 3 // 4, height * 3 // 4], outline=(255, 0, 0, 255), width=2)
+
+    if mode == "RGBA":
+        return base
+    if mode == "LA":
+        return base.convert("LA")
+    if mode == "P":
+        return base.convert("P", palette=Image.Palette.ADAPTIVE, colors=64)
+    return base.convert(mode)
+
+
+def corrupt_png_crc(src, dst):
+    data = bytearray(src.read_bytes())
+    # Corrupt the critical IHDR CRC. Pillow is allowed to ignore ancillary and
+    # trailing CRC failures, which would not prove the declared error case.
+    if len(data) >= 33 and data[12:16] == b"IHDR":
+        data[29] ^= 0xFF
+    dst.write_bytes(data)
+
+
+def png_chunk(kind, payload):
+    return (
+        struct.pack(">I", len(payload))
+        + kind
+        + payload
+        + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFF_FFFF)
+    )
+
+
+def paeth_predictor(left, above, upper_left):
+    value = left + above - upper_left
+    left_distance = abs(value - left)
+    above_distance = abs(value - above)
+    diagonal_distance = abs(value - upper_left)
+    if left_distance <= above_distance and left_distance <= diagonal_distance:
+        return left
+    if above_distance <= diagonal_distance:
+        return above
+    return upper_left
+
+
+def filter_png_row(row, previous, filter_type, bytes_per_pixel=3):
+    encoded = bytearray(len(row))
+    for index, value in enumerate(row):
+        left = row[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+        above = previous[index] if previous is not None else 0
+        upper_left = (
+            previous[index - bytes_per_pixel]
+            if previous is not None and index >= bytes_per_pixel
+            else 0
+        )
+        predictor = {
+            0: 0,
+            1: left,
+            2: above,
+            3: (left + above) // 2,
+            4: paeth_predictor(left, above, upper_left),
+        }[filter_type]
+        encoded[index] = (value - predictor) & 0xFF
+    return bytes(encoded)
+
+
+def write_rgb_png(path, image, row_filter=0, interlace=False, compress_level=6):
+    image = image.convert("RGB")
+    width, height = image.size
+    pixels = image.tobytes()
+    scanlines = bytearray()
+    if interlace:
+        passes = (
+            (0, 0, 8, 8),
+            (4, 0, 8, 8),
+            (0, 4, 4, 8),
+            (2, 0, 4, 4),
+            (0, 2, 2, 4),
+            (1, 0, 2, 2),
+            (0, 1, 1, 2),
+        )
+        for x_start, y_start, x_step, y_step in passes:
+            for y in range(y_start, height, y_step):
+                row = bytearray()
+                for x in range(x_start, width, x_step):
+                    offset = (y * width + x) * 3
+                    row.extend(pixels[offset : offset + 3])
+                if row:
+                    scanlines.append(0)
+                    scanlines.extend(row)
+    else:
+        previous = None
+        row_bytes = width * 3
+        for y in range(height):
+            row = pixels[y * row_bytes : (y + 1) * row_bytes]
+            filter_type = y % 5 if row_filter == "mixed" else row_filter
+            scanlines.append(filter_type)
+            scanlines.extend(filter_png_row(row, previous, filter_type))
+            previous = row
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, int(interlace))
+    compressed = zlib.compress(bytes(scanlines), level=compress_level)
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", ihdr)
+        + png_chunk(b"IDAT", compressed)
+        + png_chunk(b"IEND", b"")
+    )
+
+
+def save_png_variants(img, out_dir):
+    img.save(out_dir / "compress_fast.png", compress_level=1)
+    img.save(out_dir / "compress_mid.png", compress_level=6)
+    img.convert("RGBA").save(out_dir / "alpha_checker.png")
+    transparent = img.convert("RGBA")
+    alpha = Image.new("L", transparent.size, 0)
+    alpha_draw = ImageDraw.Draw(alpha)
+    alpha_draw.rectangle([0, 0, transparent.size[0] // 2, transparent.size[1] - 1], fill=255)
+    alpha_draw.ellipse([32, 32, 96, 96], fill=128)
+    transparent.putalpha(alpha)
+    transparent.save(out_dir / "alpha_partial.png")
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=2).save(out_dir / "palette_2color.png", bits=1)
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=256).save(out_dir / "palette_256color.png")
+
+
+def gen_jpeg():
+    d = OUT / "jpeg"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB")
+    for q, name in [(100, "q100"), (90, "q90"), (75, "q75"), (50, "q50"), (25, "q25"), (10, "q10"), (1, "q1")]:
+        img.save(d / f"{name}.jpg", quality=q)
+    img.save(d / "baseline.jpg", quality=85)
+    img.save(d / "baseline_default.jpg")
+    img.save(d / "baseline_optimized.jpg", quality=85, optimize=True)
+    img.save(d / "baseline_rgb_jpeg.jpg", quality=85)
+    img.save(d / "baseline_ycbcr.jpg", quality=85)
+    img.save(d / "baseline_444.jpg", quality=85, subsampling=0)
+    img.save(d / "baseline_422.jpg", quality=85, subsampling=1)
+    img.save(d / "baseline_420.jpg", quality=85, subsampling=2)
+    img.save(d / "baseline_411.jpg", quality=85, subsampling=2)
+    img.convert("L").save(d / "baseline_gray.jpg", quality=85)
+    img.convert("CMYK").save(d / "baseline_cmyk.jpg", quality=85)
+    img.save(d / "progressive.jpg", quality=85, progressive=True)
+    img.save(d / "progressive_spectral.jpg", quality=70, progressive=True)
+    img.save(d / "restart.jpg", quality=85, restart_marker_rows=4)
+    pattern_img("RGB", (1, 1)).save(d / "1x1.jpg", quality=95)
+    pattern_img("RGB", (8, 8)).save(d / "8x8.jpg", quality=95)
+    pattern_img("RGB", (17, 17)).save(d / "17x17.jpg", quality=85)
+    pattern_img("RGB", (33, 33)).save(d / "33x33.jpg", quality=85)
+    pattern_img("RGB", (257, 129)).save(d / "large.jpg", quality=85)
+    (d / "no_exif.jpg").write_bytes((d / "baseline.jpg").read_bytes())
+    (d / "exif_orientation.jpg").write_bytes((d / "baseline.jpg").read_bytes())
+    (d / "exif_thumbnail.jpg").write_bytes((d / "baseline.jpg").read_bytes())
+    (d / "trailing_data.jpg").write_bytes((d / "baseline.jpg").read_bytes() + b"TRAILING")
+    (d / "multiple_eoi.jpg").write_bytes((d / "baseline.jpg").read_bytes() + b"\xff\xd9")
+    # Corrupt/error cases
+    d.joinpath("empty.jpg").write_bytes(b"")
+    d.joinpath("truncated.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00")
+    d.joinpath("corrupt.jpg").write_bytes(b"\xff\xd8\xde\xad\xbe\xef")
+    print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
+
+
+def gen_png():
+    d = OUT / "png"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB")
+    img.save(d / "16x16.png")
+    img.save(d / "rgb.png")
+    img.convert("RGBA").save(d / "rgba.png")
+    img.convert("L").save(d / "gray.png")
+    img.convert("LA").save(d / "gray_alpha.png")
+    img.convert("P").save(d / "indexed.png")
+    indexed_alpha = img.convert("RGBA")
+    indexed_alpha.putalpha(pattern_img("L"))
+    indexed_alpha.convert("P", palette=Image.Palette.ADAPTIVE, colors=64).save(d / "indexed_alpha.png", transparency=0)
+    # Bit depths
+    img.convert("1").save(d / "1bit.png")
+    img.convert("L").save(d / "8bit.png")
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=4).save(d / "2bit.png", bits=2)
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16).save(d / "4bit.png", bits=4)
+    img.convert("I;16").save(d / "16bit.png")
+    # Pillow decodes Adam7 but does not expose Adam7 encoding. Build the input
+    # scan passes directly, then continue to use Pillow as the output oracle.
+    write_rgb_png(d / "adam7.png", img, interlace=True)
+    write_rgb_png(d / "no_interlace.png", img)
+    # Chunks
+    from PIL.PngImagePlugin import PngInfo
+    meta = PngInfo()
+    meta.add_text("Comment", "test")
+    img.save(d / "text_chunks.png", pnginfo=meta)
+    srgb = PngInfo()
+    srgb.add(b"sRGB", b"\0")
+    img.save(d / "srgb.png", pnginfo=srgb)
+    img.save(d / "iccp.png", icc_profile=b"pillow-rs-test-profile")
+    meta_time = PngInfo()
+    meta_time.add(b"tIME", bytes.fromhex("07ea0704000000"))
+    img.save(d / "time_chunk.png", pnginfo=meta_time)
+    background = PngInfo()
+    background.add(b"bKGD", struct.pack(">HHH", 0xFFFF, 0, 0))
+    img.save(d / "bkgd.png", pnginfo=background)
+    img.save(d / "phys.png", dpi=(72, 72))
+    gamma = PngInfo()
+    gamma.add(b"gAMA", struct.pack(">I", 45_455))
+    img.save(d / "gama.png", pnginfo=gamma)
+    # Pillow auto-selects filters and has no public selector. Construct each
+    # valid filtered scanline stream explicitly so the fixture name is true.
+    write_rgb_png(d / "filter_none.png", img, row_filter=0)
+    write_rgb_png(d / "filter_sub.png", img, row_filter=1)
+    write_rgb_png(d / "filter_up.png", img, row_filter=2)
+    write_rgb_png(d / "filter_average.png", img, row_filter=3)
+    write_rgb_png(d / "filter_paeth.png", img, row_filter=4)
+    write_rgb_png(d / "filter_mixed.png", img, row_filter="mixed")
+    # Compression
+    img.save(d / "compress_default.png")
+    save_png_variants(img, d)
+    img.save(d / "compress_max.png", compress_level=9)
+    img.save(d / "compress_none.png", compress_level=0)
+    # Sizes
+    Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.png")
+    Image.new("RGB", (17,17), (128,0,0)).save(d / "odd_size.png")
+    pattern_img("RGB", (2, 3)).save(d / "2x3.png")
+    pattern_img("RGB", (1, 255)).save(d / "1x255.png")
+    pattern_img("RGB", (255, 1)).save(d / "255x1.png")
+    Image.new("RGB", (513,257), (128,0,0)).save(d / "large.png")
+    # APNG-compatible files. Pillow writes a normal PNG when save_all is false.
+    img.save(d / "apng_static.png")
+    img2 = pattern_img("RGB").transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    img.save(d / "apng_animated.png", save_all=True, append_images=[img2], duration=100, loop=0)
+    # Error
+    d.joinpath("truncated.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00")
+    d.joinpath("not_a_png.png").write_bytes(b"NOTAPNG!")
+    corrupt_png_crc(d / "rgb.png", d / "bad_crc.png")
+    print(f"  PNG: {len(list(d.glob('*.png')))} files")
+
+
+def gen_gif():
+    d = OUT / "gif"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB").convert("P")
+    img.save(d / "static.gif")
+    img.save(d / "global_ct.gif")
+    pattern_img("RGB").convert("P", palette=Image.Palette.ADAPTIVE, colors=16).save(d / "local_ct.gif")
+    # Animated (2 frames)
+    img2 = Image.new("P", SIZE, 200)
+    img.save(d / "animated.gif", save_all=True, append_images=[img2], duration=100, loop=0)
+    img.save(d / "gce.gif", save_all=True, append_images=[img2], duration=75, disposal=2, loop=1)
+    img.save(d / "animated_3frame.gif", save_all=True, append_images=[img2, img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)], duration=[20, 80, 160], loop=0)
+    # Transparency
+    img.info['transparency'] = 0
+    img.save(d / "transparent.gif", transparency=0)
+    # Interlaced
+    img.save(d / "interlaced.gif", interlace=True)
+    Image.new("P", (1,1), 0).save(d / "1x1.gif")
+    d.joinpath("empty.gif").write_bytes(b"")
+    print(f"  GIF: {len(list(d.glob('*.gif')))} files")
+
+
+def bmp_palette(count):
+    entries = bytearray()
+    for index in range(count):
+        red = (index * 73) & 0xFF
+        green = (index * 151) & 0xFF
+        blue = (index * 199) & 0xFF
+        entries.extend((blue, green, red, 0))
+    return bytes(entries)
+
+
+def write_bmp(path, dib, pixels, palette=b"", masks=b""):
+    pixel_offset = 14 + len(dib) + len(masks) + len(palette)
+    file_size = pixel_offset + len(pixels)
+    header = b"BM" + struct.pack("<IHHI", file_size, 0, 0, pixel_offset)
+    path.write_bytes(header + dib + masks + palette + pixels)
+
+
+def bmp_info_header(width, height, depth, compression, image_size, colors=0):
+    return struct.pack(
+        "<IiiHHIIiiII",
+        40,
+        width,
+        height,
+        1,
+        depth,
+        compression,
+        image_size,
+        3_780,
+        3_780,
+        colors,
+        colors,
+    )
+
+
+def write_bmp_24(path, image, top_down=False, core_header=False):
+    image = image.convert("RGB")
+    width, height = image.size
+    source = image.tobytes()
+    stride = ((width * 3 + 3) // 4) * 4
+    rows = bytearray()
+    y_values = range(height) if top_down else range(height - 1, -1, -1)
+    for y in y_values:
+        for x in range(width):
+            offset = (y * width + x) * 3
+            red, green, blue = source[offset : offset + 3]
+            rows.extend((blue, green, red))
+        rows.extend(b"\0" * (stride - width * 3))
+    if core_header:
+        dib = struct.pack("<IHHHH", 12, width, height, 1, 24)
+    else:
+        signed_height = -height if top_down else height
+        dib = bmp_info_header(width, signed_height, 24, 0, len(rows))
+    write_bmp(path, dib, bytes(rows))
+
+
+def write_bmp_4(path, width=16, height=16):
+    stride = ((width + 1) // 2 + 3) & ~3
+    rows = bytearray()
+    for y in range(height - 1, -1, -1):
+        row = bytearray()
+        for x in range(0, width, 2):
+            high = (x + y) & 0x0F
+            low = (x + y + 1) & 0x0F if x + 1 < width else 0
+            row.append((high << 4) | low)
+        row.extend(b"\0" * (stride - len(row)))
+        rows.extend(row)
+    dib = bmp_info_header(width, height, 4, 0, len(rows), 16)
+    write_bmp(path, dib, bytes(rows), bmp_palette(16))
+
+
+def write_bmp_16(path, image):
+    image = image.convert("RGB")
+    width, height = image.size
+    source = image.tobytes()
+    stride = ((width * 2 + 3) // 4) * 4
+    rows = bytearray()
+    for y in range(height - 1, -1, -1):
+        for x in range(width):
+            offset = (y * width + x) * 3
+            red, green, blue = source[offset : offset + 3]
+            value = ((red >> 3) << 10) | ((green >> 3) << 5) | (blue >> 3)
+            rows.extend(struct.pack("<H", value))
+        rows.extend(b"\0" * (stride - width * 2))
+    dib = bmp_info_header(width, height, 16, 0, len(rows))
+    write_bmp(path, dib, bytes(rows))
+
+
+def write_bmp_rle(path, depth, width=16, height=16):
+    rows = bytearray()
+    color_count = 256 if depth == 8 else 16
+    for y in range(height - 1, -1, -1):
+        indices = bytes((x + y) % color_count for x in range(width))
+        rows.extend((0, width))
+        if depth == 8:
+            rows.extend(indices)
+            if width & 1:
+                rows.append(0)
+        else:
+            packed = bytes(
+                (indices[x] << 4) | indices[x + 1]
+                for x in range(0, width, 2)
+            )
+            rows.extend(packed)
+            if len(packed) & 1:
+                rows.append(0)
+        rows.extend((0, 0))
+    rows.extend((0, 1))
+    compression = 1 if depth == 8 else 2
+    dib = bmp_info_header(width, height, depth, compression, len(rows), color_count)
+    write_bmp(path, dib, bytes(rows), bmp_palette(color_count))
+
+
+def write_bmp_bitfields(path, image, header_size=40):
+    image = image.convert("RGBA")
+    width, height = image.size
+    rows = bytearray()
+    source = image.tobytes()
+    for y in range(height - 1, -1, -1):
+        for x in range(width):
+            offset = (y * width + x) * 4
+            red, green, blue, alpha = source[offset : offset + 4]
+            rows.extend((blue, green, red, alpha))
+
+    if header_size == 40:
+        dib = bmp_info_header(width, height, 32, 3, len(rows))
+        masks = struct.pack("<IIII", 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
+    else:
+        dib_data = bytearray(header_size)
+        struct.pack_into(
+            "<IiiHHIIiiII",
+            dib_data,
+            0,
+            header_size,
+            width,
+            height,
+            1,
+            32,
+            3,
+            len(rows),
+            3_780,
+            3_780,
+            0,
+            0,
+        )
+        struct.pack_into(
+            "<IIII",
+            dib_data,
+            40,
+            0x00FF0000,
+            0x0000FF00,
+            0x000000FF,
+            0xFF000000,
+        )
+        struct.pack_into("<I", dib_data, 56, 0x73524742)
+        dib = bytes(dib_data)
+        masks = b""
+    write_bmp(path, dib, bytes(rows), masks=masks)
+
+
+def gen_bmp():
+    d = OUT / "bmp"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB")
+    img.save(d / "24bit.bmp")
+    img.convert("RGBA").save(d / "32bit.bmp")
+    img.convert("1").save(d / "1bit.bmp")
+    write_bmp_4(d / "4bit.bmp")
+    img.convert("P").save(d / "8bit.bmp")
+    write_bmp_16(d / "16bit.bmp", img)
+    img.convert("L").save(d / "gray.bmp")
+    img.save(d / "uncompressed.bmp")
+    img.save(d / "bottom_up.bmp")
+    write_bmp_24(d / "top_down.bmp", img, top_down=True)
+    write_bmp_bitfields(d / "bitfields.bmp", pattern_img("RGBA"))
+    write_bmp_bitfields(d / "v4header.bmp", pattern_img("RGBA"), header_size=108)
+    write_bmp_bitfields(d / "v5header.bmp", pattern_img("RGBA"), header_size=124)
+    write_bmp_24(d / "os2v1.bmp", img, core_header=True)
+    write_bmp_rle(d / "rle8.bmp", 8)
+    write_bmp_rle(d / "rle4.bmp", 4)
+    Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.bmp")
+    Image.new("RGB", (17,17), (128,0,0)).save(d / "odd_width.bmp")
+    pattern_img("RGB", (2, 5)).save(d / "width2.bmp")
+    pattern_img("RGB", (3, 5)).save(d / "width3.bmp")
+    pattern_img("RGB", (31, 7)).save(d / "width31.bmp")
+    d.joinpath("not_bmp.bmp").write_bytes(b"NOTABMP")
+    print(f"  BMP: {len(list(d.glob('*.bmp')))} files")
+
+
+def gen_webp():
+    d = OUT / "webp"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB")
+    img.save(d / "lossy.webp", lossless=False)
+    for quality in (10, 50, 90, 100):
+        img.save(d / f"lossy_q{quality}.webp", lossless=False, quality=quality)
+    img.save(d / "lossless.webp", lossless=True)
+    img.save(d / "no_alpha.webp")
+    rgba = img.convert("RGBA")
+    rgba.save(d / "with_alpha.webp", lossless=True)
+    rgba.save(d / "alpha_lossless.webp", lossless=True)
+    rgba.save(d / "alpha_lossy.webp", lossless=False, quality=80)
+    Image.new("RGB", (16,16), (128,0,0)).save(d / "16x16.webp")
+    pattern_img("RGB", (17, 19)).save(d / "odd.webp", lossless=True)
+    img.save(d / "extended.webp", lossless=True)
+    img.save(d / "icc.webp", lossless=True, icc_profile=b"pillow-rs-test-profile")
+    img.save(d / "xmp.webp", lossless=True, xmp=b"<x:xmpmeta>pillow-rs</x:xmpmeta>")
+    img.save(d / "exif.webp", lossless=True, exif=b"Exif\x00\x00pillow-rs")
+    img.save(d / "animated.webp", save_all=True, append_images=[pattern_img("RGB").transpose(Image.Transpose.FLIP_LEFT_RIGHT)], duration=100, loop=0)
+    d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
+    print(f"  WebP: {len(list(d.glob('*.webp')))} files")
+
+
+def gen_tiff():
+    d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB")
+    img.save(d / "rgb.tiff")
+    img.save(d / "single.tiff")
+    img.convert("L").save(d / "gray.tiff")
+    img.convert("1").save(d / "1bit.tiff")
+    img.convert("L").save(d / "8bit.tiff")
+    img.convert("I;16").save(d / "16bit.tiff")
+    img.convert("F").save(d / "float32.tiff")
+    img.convert("RGBA").save(d / "rgba.tiff")
+    img.convert("P").save(d / "palette.tiff")
+    img.convert("CMYK").save(d / "cmyk.tiff")
+    img.convert("YCbCr").save(d / "ycbcr.tiff")
+    img.convert("1").save(d / "bilevel.tiff")
+    img.save(d / "uncompressed.tiff", compression=None)
+    img.save(d / "lzw.tiff", compression="tiff_lzw")
+    img.save(d / "deflate.tiff", compression="tiff_adobe_deflate")
+    img.save(d / "packbits.tiff", compression="packbits")
+    img.convert("L").save(d / "gray_lzw.tiff", compression="tiff_lzw")
+    img.convert("L").save(d / "gray_deflate.tiff", compression="tiff_adobe_deflate")
+    img.convert("RGBA").save(d / "rgba_lzw.tiff", compression="tiff_lzw")
+    img.save(d / "le.tiff")  # little-endian default
+    img.save(d / "be.tiff", byteorder="MM")
+    img.save(d / "stripped.tiff", rows_per_strip=16)
+    img.save(d / "tiled.tiff")
+    img.save(d / "multipage.tiff", save_all=True, append_images=[img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)])
+    d.joinpath("bad_ifd.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\xff\xff\xff")
+    print(f"  TIFF: {len(list(d.glob('*.tiff')))} files")
+
+
+def gen_ico():
+    d = OUT / "ico"; d.mkdir(parents=True, exist_ok=True)
+    img = pattern_img("RGB").resize((16,16))
+    img.save(d / "16x16.ico", format="ICO", sizes=[(16,16)])
+    img.save(d / "single.ico", format="ICO", sizes=[(16,16)])
+    img.save(d / "multi.ico", format="ICO", sizes=[(16,16),(32,32)])
+    img.convert("RGBA").resize((32,32)).save(d / "png_entry.ico", format="ICO", sizes=[(32,32)])
+    img.resize((16,16)).save(d / "bmp_entry.ico", format="ICO", sizes=[(16,16)])
+    img.resize((256,256)).save(d / "256x256.ico", format="ICO", sizes=[(256,256)])
+    print(f"  ICO: {len(list(d.glob('*.ico')))} files")
+
+
+def main():
+    generators = {
+        "jpeg": gen_jpeg,
+        "png": gen_png,
+        "gif": gen_gif,
+        "bmp": gen_bmp,
+        "webp": gen_webp,
+        "tiff": gen_tiff,
+        "ico": gen_ico,
+    }
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--format", choices=generators)
+    args = parser.parse_args()
+    selected = [args.format] if args.format else generators
+    for format_name in selected:
+        generators[format_name]()
+    print("\nDone. Run: .oracle-venv/bin/python scripts/generate_decode_refs.py")
+
+
+if __name__ == "__main__":
+    main()

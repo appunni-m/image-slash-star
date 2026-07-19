@@ -1,0 +1,38 @@
+schema_version: 1
+
+# This wheel, not whichever Pillow happens to be installed globally, defines
+# the project's observable image behavior.
+oracle:
+  implementation: Pillow
+  version: 12.2.0
+  python: '3.12'
+  platform: macosx_11_0_arm64
+  wheel: pillow-12.2.0-cp312-cp312-macosx_11_0_arm64.whl
+  wheel_sha256: f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421
+  imaging_extension_sha256: ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26
+
+features:
+  jpeg_abi: '6.2'
+  libjpeg_turbo: 3.1.4.1
+  zlib: 1.3.1.zlib-ng
+  zlib_ng: 2.3.3
+  libtiff: 4.7.1
+  webp: 1.6.0
+  openjpeg: 2.5.4
+  avif: 1.4.1
+  freetype: 2.14.3
+  littlecms2: '2.18'
+  xcb: available
+  raqm: unavailable
+  libimagequant: unavailable
+
+comparison_contract:
+  - success_or_error
+  - error_class
+  - image_mode
+  - image_size
+  - frame_count
+  - frame_duration_and_disposal
+  - metadata
+  - decoded_pixel_bytes
+  - encoded_file_bytes
