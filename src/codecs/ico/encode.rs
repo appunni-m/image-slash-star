@@ -18,11 +18,14 @@ use crate::types::{ColorType, DecodedImage};
 ///
 /// Supported input color types: `Rgba8`, `Rgb8`, `L8`. Other types return
 /// `None`.
-pub fn encode(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let w = img.width as usize;
     let h = img.height as usize;
     if w == 0 || h == 0 || w > 256 || h > 256 {
         return None;
+    }
+    if opts.extra.get("entry_type").map(String::as_str) == Some("bmp") {
+        return encode_bmp_entry(img, opts);
     }
     // Convert pixel data to BGRA (we always write 32-bit ICO entries)
     let bgra = match img.color {
@@ -94,6 +97,97 @@ pub fn encode(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>> {
         }
     }
     Some(data)
+}
+
+fn encode_bmp_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+    let width = usize::try_from(img.width).ok()?;
+    let height = usize::try_from(img.height).ok()?;
+    let (bits, row_bytes, pixels) = match img.color {
+        ColorType::Rgb8 => {
+            let row_bytes = width.checked_mul(3)?.next_multiple_of(4);
+            let mut pixels = Vec::with_capacity(row_bytes.checked_mul(height)?);
+            for row in img.pixels.chunks_exact(width.checked_mul(3)?).rev() {
+                for pixel in row.chunks_exact(3) {
+                    pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
+                }
+                pixels.resize(pixels.len().checked_add(row_bytes - width * 3)?, 0);
+            }
+            (24u16, row_bytes, pixels)
+        }
+        ColorType::Rgba8 => {
+            let row_bytes = width.checked_mul(4)?;
+            let mut pixels = Vec::with_capacity(row_bytes.checked_mul(height)?);
+            for row in img.pixels.chunks_exact(row_bytes).rev() {
+                for pixel in row.chunks_exact(4) {
+                    pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
+                }
+            }
+            (32u16, row_bytes, pixels)
+        }
+        _ => return None,
+    };
+    let pixel_bytes = row_bytes.checked_mul(height)?;
+    if pixels.len() != pixel_bytes {
+        return None;
+    }
+
+    // Pillow 12.2.0 IcoImagePlugin.py:137-190 leaves `size` bound to the
+    // final requested/default size when it writes a non-32-bit AND mask.
+    // With the default size list this is 256x256 even for a 16x16 frame.
+    let mask_dimensions = opts
+        .extra
+        .get("sizes")
+        .and_then(|value| parse_last_size(value))
+        .unwrap_or((256, 256));
+    let mask_row_bytes = mask_dimensions.0.div_ceil(8);
+    let mask_bytes = if bits == 32 {
+        0
+    } else {
+        mask_row_bytes.checked_mul(mask_dimensions.1)?
+    };
+    let dib_bytes = 40usize.checked_add(pixel_bytes)?.checked_add(mask_bytes)?;
+    let mut output = Vec::with_capacity(22usize.checked_add(dib_bytes)?);
+    output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);
+    output.push(if width == 256 {
+        0
+    } else {
+        u8::try_from(width).ok()?
+    });
+    output.push(if height == 256 {
+        0
+    } else {
+        u8::try_from(height).ok()?
+    });
+    output.extend_from_slice(&[0, 0, 0, 0]);
+    output.extend_from_slice(&bits.to_le_bytes());
+    output.extend_from_slice(&u32::try_from(dib_bytes).ok()?.to_le_bytes());
+    output.extend_from_slice(&22u32.to_le_bytes());
+
+    output.extend_from_slice(&40u32.to_le_bytes());
+    output.extend_from_slice(&img.width.to_le_bytes());
+    output.extend_from_slice(&img.height.checked_mul(2)?.to_le_bytes());
+    output.extend_from_slice(&1u16.to_le_bytes());
+    output.extend_from_slice(&bits.to_le_bytes());
+    output.extend_from_slice(&0u32.to_le_bytes());
+    output.extend_from_slice(&u32::try_from(pixel_bytes).ok()?.to_le_bytes());
+    output.extend_from_slice(&3_780i32.to_le_bytes());
+    output.extend_from_slice(&3_780i32.to_le_bytes());
+    output.extend_from_slice(&0u32.to_le_bytes());
+    output.extend_from_slice(&0u32.to_le_bytes());
+    output.extend_from_slice(&pixels);
+    output.resize(output.len().checked_add(mask_bytes)?, 0);
+    Some(output)
+}
+
+fn parse_last_size(value: &str) -> Option<(usize, usize)> {
+    let numbers = value
+        .split(|character: char| !character.is_ascii_digit())
+        .filter(|part| !part.is_empty())
+        .map(str::parse::<usize>)
+        .collect::<Result<Vec<_>, _>>()
+        .ok()?;
+    let pair = numbers.get(numbers.len().checked_sub(2)?..)?;
+    Some((*pair.first()?, *pair.get(1)?))
 }
 /// Convert RGBA8 pixels (R,G,B,A) to BGRA (B,G,R,A).
 fn convert_rgba_to_bgra(pixels: &[u8]) -> Vec<u8> {

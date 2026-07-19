@@ -213,24 +213,42 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
     let pixel_end = pixel_start + pixel_data_size;
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
-    let mut pixels = Vec::with_capacity(row_size * height as usize);
+    let mask_row_size = (width as usize).div_ceil(32) * 4;
+    let mask_size = mask_row_size.checked_mul(height as usize)?;
+    let mask = data.get(pixel_end..pixel_end.checked_add(mask_size)?);
+    let channels = if mask.is_some() { 4 } else { 3 };
+    let mut pixels = Vec::with_capacity(width as usize * height as usize * channels);
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
         let row_end = row_start + row_size;
         let row = &pixels_raw[row_start..row_end];
 
-        for chunk in row.chunks(3) {
+        for (x, chunk) in row.chunks(3).enumerate() {
             let b = chunk[0];
             let g = chunk[1];
             let r = chunk[2];
             pixels.push(r);
             pixels.push(g);
             pixels.push(b);
+            if let Some(mask) = mask {
+                let byte = mask[y * mask_row_size + x / 8];
+                let transparent = byte & (0x80 >> (x % 8)) != 0;
+                pixels.push(if transparent { 0 } else { 255 });
+            }
         }
     }
 
-    Some(DecodedImage::new(width, height, pixels, ColorType::Rgb8))
+    Some(DecodedImage::new(
+        width,
+        height,
+        pixels,
+        if mask.is_some() {
+            ColorType::Rgba8
+        } else {
+            ColorType::Rgb8
+        },
+    ))
 }
 
 /// Decode an 8-bit indexed ICO BMP entry (palette + indices).
