@@ -41,6 +41,130 @@ pub const Y_AC_QUANT: [u16; 128] = [
     209, 213, 217, 221, 225, 229, 234, 239, 245, 249, 254, 259, 264, 269, 274, 279, 284,
 ];
 
+/// AC quantization steps for the second-order luma transform.
+pub const Y2_AC_QUANT: [u16; 128] = [
+    8, 8, 9, 10, 12, 13, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 31, 32, 34, 35, 37, 38, 40, 41,
+    43, 44, 46, 48, 49, 51, 52, 54, 55, 57, 58, 60, 62, 63, 65, 66, 68, 69, 71, 72, 74, 75, 77, 79,
+    80, 82, 83, 85, 86, 88, 89, 93, 96, 99, 102, 105, 108, 111, 114, 117, 120, 124, 127, 130, 133,
+    136, 139, 142, 145, 148, 151, 155, 158, 161, 164, 167, 170, 173, 176, 179, 184, 189, 193, 198,
+    203, 207, 212, 217, 221, 226, 230, 235, 240, 244, 249, 254, 258, 263, 268, 274, 280, 286, 292,
+    299, 305, 311, 317, 323, 330, 336, 342, 348, 354, 362, 370, 379, 385, 393, 401, 409, 416, 424,
+    432, 440,
+];
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct QuantMatrix {
+    pub(super) q: [u16; 16],
+    pub(super) reciprocal: [u16; 16],
+    pub(super) bias: [u32; 16],
+    pub(super) zero_threshold: [u32; 16],
+    pub(super) sharpen: [u16; 16],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct SegmentMatrices {
+    pub(super) y1: QuantMatrix,
+    pub(super) y2: QuantMatrix,
+    pub(super) uv: QuantMatrix,
+    pub(super) lambda_i4: i32,
+    pub(super) lambda_i16: i32,
+    pub(super) lambda_uv: i32,
+    pub(super) lambda_mode: i32,
+}
+
+fn expand_matrix(dc: u16, ac: u16, kind: usize) -> (QuantMatrix, i32) {
+    const BIASES: [[u32; 2]; 3] = [[96, 110], [96, 108], [110, 115]];
+    const SHARPENING: [u16; 16] = [
+        0, 30, 60, 90, 30, 60, 90, 90, 60, 90, 90, 90, 90, 90, 90, 90,
+    ];
+    let mut matrix = QuantMatrix {
+        q: [ac; 16],
+        reciprocal: [0; 16],
+        bias: [0; 16],
+        zero_threshold: [0; 16],
+        sharpen: [0; 16],
+    };
+    matrix.q[0] = dc;
+    for index in 0..2 {
+        matrix.reciprocal[index] = ((1_u32 << 17) / u32::from(matrix.q[index])) as u16;
+        matrix.bias[index] = BIASES[kind][usize::from(index > 0)] << 9;
+        matrix.zero_threshold[index] =
+            ((1_u32 << 17) - 1 - matrix.bias[index]) / u32::from(matrix.reciprocal[index]);
+    }
+    for index in 2..16 {
+        matrix.reciprocal[index] = matrix.reciprocal[1];
+        matrix.bias[index] = matrix.bias[1];
+        matrix.zero_threshold[index] = matrix.zero_threshold[1];
+    }
+    if kind == 0 {
+        for (index, sharpen) in matrix.sharpen.iter_mut().enumerate() {
+            *sharpen = SHARPENING[index] * matrix.q[index] >> 11;
+        }
+    }
+    let average = (matrix.q.iter().map(|&value| i32::from(value)).sum::<i32>() + 8) >> 4;
+    (matrix, average)
+}
+
+pub(super) fn libwebp_segment_matrices(
+    quantizer: u8,
+    chroma_dc_delta: i8,
+    chroma_ac_delta: i8,
+) -> SegmentMatrices {
+    let quantizer = usize::from(quantizer);
+    let (y1, q_i4) = expand_matrix(Y_DC_QUANT[quantizer], Y_AC_QUANT[quantizer], 0);
+    let (y2, q_i16) = expand_matrix(Y_DC_QUANT[quantizer] * 2, Y2_AC_QUANT[quantizer], 1);
+    let uv_dc_index = (quantizer as i32 + i32::from(chroma_dc_delta)).clamp(0, 117) as usize;
+    let uv_ac_index = (quantizer as i32 + i32::from(chroma_ac_delta)).clamp(0, 127) as usize;
+    let (uv, q_uv) = expand_matrix(Y_DC_QUANT[uv_dc_index], Y_AC_QUANT[uv_ac_index], 2);
+    SegmentMatrices {
+        y1,
+        y2,
+        uv,
+        lambda_i4: ((3 * q_i4 * q_i4) >> 7).max(1),
+        lambda_i16: (3 * q_i16 * q_i16).max(1),
+        lambda_uv: ((3 * q_uv * q_uv) >> 6).max(1),
+        lambda_mode: ((q_i4 * q_i4) >> 7).max(1),
+    }
+}
+
+/// Quantizes one transform block using libwebp's lossy VP8 scalar quantizer.
+///
+/// `coefficients` are replaced with their dequantized reconstruction values,
+/// while the returned levels use VP8 zigzag order.
+pub(super) fn quantize_block(
+    coefficients: &mut [i16; 16],
+    levels: &mut [i16; 16],
+    matrix: &QuantMatrix,
+) -> bool {
+    const ZIGZAG: [usize; 16] = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15];
+    const MAX_LEVEL: u32 = 2_047;
+
+    let mut nonzero = false;
+    for (zigzag_index, &coefficient_index) in ZIGZAG.iter().enumerate() {
+        let signed_coefficient = i32::from(coefficients[coefficient_index]);
+        let negative = signed_coefficient < 0;
+        let coefficient =
+            signed_coefficient.unsigned_abs() + u32::from(matrix.sharpen[coefficient_index]);
+        if coefficient > matrix.zero_threshold[coefficient_index] {
+            let mut level = ((coefficient * u32::from(matrix.reciprocal[coefficient_index])
+                + matrix.bias[coefficient_index])
+                >> 17)
+                .min(MAX_LEVEL) as i32;
+            if negative {
+                level = -level;
+            }
+            coefficients[coefficient_index] =
+                (level * i32::from(matrix.q[coefficient_index])) as i16;
+            levels[zigzag_index] = level as i16;
+            nonzero |= level != 0;
+        } else {
+            coefficients[coefficient_index] = 0;
+            levels[zigzag_index] = 0;
+        }
+    }
+    nonzero
+}
+
 /// DC quantization step sizes for chroma (UV) blocks.
 ///
 /// In libvpx the UV-DC table is identical to `Y_DC_QUANT` with a cap at 132
@@ -181,6 +305,50 @@ pub fn uv_dc_quant_table() -> [u16; 128] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn segment_matrices_match_libwebp_1_6_0_q80_segment_zero() {
+        let matrices = libwebp_segment_matrices(27, -2, 6);
+        assert_eq!(&matrices.y1.q[..2], [25, 31]);
+        assert_eq!(&matrices.y1.reciprocal[..2], [5_242, 4_228]);
+        assert_eq!(&matrices.y1.bias[..2], [49_152, 56_320]);
+        assert_eq!(&matrices.y1.zero_threshold[..2], [15, 17]);
+        assert_eq!(&matrices.y1.sharpen[..2], [0, 0]);
+        assert_eq!(&matrices.y2.q[..2], [50, 48]);
+        assert_eq!(&matrices.y2.reciprocal[..2], [2_621, 2_730]);
+        assert_eq!(&matrices.uv.q[..2], [23, 37]);
+        assert_eq!(&matrices.uv.reciprocal[..2], [5_698, 3_542]);
+        assert_eq!(
+            (
+                matrices.lambda_i4,
+                matrices.lambda_i16,
+                matrices.lambda_uv,
+                matrices.lambda_mode,
+            ),
+            (22, 6_912, 60, 7)
+        );
+    }
+
+    #[test]
+    fn quantize_block_matches_libwebp_1_6_0() {
+        let matrices = libwebp_segment_matrices(27, -2, 6);
+        let mut coefficients = [
+            387, -361, 108, -40, -438, -555, 171, -56, -55, 393, 22, -28, -7, -197, -3, -28,
+        ];
+        let mut levels = [0; 16];
+
+        assert!(quantize_block(&mut coefficients, &mut levels, &matrices.y1));
+        assert_eq!(
+            coefficients,
+            [
+                375, -372, 93, -31, -434, -558, 155, -62, -62, 403, 31, -31, 0, -186, 0, -31,
+            ]
+        );
+        assert_eq!(
+            levels,
+            [15, -12, -14, -2, -18, 3, -1, 5, 13, 0, -6, 1, -2, -1, 0, -1]
+        );
+    }
 
     #[test]
     fn test_quality_to_quant_index() {
