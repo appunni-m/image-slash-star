@@ -284,28 +284,20 @@ fn estimated_cost(tokens: &[Token], cache_bits: u8) -> f64 {
         + extra as f64
 }
 
-pub(super) fn select(pixels: &[u32], width: usize, allow_cache: bool) -> (Vec<Token>, u8) {
+pub(super) fn candidates(pixels: &[u32], width: usize, allow_cache: bool) -> Vec<(Vec<Token>, u8)> {
     if pixels.is_empty() {
-        return (Vec::new(), 0);
+        return vec![(Vec::new(), 0)];
     }
     let chain = fill_hash_chain(pixels, width);
     let refs = lz77(pixels, width, &chain);
     if !allow_cache {
-        return (refs, 0);
+        return vec![(refs, 0)];
     }
-    let mut best = refs.clone();
-    let mut best_bits = 0;
-    let mut best_cost = estimated_cost(&best, 0);
+    let mut candidates = vec![(refs.clone(), 0)];
     for bits in 1..=11 {
-        let cached = with_cache(pixels, &refs, bits);
-        let cost = estimated_cost(&cached, bits);
-        if cost < best_cost {
-            best = cached;
-            best_bits = bits;
-            best_cost = cost;
-        }
+        candidates.push((with_cache(pixels, &refs, bits), bits));
     }
-    (best, best_bits)
+    candidates
 }
 
 const PLANE_TO_CODE: [u8; 128] = [

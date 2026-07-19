@@ -540,7 +540,46 @@ fn write_image_stream<W: Write>(
     width: usize,
     write_meta_huffman_bit: bool,
 ) -> io::Result<()> {
-    let (tokens, cache_bits) = backward_refs::select(pixels, width, write_meta_huffman_bit);
+    let candidates = backward_refs::candidates(pixels, width, write_meta_huffman_bit);
+    let (tokens, cache_bits) = candidates
+        .into_iter()
+        .min_by_key(|(tokens, cache_bits)| {
+            let mut encoded = Vec::new();
+            let mut candidate_writer = BitWriter {
+                writer: &mut encoded,
+                buffer: 0,
+                nbits: 0,
+            };
+            write_token_stream(
+                &mut candidate_writer,
+                pixels,
+                width,
+                write_meta_huffman_bit,
+                tokens,
+                *cache_bits,
+            )
+            .and_then(|()| candidate_writer.flush())
+            .map_or(usize::MAX, |()| encoded.len())
+        })
+        .unwrap();
+    write_token_stream(
+        w,
+        pixels,
+        width,
+        write_meta_huffman_bit,
+        &tokens,
+        cache_bits,
+    )
+}
+
+fn write_token_stream<W: Write>(
+    w: &mut BitWriter<W>,
+    _pixels: &[u32],
+    width: usize,
+    write_meta_huffman_bit: bool,
+    tokens: &[backward_refs::Token],
+    cache_bits: u8,
+) -> io::Result<()> {
     w.write_bits(u64::from(cache_bits != 0), 1)?;
     if cache_bits != 0 {
         w.write_bits(u64::from(cache_bits), 4)?;
@@ -555,7 +594,7 @@ fn write_image_stream<W: Write>(
     let mut frequencies2 = [0_u32; 256];
     let mut frequencies3 = [0_u32; 256];
     let mut frequencies4 = [0_u32; 40];
-    for &token in &tokens {
+    for &token in tokens {
         match token {
             backward_refs::Token::Literal(pixel) => {
                 let [red, green, blue, alpha] = channels(pixel);
@@ -591,7 +630,7 @@ fn write_image_stream<W: Write>(
     write_huffman_tree(w, &frequencies3, &mut lengths3, &mut codes3)?;
     write_huffman_tree(w, &frequencies4, &mut lengths4, &mut codes4)?;
 
-    for token in tokens {
+    for &token in tokens {
         match token {
             backward_refs::Token::Literal(pixel) => {
                 let [red, green, blue, alpha] = channels(pixel);
