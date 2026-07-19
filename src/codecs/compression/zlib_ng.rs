@@ -103,6 +103,7 @@ struct Level6Matcher {
     head: Vec<usize>,
     previous: Vec<usize>,
     position: usize,
+    window_base: usize,
     tokens: Vec<Token>,
 }
 
@@ -119,6 +120,7 @@ impl Level6Matcher {
             head: vec![0; HASH_SIZE],
             previous: vec![0; WINDOW_MASK + 1],
             position: 0,
+            window_base: 0,
             tokens: Vec::new(),
         }
     }
@@ -126,8 +128,21 @@ impl Level6Matcher {
     fn refill_boundary(&mut self) -> Option<()> {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:1213-1237. fill_window()
         // re-inserts strstart-1 when new input makes a three-byte hash valid.
+        self.slide_window_if_needed()?;
         if self.position >= 1 {
             self.quick_insert(self.position - 1)?;
+        }
+        Some(())
+    }
+
+    fn slide_window_if_needed(&mut self) -> Option<()> {
+        if self.position.checked_sub(self.window_base)? >= 32_768 + MAX_DISTANCE {
+            self.window_base = self.window_base.checked_add(32_768)?;
+            for position in self.head.iter_mut().chain(&mut self.previous) {
+                if *position < self.window_base {
+                    *position = 0;
+                }
+            }
         }
         Some(())
     }
@@ -135,6 +150,7 @@ impl Level6Matcher {
     fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
         let mut following = None::<MediumMatch>;
         loop {
+            self.slide_window_if_needed()?;
             let lookahead = available.checked_sub(self.position)?;
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
                 return Some(());
@@ -147,7 +163,9 @@ impl Level6Matcher {
 
             if lookahead > MIN_LOOKAHEAD
                 && current.start.checked_add(current.length)?
-                    < 65_536usize.checked_sub(MIN_LOOKAHEAD)?
+                    < self
+                        .window_base
+                        .checked_add(65_536usize.checked_sub(MIN_LOOKAHEAD)?)?
             {
                 let future = current.start.checked_add(current.length)?;
                 let mut next = self.find_match(future, lookahead)?;
