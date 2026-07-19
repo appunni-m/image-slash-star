@@ -12,6 +12,7 @@
 
 #![allow(dead_code)]
 
+mod analysis;
 pub mod bool_enc;
 pub mod dct;
 pub mod encoder;

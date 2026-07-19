@@ -50,6 +50,43 @@ pub fn fdct_4x4(block: &[i16; 16]) -> [i16; 16] {
     result
 }
 
+/// Apply libwebp's scaled integer VP8 forward transform to a 4×4 residual block.
+///
+/// This is the transform used by libwebp 1.6.0 for susceptibility analysis and
+/// coefficient generation (`src/dsp/enc.c`, `FTransform_C`, lines 165–194).
+pub fn vp8_fdct_4x4(block: &[i16; 16]) -> [i16; 16] {
+    let mut temporary = [0i32; 16];
+    for row in 0..4 {
+        let offset = row * 4;
+        let d0 = i32::from(block[offset]);
+        let d1 = i32::from(block[offset + 1]);
+        let d2 = i32::from(block[offset + 2]);
+        let d3 = i32::from(block[offset + 3]);
+        let a0 = d0 + d3;
+        let a1 = d1 + d2;
+        let a2 = d1 - d2;
+        let a3 = d0 - d3;
+        temporary[offset] = (a0 + a1) * 8;
+        temporary[offset + 1] = (a2 * 2_217 + a3 * 5_352 + 1_812) >> 9;
+        temporary[offset + 2] = (a0 - a1) * 8;
+        temporary[offset + 3] = (a3 * 2_217 - a2 * 5_352 + 937) >> 9;
+    }
+
+    let mut output = [0i16; 16];
+    for column in 0..4 {
+        let a0 = temporary[column] + temporary[12 + column];
+        let a1 = temporary[4 + column] + temporary[8 + column];
+        let a2 = temporary[4 + column] - temporary[8 + column];
+        let a3 = temporary[column] - temporary[12 + column];
+        output[column] = ((a0 + a1 + 7) >> 4) as i16;
+        output[4 + column] =
+            (((a2 * 2_217 + a3 * 5_352 + 12_000) >> 16) + i32::from(a3 != 0)) as i16;
+        output[8 + column] = ((a0 - a1 + 7) >> 4) as i16;
+        output[12 + column] = ((a3 * 2_217 - a2 * 5_352 + 51_000) >> 16) as i16;
+    }
+    output
+}
+
 /// Compute the inverse 4×4 DCT (for encoder reconstruction loop).
 /// Same separable approach in reverse.
 pub fn idct_4x4(coeffs: &[i16; 16]) -> [i16; 16] {
@@ -210,6 +247,23 @@ pub fn iwht_4x4(block: &[i16; 16]) -> [i16; 16] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vp8_fdct_matches_libwebp_1_6_0() {
+        let source = [
+            0, 17, 64, 255, 9, 31, 127, 240, 15, 80, 160, 220, 255, 200, 100, 0,
+        ];
+        let prediction = [
+            128, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 20, 30, 40,
+        ];
+        let residual = std::array::from_fn(|index| source[index] - prediction[index]);
+        assert_eq!(
+            vp8_fdct_4x4(&residual),
+            [
+                387, -361, 108, -40, -438, -555, 171, -56, -55, 393, 22, -28, -7, -197, -3, -28,
+            ]
+        );
+    }
 
     // ── Helper ──
 

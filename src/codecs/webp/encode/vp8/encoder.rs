@@ -16,7 +16,7 @@
 
 use super::{
     bool_enc::BoolEncoder,
-    dct::{fdct_4x4, wht_4x4},
+    dct::{vp8_fdct_4x4, wht_4x4},
     predict::{MbPredictionMode, choose_luma_mode, predict_chroma_8x8, predict_luma_16x16},
     quant::quality_to_quant_index,
     tokenize::{
@@ -541,7 +541,7 @@ fn compute_macroblock(
                 }
             }
 
-            let coeffs = fdct_4x4(&residual);
+            let coeffs = vp8_fdct_4x4(&residual);
             let mut qcoeffs = [0i16; 16];
             for i in 0..16 {
                 qcoeffs[i] = quantize(coeffs[i], qi, i == 0);
@@ -623,7 +623,7 @@ fn compute_chroma_sub_blocks(
                 }
             }
 
-            let coeffs = fdct_4x4(&residual);
+            let coeffs = vp8_fdct_4x4(&residual);
             let mut qcoeffs = [0i16; 16];
             for i in 0..16 {
                 qcoeffs[i] = quantize_uv(coeffs[i], qi, i == 0);
@@ -750,7 +750,11 @@ fn linear_to_gamma(base_value: u32) -> i32 {
 }
 
 /// Convert RGB bytes to the YUV420 planes produced by libwebp's regular import path.
-fn rgb_to_yuv_planes_internal(rgb: &[u8], width: u32, height: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+pub(super) fn rgb_to_yuv_planes_internal(
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let w = width as usize;
     let h = height as usize;
     let mut y_plane = vec![0u8; w * h];
