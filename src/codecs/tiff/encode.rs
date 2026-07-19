@@ -1,6 +1,6 @@
 //! Classic TIFF encoder with selectable byte order, compression, and predictor.
 
-use crate::compression::deflate::compress_zlib;
+use crate::codecs::compression::deflate::compress_zlib;
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
 

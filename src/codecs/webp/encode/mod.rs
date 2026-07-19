@@ -22,13 +22,13 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>> {
     let (width, height) = (img.width, img.height);
     let color = match img.color {
-        ColorType::Rgb8 => crate::webp_native::ColorType::Rgb8,
-        ColorType::Rgba8 => crate::webp_native::ColorType::Rgba8,
+        ColorType::Rgb8 => super::native::ColorType::Rgb8,
+        ColorType::Rgba8 => super::native::ColorType::Rgba8,
         _ => return None,
     };
 
     let mut out = Cursor::new(Vec::new());
-    let encoder = crate::webp_native::WebPEncoder::new(&mut out);
+    let encoder = super::native::WebPEncoder::new(&mut out);
     encoder.encode(&img.pixels, width, height, color).ok()?;
 
     Some(out.into_inner())

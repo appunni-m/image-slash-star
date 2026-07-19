@@ -5,7 +5,7 @@ use std::io::{self, BufRead, Cursor, Read, Seek};
 use std::num::NonZeroU16;
 use std::ops::Range;
 
-use crate::webp_native::extended::{self, WebPExtendedInfo, get_alpha_predictor, read_alpha_chunk};
+use super::extended::{self, WebPExtendedInfo, get_alpha_predictor, read_alpha_chunk};
 
 use super::lossless::LosslessDecoder;
 use super::vp8::Vp8Decoder;

@@ -1,6 +1,6 @@
 //! Baseline TIFF/BigTIFF-independent decoder for classic TIFF IFDs.
 
-use crate::compression::deflate::decompress_zlib;
+use crate::codecs::compression::deflate::decompress_zlib;
 use crate::types::{ColorType, DecodedImage};
 
 const COMPRESSION_NONE: u64 = 1;

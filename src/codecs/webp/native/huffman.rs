@@ -3,7 +3,7 @@
 
 use std::io::BufRead;
 
-use crate::webp_native::decoder::DecodingError;
+use super::decoder::DecodingError;
 
 use super::lossless::BitReader;
 

@@ -1,4 +1,4 @@
-use crate::webp_native::decoder::DecodingError;
+use super::decoder::DecodingError;
 
 use super::vp8::TreeNode;
 

@@ -5,8 +5,8 @@
 use std::io::BufRead;
 use std::mem;
 
-use crate::webp_native::decoder::DecodingError;
-use crate::webp_native::lossless_transform::{
+use super::decoder::DecodingError;
+use super::lossless_transform::{
     apply_color_indexing_transform, apply_color_transform, apply_predictor_transform,
     apply_subtract_green_transform,
 };

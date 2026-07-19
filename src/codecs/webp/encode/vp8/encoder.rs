@@ -931,7 +931,7 @@ mod tests {
         let rgb = make_rgb(w, h, 128);
         let encoded = encode_vp8_lossy(&rgb, w, h, 75);
 
-        let decoder = crate::webp_native::WebPDecoder::new(Cursor::new(&encoded))
+        let decoder = crate::codecs::webp::native::WebPDecoder::new(Cursor::new(&encoded))
             .expect("WebPDecoder should accept valid VP8 bitstream");
         let (dec_w, dec_h) = decoder.dimensions();
         assert_eq!(dec_w, w, "decoded width matches");
@@ -945,8 +945,8 @@ mod tests {
         let rgb = make_rgb(w, h, 128);
         let encoded = encode_vp8_lossy(&rgb, w, h, 75);
 
-        let mut decoder =
-            crate::webp_native::WebPDecoder::new(Cursor::new(&encoded)).expect("decoder created");
+        let mut decoder = crate::codecs::webp::native::WebPDecoder::new(Cursor::new(&encoded))
+            .expect("decoder created");
         let size = decoder.output_buffer_size().expect("buffer size");
         let mut decoded = vec![0u8; size];
         decoder
@@ -967,7 +967,7 @@ mod tests {
 
     #[test]
     fn test_header_roundtrip_direct() {
-        use crate::encode::webp::vp8::bool_enc::BoolEncoder;
+        use crate::codecs::webp::encode::vp8::bool_enc::BoolEncoder;
         use std::io::Cursor;
 
         // Test with multiple qi values - check if all work
@@ -1002,7 +1002,8 @@ mod tests {
             vp8_data.extend_from_slice(&header_data);
             vp8_data.extend_from_slice(&coeff_data);
 
-            let result = crate::webp_native::vp8::Vp8Decoder::decode_frame(Cursor::new(&vp8_data));
+            let result =
+                crate::codecs::webp::native::vp8::Vp8Decoder::decode_frame(Cursor::new(&vp8_data));
             match &result {
                 Ok(f) => eprintln!(
                     "qi={}: OK {}x{} hdr={}B coeff={}B",
@@ -1079,7 +1080,8 @@ mod tests {
             vp8.extend_from_slice(&header_data);
             vp8.extend_from_slice(&coeff_data);
 
-            let result = crate::webp_native::vp8::Vp8Decoder::decode_frame(Cursor::new(&vp8));
+            let result =
+                crate::codecs::webp::native::vp8::Vp8Decoder::decode_frame(Cursor::new(&vp8));
             if let Err(e) = &result {
                 eprintln!("  q255-qi={}: FAILED {:?}", qi, e);
             } else {
@@ -1178,7 +1180,7 @@ mod tests {
         manual_vp8.extend_from_slice(&manual_header);
         manual_vp8.extend_from_slice(&manual_coeff);
         let manual_result =
-            crate::webp_native::vp8::Vp8Decoder::decode_frame(Cursor::new(&manual_vp8));
+            crate::codecs::webp::native::vp8::Vp8Decoder::decode_frame(Cursor::new(&manual_vp8));
         eprintln!("Manual VP8 decode: {:?}", manual_result.is_ok());
         manual_result.unwrap();
     }
@@ -1189,8 +1191,8 @@ mod tests {
         let h = 16u32;
         let rgb = make_rgb(w, h, 200);
         let encoded = encode_vp8_lossy(&rgb, w, h, 75);
-        let decoder =
-            crate::webp_native::WebPDecoder::new(Cursor::new(&encoded)).expect("decoder created");
+        let decoder = crate::codecs::webp::native::WebPDecoder::new(Cursor::new(&encoded))
+            .expect("decoder created");
         assert!(!decoder.has_alpha(), "lossy VP8 has no alpha");
     }
 
@@ -1200,7 +1202,7 @@ mod tests {
         let h = 32u32;
         let rgb = make_gradient(w, h);
         let encoded = encode_vp8_lossy(&rgb, w, h, 90);
-        let result = crate::webp_native::WebPDecoder::new(Cursor::new(&encoded));
+        let result = crate::codecs::webp::native::WebPDecoder::new(Cursor::new(&encoded));
         assert!(
             result.is_ok(),
             "gradient image should decode, got: {:?}",

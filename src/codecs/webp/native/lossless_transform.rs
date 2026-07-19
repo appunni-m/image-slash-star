@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::webp_native::decoder::DecodingError;
+use super::decoder::DecodingError;
 
 use super::lossless::subsample_size;
 

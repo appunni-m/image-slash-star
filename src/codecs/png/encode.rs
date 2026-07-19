@@ -1,6 +1,6 @@
 //! PNG encoder using the internal zlib/DEFLATE implementation.
 
-use crate::compression::deflate::compress_zlib;
+use crate::codecs::compression::deflate::compress_zlib;
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
 

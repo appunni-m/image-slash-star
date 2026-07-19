@@ -12,7 +12,7 @@ use std::io::Cursor;
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let cursor = Cursor::new(data);
 
-    let mut decoder = crate::webp_native::WebPDecoder::new(cursor).ok()?;
+    let mut decoder = super::native::WebPDecoder::new(cursor).ok()?;
     let (width, height) = decoder.dimensions();
     let has_alpha = decoder.has_alpha();
 

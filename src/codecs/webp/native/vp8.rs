@@ -14,8 +14,8 @@ use super::byteorder_lite::{LittleEndian, ReadBytesExt};
 use std::default::Default;
 use std::io::Read;
 
+use super::decoder::{DecodingError, UpsamplingMethod};
 use super::yuv;
-use crate::webp_native::decoder::{DecodingError, UpsamplingMethod};
 
 use super::vp8_arithmetic_decoder::ArithmeticDecoder;
 use super::{loop_filter, transform};

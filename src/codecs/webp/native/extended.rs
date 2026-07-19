@@ -1,9 +1,9 @@
 use super::byteorder_lite::ReadBytesExt;
+use super::decoder::DecodingError;
 use super::lossless::LosslessDecoder;
-use crate::webp_native::decoder::DecodingError;
 use std::io::{BufRead, Read};
 
-use crate::webp_native::alpha_blending::do_alpha_blending;
+use super::alpha_blending::do_alpha_blending;
 
 #[derive(Debug, Clone)]
 pub(crate) struct WebPExtendedInfo {

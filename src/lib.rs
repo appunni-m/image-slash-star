@@ -25,15 +25,10 @@ use serde as _;
 #[cfg(test)]
 use serde_json as _;
 
+pub mod codecs;
 pub mod decode;
 pub mod encode;
 pub mod types;
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-mod compression;
-
-#[cfg(feature = "webp")]
-mod webp_native;
 
 pub use types::*;
 
@@ -72,12 +67,12 @@ pub fn detect_format(data: &[u8]) -> Option<ImageFormat> {
 /// Auto-detect format and decode image data.
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let format = detect_format(data)?;
-    decode::decode_format(data, format)
+    codecs::decode_format(data, format)
 }
 
 /// Encode a DecodedImage into the specified format with given options.
 pub fn encode(img: &DecodedImage, format: ImageFormat, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    encode::encode_format(img, format, opts)
+    codecs::encode_format(img, format, opts)
 }
 
 /// Encode with default options.

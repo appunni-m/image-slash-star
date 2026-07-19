@@ -113,7 +113,7 @@ fn decode_entry(data: &[u8], index: usize, _count: usize) -> Option<DecodedImage
         // Decode as PNG
         #[cfg(feature = "png")]
         {
-            crate::decode::png::decode(entry_data)
+            crate::codecs::png::decode::decode(entry_data)
         }
         #[cfg(not(feature = "png"))]
         {

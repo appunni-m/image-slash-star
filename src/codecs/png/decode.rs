@@ -1,6 +1,6 @@
 //! PNG decoder implemented from the PNG chunk and filtering specifications.
 
-use crate::compression::deflate::decompress_zlib;
+use crate::codecs::compression::deflate::decompress_zlib;
 use crate::types::{ColorType, DecodedImage};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
