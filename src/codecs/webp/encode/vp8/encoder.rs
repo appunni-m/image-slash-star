@@ -22,7 +22,6 @@ use super::{
     partition::encode_first_partition,
     predict::{MbPredictionMode, choose_luma_mode, predict_chroma_8x8, predict_luma_16x16},
     probability::adapt_coefficients,
-    quant::quality_to_quant_index,
     residual::encode_coefficients,
     tokenize::{
         COEFF_BANDS, COEFF_PROBS, DCT_1, DCT_2, DCT_4, DCT_CAT1, DCT_CAT2, DCT_CAT4, DCT_CAT6,
@@ -1150,7 +1149,7 @@ mod tests {
         let h = 16u32;
         let rgb = make_rgb(w, h, 128);
         let quality = 75u8;
-        let qi = quality_to_quant_index(quality);
+        let qi = super::super::quant::quality_to_quant_index(quality);
 
         // Manual: build VP8 data exactly as encode_vp8_lossy would
         let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(&rgb, w, h);
