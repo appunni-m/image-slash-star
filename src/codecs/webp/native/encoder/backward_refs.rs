@@ -58,7 +58,7 @@ fn fill_hash_chain(pixels: &[u32], width: usize) -> Vec<(usize, usize)> {
                 run = MAX_LENGTH;
             }
             while run > 0 {
-                let key = pixels[position + 1]
+                let key = (run as u32)
                     .wrapping_mul(HASH_MULTIPLIER_HI)
                     .wrapping_add(pixels[position].wrapping_mul(HASH_MULTIPLIER_LO));
                 let hash = (key >> (32 - HASH_BITS)) as usize;
@@ -184,6 +184,37 @@ fn lz77(pixels: &[u32], width: usize, chain: &[(usize, usize)]) -> Vec<Token> {
     refs
 }
 
+fn rle(pixels: &[u32], width: usize) -> Vec<Token> {
+    let mut refs = vec![Token::Literal(pixels[0])];
+    let mut position = 1;
+    while position < pixels.len() {
+        let maximum = MAX_LENGTH.min(pixels.len() - position);
+        let run_length = match_length(pixels, position, position - 1, maximum);
+        let previous_row_length = if position < width {
+            0
+        } else {
+            match_length(pixels, position, position - width, maximum)
+        };
+        if run_length >= previous_row_length && run_length >= MIN_LENGTH {
+            refs.push(Token::Copy {
+                distance: 1,
+                length: run_length,
+            });
+            position += run_length;
+        } else if previous_row_length >= MIN_LENGTH {
+            refs.push(Token::Copy {
+                distance: width,
+                length: previous_row_length,
+            });
+            position += previous_row_length;
+        } else {
+            refs.push(Token::Literal(pixels[position]));
+            position += 1;
+        }
+    }
+    refs
+}
+
 fn color_hash(pixel: u32, bits: u8) -> usize {
     (pixel.wrapping_mul(COLOR_HASH_MUL) >> (32 - bits)) as usize
 }
@@ -231,14 +262,242 @@ fn prefix(value: usize) -> (usize, u8) {
     (2 * highest + second, (highest - 1) as u8)
 }
 
-fn estimated_cost(tokens: &[Token], cache_bits: u8) -> f64 {
+struct CostModel {
+    green: Vec<u32>,
+    red: [u32; 256],
+    blue: [u32; 256],
+    alpha: [u32; 256],
+    distance: [u32; 40],
+}
+
+fn population_estimate(counts: &[u32]) -> f64 {
+    let sum: u32 = counts.iter().sum();
+    let nonzero = counts.iter().filter(|&&count| count != 0).count();
+    let maximum = counts.iter().copied().max().unwrap_or(0);
+    let entropy = if sum == 0 {
+        0.0
+    } else {
+        counts
+            .iter()
+            .filter(|&&count| count != 0)
+            .map(|&count| f64::from(count) * (f64::from(sum) / f64::from(count)).log2())
+            .sum()
+    };
+    let refined = match nonzero {
+        0 | 1 => 0.0,
+        2 => (99.0 * f64::from(sum) + entropy) / 100.0,
+        _ => {
+            let mix = if nonzero == 3 {
+                950.0
+            } else if nonzero == 4 {
+                700.0
+            } else {
+                627.0
+            };
+            let minimum = (mix * f64::from(2 * sum - maximum) + (1000.0 - mix) * entropy) / 1000.0;
+            entropy.max(minimum)
+        }
+    };
+
+    let mut counts_by_kind = [0_u32; 2];
+    let mut streaks = [[0_u32; 2]; 2];
+    let mut start = 0;
+    while start < counts.len() {
+        let value = counts[start];
+        let mut end = start + 1;
+        while end < counts.len() && counts[end] == value {
+            end += 1;
+        }
+        let kind = usize::from(value != 0);
+        let long = usize::from(end - start > 3);
+        counts_by_kind[kind] += u32::from(long != 0);
+        streaks[kind][long] += (end - start) as u32;
+        start = end;
+    }
+    let extra = counts_by_kind[0] * 1600
+        + 240 * streaks[0][1]
+        + counts_by_kind[1] * 2640
+        + 720 * streaks[1][1]
+        + 1840 * streaks[0][0]
+        + 3360 * streaks[1][0];
+    refined + 47.9 + f64::from(extra) / 1024.0
+}
+
+fn fast_slog(value: u32) -> u64 {
+    if value < 256 {
+        (f64::from(value) * f64::from(value).log2() * f64::from(1_u32 << 23)).round_ties_even()
+            as u64
+    } else if value < 65_536 {
+        let log_count = value.ilog2() - 7;
+        let scale = 1_u32 << log_count;
+        let reduced = value >> log_count;
+        let reduced_log =
+            (f64::from(reduced).log2() * f64::from(1_u32 << 23)).round_ties_even() as u32;
+        u64::from(value) * u64::from(reduced_log + (log_count << 23))
+            + 12_102_203_u64 * u64::from(value & (scale - 1))
+    } else {
+        (12_102_203.161_561_485 * f64::from(value) * f64::from(value).ln() + 0.5) as u64
+    }
+}
+
+fn population_estimate_fixed(counts: &[u32]) -> u64 {
+    let sum: u32 = counts.iter().sum();
+    let nonzero = counts.iter().filter(|&&count| count != 0).count();
+    let maximum = counts.iter().copied().max().unwrap_or(0);
+    let entropy = fast_slog(sum)
+        - counts
+            .iter()
+            .copied()
+            .filter(|&count| count != 0)
+            .map(fast_slog)
+            .sum::<u64>();
+    let div_round = |value: u64, divisor: u64| (value + divisor / 2) / divisor;
+    let refined = match nonzero {
+        0 | 1 => 0,
+        2 => div_round(99 * (u64::from(sum) << 23) + entropy, 100),
+        _ => {
+            let mix = if nonzero == 3 {
+                950
+            } else if nonzero == 4 {
+                700
+            } else {
+                627
+            };
+            let minimum = div_round(
+                mix * (u64::from(2 * sum - maximum) << 23) + (1000 - mix) * entropy,
+                1000,
+            );
+            entropy.max(minimum)
+        }
+    };
+
+    let mut counts_by_kind = [0_u32; 2];
+    let mut streaks = [[0_u32; 2]; 2];
+    let mut start = 0;
+    while start < counts.len() {
+        let value = counts[start];
+        let mut end = start + 1;
+        while end < counts.len() && counts[end] == value {
+            end += 1;
+        }
+        let kind = usize::from(value != 0);
+        let long = usize::from(end - start > 3);
+        counts_by_kind[kind] += u32::from(long != 0);
+        streaks[kind][long] += (end - start) as u32;
+        start = end;
+    }
+    let extra = counts_by_kind[0] * 1600
+        + 240 * streaks[0][1]
+        + counts_by_kind[1] * 2640
+        + 720 * streaks[1][1]
+        + 1840 * streaks[0][0]
+        + 3360 * streaks[1][0];
+    let initial = (57_u64 << 23) - div_round(91_u64 << 23, 10);
+    refined + initial + (u64::from(extra) << 13)
+}
+
+pub(super) fn estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
     let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
     let mut green = vec![0_u32; 280 + cache_size];
     let mut red = [0_u32; 256];
     let mut blue = [0_u32; 256];
     let mut alpha = [0_u32; 256];
     let mut distance = [0_u32; 40];
-    let mut extra = 0_u64;
+    let mut extra = 0_u32;
+    for &token in tokens {
+        match token {
+            Token::Literal(pixel) => {
+                let [r, g, b, a] = super::channels(pixel);
+                green[g] += 1;
+                red[r] += 1;
+                blue[b] += 1;
+                alpha[a] += 1;
+            }
+            Token::Copy {
+                distance: d,
+                length,
+            } => {
+                let (length_symbol, length_extra) = prefix(length);
+                let (distance_symbol, distance_extra) = prefix(d);
+                green[256 + length_symbol] += 1;
+                distance[distance_symbol] += 1;
+                extra += u32::from(length_extra + distance_extra);
+            }
+            Token::Cache(index) => green[280 + index] += 1,
+        }
+    }
+    population_estimate_fixed(&green)
+        + population_estimate_fixed(&red)
+        + population_estimate_fixed(&blue)
+        + population_estimate_fixed(&alpha)
+        + population_estimate_fixed(&distance)
+        + (u64::from(extra) << 23)
+}
+
+fn cache_estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
+    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+    let mut green = vec![0_u32; 280 + cache_size];
+    let mut red = [0_u32; 256];
+    let mut blue = [0_u32; 256];
+    let mut alpha = [0_u32; 256];
+    for &token in tokens {
+        match token {
+            Token::Literal(pixel) => {
+                let [r, g, b, a] = super::channels(pixel);
+                green[g] += 1;
+                red[r] += 1;
+                blue[b] += 1;
+                alpha[a] += 1;
+            }
+            Token::Copy { length, .. } => green[256 + prefix(length).0] += 1,
+            Token::Cache(index) => green[280 + index] += 1,
+        }
+    }
+    population_estimate_fixed(&green)
+        + population_estimate_fixed(&red)
+        + population_estimate_fixed(&blue)
+        + population_estimate_fixed(&alpha)
+}
+
+fn population_cost(counts: &[u32]) -> Vec<u32> {
+    let sum: u32 = counts.iter().sum();
+    if counts.iter().filter(|&&count| count != 0).count() <= 1 {
+        return vec![0; counts.len()];
+    }
+    let fast_log = |value: u32| -> u32 {
+        if value == 0 {
+            0
+        } else if value < 256 {
+            (f64::from(value).log2() * f64::from(1_u32 << 23)).round() as u32
+        } else if value < 65_536 {
+            let log_count = value.ilog2() - 7;
+            let scale = 1_u32 << log_count;
+            let reduced = value >> log_count;
+            let mut result = (f64::from(reduced).log2() * f64::from(1_u32 << 23)).round() as u32
+                + (log_count << 23);
+            if value >= 4096 {
+                let correction = 12_102_203_u64 * u64::from(value & (scale - 1));
+                result += ((correction + u64::from(value) / 2) / u64::from(value)) as u32;
+            }
+            result
+        } else {
+            (12_102_203.161_561_485 * f64::from(value).ln() + 0.5) as u32
+        }
+    };
+    let log_sum = fast_log(sum);
+    counts
+        .iter()
+        .map(|&count| log_sum - fast_log(count))
+        .collect()
+}
+
+fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
+    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+    let mut green = vec![0_u32; 280 + cache_size];
+    let mut red = [0_u32; 256];
+    let mut blue = [0_u32; 256];
+    let mut alpha = [0_u32; 256];
+    let mut distance = [0_u32; 40];
     for &token in tokens {
         match token {
             Token::Literal(pixel) => {
@@ -253,35 +512,130 @@ fn estimated_cost(tokens: &[Token], cache_bits: u8) -> f64 {
                 length,
             } => {
                 let (length_code, length_extra) = prefix(length);
-                let (distance_code, distance_extra) = prefix(d);
+                let (distance_code, distance_extra) = prefix(plane_code(width, d));
                 green[256 + length_code] += 1;
                 distance[distance_code] += 1;
-                extra += u64::from(length_extra + distance_extra);
+                let _ = (length_extra, distance_extra);
             }
             Token::Cache(index) => green[280 + index] += 1,
         }
     }
-    fn entropy(values: &[u32]) -> f64 {
-        let total: u32 = values.iter().sum();
-        if total == 0 {
-            return 0.0;
-        }
-        let total = f64::from(total);
-        values
-            .iter()
-            .filter(|&&value| value != 0)
-            .map(|&value| {
-                let value = f64::from(value);
-                value * (total / value).log2()
-            })
-            .sum()
+    CostModel {
+        green: population_cost(&green),
+        red: population_cost(&red).try_into().unwrap(),
+        blue: population_cost(&blue).try_into().unwrap(),
+        alpha: population_cost(&alpha).try_into().unwrap(),
+        distance: population_cost(&distance).try_into().unwrap(),
     }
-    entropy(&green)
-        + entropy(&red)
-        + entropy(&blue)
-        + entropy(&alpha)
-        + entropy(&distance)
-        + extra as f64
+}
+
+fn trace_backwards(
+    pixels: &[u32],
+    width: usize,
+    chain: &[(usize, usize)],
+    source: &[Token],
+    cache_bits: u8,
+) -> Vec<Token> {
+    const SCALE: i64 = 1 << 23;
+    let model = cost_model(source, cache_bits, width);
+    let mut costs = vec![i64::MAX; pixels.len()];
+    let mut lengths = vec![1_usize; pixels.len()];
+    let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
+
+    for position in 0..pixels.len() {
+        let previous_cost = if position == 0 {
+            0
+        } else {
+            costs[position - 1]
+        };
+        let pixel = pixels[position];
+        let cache_index = (cache_bits != 0).then(|| color_hash(pixel, cache_bits));
+        let literal_cost = if let Some(index) = cache_index.filter(|&index| cache[index] == pixel) {
+            (i64::from(model.green[280 + index]) * 68 + 50) / 100
+        } else {
+            if let Some(index) = cache_index {
+                cache[index] = pixel;
+            }
+            let [red, green, blue, alpha] = super::channels(pixel);
+            let cost = i64::from(model.green[green])
+                + i64::from(model.red[red])
+                + i64::from(model.blue[blue])
+                + i64::from(model.alpha[alpha]);
+            (cost * 82 + 50) / 100
+        };
+        let candidate = previous_cost + literal_cost;
+        if candidate < costs[position] {
+            costs[position] = candidate;
+            lengths[position] = 1;
+        }
+
+        let (distance, maximum_length) = chain[position];
+        if maximum_length >= 2 {
+            let plane_distance = plane_code(width, distance);
+            let (distance_symbol, distance_extra) = prefix(plane_distance);
+            let distance_cost =
+                i64::from(model.distance[distance_symbol]) + i64::from(distance_extra) * SCALE;
+            for length in 1..=maximum_length {
+                let end = position + length - 1;
+                let (length_symbol, length_extra) = prefix(length);
+                let candidate = previous_cost
+                    + distance_cost
+                    + i64::from(model.green[256 + length_symbol])
+                    + i64::from(length_extra) * SCALE;
+                if candidate < costs[end] {
+                    costs[end] = candidate;
+                    lengths[end] = length;
+                }
+            }
+        }
+    }
+
+    let mut path = Vec::new();
+    let mut end = pixels.len();
+    while end != 0 {
+        let length = lengths[end - 1];
+        path.push(length);
+        end -= length;
+    }
+    path.reverse();
+
+    let mut output = Vec::with_capacity(path.len());
+    let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
+    let mut position = 0;
+    for length in path {
+        if length == 1 {
+            let pixel = pixels[position];
+            if cache_bits != 0 {
+                let index = color_hash(pixel, cache_bits);
+                if cache[index] == pixel {
+                    output.push(Token::Cache(index));
+                } else {
+                    cache[index] = pixel;
+                    output.push(Token::Literal(pixel));
+                }
+            } else {
+                output.push(Token::Literal(pixel));
+            }
+        } else {
+            output.push(Token::Copy {
+                distance: chain[position].0,
+                length,
+            });
+            if cache_bits != 0 {
+                for &pixel in &pixels[position..position + length] {
+                    let index = color_hash(pixel, cache_bits);
+                    cache[index] = pixel;
+                }
+            }
+        }
+        position += length;
+    }
+    output
+}
+
+pub(super) fn trace(pixels: &[u32], width: usize, source: &[Token], cache_bits: u8) -> Vec<Token> {
+    let chain = fill_hash_chain(pixels, width);
+    trace_backwards(pixels, width, &chain, source, cache_bits)
 }
 
 pub(super) fn candidates(pixels: &[u32], width: usize, allow_cache: bool) -> Vec<(Vec<Token>, u8)> {
@@ -290,13 +644,24 @@ pub(super) fn candidates(pixels: &[u32], width: usize, allow_cache: bool) -> Vec
     }
     let chain = fill_hash_chain(pixels, width);
     let refs = lz77(pixels, width, &chain);
+    let refs_rle = rle(pixels, width);
     if !allow_cache {
-        return vec![(refs, 0)];
+        return vec![(refs, 0), (refs_rle, 0)];
     }
-    let mut candidates = vec![(refs.clone(), 0)];
-    for bits in 1..=11 {
-        candidates.push((with_cache(pixels, &refs, bits), bits));
-    }
+    let candidates: Vec<_> = [refs, refs_rle]
+        .into_iter()
+        .map(|source| {
+            (0..=11)
+                .map(|bits| {
+                    let cached = with_cache(pixels, &source, bits);
+                    let cost = cache_estimated_bits(&cached, bits);
+                    (cached, bits, cost)
+                })
+                .min_by_key(|candidate| candidate.2)
+                .map(|(tokens, bits, _)| (tokens, bits))
+                .unwrap()
+        })
+        .collect();
     candidates
 }
 

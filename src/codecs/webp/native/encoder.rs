@@ -541,27 +541,19 @@ fn write_image_stream<W: Write>(
     write_meta_huffman_bit: bool,
 ) -> io::Result<()> {
     let candidates = backward_refs::candidates(pixels, width, write_meta_huffman_bit);
-    let (tokens, cache_bits) = candidates
+    let token_cost = |tokens: &[backward_refs::Token], cache_bits: u8| {
+        backward_refs::estimated_bits(tokens, cache_bits)
+    };
+    let (mut tokens, cache_bits) = candidates
         .into_iter()
-        .min_by_key(|(tokens, cache_bits)| {
-            let mut encoded = Vec::new();
-            let mut candidate_writer = BitWriter {
-                writer: &mut encoded,
-                buffer: 0,
-                nbits: 0,
-            };
-            write_token_stream(
-                &mut candidate_writer,
-                pixels,
-                width,
-                write_meta_huffman_bit,
-                tokens,
-                *cache_bits,
-            )
-            .and_then(|()| candidate_writer.flush())
-            .map_or(usize::MAX, |()| encoded.len())
-        })
+        .min_by_key(|(tokens, cache_bits)| token_cost(tokens, *cache_bits))
         .unwrap();
+    if write_meta_huffman_bit {
+        let traced = backward_refs::trace(pixels, width, &tokens, cache_bits);
+        if token_cost(&traced, cache_bits) < token_cost(&tokens, cache_bits) {
+            tokens = traced;
+        }
+    }
     write_token_stream(
         w,
         pixels,
