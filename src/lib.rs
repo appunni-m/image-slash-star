@@ -15,7 +15,8 @@
 //! dependency, no native libraries are linked, and the crate works on WASM.
 //!
 //! Architecture:
-//!   &[u8] → decode() → DecodedImage { width, height, pixels, color }
+//!   &[u8] → decode() → DecodedImage { dimensions, pixels, mode, palette }
+//!   &[u8] → decode_sequence() → DecodedSequence { frames, timing, disposal }
 //!   pillow-rs wraps DecodedImage into DynamicImage/Image::Loaded.
 
 // Integration-test-only dependencies are still visible while Cargo builds the
@@ -70,9 +71,24 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     codecs::decode_format(data, format)
 }
 
+/// Auto-detect the format and decode all retained image frames.
+pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
+    let format = detect_format(data)?;
+    codecs::decode_sequence_format(data, format)
+}
+
 /// Encode a DecodedImage into the specified format with given options.
 pub fn encode(img: &DecodedImage, format: ImageFormat, opts: &EncodeOptions) -> Option<Vec<u8>> {
     codecs::encode_format(img, format, opts)
+}
+
+/// Encode a still image or animation while retaining every source frame.
+pub fn encode_sequence(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+) -> Option<Vec<u8>> {
+    codecs::encode_sequence_format(sequence, format, opts)
 }
 
 /// Encode with default options.

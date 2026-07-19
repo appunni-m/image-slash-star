@@ -1,7 +1,7 @@
 //! PNG decoder implemented from the PNG chunk and filtering specifications.
 
 use crate::codecs::compression::deflate::decompress_zlib;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const ADAM7: [(usize, usize, usize, usize); 7] = [
@@ -40,10 +40,14 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     let mut compressed = Vec::new();
+    let mut palette_rgb = None;
+    let mut palette_alpha = Vec::new();
     let mut saw_end = false;
     for chunk in chunks {
         match &chunk.kind {
             b"IDAT" => compressed.extend_from_slice(chunk.data),
+            b"PLTE" if palette_rgb.is_none() => palette_rgb = Some(chunk.data.to_vec()),
+            b"tRNS" if palette_alpha.is_empty() => palette_alpha.extend_from_slice(chunk.data),
             b"IEND" => {
                 saw_end = true;
                 break;
@@ -63,7 +67,15 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     let samples = decode_scanlines(&inflated, width, height, channels, depth, interlace)?;
-    build_image(width, height, png_color, depth, &samples)
+    build_image(
+        width,
+        height,
+        png_color,
+        depth,
+        &samples,
+        palette_rgb,
+        palette_alpha,
+    )
 }
 
 fn valid_color_depth(color: u8, depth: u8) -> bool {
@@ -269,6 +281,8 @@ fn build_image(
     png_color: u8,
     depth: u8,
     samples: &[u16],
+    palette_rgb: Option<Vec<u8>>,
+    mut palette_alpha: Vec<u8>,
 ) -> Option<DecodedImage> {
     let color = match (png_color, depth) {
         (0, 16) => ColorType::L16,
@@ -306,7 +320,24 @@ fn build_image(
         }
         bytes
     };
-    Some(DecodedImage::new(width, height, pixels, color))
+    let mode = match (png_color, depth) {
+        (0, 1) => ImageMode::L1,
+        (3, _) => ImageMode::P8,
+        _ => color.into(),
+    };
+    let mut image = DecodedImage::with_mode(width, height, pixels, mode);
+    if png_color == 3 {
+        let rgb = palette_rgb?;
+        let entries = rgb.len() / 3;
+        if !palette_alpha.is_empty() {
+            if palette_alpha.len() > entries {
+                return None;
+            }
+            palette_alpha.resize(entries, 255);
+        }
+        image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
+    }
+    Some(image)
 }
 
 fn pack_one_bit(samples: &[u16], width: usize, height: usize) -> Option<Vec<u8>> {

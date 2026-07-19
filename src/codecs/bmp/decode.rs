@@ -8,7 +8,7 @@
 //! - 4‑byte row padding
 //! - Palette (color table)
 
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
 // ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         0
     };
 
-    let _palette = if pal_count > 0 {
+    let palette = if pal_count > 0 {
         read_palette(&mut r, pal_count)?
     } else {
         Vec::new()
@@ -494,7 +494,20 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         ColorType::Rgb8
     };
 
-    Some(DecodedImage::new(w, h, pixels, color))
+    let mode = match bit_depth {
+        1 => ImageMode::L1,
+        2 | 4 | 8 => ImageMode::P8,
+        _ => color.into(),
+    };
+    let mut image = DecodedImage::with_mode(w, h, pixels, mode);
+    if mode == ImageMode::P8 {
+        let mut rgb = Vec::with_capacity(palette.len().checked_mul(3)?);
+        for entry in palette {
+            rgb.extend_from_slice(&[entry[2], entry[1], entry[0]]);
+        }
+        image = image.with_palette(ImagePalette::new(rgb, Vec::new()).ok()?);
+    }
+    Some(image)
 }
 
 fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Option<Vec<u8>> {

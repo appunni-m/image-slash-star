@@ -5,7 +5,7 @@
 //! - `Rgb8`: quantized to a 256-color palette
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode};
 use std::collections::HashMap;
 
 const GIF_TRAILER: u8 = 0x3b;
@@ -21,15 +21,63 @@ const MAX_LZW_CODE: u16 = 4095;
 ///
 /// Returns `None` for unsupported color types or images with no pixels.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let w = u16::try_from(img.width).ok()?;
-    let h = u16::try_from(img.height).ok()?;
-    if w == 0 || h == 0 {
+    encode_sequence(&DecodedSequence::from_image(img.clone()), opts)
+}
+
+/// Encode a still image or animation without discarding source frames.
+pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Option<Vec<u8>> {
+    sequence.validate().ok()?;
+    let animated = option_bool(opts, "animated").unwrap_or(sequence.frames.len() > 1);
+    let requested_frames = if animated {
+        option_u16(opts, "frames")
+            .map(usize::from)
+            .unwrap_or(sequence.frames.len())
+    } else {
+        1
+    };
+    if requested_frames == 0 || requested_frames > sequence.frames.len() {
         return None;
     }
 
-    let (palette, indices, mut transparent) = match img.color {
-        ColorType::L8 => {
-            if img.pixels.len() != usize::from(w).checked_mul(usize::from(h))? {
+    let disposal_override = opts.extra.get("disposal").map(String::as_str);
+    let disposal_override = match disposal_override {
+        Some(value) => Some(parse_disposal(value)?),
+        None => None,
+    };
+    let loop_count = match parse_loop_count(opts)? {
+        Some(value) => Some(value),
+        None => sequence
+            .loop_count
+            .and_then(|value| u16::try_from(value).ok()),
+    };
+    let settings = GifSettings {
+        interlaced: opts.interlace,
+        local_color_table: opts
+            .extra
+            .get("color_table")
+            .is_some_and(|value| value == "local"),
+        disposal_override,
+        loop_count,
+    };
+    write_gif(sequence, requested_frames, opts, settings)
+}
+
+fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
+    let (palette, indices, transparent) = match (img.mode, img.color) {
+        (ImageMode::P8, ColorType::L8) => {
+            let palette = img.palette.as_ref()?;
+            let transparent = palette.alpha.iter().position(|&alpha| alpha == 0);
+            (
+                palette.rgb.clone(),
+                img.pixels.clone(),
+                transparent.and_then(|index| u8::try_from(index).ok()),
+            )
+        }
+        (ImageMode::L8, ColorType::L8) => {
+            let pixel_count = usize::try_from(img.width)
+                .ok()?
+                .checked_mul(usize::try_from(img.height).ok()?)?;
+            if img.pixels.len() != pixel_count {
                 return None;
             }
             let mut palette = Vec::with_capacity(256 * 3);
@@ -39,50 +87,41 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             }
             (palette, img.pixels.clone(), None)
         }
-        ColorType::Rgb8 => {
+        (ImageMode::Rgb8, ColorType::Rgb8) => {
             let (palette, indices) = quantize_rgb(&img.pixels)?;
             (palette, indices, None)
         }
-        ColorType::Rgba8 => {
+        (ImageMode::Rgba8, ColorType::Rgba8) => {
             let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels);
             (palette, indices, transparent_idx)
         }
         _ => return None,
     };
-
-    let pixel_count = usize::from(w).checked_mul(usize::from(h))?;
+    let pixel_count = usize::try_from(img.width)
+        .ok()?
+        .checked_mul(usize::try_from(img.height).ok()?)?;
     if indices.len() != pixel_count {
         return None;
     }
-    if let Some(requested) = option_bool(opts, "transparency") {
-        transparent = requested.then_some(transparent.unwrap_or(0));
-    }
-    let animated = option_bool(opts, "animated").unwrap_or(false);
-    let frames = if animated {
-        option_u16(opts, "frames").unwrap_or(2).max(2)
-    } else {
-        1
-    };
-    let settings = GifSettings {
-        interlaced: opts.interlace.unwrap_or(false),
-        local_color_table: opts
-            .extra
-            .get("color_table")
-            .is_some_and(|value| value == "local"),
-        disposal: parse_disposal(opts.extra.get("disposal").map(String::as_str))?,
-        frames,
-        loop_count: parse_loop_count(opts)?,
-    };
-    write_gif(w, h, &palette, &indices, transparent, settings)
+    Some(PreparedImage {
+        palette,
+        indices,
+        transparent,
+    })
 }
 
 #[derive(Clone, Copy)]
 struct GifSettings {
-    interlaced: bool,
+    interlaced: Option<bool>,
     local_color_table: bool,
-    disposal: u8,
-    frames: u16,
+    disposal_override: Option<u8>,
     loop_count: Option<u16>,
+}
+
+struct PreparedImage {
+    palette: Vec<u8>,
+    indices: Vec<u8>,
+    transparent: Option<u8>,
 }
 
 fn option_bool(opts: &EncodeOptions, key: &str) -> Option<bool> {
@@ -97,12 +136,13 @@ fn option_u16(opts: &EncodeOptions, key: &str) -> Option<u16> {
     opts.extra.get(key)?.parse().ok()
 }
 
-fn parse_disposal(value: Option<&str>) -> Option<u8> {
+fn parse_disposal(value: &str) -> Option<u8> {
     match value {
-        None | Some("none" | "0" | "1") => Some(0),
-        Some("background" | "2") => Some(2),
-        Some("previous" | "3") => Some(3),
-        Some(_) => None,
+        "none" | "0" => Some(0),
+        "keep" | "1" => Some(1),
+        "background" | "2" => Some(2),
+        "previous" | "3" => Some(3),
+        _ => None,
     }
 }
 
@@ -117,41 +157,54 @@ fn parse_loop_count(opts: &EncodeOptions) -> Option<Option<u16>> {
     }
 }
 
-fn write_gif(
-    width: u16,
-    height: u16,
-    palette: &[u8],
-    indices: &[u8],
-    transparent: Option<u8>,
-    settings: GifSettings,
-) -> Option<Vec<u8>> {
+fn frame_disposal(disposal: FrameDisposal) -> u8 {
+    match disposal {
+        FrameDisposal::Unspecified => 0,
+        FrameDisposal::Keep => 1,
+        FrameDisposal::Background => 2,
+        FrameDisposal::Previous => 3,
+    }
+}
+
+fn table_parameters(palette: &[u8]) -> Option<(usize, u8, u8)> {
     if palette.is_empty() || !palette.len().is_multiple_of(3) || palette.len() > 256 * 3 {
         return None;
     }
-
     let color_count = (palette.len() / 3).max(2).next_power_of_two();
     let table_bits = usize::BITS - color_count.leading_zeros() - 1;
     let size_field = u8::try_from(table_bits.checked_sub(1)?).ok()?;
     let minimum_code_size = u8::try_from(table_bits.max(2)).ok()?;
-    let encoded_indices = if settings.interlaced {
-        interlace(indices, usize::from(width), usize::from(height))?
-    } else {
-        indices.to_vec()
-    };
-    let compressed = encode_lzw(&encoded_indices, minimum_code_size)?;
+    Some((color_count, size_field, minimum_code_size))
+}
 
+fn write_gif(
+    sequence: &DecodedSequence,
+    frame_count: usize,
+    opts: &EncodeOptions,
+    settings: GifSettings,
+) -> Option<Vec<u8>> {
+    let width = u16::try_from(sequence.width).ok()?;
+    let height = u16::try_from(sequence.height).ok()?;
+    let first = prepare_image(&sequence.frames.first()?.image)?;
+    let (global_count, global_size, _) = table_parameters(&first.palette)?;
+    let global_table = !settings.local_color_table;
+
+    let needs_89a = frame_count > 1
+        || settings.loop_count.is_some()
+        || sequence.frames.iter().take(frame_count).any(|frame| {
+            prepare_image(&frame.image).is_some_and(|image| image.transparent.is_some())
+        });
     let mut output = Vec::new();
-    output.extend_from_slice(b"GIF89a");
+    output.extend_from_slice(if needs_89a { b"GIF89a" } else { b"GIF87a" });
     output.extend_from_slice(&width.to_le_bytes());
     output.extend_from_slice(&height.to_le_bytes());
-    let global_table = !settings.local_color_table;
-    output.push(u8::from(global_table) << 7 | 0x70 | size_field);
+    output.push(u8::from(global_table) << 7 | global_size);
     output.extend_from_slice(&[0, 0]); // Background index and pixel aspect ratio.
     if global_table {
-        write_color_table(&mut output, palette, color_count)?;
+        write_color_table(&mut output, &first.palette, global_count)?;
     }
 
-    if settings.frames > 1
+    if frame_count > 1
         && let Some(loop_count) = settings.loop_count
     {
         output.extend_from_slice(&[
@@ -176,32 +229,51 @@ fn write_gif(
         output.push(0);
     }
 
-    for _ in 0..settings.frames {
-        if transparent.is_some() || settings.disposal != 0 {
+    for frame in sequence.frames.iter().take(frame_count) {
+        let prepared = prepare_image(&frame.image)?;
+        let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette)?;
+        let mut transparent = prepared.transparent;
+        if let Some(requested) = option_bool(opts, "transparency") {
+            transparent = requested.then_some(transparent.unwrap_or(0));
+        }
+        let disposal = settings
+            .disposal_override
+            .unwrap_or_else(|| frame_disposal(frame.disposal));
+        let delay_cs = u16::try_from(frame.duration_ms / 10).ok()?;
+        if transparent.is_some() || disposal != 0 || delay_cs != 0 {
             output.extend_from_slice(&[
                 EXTENSION_INTRODUCER,
                 GRAPHIC_CONTROL_LABEL,
                 0x04,
-                settings.disposal << 2 | u8::from(transparent.is_some()),
-                0x00,
-                0x00,
-                transparent.unwrap_or(0),
-                0x00,
+                disposal << 2 | u8::from(transparent.is_some()),
             ]);
+            output.extend_from_slice(&delay_cs.to_le_bytes());
+            output.extend_from_slice(&[transparent.unwrap_or(0), 0]);
         }
 
         output.push(IMAGE_SEPARATOR);
-        output.extend_from_slice(&[0, 0, 0, 0]); // Left and top.
-        output.extend_from_slice(&width.to_le_bytes());
-        output.extend_from_slice(&height.to_le_bytes());
-        output.push(
-            u8::from(settings.local_color_table) << 7
-                | u8::from(settings.interlaced) << 6
-                | size_field,
-        );
-        if settings.local_color_table {
-            write_color_table(&mut output, palette, color_count)?;
+        output.extend_from_slice(&u16::try_from(frame.left).ok()?.to_le_bytes());
+        output.extend_from_slice(&u16::try_from(frame.top).ok()?.to_le_bytes());
+        let frame_width = u16::try_from(frame.image.width).ok()?;
+        let frame_height = u16::try_from(frame.image.height).ok()?;
+        output.extend_from_slice(&frame_width.to_le_bytes());
+        output.extend_from_slice(&frame_height.to_le_bytes());
+        let local_table = !global_table || prepared.palette != first.palette;
+        let interlaced = settings.interlaced.unwrap_or(frame.interlaced);
+        output.push(u8::from(local_table) << 7 | u8::from(interlaced) << 6 | size_field);
+        if local_table {
+            write_color_table(&mut output, &prepared.palette, color_count)?;
         }
+        let encoded_indices = if interlaced {
+            interlace(
+                &prepared.indices,
+                usize::from(frame_width),
+                usize::from(frame_height),
+            )?
+        } else {
+            prepared.indices
+        };
+        let compressed = encode_lzw(&encoded_indices, minimum_code_size)?;
         output.push(minimum_code_size);
         write_sub_blocks(&mut output, &compressed);
     }

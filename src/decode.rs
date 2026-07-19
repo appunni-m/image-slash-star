@@ -1,6 +1,6 @@
 //! Compatibility facade for the format-first codec modules.
 
-pub use crate::codecs::decode_format;
+pub use crate::codecs::{decode_format, decode_sequence_format};
 
 #[cfg(feature = "avif")]
 pub use crate::codecs::avif::decode as avif;

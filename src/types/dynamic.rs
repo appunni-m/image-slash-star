@@ -1012,6 +1012,8 @@ impl DynamicImage {
             height: self.height(),
             pixels: self.as_bytes().to_vec(),
             color: self.color(),
+            mode: self.color().into(),
+            palette: None,
         }
     }
 
@@ -1019,6 +1021,9 @@ impl DynamicImage {
     #[must_use]
     pub fn from_decoded(d: &DecodedImage) -> Option<DynamicImage> {
         use ColorType::*;
+        if d.mode != d.color.into() || d.palette.is_some() {
+            return None;
+        }
         let img = match d.color {
             L8 => {
                 DynamicImage::ImageLuma8(GrayImage::from_raw(d.width, d.height, d.pixels.clone())?)

@@ -1,10 +1,11 @@
-//! GIF87a/GIF89a first-frame decoder.
+//! GIF87a/GIF89a still-image and animation decoder.
 //!
-//! The decoder returns palette indices rather than expanding the palette. This
-//! matches Pillow's raw bytes for `P` mode images and keeps palette metadata out
-//! of the format-independent [`DecodedImage`] type.
+//! Frames retain palette indices, palette tables, timing, offsets, disposal,
+//! and loop metadata required for deterministic re-encoding.
 
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{
+    DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageMode, ImagePalette,
+};
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
@@ -13,40 +14,138 @@ const MAX_LZW_CODE: usize = 4096;
 
 /// Decode the first image frame in a GIF87a or GIF89a stream.
 ///
-/// Parsing follows GIF89a sections 18–23. Extensions are skipped because they
-/// do not change the raw palette indices returned for the first frame.
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
+    decode_sequence(data)?
+        .frames
+        .into_iter()
+        .next()
+        .map(|frame| frame.image)
+}
+
+/// Decode every image descriptor and its presentation metadata.
+pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     let mut input = Input::new(data);
     let signature = input.read_bytes(6)?;
     if signature != b"GIF87a" && signature != b"GIF89a" {
         return None;
     }
 
-    let _logical_width = input.read_u16()?;
-    let _logical_height = input.read_u16()?;
+    let logical_width = input.read_u16()?;
+    let logical_height = input.read_u16()?;
+    if logical_width == 0 || logical_height == 0 {
+        return None;
+    }
     let packed = input.read_u8()?;
     input.skip(2)?; // Background color index and pixel aspect ratio.
 
-    if packed & 0x80 != 0 {
-        input.skip(color_table_len(packed)?)?;
-    }
+    let global_palette = if packed & 0x80 != 0 {
+        Some(input.read_bytes(color_table_len(packed)?)?.to_vec())
+    } else {
+        None
+    };
+    let mut graphic_control = GraphicControl::default();
+    let mut frames = Vec::new();
+    let mut loop_count = None;
 
     loop {
         match input.read_u8()? {
             EXTENSION_INTRODUCER => {
-                input.read_u8()?; // Extension label.
-                input.skip_sub_blocks()?;
+                let label = input.read_u8()?;
+                if label == 0xf9 {
+                    graphic_control = read_graphic_control(&mut input)?;
+                } else if label == 0xff {
+                    let identifier_len = usize::from(input.read_u8()?);
+                    let identifier = input.read_bytes(identifier_len)?;
+                    let payload = input.read_sub_blocks()?;
+                    if matches!(identifier, b"NETSCAPE2.0" | b"ANIMEXTS1.0")
+                        && payload.first() == Some(&1)
+                    {
+                        let bytes: [u8; 2] = payload.get(1..3)?.try_into().ok()?;
+                        loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
+                    }
+                } else {
+                    input.skip_sub_blocks()?;
+                }
             }
-            IMAGE_SEPARATOR => return decode_image(&mut input),
-            TRAILER => return None,
+            IMAGE_SEPARATOR => {
+                let (image, left, top, interlaced) = decode_image(
+                    &mut input,
+                    global_palette.as_deref(),
+                    graphic_control.transparent_index,
+                )?;
+                frames.push(DecodedFrame {
+                    image,
+                    left: u32::from(left),
+                    top: u32::from(top),
+                    duration_ms: u32::from(graphic_control.delay_cs).checked_mul(10)?,
+                    disposal: graphic_control.disposal,
+                    interlaced,
+                });
+                graphic_control = GraphicControl::default();
+            }
+            TRAILER => break,
             _ => return None,
+        }
+    }
+
+    let sequence = DecodedSequence {
+        width: u32::from(logical_width),
+        height: u32::from(logical_height),
+        frames,
+        loop_count,
+    };
+    sequence.validate().ok()?;
+    Some(sequence)
+}
+
+#[derive(Clone, Copy)]
+struct GraphicControl {
+    delay_cs: u16,
+    transparent_index: Option<u8>,
+    disposal: FrameDisposal,
+}
+
+impl Default for GraphicControl {
+    fn default() -> Self {
+        Self {
+            delay_cs: 0,
+            transparent_index: None,
+            disposal: FrameDisposal::Unspecified,
         }
     }
 }
 
-fn decode_image(input: &mut Input<'_>) -> Option<DecodedImage> {
-    let _left = input.read_u16()?;
-    let _top = input.read_u16()?;
+fn read_graphic_control(input: &mut Input<'_>) -> Option<GraphicControl> {
+    if input.read_u8()? != 4 {
+        return None;
+    }
+    let packed = input.read_u8()?;
+    let delay_cs = input.read_u16()?;
+    let index = input.read_u8()?;
+    if input.read_u8()? != 0 {
+        return None;
+    }
+    let disposal = match (packed >> 2) & 7 {
+        0 => FrameDisposal::Unspecified,
+        1 => FrameDisposal::Keep,
+        2 => FrameDisposal::Background,
+        3 => FrameDisposal::Previous,
+        _ => return None,
+    };
+    Some(GraphicControl {
+        delay_cs,
+        transparent_index: (packed & 1 != 0).then_some(index),
+        disposal,
+    })
+}
+
+fn decode_image(
+    input: &mut Input<'_>,
+    global_palette: Option<&[u8]>,
+    transparent_index: Option<u8>,
+) -> Option<(DecodedImage, u16, u16, bool)> {
+    let left = input.read_u16()?;
+    let top = input.read_u16()?;
     let width = input.read_u16()?;
     let height = input.read_u16()?;
     if width == 0 || height == 0 {
@@ -54,25 +153,37 @@ fn decode_image(input: &mut Input<'_>) -> Option<DecodedImage> {
     }
 
     let packed = input.read_u8()?;
-    if packed & 0x80 != 0 {
-        input.skip(color_table_len(packed)?)?;
-    }
+    let interlaced = packed & 0x40 != 0;
+    let local_palette = if packed & 0x80 != 0 {
+        Some(input.read_bytes(color_table_len(packed)?)?)
+    } else {
+        None
+    };
+    let palette_rgb = local_palette.or(global_palette)?;
 
     let minimum_code_size = input.read_u8()?;
     let compressed = input.read_sub_blocks()?;
     let pixel_count = usize::from(width).checked_mul(usize::from(height))?;
     let mut indices = decode_lzw(&compressed, minimum_code_size, pixel_count)?;
 
-    if packed & 0x40 != 0 {
+    if interlaced {
         indices = deinterlace(&indices, usize::from(width), usize::from(height))?;
     }
 
-    Some(DecodedImage::new(
-        u32::from(width),
-        u32::from(height),
-        indices,
-        ColorType::L8,
-    ))
+    let entries = palette_rgb.len() / 3;
+    let mut alpha = Vec::new();
+    if let Some(index) = transparent_index {
+        if usize::from(index) >= entries {
+            return None;
+        }
+        alpha = vec![255; entries];
+        alpha[usize::from(index)] = 0;
+    }
+    let palette = ImagePalette::new(palette_rgb.to_vec(), alpha).ok()?;
+    let image =
+        DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
+            .with_palette(palette);
+    Some((image, left, top, interlaced))
 }
 
 fn color_table_len(packed: u8) -> Option<usize> {

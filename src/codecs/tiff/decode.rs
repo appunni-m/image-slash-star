@@ -1,7 +1,7 @@
 //! Baseline TIFF/BigTIFF-independent decoder for classic TIFF IFDs.
 
 use crate::codecs::compression::deflate::decompress_zlib;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, ImageMode};
 
 const COMPRESSION_NONE: u64 = 1;
 const COMPRESSION_LZW: u64 = 5;
@@ -118,7 +118,12 @@ fn convert_pixels(
             if photometric == 0 {
                 pixels.iter_mut().for_each(|byte| *byte = !*byte);
             }
-            Some(DecodedImage::new(width, height, pixels, ColorType::L8))
+            Some(DecodedImage::with_mode(
+                width,
+                height,
+                pixels,
+                ImageMode::L1,
+            ))
         }
         (0 | 1, 1, 8) => {
             if photometric == 0 {
@@ -139,7 +144,12 @@ fn convert_pixels(
         (2, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8)),
         (3, 1, 1 | 2 | 4 | 8) => {
             let indices = unpack_indices(&pixels, width, height, bits)?;
-            Some(DecodedImage::new(width, height, indices, ColorType::L8))
+            Some(DecodedImage::with_mode(
+                width,
+                height,
+                indices,
+                ImageMode::P8,
+            ))
         }
         (5, 4, 8) => {
             let mut rgb = Vec::with_capacity(pixels.len() / 4 * 3);

@@ -31,6 +31,15 @@ The available format features are `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp`,
 `ico`, and `avif`. Full ICO support enables its BMP and PNG container payload
 dependencies automatically.
 
+## Codec Interfaces
+
+`decode` and `encode` are the still-image convenience APIs. The
+`decode_sequence` and `encode_sequence` APIs retain all animation frames rather
+than silently duplicating or discarding them. `DecodedImage` separately records
+its generic color channels and exact byte mode, so packed `1` samples, palette
+indices, and ordinary `L8` samples cannot be confused. Indexed decoders retain
+their RGB and alpha palette tables for deterministic re-encoding.
+
 ## Reference Oracles
 
 One exact Pillow 12.2.0 CPython 3.12 macOS arm64 wheel is the authoritative

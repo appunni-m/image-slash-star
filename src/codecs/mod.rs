@@ -4,7 +4,7 @@
 //! Cargo feature pulls in only that codec and its private support code.
 
 use crate::encode_options::EncodeOptions;
-use crate::types::{DecodedImage, ImageFormat};
+use crate::types::{DecodedImage, DecodedSequence, ImageFormat};
 
 #[cfg(feature = "avif")]
 pub mod avif;
@@ -28,7 +28,7 @@ mod compression;
 
 /// Dispatch decoding to the enabled format implementation.
 pub fn decode_format(_data: &[u8], format: ImageFormat) -> Option<DecodedImage> {
-    match format {
+    let image: DecodedImage = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::decode::decode(_data),
         #[cfg(not(feature = "jpeg"))]
@@ -61,7 +61,19 @@ pub fn decode_format(_data: &[u8], format: ImageFormat) -> Option<DecodedImage> 
         ImageFormat::Avif => avif::decode::decode(_data),
         #[cfg(not(feature = "avif"))]
         ImageFormat::Avif => None,
+    }?;
+    image.validate().ok()?;
+    Some(image)
+}
+
+/// Dispatch decoding while retaining every frame and its presentation data.
+pub fn decode_sequence_format(data: &[u8], format: ImageFormat) -> Option<DecodedSequence> {
+    #[cfg(feature = "gif")]
+    if format == ImageFormat::Gif {
+        return gif::decode::decode_sequence(data);
     }
+
+    decode_format(data, format).map(DecodedSequence::from_image)
 }
 
 /// Dispatch encoding to the enabled format implementation.
@@ -70,6 +82,7 @@ pub fn encode_format(
     format: ImageFormat,
     _options: &EncodeOptions,
 ) -> Option<Vec<u8>> {
+    _image.validate().ok()?;
     match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::encode::encode(_image, _options),
@@ -104,4 +117,21 @@ pub fn encode_format(
         #[cfg(not(feature = "avif"))]
         ImageFormat::Avif => None,
     }
+}
+
+/// Dispatch encoding without collapsing an animation to its first frame.
+pub fn encode_sequence_format(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    options: &EncodeOptions,
+) -> Option<Vec<u8>> {
+    sequence.validate().ok()?;
+
+    #[cfg(feature = "gif")]
+    if format == ImageFormat::Gif {
+        return gif::encode::encode_sequence(sequence, options);
+    }
+
+    let image = sequence.first()?;
+    (sequence.frames.len() == 1).then(|| encode_format(image, format, options))?
 }

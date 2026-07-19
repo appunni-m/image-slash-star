@@ -805,6 +805,22 @@ fn mode_bytes_per_pixel(mode: Option<&str>) -> Option<usize> {
     }
 }
 
+fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
+    match mode {
+        "1" => Some(img::ImageMode::L1),
+        "P" => Some(img::ImageMode::P8),
+        "L" | "L8" => Some(img::ImageMode::L8),
+        "LA" | "La8" => Some(img::ImageMode::La8),
+        "RGB" | "Rgb8" => Some(img::ImageMode::Rgb8),
+        "RGBA" | "Rgba8" => Some(img::ImageMode::Rgba8),
+        "I;16" | "I;16B" | "I;16L" | "L16" => Some(img::ImageMode::L16),
+        "La16" => Some(img::ImageMode::La16),
+        "Rgb16" => Some(img::ImageMode::Rgb16),
+        "Rgba16" => Some(img::ImageMode::Rgba16),
+        _ => None,
+    }
+}
+
 fn first_pixel_mismatches(
     expected: &[u8],
     actual: &[u8],
@@ -882,6 +898,14 @@ fn assert_pixel_parity(
     expected: &PixelParityRef,
     actual: &img::DecodedImage,
 ) -> Result<(), String> {
+    if let Some(expected_mode) = expected.mode.as_deref().and_then(expected_image_mode)
+        && actual.mode != expected_mode
+    {
+        return Err(format!(
+            "mode mismatch: actual {:?}, expected {:?}",
+            actual.mode, expected_mode
+        ));
+    }
     if let Some(width) = expected.width {
         if actual.width != width {
             return Err(format!(
@@ -1070,7 +1094,7 @@ fn test_encode_matrix() {
         .join("input")
         .join("images");
     let mut asset_cache: HashMap<PathBuf, Vec<u8>> = HashMap::new();
-    let mut decoded_cache: HashMap<PathBuf, img::DecodedImage> = HashMap::new();
+    let mut decoded_cache: HashMap<PathBuf, img::DecodedSequence> = HashMap::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         if fmt_data.encode.is_empty() {
@@ -1128,7 +1152,7 @@ fn test_encode_matrix() {
 
             if let Entry::Vacant(entry) = decoded_cache.entry(asset_path.clone()) {
                 let asset_data = asset_cache.get(&asset_path).unwrap();
-                match img::decode(asset_data) {
+                match img::decode_sequence(asset_data) {
                     Some(decoded) => {
                         entry.insert(decoded);
                     }
@@ -1183,7 +1207,7 @@ fn test_encode_matrix() {
                 }
             };
 
-            let encoded = match img::encode(decoded, format, &opts) {
+            let encoded = match img::encode_sequence(decoded, format, &opts) {
                 Some(e) => e,
                 None => {
                     eprintln!("  FAIL [{}]: encode returned None", row.id);
