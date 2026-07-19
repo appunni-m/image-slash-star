@@ -152,8 +152,18 @@ impl Level6Matcher {
         loop {
             self.slide_window_if_needed()?;
             let lookahead = available.checked_sub(self.position)?;
-            if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
+            if lookahead == 0 {
                 return Some(());
+            }
+            if lookahead < MIN_LOOKAHEAD {
+                if !finishing {
+                    return Some(());
+                }
+                // deflate_medium clears its speculative next match after
+                // fill_window observes the final short lookahead. That match
+                // was searched using the preceding position's larger
+                // lookahead and can extend beyond the real input boundary.
+                following = None;
             }
 
             let mut current = following
@@ -845,13 +855,11 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     let mut bit_cost = 0i64;
     let mut static_cost = 0i64;
     while heap_len < 2 {
-        let current_max = max_code.unwrap_or(usize::MAX);
-        let index = if current_max < 2 {
-            current_max.checked_add(1)?
-        } else {
-            0
+        let index = match max_code {
+            Some(current_max @ 0..=1) => current_max.checked_add(1)?,
+            Some(_) | None => 0,
         };
-        max_code = Some(index);
+        max_code = Some(max_code.map_or(index, |current_max| current_max.max(index)));
         heap_len += 1;
         heap[heap_len] = index;
         nodes[index].frequency = 1;
@@ -1411,4 +1419,51 @@ fn adler32(data: &[u8]) -> u32 {
         second %= MODULUS;
     }
     (second << 16) | first
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn singleton_tree_preserves_highest_used_symbol() {
+        let mut frequencies = [0u32; DISTANCE_CODES];
+        frequencies[15] = 1;
+        let static_lengths = [5u8; DISTANCE_CODES];
+        let tree = build_tree(
+            &frequencies,
+            TreeSpec {
+                elements: DISTANCE_CODES,
+                max_length: MAX_BITS,
+                extra_bits: &DISTANCE_EXTRA,
+                extra_base: 0,
+                static_lengths: Some(&static_lengths),
+            },
+        )
+        .expect("singleton tree should be constructible");
+
+        assert_eq!(tree.max_code, 15);
+        assert_ne!(tree.nodes[15].length, 0);
+    }
+
+    #[test]
+    fn empty_tree_uses_two_dummy_symbols() {
+        let frequencies = [0u32; DISTANCE_CODES];
+        let static_lengths = [5u8; DISTANCE_CODES];
+        let tree = build_tree(
+            &frequencies,
+            TreeSpec {
+                elements: DISTANCE_CODES,
+                max_length: MAX_BITS,
+                extra_bits: &DISTANCE_EXTRA,
+                extra_base: 0,
+                static_lengths: Some(&static_lengths),
+            },
+        )
+        .expect("empty tree should be constructible with dummy symbols");
+
+        assert_eq!(tree.max_code, 1);
+        assert_ne!(tree.nodes[0].length, 0);
+        assert_ne!(tree.nodes[1].length, 0);
+    }
 }
