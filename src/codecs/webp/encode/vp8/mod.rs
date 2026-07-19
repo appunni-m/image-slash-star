@@ -18,6 +18,7 @@ mod chroma;
 mod cost;
 pub mod dct;
 pub mod encoder;
+mod frame;
 mod intra16;
 mod intra4;
 pub mod loopfilter;

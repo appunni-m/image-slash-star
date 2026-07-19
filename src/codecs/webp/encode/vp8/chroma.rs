@@ -23,16 +23,31 @@ impl ChromaMode {
 
 const FIXED_MODE_COSTS: [u32; 4] = [302, 984, 439, 642];
 
-fn predict(mode: ChromaMode, top: &[u8; 8], left: &[u8; 8], top_left: u8) -> [u8; 64] {
+fn predict(
+    mode: ChromaMode,
+    top: &[u8; 8],
+    left: &[u8; 8],
+    top_left: u8,
+    has_top: bool,
+    has_left: bool,
+) -> [u8; 64] {
     let mut output = [0; 64];
     match mode {
         ChromaMode::Dc => {
-            let sum = top
-                .iter()
-                .chain(left)
-                .map(|&value| u32::from(value))
-                .sum::<u32>();
-            output.fill(((sum + 8) >> 4) as u8);
+            let dc = match (has_top, has_left) {
+                (true, true) => {
+                    (top.iter()
+                        .chain(left)
+                        .map(|&value| u32::from(value))
+                        .sum::<u32>()
+                        + 8)
+                        >> 4
+                }
+                (true, false) => (top.iter().map(|&value| u32::from(value)).sum::<u32>() + 4) >> 3,
+                (false, true) => (left.iter().map(|&value| u32::from(value)).sum::<u32>() + 4) >> 3,
+                (false, false) => 128,
+            };
+            output.fill(dc as u8);
         }
         ChromaMode::TrueMotion => {
             for row in 0..8 {
@@ -124,6 +139,8 @@ fn evaluate(
     left_v: &[u8; 8],
     top_left_u: u8,
     top_left_v: u8,
+    has_top: bool,
+    has_left: bool,
     top_nonzero: [u8; 4],
     left_nonzero: [u8; 4],
     top_errors: [[i8; 2]; 2],
@@ -132,8 +149,8 @@ fn evaluate(
     lambda_uv: u32,
 ) -> ChromaCandidate {
     let predictions = [
-        predict(mode, top_u, left_u, top_left_u),
-        predict(mode, top_v, left_v, top_left_v),
+        predict(mode, top_u, left_u, top_left_u, has_top, has_left),
+        predict(mode, top_v, left_v, top_left_v, has_top, has_left),
     ];
     let sources = [source_u, source_v];
     let mut levels = [[0; 16]; 8];
@@ -213,7 +230,7 @@ fn evaluate(
             .flat_map(|block| &block[1..])
             .filter(|&&level| level != 0)
             .count()
-            <= 6
+            <= 2
     {
         rate += 1_120;
     }
@@ -257,6 +274,8 @@ pub(super) fn select(
     left_v: &[u8; 8],
     top_left_u: u8,
     top_left_v: u8,
+    has_top: bool,
+    has_left: bool,
     top_nonzero: [u8; 4],
     left_nonzero: [u8; 4],
     top_errors: [[i8; 2]; 2],
@@ -277,6 +296,8 @@ pub(super) fn select(
                 left_v,
                 top_left_u,
                 top_left_v,
+                has_top,
+                has_left,
                 top_nonzero,
                 left_nonzero,
                 top_errors,
@@ -327,6 +348,8 @@ mod tests {
                 &[129; 8],
                 127,
                 127,
+                false,
+                false,
                 [0; 4],
                 [0; 4],
                 [[0; 2]; 2],
@@ -352,6 +375,8 @@ mod tests {
                 &[129; 8],
                 127,
                 127,
+                false,
+                false,
                 [0; 4],
                 [0; 4],
                 [[0; 2]; 2],

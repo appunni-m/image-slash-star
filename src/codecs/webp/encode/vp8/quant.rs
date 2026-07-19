@@ -72,6 +72,7 @@ pub(super) struct SegmentMatrices {
     pub(super) lambda_i16: i32,
     pub(super) lambda_uv: i32,
     pub(super) lambda_mode: i32,
+    pub(super) texture_lambda: i32,
 }
 
 fn expand_matrix(dc: u16, ac: u16, kind: usize) -> (QuantMatrix, i32) {
@@ -126,6 +127,7 @@ pub(super) fn libwebp_segment_matrices(
         lambda_i16: (3 * q_i16 * q_i16).max(1),
         lambda_uv: ((3 * q_uv * q_uv) >> 6).max(1),
         lambda_mode: ((q_i4 * q_i4) >> 7).max(1),
+        texture_lambda: ((50 * q_i4) >> 5).max(1),
     }
 }
 

@@ -23,16 +23,31 @@ impl Intra16Mode {
 
 const FIXED_MODE_COSTS: [u32; 4] = [663, 919, 872, 919];
 
-fn predict(mode: Intra16Mode, top: &[u8; 16], left: &[u8; 16], top_left: u8) -> [u8; 256] {
+fn predict(
+    mode: Intra16Mode,
+    top: &[u8; 16],
+    left: &[u8; 16],
+    top_left: u8,
+    has_top: bool,
+    has_left: bool,
+) -> [u8; 256] {
     let mut output = [0; 256];
     match mode {
         Intra16Mode::Dc => {
-            let sum = top
-                .iter()
-                .chain(left)
-                .map(|&value| u32::from(value))
-                .sum::<u32>();
-            output.fill(((sum + 16) >> 5) as u8);
+            let dc = match (has_top, has_left) {
+                (true, true) => {
+                    (top.iter()
+                        .chain(left)
+                        .map(|&value| u32::from(value))
+                        .sum::<u32>()
+                        + 16)
+                        >> 5
+                }
+                (true, false) => (top.iter().map(|&value| u32::from(value)).sum::<u32>() + 8) >> 4,
+                (false, true) => (left.iter().map(|&value| u32::from(value)).sum::<u32>() + 8) >> 4,
+                (false, false) => 128,
+            };
+            output.fill(dc as u8);
         }
         Intra16Mode::Vertical => {
             for row in output.chunks_exact_mut(16) {
@@ -78,6 +93,8 @@ fn evaluate(
     top: &[u8; 16],
     left: &[u8; 16],
     top_left: u8,
+    has_top: bool,
+    has_left: bool,
     top_nonzero: [u8; 4],
     left_nonzero: [u8; 4],
     y2_context: usize,
@@ -85,7 +102,7 @@ fn evaluate(
     lambda_i16: u32,
     texture_lambda: u32,
 ) -> Intra16Candidate {
-    let prediction = predict(mode, top, left, top_left);
+    let prediction = predict(mode, top, left, top_left, has_top, has_left);
     let mut coefficients = [[0i16; 16]; 16];
     for block_y in 0..4 {
         for block_x in 0..4 {
@@ -180,6 +197,8 @@ pub(super) fn select(
     top: &[u8; 16],
     left: &[u8; 16],
     top_left: u8,
+    has_top: bool,
+    has_left: bool,
     top_nonzero: [u8; 4],
     left_nonzero: [u8; 4],
     y2_context: usize,
@@ -196,6 +215,8 @@ pub(super) fn select(
                 top,
                 left,
                 top_left,
+                has_top,
+                has_left,
                 top_nonzero,
                 left_nonzero,
                 y2_context,
@@ -235,7 +256,8 @@ mod tests {
         ];
         for (index, mode) in Intra16Mode::ALL.into_iter().enumerate() {
             let candidate = evaluate(
-                mode, &source, &[127; 16], &[129; 16], 127, [0; 4], [0; 4], 0, &matrices, 2_883, 31,
+                mode, &source, &[127; 16], &[129; 16], 127, false, false, [0; 4], [0; 4], 0,
+                &matrices, 2_883, 31,
             );
             let (distortion, spectral, header, rate, score) = expected[index];
             assert_eq!(candidate.distortion, distortion, "D mode {index}");
@@ -247,7 +269,8 @@ mod tests {
         }
         assert_eq!(
             select(
-                &source, &[127; 16], &[129; 16], 127, [0; 4], [0; 4], 0, &matrices, 2_883, 31,
+                &source, &[127; 16], &[129; 16], 127, false, false, [0; 4], [0; 4], 0, &matrices,
+                2_883, 31,
             )
             .mode,
             Intra16Mode::Dc

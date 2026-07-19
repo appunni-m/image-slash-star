@@ -223,7 +223,7 @@ pub(super) fn select_macroblock(
                 } else if column < 16 {
                     result.reconstructed[(block_y * 4 - 1) * 16 + column]
                 } else {
-                    result.reconstructed[(block_y * 4 - 1) * 16 + 15]
+                    top_boundary[column]
                 };
             }
             let left = std::array::from_fn(|offset| {
@@ -268,6 +268,14 @@ pub(super) fn select_macroblock(
                 } else {
                     0
                 };
+                let preliminary_score =
+                    rd_score(flat_penalty, header, distortion + spectral, lambda_i4);
+                if best
+                    .as_ref()
+                    .is_some_and(|best| preliminary_score >= best.0)
+                {
+                    continue;
+                }
                 let rate = flat_penalty + residual_cost(&levels, 0, 3, context);
                 let score = rd_score(rate, header, distortion + spectral, lambda_i4);
                 if best.as_ref().is_none_or(|best| score < best.0) {
