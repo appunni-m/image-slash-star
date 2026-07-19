@@ -25,5 +25,6 @@ pub mod loopfilter;
 pub mod predict;
 mod probability;
 pub mod quant;
+mod residual;
 pub mod segmentation;
 pub mod tokenize;
