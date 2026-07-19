@@ -1,7 +1,7 @@
 //! Encoding of WebP images.
-use std::collections::BinaryHeap;
 use std::io::{self, Write};
 
+mod backward_refs;
 pub(super) mod cross_color;
 pub(super) mod predictor;
 
@@ -118,98 +118,69 @@ fn build_huffman_tree(
         return false;
     }
 
-    #[derive(Eq, PartialEq, Copy, Clone, Debug)]
-    struct Item(u32, u16);
-    impl Ord for Item {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            other.0.cmp(&self.0)
-        }
+    #[derive(Clone)]
+    enum Node {
+        Leaf(usize),
+        Branch(Box<Node>, Box<Node>),
     }
-    impl PartialOrd for Item {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            Some(self.cmp(other))
-        }
+    #[derive(Clone)]
+    struct WeightedNode {
+        count: u32,
+        sort_value: usize,
+        node: Node,
     }
 
-    // Build a huffman tree
-    let mut internal_nodes = Vec::new();
-    let mut nodes = BinaryHeap::from_iter(
-        frequencies
+    let mut count_min = 1_u32;
+    loop {
+        let mut nodes = frequencies
             .iter()
             .enumerate()
-            .filter(|&(_, &frequency)| frequency > 0)
-            .map(|(i, &frequency)| Item(frequency, i as u16)),
-    );
-    while nodes.len() > 1 {
-        let Item(frequency1, index1) = nodes.pop().unwrap();
-        let mut root = nodes.peek_mut().unwrap();
-        internal_nodes.push((index1, root.1));
-        *root = Item(
-            frequency1 + root.0,
-            internal_nodes.len() as u16 + frequencies.len() as u16 - 1,
-        );
-    }
-
-    // Walk the tree to assign code lengths
-    lengths.fill(0);
-    let mut stack = Vec::new();
-    stack.push((nodes.pop().unwrap().1, 0));
-    while let Some((node, depth)) = stack.pop() {
-        let node = node as usize;
-        if node < frequencies.len() {
-            lengths[node] = depth as u8;
-        } else {
-            let (left, right) = internal_nodes[node - frequencies.len()];
-            stack.push((left, depth + 1));
-            stack.push((right, depth + 1));
-        }
-    }
-
-    // Limit the codes to length length_limit
-    let mut max_length = 0;
-    for &length in lengths.iter() {
-        max_length = max_length.max(length);
-    }
-    if max_length > length_limit {
-        let mut counts = [0u32; 16];
-        for &length in lengths.iter() {
-            counts[length.min(length_limit) as usize] += 1;
+            .filter(|&(_, &frequency)| frequency != 0)
+            .map(|(value, &frequency)| WeightedNode {
+                count: frequency.max(count_min),
+                sort_value: value,
+                node: Node::Leaf(value),
+            })
+            .collect::<Vec<_>>();
+        nodes.sort_by(|left, right| {
+            right
+                .count
+                .cmp(&left.count)
+                .then_with(|| left.sort_value.cmp(&right.sort_value))
+        });
+        while nodes.len() > 1 {
+            let left = nodes.pop().unwrap();
+            let right = nodes.pop().unwrap();
+            let count = left.count + right.count;
+            let position = nodes
+                .iter()
+                .position(|node| node.count <= count)
+                .unwrap_or(nodes.len());
+            nodes.insert(
+                position,
+                WeightedNode {
+                    count,
+                    sort_value: usize::MAX,
+                    node: Node::Branch(Box::new(left.node), Box::new(right.node)),
+                },
+            );
         }
 
-        let mut total = 0;
-        for (i, count) in counts
-            .iter()
-            .enumerate()
-            .skip(1)
-            .take(length_limit as usize)
-        {
-            total += count << (length_limit as usize - i);
-        }
-
-        while total > 1u32 << length_limit {
-            let mut i = length_limit as usize - 1;
-            while counts[i] == 0 {
-                i -= 1;
-            }
-            counts[i] -= 1;
-            counts[length_limit as usize] -= 1;
-            counts[i + 1] += 2;
-            total -= 1;
-        }
-
-        // assign new lengths
-        let mut len = length_limit;
-        let mut indexes = frequencies.iter().copied().enumerate().collect::<Vec<_>>();
-        indexes.sort_unstable_by_key(|&(_, frequency)| frequency);
-        for &(i, frequency) in &indexes {
-            if frequency > 0 {
-                while counts[len as usize] == 0 {
-                    len -= 1;
+        lengths.fill(0);
+        let mut stack = vec![(&nodes[0].node, 0_u8)];
+        while let Some((node, depth)) = stack.pop() {
+            match node {
+                Node::Leaf(value) => lengths[*value] = depth,
+                Node::Branch(left, right) => {
+                    stack.push((right, depth + 1));
+                    stack.push((left, depth + 1));
                 }
-                lengths[i] = len;
-                counts[len as usize] -= 1;
             }
         }
+        if lengths.iter().copied().max().unwrap_or(0) <= length_limit {
+            break;
+        }
+        count_min *= 2;
     }
 
     // Assign codes
@@ -224,8 +195,6 @@ fn build_huffman_tree(
         }
         code <<= 1;
     }
-    assert_eq!(code, 2 << length_limit);
-
     true
 }
 
@@ -235,6 +204,33 @@ fn write_huffman_tree<W: Write>(
     lengths: &mut [u8],
     codes: &mut [u16],
 ) -> io::Result<()> {
+    let symbols = frequencies
+        .iter()
+        .enumerate()
+        .filter_map(|(symbol, &frequency)| (frequency != 0).then_some(symbol))
+        .take(3)
+        .collect::<Vec<_>>();
+    if symbols.len() <= 2 && symbols.iter().all(|&symbol| symbol < 256) {
+        let first = symbols.first().copied().unwrap_or(0);
+        w.write_bits(1, 1)?;
+        w.write_bits(u64::from(symbols.len() == 2), 1)?;
+        if first <= 1 {
+            w.write_bits(0, 1)?;
+            w.write_bits(first as u64, 1)?;
+        } else {
+            w.write_bits(1, 1)?;
+            w.write_bits(first as u64, 8)?;
+        }
+        if symbols.len() == 2 {
+            w.write_bits(symbols[1] as u64, 8)?;
+            lengths.fill(0);
+            codes.fill(0);
+            lengths[symbols[0]] = 1;
+            lengths[symbols[1]] = 1;
+            codes[symbols[1]] = 1;
+        }
+        return Ok(());
+    }
     if !build_huffman_tree(frequencies, lengths, codes, 15) {
         let symbol = frequencies
             .iter()
@@ -242,7 +238,6 @@ fn write_huffman_tree<W: Write>(
             .unwrap_or(0);
         return write_single_entry_huffman_tree(w, symbol as u8);
     }
-
     let mut code_length_lengths = [0u8; 16];
     let mut code_length_codes = [0u16; 16];
     let mut code_length_frequencies = [0u32; 16];
@@ -255,7 +250,6 @@ fn write_huffman_tree<W: Write>(
         &mut code_length_codes,
         7,
     );
-
     const CODE_LENGTH_ORDER: [usize; 19] = [
         17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ];
@@ -281,7 +275,7 @@ fn write_huffman_tree<W: Write>(
             w.write_bits(254, 8)?; // max_symbol - 2
         }
         280 => w.write_bits(0, 1)?,
-        _ => unreachable!(),
+        _ => w.write_bits(0, 1)?,
     }
 
     // Write the huffman codes
@@ -297,9 +291,12 @@ fn write_huffman_tree<W: Write>(
     Ok(())
 }
 
-const fn length_to_symbol(len: u16) -> (u16, u8) {
+const fn length_to_symbol(len: usize) -> (usize, u8) {
+    if len <= 4 {
+        return (len - 1, 0);
+    }
     let len = len - 1;
-    let highest_bit = len.ilog2() as u16;
+    let highest_bit = len.ilog2() as usize;
     let second_highest_bit = (len >> (highest_bit - 1)) & 1;
     let extra_bits = highest_bit - 1;
     let symbol = 2 * highest_bit + second_highest_bit;
@@ -322,8 +319,8 @@ fn count_run(
             let symbol = 256 + run_length - 1;
             frequencies1[symbol] += 1;
         } else {
-            let (symbol, _extra_bits) = length_to_symbol(run_length as u16);
-            frequencies1[256 + symbol as usize] += 1;
+            let (symbol, _extra_bits) = length_to_symbol(run_length);
+            frequencies1[256 + symbol] += 1;
         }
     }
 }
@@ -346,11 +343,8 @@ fn write_run<W: Write>(
             let symbol = 256 + run_length - 1;
             w.write_bits(u64::from(codes1[symbol]), lengths1[symbol])?;
         } else {
-            let (symbol, extra_bits) = length_to_symbol(run_length as u16);
-            w.write_bits(
-                u64::from(codes1[256 + symbol as usize]),
-                lengths1[256 + symbol as usize],
-            )?;
+            let (symbol, extra_bits) = length_to_symbol(run_length);
+            w.write_bits(u64::from(codes1[256 + symbol]), lengths1[256 + symbol])?;
             w.write_bits(
                 (run_length as u64 - 1) & ((1 << extra_bits) - 1),
                 extra_bits,
@@ -373,54 +367,92 @@ fn channels(pixel: u32) -> [usize; 4] {
 fn write_image_stream<W: Write>(
     w: &mut BitWriter<W>,
     pixels: &[u32],
+    width: usize,
     write_meta_huffman_bit: bool,
 ) -> io::Result<()> {
-    w.write_bits(0, 1)?; // no color cache
+    let (tokens, cache_bits) = backward_refs::select(pixels, width, write_meta_huffman_bit);
+    w.write_bits(u64::from(cache_bits != 0), 1)?;
+    if cache_bits != 0 {
+        w.write_bits(u64::from(cache_bits), 4)?;
+    }
     if write_meta_huffman_bit {
         w.write_bits(0, 1)?; // one global Huffman group
     }
 
     let mut frequencies0 = [0_u32; 256];
-    let mut frequencies1 = [0_u32; 280];
+    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+    let mut frequencies1 = vec![0_u32; 280 + cache_size];
     let mut frequencies2 = [0_u32; 256];
     let mut frequencies3 = [0_u32; 256];
-    let mut iterator = pixels.iter().peekable();
-    while let Some(&pixel) = iterator.next() {
-        let [red, green, blue, alpha] = channels(pixel);
-        frequencies0[red] += 1;
-        frequencies1[green] += 1;
-        frequencies2[blue] += 1;
-        frequencies3[alpha] += 1;
-        count_run(pixel, &mut iterator, &mut frequencies1);
+    let mut frequencies4 = [0_u32; 40];
+    for &token in &tokens {
+        match token {
+            backward_refs::Token::Literal(pixel) => {
+                let [red, green, blue, alpha] = channels(pixel);
+                frequencies0[red] += 1;
+                frequencies1[green] += 1;
+                frequencies2[blue] += 1;
+                frequencies3[alpha] += 1;
+            }
+            backward_refs::Token::Copy { distance, length } => {
+                let (symbol, _) = length_to_symbol(length);
+                frequencies1[256 + symbol] += 1;
+                let distance = backward_refs::plane_code(width, distance);
+                let (symbol, _) = length_to_symbol(distance);
+                frequencies4[symbol] += 1;
+            }
+            backward_refs::Token::Cache(index) => frequencies1[280 + index] += 1,
+        }
     }
 
     let mut lengths0 = [0_u8; 256];
-    let mut lengths1 = [0_u8; 280];
+    let mut lengths1 = vec![0_u8; frequencies1.len()];
     let mut lengths2 = [0_u8; 256];
     let mut lengths3 = [0_u8; 256];
+    let mut lengths4 = [0_u8; 40];
     let mut codes0 = [0_u16; 256];
-    let mut codes1 = [0_u16; 280];
+    let mut codes1 = vec![0_u16; frequencies1.len()];
     let mut codes2 = [0_u16; 256];
     let mut codes3 = [0_u16; 256];
+    let mut codes4 = [0_u16; 40];
     write_huffman_tree(w, &frequencies1, &mut lengths1, &mut codes1)?;
     write_huffman_tree(w, &frequencies0, &mut lengths0, &mut codes0)?;
     write_huffman_tree(w, &frequencies2, &mut lengths2, &mut codes2)?;
     write_huffman_tree(w, &frequencies3, &mut lengths3, &mut codes3)?;
-    write_single_entry_huffman_tree(w, 1)?;
+    write_huffman_tree(w, &frequencies4, &mut lengths4, &mut codes4)?;
 
-    let mut iterator = pixels.iter().peekable();
-    while let Some(&pixel) = iterator.next() {
-        let [red, green, blue, alpha] = channels(pixel);
-        let green_length = lengths1[green];
-        let red_length = lengths0[red];
-        let blue_length = lengths2[blue];
-        let alpha_length = lengths3[alpha];
-        let code = u64::from(codes1[green])
-            | (u64::from(codes0[red]) << green_length)
-            | (u64::from(codes2[blue]) << (green_length + red_length))
-            | (u64::from(codes3[alpha]) << (green_length + red_length + blue_length));
-        w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
-        write_run(w, pixel, &mut iterator, &codes1, &lengths1)?;
+    for token in tokens {
+        match token {
+            backward_refs::Token::Literal(pixel) => {
+                let [red, green, blue, alpha] = channels(pixel);
+                let green_length = lengths1[green];
+                let red_length = lengths0[red];
+                let blue_length = lengths2[blue];
+                let alpha_length = lengths3[alpha];
+                let code = u64::from(codes1[green])
+                    | (u64::from(codes0[red]) << green_length)
+                    | (u64::from(codes2[blue]) << (green_length + red_length))
+                    | (u64::from(codes3[alpha]) << (green_length + red_length + blue_length));
+                w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
+            }
+            backward_refs::Token::Copy { distance, length } => {
+                let (symbol, extra_bits) = length_to_symbol(length);
+                let symbol = 256 + symbol;
+                w.write_bits(u64::from(codes1[symbol]), lengths1[symbol])?;
+                w.write_bits(((length - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
+                let distance = backward_refs::plane_code(width, distance);
+                let (symbol, extra_bits) = length_to_symbol(distance);
+                w.write_bits(u64::from(codes4[symbol]), lengths4[symbol])?;
+                w.write_bits(
+                    ((distance - 1) & ((1 << extra_bits) - 1)) as u64,
+                    extra_bits,
+                )?;
+            }
+            backward_refs::Token::Cache(index) => {
+                let symbol = 280 + index;
+                w.write_bits(u64::from(codes1[symbol]), lengths1[symbol])?;
+            }
+        }
     }
     Ok(())
 }
@@ -527,18 +559,20 @@ fn encode_frame<W: Write>(
         w.write_bits(1, 1)?;
         w.write_bits(0, 2)?;
         w.write_bits(u64::from(predictor_bits - 2), 3)?;
-        write_image_stream(w, &predictor_map, false)?;
+        let predictor_width = (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
+        write_image_stream(w, &predictor_map, predictor_width, false)?;
 
         let (color_map, color_bits) =
             cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
         w.write_bits(1, 1)?;
         w.write_bits(1, 2)?;
         w.write_bits(u64::from(color_bits - 2), 3)?;
-        write_image_stream(w, &color_map, false)?;
+        let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
+        write_image_stream(w, &color_map, color_width, false)?;
     }
 
     w.write_bits(0, 1)?; // transforms done
-    write_image_stream(w, &pixels, true)?;
+    write_image_stream(w, &pixels, width as usize, true)?;
 
     w.flush()?;
     Ok(())
