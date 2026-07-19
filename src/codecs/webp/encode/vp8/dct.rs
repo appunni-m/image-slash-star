@@ -290,6 +290,65 @@ pub fn iwht_4x4(block: &[i16; 16]) -> [i16; 16] {
     wht_4x4(block)
 }
 
+/// Applies libwebp's encoder-side VP8 Walsh-Hadamard transform to luma DCs.
+pub fn vp8_fwht_4x4(block: &[i16; 16]) -> [i16; 16] {
+    let mut temporary = [0i32; 16];
+    for row in 0..4 {
+        let offset = row * 4;
+        let a0 = i32::from(block[offset]) + i32::from(block[offset + 2]);
+        let a1 = i32::from(block[offset + 1]) + i32::from(block[offset + 3]);
+        let a2 = i32::from(block[offset + 1]) - i32::from(block[offset + 3]);
+        let a3 = i32::from(block[offset]) - i32::from(block[offset + 2]);
+        temporary[offset] = a0 + a1;
+        temporary[offset + 1] = a3 + a2;
+        temporary[offset + 2] = a3 - a2;
+        temporary[offset + 3] = a0 - a1;
+    }
+
+    let mut output = [0i16; 16];
+    for column in 0..4 {
+        let a0 = temporary[column] + temporary[8 + column];
+        let a1 = temporary[4 + column] + temporary[12 + column];
+        let a2 = temporary[4 + column] - temporary[12 + column];
+        let a3 = temporary[column] - temporary[8 + column];
+        output[column] = ((a0 + a1) >> 1) as i16;
+        output[4 + column] = ((a3 + a2) >> 1) as i16;
+        output[8 + column] = ((a3 - a2) >> 1) as i16;
+        output[12 + column] = ((a0 - a1) >> 1) as i16;
+    }
+    output
+}
+
+/// Applies libwebp's decoder-side inverse VP8 Walsh-Hadamard transform.
+pub fn vp8_iwht_4x4(block: &[i16; 16]) -> [i16; 16] {
+    let mut temporary = [0i32; 16];
+    for column in 0..4 {
+        let a0 = i32::from(block[column]) + i32::from(block[12 + column]);
+        let a1 = i32::from(block[4 + column]) + i32::from(block[8 + column]);
+        let a2 = i32::from(block[4 + column]) - i32::from(block[8 + column]);
+        let a3 = i32::from(block[column]) - i32::from(block[12 + column]);
+        temporary[column] = a0 + a1;
+        temporary[8 + column] = a0 - a1;
+        temporary[4 + column] = a3 + a2;
+        temporary[12 + column] = a3 - a2;
+    }
+
+    let mut output = [0i16; 16];
+    for row in 0..4 {
+        let offset = row * 4;
+        let dc = temporary[offset] + 3;
+        let a0 = dc + temporary[offset + 3];
+        let a1 = temporary[offset + 1] + temporary[offset + 2];
+        let a2 = temporary[offset + 1] - temporary[offset + 2];
+        let a3 = dc - temporary[offset + 3];
+        output[offset] = ((a0 + a1) >> 3) as i16;
+        output[offset + 1] = ((a3 + a2) >> 3) as i16;
+        output[offset + 2] = ((a0 - a1) >> 3) as i16;
+        output[offset + 3] = ((a3 - a2) >> 3) as i16;
+    }
+    output
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,6 +384,17 @@ mod tests {
                 0, 20, 65, 251, 0, 30, 135, 239, 14, 79, 164, 219, 254, 192, 98, 0,
             ]
         );
+    }
+
+    #[test]
+    fn vp8_wht_matches_libwebp_1_6_0() {
+        let input = std::array::from_fn(|index| index as i16 + 1);
+        let transformed = vp8_fwht_4x4(&input);
+        assert_eq!(
+            transformed,
+            [68, -8, 0, -4, -32, 0, 0, 0, 0, 0, 0, 0, -16, 0, 0, 0]
+        );
+        assert_eq!(vp8_iwht_4x4(&transformed), input);
     }
 
     // ── Helper ──
