@@ -1,7 +1,7 @@
 //! Pure-Rust BMP encoder for indexed grayscale and true-color images.
 
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 
 const FILE_HEADER_SIZE: usize = 14;
 const INFO_HEADER_SIZE: u32 = 40;
@@ -11,6 +11,9 @@ const BI_RGB: u32 = 0;
 const BI_RLE8: u32 = 1;
 const BI_RLE4: u32 = 2;
 const BI_BITFIELDS: u32 = 3;
+// Pillow 12.2.0 BmpImagePlugin.py:437-440 defaults to 96 DPI and converts
+// using round(96 * 39.3701), yielding 3,780 pixels per meter on both axes.
+const DEFAULT_PIXELS_PER_METER: i32 = 3_780;
 
 #[derive(Clone, Copy)]
 enum Compression {
@@ -88,9 +91,16 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         (Compression::Rgb, ColorType::L8, Some(4)) if valid_unpacked => {
             encode_4bit(img.width, img.height, &img.pixels, top_down, header_size)
         }
-        (Compression::Rgb, ColorType::L8, None | Some(8)) if valid_unpacked => {
-            encode_l8(img.width, img.height, &img.pixels, top_down, header_size)
-        }
+        (Compression::Rgb, ColorType::L8, None | Some(8)) if valid_unpacked => encode_l8(
+            img.width,
+            img.height,
+            &img.pixels,
+            (img.mode == ImageMode::P8)
+                .then_some(img.palette.as_ref())
+                .flatten(),
+            top_down,
+            header_size,
+        ),
         (Compression::Rle8, ColorType::L8, Some(8)) if valid_unpacked && !top_down => {
             encode_rle(img.width, img.height, &img.pixels, 8, header_size)
         }
@@ -365,11 +375,16 @@ fn encode_l8(
     width: u32,
     height: u32,
     pixels: &[u8],
+    palette: Option<&ImagePalette>,
     top_down: bool,
     header_size: u32,
 ) -> Option<Vec<u8>> {
     let stride = row_size(8, width)?;
-    let palette_bytes = 256usize.checked_mul(4)?;
+    // Pillow 12.2.0 BmpImagePlugin.py:446-452 retains the exact P-mode
+    // palette length and writes it as BGRX. Ordinary L mode gets 256 gray
+    // entries instead.
+    let color_count = palette.map_or(256, ImagePalette::len);
+    let palette_bytes = color_count.checked_mul(4)?;
     let pixel_bytes = stride.checked_mul(usize::try_from(height).ok()?)?;
     let pixel_offset = FILE_HEADER_SIZE
         .checked_add(usize::try_from(header_size).ok()?)?
@@ -381,12 +396,18 @@ fn encode_l8(
         BI_RGB,
         header_size,
         top_down,
-        256,
+        u32::try_from(color_count).ok()?,
         pixel_offset,
         pixel_bytes,
     )?;
-    for value in 0..=255u8 {
-        output.extend_from_slice(&[value, value, value, 0]);
+    if let Some(palette) = palette {
+        for rgb in palette.rgb.chunks_exact(3) {
+            output.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
+        }
+    } else {
+        for value in 0..=255u8 {
+            output.extend_from_slice(&[value, value, value, 0]);
+        }
     }
     write_rows(
         &mut output,
@@ -526,8 +547,8 @@ fn bmp_headers(
     output.extend_from_slice(&depth.to_le_bytes());
     output.extend_from_slice(&compression.to_le_bytes());
     output.extend_from_slice(&u32::try_from(pixel_bytes).ok()?.to_le_bytes());
-    output.extend_from_slice(&0i32.to_le_bytes());
-    output.extend_from_slice(&0i32.to_le_bytes());
+    output.extend_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
+    output.extend_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
     output.extend_from_slice(&colors.to_le_bytes());
     output.extend_from_slice(&colors.to_le_bytes());
     output.resize(
