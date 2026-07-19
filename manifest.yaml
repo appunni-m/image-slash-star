@@ -1140,7 +1140,6 @@ formats:
       - gray.tiff
     - id: palette
       description: Palette/indexed color
-      status: planned
       test_assets:
       - palette.tiff
     - id: rgb
@@ -1153,7 +1152,6 @@ formats:
       - rgba.tiff
     - id: cmyk
       description: CMYK
-      status: planned
       test_assets:
       - cmyk.tiff
     - id: ycbcr
@@ -1171,7 +1169,6 @@ formats:
       - 8bit.tiff
     - id: depth_16
       description: 16-bit per channel
-      status: planned
       test_assets:
       - 16bit.tiff
     - id: depth_float

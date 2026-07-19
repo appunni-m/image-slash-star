@@ -4805,9 +4805,16 @@
           "expect_error": false,
           "format": "tiff",
           "id": "palette",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "Rust TIFF decoding does not yet match Pillow for this declared input mode."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_tiff.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "rgb.tiff",
@@ -4854,9 +4861,16 @@
           "expect_error": false,
           "format": "tiff",
           "id": "cmyk",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "Rust TIFF decoding does not yet match Pillow for this declared input mode."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_cmyk_tiff.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "ycbcr.tiff",
@@ -4912,9 +4926,16 @@
           "expect_error": false,
           "format": "tiff",
           "id": "depth_16",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "Rust TIFF decoding does not yet match Pillow for this declared input mode."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_16bit_tiff.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "I;16",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "float32.tiff",
@@ -6197,8 +6218,8 @@
     "encode_rows": 156,
     "formats": 8,
     "assets_available": 161,
-    "decode_active": 157,
-    "decode_planned": 11,
+    "decode_active": 160,
+    "decode_planned": 8,
     "encode_not_wired": 48
   }
 }

@@ -156,6 +156,19 @@
       }
     },
     {
+      "id": "palette",
+      "asset": "palette.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/palette.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "rgb",
       "asset": "rgb.tiff",
       "expect_error": false,
@@ -182,6 +195,19 @@
       }
     },
     {
+      "id": "cmyk",
+      "asset": "cmyk.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "depth_1",
       "asset": "1bit.tiff",
       "expect_error": false,
@@ -200,6 +226,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/8bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_16",
+      "asset": "16bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/16bit.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

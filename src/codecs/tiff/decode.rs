@@ -1,7 +1,7 @@
 //! Baseline TIFF/BigTIFF-independent decoder for classic TIFF IFDs.
 
 use crate::codecs::compression::deflate::decompress_zlib;
-use crate::types::{ColorType, DecodedImage, ImageMode};
+use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 
 const COMPRESSION_NONE: u64 = 1;
 const COMPRESSION_LZW: u64 = 5;
@@ -38,6 +38,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let rows_per_strip = usize::try_from(directory.one_or(278, u64::from(height))).ok()?;
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
+    let color_map = directory.values(320);
     if rows_per_strip == 0 || planar != 1 || !matches!(predictor, 1 | 2) {
         return None;
     }
@@ -106,6 +107,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         samples_per_pixel,
         bits_per_sample,
         endian,
+        color_map.as_deref(),
     )
 }
 
@@ -117,6 +119,7 @@ fn convert_pixels(
     samples: usize,
     bits: u8,
     endian: Endian,
+    color_map: Option<&[u64]>,
 ) -> Option<DecodedImage> {
     match (photometric, samples, bits) {
         (0 | 1, 1, 1) => {
@@ -137,35 +140,32 @@ fn convert_pixels(
             Some(DecodedImage::new(width, height, pixels, ColorType::L8))
         }
         (0 | 1, 1, 16) => {
-            let mut output = Vec::with_capacity(pixels.len() / 2);
+            let mut output = Vec::with_capacity(pixels.len());
             for bytes in pixels.chunks_exact(2) {
                 let value = endian.u16(bytes)?;
-                let high = (value >> 8) as u8;
-                output.push(if photometric == 0 { !high } else { high });
+                let value = if photometric == 0 { !value } else { value };
+                output.extend_from_slice(&value.to_le_bytes());
             }
-            Some(DecodedImage::new(width, height, output, ColorType::L8))
+            Some(DecodedImage::new(width, height, output, ColorType::L16))
         }
         (2, 3, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgb8)),
         (2, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8)),
         (3, 1, 1 | 2 | 4 | 8) => {
             let indices = unpack_indices(&pixels, width, height, bits)?;
-            Some(DecodedImage::with_mode(
-                width,
-                height,
-                indices,
-                ImageMode::P8,
-            ))
-        }
-        (5, 4, 8) => {
-            let mut rgb = Vec::with_capacity(pixels.len() / 4 * 3);
-            for cmyk in pixels.chunks_exact(4) {
-                let black = 255u32 - u32::from(cmyk[3]);
-                rgb.push(((255 - u32::from(cmyk[0])) * black / 255) as u8);
-                rgb.push(((255 - u32::from(cmyk[1])) * black / 255) as u8);
-                rgb.push(((255 - u32::from(cmyk[2])) * black / 255) as u8);
+            let entries = 1usize.checked_shl(u32::from(bits))?;
+            let map = color_map?.get(..entries.checked_mul(3)?)?;
+            let mut rgb = Vec::with_capacity(entries.checked_mul(3)?);
+            for index in 0..entries {
+                rgb.push(u8::try_from(map[index] >> 8).ok()?);
+                rgb.push(u8::try_from(map[entries + index] >> 8).ok()?);
+                rgb.push(u8::try_from(map[entries * 2 + index] >> 8).ok()?);
             }
-            Some(DecodedImage::new(width, height, rgb, ColorType::Rgb8))
+            Some(
+                DecodedImage::with_mode(width, height, indices, ImageMode::P8)
+                    .with_palette(ImagePalette::new(rgb, Vec::new()).ok()?),
+            )
         }
+        (5, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Cmyk8)),
         (6, 3, 8) => {
             let mut rgb = Vec::with_capacity(pixels.len());
             for ycbcr in pixels.chunks_exact(3) {

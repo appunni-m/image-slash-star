@@ -156,6 +156,19 @@
       ]
     },
     {
+      "id": "palette",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_tiff.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "rgb",
       "status": "ok",
       "error_type": null,
@@ -182,6 +195,19 @@
       ]
     },
     {
+      "id": "cmyk",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_cmyk_tiff.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "CMYK",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "depth_1",
       "status": "ok",
       "error_type": null,
@@ -202,6 +228,19 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_8bit_tiff.bin",
       "ref_bytes": 16384,
       "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "depth_16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_16bit_tiff.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "I;16",
       "ref_size": [
         128,
         128
