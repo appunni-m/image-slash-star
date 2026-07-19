@@ -40,7 +40,7 @@ pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_level3(data, input_chunks)?;
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_block(&tokens, data.len(), &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)?;
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -51,7 +51,17 @@ pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_level6(data, input_chunks)?;
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
-    emit_block(&tokens, data.len(), &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let tokens = tokenize_level6(data, input_chunks)?;
+    let mut output = vec![0x78, 0x9c];
+    let mut writer = BitWriter::default();
+    emit_blocks(&tokens, 16_383, &mut writer)?;
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -739,7 +749,26 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS +
     Some(())
 }
 
-fn emit_block(tokens: &[Token], stored_length: usize, writer: &mut BitWriter) -> Option<()> {
+fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) -> Option<()> {
+    let block_count = tokens.len().div_ceil(block_tokens);
+    for (index, block) in tokens.chunks(block_tokens).enumerate() {
+        let stored_length = block.iter().try_fold(0usize, |length, token| {
+            length.checked_add(match token {
+                Token::Literal(_) => 1,
+                Token::Match { length, .. } => *length,
+            })
+        })?;
+        emit_block(block, stored_length, index + 1 == block_count, writer)?;
+    }
+    Some(())
+}
+
+fn emit_block(
+    tokens: &[Token],
+    stored_length: usize,
+    final_block: bool,
+    writer: &mut BitWriter,
+) -> Option<()> {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:628-707.
     let (literal_frequencies, distance_frequencies) = frequencies(tokens)?;
     let static_literal_lengths = static_literal_lengths();
@@ -806,9 +835,9 @@ fn emit_block(tokens: &[Token], stored_length: usize, writer: &mut BitWriter) ->
         return None;
     }
     if static_bytes <= dynamic_bytes {
-        emit_fixed_block(tokens, writer)?;
+        emit_fixed_block(tokens, final_block, writer)?;
     } else {
-        writer.write_bits(5, 3); // BFINAL=1, BTYPE=dynamic (10).
+        writer.write_bits(4 | u32::from(final_block), 3); // BTYPE=dynamic (10).
         send_all_trees(
             &literal_tree,
             &distance_tree,
@@ -1002,8 +1031,8 @@ fn emit_tokens(
     Some(())
 }
 
-fn emit_fixed_block(tokens: &[Token], writer: &mut BitWriter) -> Option<()> {
-    writer.write_bits(3, 3); // BFINAL=1, BTYPE=fixed (01).
+fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter) -> Option<()> {
+    writer.write_bits(2 | u32::from(final_block), 3); // BTYPE=fixed (01).
     for &token in tokens {
         match token {
             Token::Literal(value) => write_fixed_symbol(writer, u16::from(value)),

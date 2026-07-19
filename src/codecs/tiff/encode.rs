@@ -1,6 +1,6 @@
 //! Classic TIFF encoder with selectable byte order, compression, and predictor.
 
-use crate::codecs::compression::deflate::compress_zlib;
+use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
 use std::collections::HashMap;
@@ -58,7 +58,13 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let encoded = match compression {
         COMPRESSION_NONE => raw,
         COMPRESSION_LZW => encode_lzw(&raw),
-        COMPRESSION_DEFLATE => compress_zlib(&raw, 6)?,
+        COMPRESSION_DEFLATE => {
+            let row_len = usize::try_from(img.width)
+                .ok()?
+                .checked_mul(usize::from(channels))?;
+            let input_chunks = vec![row_len; usize::try_from(img.height).ok()?];
+            compress_zlib_tiff(&raw, &input_chunks)?
+        }
         COMPRESSION_PACKBITS => encode_packbits(
             &raw,
             usize::try_from(img.width)

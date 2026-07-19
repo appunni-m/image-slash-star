@@ -61,11 +61,10 @@ pub(crate) fn decompress_zlib(data: &[u8], max_output: usize) -> Option<Vec<u8>>
     (adler32(&output) == expected).then_some(output)
 }
 
-/// Compress data into a zlib stream using stored blocks at level zero and a
-/// deterministic fixed-Huffman LZ77 stream at levels one through nine.
+/// Compress TIFF scanlines with zlib-ng's default memLevel-eight buffer.
 #[cfg(feature = "tiff")]
-pub(crate) fn compress_zlib(data: &[u8], level: u8) -> Option<Vec<u8>> {
-    compress_zlib_chunked(data, level, &[data.len()])
+pub(crate) fn compress_zlib_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    super::zlib_ng::compress_level6_tiff(data, input_chunks)
 }
 
 /// Compress a sequence of input calls as one zlib stream.
