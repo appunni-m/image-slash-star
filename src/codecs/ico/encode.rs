@@ -27,117 +27,218 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     if opts.extra.get("entry_type").map(String::as_str) == Some("bmp") {
         return encode_bmp_entry(img, opts);
     }
-    if writes_one_source_sized_png(img, opts) {
-        return encode_png_entry(img);
+    encode_png_entries(img, opts)
+}
+
+fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+    let mut sizes = if let Some(value) = opts.extra.get("sizes") {
+        parse_sizes(value)?
+    } else {
+        [16, 24, 32, 48, 64, 128, 256]
+            .into_iter()
+            .map(|size| (size, size))
+            .collect()
+    };
+    sizes.retain(|&(width, height)| {
+        width <= img.width as usize
+            && height <= img.height as usize
+            && width <= 256
+            && height <= 256
+    });
+    sizes.sort_unstable();
+    sizes.dedup();
+    if sizes.is_empty() {
+        return None;
     }
-    // Convert pixel data to BGRA (we always write 32-bit ICO entries)
-    let bgra = match img.color {
-        ColorType::Rgba8 => convert_rgba_to_bgra(&img.pixels),
-        ColorType::Rgb8 => convert_rgb_to_bgra(&img.pixels),
-        ColorType::L8 => convert_l8_to_bgra(&img.pixels),
+
+    let mut frames = Vec::with_capacity(sizes.len());
+    for &(width, height) in &sizes {
+        let frame = if (width, height) == (img.width as usize, img.height as usize) {
+            img.clone()
+        } else {
+            resize_lanczos(img, width, height)?
+        };
+        frames.push(crate::codecs::png::encode::encode(
+            &frame,
+            &EncodeOptions::default(),
+        )?);
+    }
+
+    let directory_bytes = sizes.len().checked_mul(16)?;
+    let mut offset = 6usize.checked_add(directory_bytes)?;
+    let total = frames
+        .iter()
+        .try_fold(offset, |length, frame| length.checked_add(frame.len()))?;
+    let mut output = Vec::with_capacity(total);
+    output.extend_from_slice(&[0, 0, 1, 0]);
+    output.extend_from_slice(&u16::try_from(sizes.len()).ok()?.to_le_bytes());
+    for (&(width, height), frame) in sizes.iter().zip(&frames) {
+        output.push(if width == 256 {
+            0
+        } else {
+            u8::try_from(width).ok()?
+        });
+        output.push(if height == 256 {
+            0
+        } else {
+            u8::try_from(height).ok()?
+        });
+        output.extend_from_slice(&[0, 0, 0, 0]);
+        output.extend_from_slice(&32u16.to_le_bytes());
+        output.extend_from_slice(&u32::try_from(frame.len()).ok()?.to_le_bytes());
+        output.extend_from_slice(&u32::try_from(offset).ok()?.to_le_bytes());
+        offset = offset.checked_add(frame.len())?;
+    }
+    for frame in frames {
+        output.extend_from_slice(&frame);
+    }
+    Some(output)
+}
+
+fn resize_lanczos(img: &DecodedImage, width: usize, height: usize) -> Option<DecodedImage> {
+    let channels = match img.color {
+        ColorType::L8 => 1,
+        ColorType::Rgb8 => 3,
+        ColorType::Rgba8 => 4,
         _ => return None,
     };
-    // ICO header + directory entry size
-    let header_size = 6;
-    let dir_entry_size = 16;
-    let data_offset = header_size + dir_entry_size;
-    // BMP BITMAPINFOHEADER (40 bytes)
-    let dib_header_size = 40u32;
-    // Pixel data: each row is 4 bytes per pixel, bottom-up
-    let row_bytes = w * 4;
-    let pixel_data_size = row_bytes * h;
-    // AND mask: 1 bit per pixel, each row padded to 4-byte boundary
-    let and_mask_row_bytes = w.div_ceil(32) * 4;
-    let and_mask_size = and_mask_row_bytes * h;
-    // ICO BMP data: DIB header + pixels + AND mask
-    let bmp_data_size = dib_header_size as usize + pixel_data_size + and_mask_size;
-    let total_size = data_offset + bmp_data_size;
-    let mut data = Vec::with_capacity(total_size);
-    // --- ICO header (6 bytes) ---
-    data.extend_from_slice(&[0u8; 2]); // reserved
-    data.extend_from_slice(&1u16.to_le_bytes()); // type = ICO (1)
-    data.extend_from_slice(&1u16.to_le_bytes()); // count = 1
-    // --- Directory entry (16 bytes) ---
-    // Width/height: 0 means 256; otherwise actual value
-    if w == 256 {
-        data.push(0);
-    } else {
-        data.push(w as u8);
-    }
-    if h == 256 {
-        data.push(0);
-    } else {
-        data.push(h as u8);
-    }
-    data.push(0); // colors (0 = >= 256)
-    data.push(0); // reserved
-    data.extend_from_slice(&1u16.to_le_bytes()); // color planes
-    data.extend_from_slice(&32u16.to_le_bytes()); // bits per pixel
-    data.extend_from_slice(&(bmp_data_size as u32).to_le_bytes()); // size of BMP data
-    data.extend_from_slice(&(data_offset as u32).to_le_bytes()); // offset of BMP data
-    // --- BMP data: BITMAPINFOHEADER (40 bytes) ---
-    data.extend_from_slice(&dib_header_size.to_le_bytes()); // biSize
-    data.extend_from_slice(&(w as u32).to_le_bytes()); // biWidth
-    // ICO convention: height is doubled to include AND mask rows
-    data.extend_from_slice(&((h as u32) * 2).to_le_bytes()); // biHeight
-    data.extend_from_slice(&1u16.to_le_bytes()); // biPlanes
-    data.extend_from_slice(&32u16.to_le_bytes()); // biBitCount
-    data.extend_from_slice(&0u32.to_le_bytes()); // biCompression (BI_RGB)
-    data.extend_from_slice(&0u32.to_le_bytes()); // biSizeImage
-    data.extend_from_slice(&0i32.to_le_bytes()); // biXPelsPerMeter
-    data.extend_from_slice(&0i32.to_le_bytes()); // biYPelsPerMeter
-    data.extend_from_slice(&0u32.to_le_bytes()); // biClrUsed
-    data.extend_from_slice(&0u32.to_le_bytes()); // biClrImportant
-    // --- Pixel data (bottom-up BGRA) ---
-    for y in (0..h).rev() {
-        let row_start = y * row_bytes;
-        data.extend_from_slice(&bgra[row_start..row_start + row_bytes]);
-    }
-    // --- AND mask (all zeros = fully opaque) ---
-    for _ in 0..h {
-        for _ in 0..and_mask_row_bytes {
-            data.push(0);
+    let source_width = usize::try_from(img.width).ok()?;
+    let source_height = usize::try_from(img.height).ok()?;
+    let mut pixels = img.pixels.clone();
+    if channels == 4 {
+        for pixel in pixels.chunks_exact_mut(4) {
+            let alpha = u32::from(pixel[3]);
+            for channel in &mut pixel[..3] {
+                let product = u32::from(*channel).checked_mul(alpha)?.checked_add(128)?;
+                *channel = u8::try_from(((product >> 8) + product) >> 8).ok()?;
+            }
         }
     }
-    Some(data)
-}
 
-fn writes_one_source_sized_png(img: &DecodedImage, opts: &EncodeOptions) -> bool {
-    if let Some(value) = opts.extra.get("sizes") {
-        return parse_sizes(value).is_some_and(|sizes| {
-            sizes.len() == 1 && sizes[0] == (img.width as usize, img.height as usize)
-        });
+    let horizontal = resample_axis(&pixels, source_width, source_height, width, channels, true)?;
+    let mut resized = resample_axis(&horizontal, width, source_height, height, channels, false)?;
+    if channels == 4 {
+        for pixel in resized.chunks_exact_mut(4) {
+            let alpha = u32::from(pixel[3]);
+            if alpha != 0 && alpha != 255 {
+                for channel in &mut pixel[..3] {
+                    *channel = u8::try_from((255 * u32::from(*channel) / alpha).min(255)).ok()?;
+                }
+            }
+        }
     }
-    const DEFAULT_SIZES: [usize; 7] = [16, 24, 32, 48, 64, 128, 256];
-    DEFAULT_SIZES
-        .into_iter()
-        .filter(|&size| size <= img.width as usize && size <= img.height as usize)
-        .count()
-        == 1
+    Some(DecodedImage::new(
+        u32::try_from(width).ok()?,
+        u32::try_from(height).ok()?,
+        resized,
+        img.color,
+    ))
 }
 
-fn encode_png_entry(img: &DecodedImage) -> Option<Vec<u8>> {
-    // Pillow 12.2.0 IcoImagePlugin.py:175-178 delegates the frame to the PNG
-    // writer without forwarding ICO options.
-    let png = crate::codecs::png::encode::encode(img, &EncodeOptions::default())?;
-    let mut output = Vec::with_capacity(22usize.checked_add(png.len())?);
-    output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);
-    output.push(if img.width == 256 {
-        0
+fn resample_axis(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+    output_size: usize,
+    channels: usize,
+    horizontal: bool,
+) -> Option<Vec<u8>> {
+    let input_size = if horizontal { width } else { height };
+    let coefficients = lanczos_coefficients(input_size, output_size)?;
+    let (output_width, output_height) = if horizontal {
+        (output_size, height)
     } else {
-        u8::try_from(img.width).ok()?
-    });
-    output.push(if img.height == 256 {
-        0
-    } else {
-        u8::try_from(img.height).ok()?
-    });
-    output.extend_from_slice(&[0, 0, 0, 0]);
-    output.extend_from_slice(&32u16.to_le_bytes());
-    output.extend_from_slice(&u32::try_from(png.len()).ok()?.to_le_bytes());
-    output.extend_from_slice(&22u32.to_le_bytes());
-    output.extend_from_slice(&png);
+        (width, output_size)
+    };
+    let mut output = vec![
+        0;
+        output_width
+            .checked_mul(output_height)?
+            .checked_mul(channels)?
+    ];
+    for y in 0..output_height {
+        for x in 0..output_width {
+            let coefficient = &coefficients[if horizontal { x } else { y }];
+            for channel in 0..channels {
+                let mut sum = 1i64 << 21;
+                for (index, &weight) in coefficient.weights.iter().enumerate() {
+                    let source_x = if horizontal {
+                        coefficient.start + index
+                    } else {
+                        x
+                    };
+                    let source_y = if horizontal {
+                        y
+                    } else {
+                        coefficient.start + index
+                    };
+                    let source = (source_y.checked_mul(width)?.checked_add(source_x)?)
+                        .checked_mul(channels)?
+                        .checked_add(channel)?;
+                    sum = sum.checked_add(i64::from(*pixels.get(source)?) * i64::from(weight))?;
+                }
+                let value = (sum >> 22).clamp(0, 255) as u8;
+                let target = (y.checked_mul(output_width)?.checked_add(x)?)
+                    .checked_mul(channels)?
+                    .checked_add(channel)?;
+                output[target] = value;
+            }
+        }
+    }
     Some(output)
+}
+
+struct Coefficients {
+    start: usize,
+    weights: Vec<i32>,
+}
+
+fn lanczos_coefficients(input: usize, output: usize) -> Option<Vec<Coefficients>> {
+    let scale = input as f64 / output as f64;
+    let filter_scale = scale.max(1.0);
+    let support = 3.0 * filter_scale;
+    let mut coefficients = Vec::with_capacity(output);
+    for out in 0..output {
+        let center = (out as f64 + 0.5) * scale;
+        let start = ((center - support + 0.5) as isize).max(0) as usize;
+        let end = ((center + support + 0.5) as usize).min(input);
+        let mut weights = Vec::with_capacity(end.checked_sub(start)?);
+        let mut total = 0.0;
+        for source in start..end {
+            let distance = (source as f64 - center + 0.5) / filter_scale;
+            let weight = lanczos(distance);
+            weights.push(weight);
+            total += weight;
+        }
+        let weights = weights
+            .into_iter()
+            .map(|weight| {
+                let normalized = weight / total * ((1u64 << 22) as f64);
+                if normalized < 0.0 {
+                    (normalized - 0.5) as i32
+                } else {
+                    (normalized + 0.5) as i32
+                }
+            })
+            .collect();
+        coefficients.push(Coefficients { start, weights });
+    }
+    Some(coefficients)
+}
+
+fn lanczos(value: f64) -> f64 {
+    if !(-3.0..3.0).contains(&value) {
+        return 0.0;
+    }
+    sinc(value) * sinc(value / 3.0)
+}
+
+fn sinc(mut value: f64) -> f64 {
+    if value == 0.0 {
+        return 1.0;
+    }
+    value *= std::f64::consts::PI;
+    value.sin() / value
 }
 
 fn encode_bmp_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
@@ -240,38 +341,4 @@ fn parse_sizes(value: &str) -> Option<Vec<(usize, usize)>> {
             .map(|pair| (pair[0], pair[1]))
             .collect(),
     )
-}
-/// Convert RGBA8 pixels (R,G,B,A) to BGRA (B,G,R,A).
-fn convert_rgba_to_bgra(pixels: &[u8]) -> Vec<u8> {
-    let mut bgra = Vec::with_capacity(pixels.len());
-    for chunk in pixels.chunks_exact(4) {
-        bgra.push(chunk[2]); // B
-        bgra.push(chunk[1]); // G
-        bgra.push(chunk[0]); // R
-        bgra.push(chunk[3]); // A
-    }
-    bgra
-}
-/// Convert RGB8 pixels (R,G,B) to BGRA (B,G,R,A=255).
-fn convert_rgb_to_bgra(pixels: &[u8]) -> Vec<u8> {
-    let pixel_count = pixels.len() / 3;
-    let mut bgra = Vec::with_capacity(pixel_count * 4);
-    for chunk in pixels.chunks_exact(3) {
-        bgra.push(chunk[2]); // B
-        bgra.push(chunk[1]); // G
-        bgra.push(chunk[0]); // R
-        bgra.push(255); // A (fully opaque)
-    }
-    bgra
-}
-/// Convert L8 pixels (grayscale) to BGRA (B=G=R=lum, A=255).
-fn convert_l8_to_bgra(pixels: &[u8]) -> Vec<u8> {
-    let mut bgra = Vec::with_capacity(pixels.len() * 4);
-    for &lum in pixels {
-        bgra.push(lum); // B
-        bgra.push(lum); // G
-        bgra.push(lum); // R
-        bgra.push(255); // A
-    }
-    bgra
 }
