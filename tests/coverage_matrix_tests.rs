@@ -649,18 +649,39 @@ fn assert_ico_contract(
     params: &HashMap<String, serde_json::Value>,
     encoded: &[u8],
 ) -> Result<(), String> {
-    if encoded.get(..4) != Some(&[0, 0, 1, 0]) || read_le_u16(encoded, 4) != Some(1) {
-        return Err("encoded ICO is not a single-image icon container".to_owned());
+    if encoded.get(..4) != Some(&[0, 0, 1, 0]) {
+        return Err("encoded ICO has an invalid header".to_owned());
     }
-    if let Some(expected) = params.get("bit_depth").and_then(serde_json::Value::as_u64)
-        && read_le_u16(encoded, 12).map(u64::from) != Some(expected)
-    {
-        return Err(format!("ICO bit depth does not match {expected}"));
+    let count = usize::from(read_le_u16(encoded, 4).ok_or("truncated ICO header")?);
+    if count == 0 || encoded.len() < 6 + count * 16 {
+        return Err("encoded ICO has an invalid image directory".to_owned());
     }
-    if params.get("entry_type").and_then(serde_json::Value::as_str) == Some("bmp") {
-        let data_offset = usize::try_from(read_le_u32(encoded, 18).ok_or("truncated ICO entry")?)
-            .map_err(|_| "ICO data offset is too large")?;
-        if read_le_u32(encoded, data_offset) != Some(40) {
+
+    let expected_bit_depth = params.get("bit_depth").and_then(serde_json::Value::as_u64);
+    let expect_bmp = params.get("entry_type").and_then(serde_json::Value::as_str) == Some("bmp");
+    for index in 0..count {
+        let entry = 6 + index * 16;
+        if let Some(expected) = expected_bit_depth
+            && read_le_u16(encoded, entry + 6).map(u64::from) != Some(expected)
+        {
+            return Err(format!("ICO bit depth does not match {expected}"));
+        }
+
+        let data_size = usize::try_from(
+            read_le_u32(encoded, entry + 8).ok_or("truncated ICO directory entry")?,
+        )
+        .map_err(|_| "ICO data size is too large")?;
+        let data_offset = usize::try_from(
+            read_le_u32(encoded, entry + 12).ok_or("truncated ICO directory entry")?,
+        )
+        .map_err(|_| "ICO data offset is too large")?;
+        if data_offset
+            .checked_add(data_size)
+            .is_none_or(|end| end > encoded.len())
+        {
+            return Err("ICO directory entry points outside the file".to_owned());
+        }
+        if expect_bmp && read_le_u32(encoded, data_offset) != Some(40) {
             return Err("ICO BMP entry request did not emit a BITMAPINFOHEADER".to_owned());
         }
     }
