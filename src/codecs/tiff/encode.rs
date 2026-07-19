@@ -3,6 +3,7 @@
 use crate::codecs::compression::deflate::compress_zlib;
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
+use std::collections::HashMap;
 
 const COMPRESSION_NONE: u16 = 1;
 const COMPRESSION_LZW: u16 = 5;
@@ -56,7 +57,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     }
     let encoded = match compression {
         COMPRESSION_NONE => raw,
-        COMPRESSION_LZW => encode_lzw_literals(&raw),
+        COMPRESSION_LZW => encode_lzw(&raw),
         COMPRESSION_DEFLATE => compress_zlib(&raw, 6)?,
         COMPRESSION_PACKBITS => encode_packbits(
             &raw,
@@ -294,25 +295,88 @@ fn emit_packbits_run(output: &mut Vec<u8>, byte: u8, run_len: &mut usize) {
     *run_len -= emitted;
 }
 
-/// Emit literal-only TIFF LZW packets. Periodic CLEAR codes keep the code
-/// width at nine bits, making the stream simple while remaining interoperable.
-fn encode_lzw_literals(data: &[u8]) -> Vec<u8> {
+fn encode_lzw(data: &[u8]) -> Vec<u8> {
     const CLEAR: u16 = 256;
     const END: u16 = 257;
-    const LITERALS_PER_DICTIONARY: usize = 200;
+    const FIRST: u16 = 258;
+    const MAX_CODE: u16 = 4095;
+    const CHECK_GAP: usize = 10_000;
 
     let mut writer = MsbWriter::default();
     if data.is_empty() {
         writer.write(CLEAR, 9);
-    } else {
-        for chunk in data.chunks(LITERALS_PER_DICTIONARY) {
-            writer.write(CLEAR, 9);
-            for &byte in chunk {
-                writer.write(u16::from(byte), 9);
+        writer.write(END, 9);
+        return writer.finish();
+    }
+
+    let mut dictionary = HashMap::<(u16, u8), u16>::with_capacity(4096);
+    let mut width = 9u8;
+    let mut max_code = (1u16 << width) - 1;
+    let mut free_entry = FIRST;
+    let mut input_count = 1usize;
+    let mut output_bits = 0usize;
+    let mut checkpoint = CHECK_GAP;
+    let mut ratio = 0usize;
+
+    writer.write(CLEAR, width);
+    output_bits += usize::from(width);
+    let mut entry = u16::from(data[0]);
+
+    for &byte in &data[1..] {
+        input_count += 1;
+        if let Some(&code) = dictionary.get(&(entry, byte)) {
+            entry = code;
+            continue;
+        }
+
+        let prefix = entry;
+        writer.write(prefix, width);
+        output_bits += usize::from(width);
+        entry = u16::from(byte);
+        dictionary.insert((prefix, byte), free_entry);
+        free_entry += 1;
+
+        if free_entry == MAX_CODE - 1 {
+            dictionary.clear();
+            ratio = 0;
+            input_count = 0;
+            output_bits = 0;
+            free_entry = FIRST;
+            writer.write(CLEAR, width);
+            output_bits += usize::from(width);
+            width = 9;
+            max_code = (1u16 << width) - 1;
+        } else if free_entry > max_code {
+            width += 1;
+            max_code = (1u16 << width) - 1;
+        } else if input_count >= checkpoint {
+            checkpoint = input_count + CHECK_GAP;
+            let current_ratio = (input_count << 8) / output_bits;
+            if current_ratio <= ratio {
+                dictionary.clear();
+                ratio = 0;
+                input_count = 0;
+                output_bits = 0;
+                free_entry = FIRST;
+                writer.write(CLEAR, width);
+                output_bits += usize::from(width);
+                width = 9;
+                max_code = (1u16 << width) - 1;
+            } else {
+                ratio = current_ratio;
             }
         }
     }
-    writer.write(END, 9);
+
+    writer.write(entry, width);
+    free_entry += 1;
+    if free_entry == MAX_CODE - 1 {
+        writer.write(CLEAR, width);
+        width = 9;
+    } else if free_entry > max_code {
+        width += 1;
+    }
+    writer.write(END, width);
     writer.finish()
 }
 
