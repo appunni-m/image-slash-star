@@ -63,13 +63,34 @@ pub(crate) fn decompress_zlib(data: &[u8], max_output: usize) -> Option<Vec<u8>>
 
 /// Compress data into a zlib stream using stored blocks at level zero and a
 /// deterministic fixed-Huffman LZ77 stream at levels one through nine.
-#[cfg(any(feature = "png", feature = "tiff"))]
+#[cfg(feature = "tiff")]
 pub(crate) fn compress_zlib(data: &[u8], level: u8) -> Option<Vec<u8>> {
+    compress_zlib_chunked(data, level, &[data.len()])
+}
+
+/// Compress a sequence of input calls as one zlib stream.
+///
+/// The chunk lengths model callers such as Pillow's PNG encoder, which feeds
+/// one complete filtered scanline to zlib-ng at a time. Input-call boundaries
+/// are observable at level zero because zlib-ng emits a stored block when its
+/// buffered input first reaches the 32 KiB window size.
+#[cfg(any(feature = "png", feature = "tiff"))]
+pub(crate) fn compress_zlib_chunked(
+    data: &[u8],
+    level: u8,
+    input_chunks: &[usize],
+) -> Option<Vec<u8>> {
     if level > 9 {
         return None;
     }
+    let input_len = input_chunks
+        .iter()
+        .try_fold(0usize, |total, &length| total.checked_add(length))?;
+    if input_len != data.len() {
+        return None;
+    }
     if level == 0 {
-        return Some(compress_zlib_stored(data));
+        return compress_zlib_stored_chunked(data, input_chunks);
     }
 
     let mut output = zlib_header(level);
@@ -83,24 +104,36 @@ pub(crate) fn compress_zlib(data: &[u8], level: u8) -> Option<Vec<u8>> {
     Some(output)
 }
 
-/// Emit a standards-compliant zlib stream made of uncompressed DEFLATE blocks.
 #[cfg(any(feature = "png", feature = "tiff"))]
-pub(crate) fn compress_zlib_stored(data: &[u8]) -> Vec<u8> {
+fn compress_zlib_stored_chunked(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    const MIN_BLOCK: usize = 32_768;
+    const MAX_STORED: usize = u16::MAX as usize;
+
     let mut output = vec![0x78, 0x01];
-    if data.is_empty() {
-        output.extend_from_slice(&[1, 0, 0, 0xff, 0xff]);
-    } else {
-        let block_count = data.len().div_ceil(u16::MAX as usize);
-        for (index, block) in data.chunks(u16::MAX as usize).enumerate() {
-            output.push(u8::from(index + 1 == block_count));
-            let len = block.len() as u16;
-            output.extend_from_slice(&len.to_le_bytes());
-            output.extend_from_slice(&(!len).to_le_bytes());
-            output.extend_from_slice(block);
+    let mut pending_start = 0usize;
+    let mut input_end = 0usize;
+    for &input_len in input_chunks {
+        input_end = input_end.checked_add(input_len)?;
+        while input_end.checked_sub(pending_start)? >= MIN_BLOCK {
+            let maximum_end = pending_start.checked_add(MAX_STORED)?;
+            let block_end = input_end.min(maximum_end);
+            write_stored_block(&mut output, data.get(pending_start..block_end)?, false)?;
+            pending_start = block_end;
         }
     }
+    write_stored_block(&mut output, data.get(pending_start..)?, true)?;
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
+    Some(output)
+}
+
+#[cfg(any(feature = "png", feature = "tiff"))]
+fn write_stored_block(output: &mut Vec<u8>, block: &[u8], final_block: bool) -> Option<()> {
+    output.push(u8::from(final_block));
+    let len = u16::try_from(block.len()).ok()?;
+    output.extend_from_slice(&len.to_le_bytes());
+    output.extend_from_slice(&(!len).to_le_bytes());
+    output.extend_from_slice(block);
+    Some(())
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]

@@ -1,6 +1,6 @@
 //! PNG encoder using the internal zlib/DEFLATE implementation.
 
-use crate::codecs::compression::deflate::compress_zlib;
+use crate::codecs::compression::deflate::compress_zlib_chunked;
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
 
@@ -40,25 +40,29 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     let interlaced = opts.interlace.unwrap_or(false);
     let filter = Filter::parse(opts.extra.get("filter").map(String::as_str))?;
-    let filtered = if interlaced {
-        adam7_rows(&img.pixels, width, height, channels, filter)?
+    let optimize = opts.optimize.unwrap_or(false);
+    let (filtered, input_chunks) = if interlaced {
+        adam7_rows(&img.pixels, width, height, channels, filter, optimize)?
     } else {
-        plain_rows(&img.pixels, width, height, channels, filter)?
+        plain_rows(&img.pixels, width, height, channels, filter, optimize)?
     };
-    let compression_level = opts
-        .compression
-        .or_else(|| {
-            opts.extra
-                .get("compression")
-                .and_then(|value| match value.as_str() {
-                    "none" => Some(0),
-                    "default" => Some(6),
-                    "max" => Some(9),
-                    _ => value.parse().ok(),
-                })
-        })
-        .unwrap_or(6);
-    let compressed = compress_zlib(&filtered, compression_level)?;
+    let compression_level = if optimize {
+        9
+    } else {
+        opts.compression
+            .or_else(|| {
+                opts.extra
+                    .get("compression")
+                    .and_then(|value| match value.as_str() {
+                        "none" => Some(0),
+                        "default" => Some(6),
+                        "max" => Some(9),
+                        _ => value.parse().ok(),
+                    })
+            })
+            .unwrap_or(6)
+    };
+    let compressed = compress_zlib_chunked(&filtered, compression_level, &input_chunks)?;
 
     let mut header = Vec::with_capacity(13);
     header.extend_from_slice(&img.width.to_be_bytes());
@@ -79,15 +83,17 @@ fn plain_rows(
     height: usize,
     channels: usize,
     filter: Filter,
-) -> Option<Vec<u8>> {
+    optimize: bool,
+) -> Option<(Vec<u8>, Vec<usize>)> {
     let stride = width.checked_mul(channels)?;
     let mut output = Vec::with_capacity(stride.checked_add(1)?.checked_mul(height)?);
+    let input_chunks = vec![stride.checked_add(1)?; height];
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
-        append_filtered_row(&mut output, row, previous, channels, filter);
+        append_filtered_row(&mut output, row, previous, channels, filter, optimize);
         previous = Some(row);
     }
-    Some(output)
+    Some((output, input_chunks))
 }
 
 fn adam7_rows(
@@ -96,8 +102,10 @@ fn adam7_rows(
     height: usize,
     channels: usize,
     filter: Filter,
-) -> Option<Vec<u8>> {
+    optimize: bool,
+) -> Option<(Vec<u8>, Vec<usize>)> {
     let mut output = Vec::new();
+    let mut input_chunks = Vec::new();
     for (x_start, y_start, x_step, y_step) in ADAM7 {
         if width <= x_start || height <= y_start {
             continue;
@@ -110,11 +118,19 @@ fn adam7_rows(
                 let start = (y.checked_mul(width)?.checked_add(x)?).checked_mul(channels)?;
                 row.extend_from_slice(pixels.get(start..start + channels)?);
             }
-            append_filtered_row(&mut output, &row, previous.as_deref(), channels, filter);
+            input_chunks.push(row.len().checked_add(1)?);
+            append_filtered_row(
+                &mut output,
+                &row,
+                previous.as_deref(),
+                channels,
+                filter,
+                optimize,
+            );
             previous = Some(row);
         }
     }
-    Some(output)
+    Some((output, input_chunks))
 }
 
 #[derive(Clone, Copy)]
@@ -147,18 +163,10 @@ fn append_filtered_row(
     previous: Option<&[u8]>,
     bytes_per_pixel: usize,
     requested: Filter,
+    optimize: bool,
 ) {
     let selected = if matches!(requested, Filter::Adaptive) {
-        [
-            Filter::None,
-            Filter::Sub,
-            Filter::Up,
-            Filter::Average,
-            Filter::Paeth,
-        ]
-        .into_iter()
-        .min_by_key(|&candidate| filter_score(row, previous, bytes_per_pixel, candidate))
-        .unwrap_or(Filter::None)
+        select_adaptive_filter(row, previous, bytes_per_pixel, optimize)
     } else {
         requested
     };
@@ -182,6 +190,31 @@ fn append_filtered_row(
         };
         output.push(value.wrapping_sub(prediction));
     }
+}
+
+fn select_adaptive_filter(
+    row: &[u8],
+    previous: Option<&[u8]>,
+    bytes_per_pixel: usize,
+    optimize: bool,
+) -> Filter {
+    // Pillow's ZipEncode.c starts with None, then replaces it only on a
+    // strictly lower score in this order. Average is deliberately excluded
+    // unless optimize=True.
+    let mut selected = Filter::None;
+    let mut score = filter_score(row, previous, bytes_per_pixel, selected);
+    for candidate in [Filter::Up, Filter::Sub]
+        .into_iter()
+        .chain(optimize.then_some(Filter::Average))
+        .chain([Filter::Paeth])
+    {
+        let candidate_score = filter_score(row, previous, bytes_per_pixel, candidate);
+        if candidate_score < score {
+            selected = candidate;
+            score = candidate_score;
+        }
+    }
+    selected
 }
 
 fn filter_score(
