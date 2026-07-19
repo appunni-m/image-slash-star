@@ -263,7 +263,6 @@ formats:
       params: {'exif': False}
     - id: enc_restart
       description: 
-      status: planned
       params: {'restart_interval': 4}
     - id: enc_no_restart
       description: 

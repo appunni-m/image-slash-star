@@ -56,6 +56,11 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     let progressive = opts.progressive.unwrap_or(false);
     let optimize = opts.optimize.unwrap_or(false);
     let subsampling = opts.subsampling.as_deref().unwrap_or("420");
+    let restart_rows = opts
+        .extra
+        .get("restart_interval")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(0);
 
     let params = quant::build_params(quality, subsampling, num_components as usize);
 
@@ -157,13 +162,24 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
         }
     }
 
+    let mcu_columns = comps[0]
+        .blocks_per_row
+        .checked_mul(8)?
+        .div_ceil(usize::from(max_h).checked_mul(8)?);
+    let restart_interval = if restart_rows == 0 {
+        0
+    } else {
+        u16::try_from(restart_rows.checked_mul(mcu_columns)?).ok()?
+    };
+
     // Derive standard Huffman tables.
     let dc_luma = huffman::derive_table(&huffman::STD_DC_LUMA.0, &huffman::STD_DC_LUMA.1);
     let dc_chroma = huffman::derive_table(&huffman::STD_DC_CHROMA.0, &huffman::STD_DC_CHROMA.1);
     let ac_luma = huffman::derive_table(&huffman::STD_AC_LUMA.0, &huffman::STD_AC_LUMA.1);
     let ac_chroma = huffman::derive_table(&huffman::STD_AC_CHROMA.0, &huffman::STD_AC_CHROMA.1);
     let (optimized_dc, optimized_ac) = if !progressive && optimize {
-        let (dc_frequencies, ac_frequencies) = baseline_frequencies(&comps, max_h, max_v)?;
+        let (dc_frequencies, ac_frequencies) =
+            baseline_frequencies(&comps, max_h, max_v, restart_interval)?;
         (
             [
                 Some(huffman::optimal_table(&dc_frequencies[0])?),
@@ -270,12 +286,24 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
             }
         }
 
+        if restart_interval != 0 {
+            marker::write_dri(&mut out, restart_interval);
+        }
+
         // Single SOS for baseline (interleaved).
         let sos_comps: Vec<(u8, u8, u8)> =
             comps.iter().map(|c| (c.id, c.dc_tbl, c.ac_tbl)).collect();
         marker::write_sos(&mut out, &sos_comps, 0, 63, 0, 0);
 
-        encode_baseline_entropy(&mut out, &comps, max_h, max_v, &dc_tables, &ac_tables);
+        encode_baseline_entropy(
+            &mut out,
+            &comps,
+            max_h,
+            max_v,
+            &dc_tables,
+            &ac_tables,
+            restart_interval,
+        );
     } else {
         encode_progressive_scans_exact(&mut out, &comps, num_components, max_h, max_v, &params)?;
     }
@@ -415,6 +443,7 @@ fn baseline_frequencies(
     comps: &[CompData],
     max_h: u8,
     max_v: u8,
+    restart_interval: u16,
 ) -> Option<([[u64; 256]; 2], [[u64; 256]; 2])> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c's gather_statistics pass.
     // Traverse exactly the same MCU stream as encode_baseline_entropy so the
@@ -426,9 +455,14 @@ fn baseline_frequencies(
     let mut dc = [[0u64; 256]; 2];
     let mut ac = [[0u64; 256]; 2];
     let mut last_dc = [0i32; 4];
+    let mut mcus_until_restart = usize::from(restart_interval);
 
     for my in 0..n_mcu_y {
         for mx in 0..n_mcu_x {
+            if restart_interval != 0 && mcus_until_restart == 0 {
+                last_dc.fill(0);
+                mcus_until_restart = usize::from(restart_interval);
+            }
             for (ci, component) in comps.iter().enumerate() {
                 let dc_slot = usize::from(component.dc_tbl);
                 let ac_slot = usize::from(component.ac_tbl);
@@ -477,6 +511,7 @@ fn baseline_frequencies(
                     }
                 }
             }
+            mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }
     Some((dc, ac))
@@ -489,6 +524,7 @@ fn encode_baseline_entropy(
     max_v: u8,
     dc_tables: &[&huffman::DerivedTable; 2],
     ac_tables: &[&huffman::DerivedTable; 2],
+    restart_interval: u16,
 ) {
     let mcu_w = max_h as usize * 8;
     let mcu_h = max_v as usize * 8;
@@ -497,9 +533,19 @@ fn encode_baseline_entropy(
 
     let mut bw = huffman::BitWriter::new();
     let mut last_dc = [0i32; 4];
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut next_restart = 0u8;
 
     for my in 0..n_mcu_y {
         for mx in 0..n_mcu_x {
+            if restart_interval != 0 && mcus_until_restart == 0 {
+                bw.flush();
+                out.append(&mut bw.out);
+                marker::write_rst(out, next_restart);
+                next_restart = (next_restart + 1) & 7;
+                last_dc.fill(0);
+                mcus_until_restart = usize::from(restart_interval);
+            }
             for (ci, c) in comps.iter().enumerate() {
                 let hs = c.h_samp as usize;
                 let vs = c.v_samp as usize;
@@ -524,6 +570,7 @@ fn encode_baseline_entropy(
                     }
                 }
             }
+            mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }
     bw.flush();

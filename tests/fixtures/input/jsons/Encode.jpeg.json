@@ -393,6 +393,27 @@
       }
     },
     {
+      "id": "enc_restart",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "restart_interval": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "restart_marker_rows": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_no_restart",
       "source_asset": "baseline_444.jpg",
       "source_format": "jpeg",
