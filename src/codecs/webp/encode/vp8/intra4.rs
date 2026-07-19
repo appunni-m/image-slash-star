@@ -2,6 +2,11 @@
 
 #![allow(dead_code)]
 
+use super::{
+    cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
+    quant::{SegmentMatrices, quantize_reconstruct_block},
+};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub(super) enum Intra4Mode {
@@ -158,6 +163,150 @@ const FIXED_MODE_COSTS: [[[u16; 10]; 10]; 10] = [
 
 pub(super) fn fixed_mode_cost(top: Intra4Mode, left: Intra4Mode, mode: Intra4Mode) -> u16 {
     FIXED_MODE_COSTS[top as usize][left as usize][mode as usize]
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct Intra4Result {
+    pub(super) modes: [Intra4Mode; 16],
+    pub(super) levels: [[i16; 16]; 16],
+    pub(super) reconstructed: [u8; 256],
+    pub(super) distortion: u32,
+    pub(super) spectral_distortion: u32,
+    pub(super) header_cost: u32,
+    pub(super) rate_cost: u32,
+    pub(super) score: u64,
+    pub(super) nonzero: u32,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn select_macroblock(
+    source: &[u8; 256],
+    top_boundary: &[u8; 20],
+    left_boundary: &[u8; 16],
+    top_left: u8,
+    top_modes: &[Intra4Mode; 4],
+    left_modes: &[Intra4Mode; 4],
+    mut top_nonzero: [u8; 4],
+    mut left_nonzero: [u8; 4],
+    matrices: &SegmentMatrices,
+    lambda_i4: u32,
+    lambda_mode: u32,
+    texture_lambda: u32,
+) -> Intra4Result {
+    let mut result = Intra4Result {
+        modes: [Intra4Mode::Dc; 16],
+        levels: [[0; 16]; 16],
+        reconstructed: [0; 256],
+        distortion: 0,
+        spectral_distortion: 0,
+        header_cost: 211,
+        rate_cost: 0,
+        score: u64::from(211 * lambda_mode),
+        nonzero: 0,
+    };
+
+    for block_y in 0..4 {
+        for block_x in 0..4 {
+            let block_index = block_y * 4 + block_x;
+            let mut block_source = [0; 16];
+            for row in 0..4 {
+                let source_offset = (block_y * 4 + row) * 16 + block_x * 4;
+                block_source[row * 4..row * 4 + 4]
+                    .copy_from_slice(&source[source_offset..source_offset + 4]);
+            }
+
+            let mut top = [0; 8];
+            for (offset, sample) in top.iter_mut().enumerate() {
+                let column = block_x * 4 + offset;
+                *sample = if block_y == 0 {
+                    top_boundary[column]
+                } else if column < 16 {
+                    result.reconstructed[(block_y * 4 - 1) * 16 + column]
+                } else {
+                    result.reconstructed[(block_y * 4 - 1) * 16 + 15]
+                };
+            }
+            let left = std::array::from_fn(|offset| {
+                let row = block_y * 4 + offset;
+                if block_x == 0 {
+                    left_boundary[row]
+                } else {
+                    result.reconstructed[row * 16 + block_x * 4 - 1]
+                }
+            });
+            let block_top_left = match (block_x, block_y) {
+                (0, 0) => top_left,
+                (_, 0) => top_boundary[block_x * 4 - 1],
+                (0, _) => left_boundary[block_y * 4 - 1],
+                _ => result.reconstructed[(block_y * 4 - 1) * 16 + block_x * 4 - 1],
+            };
+            let top_mode = if block_y == 0 {
+                top_modes[block_x]
+            } else {
+                result.modes[block_index - 4]
+            };
+            let left_mode = if block_x == 0 {
+                left_modes[block_y]
+            } else {
+                result.modes[block_index - 1]
+            };
+            let context = usize::from(top_nonzero[block_x] + left_nonzero[block_y]);
+
+            let mut best: Option<(u64, Intra4Mode, [i16; 16], [u8; 16], u32, u32, u32, u32)> = None;
+            for mode in Intra4Mode::ALL {
+                let prediction = predict(mode, &top, &left, block_top_left);
+                let (nonzero, levels, reconstructed) =
+                    quantize_reconstruct_block(&block_source, &prediction, &matrices.y1);
+                let distortion = squared_error_4x4(&block_source, &reconstructed);
+                let texture = spectral_distortion_4x4(&block_source, &reconstructed);
+                let spectral = (texture_lambda * texture + 128) >> 8;
+                let header = u32::from(fixed_mode_cost(top_mode, left_mode, mode));
+                let flat_penalty = if mode != Intra4Mode::Dc
+                    && levels[1..].iter().filter(|&&level| level != 0).count() <= 3
+                {
+                    140
+                } else {
+                    0
+                };
+                let rate = flat_penalty + residual_cost(&levels, 0, 3, context);
+                let score = rd_score(rate, header, distortion + spectral, lambda_i4);
+                if best.as_ref().is_none_or(|best| score < best.0) {
+                    best = Some((
+                        score,
+                        mode,
+                        levels,
+                        reconstructed,
+                        distortion,
+                        spectral,
+                        header,
+                        rate,
+                    ));
+                }
+                let _ = nonzero;
+            }
+            let (_, mode, levels, reconstructed, distortion, spectral, header, rate) =
+                best.expect("VP8 always has intra4 candidates");
+            let nonzero = levels.iter().any(|&level| level != 0);
+            result.modes[block_index] = mode;
+            result.levels[block_index] = levels;
+            result.distortion += distortion;
+            result.spectral_distortion += spectral;
+            result.header_cost += header;
+            result.rate_cost += rate;
+            result.score += rd_score(rate, header, distortion + spectral, lambda_mode);
+            if nonzero {
+                result.nonzero |= 1 << block_index;
+            }
+            top_nonzero[block_x] = u8::from(nonzero);
+            left_nonzero[block_y] = u8::from(nonzero);
+            for row in 0..4 {
+                let destination_offset = (block_y * 4 + row) * 16 + block_x * 4;
+                result.reconstructed[destination_offset..destination_offset + 4]
+                    .copy_from_slice(&reconstructed[row * 4..row * 4 + 4]);
+            }
+        }
+    }
+    result
 }
 
 fn average_two(a: u8, b: u8) -> u8 {
@@ -345,8 +494,7 @@ pub(super) fn predict(mode: Intra4Mode, top: &[u8; 8], left: &[u8; 4], top_left:
 mod tests {
     use super::*;
     use crate::codecs::webp::encode::vp8::{
-        cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
-        quant::{libwebp_segment_matrices, quantize_reconstruct_block},
+        encoder::rgb_to_yuv_planes_internal, quant::libwebp_segment_matrices,
     };
 
     #[test]
@@ -452,5 +600,66 @@ mod tests {
             assert_eq!(rate, expected_rate[index], "R mode {index}");
             assert_eq!(score, expected_score[index], "score mode {index}");
         }
+    }
+
+    #[test]
+    fn first_q80_macroblock_selection_matches_libwebp_1_6_0() {
+        let rgb = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/outputs/raws/Decode.webp_lossless_webp.bin"
+        ));
+        let (luma, _, _) = rgb_to_yuv_planes_internal(rgb, 128, 128);
+        let mut source = [0; 256];
+        for row in 0..16 {
+            source[row * 16..row * 16 + 16].copy_from_slice(&luma[row * 128..row * 128 + 16]);
+        }
+        let matrices = libwebp_segment_matrices(16, -2, 6);
+        let result = select_macroblock(
+            &source,
+            &[127; 20],
+            &[129; 16],
+            127,
+            &[Intra4Mode::Dc; 4],
+            &[Intra4Mode::Dc; 4],
+            [0; 4],
+            [0; 4],
+            &matrices,
+            9,
+            3,
+            31,
+        );
+
+        assert_eq!(
+            result.modes,
+            [
+                Intra4Mode::Dc,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::Dc,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::TrueMotion,
+                Intra4Mode::Dc,
+                Intra4Mode::DownLeft,
+                Intra4Mode::TrueMotion,
+            ]
+        );
+        assert_eq!(
+            result.levels[0],
+            [-6, 21, 21, 16, -9, 16, 9, -7, -7, 9, -4, -5, -4, -3, -3, -2]
+        );
+        assert_eq!(result.levels[14], [0; 16]);
+        assert_eq!(result.distortion, 774);
+        assert_eq!(result.spectral_distortion, 37);
+        assert_eq!(result.header_cost, 8_857);
+        assert_eq!(result.rate_cost, 99_633);
+        assert_eq!(result.score, 533_086);
+        assert_eq!(result.nonzero, 0x0000_bfbf);
     }
 }
