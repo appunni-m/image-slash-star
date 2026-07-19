@@ -14,6 +14,7 @@
 
 mod analysis;
 pub mod bool_enc;
+mod cost;
 pub mod dct;
 pub mod encoder;
 mod intra4;
