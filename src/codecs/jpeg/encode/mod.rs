@@ -79,11 +79,15 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
         _ => (2, 2, 1, 1, 1, 1, 2, 2),
     };
 
-    // Component image dimensions on the sampling grid.
+    // Component image dimensions on the sampling grid. libjpeg expands the
+    // horizontal source edge through a complete downsampled DCT block before
+    // filtering; bottom rows are replicated later by fdct_quantize.
     let y_w = w;
     let y_h = h;
-    let cb_w = (w * cb_hs as usize + max_h as usize - 1) / max_h as usize;
-    let cb_h = (h * cb_vs as usize + max_v as usize - 1) / max_v as usize;
+    let cb_w = (w * cb_hs as usize)
+        .div_ceil(max_h as usize * 8)
+        .checked_mul(8)?;
+    let cb_h = (h * cb_vs as usize).div_ceil(max_v as usize);
     let cr_w = cb_w;
     let cr_h = cb_h;
 
@@ -162,6 +166,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
 
     let mut out = Vec::new();
     marker::write_soi(&mut out);
+    marker::write_jfif_app0(&mut out);
 
     // Write DQT tables (one per unique quant slot).
     let mut emitted = [false; 4];
@@ -250,23 +255,21 @@ fn rgb_to_ycbcr(pixels: &[u8], w: usize, h: usize) -> (Vec<u8>, Vec<u8>, Vec<u8>
         let r = pixels[i * 3] as i32;
         let g = pixels[i * 3 + 1] as i32;
         let b = pixels[i * 3 + 2] as i32;
-        // IJG jccolor.c fixed-point: Y = (0.29900*R + 0.58700*G + 0.11400*B)
+        // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jccolor.c:214-243 and
+        // jccolext.c:37-73. Chroma includes CENTERJSAMPLE before descaling;
+        // the prior port accidentally added 128 before, rather than after,
+        // the 16-bit fixed-point scale.
         y[i] = ((19595 * r + 38470 * g + 7471 * b + 32768) >> 16) as u8;
-        // Cb = (-0.16874*R - 0.33126*G + 0.50000*B) + 128
-        let cbv = (-11059 * r - 21709 * g + 32768 * b + 128 + 32768) >> 16;
-        cb[i] = cbv.clamp(0, 255) as u8;
-        // Cr = (0.50000*R - 0.41869*G - 0.08131*B) + 128
-        let crv = (32768 * r - 27439 * g - 5329 * b + 128 + 32768) >> 16;
-        cr[i] = crv.clamp(0, 255) as u8;
+        cb[i] = ((-11059 * r - 21709 * g + 32768 * b + (128 << 16) + 32767) >> 16) as u8;
+        cr[i] = ((32768 * r - 27439 * g - 5329 * b + (128 << 16) + 32767) >> 16) as u8;
     }
     (y, cb, cr)
 }
 
 // ── Downsampling (jcsample.c) ────────────────────────────────────────────
 //
-// libjpeg uses a 3-tap smoothing filter for h2v2 downsampling by default
-// (smooth_downsample).  For byte-exactness we'd replicate that; here we use
-// simple box averaging which is close and roundtrip-safe.
+// libjpeg's default smoothing factor is zero, so its h2v1/h2v2 box filters
+// use alternating rounding biases to avoid a systematic upward bias.
 
 fn downsample(
     plane: &[u8],
@@ -279,24 +282,34 @@ fn downsample(
 ) -> Vec<u8> {
     let mut out = vec![0u8; dw * dh];
     if hr == 1 && vr == 1 {
-        for i in 0..(dw * dh).min(plane.len()) {
-            out[i] = plane[i];
+        // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:99-113,145-174.
+        // Full-size components duplicate their right and bottom edge samples
+        // through the padded DCT extent.
+        for y in 0..dh {
+            for x in 0..dw {
+                out[y * dw + x] = plane[y.min(sh - 1) * sw + x.min(sw - 1)];
+            }
         }
         return out;
     }
     for y in 0..dh {
         for x in 0..dw {
             let mut sum = 0u32;
-            let mut cnt = 0u32;
             for vy in 0..vr {
                 for vx in 0..hr {
                     let sy = (y * vr + vy).min(sh - 1);
                     let sx = (x * hr + vx).min(sw - 1);
                     sum += plane[sy * sw + sx] as u32;
-                    cnt += 1;
                 }
             }
-            out[y * dw + x] = ((sum + cnt / 2) / cnt) as u8;
+            // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:227-299.
+            // h2v1 alternates 0/1; h2v2 alternates 1/2 for each output row.
+            let bias = match (hr, vr) {
+                (2, 1) => (x & 1) as u32,
+                (2, 2) => 1 + (x & 1) as u32,
+                _ => 0,
+            };
+            out[y * dw + x] = ((sum + bias) / u32::try_from(hr * vr).unwrap_or(1)) as u8;
         }
     }
     out
@@ -386,8 +399,11 @@ fn encode_baseline_entropy(
                         let brow = my * vs + vy;
                         let bcol = mx * hs + vx;
                         if brow >= c.block_rows || bcol >= bpr {
-                            // Dummy block beyond component extent: emit zero block.
-                            // DC diff 0, no AC → just EOB.
+                            // ✅ VERIFIED: libjpeg-turbo 3.1.4.1
+                            // jccoefct.c:174-199. Edge dummy blocks copy the
+                            // preceding DC coefficient and zero every AC, so
+                            // entropy coding emits both DC category 0 and EOB.
+                            bw.write_bits(dc_tbl.codes[0], dc_tbl.lengths[0]);
                             bw.write_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
                             continue;
                         }

@@ -12,6 +12,15 @@ pub(crate) fn write_soi(out: &mut Vec<u8>) {
     out.extend_from_slice(&[0xFF, 0xD8]);
 }
 
+/// APP0 JFIF marker emitted by Pillow's default libjpeg compressor.
+pub(crate) fn write_jfif_app0(out: &mut Vec<u8>) {
+    // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcmarker.c:619-641. Pillow's default
+    // density is 1x1 with no units and no thumbnail.
+    out.extend_from_slice(&[
+        0xFF, 0xE0, 0x00, 0x10, b'J', b'F', b'I', b'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0,
+    ]);
+}
+
 /// EOI (End Of Image).
 pub(crate) fn write_eoi(out: &mut Vec<u8>) {
     out.extend_from_slice(&[0xFF, 0xD9]);

@@ -4,11 +4,12 @@
 // uses the standard IJG tables divided by 2 then clamped (the "scale_factor"
 // path), producing the well-known q75 tables.
 
-/// IJG std luminance quant table (jpeg_std_quant_table, val_base 8-bit).
+/// IJG standard luminance quantization table.
+// ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcparam.c:75-84.
 pub(crate) const STD_LUMA_QT: [u8; 64] = [
     16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56,
-    14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 62, 99, 68, 56, 24, 35, 55, 64, 81, 104, 81,
-    64, 49, 64, 78, 87, 103, 113, 92, 73, 72, 92, 95, 98, 112, 100, 103, 99,
+    14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81, 104, 113,
+    92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99,
 ];
 
 /// IJG std chrominance quant table.
