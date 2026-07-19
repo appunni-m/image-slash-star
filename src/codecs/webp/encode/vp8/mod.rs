@@ -16,6 +16,7 @@ mod analysis;
 pub mod bool_enc;
 pub mod dct;
 pub mod encoder;
+mod intra4;
 pub mod loopfilter;
 pub mod predict;
 pub mod quant;
