@@ -2557,10 +2557,18 @@
           },
           "source_asset": "baseline_444.jpg",
           "source_format": "jpeg",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "progressive",
-          "gap": "Rust JPEG encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive.bin",
+          "encoded_ref_bytes": 4562,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -2715,7 +2723,7 @@
           "status": "planned",
           "type": "encode",
           "category": "exif",
-          "gap": "Rust JPEG encoding does not yet match Pillow for this declared save operation."
+          "gap": "exif=true does not identify the metadata bytes Pillow must encode."
         },
         {
           "description": "",
@@ -2787,7 +2795,7 @@
           "status": "planned",
           "type": "encode",
           "category": "dct",
-          "gap": "Rust JPEG encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 does not expose a JPEG DCT method selector."
         },
         {
           "description": "",
@@ -6136,6 +6144,6 @@
     "assets_available": 161,
     "decode_active": 156,
     "decode_planned": 12,
-    "encode_not_wired": 55
+    "encode_not_wired": 54
   }
 }

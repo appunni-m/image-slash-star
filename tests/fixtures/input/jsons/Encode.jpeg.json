@@ -223,6 +223,27 @@
       }
     },
     {
+      "id": "enc_progressive",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "progressive": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "progressive": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_baseline",
       "source_asset": "baseline_444.jpg",
       "source_format": "jpeg",

@@ -55,6 +55,122 @@ pub(crate) struct DerivedTable {
     pub lengths: [u8; 256],
 }
 
+/// JPEG-compliant optimal Huffman table and its derived encoder lookup.
+pub(crate) struct OptimalTable {
+    pub bits: [u8; 16],
+    pub values: Vec<u8>,
+    pub derived: DerivedTable,
+}
+
+/// Build libjpeg's length-limited optimal table from observed symbol counts.
+pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
+    // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c:947-1110
+    const MAX_CODE_LENGTH: usize = 32;
+    const SENTINEL_FREQUENCY: u64 = 1_000_000_001;
+
+    let mut source = [0u64; 257];
+    source[..256].copy_from_slice(frequencies);
+    source[256] = 1;
+
+    let mut nonzero_symbols = Vec::new();
+    let mut working = Vec::new();
+    for (symbol, &frequency) in source.iter().enumerate() {
+        if frequency != 0 {
+            nonzero_symbols.push(symbol);
+            working.push(frequency);
+        }
+    }
+
+    let count = working.len();
+    let mut code_size = vec![0usize; count];
+    let mut others = vec![None::<usize>; count];
+    loop {
+        let mut smallest = None::<usize>;
+        let mut next_smallest = None::<usize>;
+        let mut smallest_frequency = 1_000_000_000u64;
+        let mut next_frequency = 1_000_000_000u64;
+        for (index, &frequency) in working.iter().enumerate() {
+            if frequency <= next_frequency {
+                if frequency <= smallest_frequency {
+                    next_smallest = smallest;
+                    next_frequency = smallest_frequency;
+                    smallest = Some(index);
+                    smallest_frequency = frequency;
+                } else {
+                    next_smallest = Some(index);
+                    next_frequency = frequency;
+                }
+            }
+        }
+        let (Some(mut first), Some(mut second)) = (smallest, next_smallest) else {
+            break;
+        };
+
+        working[first] = working[first].checked_add(working[second])?;
+        working[second] = SENTINEL_FREQUENCY;
+        code_size[first] = code_size[first].checked_add(1)?;
+        while let Some(next) = others[first] {
+            first = next;
+            code_size[first] = code_size[first].checked_add(1)?;
+        }
+        others[first] = Some(second);
+        code_size[second] = code_size[second].checked_add(1)?;
+        while let Some(next) = others[second] {
+            second = next;
+            code_size[second] = code_size[second].checked_add(1)?;
+        }
+    }
+
+    let mut length_counts = [0u16; MAX_CODE_LENGTH + 2];
+    for &length in &code_size {
+        *length_counts.get_mut(length)? = length_counts[length].checked_add(1)?;
+    }
+    let mut positions = [0usize; MAX_CODE_LENGTH + 1];
+    let mut position = 0usize;
+    for length in 1..=MAX_CODE_LENGTH {
+        positions[length] = position;
+        position = position.checked_add(usize::from(length_counts[length]))?;
+    }
+
+    for length in (17..=MAX_CODE_LENGTH).rev() {
+        while length_counts[length] != 0 {
+            let mut prefix = length.checked_sub(2)?;
+            while length_counts[prefix] == 0 {
+                prefix = prefix.checked_sub(1)?;
+            }
+            length_counts[length] = length_counts[length].checked_sub(2)?;
+            length_counts[length - 1] = length_counts[length - 1].checked_add(1)?;
+            length_counts[prefix + 1] = length_counts[prefix + 1].checked_add(2)?;
+            length_counts[prefix] = length_counts[prefix].checked_sub(1)?;
+        }
+    }
+
+    let mut longest = 16usize;
+    while length_counts[longest] == 0 {
+        longest = longest.checked_sub(1)?;
+    }
+    length_counts[longest] = length_counts[longest].checked_sub(1)?;
+
+    let mut bits = [0u8; 16];
+    for (target, &value) in bits.iter_mut().zip(&length_counts[1..=16]) {
+        *target = u8::try_from(value).ok()?;
+    }
+    let value_count: usize = bits.iter().map(|&value| usize::from(value)).sum();
+    let mut values = vec![0u8; value_count];
+    for index in 0..count.checked_sub(1)? {
+        let length = code_size[index];
+        let target = positions[length];
+        *values.get_mut(target)? = u8::try_from(nonzero_symbols[index]).ok()?;
+        positions[length] = target.checked_add(1)?;
+    }
+    let derived = derive_table(&bits, &values);
+    Some(OptimalTable {
+        bits,
+        values,
+        derived,
+    })
+}
+
 /// Derive canonical Huffman codes from BITS/HUFFVAL (jcphuff.c jpeg_make_c_derived_tbl).
 pub(crate) fn derive_table(bits: &[u8; 16], huffval: &[u8]) -> DerivedTable {
     let mut codes = [0u32; 256];

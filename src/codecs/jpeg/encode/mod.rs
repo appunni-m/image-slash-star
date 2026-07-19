@@ -227,16 +227,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
 
         encode_baseline_entropy(&mut out, &comps, max_h, max_v, &dc_tables, &ac_tables);
     } else {
-        encode_progressive_scans(
-            &mut out,
-            &comps,
-            num_components,
-            max_h,
-            max_v,
-            &params,
-            &dc_tables,
-            &ac_tables,
-        );
+        encode_progressive_scans_exact(&mut out, &comps, num_components, max_h, max_v, &params)?;
     }
 
     marker::write_eoi(&mut out);
@@ -552,408 +543,346 @@ fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
     s
 }
 
-fn encode_progressive_scans(
-    out: &mut Vec<u8>,
-    comps: &[CompData],
-    ncomp: u8,
-    _max_h: u8,
-    _max_v: u8,
+#[derive(Clone, Copy)]
+enum ProgressiveEvent {
+    Symbol { table: usize, value: u8 },
+    Bits { value: u32, width: u8 },
+}
+
+fn encode_progressive_scans_exact(
+    output: &mut Vec<u8>,
+    components: &[CompData],
+    component_count: u8,
+    _maximum_horizontal_sampling: u8,
+    _maximum_vertical_sampling: u8,
     _params: &quant::EncodeParams,
-    dc_tables: &[&huffman::DerivedTable; 2],
-    ac_tables: &[&huffman::DerivedTable; 2],
-) {
-    let script = default_progression_script(ncomp);
+) -> Option<()> {
+    // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcphuff.c:179-1075 and
+    // jcmaster.c's jpeg_simple_progression scan script.
+    for scan in default_progression_script(component_count) {
+        let events = progressive_events(&scan, components)?;
+        let mut frequencies = [[0u64; 256]; 4];
+        for &event in &events {
+            if let ProgressiveEvent::Symbol { table, value } = event {
+                frequencies[table][usize::from(value)] =
+                    frequencies[table][usize::from(value)].checked_add(1)?;
+            }
+        }
 
-    for scan in &script {
-        // Emit DHT for the tables this scan uses.
-        emit_scan_dht(out, scan, comps);
+        let mut tables: [Option<huffman::OptimalTable>; 4] = std::array::from_fn(|_| None);
+        for table in 0..tables.len() {
+            if frequencies[table].iter().any(|&frequency| frequency != 0) {
+                let optimized = huffman::optimal_table(&frequencies[table])?;
+                marker::write_dht(
+                    output,
+                    u8::from(scan.ss != 0),
+                    u8::try_from(table).ok()?,
+                    &optimized.bits,
+                    &optimized.values,
+                );
+                tables[table] = Some(optimized);
+            }
+        }
 
-        // SOS for this scan.
-        let sos_comps: Vec<(u8, u8, u8)> = scan
+        let scan_components = scan
             .comps
             .iter()
-            .map(|&ci| {
-                let c = &comps[ci];
-                // DC scans use dc_tbl for both dc/ac slots; AC scans use ac_tbl for ac.
-                if scan.is_dc {
-                    (c.id, c.dc_tbl, 0)
+            .map(|&index| {
+                let component = &components[index];
+                let (dc_table, ac_table) = if scan.ss == 0 {
+                    (if scan.ah == 0 { component.dc_tbl } else { 0 }, 0)
                 } else {
-                    (c.id, 0, c.ac_tbl)
-                }
+                    (0, component.ac_tbl)
+                };
+                (component.id, dc_table, ac_table)
             })
-            .collect();
-        marker::write_sos(out, &sos_comps, scan.ss, scan.se, scan.ah, scan.al);
+            .collect::<Vec<_>>();
+        marker::write_sos(output, &scan_components, scan.ss, scan.se, scan.ah, scan.al);
 
-        // Entropy-code the scan.
-        let mut bw = huffman::BitWriter::new();
-        if scan.is_dc {
-            encode_dc_scan(&mut bw, scan, comps, dc_tables);
-        } else {
-            encode_ac_scan(&mut bw, scan, comps, ac_tables);
-        }
-        bw.flush();
-        out.extend_from_slice(&bw.out);
-    }
-}
-
-/// Emit DHT markers for the Huffman tables referenced by a scan.
-fn emit_scan_dht(out: &mut Vec<u8>, scan: &ProgScan, comps: &[CompData]) {
-    let mut dc_seen = [false; 4];
-    let mut ac_seen = [false; 4];
-    if scan.is_dc {
-        for &ci in &scan.comps {
-            let t = comps[ci].dc_tbl as usize;
-            if !dc_seen[t] {
-                let (bits, vals) = if t == 0 {
-                    huffman::STD_DC_LUMA
-                } else {
-                    huffman::STD_DC_CHROMA
-                };
-                marker::write_dht(out, 0, t as u8, &bits, &vals);
-                dc_seen[t] = true;
+        let mut writer = huffman::BitWriter::new();
+        for event in events {
+            match event {
+                ProgressiveEvent::Symbol { table, value } => {
+                    let derived = &tables.get(table)?.as_ref()?.derived;
+                    writer.write_bits(
+                        derived.codes[usize::from(value)],
+                        derived.lengths[usize::from(value)],
+                    );
+                }
+                ProgressiveEvent::Bits { value, width } => writer.write_bits(value, width),
             }
         }
+        writer.flush();
+        output.extend_from_slice(&writer.out);
+    }
+    Some(())
+}
+
+fn progressive_events(scan: &ProgScan, components: &[CompData]) -> Option<Vec<ProgressiveEvent>> {
+    if scan.ss == 0 {
+        dc_progressive_events(scan, components)
     } else {
-        for &ci in &scan.comps {
-            let t = comps[ci].ac_tbl as usize;
-            if !ac_seen[t] {
-                let (bits, vals) = if t == 0 {
-                    huffman::STD_AC_LUMA
-                } else {
-                    huffman::STD_AC_CHROMA
-                };
-                marker::write_dht(out, 1, t as u8, &bits, &vals);
-                ac_seen[t] = true;
-            }
-        }
+        ac_progressive_events(scan, components)
     }
 }
 
-/// Encode a DC scan (first or refine).  Interleaved scans iterate the image
-/// MCU grid; the coefficient stored is block[0] shifted by Al.
-fn encode_dc_scan(
-    bw: &mut huffman::BitWriter,
+fn dc_progressive_events(
     scan: &ProgScan,
-    comps: &[CompData],
-    dc_tables: &[&huffman::DerivedTable; 2],
-) {
+    components: &[CompData],
+) -> Option<Vec<ProgressiveEvent>> {
+    let mut events = Vec::new();
     let interleaved = scan.comps.len() > 1;
-    let max_h = comps.iter().map(|c| c.h_samp).max().unwrap_or(1);
-    let max_v = comps.iter().map(|c| c.v_samp).max().unwrap_or(1);
-    let mcu_w = max_h as usize * 8;
-    let mcu_h = max_v as usize * 8;
-    let n_mcu_x = (comps[0].blocks_per_row * 8 + mcu_w - 1) / mcu_w;
-    let n_mcu_y = (comps[0].block_rows * 8 + mcu_h - 1) / mcu_h;
+    let maximum_horizontal_sampling = components.iter().map(|c| c.h_samp).max().unwrap_or(1);
+    let maximum_vertical_sampling = components.iter().map(|c| c.v_samp).max().unwrap_or(1);
+    let mcu_width = usize::from(maximum_horizontal_sampling).checked_mul(8)?;
+    let mcu_height = usize::from(maximum_vertical_sampling).checked_mul(8)?;
+    let mcu_columns = components[0]
+        .blocks_per_row
+        .checked_mul(8)?
+        .div_ceil(mcu_width);
+    let mcu_rows = components[0]
+        .block_rows
+        .checked_mul(8)?
+        .div_ceil(mcu_height);
+    let mut predictors = vec![0i32; scan.comps.len()];
 
-    let mut last_dc = vec![0i32; comps.len()];
+    let mut append = |scan_index: usize, component_index: usize, block: &[i16; 64]| {
+        let component = &components[component_index];
+        let raw = i32::from(block[0]);
+        if scan.ah == 0 {
+            let transformed = raw >> scan.al;
+            let difference = transformed - predictors[scan_index];
+            predictors[scan_index] = transformed;
+            let width = jpeg_nbits(difference);
+            events.push(ProgressiveEvent::Symbol {
+                table: usize::from(component.dc_tbl),
+                value: u8::try_from(width).ok()?,
+            });
+            if width != 0 {
+                events.push(ProgressiveEvent::Bits {
+                    value: mag_bits(difference, width),
+                    width: u8::try_from(width).ok()?,
+                });
+            }
+        } else {
+            events.push(ProgressiveEvent::Bits {
+                value: u32::try_from((raw >> scan.al) & 1).ok()?,
+                width: 1,
+            });
+        }
+        Some(())
+    };
 
     if interleaved {
-        for my in 0..n_mcu_y {
-            for mx in 0..n_mcu_x {
-                for (s, &ci) in scan.comps.iter().enumerate() {
-                    let c = &comps[ci];
-                    let hs = c.h_samp as usize;
-                    let vs = c.v_samp as usize;
-                    let bpr = c.blocks_per_row;
-                    for vy in 0..vs {
-                        for vx in 0..hs {
-                            let brow = my * vs + vy;
-                            let bcol = mx * hs + vx;
-                            if brow >= c.block_rows || bcol >= bpr {
-                                continue;
+        for mcu_row in 0..mcu_rows {
+            for mcu_column in 0..mcu_columns {
+                for (scan_index, &component_index) in scan.comps.iter().enumerate() {
+                    let component = &components[component_index];
+                    for vertical in 0..usize::from(component.v_samp) {
+                        for horizontal in 0..usize::from(component.h_samp) {
+                            let block_row = mcu_row
+                                .checked_mul(usize::from(component.v_samp))?
+                                .checked_add(vertical)?;
+                            let block_column = mcu_column
+                                .checked_mul(usize::from(component.h_samp))?
+                                .checked_add(horizontal)?;
+                            if block_row < component.block_rows
+                                && block_column < component.blocks_per_row
+                            {
+                                append(
+                                    scan_index,
+                                    component_index,
+                                    &component.blocks
+                                        [block_row * component.blocks_per_row + block_column],
+                                )?;
                             }
-                            let blk = &c.blocks[brow * bpr + bcol];
-                            encode_dc_coeff(
-                                bw,
-                                blk,
-                                scan,
-                                &mut last_dc[s],
-                                dc_tables[c.dc_tbl as usize],
-                            );
                         }
                     }
                 }
             }
         }
     } else {
-        // Non-interleaved: iterate this component's own block raster.
-        let ci = scan.comps[0];
-        let c = &comps[ci];
-        let bpr = c.blocks_per_row;
-        let tbl = dc_tables[c.dc_tbl as usize];
-        for br in 0..c.block_rows {
-            for bc in 0..bpr {
-                let blk = &c.blocks[br * bpr + bc];
-                encode_dc_coeff(bw, blk, scan, &mut last_dc[0], tbl);
-            }
+        let component_index = scan.comps[0];
+        let component = &components[component_index];
+        for block in &component.blocks {
+            append(0, component_index, block)?;
         }
     }
+    Some(events)
 }
 
-/// Encode one DC coefficient for the current scan.
-fn encode_dc_coeff(
-    bw: &mut huffman::BitWriter,
+fn ac_progressive_events(
+    scan: &ProgScan,
+    components: &[CompData],
+) -> Option<Vec<ProgressiveEvent>> {
+    let component = &components[*scan.comps.first()?];
+    let table = usize::from(component.ac_tbl);
+    let mut events = Vec::new();
+    let mut eob_run = 0u32;
+    let mut correction_bits = Vec::<u8>::new();
+    for block in &component.blocks {
+        if scan.ah == 0 {
+            append_ac_first_events(
+                &mut events,
+                block,
+                scan,
+                table,
+                &mut eob_run,
+                &mut correction_bits,
+            )?;
+        } else {
+            append_ac_refine_events(
+                &mut events,
+                block,
+                scan,
+                table,
+                &mut eob_run,
+                &mut correction_bits,
+            )?;
+        }
+    }
+    flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits)?;
+    Some(events)
+}
+
+fn append_ac_first_events(
+    events: &mut Vec<ProgressiveEvent>,
     block: &[i16; 64],
     scan: &ProgScan,
-    last_dc: &mut i32,
-    tbl: &huffman::DerivedTable,
-) {
-    // Point transform: divide coefficient by 2^Al, rounding.
-    let raw = block[0] as i32;
-    let al = scan.al as i32;
-    let pt = if al > 0 { raw >> al } else { raw };
-    if scan.ah == 0 {
-        // DC first: code the difference.
-        let diff = pt - *last_dc;
-        *last_dc = pt;
-        let nbits = jpeg_nbits(diff);
-        bw.write_bits(tbl.codes[nbits as usize], tbl.lengths[nbits as usize]);
-        if nbits > 0 {
-            bw.write_bits(mag_bits(diff, nbits), nbits as u8);
+    table: usize,
+    eob_run: &mut u32,
+    correction_bits: &mut Vec<u8>,
+) -> Option<()> {
+    let mut run = 0usize;
+    let mut last_nonzero = None;
+    for coefficient in scan.ss..=scan.se {
+        let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
+        let sign = raw >> 31;
+        let absolute = (raw ^ sign).wrapping_sub(sign) >> scan.al;
+        if absolute == 0 {
+            run = run.checked_add(1)?;
+            continue;
         }
-    } else {
-        // DC refine: transmit the Al-th bit of the coefficient (jcphuff DC_refine).
-        let bit = (raw >> al) & 1;
-        bw.write_bits(bit as u32, 1);
-    }
-}
-
-/// Encode an AC scan (first or refine), single-component, over the component's
-/// own block raster (non-interleaved per JPEG spec).
-fn encode_ac_scan(
-    bw: &mut huffman::BitWriter,
-    scan: &ProgScan,
-    comps: &[CompData],
-    ac_tables: &[&huffman::DerivedTable; 2],
-) {
-    // AC scans are always single-component in the default script.
-    let ci = scan.comps[0];
-    let c = &comps[ci];
-    let bpr = c.blocks_per_row;
-    let tbl = ac_tables[c.ac_tbl as usize];
-    let ss = scan.ss as usize;
-    let se = scan.se as usize;
-    let al = scan.al as i32;
-
-    let mut eobrun = 0u32;
-    // Correction-bit buffer for AC-refine (the "BE" buffer in jcphuff.c).
-    let mut be_buffer: Vec<u8> = Vec::new();
-
-    for br in 0..c.block_rows {
-        for bc in 0..bpr {
-            let blk = &c.blocks[br * bpr + bc];
-            if scan.ah == 0 {
-                encode_ac_first(bw, blk, ss, se, al, tbl, &mut eobrun);
-            } else {
-                encode_ac_refine(bw, blk, ss, se, al, tbl, &mut eobrun, &mut be_buffer);
-            }
+        if eob_run != &0 {
+            flush_progressive_eob(events, table, eob_run, correction_bits)?;
         }
-    }
-    // Flush any pending EOBRUN (and its trailing correction bits for refine).
-    if eobrun > 0 {
-        emit_eobrun(bw, eobrun, tbl);
-        if !be_buffer.is_empty() {
-            for &bit in &be_buffer {
-                bw.write_bits(bit as u32, 1);
-            }
-            be_buffer.clear();
-        }
-    }
-}
-
-/// Encode one block for an AC-first scan (jcphuff.c encode_mcu_AC_first).
-fn encode_ac_first(
-    bw: &mut huffman::BitWriter,
-    block: &[i16; 64],
-    ss: usize,
-    se: usize,
-    al: i32,
-    tbl: &huffman::DerivedTable,
-    eobrun: &mut u32,
-) {
-    // SIMPLIFIED FOR DEBUG: Always emit a fresh EOB0 per block so decoder never
-    // has to rely on deferred EOBRUN.  This is wasteful but validates whether
-    // the coefficient encoding itself is correct.
-
-    // Flush any pending EOBRUN first (matches IJG).
-    if *eobrun > 0 {
-        emit_eobrun(bw, *eobrun, tbl);
-        *eobrun = 0;
-    }
-
-    // Find nonzero point-transformed coefficients in the band.
-    let mut coeffs: Vec<(usize, i32)> = Vec::new();
-    for k in ss..=se {
-        let raw = block[ZIGZAG[k]] as i32;
-        // Point transform: integer division toward 0 (abs>>Al with sign restored).
-        let temp2 = raw >> 31;
-        let mut temp = raw ^ temp2;
-        temp = temp.wrapping_sub(temp2);
-        temp >>= al;
-        // Restore sign: temp is the abs value; reapply original sign.
-        let signed = if raw < 0 { -temp } else { temp };
-        if signed != 0 {
-            coeffs.push((k, signed));
-        }
-    }
-
-    if coeffs.is_empty() {
-        // All-zero band: don't extend EOB run, just emit EOB0.
-        bw.write_bits(tbl.codes[0], tbl.lengths[0]);
-        return;
-    }
-
-    let mut k = ss;
-    for &(pos, val) in &coeffs {
-        // Run of zeros from k to pos.  Emit ZRL (0xF0) for each full 16-run.
-        let mut run = (pos - k) as u32;
-        while run >= 16 {
-            bw.write_bits(tbl.codes[0xF0], tbl.lengths[0xF0]);
+        while run > 15 {
+            events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
             run -= 16;
         }
-        let nbits = jpeg_nbits(val);
-        let sym = ((run << 4) | nbits) as usize;
-        bw.write_bits(tbl.codes[sym], tbl.lengths[sym]);
-        bw.write_bits(mag_bits(val, nbits), nbits as u8);
-        k = pos + 1;
+        let width = jpeg_nbits(absolute);
+        events.push(ProgressiveEvent::Symbol {
+            table,
+            value: u8::try_from((run << 4).checked_add(usize::try_from(width).ok()?)?).ok()?,
+        });
+        events.push(ProgressiveEvent::Bits {
+            value: mag_bits(if sign == 0 { absolute } else { -absolute }, width),
+            width: u8::try_from(width).ok()?,
+        });
+        run = 0;
+        last_nonzero = Some(coefficient);
     }
-
-    // Always terminate with EOB0 (no EOBRUN accumulation).
-    bw.write_bits(tbl.codes[0], tbl.lengths[0]);
+    if last_nonzero != Some(scan.se) {
+        *eob_run = eob_run.checked_add(1)?;
+        if *eob_run == 0x7fff {
+            flush_progressive_eob(events, table, eob_run, correction_bits)?;
+        }
+    }
+    Some(())
 }
 
-/// Emit a pending EOBRUN using the EOBn Huffman codes (jcphuff.c emit_eobrun).
-fn emit_eobrun(bw: &mut huffman::BitWriter, eobrun: u32, tbl: &huffman::DerivedTable) {
-    if eobrun == 0 {
-        return;
-    }
-    // jcphuff: nbits = JPEG_NBITS_NONZERO(eobrun) - 1; symbol = nbits << 4.
-    // EOBRUN = 2^nbits + extra.  Find nbits such that 2^nbits <= eobrun < 2^(nbits+1).
-    let mut nbits = 0u32;
-    while (1u32 << (nbits + 1)) <= eobrun {
-        nbits += 1;
-    }
-    let sym = (nbits << 4) as usize; // EOBn symbol = nbits<<4 (0x00,0x10,...,0xE0)
-    bw.write_bits(tbl.codes[sym], tbl.lengths[sym]);
-    let extra = eobrun - (1u32 << nbits);
-    if nbits > 0 {
-        bw.write_bits(extra, nbits as u8);
-    }
-}
-
-/// Encode one block for an AC-refine scan.  Uses EOB1 (not EOB0) for blocks
-/// with trailing correction bits so the decoder's Phase 2 activates (EOBRUN>0).
-/// No cross-block EOBRUN accumulation — each block is self-contained.
-fn encode_ac_refine(
-    bw: &mut huffman::BitWriter,
+fn append_ac_refine_events(
+    events: &mut Vec<ProgressiveEvent>,
     block: &[i16; 64],
-    ss: usize,
-    se: usize,
-    al: i32,
-    tbl: &huffman::DerivedTable,
-    eobrun: &mut u32,
-    be_buffer: &mut Vec<u8>,
-) {
-    let sl = se - ss + 1;
-
-    // Prepare absvalues = |coef| >> Al and find EOB (last newly-significant).
-    let absvalues: Vec<u32> = (0..sl)
-        .map(|k| {
-            let raw = block[ZIGZAG[ss + k]] as i32;
-            let temp2 = raw >> 31;
-            let mut temp = raw ^ temp2;
-            temp = temp.wrapping_sub(temp2);
-            (temp >> al) as u32
+    scan: &ProgScan,
+    table: usize,
+    eob_run: &mut u32,
+    correction_bits: &mut Vec<u8>,
+) -> Option<()> {
+    let coefficients = (scan.ss..=scan.se)
+        .map(|coefficient| {
+            let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
+            let sign = raw >> 31;
+            let absolute = (raw ^ sign).wrapping_sub(sign) >> scan.al;
+            (raw, u32::try_from(absolute).ok())
         })
-        .collect();
-
-    let eob = absvalues
+        .collect::<Vec<_>>();
+    let last_new = coefficients
         .iter()
-        .enumerate()
-        .rev()
-        .find(|(_, v)| **v == 1)
-        .map_or(usize::MAX, |(i, _)| i);
+        .rposition(|(_, absolute)| *absolute == Some(1));
+    let mut run = 0usize;
+    let mut block_corrections = Vec::<u8>::new();
+    let mut last_nonzero = None;
 
-    // Flush any pending cross-block EOBRUN+BE from previous blocks.
-    if *eobrun > 0 {
-        emit_eobrun(bw, *eobrun, tbl);
-        *eobrun = 0;
-        for &bit in &*be_buffer {
-            bw.write_bits(bit as u32, 1);
-        }
-        be_buffer.clear();
-    }
-
-    // Collect nonzero positions: (idx, absvalue).
-    let nonzero: Vec<(usize, u32)> = absvalues
-        .iter()
-        .enumerate()
-        .filter(|(_, v)| **v > 0)
-        .map(|(i, v)| (i, *v))
-        .collect();
-    let has_new = nonzero.iter().any(|&(_, v)| v == 1);
-
-    if !has_new {
-        // No newly-significant: just emit correction bits + EOB0.
-        for &(_, v) in &nonzero {
-            bw.write_bits(v & 1, 1);
-        }
-        bw.write_bits(tbl.codes[0], tbl.lengths[0]);
-        return;
-    }
-
-    // ── Encode ──────────────────────────────────────────────────────────
-    // Walk k across the band.  For zeros: increment r.  For already-nonzero:
-    // buffer 1 correction bit.  For newly-significant: emit run/size=1 + sign
-    // bit, flush accumulated correction bits, reset r.
-
-    let mut r: i32 = 0; // zero-run counter
-    let mut corr_bits: Vec<u8> = Vec::new();
-
-    for k in 0..sl {
-        let v = absvalues[k];
-        if v == 0 {
-            r += 1;
+    for (index, &(raw, absolute)) in coefficients.iter().enumerate() {
+        let absolute = absolute?;
+        if absolute == 0 {
+            run = run.checked_add(1)?;
             continue;
         }
-        if v > 1 {
-            // Already-nonzero: buffer correction bit.  These are consumed by
-            // the decoder during inner-loop traversal.
-            corr_bits.push((v & 1) as u8);
+        last_nonzero = Some(index);
+        while run > 15 && last_new.is_some_and(|last| index <= last) {
+            flush_progressive_eob(events, table, eob_run, correction_bits)?;
+            events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
+            run -= 16;
+            append_correction_events(events, &mut block_corrections);
+        }
+        if absolute > 1 {
+            block_corrections.push((absolute & 1) as u8);
             continue;
         }
-        // v == 1: newly-significant.
-        // Emit ZRLs for runs > 15, but only while within EOB.
-        while r > 15 && (k as i32) <= eob as i32 {
-            bw.write_bits(tbl.codes[0xF0], tbl.lengths[0xF0]);
-            r -= 16;
-            // Flush correction bits accumulated for this ZRL segment.
-            for &b in &corr_bits {
-                bw.write_bits(b as u32, 1);
-            }
-            corr_bits.clear();
-        }
-        // Emit run/size symbol (size=1) + sign bit.
-        let sym = (r.min(15) as u32) << 4 | 1;
-        bw.write_bits(tbl.codes[sym as usize], tbl.lengths[sym as usize]);
-        let raw = block[ZIGZAG[ss + k]] as i32;
-        bw.write_bits(if raw >= 0 { 1 } else { 0 }, 1);
-        // Flush accumulated correction bits.
-        for &b in &corr_bits {
-            bw.write_bits(b as u32, 1);
-        }
-        corr_bits.clear();
-        r = 0;
+
+        flush_progressive_eob(events, table, eob_run, correction_bits)?;
+        events.push(ProgressiveEvent::Symbol {
+            table,
+            value: u8::try_from((run << 4) | 1).ok()?,
+        });
+        events.push(ProgressiveEvent::Bits {
+            value: u32::from(raw >= 0),
+            width: 1,
+        });
+        append_correction_events(events, &mut block_corrections);
+        run = 0;
     }
 
-    // After the last new coef: any remaining corr_bits are trailing nonzeros.
-    // Need Phase 2 to consume them.  Emit EOB1 so eobrun=1 after -=1.
-    if !corr_bits.is_empty() {
-        bw.write_bits(tbl.codes[0x10], tbl.lengths[0x10]); // EOB1 (symbol 0x10)
-        for &b in &corr_bits {
-            bw.write_bits(b as u32, 1);
+    if last_nonzero != Some(coefficients.len().checked_sub(1)?) || !block_corrections.is_empty() {
+        *eob_run = eob_run.checked_add(1)?;
+        correction_bits.append(&mut block_corrections);
+        if *eob_run == 0x7fff || correction_bits.len() > 937 {
+            flush_progressive_eob(events, table, eob_run, correction_bits)?;
         }
-    } else {
-        bw.write_bits(tbl.codes[0], tbl.lengths[0]); // EOB0
     }
+    Some(())
+}
+
+fn flush_progressive_eob(
+    events: &mut Vec<ProgressiveEvent>,
+    table: usize,
+    eob_run: &mut u32,
+    correction_bits: &mut Vec<u8>,
+) -> Option<()> {
+    if *eob_run == 0 {
+        return Some(());
+    }
+    let width = eob_run.ilog2();
+    events.push(ProgressiveEvent::Symbol {
+        table,
+        value: u8::try_from(width.checked_mul(16)?).ok()?,
+    });
+    if width != 0 {
+        events.push(ProgressiveEvent::Bits {
+            value: *eob_run,
+            width: u8::try_from(width).ok()?,
+        });
+    }
+    *eob_run = 0;
+    append_correction_events(events, correction_bits);
+    Some(())
+}
+
+fn append_correction_events(events: &mut Vec<ProgressiveEvent>, bits: &mut Vec<u8>) {
+    events.extend(bits.drain(..).map(|value| ProgressiveEvent::Bits {
+        value: u32::from(value),
+        width: 1,
+    }));
 }

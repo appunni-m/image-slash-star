@@ -229,7 +229,6 @@ formats:
       params: {'subsampling': '420'}
     - id: enc_progressive
       description: 
-      status: planned
       params: {'progressive': True}
     - id: enc_baseline
       description: 
@@ -257,6 +256,7 @@ formats:
     - id: enc_exif
       description: 
       status: planned
+      oracle_gap: exif=true does not identify the metadata bytes Pillow must encode.
       params: {'exif': True}
     - id: enc_no_exif
       description: 
@@ -271,6 +271,7 @@ formats:
     - id: enc_dct_fast
       description: 
       status: planned
+      oracle_gap: Pillow 12.2.0 does not expose a JPEG DCT method selector.
       params: {'dct_method': 'fast'}
     - id: enc_dct_slow
       description: 
