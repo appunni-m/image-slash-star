@@ -18,7 +18,7 @@ use super::{
     bool_enc::BoolEncoder,
     dct::{fdct_4x4, wht_4x4},
     predict::{MbPredictionMode, choose_luma_mode, predict_chroma_8x8, predict_luma_16x16},
-    quant::{quality_to_quant_index, rgb_to_yuv},
+    quant::quality_to_quant_index,
     tokenize::{
         COEFF_BANDS, COEFF_PROBS, DCT_1, DCT_2, DCT_4, DCT_CAT1, DCT_CAT2, DCT_CAT4, DCT_CAT6,
         ZIGZAG, classify_coefficient,
@@ -696,7 +696,60 @@ fn quantize_uv(coeff: i16, q: u8, dc: bool) -> i16 {
 // Bitstream helpers
 // ===========================================================================
 
-/// Convert RGB bytes to planar YUV with 4:2:0 subsampling.
+const YUV_FIX: i32 = 16;
+const YUV_HALF: i32 = 1 << (YUV_FIX - 1);
+const GAMMA_FIX: i32 = 12;
+const GAMMA_TAB_FIX: i32 = 7;
+const GAMMA_TAB_SIZE: usize = 1 << (GAMMA_FIX - GAMMA_TAB_FIX);
+
+fn rgb_to_y(r: i32, g: i32, b: i32) -> u8 {
+    let luma = 16_839 * r + 33_059 * g + 6_420 * b;
+    ((luma + YUV_HALF + (16 << YUV_FIX)) >> YUV_FIX) as u8
+}
+
+fn clip_uv(value: i32) -> u8 {
+    let value = (value + (YUV_HALF << 2) + (128 << (YUV_FIX + 2))) >> (YUV_FIX + 2);
+    value.clamp(0, 255) as u8
+}
+
+fn rgb_to_u(r: i32, g: i32, b: i32) -> u8 {
+    clip_uv(-9_719 * r - 19_081 * g + 28_800 * b)
+}
+
+fn rgb_to_v(r: i32, g: i32, b: i32) -> u8 {
+    clip_uv(28_800 * r - 24_116 * g - 4_684 * b)
+}
+
+fn gamma_tables() -> &'static ([u16; 256], [i32; GAMMA_TAB_SIZE + 1]) {
+    use std::sync::OnceLock;
+
+    static TABLES: OnceLock<([u16; 256], [i32; GAMMA_TAB_SIZE + 1])> = OnceLock::new();
+    TABLES.get_or_init(|| {
+        let mut gamma_to_linear = [0u16; 256];
+        for (value, result) in gamma_to_linear.iter_mut().enumerate() {
+            *result = (((value as f64 / 255.0).powf(0.80) * 4_095.0) + 0.5) as u16;
+        }
+
+        let mut linear_to_gamma = [0i32; GAMMA_TAB_SIZE + 1];
+        for (value, result) in linear_to_gamma.iter_mut().enumerate() {
+            let scaled = (128.0 * value as f64) / 4_095.0;
+            *result = (255.0 * scaled.powf(1.0 / 0.80) + 0.5) as i32;
+        }
+        (gamma_to_linear, linear_to_gamma)
+    })
+}
+
+fn linear_to_gamma(base_value: u32) -> i32 {
+    let (_, linear_to_gamma) = gamma_tables();
+    let tab_position = (base_value >> (GAMMA_TAB_FIX + 2)) as usize;
+    let fraction = (base_value & ((1 << (GAMMA_TAB_FIX + 2)) - 1)) as i32;
+    let span = 1 << (GAMMA_TAB_FIX + 2);
+    let interpolated = linear_to_gamma[tab_position] * (span - fraction)
+        + linear_to_gamma[tab_position + 1] * fraction;
+    (interpolated + (1 << (GAMMA_TAB_FIX - 1))) >> GAMMA_TAB_FIX
+}
+
+/// Convert RGB bytes to the YUV420 planes produced by libwebp's regular import path.
 fn rgb_to_yuv_planes_internal(rgb: &[u8], width: u32, height: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let w = width as usize;
     let h = height as usize;
@@ -709,8 +762,11 @@ fn rgb_to_yuv_planes_internal(rgb: &[u8], width: u32, height: u32) -> (Vec<u8>, 
     for row in 0..h {
         for col in 0..w {
             let idx = (row * w + col) * 3;
-            let (y, _, _) = rgb_to_yuv(rgb[idx], rgb[idx + 1], rgb[idx + 2]);
-            y_plane[row * w + col] = y;
+            y_plane[row * w + col] = rgb_to_y(
+                i32::from(rgb[idx]),
+                i32::from(rgb[idx + 1]),
+                i32::from(rgb[idx + 2]),
+            );
         }
     }
 
@@ -726,25 +782,19 @@ fn rgb_to_yuv_planes_internal(rgb: &[u8], width: u32, height: u32) -> (Vec<u8>, 
             let p10 = (r1 * w + c0) * 3;
             let p11 = (r1 * w + c1) * 3;
 
-            let r_avg =
-                (rgb[p00] as u32 + rgb[p01] as u32 + rgb[p10] as u32 + rgb[p11] as u32 + 2) / 4;
-            let g_avg = (rgb[p00 + 1] as u32
-                + rgb[p01 + 1] as u32
-                + rgb[p10 + 1] as u32
-                + rgb[p11 + 1] as u32
-                + 2)
-                / 4;
-            let b_avg = (rgb[p00 + 2] as u32
-                + rgb[p01 + 2] as u32
-                + rgb[p10 + 2] as u32
-                + rgb[p11 + 2] as u32
-                + 2)
-                / 4;
-
-            let (_, u, v) = rgb_to_yuv(r_avg as u8, g_avg as u8, b_avg as u8);
+            let (gamma_to_linear, _) = gamma_tables();
+            let gamma_sum = |channel: usize| {
+                u32::from(gamma_to_linear[rgb[p00 + channel] as usize])
+                    + u32::from(gamma_to_linear[rgb[p01 + channel] as usize])
+                    + u32::from(gamma_to_linear[rgb[p10 + channel] as usize])
+                    + u32::from(gamma_to_linear[rgb[p11 + channel] as usize])
+            };
+            let r = linear_to_gamma(gamma_sum(0));
+            let g = linear_to_gamma(gamma_sum(1));
+            let b = linear_to_gamma(gamma_sum(2));
             let uv_idx = row * uv_w + col;
-            u_plane[uv_idx] = u;
-            v_plane[uv_idx] = v;
+            u_plane[uv_idx] = rgb_to_u(r, g, b);
+            v_plane[uv_idx] = rgb_to_v(r, g, b);
         }
     }
 
@@ -862,6 +912,24 @@ fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn libwebp_yuv_import_uses_studio_range() {
+        let rgb = [0, 0, 0, 255, 255, 255];
+        let (y, u, v) = rgb_to_yuv_planes_internal(&rgb, 2, 1);
+        assert_eq!(y, [16, 235]);
+        assert_eq!(u, [128]);
+        assert_eq!(v, [128]);
+    }
+
+    #[test]
+    fn libwebp_yuv_import_duplicates_odd_edges() {
+        let rgb = [255, 0, 0, 0, 255, 0, 0, 0, 255];
+        let (y, u, v) = rgb_to_yuv_planes_internal(&rgb, 3, 1);
+        assert_eq!(y, [82, 145, 41]);
+        assert_eq!(u, [81, 240]);
+        assert_eq!(v, [136, 110]);
+    }
 
     fn make_rgb(width: u32, height: u32, value: u8) -> Vec<u8> {
         vec![value; (width * height * 3) as usize]
