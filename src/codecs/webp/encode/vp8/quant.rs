@@ -8,6 +8,8 @@
 
 #![allow(dead_code)]
 
+use super::dct::{vp8_fdct_4x4, vp8_idct_add_4x4};
+
 /// Map a quality setting (0–100) to a VP8 quantizer index (0–127).
 ///
 /// Maps [0 (worst), 100 (best)] linearly to [127 (coarsest), 0 (finest)].
@@ -163,6 +165,21 @@ pub(super) fn quantize_block(
         }
     }
     nonzero
+}
+
+/// Transforms, quantizes, and reconstructs one predicted 4×4 block.
+pub(super) fn quantize_reconstruct_block(
+    source: &[u8; 16],
+    prediction: &[u8; 16],
+    matrix: &QuantMatrix,
+) -> (bool, [i16; 16], [u8; 16]) {
+    let residual =
+        std::array::from_fn(|index| i16::from(source[index]) - i16::from(prediction[index]));
+    let mut coefficients = vp8_fdct_4x4(&residual);
+    let mut levels = [0; 16];
+    let nonzero = quantize_block(&mut coefficients, &mut levels, matrix);
+    let reconstructed = vp8_idct_add_4x4(prediction, &coefficients);
+    (nonzero, levels, reconstructed)
 }
 
 /// DC quantization step sizes for chroma (UV) blocks.
@@ -347,6 +364,30 @@ mod tests {
         assert_eq!(
             levels,
             [15, -12, -14, -2, -18, 3, -1, 5, 13, 0, -6, 1, -2, -1, 0, -1]
+        );
+    }
+
+    #[test]
+    fn intra4_reconstruction_matches_libwebp_1_6_0_q80_first_block() {
+        let source = [
+            235, 235, 235, 235, 235, 18, 19, 20, 235, 20, 21, 21, 235, 21, 22, 23,
+        ];
+        let prediction = [128; 16];
+        let matrices = libwebp_segment_matrices(16, -2, 6);
+
+        let (nonzero, levels, reconstructed) =
+            quantize_reconstruct_block(&source, &prediction, &matrices.y1);
+
+        assert!(nonzero);
+        assert_eq!(
+            levels,
+            [-6, 21, 21, 16, -9, 16, 9, -7, -7, 9, -4, -5, -4, -3, -3, -2]
+        );
+        assert_eq!(
+            reconstructed,
+            [
+                235, 236, 233, 236, 236, 18, 23, 17, 234, 23, 24, 22, 236, 17, 22, 20
+            ]
         );
     }
 
