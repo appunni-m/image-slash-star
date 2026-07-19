@@ -190,7 +190,7 @@ fn assert_png_contract(
         .and_then(serde_json::Value::as_str);
     if let Some(request) = color_request {
         let expected = match request {
-            "L" | "gray" => 0,
+            "1" | "L" | "gray" => 0,
             "RGB" | "rgb" => 2,
             "P" => 3,
             "LA" | "gray_alpha" => 4,

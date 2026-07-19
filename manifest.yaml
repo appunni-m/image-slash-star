@@ -526,11 +526,11 @@ formats:
       source_asset: rgba.png
     - id: enc_indexed
       description: 
-      status: planned
+      source_asset: indexed.png
       params: {'color_type': 'P'}
     - id: enc_1bit
       description: 
-      status: planned
+      source_asset: 1bit.png
       params: {'color_type': '1'}
     - id: enc_adam7
       description: 
@@ -546,7 +546,7 @@ formats:
       source_asset: 8bit.png
     - id: enc_16bit
       description: 
-      status: planned
+      source_asset: 16bit.png
       params: {'bit_depth': 16}
     - id: enc_filter_none
       description: 

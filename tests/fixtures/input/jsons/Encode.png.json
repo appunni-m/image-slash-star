@@ -173,6 +173,44 @@
       }
     },
     {
+      "id": "enc_indexed",
+      "source_asset": "indexed.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_1bit",
+      "source_asset": "1bit.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "1"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_no_interlace",
       "source_asset": "rgb.png",
       "source_format": "png",
@@ -200,6 +238,25 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/8bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_16bit",
+      "source_asset": "16bit.png",
+      "source_format": "png",
+      "params": {
+        "bit_depth": 16
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/16bit.png",
         "method": "PIL.Image.Image.save",
         "format": "PNG",
         "kwargs": {},

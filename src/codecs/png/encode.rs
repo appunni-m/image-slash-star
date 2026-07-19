@@ -2,7 +2,7 @@
 
 use crate::codecs::compression::deflate::compress_zlib_chunked;
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, ImageMode};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const ADAM7: [(usize, usize, usize, usize); 7] = [
@@ -20,31 +20,67 @@ const ADAM7: [(usize, usize, usize, usize); 7] = [
 /// `interlace = true` emits Adam7 passes. Compression levels select the
 /// corresponding strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let (png_color, channels) = match img.color {
-        ColorType::L8 => (0, 1usize),
-        ColorType::La8 => (4, 2),
-        ColorType::Rgb8 => (2, 3),
-        ColorType::Rgba8 => (6, 4),
-        _ => return None,
-    };
     if img.width == 0 || img.height == 0 || opts.compression.is_some_and(|level| level > 9) {
         return None;
     }
 
     let width = usize::try_from(img.width).ok()?;
     let height = usize::try_from(img.height).ok()?;
-    let expected = width.checked_mul(height)?.checked_mul(channels)?;
-    if img.pixels.len() != expected {
+    let (png_color, depth, channels, row_bytes, filter_bytes, pixels) = match img.mode {
+        ImageMode::L1 => {
+            let row_bytes = width.div_ceil(8);
+            (0, 1, 1, row_bytes, 1, img.pixels.clone())
+        }
+        ImageMode::P8 => (3, 8, 1, width, 1, img.pixels.clone()),
+        ImageMode::L16 => {
+            let mut big_endian = Vec::with_capacity(img.pixels.len());
+            for sample in img.pixels.chunks_exact(2) {
+                big_endian
+                    .extend_from_slice(&u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes());
+            }
+            (0, 16, 1, width.checked_mul(2)?, 2, big_endian)
+        }
+        _ => {
+            let (png_color, channels) = match img.color {
+                ColorType::L8 => (0, 1usize),
+                ColorType::La8 => (4, 2),
+                ColorType::Rgb8 => (2, 3),
+                ColorType::Rgba8 => (6, 4),
+                _ => return None,
+            };
+            (
+                png_color,
+                8,
+                channels,
+                width.checked_mul(channels)?,
+                channels,
+                img.pixels.clone(),
+            )
+        }
+    };
+    if pixels.len() != row_bytes.checked_mul(height)? {
         return None;
     }
 
     let interlaced = opts.interlace.unwrap_or(false);
-    let filter = Filter::parse(opts.extra.get("filter").map(String::as_str))?;
+    if interlaced
+        && !matches!(
+            img.mode,
+            ImageMode::L8 | ImageMode::La8 | ImageMode::Rgb8 | ImageMode::Rgba8
+        )
+    {
+        return None;
+    }
+    let filter = if img.mode == ImageMode::P8 {
+        Filter::None
+    } else {
+        Filter::parse(opts.extra.get("filter").map(String::as_str))?
+    };
     let optimize = opts.optimize.unwrap_or(false);
     let (filtered, input_chunks) = if interlaced {
-        adam7_rows(&img.pixels, width, height, channels, filter, optimize)?
+        adam7_rows(&pixels, width, height, channels, filter, optimize)?
     } else {
-        plain_rows(&img.pixels, width, height, channels, filter, optimize)?
+        plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize)?
     };
     let compression_level = if optimize {
         9
@@ -67,10 +103,24 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let mut header = Vec::with_capacity(13);
     header.extend_from_slice(&img.width.to_be_bytes());
     header.extend_from_slice(&img.height.to_be_bytes());
-    header.extend_from_slice(&[8, png_color, 0, 0, u8::from(interlaced)]);
+    header.extend_from_slice(&[depth, png_color, 0, 0, u8::from(interlaced)]);
 
     let mut output = PNG_SIGNATURE.to_vec();
     write_chunk(&mut output, *b"IHDR", &header)?;
+    if img.mode == ImageMode::P8 {
+        let palette = img.palette.as_ref()?;
+        write_chunk(&mut output, *b"PLTE", &palette.rgb)?;
+        if !palette.alpha.is_empty() {
+            let retained = palette
+                .alpha
+                .iter()
+                .rposition(|&alpha| alpha != 255)
+                .map_or(0, |index| index + 1);
+            if retained != 0 {
+                write_chunk(&mut output, *b"tRNS", &palette.alpha[..retained])?;
+            }
+        }
+    }
     write_requested_ancillary_chunks(&mut output, opts)?;
     write_chunk(&mut output, *b"IDAT", &compressed)?;
     write_chunk(&mut output, *b"IEND", &[])?;
@@ -79,18 +129,17 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
 fn plain_rows(
     pixels: &[u8],
-    width: usize,
+    stride: usize,
     height: usize,
-    channels: usize,
+    filter_bytes: usize,
     filter: Filter,
     optimize: bool,
 ) -> Option<(Vec<u8>, Vec<usize>)> {
-    let stride = width.checked_mul(channels)?;
     let mut output = Vec::with_capacity(stride.checked_add(1)?.checked_mul(height)?);
     let input_chunks = vec![stride.checked_add(1)?; height];
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
-        append_filtered_row(&mut output, row, previous, channels, filter, optimize);
+        append_filtered_row(&mut output, row, previous, filter_bytes, filter, optimize);
         previous = Some(row);
     }
     Some((output, input_chunks))

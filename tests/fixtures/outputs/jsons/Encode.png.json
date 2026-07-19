@@ -109,6 +109,30 @@
       "encoded_ref_bytes": 3941
     },
     {
+      "id": "enc_indexed",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_indexed.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_indexed.bin",
+      "encoded_ref_bytes": 12243
+    },
+    {
+      "id": "enc_1bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_1bit.bin",
+      "ref_bytes": 2048,
+      "ref_mode": "1",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_1bit.bin",
+      "encoded_ref_bytes": 2132
+    },
+    {
       "id": "enc_no_interlace",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_no_interlace.bin",
       "ref_bytes": 49152,
@@ -131,6 +155,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_8bit.bin",
       "encoded_ref_bytes": 3392
+    },
+    {
+      "id": "enc_16bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_16bit.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "I;16",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_16bit.bin",
+      "encoded_ref_bytes": 3928
     },
     {
       "id": "enc_chunk_text",

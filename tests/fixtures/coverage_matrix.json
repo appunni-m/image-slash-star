@@ -4061,12 +4061,20 @@
           "params": {
             "color_type": "P"
           },
-          "source_asset": "rgb.png",
+          "source_asset": "indexed.png",
           "source_format": "png",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "indexed",
-          "gap": "Rust PNG encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_indexed.bin",
+          "encoded_ref_bytes": 12243,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_indexed.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -4075,12 +4083,20 @@
           "params": {
             "color_type": "1"
           },
-          "source_asset": "rgb.png",
+          "source_asset": "1bit.png",
           "source_format": "png",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "1bit",
-          "gap": "Rust PNG encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_1bit.bin",
+          "encoded_ref_bytes": 2132,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_1bit.bin",
+          "ref_bytes": 2048,
+          "ref_mode": "1",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -4147,12 +4163,20 @@
           "params": {
             "bit_depth": 16
           },
-          "source_asset": "rgb.png",
+          "source_asset": "16bit.png",
           "source_format": "png",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "16bit",
-          "gap": "Rust PNG encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_16bit.bin",
+          "encoded_ref_bytes": 3928,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_16bit.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "I;16",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6175,6 +6199,6 @@
     "assets_available": 161,
     "decode_active": 157,
     "decode_planned": 11,
-    "encode_not_wired": 51
+    "encode_not_wired": 48
   }
 }
