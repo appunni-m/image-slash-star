@@ -17,6 +17,7 @@ pub mod bool_enc;
 mod cost;
 pub mod dct;
 pub mod encoder;
+mod intra16;
 mod intra4;
 pub mod loopfilter;
 pub mod predict;

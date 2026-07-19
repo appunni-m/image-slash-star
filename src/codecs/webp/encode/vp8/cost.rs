@@ -166,6 +166,16 @@ pub(super) fn squared_error_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 {
         .sum()
 }
 
+pub(super) fn squared_error_16x16(left: &[u8; 256], right: &[u8; 256]) -> u32 {
+    left.iter()
+        .zip(right)
+        .map(|(&left, &right)| {
+            let difference = i32::from(left) - i32::from(right);
+            (difference * difference) as u32
+        })
+        .sum()
+}
+
 fn weighted_transform(block: &[u8; 16]) -> i32 {
     const WEIGHTS: [i32; 16] = [38, 32, 20, 9, 32, 28, 17, 7, 20, 17, 10, 4, 9, 7, 4, 2];
     let mut temporary = [0i32; 16];
@@ -196,6 +206,23 @@ fn weighted_transform(block: &[u8; 16]) -> i32 {
 
 pub(super) fn spectral_distortion_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 {
     ((weighted_transform(left) - weighted_transform(right)).unsigned_abs()) >> 5
+}
+
+pub(super) fn spectral_distortion_16x16(left: &[u8; 256], right: &[u8; 256]) -> u32 {
+    let mut distortion = 0;
+    for block_y in 0..4 {
+        for block_x in 0..4 {
+            let mut left_block = [0; 16];
+            let mut right_block = [0; 16];
+            for row in 0..4 {
+                let offset = (block_y * 4 + row) * 16 + block_x * 4;
+                left_block[row * 4..row * 4 + 4].copy_from_slice(&left[offset..offset + 4]);
+                right_block[row * 4..row * 4 + 4].copy_from_slice(&right[offset..offset + 4]);
+            }
+            distortion += spectral_distortion_4x4(&left_block, &right_block);
+        }
+    }
+    distortion
 }
 
 pub(super) fn rd_score(rate: u32, header: u32, distortion: u32, lambda: u32) -> u64 {
