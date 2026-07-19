@@ -22,6 +22,8 @@ mod frame;
 mod intra16;
 mod intra4;
 pub mod loopfilter;
+mod mode_probability;
+mod partition;
 pub mod predict;
 mod probability;
 pub mod quant;
