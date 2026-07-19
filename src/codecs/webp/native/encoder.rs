@@ -3,6 +3,9 @@ use std::collections::BinaryHeap;
 use std::io::{self, Write};
 use std::slice::ChunksExact;
 
+pub(super) mod cross_color;
+pub(super) mod predictor;
+
 /// Color type of the image.
 ///
 /// Note that the WebP format doesn't have a concept of color type. All images are encoded as RGBA

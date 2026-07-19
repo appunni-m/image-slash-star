@@ -669,6 +669,170 @@ impl<R: BufRead> LosslessDecoder<R> {
     }
 }
 
+#[cfg(test)]
+mod cross_color_oracle_tests {
+    use std::io::Cursor;
+
+    use super::{LosslessDecoder, TransformType, apply_color_transform};
+    use crate::codecs::webp::native::encoder::cross_color::select_and_apply;
+    use crate::codecs::webp::native::encoder::predictor;
+
+    fn rgba_bytes_to_argb(pixels: &[u8]) -> Vec<u32> {
+        pixels
+            .chunks_exact(4)
+            .map(|pixel| {
+                (u32::from(pixel[3]) << 24)
+                    | (u32::from(pixel[0]) << 16)
+                    | (u32::from(pixel[1]) << 8)
+                    | u32::from(pixel[2])
+            })
+            .collect()
+    }
+
+    fn verify_cross_color_stage(webp: &[u8]) {
+        let mut decoder = LosslessDecoder::new(Cursor::new(&webp[20..]));
+        assert_eq!(decoder.bit_reader.read_bits::<u8>(8).unwrap(), 0x2f);
+        decoder.width = decoder.bit_reader.read_bits::<u16>(14).unwrap() + 1;
+        decoder.height = decoder.bit_reader.read_bits::<u16>(14).unwrap() + 1;
+        let _alpha = decoder.bit_reader.read_bits::<u8>(1).unwrap();
+        assert_eq!(decoder.bit_reader.read_bits::<u8>(3).unwrap(), 0);
+
+        let transformed_width = decoder.read_transforms().unwrap();
+        let mut final_pixels =
+            vec![0; usize::from(transformed_width) * usize::from(decoder.height) * 4];
+        decoder
+            .decode_image_stream(transformed_width, decoder.height, true, &mut final_pixels)
+            .unwrap();
+
+        let TransformType::ColorTransform {
+            size_bits,
+            transform_data,
+        } = decoder.transforms[1].as_ref().unwrap()
+        else {
+            panic!("oracle stream must use a cross-color transform");
+        };
+        let expected_map = rgba_bytes_to_argb(transform_data);
+        let expected_final = rgba_bytes_to_argb(&final_pixels);
+        apply_color_transform(
+            &mut final_pixels,
+            transformed_width,
+            *size_bits,
+            transform_data,
+        );
+        let mut predictor_residual = rgba_bytes_to_argb(&final_pixels);
+        let (actual_map, actual_bits) = select_and_apply(
+            &mut predictor_residual,
+            usize::from(transformed_width),
+            usize::from(decoder.height),
+            3,
+            80,
+        );
+
+        assert_eq!(actual_bits, *size_bits);
+        assert_eq!(actual_map, expected_map);
+        assert_eq!(predictor_residual, expected_final);
+    }
+
+    fn verify_predictor_stage(webp: &[u8], source: &[u8], rgba: bool) {
+        let mut decoder = LosslessDecoder::new(Cursor::new(&webp[20..]));
+        assert_eq!(decoder.bit_reader.read_bits::<u8>(8).unwrap(), 0x2f);
+        decoder.width = decoder.bit_reader.read_bits::<u16>(14).unwrap() + 1;
+        decoder.height = decoder.bit_reader.read_bits::<u16>(14).unwrap() + 1;
+        let _alpha = decoder.bit_reader.read_bits::<u8>(1).unwrap();
+        assert_eq!(decoder.bit_reader.read_bits::<u8>(3).unwrap(), 0);
+
+        let transformed_width = decoder.read_transforms().unwrap();
+        let mut final_pixels =
+            vec![0; usize::from(transformed_width) * usize::from(decoder.height) * 4];
+        decoder
+            .decode_image_stream(transformed_width, decoder.height, true, &mut final_pixels)
+            .unwrap();
+        let TransformType::ColorTransform {
+            size_bits,
+            transform_data,
+        } = decoder.transforms[1].as_ref().unwrap()
+        else {
+            panic!("oracle stream must use a cross-color transform");
+        };
+        apply_color_transform(
+            &mut final_pixels,
+            transformed_width,
+            *size_bits,
+            transform_data,
+        );
+        let expected_residual = rgba_bytes_to_argb(&final_pixels);
+        let TransformType::PredictorTransform {
+            size_bits,
+            predictor_data,
+        } = decoder.transforms[0].as_ref().unwrap()
+        else {
+            panic!("oracle stream must use a predictor transform");
+        };
+        let expected_map = rgba_bytes_to_argb(predictor_data);
+        let mut source = if rgba {
+            rgba_bytes_to_argb(source)
+        } else {
+            source
+                .chunks_exact(3)
+                .map(|pixel| {
+                    0xff00_0000
+                        | (u32::from(pixel[0]) << 16)
+                        | (u32::from(pixel[1]) << 8)
+                        | u32::from(pixel[2])
+                })
+                .collect()
+        };
+        let (actual_map, actual_bits) = predictor::select_and_apply(
+            &mut source,
+            usize::from(decoder.width),
+            usize::from(decoder.height),
+            3,
+        );
+
+        assert_eq!(actual_bits, *size_bits);
+        assert_eq!(actual_map, expected_map);
+        assert_eq!(source, expected_residual);
+    }
+
+    #[test]
+    fn rgb_cross_color_stage_matches_libwebp_1_6_0() {
+        verify_cross_color_stage(include_bytes!(
+            "../../../../tests/fixtures/outputs/encoded/Encode.webp_enc_lossless.bin"
+        ));
+    }
+
+    #[test]
+    fn rgba_cross_color_stage_matches_libwebp_1_6_0() {
+        verify_cross_color_stage(include_bytes!(
+            "../../../../tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_alpha.bin"
+        ));
+    }
+
+    #[test]
+    fn rgb_predictor_stage_matches_libwebp_1_6_0() {
+        verify_predictor_stage(
+            include_bytes!(
+                "../../../../tests/fixtures/outputs/encoded/Encode.webp_enc_lossless.bin"
+            ),
+            include_bytes!("../../../../tests/fixtures/outputs/raws/Encode.webp_enc_lossless.bin"),
+            false,
+        );
+    }
+
+    #[test]
+    fn rgba_predictor_stage_matches_libwebp_1_6_0() {
+        verify_predictor_stage(
+            include_bytes!(
+                "../../../../tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_alpha.bin"
+            ),
+            include_bytes!(
+                "../../../../tests/fixtures/outputs/raws/Decode.png_alpha_partial_png.bin"
+            ),
+            true,
+        );
+    }
+}
+
 #[derive(Debug, Clone)]
 struct HuffmanInfo {
     xsize: u16,
