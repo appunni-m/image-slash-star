@@ -58,7 +58,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         COMPRESSION_NONE => raw,
         COMPRESSION_LZW => encode_lzw_literals(&raw),
         COMPRESSION_DEFLATE => compress_zlib(&raw, 6)?,
-        COMPRESSION_PACKBITS => encode_packbits_literals(&raw),
+        COMPRESSION_PACKBITS => encode_packbits(
+            &raw,
+            usize::try_from(img.width)
+                .ok()?
+                .checked_mul(usize::from(channels))?,
+        )?,
         _ => return None,
     };
 
@@ -69,25 +74,49 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let ifd_size = 2usize
         .checked_add(usize::from(entry_count).checked_mul(12)?)?
         .checked_add(4)?;
-    let bits_offset = 8usize.checked_add(ifd_size)?;
     let bits_len = if channels == 1 {
         0
     } else {
         usize::from(channels).checked_mul(2)?
     };
-    let pixel_offset = bits_offset.checked_add(bits_len)?.next_multiple_of(2);
+    let compressed_layout = compression != COMPRESSION_NONE;
+    let ifd_offset = if compressed_layout {
+        8usize.checked_add(encoded.len())?.next_multiple_of(2)
+    } else {
+        8
+    };
+    let bits_offset = ifd_offset.checked_add(ifd_size)?;
+    let pixel_offset = if compressed_layout {
+        8
+    } else {
+        bits_offset.checked_add(bits_len)?.next_multiple_of(2)
+    };
 
-    let mut output = Vec::with_capacity(pixel_offset.checked_add(encoded.len())?);
+    let output_len = if compressed_layout {
+        bits_offset.checked_add(bits_len)?
+    } else {
+        pixel_offset.checked_add(encoded.len())?
+    };
+    let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(match endian {
         Endian::Little => b"II",
         Endian::Big => b"MM",
     });
     endian.push_u16(&mut output, 42);
-    endian.push_u32(&mut output, 8);
+    endian.push_u32(&mut output, u32::try_from(ifd_offset).ok()?);
+    if compressed_layout {
+        output.extend_from_slice(&encoded);
+        output.resize(ifd_offset, 0);
+    }
     endian.push_u16(&mut output, entry_count);
 
-    write_entry(&mut output, endian, 256, 4, 1, img.width);
-    write_entry(&mut output, endian, 257, 4, 1, img.height);
+    if compressed_layout {
+        write_short_entry(&mut output, endian, 256, u16::try_from(img.width).ok()?);
+        write_short_entry(&mut output, endian, 257, u16::try_from(img.height).ok()?);
+    } else {
+        write_entry(&mut output, endian, 256, 4, 1, img.width);
+        write_entry(&mut output, endian, 257, 4, 1, img.height);
+    }
     if channels == 1 {
         write_short_entry(&mut output, endian, 258, 8);
     } else {
@@ -113,7 +142,11 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     if channels > 1 {
         write_short_entry(&mut output, endian, 277, channels);
     }
-    write_entry(&mut output, endian, 278, 4, 1, img.height);
+    if compressed_layout {
+        write_short_entry(&mut output, endian, 278, u16::try_from(img.height).ok()?);
+    } else {
+        write_entry(&mut output, endian, 278, 4, 1, img.height);
+    }
     write_entry(
         &mut output,
         endian,
@@ -136,8 +169,10 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             endian.push_u16(&mut output, 8);
         }
     }
-    output.resize(pixel_offset, 0);
-    output.extend_from_slice(&encoded);
+    if !compressed_layout {
+        output.resize(pixel_offset, 0);
+        output.extend_from_slice(&encoded);
+    }
     Some(output)
 }
 
@@ -154,13 +189,109 @@ fn apply_horizontal_predictor(data: &mut [u8], width: usize, channels: usize) ->
     Some(())
 }
 
-fn encode_packbits_literals(data: &[u8]) -> Vec<u8> {
-    let mut output = Vec::with_capacity(data.len().saturating_add(data.len().div_ceil(128)));
-    for chunk in data.chunks(128) {
-        output.push((chunk.len() - 1) as u8);
-        output.extend_from_slice(chunk);
+fn encode_packbits(data: &[u8], row_len: usize) -> Option<Vec<u8>> {
+    if row_len == 0 || !data.len().is_multiple_of(row_len) {
+        return None;
     }
-    output
+
+    let mut output = Vec::with_capacity(data.len().saturating_add(data.len().div_ceil(128)));
+    for row in data.chunks_exact(row_len) {
+        encode_packbits_row(row, &mut output);
+    }
+    Some(output)
+}
+
+fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
+    #[derive(Clone, Copy)]
+    enum State {
+        Base,
+        Literal,
+        Run,
+        LiteralRun,
+    }
+
+    let mut state = State::Base;
+    let mut last_literal = 0usize;
+    let mut position = 0usize;
+    while position < row.len() {
+        let byte = row[position];
+        position += 1;
+        let mut run_len = 1usize;
+        while position < row.len() && row[position] == byte {
+            position += 1;
+            run_len += 1;
+        }
+
+        loop {
+            let mut again = false;
+            match state {
+                State::Base => {
+                    if run_len > 1 {
+                        state = State::Run;
+                        again = run_len > 128;
+                        emit_packbits_run(output, byte, &mut run_len);
+                    } else {
+                        last_literal = output.len();
+                        output.extend_from_slice(&[0, byte]);
+                        state = State::Literal;
+                    }
+                }
+                State::Literal => {
+                    if run_len > 1 {
+                        state = State::LiteralRun;
+                        again = run_len > 128;
+                        emit_packbits_run(output, byte, &mut run_len);
+                    } else {
+                        output[last_literal] += 1;
+                        if output[last_literal] == 127 {
+                            state = State::Base;
+                        }
+                        output.push(byte);
+                    }
+                }
+                State::Run => {
+                    if run_len > 1 {
+                        again = run_len > 128;
+                        emit_packbits_run(output, byte, &mut run_len);
+                    } else {
+                        last_literal = output.len();
+                        output.extend_from_slice(&[0, byte]);
+                        state = State::Literal;
+                    }
+                }
+                State::LiteralRun => {
+                    if run_len == 1
+                        && output[output.len() - 2] == u8::MAX
+                        && output[last_literal] < 126
+                    {
+                        output[last_literal] += 2;
+                        state = if output[last_literal] == 127 {
+                            State::Base
+                        } else {
+                            State::Literal
+                        };
+                        let repeated = output[output.len() - 1];
+                        let control = output.len() - 2;
+                        output[control] = repeated;
+                    } else {
+                        state = State::Run;
+                    }
+                    continue;
+                }
+            }
+
+            if !again {
+                break;
+            }
+        }
+    }
+}
+
+fn emit_packbits_run(output: &mut Vec<u8>, byte: u8, run_len: &mut usize) {
+    let emitted = (*run_len).min(128);
+    output.push((1i16 - emitted as i16) as i8 as u8);
+    output.push(byte);
+    *run_len -= emitted;
 }
 
 /// Emit literal-only TIFF LZW packets. Periodic CLEAR codes keep the code
