@@ -1,7 +1,6 @@
 //! Encoding of WebP images.
 use std::collections::BinaryHeap;
 use std::io::{self, Write};
-use std::slice::ChunksExact;
 
 pub(super) mod cross_color;
 pub(super) mod predictor;
@@ -309,12 +308,12 @@ const fn length_to_symbol(len: u16) -> (u16, u8) {
 
 #[inline(always)]
 fn count_run(
-    pixel: &[u8],
-    it: &mut std::iter::Peekable<ChunksExact<u8>>,
+    pixel: u32,
+    it: &mut std::iter::Peekable<std::slice::Iter<'_, u32>>,
     frequencies1: &mut [u32; 280],
 ) {
     let mut run_length = 0;
-    while run_length < 4096 && it.peek() == Some(&pixel) {
+    while run_length < 4096 && it.peek().is_some_and(|&&next| next == pixel) {
         run_length += 1;
         it.next();
     }
@@ -332,13 +331,13 @@ fn count_run(
 #[inline(always)]
 fn write_run<W: Write>(
     w: &mut BitWriter<W>,
-    pixel: &[u8],
-    it: &mut std::iter::Peekable<ChunksExact<u8>>,
+    pixel: u32,
+    it: &mut std::iter::Peekable<std::slice::Iter<'_, u32>>,
     codes1: &[u16; 280],
     lengths1: &[u8; 280],
 ) -> io::Result<()> {
     let mut run_length = 0;
-    while run_length < 4096 && it.peek() == Some(&pixel) {
+    while run_length < 4096 && it.peek().is_some_and(|&&next| next == pixel) {
         run_length += 1;
         it.next();
     }
@@ -357,6 +356,71 @@ fn write_run<W: Write>(
                 extra_bits,
             )?;
         }
+    }
+    Ok(())
+}
+
+#[inline]
+fn channels(pixel: u32) -> [usize; 4] {
+    [
+        ((pixel >> 16) & 0xff) as usize,
+        ((pixel >> 8) & 0xff) as usize,
+        (pixel & 0xff) as usize,
+        (pixel >> 24) as usize,
+    ]
+}
+
+fn write_image_stream<W: Write>(
+    w: &mut BitWriter<W>,
+    pixels: &[u32],
+    write_meta_huffman_bit: bool,
+) -> io::Result<()> {
+    w.write_bits(0, 1)?; // no color cache
+    if write_meta_huffman_bit {
+        w.write_bits(0, 1)?; // one global Huffman group
+    }
+
+    let mut frequencies0 = [0_u32; 256];
+    let mut frequencies1 = [0_u32; 280];
+    let mut frequencies2 = [0_u32; 256];
+    let mut frequencies3 = [0_u32; 256];
+    let mut iterator = pixels.iter().peekable();
+    while let Some(&pixel) = iterator.next() {
+        let [red, green, blue, alpha] = channels(pixel);
+        frequencies0[red] += 1;
+        frequencies1[green] += 1;
+        frequencies2[blue] += 1;
+        frequencies3[alpha] += 1;
+        count_run(pixel, &mut iterator, &mut frequencies1);
+    }
+
+    let mut lengths0 = [0_u8; 256];
+    let mut lengths1 = [0_u8; 280];
+    let mut lengths2 = [0_u8; 256];
+    let mut lengths3 = [0_u8; 256];
+    let mut codes0 = [0_u16; 256];
+    let mut codes1 = [0_u16; 280];
+    let mut codes2 = [0_u16; 256];
+    let mut codes3 = [0_u16; 256];
+    write_huffman_tree(w, &frequencies1, &mut lengths1, &mut codes1)?;
+    write_huffman_tree(w, &frequencies0, &mut lengths0, &mut codes0)?;
+    write_huffman_tree(w, &frequencies2, &mut lengths2, &mut codes2)?;
+    write_huffman_tree(w, &frequencies3, &mut lengths3, &mut codes3)?;
+    write_single_entry_huffman_tree(w, 1)?;
+
+    let mut iterator = pixels.iter().peekable();
+    while let Some(&pixel) = iterator.next() {
+        let [red, green, blue, alpha] = channels(pixel);
+        let green_length = lengths1[green];
+        let red_length = lengths0[red];
+        let blue_length = lengths2[blue];
+        let alpha_length = lengths3[alpha];
+        let code = u64::from(codes1[green])
+            | (u64::from(codes0[red]) << green_length)
+            | (u64::from(codes2[blue]) << (green_length + red_length))
+            | (u64::from(codes3[alpha]) << (green_length + red_length + blue_length));
+        w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
+        write_run(w, pixel, &mut iterator, &codes1, &lengths1)?;
     }
     Ok(())
 }
@@ -398,11 +462,11 @@ fn encode_frame<W: Write>(
         nbits: 0,
     };
 
-    let (is_color, is_alpha, bytes_per_pixel) = match color {
-        ColorType::L8 => (false, false, 1),
-        ColorType::La8 => (false, true, 2),
-        ColorType::Rgb8 => (true, false, 3),
-        ColorType::Rgba8 => (true, true, 4),
+    let (is_alpha, bytes_per_pixel) = match color {
+        ColorType::L8 => (false, 1),
+        ColorType::La8 => (true, 2),
+        ColorType::Rgb8 => (false, 3),
+        ColorType::Rgba8 => (true, 4),
     };
 
     assert_eq!(
@@ -421,190 +485,60 @@ fn encode_frame<W: Write>(
     w.write_bits(u64::from(is_alpha), 1)?; // alpha used
     w.write_bits(0x0, 3)?; // version
 
-    // subtract green transform
-    w.write_bits(0b101, 3)?;
-
-    // predictor transform
-    if params.use_predictor_transform {
-        w.write_bits(0b111001, 6)?;
-        w.write_bits(0x0, 1)?; // no color cache
-        write_single_entry_huffman_tree(w, 2)?;
-        for _ in 0..4 {
-            write_single_entry_huffman_tree(w, 0)?;
-        }
-    }
-
-    // transforms done
-    w.write_bits(0x0, 1)?;
-
-    // color cache
-    w.write_bits(0x0, 1)?;
-
-    // meta-huffman codes
-    w.write_bits(0x0, 1)?;
-
-    // expand to RGBA
-    let mut pixels = match color {
-        ColorType::L8 => data.iter().flat_map(|&p| [p, p, p, 255]).collect(),
+    let mut pixels: Vec<u32> = match color {
+        ColorType::L8 => data
+            .iter()
+            .map(|&value| {
+                0xff00_0000 | (u32::from(value) << 16) | (u32::from(value) << 8) | u32::from(value)
+            })
+            .collect(),
         ColorType::La8 => data
             .chunks_exact(2)
-            .flat_map(|p| [p[0], p[0], p[0], p[1]])
+            .map(|pixel| {
+                (u32::from(pixel[1]) << 24)
+                    | (u32::from(pixel[0]) << 16)
+                    | (u32::from(pixel[0]) << 8)
+                    | u32::from(pixel[0])
+            })
             .collect(),
         ColorType::Rgb8 => data
             .chunks_exact(3)
-            .flat_map(|p| [p[0], p[1], p[2], 255])
+            .map(|pixel| {
+                0xff00_0000
+                    | (u32::from(pixel[0]) << 16)
+                    | (u32::from(pixel[1]) << 8)
+                    | u32::from(pixel[2])
+            })
             .collect(),
-        ColorType::Rgba8 => data.to_vec(),
+        ColorType::Rgba8 => data
+            .chunks_exact(4)
+            .map(|pixel| {
+                (u32::from(pixel[3]) << 24)
+                    | (u32::from(pixel[0]) << 16)
+                    | (u32::from(pixel[1]) << 8)
+                    | u32::from(pixel[2])
+            })
+            .collect(),
     };
 
-    // compute subtract green transform
-    for pixel in pixels.chunks_exact_mut(4) {
-        pixel[0] = pixel[0].wrapping_sub(pixel[1]);
-        pixel[2] = pixel[2].wrapping_sub(pixel[1]);
-    }
-
-    // compute predictor transform
     if params.use_predictor_transform {
-        let row_bytes = width as usize * 4;
-        for y in (1..height as usize).rev() {
-            let (prev, current) =
-                pixels[(y - 1) * row_bytes..][..row_bytes * 2].split_at_mut(row_bytes);
-            for (c, p) in current.iter_mut().zip(prev) {
-                *c = c.wrapping_sub(*p);
-            }
-        }
-        for i in (4..row_bytes).rev() {
-            pixels[i] = pixels[i].wrapping_sub(pixels[i - 4]);
-        }
-        pixels[3] = pixels[3].wrapping_sub(255);
+        let (predictor_map, predictor_bits) =
+            predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3);
+        w.write_bits(1, 1)?;
+        w.write_bits(0, 2)?;
+        w.write_bits(u64::from(predictor_bits - 2), 3)?;
+        write_image_stream(w, &predictor_map, false)?;
+
+        let (color_map, color_bits) =
+            cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
+        w.write_bits(1, 1)?;
+        w.write_bits(1, 2)?;
+        w.write_bits(u64::from(color_bits - 2), 3)?;
+        write_image_stream(w, &color_map, false)?;
     }
 
-    // compute frequencies
-    let mut frequencies0 = [0u32; 256];
-    let mut frequencies1 = [0u32; 280];
-    let mut frequencies2 = [0u32; 256];
-    let mut frequencies3 = [0u32; 256];
-    let mut it = pixels.chunks_exact(4).peekable();
-    match color {
-        ColorType::L8 => {
-            frequencies0[0] = 1;
-            frequencies2[0] = 1;
-            frequencies3[0] = 1;
-            while let Some(pixel) = it.next() {
-                frequencies1[pixel[1] as usize] += 1;
-                count_run(pixel, &mut it, &mut frequencies1);
-            }
-        }
-        ColorType::La8 => {
-            frequencies0[0] = 1;
-            frequencies2[0] = 1;
-            while let Some(pixel) = it.next() {
-                frequencies1[pixel[1] as usize] += 1;
-                frequencies3[pixel[3] as usize] += 1;
-                count_run(pixel, &mut it, &mut frequencies1);
-            }
-        }
-        ColorType::Rgb8 => {
-            frequencies3[0] = 1;
-            while let Some(pixel) = it.next() {
-                frequencies0[pixel[0] as usize] += 1;
-                frequencies1[pixel[1] as usize] += 1;
-                frequencies2[pixel[2] as usize] += 1;
-                count_run(pixel, &mut it, &mut frequencies1);
-            }
-        }
-        ColorType::Rgba8 => {
-            while let Some(pixel) = it.next() {
-                frequencies0[pixel[0] as usize] += 1;
-                frequencies1[pixel[1] as usize] += 1;
-                frequencies2[pixel[2] as usize] += 1;
-                frequencies3[pixel[3] as usize] += 1;
-                count_run(pixel, &mut it, &mut frequencies1);
-            }
-        }
-    }
-
-    // compute and write huffman codes
-    let mut lengths0 = [0u8; 256];
-    let mut lengths1 = [0u8; 280];
-    let mut lengths2 = [0u8; 256];
-    let mut lengths3 = [0u8; 256];
-    let mut codes0 = [0u16; 256];
-    let mut codes1 = [0u16; 280];
-    let mut codes2 = [0u16; 256];
-    let mut codes3 = [0u16; 256];
-    write_huffman_tree(w, &frequencies1, &mut lengths1, &mut codes1)?;
-    if is_color {
-        write_huffman_tree(w, &frequencies0, &mut lengths0, &mut codes0)?;
-        write_huffman_tree(w, &frequencies2, &mut lengths2, &mut codes2)?;
-    } else {
-        write_single_entry_huffman_tree(w, 0)?;
-        write_single_entry_huffman_tree(w, 0)?;
-    }
-    if is_alpha {
-        write_huffman_tree(w, &frequencies3, &mut lengths3, &mut codes3)?;
-    } else if params.use_predictor_transform {
-        write_single_entry_huffman_tree(w, 0)?;
-    } else {
-        write_single_entry_huffman_tree(w, 255)?;
-    }
-    write_single_entry_huffman_tree(w, 1)?;
-
-    // Write image data
-    let mut it = pixels.chunks_exact(4).peekable();
-    match color {
-        ColorType::L8 => {
-            while let Some(pixel) = it.next() {
-                w.write_bits(
-                    u64::from(codes1[pixel[1] as usize]),
-                    lengths1[pixel[1] as usize],
-                )?;
-                write_run(w, pixel, &mut it, &codes1, &lengths1)?;
-            }
-        }
-        ColorType::La8 => {
-            while let Some(pixel) = it.next() {
-                let len1 = lengths1[pixel[1] as usize];
-                let len3 = lengths3[pixel[3] as usize];
-
-                let code = u64::from(codes1[pixel[1] as usize])
-                    | (u64::from(codes3[pixel[3] as usize]) << len1);
-
-                w.write_bits(code, len1 + len3)?;
-                write_run(w, pixel, &mut it, &codes1, &lengths1)?;
-            }
-        }
-        ColorType::Rgb8 => {
-            while let Some(pixel) = it.next() {
-                let len1 = lengths1[pixel[1] as usize];
-                let len0 = lengths0[pixel[0] as usize];
-                let len2 = lengths2[pixel[2] as usize];
-
-                let code = u64::from(codes1[pixel[1] as usize])
-                    | (u64::from(codes0[pixel[0] as usize]) << len1)
-                    | (u64::from(codes2[pixel[2] as usize]) << (len1 + len0));
-
-                w.write_bits(code, len1 + len0 + len2)?;
-                write_run(w, pixel, &mut it, &codes1, &lengths1)?;
-            }
-        }
-        ColorType::Rgba8 => {
-            while let Some(pixel) = it.next() {
-                let len1 = lengths1[pixel[1] as usize];
-                let len0 = lengths0[pixel[0] as usize];
-                let len2 = lengths2[pixel[2] as usize];
-                let len3 = lengths3[pixel[3] as usize];
-
-                let code = u64::from(codes1[pixel[1] as usize])
-                    | (u64::from(codes0[pixel[0] as usize]) << len1)
-                    | (u64::from(codes2[pixel[2] as usize]) << (len1 + len0))
-                    | (u64::from(codes3[pixel[3] as usize]) << (len1 + len0 + len2));
-
-                w.write_bits(code, len1 + len0 + len2 + len3)?;
-                write_run(w, pixel, &mut it, &codes1, &lengths1)?;
-            }
-        }
-    }
+    w.write_bits(0, 1)?; // transforms done
+    write_image_stream(w, &pixels, true)?;
 
     w.flush()?;
     Ok(())
