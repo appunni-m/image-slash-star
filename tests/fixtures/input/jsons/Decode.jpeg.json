@@ -104,6 +104,19 @@
       }
     },
     {
+      "id": "color_cmyk",
+      "asset": "baseline_cmyk.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "huffman_default",
       "asset": "baseline_default.jpg",
       "expect_error": false,

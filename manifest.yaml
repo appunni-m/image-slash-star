@@ -94,7 +94,6 @@ formats:
       - baseline_rgb_jpeg.jpg
     - id: color_cmyk
       description: CMYK color space (Adobe)
-      status: planned
       test_assets:
       - baseline_cmyk.jpg
     - id: huffman_default

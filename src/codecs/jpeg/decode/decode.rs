@@ -260,6 +260,32 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
             pixels,
             ColorType::Rgb8,
         ))
+    } else if info.num_components == 4 {
+        // Pillow exposes Adobe four-component JPEGs as CMYK and selects its
+        // inverted CMYK raw mode whenever APP14 identifies Adobe data.
+        let inverted = info.adobe_transform.is_some();
+        let mut pixels = Vec::with_capacity(w * h * 4);
+        for y in 0..h {
+            for x in 0..w {
+                for component in 0..4 {
+                    let horizontal_ratio =
+                        usize::from(info.max_h_samp / info.components[component].h_samp);
+                    let vertical_ratio =
+                        usize::from(info.max_v_samp / info.components[component].v_samp);
+                    let source_x = x / horizontal_ratio;
+                    let source_y = y / vertical_ratio;
+                    let sample =
+                        comp_buffers[component][source_y * comp_buf_width[component] + source_x];
+                    pixels.push(if inverted { 255 - sample } else { sample });
+                }
+            }
+        }
+        Some(DecodedImage::new(
+            info.width as u32,
+            info.height as u32,
+            pixels,
+            ColorType::Cmyk8,
+        ))
     } else {
         None
     }

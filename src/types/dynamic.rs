@@ -114,6 +114,9 @@ impl DynamicImage {
             La8 => Self::new_luma_a8(w, h),
             Rgb8 => Self::new_rgb8(w, h),
             Rgba8 => Self::new_rgba8(w, h),
+            // DynamicImage mirrors image-rs and has no native CMYK variant;
+            // callers retain CMYK losslessly through DecodedImage instead.
+            Cmyk8 => panic!("DynamicImage has no native CMYK representation"),
             L16 => Self::new_luma16(w, h),
             La16 => Self::new_luma_a16(w, h),
             Rgb16 => Self::new_rgb16(w, h),
@@ -338,6 +341,7 @@ impl DynamicImage {
                 let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
                 buf
             }
+            Cmyk8 => unreachable!("DynamicImage has no native CMYK representation"),
             L16 => {
                 let Some(img) = self.as_luma16() else {
                     panic!("BUG: as_luma16 returned None for L16 image");
@@ -1039,6 +1043,7 @@ impl DynamicImage {
             Rgba8 => {
                 DynamicImage::ImageRgba8(RgbaImage::from_raw(d.width, d.height, d.pixels.clone())?)
             }
+            Cmyk8 => return None,
             L16 => {
                 let u16_data: Vec<u16> = d
                     .pixels

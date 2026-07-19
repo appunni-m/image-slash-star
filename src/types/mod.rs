@@ -113,6 +113,8 @@ pub enum ImageMode {
     Rgb8,
     /// Eight-bit RGBA samples.
     Rgba8,
+    /// Eight-bit cyan, magenta, yellow, and black samples.
+    Cmyk8,
     /// Little-endian sixteen-bit luminance samples.
     L16,
     /// Little-endian sixteen-bit luminance and alpha samples.
@@ -134,6 +136,7 @@ impl From<ColorType> for ImageMode {
             ColorType::La8 => Self::La8,
             ColorType::Rgb8 => Self::Rgb8,
             ColorType::Rgba8 => Self::Rgba8,
+            ColorType::Cmyk8 => Self::Cmyk8,
             ColorType::L16 => Self::L16,
             ColorType::La16 => Self::La16,
             ColorType::Rgb16 => Self::Rgb16,
@@ -153,6 +156,7 @@ impl ImageMode {
             Self::La8 => ColorType::La8,
             Self::Rgb8 => ColorType::Rgb8,
             Self::Rgba8 => ColorType::Rgba8,
+            Self::Cmyk8 => ColorType::Cmyk8,
             Self::L16 => ColorType::L16,
             Self::La16 => ColorType::La16,
             Self::Rgb16 => ColorType::Rgb16,

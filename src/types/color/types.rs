@@ -14,6 +14,8 @@ pub enum ColorType {
     Rgb8,
     /// Pixel is 8-bit RGB with an alpha channel
     Rgba8,
+    /// Pixel is 8-bit CMYK
+    Cmyk8,
 
     /// Pixel is 16-bit luminance
     L16,
@@ -38,7 +40,7 @@ impl ColorType {
             ColorType::L8 => 1,
             ColorType::L16 | ColorType::La8 => 2,
             ColorType::Rgb8 => 3,
-            ColorType::Rgba8 | ColorType::La16 => 4,
+            ColorType::Rgba8 | ColorType::Cmyk8 | ColorType::La16 => 4,
             ColorType::Rgb16 => 6,
             ColorType::Rgba16 => 8,
             ColorType::Rgb32F => 3 * 4,
@@ -51,7 +53,7 @@ impl ColorType {
     pub fn has_alpha(self) -> bool {
         use ColorType::*;
         match self {
-            L8 | L16 | Rgb8 | Rgb16 | Rgb32F => false,
+            L8 | L16 | Rgb8 | Cmyk8 | Rgb16 | Rgb32F => false,
             La8 | Rgba8 | La16 | Rgba16 | Rgba32F => true,
         }
     }
@@ -62,7 +64,7 @@ impl ColorType {
         use ColorType::*;
         match self {
             L8 | L16 | La8 | La16 => false,
-            Rgb8 | Rgb16 | Rgba8 | Rgba16 | Rgb32F | Rgba32F => true,
+            Rgb8 | Cmyk8 | Rgb16 | Rgba8 | Rgba16 | Rgb32F | Rgba32F => true,
         }
     }
 
@@ -248,6 +250,7 @@ impl From<ColorType> for ExtendedColorType {
             ColorType::La8 => ExtendedColorType::La8,
             ColorType::Rgb8 => ExtendedColorType::Rgb8,
             ColorType::Rgba8 => ExtendedColorType::Rgba8,
+            ColorType::Cmyk8 => ExtendedColorType::Cmyk8,
             ColorType::L16 => ExtendedColorType::L16,
             ColorType::La16 => ExtendedColorType::La16,
             ColorType::Rgb16 => ExtendedColorType::Rgb16,

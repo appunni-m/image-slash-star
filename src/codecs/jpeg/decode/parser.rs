@@ -9,6 +9,7 @@ pub(crate) const M_SOF2: u16 = 0xFFC2;
 pub(crate) const M_DHT: u16 = 0xFFC4;
 pub(crate) const M_DQT: u16 = 0xFFDB;
 pub(crate) const M_DRI: u16 = 0xFFDD;
+pub(crate) const M_APP14: u16 = 0xFFEE;
 
 // ── JPEG Structures ───────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ pub(super) struct JpegInfo {
     pub(super) max_v_samp: u8,
     pub(super) progressive: bool,
     pub(super) scans: Vec<ScanInfo>,
+    pub(super) adobe_transform: Option<u8>,
 }
 
 // ── JPEG Parser ───────────────────────────────────────────────────────────
@@ -141,7 +143,7 @@ pub(super) fn parse_sof0(
     let height = read_u16(data, pos)?;
     let width = read_u16(data, pos)?;
     let num_components = read_u8(data, pos)?;
-    if num_components != 1 && num_components != 3 {
+    if num_components != 1 && num_components != 3 && num_components != 4 {
         return None;
     }
 
@@ -319,6 +321,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
     let mut saw_sos = false;
     let mut progressive = false;
     let mut scans: Vec<ScanInfo> = Vec::new();
+    let mut adobe_transform = None;
 
     loop {
         let marker = find_next_marker(data, &mut pos)?;
@@ -394,6 +397,17 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
             M_DRI => {
                 restart_interval = parse_dri(data, &mut pos)?;
             }
+            M_APP14 => {
+                let length = usize::from(read_u16(data, &mut pos)?);
+                if length < 2 || pos.checked_add(length - 2)? > data.len() {
+                    return None;
+                }
+                let payload_end = pos + length - 2;
+                if data.get(pos..pos + 5) == Some(b"Adobe") && length >= 14 {
+                    adobe_transform = data.get(pos + 11).copied();
+                }
+                pos = payload_end;
+            }
             M_EOI => {
                 break;
             }
@@ -427,5 +441,6 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
         max_v_samp,
         progressive,
         scans,
+        adobe_transform,
     })
 }
