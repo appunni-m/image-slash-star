@@ -87,6 +87,52 @@ pub fn vp8_fdct_4x4(block: &[i16; 16]) -> [i16; 16] {
     output
 }
 
+/// Applies libwebp's integer VP8 inverse transform to a prediction block.
+pub fn vp8_idct_add_4x4(prediction: &[u8; 16], coefficients: &[i16; 16]) -> [u8; 16] {
+    fn multiply_one(value: i32) -> i32 {
+        ((value * 20_091) >> 16) + value
+    }
+
+    fn multiply_two(value: i32) -> i32 {
+        (value * 35_468) >> 16
+    }
+
+    let mut temporary = [0i32; 16];
+    for column in 0..4 {
+        let dc = i32::from(coefficients[column]);
+        let ac1 = i32::from(coefficients[4 + column]);
+        let ac2 = i32::from(coefficients[8 + column]);
+        let ac3 = i32::from(coefficients[12 + column]);
+        let a = dc + ac2;
+        let b = dc - ac2;
+        let c = multiply_two(ac1) - multiply_one(ac3);
+        let d = multiply_one(ac1) + multiply_two(ac3);
+        temporary[column * 4] = a + d;
+        temporary[column * 4 + 1] = b + c;
+        temporary[column * 4 + 2] = b - c;
+        temporary[column * 4 + 3] = a - d;
+    }
+
+    let mut output = [0u8; 16];
+    for row in 0..4 {
+        let dc = temporary[row] + 4;
+        let ac1 = temporary[4 + row];
+        let ac2 = temporary[8 + row];
+        let ac3 = temporary[12 + row];
+        let a = dc + ac2;
+        let b = dc - ac2;
+        let c = multiply_two(ac1) - multiply_one(ac3);
+        let d = multiply_one(ac1) + multiply_two(ac3);
+        let residuals = [a + d, b + c, b - c, a - d];
+        for column in 0..4 {
+            output[row * 4 + column] = (i32::from(prediction[row * 4 + column])
+                + (residuals[column] >> 3))
+                .clamp(0, 255) as u8;
+        }
+    }
+    output
+}
+
 /// Compute the inverse 4×4 DCT (for encoder reconstruction loop).
 /// Same separable approach in reverse.
 pub fn idct_4x4(coeffs: &[i16; 16]) -> [i16; 16] {
@@ -261,6 +307,22 @@ mod tests {
             vp8_fdct_4x4(&residual),
             [
                 387, -361, 108, -40, -438, -555, 171, -56, -55, 393, 22, -28, -7, -197, -3, -28,
+            ]
+        );
+    }
+
+    #[test]
+    fn vp8_idct_add_matches_libwebp_1_6_0() {
+        let prediction = [
+            128, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 20, 30, 40,
+        ];
+        let coefficients = [
+            375, -372, 93, -31, -434, -558, 155, -62, -62, 403, 31, -31, 0, -186, 0, -31,
+        ];
+        assert_eq!(
+            vp8_idct_add_4x4(&prediction, &coefficients),
+            [
+                0, 20, 65, 251, 0, 30, 135, 239, 14, 79, 164, 219, 254, 192, 98, 0,
             ]
         );
     }
