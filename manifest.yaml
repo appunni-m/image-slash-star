@@ -1350,34 +1350,34 @@ formats:
       source_asset: 16x16.ico
     - id: enc_32x32
       description: 32x32 icon
-      status: planned
       params: {'sizes': [[32, 32]]}
+      source_asset: 256x256.ico
     - id: enc_48x48
       description: 48x48 icon
-      status: planned
       params: {'sizes': [[48, 48]]}
+      source_asset: 256x256.ico
     - id: enc_256x256
       description: 256x256 icon
       params: {'sizes': [[256, 256]]}
       source_asset: 256x256.ico
     - id: enc_multi_2
       description: Two-resolution icon
-      status: planned
       params: {'sizes': [[16, 16], [32, 32]]}
+      source_asset: 256x256.ico
     - id: enc_multi_4
       description: Four-resolution icon
-      status: planned
       params: {'sizes': [[16, 16], [32, 32], [48, 48], [256, 256]]}
+      source_asset: 256x256.ico
     - id: enc_bmp_entry
       description: 
       params: {'entry_type': 'bmp'}
     - id: enc_png_entry
       description: 
-      status: planned
       params: {'entry_type': 'png'}
     - id: enc_24bit
       description: 
-      status: planned
+      source_format: bmp
+      source_asset: 24bit.bmp
       params: {'bit_depth': 24}
     - id: enc_32bit
       description: 
@@ -1390,11 +1390,12 @@ formats:
     - id: enc_hotspot
       description: 
       status: planned
+      oracle_gap: Pillow 12.2.0 ICO save cannot emit cursor hotspots.
       params: {'hotspot': [8, 8]}
 
     - id: enc_multi
       description: Multi-resolution
-      status: planned
+      source_asset: 256x256.ico
       params:
         sizes:
         - [16, 16]

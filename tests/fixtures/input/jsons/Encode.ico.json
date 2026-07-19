@@ -44,6 +44,68 @@
       }
     },
     {
+      "id": "enc_32x32",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            32,
+            32
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              32,
+              32
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_48x48",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            48,
+            48
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              48,
+              48
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_256x256",
       "source_asset": "256x256.ico",
       "source_format": "ico",
@@ -75,6 +137,100 @@
       }
     },
     {
+      "id": "enc_multi_2",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ],
+          [
+            32,
+            32
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ],
+            [
+              32,
+              32
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_multi_4",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ],
+          [
+            32,
+            32
+          ],
+          [
+            48,
+            48
+          ],
+          [
+            256,
+            256
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ],
+            [
+              32,
+              32
+            ],
+            [
+              48,
+              48
+            ],
+            [
+              256,
+              256
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_bmp_entry",
       "source_asset": "16x16.ico",
       "source_format": "ico",
@@ -88,6 +244,46 @@
         "kwargs": {
           "bitmap_format": "bmp"
         },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_png_entry",
+      "source_asset": "16x16.ico",
+      "source_format": "ico",
+      "params": {
+        "entry_type": "png"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/16x16.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "bitmap_format": "png"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_24bit",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "bit_depth": 24
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {},
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -126,6 +322,45 @@
         "method": "PIL.Image.Image.save",
         "format": "ICO",
         "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_multi",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ],
+          [
+            32,
+            32
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ],
+            [
+              32,
+              32
+            ]
+          ]
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",

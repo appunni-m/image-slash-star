@@ -657,14 +657,13 @@ fn assert_ico_contract(
         return Err("encoded ICO has an invalid image directory".to_owned());
     }
 
-    let expected_bit_depth = params.get("bit_depth").and_then(serde_json::Value::as_u64);
     let expect_bmp = params.get("entry_type").and_then(serde_json::Value::as_str) == Some("bmp");
     for index in 0..count {
         let entry = 6 + index * 16;
-        if let Some(expected) = expected_bit_depth
-            && read_le_u16(encoded, entry + 6).map(u64::from) != Some(expected)
-        {
-            return Err(format!("ICO bit depth does not match {expected}"));
+        let directory_depth =
+            read_le_u16(encoded, entry + 6).ok_or("truncated ICO directory entry")?;
+        if !expect_bmp && directory_depth != 32 {
+            return Err("ICO PNG directory entry is not 32-bit".to_owned());
         }
 
         let data_size = usize::try_from(
@@ -683,6 +682,9 @@ fn assert_ico_contract(
         }
         if expect_bmp && read_le_u32(encoded, data_offset) != Some(40) {
             return Err("ICO BMP entry request did not emit a BITMAPINFOHEADER".to_owned());
+        }
+        if expect_bmp && read_le_u16(encoded, data_offset + 14) != Some(directory_depth) {
+            return Err("ICO BMP directory and payload bit depths disagree".to_owned());
         }
     }
     Ok(())

@@ -25,6 +25,30 @@
       "encoded_ref_bytes": 839
     },
     {
+      "id": "enc_32x32",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_32x32.bin",
+      "ref_bytes": 3072,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        32,
+        32
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_32x32.bin",
+      "encoded_ref_bytes": 2385
+    },
+    {
+      "id": "enc_48x48",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_48x48.bin",
+      "ref_bytes": 6912,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        48,
+        48
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_48x48.bin",
+      "encoded_ref_bytes": 4666
+    },
+    {
       "id": "enc_256x256",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_256x256.bin",
       "ref_bytes": 196608,
@@ -37,6 +61,30 @@
       "encoded_ref_bytes": 59255
     },
     {
+      "id": "enc_multi_2",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi_2.bin",
+      "ref_bytes": 3072,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        32,
+        32
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi_2.bin",
+      "encoded_ref_bytes": 3191
+    },
+    {
+      "id": "enc_multi_4",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi_4.bin",
+      "ref_bytes": 196608,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        256,
+        256
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi_4.bin",
+      "encoded_ref_bytes": 67100
+    },
+    {
       "id": "enc_bmp_entry",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_entry.bin",
       "ref_bytes": 1024,
@@ -47,6 +95,30 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_entry.bin",
       "encoded_ref_bytes": 9022
+    },
+    {
+      "id": "enc_png_entry",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_entry.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_entry.bin",
+      "encoded_ref_bytes": 839
+    },
+    {
+      "id": "enc_24bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_24bit.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_24bit.bin",
+      "encoded_ref_bytes": 19587
     },
     {
       "id": "enc_32bit",
@@ -71,6 +143,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_no_hotspot.bin",
       "encoded_ref_bytes": 839
+    },
+    {
+      "id": "enc_multi",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi.bin",
+      "ref_bytes": 3072,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        32,
+        32
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi.bin",
+      "encoded_ref_bytes": 3191
     }
   ]
 }

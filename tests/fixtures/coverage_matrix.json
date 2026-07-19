@@ -1395,12 +1395,20 @@
               ]
             ]
           },
-          "source_asset": "16x16.ico",
+          "source_asset": "256x256.ico",
           "source_format": "ico",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "32x32",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_32x32.bin",
+          "encoded_ref_bytes": 2385,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_32x32.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ]
         },
         {
           "description": "48x48 icon",
@@ -1414,12 +1422,20 @@
               ]
             ]
           },
-          "source_asset": "16x16.ico",
+          "source_asset": "256x256.ico",
           "source_format": "ico",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "48x48",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_48x48.bin",
+          "encoded_ref_bytes": 4666,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_48x48.bin",
+          "ref_bytes": 6912,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            48,
+            48
+          ]
         },
         {
           "description": "256x256 icon",
@@ -1464,12 +1480,20 @@
               ]
             ]
           },
-          "source_asset": "16x16.ico",
+          "source_asset": "256x256.ico",
           "source_format": "ico",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "multi",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi_2.bin",
+          "encoded_ref_bytes": 3191,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi_2.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ]
         },
         {
           "description": "Four-resolution icon",
@@ -1495,12 +1519,20 @@
               ]
             ]
           },
-          "source_asset": "16x16.ico",
+          "source_asset": "256x256.ico",
           "source_format": "ico",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "multi",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi_4.bin",
+          "encoded_ref_bytes": 67100,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi_4.bin",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            256,
+            256
+          ]
         },
         {
           "description": "",
@@ -1533,10 +1565,18 @@
           },
           "source_asset": "16x16.ico",
           "source_format": "ico",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "png",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_entry.bin",
+          "encoded_ref_bytes": 839,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_entry.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ]
         },
         {
           "description": "",
@@ -1545,12 +1585,20 @@
           "params": {
             "bit_depth": 24
           },
-          "source_asset": "16x16.ico",
-          "source_format": "ico",
-          "status": "planned",
+          "source_asset": "24bit.bmp",
+          "source_format": "bmp",
+          "status": "active",
           "type": "encode",
           "category": "24bit",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_24bit.bin",
+          "encoded_ref_bytes": 19587,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_24bit.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -1611,7 +1659,7 @@
           "status": "planned",
           "type": "encode",
           "category": "hotspot",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 ICO save cannot emit cursor hotspots."
         },
         {
           "description": "Multi-resolution",
@@ -1629,12 +1677,20 @@
               ]
             ]
           },
-          "source_asset": "16x16.ico",
+          "source_asset": "256x256.ico",
           "source_format": "ico",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "multi",
-          "gap": "Rust ICO encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi.bin",
+          "encoded_ref_bytes": 3191,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ]
         }
       ]
     },
@@ -6080,6 +6136,6 @@
     "assets_available": 161,
     "decode_active": 156,
     "decode_planned": 12,
-    "encode_not_wired": 62
+    "encode_not_wired": 55
   }
 }

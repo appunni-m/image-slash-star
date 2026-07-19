@@ -1,23 +1,10 @@
-//! ICO encoder — wraps a BMP DIB inside an ICO container.
+//! ICO encoder with PNG-backed multi-resolution and BMP-backed entries.
 //!
-//! ICO (Icon) files store one or more images. This encoder writes a single
-//! 32-bit BGRA entry, wrapping the pixel data in a BITMAPINFOHEADER + AND
-//! mask. Supports RGBA8 (4 bytes/pixel), RGB8 (converts to RGBA), and L8
-//! (converts to RGBA).
+//! Supports the Pillow ICO save surface for RGB and RGBA images, including
+//! filtered size lists and explicit PNG or BMP payload selection.
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
-/// Encode a `DecodedImage` as an ICO file (single 32-bit BGRA entry).
-///
-/// The output is a valid ICO container with one directory entry pointing to
-/// BMP/DIB data:
-/// - ICO header (6 bytes)
-/// - Directory entry (16 bytes)
-/// - BITMAPINFOHEADER (40 bytes)
-/// - BGRA pixel data (bottom-up)
-/// - AND mask (all zeros, for full opacity)
-///
-/// Supported input color types: `Rgba8`, `Rgb8`, `L8`. Other types return
-/// `None`.
+/// Encode an image using Pillow-compatible ICO save options.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let w = img.width as usize;
     let h = img.height as usize;

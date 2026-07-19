@@ -111,6 +111,11 @@ def sync_decode_rows(manifest, matrix):
                     raise RuntimeError(f"duplicate decode case id: {fmt_name}/{row_id}")
                 seen.add(row_id)
                 row = dict(existing.get(row_id, {}))
+                case_status = case.get("status")
+                if case_status is None:
+                    case_status = (
+                        "planned" if fmt_manifest.get("status") == "planned" else "active"
+                    )
                 row.update(
                     {
                         "id": row_id,
@@ -120,7 +125,7 @@ def sync_decode_rows(manifest, matrix):
                         "description": case.get("description", ""),
                         "asset": asset_name,
                         "expect_error": bool(case.get("expect_error", False)),
-                        "status": case.get("status", fmt_manifest.get("status", "active")),
+                        "status": case_status,
                     }
                 )
                 if row["status"] == "planned":
