@@ -15,10 +15,15 @@
 #![allow(dead_code)]
 
 use super::{
+    analysis::{analyze, segment_params},
     bool_enc::BoolEncoder,
     dct::{vp8_fdct_4x4, wht_4x4},
+    frame::select_frame,
+    partition::encode_first_partition,
     predict::{MbPredictionMode, choose_luma_mode, predict_chroma_8x8, predict_luma_16x16},
+    probability::adapt_coefficients,
     quant::quality_to_quant_index,
+    residual::encode_coefficients,
     tokenize::{
         COEFF_BANDS, COEFF_PROBS, DCT_1, DCT_2, DCT_4, DCT_CAT1, DCT_CAT2, DCT_CAT4, DCT_CAT6,
         ZIGZAG, classify_coefficient,
@@ -375,115 +380,78 @@ fn encode_extra_bits(enc: &mut BoolEncoder, extra_bits: u32, num_extra: u8, toke
 ///
 /// Returns the complete RIFF/WEBP container bytes.
 pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec<u8> {
-    let qi = quality_to_quant_index(quality);
-
-    // Convert RGB to YUV planar
     let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height);
-
-    // Pad to multiples of 16
-    let padded_w = ((width + 15) / 16) * 16;
-    let padded_h = ((height + 15) / 16) * 16;
-    let mut y_plane = y_plane;
-    y_plane.resize((padded_w * padded_h) as usize, 128);
-    let uv_w = (padded_w + 1) / 2;
-    let uv_h = (padded_h + 1) / 2;
-    let mut u_plane = u_plane;
-    u_plane.resize((uv_w * uv_h) as usize, 128);
-    let mut v_plane = v_plane;
-    v_plane.resize((uv_w * uv_h) as usize, 128);
-
-    let mb_cols = (padded_w / 16) as usize;
-    let mb_rows = (padded_h / 16) as usize;
-
-    // ── Build macroblock data FIRST (coeffs and modes) ──
-    //
-    // We need the modes to know first_partition_size, but we also need
-    // to compute coeffs to know the mode (mode selection uses SAD).
-    // So compute everything, then encode.
-
-    // First pass: compute all quantized coefficient arrays and choose modes
-    let mut mb_modes = Vec::with_capacity(mb_cols * mb_rows);
-    let mut mb_coeff_data: Vec<Vec<Vec<[i16; 16]>>> = Vec::with_capacity(mb_rows);
-
-    for mb_y in 0..mb_rows {
-        let mut row_coeffs = Vec::with_capacity(mb_cols);
-        for mb_x in 0..mb_cols {
-            let (luma_mode, y2_coeffs, y_sub_coeffs, u_sub_coeffs, v_sub_coeffs) =
-                compute_macroblock(&y_plane, &u_plane, &v_plane, padded_w, uv_w, mb_x, mb_y, qi);
-            mb_modes.push((luma_mode, MbPredictionMode::DcPred));
-            let mut blocks = Vec::new();
-            blocks.push(y2_coeffs); // Y2 first
-            blocks.extend_from_slice(&y_sub_coeffs); // then 16 luma sub-blocks
-            blocks.extend_from_slice(&u_sub_coeffs); // then 4 U sub-blocks
-            blocks.extend_from_slice(&v_sub_coeffs); // then 4 V sub-blocks
-            row_coeffs.push(blocks);
-        }
-        mb_coeff_data.push(row_coeffs);
-    }
-
-    // ── Encode first partition (frame header + MB modes) ──
-    let mut header_enc = BoolEncoder::new();
-    encode_frame_header(&mut header_enc, width, height, qi);
-
-    for mb_y in 0..mb_rows {
-        for mb_x in 0..mb_cols {
-            let (luma_mode, chroma_mode) = mb_modes[mb_y * mb_cols + mb_x];
-            encode_luma_mode_tree(&mut header_enc, luma_mode);
-            encode_chroma_mode_tree(&mut header_enc, chroma_mode);
-        }
-    }
-
-    let header_data = header_enc.finish();
-
-    // ── Encode coefficient partition ──
-    let mut coeff_enc = BoolEncoder::new();
-
-    for mb_y in 0..mb_rows {
-        for mb_x in 0..mb_cols {
-            let blocks = &mb_coeff_data[mb_y][mb_x];
-            // Block order: [Y2, 16×Y, 4×U, 4×V]
-            // Coefficient types match decoder's `plane` parameter in read_coefficients:
-            //   Y2 uses plane=1 → coeff_type=1 (U probs) — the decoder reads Y2 with self.token_probs[1]
-            //   Y  uses plane=0 → coeff_type=0
-            //   U  uses plane=1 → coeff_type=1
-            //   V  uses plane=2 → coeff_type=2
-            let mut block_idx = 0;
-
-            // Y2 block (type 1 — matches decoder using plane=1/U probs for Y2)
-            encode_coeff_block(&mut coeff_enc, &blocks[block_idx], 1);
-            block_idx += 1;
-
-            // 16 luma sub-blocks (type 0)
-            for _ in 0..16 {
-                encode_coeff_block(&mut coeff_enc, &blocks[block_idx], 0);
-                block_idx += 1;
-            }
-
-            // 4 U sub-blocks (type 1)
-            for _ in 0..4 {
-                encode_coeff_block(&mut coeff_enc, &blocks[block_idx], 1);
-                block_idx += 1;
-            }
-
-            // 4 V sub-blocks (type 2)
-            for _ in 0..4 {
-                encode_coeff_block(&mut coeff_enc, &blocks[block_idx], 2);
-                block_idx += 1;
-            }
-        }
-    }
-
-    let coeff_data = coeff_enc.finish();
-
-    // ── Build the VP8 bitstream ──
-    let first_partition_size = header_data.len() as u32;
-    let frame_header = build_frame_header(width, height, first_partition_size);
+    let padded_width = width.div_ceil(16) * 16;
+    let padded_height = height.div_ceil(16) * 16;
+    let chroma_width = width.div_ceil(2);
+    let chroma_height = height.div_ceil(2);
+    let padded_chroma_width = padded_width / 2;
+    let padded_chroma_height = padded_height / 2;
+    let y_plane = pad_plane(
+        &y_plane,
+        width as usize,
+        height as usize,
+        padded_width as usize,
+        padded_height as usize,
+    );
+    let u_plane = pad_plane(
+        &u_plane,
+        chroma_width as usize,
+        chroma_height as usize,
+        padded_chroma_width as usize,
+        padded_chroma_height as usize,
+    );
+    let v_plane = pad_plane(
+        &v_plane,
+        chroma_width as usize,
+        chroma_height as usize,
+        padded_chroma_width as usize,
+        padded_chroma_height as usize,
+    );
+    let analysis = analyze(
+        &y_plane,
+        &u_plane,
+        &v_plane,
+        padded_width as usize,
+        padded_height as usize,
+    );
+    let params = segment_params(&analysis, f64::from(quality));
+    let decisions = select_frame(
+        &y_plane,
+        &u_plane,
+        &v_plane,
+        padded_width as usize,
+        padded_height as usize,
+        f64::from(quality),
+    );
+    let macroblock_width = padded_width as usize / 16;
+    let probabilities = adapt_coefficients(&decisions, macroblock_width);
+    let header_data = encode_first_partition(&decisions, macroblock_width, &params, &probabilities);
+    let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities);
+    let frame_header = build_frame_header(width, height, header_data.len() as u32);
 
     let mut vp8_data = frame_header;
     vp8_data.extend_from_slice(&header_data);
     vp8_data.extend_from_slice(&coeff_data);
 
     build_webp_container(&vp8_data, width, height)
+}
+
+fn pad_plane(
+    input: &[u8],
+    width: usize,
+    height: usize,
+    padded_width: usize,
+    padded_height: usize,
+) -> Vec<u8> {
+    let mut output = vec![0; padded_width * padded_height];
+    for y in 0..padded_height {
+        let source_y = y.min(height - 1);
+        for x in 0..padded_width {
+            output[y * padded_width + x] = input[source_y * width + x.min(width - 1)];
+        }
+    }
+    output
 }
 
 /// Compute all coefficients for a single macroblock.
@@ -883,7 +851,7 @@ fn get_neighbor_pixels(
 
 /// Build RIFF/WEBP/VP8 container.
 fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
-    let vp8_chunk_size = vp8_data.len() as u32;
+    let vp8_chunk_size = (vp8_data.len() + (vp8_data.len() & 1)) as u32;
     let riff_size: u32 = 4 + 4 + 4 + vp8_chunk_size;
 
     let mut out = Vec::with_capacity(12 + 8 + vp8_data.len() + 1);
@@ -901,7 +869,7 @@ fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
     out.extend_from_slice(vp8_data);
 
     // Pad to even length (RIFF requirement)
-    if out.len() % 2 != 0 {
+    if vp8_data.len() & 1 != 0 {
         out.push(0);
     }
 
@@ -933,6 +901,19 @@ mod tests {
         assert_eq!(y, [82, 145, 41]);
         assert_eq!(u, [81, 240]);
         assert_eq!(v, [136, 110]);
+    }
+
+    #[test]
+    fn q80_public_encoder_matches_pillow_libwebp_bytes() {
+        let rgb = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/outputs/raws/Decode.webp_lossless_webp.bin"
+        ));
+        let expected = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q80.bin"
+        ));
+        assert_eq!(encode_vp8_lossy(rgb, 128, 128, 80), expected);
     }
 
     fn make_rgb(width: u32, height: u32, value: u8) -> Vec<u8> {
