@@ -130,9 +130,11 @@ fn build_huffman_tree(
         node: Node,
     }
 
+    let mut optimized = frequencies.to_vec();
+    optimize_huffman_for_rle(&mut optimized);
     let mut count_min = 1_u32;
     loop {
-        let mut nodes = frequencies
+        let mut nodes = optimized
             .iter()
             .enumerate()
             .filter(|&(_, &frequency)| frequency != 0)
@@ -198,6 +200,135 @@ fn build_huffman_tree(
     true
 }
 
+fn optimize_huffman_for_rle(counts: &mut [u32]) {
+    let Some(length) = counts.iter().rposition(|&count| count != 0).map(|i| i + 1) else {
+        return;
+    };
+    let mut good = vec![false; length];
+    let mut symbol = counts[0];
+    let mut stride = 0;
+    for i in 0..=length {
+        if i == length || counts[i] != symbol {
+            if (symbol == 0 && stride >= 5) || (symbol != 0 && stride >= 7) {
+                good[i - stride..i].fill(true);
+            }
+            stride = 1;
+            if i != length {
+                symbol = counts[i];
+            }
+        } else {
+            stride += 1;
+        }
+    }
+
+    stride = 0;
+    let mut limit = counts[0];
+    let mut sum = 0_u32;
+    for i in 0..=length {
+        if i == length || good[i] || (i != 0 && good[i - 1]) || counts[i].abs_diff(limit) >= 4 {
+            if stride >= 4 || (stride >= 3 && sum == 0) {
+                let mut count = (sum + stride as u32 / 2) / stride as u32;
+                count = count.max(1);
+                if sum == 0 {
+                    count = 0;
+                }
+                counts[i - stride..i].fill(count);
+            }
+            stride = 0;
+            sum = 0;
+            limit = if i + 3 < length {
+                (counts[i] + counts[i + 1] + counts[i + 2] + counts[i + 3] + 2) / 4
+            } else if i < length {
+                counts[i]
+            } else {
+                0
+            };
+        }
+        stride += 1;
+        if i != length {
+            sum += counts[i];
+            if stride >= 4 {
+                limit = (sum + stride as u32 / 2) / stride as u32;
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct HuffmanToken {
+    code: u8,
+    extra: u8,
+}
+
+fn compressed_huffman_tokens(lengths: &[u8]) -> Vec<HuffmanToken> {
+    let mut tokens = Vec::new();
+    let mut previous = 8;
+    let mut i = 0;
+    while i < lengths.len() {
+        let value = lengths[i];
+        let mut end = i + 1;
+        while end < lengths.len() && lengths[end] == value {
+            end += 1;
+        }
+        let mut repetitions = end - i;
+        if value == 0 {
+            while repetitions != 0 {
+                if repetitions < 3 {
+                    tokens.extend((0..repetitions).map(|_| HuffmanToken { code: 0, extra: 0 }));
+                    break;
+                } else if repetitions < 11 {
+                    tokens.push(HuffmanToken {
+                        code: 17,
+                        extra: (repetitions - 3) as u8,
+                    });
+                    break;
+                } else if repetitions < 139 {
+                    tokens.push(HuffmanToken {
+                        code: 18,
+                        extra: (repetitions - 11) as u8,
+                    });
+                    break;
+                } else {
+                    tokens.push(HuffmanToken {
+                        code: 18,
+                        extra: 0x7f,
+                    });
+                    repetitions -= 138;
+                }
+            }
+        } else {
+            if value != previous {
+                tokens.push(HuffmanToken {
+                    code: value,
+                    extra: 0,
+                });
+                repetitions -= 1;
+            }
+            while repetitions != 0 {
+                if repetitions < 3 {
+                    tokens.extend((0..repetitions).map(|_| HuffmanToken {
+                        code: value,
+                        extra: 0,
+                    }));
+                    break;
+                } else if repetitions < 7 {
+                    tokens.push(HuffmanToken {
+                        code: 16,
+                        extra: (repetitions - 3) as u8,
+                    });
+                    break;
+                } else {
+                    tokens.push(HuffmanToken { code: 16, extra: 3 });
+                    repetitions -= 6;
+                }
+            }
+            previous = value;
+        }
+        i = end;
+    }
+    tokens
+}
+
 fn write_huffman_tree<W: Write>(
     w: &mut BitWriter<W>,
     frequencies: &[u32],
@@ -238,54 +369,93 @@ fn write_huffman_tree<W: Write>(
             .unwrap_or(0);
         return write_single_entry_huffman_tree(w, symbol as u8);
     }
-    let mut code_length_lengths = [0u8; 16];
-    let mut code_length_codes = [0u16; 16];
-    let mut code_length_frequencies = [0u32; 16];
-    for &length in lengths.iter() {
-        code_length_frequencies[length as usize] += 1;
+    let tokens = compressed_huffman_tokens(lengths);
+    let mut code_length_lengths = [0u8; 19];
+    let mut code_length_codes = [0u16; 19];
+    let mut code_length_frequencies = [0u32; 19];
+    for token in &tokens {
+        code_length_frequencies[usize::from(token.code)] += 1;
     }
-    let single_code_length_length = !build_huffman_tree(
+    let code_length_tree_is_nontrivial = build_huffman_tree(
         &code_length_frequencies,
         &mut code_length_lengths,
         &mut code_length_codes,
         7,
     );
+    if !code_length_tree_is_nontrivial {
+        let symbol = code_length_frequencies
+            .iter()
+            .position(|&frequency| frequency != 0)
+            .unwrap_or(0);
+        code_length_lengths[symbol] = 1;
+    }
     const CODE_LENGTH_ORDER: [usize; 19] = [
         17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ];
 
     // Write the huffman tree
     w.write_bits(0, 1)?; // normal huffman tree
-    w.write_bits(19 - 4, 4)?; // num_code_lengths - 4
+    let mut codes_to_store = 19;
+    while codes_to_store > 4 && code_length_lengths[CODE_LENGTH_ORDER[codes_to_store - 1]] == 0 {
+        codes_to_store -= 1;
+    }
+    w.write_bits((codes_to_store - 4) as u64, 4)?;
+    for &symbol in &CODE_LENGTH_ORDER[..codes_to_store] {
+        w.write_bits(u64::from(code_length_lengths[symbol]), 3)?;
+    }
 
-    for i in CODE_LENGTH_ORDER {
-        if i > 15 || code_length_frequencies[i] == 0 {
-            w.write_bits(0, 3)?;
-        } else if single_code_length_length {
-            w.write_bits(1, 3)?;
+    if code_length_lengths
+        .iter()
+        .filter(|&&length| length != 0)
+        .count()
+        <= 1
+    {
+        code_length_lengths.fill(0);
+        code_length_codes.fill(0);
+    }
+    let mut trimmed_length = tokens.len();
+    let mut trailing_zero_bits = 0;
+    while trimmed_length > 0 {
+        let token = tokens[trimmed_length - 1];
+        if !matches!(token.code, 0 | 17 | 18) {
+            break;
+        }
+        trimmed_length -= 1;
+        trailing_zero_bits += usize::from(code_length_lengths[usize::from(token.code)]);
+        trailing_zero_bits += match token.code {
+            17 => 3,
+            18 => 7,
+            _ => 0,
+        };
+    }
+    let write_trimmed = trimmed_length > 1 && trailing_zero_bits > 12;
+    w.write_bits(u64::from(write_trimmed), 1)?;
+    let token_count = if write_trimmed {
+        if trimmed_length == 2 {
+            w.write_bits(0, 5)?;
         } else {
-            w.write_bits(u64::from(code_length_lengths[i]), 3)?;
+            let nbits = (trimmed_length - 2).ilog2() as usize;
+            let pairs = nbits / 2 + 1;
+            w.write_bits((pairs - 1) as u64, 3)?;
+            w.write_bits((trimmed_length - 2) as u64, (pairs * 2) as u8)?;
         }
-    }
-
-    match lengths.len() {
-        256 => {
-            w.write_bits(1, 1)?; // max_symbol is stored
-            w.write_bits(3, 3)?; // max_symbol_nbits / 2 - 2
-            w.write_bits(254, 8)?; // max_symbol - 2
-        }
-        280 => w.write_bits(0, 1)?,
-        _ => w.write_bits(0, 1)?,
-    }
-
-    // Write the huffman codes
-    if !single_code_length_length {
-        for &len in lengths.iter() {
-            w.write_bits(
-                u64::from(code_length_codes[len as usize]),
-                code_length_lengths[len as usize],
-            )?;
-        }
+        trimmed_length
+    } else {
+        tokens.len()
+    };
+    for token in &tokens[..token_count] {
+        let symbol = usize::from(token.code);
+        w.write_bits(
+            u64::from(code_length_codes[symbol]),
+            code_length_lengths[symbol],
+        )?;
+        let bits = match token.code {
+            16 => 2,
+            17 => 3,
+            18 => 7,
+            _ => 0,
+        };
+        w.write_bits(u64::from(token.extra), bits)?;
     }
 
     Ok(())
