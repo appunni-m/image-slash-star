@@ -97,6 +97,9 @@ pub(crate) fn compress_zlib_chunked(
     if level == 6 {
         return super::zlib_ng::compress_level6(data, input_chunks);
     }
+    if level == 9 {
+        return super::zlib_ng::compress_level9(data, input_chunks);
+    }
 
     let mut output = zlib_header(level);
     let mut writer = DeflateWriter::default();

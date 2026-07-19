@@ -277,6 +277,248 @@ impl Level6Matcher {
     }
 }
 
+/// Compress using Pillow's zlib-ng 2.3.3 level-nine `Z_FILTERED`
+/// configuration.
+pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let tokens = tokenize_level9(data, input_chunks)?;
+    let mut output = vec![0x78, 0xda];
+    let mut writer = BitWriter::default();
+    emit_blocks(&tokens, 32_767, &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
+    let mut matcher = Level9Matcher::new(data);
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        if available != 0 {
+            matcher.refill_boundary()?;
+        }
+        available = available.checked_add(chunk_length)?;
+        if available > data.len() {
+            return None;
+        }
+        matcher.process(available, false)?;
+    }
+    if available != data.len() {
+        return None;
+    }
+    matcher.process(available, true)?;
+    Some(matcher.tokens)
+}
+
+struct Level9Matcher {
+    data: Vec<u8>,
+    head: Vec<usize>,
+    previous: Vec<usize>,
+    hash: usize,
+    position: usize,
+    previous_length: usize,
+    match_start: usize,
+    match_available: bool,
+    tokens: Vec<Token>,
+}
+
+impl Level9Matcher {
+    fn new(data: &[u8]) -> Self {
+        let mut window = Vec::with_capacity(data.len().saturating_add(MAX_MATCH));
+        window.extend_from_slice(data);
+        window.resize(data.len().saturating_add(MAX_MATCH), 0);
+        let hash = rolling_hash(usize::from(window[0]), window[1]);
+        Self {
+            data: window,
+            head: vec![0; 32_768],
+            previous: vec![0; WINDOW_MASK + 1],
+            hash,
+            position: 0,
+            previous_length: 2,
+            match_start: 0,
+            match_available: false,
+            tokens: Vec::new(),
+        }
+    }
+
+    fn refill_boundary(&mut self) -> Option<()> {
+        self.hash = rolling_hash(
+            usize::from(*self.data.get(self.position)?),
+            *self.data.get(self.position.checked_add(1)?)?,
+        );
+        Some(())
+    }
+
+    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+        loop {
+            let lookahead = available.checked_sub(self.position)?;
+            if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
+                break;
+            }
+
+            let candidate = if lookahead >= MIN_MATCH {
+                self.quick_insert(self.position)?
+            } else {
+                0
+            };
+            let previous_match = self.match_start;
+            let mut match_length = 2usize;
+            if candidate != 0
+                && candidate < self.position
+                && self.position.checked_sub(candidate)? <= MAX_DISTANCE
+                && self.previous_length < MAX_MATCH
+            {
+                let found = self.longest_match(candidate, lookahead)?;
+                match_length = found.0;
+                if match_length > self.previous_length {
+                    self.match_start = found.1;
+                }
+                if match_length <= 5 {
+                    match_length = 2;
+                }
+            }
+
+            if self.previous_length >= 3 && match_length <= self.previous_length {
+                self.tokens.push(Token::Match {
+                    length: self.previous_length,
+                    distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
+                });
+                let maximum_insert = self.position.checked_add(lookahead)?.checked_sub(3)?;
+                let move_forward = self.previous_length.checked_sub(2)?;
+                if maximum_insert > self.position {
+                    let insert_count = move_forward.min(maximum_insert - self.position);
+                    for insert_position in
+                        self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
+                    {
+                        self.quick_insert(insert_position)?;
+                    }
+                }
+                self.position = self
+                    .position
+                    .checked_add(self.previous_length.checked_sub(1)?)?;
+                self.previous_length = 0;
+                self.match_available = false;
+            } else if self.match_available {
+                self.tokens.push(Token::Literal(
+                    *self.data.get(self.position.checked_sub(1)?)?,
+                ));
+                self.previous_length = match_length;
+                self.position = self.position.checked_add(1)?;
+            } else {
+                self.previous_length = match_length;
+                self.match_available = true;
+                self.position = self.position.checked_add(1)?;
+            }
+        }
+
+        if finishing && self.position == available && self.match_available {
+            self.tokens.push(Token::Literal(
+                *self.data.get(self.position.checked_sub(1)?)?,
+            ));
+            self.match_available = false;
+        }
+        Some(())
+    }
+
+    fn quick_insert(&mut self, position: usize) -> Option<usize> {
+        self.hash = rolling_hash(self.hash, *self.data.get(position.checked_add(2)?)?);
+        let candidate = *self.head.get(self.hash)?;
+        if candidate != position {
+            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            *self.head.get_mut(self.hash)? = position;
+        }
+        Some(candidate)
+    }
+
+    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> Option<(usize, usize)> {
+        let mut best_length = self.previous_length.max(2);
+        let mut best_start = self.match_start;
+        let mut chain_length = if best_length >= 32 {
+            1024usize
+        } else {
+            4096usize
+        };
+        let base_limit = self.position.saturating_sub(MAX_DISTANCE);
+        let mut match_offset = 0usize;
+        if best_length >= 3 {
+            let mut hash = rolling_hash(0, *self.data.get(self.position.checked_add(1)?)?);
+            hash = rolling_hash(hash, *self.data.get(self.position.checked_add(2)?)?);
+            for index in 3..=best_length {
+                hash = rolling_hash(hash, *self.data.get(self.position.checked_add(index)?)?);
+                let position = *self.head.get(hash)?;
+                if position < candidate {
+                    match_offset = index.checked_sub(2)?;
+                    candidate = position;
+                }
+            }
+        }
+        let mut limit = base_limit.checked_add(match_offset)?;
+        if candidate <= limit {
+            return Some((best_length.min(lookahead), best_start));
+        }
+        loop {
+            if candidate < match_offset || candidate >= self.position.checked_add(match_offset)? {
+                break;
+            }
+            let aligned = candidate.checked_sub(match_offset)?;
+            if medium_candidate_can_improve(&self.data, aligned, self.position, best_length)? {
+                let length =
+                    match_length(&self.data, aligned, self.position, lookahead.min(MAX_MATCH));
+                if length > best_length {
+                    best_length = length;
+                    best_start = aligned;
+                    if best_length >= lookahead || best_length >= MAX_MATCH {
+                        break;
+                    }
+                    if best_length > 3 && best_start.checked_add(best_length)? < self.position {
+                        candidate = candidate.checked_sub(match_offset)?;
+                        match_offset = 0;
+                        let mut next_position = candidate;
+                        for index in 0..=best_length.checked_sub(3)? {
+                            let position = *self.previous.get((candidate + index) & WINDOW_MASK)?;
+                            if position < next_position {
+                                if position <= base_limit.checked_add(index)? {
+                                    return Some((best_length.min(lookahead), best_start));
+                                }
+                                next_position = position;
+                                match_offset = index;
+                            }
+                        }
+                        candidate = next_position;
+
+                        let hash_start = self.position.checked_add(best_length)?.checked_sub(4)?;
+                        let mut hash = rolling_hash(0, *self.data.get(hash_start)?);
+                        hash = rolling_hash(hash, *self.data.get(hash_start + 1)?);
+                        hash = rolling_hash(hash, *self.data.get(hash_start + 2)?);
+                        let position = *self.head.get(hash)?;
+                        if position < candidate {
+                            match_offset = best_length.checked_sub(4)?;
+                            if position <= base_limit.checked_add(match_offset)? {
+                                return Some((best_length.min(lookahead), best_start));
+                            }
+                            candidate = position;
+                        }
+                        limit = base_limit.checked_add(match_offset)?;
+                        continue;
+                    }
+                }
+            }
+            chain_length = chain_length.checked_sub(1)?;
+            if chain_length == 0 {
+                break;
+            }
+            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            if candidate <= limit {
+                break;
+            }
+        }
+        Some((best_length.min(lookahead), best_start))
+    }
+}
+
+fn rolling_hash(hash: usize, value: u8) -> usize {
+    ((hash << 5) ^ usize::from(value)) & 32_767
+}
+
 fn medium_candidate_can_improve(
     data: &[u8],
     candidate: usize,
