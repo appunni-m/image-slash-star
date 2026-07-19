@@ -754,6 +754,17 @@ fn encode_frame<W: Write>(
             .collect(),
     };
 
+    // Pillow's lossless WebP path uses libwebp's default `exact=false`.
+    // libwebp therefore replaces hidden RGB values of fully transparent
+    // pixels with transparent black before selecting any transforms.
+    if is_alpha {
+        for pixel in &mut pixels {
+            if *pixel >> 24 == 0 {
+                *pixel = 0;
+            }
+        }
+    }
+
     if params.use_predictor_transform {
         let (predictor_map, predictor_bits) =
             predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3);

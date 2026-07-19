@@ -77,7 +77,6 @@ fn fill_hash_chain(pixels: &[u32], width: usize) -> Vec<(usize, usize)> {
         }
     }
     chain[position] = first[pair_hash(pixels, position)];
-
     let iterations = 8 + 80 * 80 / 128;
     let mut base = size - 2;
     while base > 0 {
@@ -268,59 +267,6 @@ struct CostModel {
     blue: [u32; 256],
     alpha: [u32; 256],
     distance: [u32; 40],
-}
-
-fn population_estimate(counts: &[u32]) -> f64 {
-    let sum: u32 = counts.iter().sum();
-    let nonzero = counts.iter().filter(|&&count| count != 0).count();
-    let maximum = counts.iter().copied().max().unwrap_or(0);
-    let entropy = if sum == 0 {
-        0.0
-    } else {
-        counts
-            .iter()
-            .filter(|&&count| count != 0)
-            .map(|&count| f64::from(count) * (f64::from(sum) / f64::from(count)).log2())
-            .sum()
-    };
-    let refined = match nonzero {
-        0 | 1 => 0.0,
-        2 => (99.0 * f64::from(sum) + entropy) / 100.0,
-        _ => {
-            let mix = if nonzero == 3 {
-                950.0
-            } else if nonzero == 4 {
-                700.0
-            } else {
-                627.0
-            };
-            let minimum = (mix * f64::from(2 * sum - maximum) + (1000.0 - mix) * entropy) / 1000.0;
-            entropy.max(minimum)
-        }
-    };
-
-    let mut counts_by_kind = [0_u32; 2];
-    let mut streaks = [[0_u32; 2]; 2];
-    let mut start = 0;
-    while start < counts.len() {
-        let value = counts[start];
-        let mut end = start + 1;
-        while end < counts.len() && counts[end] == value {
-            end += 1;
-        }
-        let kind = usize::from(value != 0);
-        let long = usize::from(end - start > 3);
-        counts_by_kind[kind] += u32::from(long != 0);
-        streaks[kind][long] += (end - start) as u32;
-        start = end;
-    }
-    let extra = counts_by_kind[0] * 1600
-        + 240 * streaks[0][1]
-        + counts_by_kind[1] * 2640
-        + 720 * streaks[1][1]
-        + 1840 * streaks[0][0]
-        + 3360 * streaks[1][0];
-    refined + 47.9 + f64::from(extra) / 1024.0
 }
 
 fn fast_slog(value: u32) -> u64 {
@@ -529,6 +475,188 @@ fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
     }
 }
 
+#[derive(Clone, Copy)]
+struct CostInterval {
+    cost: i64,
+    start: usize,
+    end: usize,
+    position: usize,
+}
+
+struct CostManager {
+    costs: Vec<i64>,
+    lengths: Vec<usize>,
+    length_costs: Vec<i64>,
+    length_intervals: Vec<(i64, usize, usize)>,
+    intervals: Vec<CostInterval>,
+}
+
+impl CostManager {
+    fn new(pixel_count: usize, model: &CostModel) -> Self {
+        const SCALE: i64 = 1 << 23;
+        let cache_size = pixel_count.min(MAX_LENGTH);
+        let mut length_costs = Vec::with_capacity(cache_size);
+        for value in 0..cache_size {
+            let (symbol, extra) = if value == 0 { (0, 0) } else { prefix(value) };
+            length_costs.push(i64::from(model.green[256 + symbol]) + i64::from(extra) * SCALE);
+        }
+        let mut length_intervals = Vec::new();
+        let mut start = 0;
+        while start < length_costs.len() {
+            let cost = length_costs[start];
+            let mut end = start + 1;
+            while end < length_costs.len() && length_costs[end] == cost {
+                end += 1;
+            }
+            length_intervals.push((cost, start, end));
+            start = end;
+        }
+        Self {
+            costs: vec![i64::MAX; pixel_count],
+            lengths: vec![1; pixel_count],
+            length_costs,
+            length_intervals,
+            intervals: Vec::new(),
+        }
+    }
+
+    fn update(&mut self, index: usize, position: usize, cost: i64) {
+        if self.costs[index] > cost {
+            self.costs[index] = cost;
+            self.lengths[index] = index - position + 1;
+        }
+    }
+
+    fn update_at(&mut self, index: usize, clean: bool) {
+        let applicable = self
+            .intervals
+            .iter()
+            .copied()
+            .take_while(|interval| interval.start <= index)
+            .filter(|interval| interval.end > index)
+            .collect::<Vec<_>>();
+        for interval in applicable {
+            self.update(index, interval.position, interval.cost);
+        }
+        if clean {
+            self.intervals.retain(|interval| interval.end > index);
+        }
+    }
+
+    fn insert_min_interval(&mut self, candidate: CostInterval) {
+        if candidate.start >= candidate.end {
+            return;
+        }
+        if self.intervals.len() >= 500 {
+            for index in candidate.start..candidate.end {
+                self.update(index, candidate.position, candidate.cost);
+            }
+            return;
+        }
+
+        let mut boundaries = vec![candidate.start, candidate.end];
+        for interval in &self.intervals {
+            if interval.end > candidate.start && interval.start < candidate.end {
+                boundaries.push(interval.start.max(candidate.start));
+                boundaries.push(interval.end.min(candidate.end));
+            }
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+
+        let mut additions = Vec::new();
+        for window in boundaries.windows(2) {
+            let start = window[0];
+            let end = window[1];
+            if start == end {
+                continue;
+            }
+            let existing = self
+                .intervals
+                .iter()
+                .find(|interval| interval.start <= start && interval.end >= end);
+            if existing.is_none_or(|interval| candidate.cost < interval.cost) {
+                additions.push(CostInterval {
+                    start,
+                    end,
+                    ..candidate
+                });
+            }
+        }
+
+        if additions.is_empty() {
+            return;
+        }
+        let old = std::mem::take(&mut self.intervals);
+        let mut rebuilt = Vec::new();
+        for interval in old {
+            let overlaps = additions
+                .iter()
+                .filter(|addition| addition.end > interval.start && addition.start < interval.end)
+                .copied()
+                .collect::<Vec<_>>();
+            if overlaps.is_empty() {
+                rebuilt.push(interval);
+                continue;
+            }
+            let mut cursor = interval.start;
+            for addition in overlaps {
+                if cursor < addition.start {
+                    rebuilt.push(CostInterval {
+                        end: addition.start,
+                        start: cursor,
+                        ..interval
+                    });
+                }
+                cursor = cursor.max(addition.end);
+            }
+            if cursor < interval.end {
+                rebuilt.push(CostInterval {
+                    start: cursor,
+                    ..interval
+                });
+            }
+        }
+        rebuilt.extend(additions);
+        rebuilt.sort_by_key(|interval| interval.start);
+        let mut merged: Vec<CostInterval> = Vec::new();
+        for interval in rebuilt {
+            if let Some(last) = merged.last_mut()
+                && last.end == interval.start
+                && last.cost == interval.cost
+                && last.position == interval.position
+            {
+                last.end = interval.end;
+            } else {
+                merged.push(interval);
+            }
+        }
+        self.intervals = merged;
+    }
+
+    fn push(&mut self, distance_cost: i64, position: usize, length: usize) {
+        if length < 10 {
+            for index in position..position + length {
+                let cost = distance_cost + self.length_costs[index - position];
+                self.update(index, position, cost);
+            }
+            return;
+        }
+        let intervals = self.length_intervals.clone();
+        for (length_cost, relative_start, relative_end) in intervals {
+            if relative_start >= length {
+                break;
+            }
+            self.insert_min_interval(CostInterval {
+                cost: distance_cost + length_cost,
+                start: position + relative_start,
+                end: position + relative_end.min(length),
+                position,
+            });
+        }
+    }
+}
+
 fn trace_backwards(
     pixels: &[u32],
     width: usize,
@@ -538,16 +666,10 @@ fn trace_backwards(
 ) -> Vec<Token> {
     const SCALE: i64 = 1 << 23;
     let model = cost_model(source, cache_bits, width);
-    let mut costs = vec![i64::MAX; pixels.len()];
-    let mut lengths = vec![1_usize; pixels.len()];
+    let mut manager = CostManager::new(pixels.len(), &model);
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
 
-    for position in 0..pixels.len() {
-        let previous_cost = if position == 0 {
-            0
-        } else {
-            costs[position - 1]
-        };
+    let mut add_literal = |position: usize, previous_cost: i64, manager: &mut CostManager| {
         let pixel = pixels[position];
         let cache_index = (cache_bits != 0).then(|| color_hash(pixel, cache_bits));
         let literal_cost = if let Some(index) = cache_index.filter(|&index| cache[index] == pixel) {
@@ -564,36 +686,65 @@ fn trace_backwards(
             (cost * 82 + 50) / 100
         };
         let candidate = previous_cost + literal_cost;
-        if candidate < costs[position] {
-            costs[position] = candidate;
-            lengths[position] = 1;
+        if candidate < manager.costs[position] {
+            manager.costs[position] = candidate;
+            manager.lengths[position] = 1;
         }
+    };
 
+    add_literal(0, 0, &mut manager);
+    let mut previous_offset = usize::MAX;
+    let mut previous_length = usize::MAX;
+    let mut offset_cost = 0_i64;
+    let mut first_constant = false;
+    let mut reach = 0_usize;
+
+    for position in 1..pixels.len() {
+        let previous_cost = manager.costs[position - 1];
         let (distance, maximum_length) = chain[position];
+        add_literal(position, previous_cost, &mut manager);
+
         if maximum_length >= 2 {
-            let plane_distance = plane_code(width, distance);
-            let (distance_symbol, distance_extra) = prefix(plane_distance);
-            let distance_cost =
-                i64::from(model.distance[distance_symbol]) + i64::from(distance_extra) * SCALE;
-            for length in 1..=maximum_length {
-                let end = position + length - 1;
-                let (length_symbol, length_extra) = prefix(length);
-                let candidate = previous_cost
-                    + distance_cost
-                    + i64::from(model.green[256 + length_symbol])
-                    + i64::from(length_extra) * SCALE;
-                if candidate < costs[end] {
-                    costs[end] = candidate;
-                    lengths[end] = length;
+            if distance != previous_offset {
+                let plane_distance = plane_code(width, distance);
+                let (distance_symbol, distance_extra) = prefix(plane_distance);
+                offset_cost =
+                    i64::from(model.distance[distance_symbol]) + i64::from(distance_extra) * SCALE;
+                first_constant = true;
+                manager.push(previous_cost + offset_cost, position, maximum_length);
+            } else {
+                if first_constant {
+                    reach = position - 1 + previous_length - 1;
+                    first_constant = false;
+                }
+                if position + maximum_length - 1 > reach {
+                    let mut split = position;
+                    let mut split_length = 0;
+                    while split <= reach {
+                        let (next_offset, next_length) = chain[split + 1];
+                        split_length = next_length;
+                        if next_offset != distance {
+                            split_length = chain[split].1;
+                            break;
+                        }
+                        split += 1;
+                    }
+                    manager.update_at(split - 1, false);
+                    manager.update_at(split, false);
+                    manager.push(manager.costs[split - 1] + offset_cost, split, split_length);
+                    reach = split + split_length - 1;
                 }
             }
         }
+        manager.update_at(position, true);
+        previous_offset = distance;
+        previous_length = maximum_length;
     }
 
     let mut path = Vec::new();
     let mut end = pixels.len();
     while end != 0 {
-        let length = lengths[end - 1];
+        let length = manager.lengths[end - 1];
         path.push(length);
         end -= length;
     }
