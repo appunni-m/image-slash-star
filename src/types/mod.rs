@@ -127,6 +127,8 @@ pub enum ImageMode {
     Rgb32F,
     /// Native-endian 32-bit floating-point RGBA samples.
     Rgba32F,
+    /// Native-endian 32-bit floating-point luminance samples.
+    F32,
 }
 
 impl From<ColorType> for ImageMode {
@@ -143,6 +145,7 @@ impl From<ColorType> for ImageMode {
             ColorType::Rgba16 => Self::Rgba16,
             ColorType::Rgb32F => Self::Rgb32F,
             ColorType::Rgba32F => Self::Rgba32F,
+            ColorType::L32F => Self::F32,
         }
     }
 }
@@ -163,6 +166,7 @@ impl ImageMode {
             Self::Rgba16 => ColorType::Rgba16,
             Self::Rgb32F => ColorType::Rgb32F,
             Self::Rgba32F => ColorType::Rgba32F,
+            Self::F32 => ColorType::L32F,
         }
     }
 

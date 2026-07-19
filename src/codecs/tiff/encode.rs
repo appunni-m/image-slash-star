@@ -20,6 +20,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
         ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
         ImageMode::L16 => (1, 1, 16, false, width.checked_mul(2)?),
+        ImageMode::F32 => (1, 1, 32, false, width.checked_mul(4)?),
         _ => match img.color {
             ColorType::L8 => (1, 1, 8, false, width),
             ColorType::Rgb8 => (2, 3, 8, false, width.checked_mul(3)?),
@@ -69,7 +70,8 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
         .checked_add(u16::from(channels > 1))?
         .checked_add(u16::from(extra_sample))?
-        .checked_add(u16::from(predictor == 2))?;
+        .checked_add(u16::from(predictor == 2))?
+        .checked_add(u16::from(img.mode == ImageMode::F32))?;
     let ifd_size = 2usize
         .checked_add(usize::from(entry_count).checked_mul(12)?)?
         .checked_add(4)?;
@@ -162,6 +164,9 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     }
     if extra_sample {
         write_short_entry(&mut output, endian, 338, 2);
+    }
+    if img.mode == ImageMode::F32 {
+        write_short_entry(&mut output, endian, 339, 3);
     }
     endian.push_u32(&mut output, 0);
 

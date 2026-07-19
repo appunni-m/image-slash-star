@@ -249,6 +249,25 @@
       }
     },
     {
+      "id": "enc_32bit",
+      "source_asset": "float32.tiff",
+      "source_format": "tiff",
+      "params": {
+        "bit_depth": 32
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/float32.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_stripped",
       "source_asset": "stripped.tiff",
       "source_format": "tiff",

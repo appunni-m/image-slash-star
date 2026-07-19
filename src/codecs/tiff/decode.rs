@@ -38,6 +38,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let rows_per_strip = usize::try_from(directory.one_or(278, u64::from(height))).ok()?;
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
+    let sample_format = directory.one_or(339, 1);
     let color_map = directory.values(320);
     if rows_per_strip == 0 || planar != 1 || !matches!(predictor, 1 | 2) {
         return None;
@@ -108,6 +109,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         bits_per_sample,
         endian,
         color_map.as_deref(),
+        sample_format,
     )
 }
 
@@ -120,6 +122,7 @@ fn convert_pixels(
     bits: u8,
     endian: Endian,
     color_map: Option<&[u64]>,
+    sample_format: u64,
 ) -> Option<DecodedImage> {
     match (photometric, samples, bits) {
         (0 | 1, 1, 1) => {
@@ -147,6 +150,15 @@ fn convert_pixels(
                 output.extend_from_slice(&value.to_le_bytes());
             }
             Some(DecodedImage::new(width, height, output, ColorType::L16))
+        }
+        (0 | 1, 1, 32) if sample_format == 3 => {
+            let mut output = Vec::with_capacity(pixels.len());
+            for bytes in pixels.chunks_exact(4) {
+                let bits = endian.u32(bytes)?;
+                let value = f32::from_bits(bits);
+                output.extend_from_slice(&value.to_ne_bytes());
+            }
+            Some(DecodedImage::new(width, height, output, ColorType::L32F))
         }
         (2, 3, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgb8)),
         (2, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8)),

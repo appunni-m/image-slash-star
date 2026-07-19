@@ -30,6 +30,8 @@ pub enum ColorType {
     Rgb32F,
     /// Pixel is 32-bit float RGBA
     Rgba32F,
+    /// Pixel is 32-bit float luminance
+    L32F,
 }
 
 impl ColorType {
@@ -40,7 +42,7 @@ impl ColorType {
             ColorType::L8 => 1,
             ColorType::L16 | ColorType::La8 => 2,
             ColorType::Rgb8 => 3,
-            ColorType::Rgba8 | ColorType::Cmyk8 | ColorType::La16 => 4,
+            ColorType::Rgba8 | ColorType::Cmyk8 | ColorType::La16 | ColorType::L32F => 4,
             ColorType::Rgb16 => 6,
             ColorType::Rgba16 => 8,
             ColorType::Rgb32F => 3 * 4,
@@ -53,7 +55,7 @@ impl ColorType {
     pub fn has_alpha(self) -> bool {
         use ColorType::*;
         match self {
-            L8 | L16 | Rgb8 | Cmyk8 | Rgb16 | Rgb32F => false,
+            L8 | L16 | L32F | Rgb8 | Cmyk8 | Rgb16 | Rgb32F => false,
             La8 | Rgba8 | La16 | Rgba16 | Rgba32F => true,
         }
     }
@@ -63,7 +65,7 @@ impl ColorType {
     pub fn has_color(self) -> bool {
         use ColorType::*;
         match self {
-            L8 | L16 | La8 | La16 => false,
+            L8 | L16 | L32F | La8 | La16 => false,
             Rgb8 | Cmyk8 | Rgb16 | Rgba8 | Rgba16 | Rgb32F | Rgba32F => true,
         }
     }
@@ -144,6 +146,8 @@ pub enum ExtendedColorType {
     Rgb32F,
     /// Pixel is 32-bit float RGBA
     Rgba32F,
+    /// Pixel is 32-bit float luminance
+    L32F,
     /// Pixel is 8-bit CMYK
     Cmyk8,
     /// Pixel is 16-bit CMYK
@@ -163,6 +167,7 @@ impl ExtendedColorType {
             | ExtendedColorType::L4
             | ExtendedColorType::L8
             | ExtendedColorType::L16
+            | ExtendedColorType::L32F
             | ExtendedColorType::Unknown(_) => 1,
             ExtendedColorType::La1
             | ExtendedColorType::La2
@@ -217,6 +222,7 @@ impl ExtendedColorType {
             ExtendedColorType::Rgba16 => 64,
             ExtendedColorType::Rgb32F => 96,
             ExtendedColorType::Rgba32F => 128,
+            ExtendedColorType::L32F => 32,
             ExtendedColorType::Bgr8 => 24,
             ExtendedColorType::Bgra8 => 32,
             ExtendedColorType::Cmyk8 => 32,
@@ -238,6 +244,7 @@ impl ExtendedColorType {
             ExtendedColorType::Rgba16 => Some(ColorType::Rgba16),
             ExtendedColorType::Rgb32F => Some(ColorType::Rgb32F),
             ExtendedColorType::Rgba32F => Some(ColorType::Rgba32F),
+            ExtendedColorType::L32F => Some(ColorType::L32F),
             _ => None,
         }
     }
@@ -257,6 +264,7 @@ impl From<ColorType> for ExtendedColorType {
             ColorType::Rgba16 => ExtendedColorType::Rgba16,
             ColorType::Rgb32F => ExtendedColorType::Rgb32F,
             ColorType::Rgba32F => ExtendedColorType::Rgba32F,
+            ColorType::L32F => ExtendedColorType::L32F,
         }
     }
 }

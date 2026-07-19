@@ -247,6 +247,19 @@
       }
     },
     {
+      "id": "depth_float",
+      "asset": "float32.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/float32.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "stripped",
       "asset": "stripped.tiff",
       "expect_error": false,

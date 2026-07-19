@@ -4944,9 +4944,16 @@
           "expect_error": false,
           "format": "tiff",
           "id": "depth_float",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "Rust TIFF decoding does not yet match Pillow for this declared input mode."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_float32_tiff.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "F",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "stripped.tiff",
@@ -5322,12 +5329,20 @@
           "params": {
             "bit_depth": 32
           },
-          "source_asset": "rgb.tiff",
+          "source_asset": "float32.tiff",
           "source_format": "tiff",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "32bit",
-          "gap": "Rust TIFF encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_32bit.bin",
+          "encoded_ref_bytes": 65670,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_32bit.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "F",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6242,8 +6257,8 @@
     "encode_rows": 156,
     "formats": 8,
     "assets_available": 161,
-    "decode_active": 160,
-    "decode_planned": 8,
-    "encode_not_wired": 45
+    "decode_active": 161,
+    "decode_planned": 7,
+    "encode_not_wired": 44
   }
 }

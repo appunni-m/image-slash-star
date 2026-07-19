@@ -157,6 +157,18 @@
       "encoded_ref_bytes": 32890
     },
     {
+      "id": "enc_32bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_32bit.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "F",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_32bit.bin",
+      "encoded_ref_bytes": 65670
+    },
+    {
       "id": "enc_stripped",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_stripped.bin",
       "ref_bytes": 49152,

@@ -834,6 +834,7 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "La16" => Some(img::ImageMode::La16),
         "Rgb16" => Some(img::ImageMode::Rgb16),
         "Rgba16" => Some(img::ImageMode::Rgba16),
+        "F" | "F32" => Some(img::ImageMode::F32),
         _ => None,
     }
 }

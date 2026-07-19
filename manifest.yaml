@@ -1173,7 +1173,6 @@ formats:
       - 16bit.tiff
     - id: depth_float
       description: 32-bit float (F-mode)
-      status: planned
       test_assets:
       - float32.tiff
     - id: stripped
@@ -1248,7 +1247,7 @@ formats:
       params: {'bit_depth': 16}
     - id: enc_32bit
       description: 
-      status: planned
+      source_asset: float32.tiff
       params: {'bit_depth': 32}
     - id: enc_stripped
       description: 

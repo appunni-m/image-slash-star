@@ -247,6 +247,19 @@
       ]
     },
     {
+      "id": "depth_float",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_float32_tiff.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "F",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "stripped",
       "status": "ok",
       "error_type": null,
