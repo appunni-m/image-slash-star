@@ -464,12 +464,20 @@
           "params": {
             "bit_depth": 1
           },
-          "source_asset": "24bit.bmp",
+          "source_asset": "1bit.bmp",
           "source_format": "bmp",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "1bit",
-          "gap": "Rust BMP encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_1bit.bin",
+          "encoded_ref_bytes": 2110,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_1bit.bin",
+          "ref_bytes": 2048,
+          "ref_mode": "1",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -483,7 +491,7 @@
           "status": "planned",
           "type": "encode",
           "category": "4bit",
-          "gap": "Rust BMP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 saves P-mode BMP as 8-bit and cannot select 4-bit output."
         },
         {
           "description": "",
@@ -519,7 +527,7 @@
           "status": "planned",
           "type": "encode",
           "category": "16bit",
-          "gap": "Rust BMP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 saves RGB BMP as 24-bit and cannot select 16-bit output."
         },
         {
           "description": "",
@@ -599,7 +607,7 @@
           "status": "planned",
           "type": "encode",
           "category": "bi",
-          "gap": "Rust BMP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 BMP save cannot select BI_RLE8 compression."
         },
         {
           "description": "",
@@ -613,7 +621,7 @@
           "status": "planned",
           "type": "encode",
           "category": "bi",
-          "gap": "Rust BMP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 BMP save cannot select BI_RLE4 compression."
         },
         {
           "description": "",
@@ -6167,6 +6175,6 @@
     "assets_available": 161,
     "decode_active": 157,
     "decode_planned": 11,
-    "encode_not_wired": 52
+    "encode_not_wired": 51
   }
 }

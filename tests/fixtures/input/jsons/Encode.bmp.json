@@ -13,6 +13,25 @@
   },
   "cases": [
     {
+      "id": "enc_1bit",
+      "source_asset": "1bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "bit_depth": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/1bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_8bit",
       "source_asset": "8bit.bmp",
       "source_format": "bmp",

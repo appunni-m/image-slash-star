@@ -13,6 +13,18 @@
   },
   "cases": [
     {
+      "id": "enc_1bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_1bit.bin",
+      "ref_bytes": 2048,
+      "ref_mode": "1",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_1bit.bin",
+      "encoded_ref_bytes": 2110
+    },
+    {
       "id": "enc_8bit",
       "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_8bit.bin",
       "ref_bytes": 16384,
