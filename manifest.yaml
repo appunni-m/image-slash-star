@@ -280,7 +280,6 @@ formats:
       params: {'dct_method': 'slow'}
     - id: enc_optimize
       description: 
-      status: planned
       params: {'optimize': True}
     - id: enc_no_optimize
       description: 

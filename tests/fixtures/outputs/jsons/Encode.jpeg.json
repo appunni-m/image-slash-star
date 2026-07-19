@@ -241,6 +241,18 @@
       "encoded_ref_bytes": 4899
     },
     {
+      "id": "enc_optimize",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize.bin",
+      "encoded_ref_bytes": 4437
+    },
+    {
       "id": "enc_no_optimize",
       "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_no_optimize.bin",
       "ref_bytes": 49152,

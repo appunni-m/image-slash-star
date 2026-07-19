@@ -2820,10 +2820,18 @@
           },
           "source_asset": "baseline_444.jpg",
           "source_format": "jpeg",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "optimize",
-          "gap": "Rust JPEG encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize.bin",
+          "encoded_ref_bytes": 4437,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6144,6 +6152,6 @@
     "assets_available": 161,
     "decode_active": 156,
     "decode_planned": 12,
-    "encode_not_wired": 54
+    "encode_not_wired": 53
   }
 }

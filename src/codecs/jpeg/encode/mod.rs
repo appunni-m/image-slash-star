@@ -54,6 +54,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
 
     let quality = opts.quality.unwrap_or(75);
     let progressive = opts.progressive.unwrap_or(false);
+    let optimize = opts.optimize.unwrap_or(false);
     let subsampling = opts.subsampling.as_deref().unwrap_or("420");
 
     let params = quant::build_params(quality, subsampling, num_components as usize);
@@ -161,8 +162,41 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     let dc_chroma = huffman::derive_table(&huffman::STD_DC_CHROMA.0, &huffman::STD_DC_CHROMA.1);
     let ac_luma = huffman::derive_table(&huffman::STD_AC_LUMA.0, &huffman::STD_AC_LUMA.1);
     let ac_chroma = huffman::derive_table(&huffman::STD_AC_CHROMA.0, &huffman::STD_AC_CHROMA.1);
-    let dc_tables = [&dc_luma, &dc_chroma];
-    let ac_tables = [&ac_luma, &ac_chroma];
+    let (optimized_dc, optimized_ac) = if !progressive && optimize {
+        let (dc_frequencies, ac_frequencies) = baseline_frequencies(&comps, max_h, max_v)?;
+        (
+            [
+                Some(huffman::optimal_table(&dc_frequencies[0])?),
+                (num_components >= 3)
+                    .then(|| huffman::optimal_table(&dc_frequencies[1]))
+                    .flatten(),
+            ],
+            [
+                Some(huffman::optimal_table(&ac_frequencies[0])?),
+                (num_components >= 3)
+                    .then(|| huffman::optimal_table(&ac_frequencies[1]))
+                    .flatten(),
+            ],
+        )
+    } else {
+        ([None, None], [None, None])
+    };
+    let dc_tables = [
+        optimized_dc[0]
+            .as_ref()
+            .map_or(&dc_luma, |table| &table.derived),
+        optimized_dc[1]
+            .as_ref()
+            .map_or(&dc_chroma, |table| &table.derived),
+    ];
+    let ac_tables = [
+        optimized_ac[0]
+            .as_ref()
+            .map_or(&ac_luma, |table| &table.derived),
+        optimized_ac[1]
+            .as_ref()
+            .map_or(&ac_chroma, |table| &table.derived),
+    ];
 
     let mut out = Vec::new();
     marker::write_soi(&mut out);
@@ -189,35 +223,51 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     // DHT tables. Baseline: all 4 standard tables up front. Progressive: DHT
     // is emitted per-scan with only the tables that scan uses.
     if !progressive {
-        marker::write_dht(
-            &mut out,
-            0,
-            0,
-            &huffman::STD_DC_LUMA.0,
-            &huffman::STD_DC_LUMA.1,
-        );
-        marker::write_dht(
-            &mut out,
-            1,
-            0,
-            &huffman::STD_AC_LUMA.0,
-            &huffman::STD_AC_LUMA.1,
-        );
-        if num_components >= 3 {
+        if let Some(table) = &optimized_dc[0] {
+            marker::write_dht(&mut out, 0, 0, &table.bits, &table.values);
+        } else {
             marker::write_dht(
                 &mut out,
                 0,
-                1,
-                &huffman::STD_DC_CHROMA.0,
-                &huffman::STD_DC_CHROMA.1,
+                0,
+                &huffman::STD_DC_LUMA.0,
+                &huffman::STD_DC_LUMA.1,
             );
+        }
+        if let Some(table) = &optimized_ac[0] {
+            marker::write_dht(&mut out, 1, 0, &table.bits, &table.values);
+        } else {
             marker::write_dht(
                 &mut out,
                 1,
-                1,
-                &huffman::STD_AC_CHROMA.0,
-                &huffman::STD_AC_CHROMA.1,
+                0,
+                &huffman::STD_AC_LUMA.0,
+                &huffman::STD_AC_LUMA.1,
             );
+        }
+        if num_components >= 3 {
+            if let Some(table) = &optimized_dc[1] {
+                marker::write_dht(&mut out, 0, 1, &table.bits, &table.values);
+            } else {
+                marker::write_dht(
+                    &mut out,
+                    0,
+                    1,
+                    &huffman::STD_DC_CHROMA.0,
+                    &huffman::STD_DC_CHROMA.1,
+                );
+            }
+            if let Some(table) = &optimized_ac[1] {
+                marker::write_dht(&mut out, 1, 1, &table.bits, &table.values);
+            } else {
+                marker::write_dht(
+                    &mut out,
+                    1,
+                    1,
+                    &huffman::STD_AC_CHROMA.0,
+                    &huffman::STD_AC_CHROMA.1,
+                );
+            }
         }
 
         // Single SOS for baseline (interleaved).
@@ -360,6 +410,77 @@ fn fdct_quantize(
 }
 
 // ── Baseline entropy coding (jchuff.c) ───────────────────────────────────
+
+fn baseline_frequencies(
+    comps: &[CompData],
+    max_h: u8,
+    max_v: u8,
+) -> Option<([[u64; 256]; 2], [[u64; 256]; 2])> {
+    // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c's gather_statistics pass.
+    // Traverse exactly the same MCU stream as encode_baseline_entropy so the
+    // optimized table describes every symbol that the output pass will emit.
+    let mcu_w = usize::from(max_h).checked_mul(8)?;
+    let mcu_h = usize::from(max_v).checked_mul(8)?;
+    let n_mcu_x = comps[0].blocks_per_row.checked_mul(8)?.div_ceil(mcu_w);
+    let n_mcu_y = comps[0].block_rows.checked_mul(8)?.div_ceil(mcu_h);
+    let mut dc = [[0u64; 256]; 2];
+    let mut ac = [[0u64; 256]; 2];
+    let mut last_dc = [0i32; 4];
+
+    for my in 0..n_mcu_y {
+        for mx in 0..n_mcu_x {
+            for (ci, component) in comps.iter().enumerate() {
+                let dc_slot = usize::from(component.dc_tbl);
+                let ac_slot = usize::from(component.ac_tbl);
+                for vertical in 0..usize::from(component.v_samp) {
+                    for horizontal in 0..usize::from(component.h_samp) {
+                        let block_row = my
+                            .checked_mul(usize::from(component.v_samp))?
+                            .checked_add(vertical)?;
+                        let block_column = mx
+                            .checked_mul(usize::from(component.h_samp))?
+                            .checked_add(horizontal)?;
+                        if block_row >= component.block_rows
+                            || block_column >= component.blocks_per_row
+                        {
+                            dc[dc_slot][0] = dc[dc_slot][0].checked_add(1)?;
+                            ac[ac_slot][0] = ac[ac_slot][0].checked_add(1)?;
+                            continue;
+                        }
+
+                        let block =
+                            &component.blocks[block_row * component.blocks_per_row + block_column];
+                        let difference = i32::from(block[0]) - last_dc[ci];
+                        last_dc[ci] = i32::from(block[0]);
+                        let dc_symbol = usize::try_from(jpeg_nbits(difference)).ok()?;
+                        dc[dc_slot][dc_symbol] = dc[dc_slot][dc_symbol].checked_add(1)?;
+
+                        let mut run = 0usize;
+                        for &natural_index in &ZIGZAG[1..] {
+                            let coefficient = i32::from(block[natural_index]);
+                            if coefficient == 0 {
+                                run = run.checked_add(1)?;
+                                continue;
+                            }
+                            while run >= 16 {
+                                ac[ac_slot][0xf0] = ac[ac_slot][0xf0].checked_add(1)?;
+                                run -= 16;
+                            }
+                            let width = usize::try_from(jpeg_nbits(coefficient)).ok()?;
+                            let symbol = (run << 4) | width;
+                            ac[ac_slot][symbol] = ac[ac_slot][symbol].checked_add(1)?;
+                            run = 0;
+                        }
+                        if run != 0 {
+                            ac[ac_slot][0] = ac[ac_slot][0].checked_add(1)?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Some((dc, ac))
+}
 
 fn encode_baseline_entropy(
     out: &mut Vec<u8>,
