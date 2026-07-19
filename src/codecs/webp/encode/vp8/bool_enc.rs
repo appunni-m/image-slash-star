@@ -5,31 +5,18 @@
 //! 255 ≈ 100% false).  This module implements the encoder counterpart of
 //! the boolean entropy decoder described in the specification.
 //!
-//! # Algorithm (RFC 6386 Section 7.3)
-//!
-//! The encoder maintains a 32-bit interval [`low`, `low` + `range`).  Each
-//! `encode_bool` splits the interval proportionally to `prob`:
+//! This is the byte-exact writer used by libwebp 1.6.0. It stores `range - 1`
+//! and splits the interval as follows:
 //!
 //! ```text
-//! split = 1 + ((range - 1) * prob >> 8)
+//! split = range * prob >> 8
 //!
 //! if value == false:  range = split
-//! if value == true:   low += split;  range -= split
+//! if value == true:   value += split + 1; range -= split + 1
 //! ```
 //!
-//! The interval is then renormalised by doubling both `low` and `range` until
-//! `range >= 128`.  When the high bit of `low` (bit 31) is set before a shift,
-//! the carry is propagated backward through already-emitted output bytes
-//! (`add_one_to_output`).  A byte of `low` is emitted every eighth
-//! renormalization shift.
-//!
-//! # Carry handling
-//!
-//! VP8 uses a retroactive carry-propagation scheme rather than deferring 0xFF
-//! bytes.  When `low[31]` is set before a renormalization shift, the carry is
-//! walked backward through the output, incrementing bytes and wrapping 0xFF to
-//! 0x00 until the carry is absorbed.  This is the `add_one_to_output` function
-//! from RFC 6386 Section 7.3.
+//! Renormalization follows libwebp's `kNorm`/`kNewRange` transformation.
+//! Pending `0xff` bytes are delayed so a later carry can resolve the whole run.
 //!
 //! # Safety
 //!
@@ -42,34 +29,30 @@
 /// Encodes a sequence of boolean values into a byte stream using
 /// 8-bit fixed-point probabilities.
 pub struct BoolEncoder {
-    /// Bottom of the current coding interval (up to 32 bits).
-    low: u32,
-
-    /// Current interval width.  After renormalization this is always in
-    /// [128, 255].
-    range: u32,
-
-    /// Number of renormalization shifts since the last byte was emitted.
-    /// Starts at `-8`; each renormalization shift increments it by 1.
-    /// When `count >= 0` we have accumulated a full byte to emit.
-    count: i32,
-
-    /// Output byte buffer.
+    /// Current interval width minus one.
+    range: i32,
+    /// Pending arithmetic-coded value.
+    value: i32,
+    /// Number of delayed `0xff` bytes awaiting carry resolution.
+    run: usize,
+    /// Number of pending bits.
+    nb_bits: i32,
     output: Vec<u8>,
 }
 
 impl BoolEncoder {
     /// Create a new bool encoder with initial state.
     ///
-    /// * `low` = 0
-    /// * `range` = 255
-    /// * `count` = -8 (need 8 shifts before first byte)
+    /// * `value` = 0
+    /// * `range` = 254 (`255 - 1`)
+    /// * `nb_bits` = -8
     /// * `output` = empty
     pub fn new() -> Self {
         Self {
-            low: 0,
-            range: 255,
-            count: -8,
+            range: 254,
+            value: 0,
+            run: 0,
+            nb_bits: -8,
             output: Vec::new(),
         }
     }
@@ -82,87 +65,61 @@ impl BoolEncoder {
     ///   0 means `false` is impossible; 255 means `false` is nearly certain.
     /// * `value` — `false` (0) or `true` (1) to encode.
     pub fn encode_bool(&mut self, prob: u8, value: bool) {
-        let prob = prob as u32;
-        // RFC 6386 Section 7.2: split = 1 + ((range - 1) * prob >> 8)
-        let split = 1 + (((self.range - 1) * prob) >> 8);
+        let split = (self.range * i32::from(prob)) >> 8;
 
         if value {
-            // 'true' occupies the upper sub-interval
-            self.low = self.low.wrapping_add(split);
-            self.range -= split;
+            self.value += split + 1;
+            self.range -= split + 1;
         } else {
-            // 'false' occupies the lower sub-interval
             self.range = split;
         }
 
-        // Renormalize: double range and low until range >= 128.
-        while self.range < 128 {
-            // Carry check BEFORE the shift (RFC 6386 Section 7.3).
-            if self.low & 0x8000_0000 != 0 {
-                self.add_one_to_output();
+        if self.range < 127 {
+            let mut shift = 0;
+            while self.range < 127 {
+                self.range = ((self.range + 1) << 1) - 1;
+                shift += 1;
             }
-            self.range <<= 1;
-            self.low <<= 1;
-            self.count += 1;
-
-            if self.count >= 0 {
-                self.emit_byte();
+            self.value <<= shift;
+            self.nb_bits += shift;
+            if self.nb_bits > 0 {
+                self.flush();
             }
         }
     }
 
-    /// Propagate a carry backward through already-emitted bytes.
-    ///
-    /// This is the `add_one_to_output` function from RFC 6386 Section 7.3.
-    /// When the encoded value overflows past a 0xFF boundary, we walk the
-    /// output from the most-recently-written byte backward, incrementing
-    /// each byte and stopping when the byte does not wrap (i.e. was not
-    /// 0xFF before incrementing).
-    fn add_one_to_output(&mut self) {
-        // Walk backward through the emitted bytes.
-        for i in (0..self.output.len()).rev() {
-            let (new_val, overflowed) = self.output[i].overflowing_add(1);
-            self.output[i] = new_val;
-            if !overflowed {
-                // Byte was not 0xFF — carry absorbed here.
-                return;
-            }
-            // byte was 0xFF and became 0x00 — carry propagates further.
+    fn flush(&mut self) {
+        let shift = 8 + self.nb_bits;
+        let bits = self.value >> shift;
+        self.value -= bits << shift;
+        self.nb_bits -= 8;
+        if bits & 0xff == 0xff {
+            self.run += 1;
+            return;
         }
-        // Loop finished without returning: the carry propagated past the
-        // earliest byte in the output.  This is expected when no bytes
-        // have been emitted yet or when the carry reaches the start of
-        // the stream.
-    }
-
-    /// Emit the top byte of `low` to the output buffer.
-    ///
-    /// The byte is pushed to `output` and `low` is masked to 24 bits.
-    /// Any outstanding carry must have been propagated by the caller.
-    fn emit_byte(&mut self) {
-        let byte = (self.low >> 24) as u8;
-        self.output.push(byte);
-        self.low &= 0x00FF_FFFF;
-        self.count -= 8;
+        if bits & 0x100 != 0 {
+            if let Some(previous) = self.output.last_mut() {
+                *previous = previous.wrapping_add(1);
+            }
+        }
+        let delayed = if bits & 0x100 != 0 { 0x00 } else { 0xff };
+        self.output.extend(std::iter::repeat_n(delayed, self.run));
+        self.run = 0;
+        self.output.push((bits & 0xff) as u8);
     }
 
     /// Flush remaining state and return the encoded byte stream.
     ///
-    /// Encodes 32 uniform (`prob = 128`) zero bits to flush any residual
-    /// state, matching the approach used by the libvpx reference encoder
-    /// (`vp8_stop_encode`).  After this call all internal state is
-    /// reflected in the output.
+    /// Writes `9 - nb_bits` uniform zero bits and performs one final flush,
+    /// matching `VP8BitWriterFinish` in libwebp 1.6.0.
     ///
     /// # Returns
     ///
     /// The encoded byte vector (the caller takes ownership).
     pub fn finish(mut self) -> Vec<u8> {
-        // Encode 32 zero-bits at uniform probability to flush the pipeline.
-        // This ensures all remaining bits in `low` are shifted out and
-        // emitted as bytes.
-        for _ in 0..32 {
-            self.encode_bool(128, false);
-        }
+        self.encode_literal(0, (9 - self.nb_bits) as u8);
+        self.nb_bits = 0;
+        self.flush();
         self.output
     }
 
@@ -306,6 +263,26 @@ pub fn encode_signed(enc: &mut BoolEncoder, value: i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn output_matches_libwebp_1_6_0() {
+        assert_eq!(BoolEncoder::new().finish(), [0x00, 0x00]);
+
+        let probabilities = [
+            128, 1, 255, 145, 156, 163, 128, 142, 114, 183, 253, 9, 248, 251, 207, 208, 192, 17,
+            73, 221,
+        ];
+        let bits = [
+            false, true, false, true, true, false, true, false, true, true, false, true, true,
+            false, true, false, true, true, false, true,
+        ];
+        let mut encoder = BoolEncoder::new();
+        for (probability, bit) in probabilities.into_iter().zip(bits) {
+            encoder.encode_bool(probability, bit);
+        }
+        encoder.encode_literal(0x12a, 9);
+        assert_eq!(encoder.finish(), [0x74, 0x95, 0x91, 0x7e, 0x10, 0x00]);
+    }
 
     // ── 1. Basic encoding ──────────────────────────────────────────────────
 
