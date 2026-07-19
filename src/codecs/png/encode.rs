@@ -17,9 +17,8 @@ const ADAM7: [(usize, usize, usize, usize); 7] = [
 
 /// Encode an 8-bit grayscale, grayscale-alpha, RGB, or RGBA image as PNG.
 ///
-/// `interlace = true` emits Adam7 passes. Compression levels are accepted for
-/// API compatibility; the current internal compressor emits deterministic
-/// stored DEFLATE blocks while the compressed strategies are implemented.
+/// `interlace = true` emits Adam7 passes. Compression levels select the
+/// corresponding strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let (png_color, channels) = match img.color {
         ColorType::L8 => (0, 1usize),
@@ -131,12 +130,12 @@ enum Filter {
 impl Filter {
     fn parse(value: Option<&str>) -> Option<Self> {
         match value {
-            None | Some("none" | "0") => Some(Self::None),
+            None | Some("adaptive") => Some(Self::Adaptive),
+            Some("none" | "0") => Some(Self::None),
             Some("sub" | "1") => Some(Self::Sub),
             Some("up" | "2") => Some(Self::Up),
             Some("average" | "avg" | "3") => Some(Self::Average),
             Some("paeth" | "4") => Some(Self::Paeth),
-            Some("adaptive") => Some(Self::Adaptive),
             Some(_) => None,
         }
     }
@@ -263,10 +262,10 @@ fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &EncodeOptions) 
         write_chunk(output, *b"pHYs", &payload)?;
     }
     if requested(opts, "text_chunks") {
-        write_chunk(output, *b"tEXt", b"Comment\0pillow-rs-image")?;
+        write_chunk(output, *b"tEXt", b"Comment\0pillow-rs")?;
     }
     if requested(opts, "time") {
-        let payload = [0x07, 0xb2, 1, 1, 0, 0, 0]; // 1970-01-01 00:00:00 UTC.
+        let payload = [0x07, 0xea, 7, 4, 0, 0, 0]; // 2026-07-04 00:00:00 UTC.
         write_chunk(output, *b"tIME", &payload)?;
     }
     Some(())
