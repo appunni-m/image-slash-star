@@ -27,6 +27,9 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     if opts.extra.get("entry_type").map(String::as_str) == Some("bmp") {
         return encode_bmp_entry(img, opts);
     }
+    if writes_one_source_sized_png(img, opts) {
+        return encode_png_entry(img);
+    }
     // Convert pixel data to BGRA (we always write 32-bit ICO entries)
     let bgra = match img.color {
         ColorType::Rgba8 => convert_rgba_to_bgra(&img.pixels),
@@ -97,6 +100,44 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         }
     }
     Some(data)
+}
+
+fn writes_one_source_sized_png(img: &DecodedImage, opts: &EncodeOptions) -> bool {
+    if let Some(value) = opts.extra.get("sizes") {
+        return parse_sizes(value).is_some_and(|sizes| {
+            sizes.len() == 1 && sizes[0] == (img.width as usize, img.height as usize)
+        });
+    }
+    const DEFAULT_SIZES: [usize; 7] = [16, 24, 32, 48, 64, 128, 256];
+    DEFAULT_SIZES
+        .into_iter()
+        .filter(|&size| size <= img.width as usize && size <= img.height as usize)
+        .count()
+        == 1
+}
+
+fn encode_png_entry(img: &DecodedImage) -> Option<Vec<u8>> {
+    // Pillow 12.2.0 IcoImagePlugin.py:175-178 delegates the frame to the PNG
+    // writer without forwarding ICO options.
+    let png = crate::codecs::png::encode::encode(img, &EncodeOptions::default())?;
+    let mut output = Vec::with_capacity(22usize.checked_add(png.len())?);
+    output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);
+    output.push(if img.width == 256 {
+        0
+    } else {
+        u8::try_from(img.width).ok()?
+    });
+    output.push(if img.height == 256 {
+        0
+    } else {
+        u8::try_from(img.height).ok()?
+    });
+    output.extend_from_slice(&[0, 0, 0, 0]);
+    output.extend_from_slice(&32u16.to_le_bytes());
+    output.extend_from_slice(&u32::try_from(png.len()).ok()?.to_le_bytes());
+    output.extend_from_slice(&22u32.to_le_bytes());
+    output.extend_from_slice(&png);
+    Some(output)
 }
 
 fn encode_bmp_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
@@ -180,14 +221,25 @@ fn encode_bmp_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>>
 }
 
 fn parse_last_size(value: &str) -> Option<(usize, usize)> {
+    parse_sizes(value)?.pop()
+}
+
+fn parse_sizes(value: &str) -> Option<Vec<(usize, usize)>> {
     let numbers = value
         .split(|character: char| !character.is_ascii_digit())
         .filter(|part| !part.is_empty())
         .map(str::parse::<usize>)
         .collect::<Result<Vec<_>, _>>()
         .ok()?;
-    let pair = numbers.get(numbers.len().checked_sub(2)?..)?;
-    Some((*pair.first()?, *pair.get(1)?))
+    if numbers.len() % 2 != 0 {
+        return None;
+    }
+    Some(
+        numbers
+            .chunks_exact(2)
+            .map(|pair| (pair[0], pair[1]))
+            .collect(),
+    )
 }
 /// Convert RGBA8 pixels (R,G,B,A) to BGRA (B,G,R,A).
 fn convert_rgba_to_bgra(pixels: &[u8]) -> Vec<u8> {
