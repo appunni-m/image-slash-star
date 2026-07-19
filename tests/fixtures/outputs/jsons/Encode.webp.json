@@ -13,6 +13,18 @@
   },
   "cases": [
     {
+      "id": "enc_lossy_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q80.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q80.bin",
+      "encoded_ref_bytes": 3634
+    },
+    {
       "id": "enc_lossless",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless.bin",
       "ref_bytes": 49152,

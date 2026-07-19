@@ -13,6 +13,29 @@
   },
   "cases": [
     {
+      "id": "enc_lossy_q80",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": false,
+        "quality": 80
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossless",
       "source_asset": "lossless.webp",
       "source_format": "webp",

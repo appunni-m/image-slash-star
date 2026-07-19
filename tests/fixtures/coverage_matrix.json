@@ -4881,7 +4881,7 @@
           "id": "ycbcr",
           "status": "planned",
           "type": "decode",
-          "gap": "Rust TIFF decoding does not yet match Pillow for this declared input mode."
+          "gap": "Pillow 12.2.0 cannot load the generated ycbcr.tiff fixture (truncated image data)."
         },
         {
           "asset": "1bit.tiff",
@@ -5951,10 +5951,18 @@
           },
           "source_asset": "lossless.webp",
           "source_format": "webp",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "lossy",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q80.bin",
+          "encoded_ref_bytes": 3634,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q80.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6031,8 +6039,8 @@
             "lossless": false,
             "alpha": true
           },
-          "source_asset": "lossless.webp",
-          "source_format": "webp",
+          "source_asset": "alpha_partial.png",
+          "source_format": "png",
           "status": "planned",
           "type": "encode",
           "category": "lossy",
@@ -6087,7 +6095,7 @@
           "status": "planned",
           "type": "encode",
           "category": "hint",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 does not expose the libwebp image-hint selector."
         },
         {
           "description": "",
@@ -6101,7 +6109,7 @@
           "status": "planned",
           "type": "encode",
           "category": "hint",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 does not expose the libwebp image-hint selector."
         },
         {
           "description": "",
@@ -6115,7 +6123,7 @@
           "status": "planned",
           "type": "encode",
           "category": "hint",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 does not expose the libwebp image-hint selector."
         },
         {
           "description": "",
@@ -6157,7 +6165,7 @@
           "status": "planned",
           "type": "encode",
           "category": "exif",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "gap": "exif=true does not identify the metadata bytes Pillow must encode."
         },
         {
           "description": "",
@@ -6171,7 +6179,7 @@
           "status": "planned",
           "type": "encode",
           "category": "xmp",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "gap": "xmp=true does not identify the metadata bytes Pillow must encode."
         },
         {
           "description": "",
@@ -6185,7 +6193,7 @@
           "status": "planned",
           "type": "encode",
           "category": "icc",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "gap": "icc=true does not identify the profile bytes Pillow must encode."
         },
         {
           "description": "",
@@ -6197,8 +6205,8 @@
               1
             ]
           },
-          "source_asset": "lossless.webp",
-          "source_format": "webp",
+          "source_asset": "1x1.png",
+          "source_format": "png",
           "status": "planned",
           "type": "encode",
           "category": "1x1",
@@ -6259,6 +6267,6 @@
     "assets_available": 161,
     "decode_active": 161,
     "decode_planned": 7,
-    "encode_not_wired": 44
+    "encode_not_wired": 43
   }
 }

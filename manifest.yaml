@@ -994,7 +994,6 @@ formats:
       params: {'lossless': False, 'quality': 100}
     - id: enc_lossy_q80
       description: 
-      status: planned
       params: {'lossless': False, 'quality': 80}
     - id: enc_lossy_q50
       description: 
@@ -1014,6 +1013,8 @@ formats:
     - id: enc_lossy_alpha
       description: 
       status: planned
+      source_format: png
+      source_asset: alpha_partial.png
       params: {'lossless': False, 'alpha': True}
     - id: enc_lossless_alpha
       description: 
@@ -1027,14 +1028,17 @@ formats:
     - id: enc_hint_photo
       description: 
       status: planned
+      oracle_gap: Pillow 12.2.0 does not expose the libwebp image-hint selector.
       params: {'hint': 'photo'}
     - id: enc_hint_graph
       description: 
       status: planned
+      oracle_gap: Pillow 12.2.0 does not expose the libwebp image-hint selector.
       params: {'hint': 'graph'}
     - id: enc_hint_picture
       description: 
       status: planned
+      oracle_gap: Pillow 12.2.0 does not expose the libwebp image-hint selector.
       params: {'hint': 'picture'}
     - id: enc_method_0
       description: 
@@ -1047,18 +1051,23 @@ formats:
     - id: enc_exif
       description: 
       status: planned
+      oracle_gap: exif=true does not identify the metadata bytes Pillow must encode.
       params: {'exif': True}
     - id: enc_xmp
       description: 
       status: planned
+      oracle_gap: xmp=true does not identify the metadata bytes Pillow must encode.
       params: {'xmp': True}
     - id: enc_icc
       description: 
       status: planned
+      oracle_gap: icc=true does not identify the profile bytes Pillow must encode.
       params: {'icc': True}
     - id: enc_1x1
       description: 
       status: planned
+      source_format: png
+      source_asset: 1x1.png
       params: {'size': [1, 1]}
 
     - id: enc_lossy
@@ -1157,6 +1166,7 @@ formats:
     - id: ycbcr
       description: YCbCr
       status: planned
+      oracle_gap: Pillow 12.2.0 cannot load the generated ycbcr.tiff fixture (truncated image data).
       test_assets:
       - ycbcr.tiff
     - id: depth_1
