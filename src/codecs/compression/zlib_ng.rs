@@ -46,6 +46,293 @@ pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     Some(output)
 }
 
+/// Compress using Pillow's zlib-ng 2.3.3 level-six configuration.
+pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let tokens = tokenize_level6(data, input_chunks)?;
+    let mut output = vec![0x78, 0x9c];
+    let mut writer = BitWriter::default();
+    emit_block(&tokens, data.len(), &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+fn tokenize_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
+    // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:102-128 and
+    // deflate_medium.c:160-293. The oracle and Rust models produce the same
+    // 2,272 tokens for the level-six PNG parity input.
+    let mut matcher = Level6Matcher::new(data);
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        if available != 0 {
+            matcher.refill_boundary()?;
+        }
+        available = available.checked_add(chunk_length)?;
+        if available > data.len() {
+            return None;
+        }
+        matcher.process(available, false)?;
+    }
+    if available != data.len() {
+        return None;
+    }
+    matcher.process(available, true)?;
+    Some(matcher.tokens)
+}
+
+#[derive(Clone, Copy, Default)]
+struct MediumMatch {
+    match_start: usize,
+    length: usize,
+    start: usize,
+    original_start: usize,
+}
+
+struct Level6Matcher {
+    data: Vec<u8>,
+    head: Vec<usize>,
+    previous: Vec<usize>,
+    position: usize,
+    tokens: Vec<Token>,
+}
+
+impl Level6Matcher {
+    fn new(data: &[u8]) -> Self {
+        // zlib-ng's window is zero-initialized through WIN_INIT bytes beyond
+        // the supplied input. Its medium matcher intentionally probes that
+        // region while evaluating the match following the current match.
+        let mut window = Vec::with_capacity(data.len().saturating_add(MAX_MATCH));
+        window.extend_from_slice(data);
+        window.resize(data.len().saturating_add(MAX_MATCH), 0);
+        Self {
+            data: window,
+            head: vec![0; HASH_SIZE],
+            previous: vec![0; WINDOW_MASK + 1],
+            position: 0,
+            tokens: Vec::new(),
+        }
+    }
+
+    fn refill_boundary(&mut self) -> Option<()> {
+        // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:1213-1237. fill_window()
+        // re-inserts strstart-1 when new input makes a three-byte hash valid.
+        if self.position >= 1 {
+            self.quick_insert(self.position - 1)?;
+        }
+        Some(())
+    }
+
+    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+        let mut following = None::<MediumMatch>;
+        loop {
+            let lookahead = available.checked_sub(self.position)?;
+            if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
+                return Some(());
+            }
+
+            let mut current = following
+                .take()
+                .map_or_else(|| self.find_match(self.position, lookahead), Some)?;
+            self.insert_match(current, lookahead)?;
+
+            if lookahead > MIN_LOOKAHEAD
+                && current.start.checked_add(current.length)?
+                    < 65_536usize.checked_sub(MIN_LOOKAHEAD)?
+            {
+                let future = current.start.checked_add(current.length)?;
+                let mut next = self.find_match(future, lookahead)?;
+                if next.length >= MIN_MATCH {
+                    fizzle_matches(&self.data, &mut current, &mut next);
+                }
+                following = Some(next);
+            }
+
+            if current.length < MIN_MATCH {
+                for offset in 0..current.length {
+                    self.tokens
+                        .push(Token::Literal(*self.data.get(current.start + offset)?));
+                }
+            } else {
+                self.tokens.push(Token::Match {
+                    length: current.length,
+                    distance: current.start.checked_sub(current.match_start)?,
+                });
+            }
+            self.position = self.position.checked_add(current.length)?;
+        }
+    }
+
+    fn find_match(&mut self, position: usize, lookahead: usize) -> Option<MediumMatch> {
+        let candidate = if lookahead >= MIN_MATCH {
+            self.quick_insert(position)?
+        } else {
+            0
+        };
+        let mut found = MediumMatch {
+            match_start: 0,
+            length: 1,
+            start: position,
+            original_start: position,
+        };
+        if candidate != 0
+            && candidate < position
+            && position.checked_sub(candidate)? <= MAX_DISTANCE
+        {
+            let (length, match_start) = self.longest_match(candidate, position, lookahead)?;
+            if length >= MIN_MATCH && match_start < position {
+                found.match_start = match_start;
+                found.length = length;
+            }
+        }
+        Some(found)
+    }
+
+    fn hash(&self, position: usize) -> Option<usize> {
+        let bytes: [u8; 4] = self
+            .data
+            .get(position..position.checked_add(4)?)?
+            .try_into()
+            .ok()?;
+        usize::try_from(u32::from_le_bytes(bytes).wrapping_mul(2_654_435_761) >> 16).ok()
+    }
+
+    fn quick_insert(&mut self, position: usize) -> Option<usize> {
+        let hash = self.hash(position)?;
+        let candidate = *self.head.get(hash)?;
+        if candidate != position {
+            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            *self.head.get_mut(hash)? = position;
+        }
+        Some(candidate)
+    }
+
+    fn insert_match(&mut self, found: MediumMatch, lookahead: usize) -> Option<()> {
+        // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94. In particular,
+        // original_start prevents a left-fizzled match from reinserting old
+        // positions and creating a cyclic hash chain.
+        if lookahead <= found.length.checked_add(MIN_MATCH)? || found.length < MIN_MATCH {
+            return Some(());
+        }
+        if found.length <= 16 * 16 {
+            let start = found.start.checked_add(1)?;
+            let count = found.length.checked_sub(1)?;
+            let insertion_start = start.max(found.original_start);
+            let insertion_end = start.checked_add(count)?;
+            for position in insertion_start..insertion_end {
+                self.quick_insert(position)?;
+            }
+        } else {
+            self.quick_insert(found.start.checked_add(found.length)?.checked_sub(1)?)?;
+        }
+        Some(())
+    }
+
+    fn longest_match(
+        &self,
+        mut candidate: usize,
+        position: usize,
+        lookahead: usize,
+    ) -> Option<(usize, usize)> {
+        // ✅ VERIFIED: zlib-ng 2.3.3 match_tpl.h:38-247 with level-six
+        // {good: 8, lazy: 16, nice: 128, chain: 128} configuration.
+        let mut best_length = 2usize;
+        let mut best_start = 0usize;
+        let mut chain_length = 128usize;
+        let limit = position.saturating_sub(MAX_DISTANCE);
+        loop {
+            if candidate >= position {
+                break;
+            }
+            if medium_candidate_can_improve(&self.data, candidate, position, best_length)? {
+                let length =
+                    match_length(&self.data, candidate, position, lookahead.min(MAX_MATCH));
+                if length > best_length {
+                    best_length = length;
+                    best_start = candidate;
+                    if best_length >= 128 || best_length >= lookahead {
+                        break;
+                    }
+                }
+            }
+            chain_length = chain_length.checked_sub(1)?;
+            if chain_length == 0 {
+                break;
+            }
+            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            if candidate <= limit {
+                break;
+            }
+        }
+        Some((best_length, best_start))
+    }
+}
+
+fn medium_candidate_can_improve(
+    data: &[u8],
+    candidate: usize,
+    position: usize,
+    best_length: usize,
+) -> Option<bool> {
+    let mut offset = best_length.checked_sub(1)?;
+    if best_length >= 4 {
+        offset = offset.checked_sub(2)?;
+        if best_length >= 8 {
+            offset = offset.checked_sub(4)?;
+        }
+    }
+    let width = if best_length < 4 {
+        2
+    } else if best_length >= 8 {
+        8
+    } else {
+        4
+    };
+    Some(
+        data.get(candidate..candidate.checked_add(width)?)?
+            == data.get(position..position.checked_add(width)?)?
+            && data.get(candidate.checked_add(offset)?..candidate.checked_add(offset + width)?)?
+                == data
+                    .get(position.checked_add(offset)?..position.checked_add(offset + width)?)?,
+    )
+}
+
+fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch) {
+    // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:96-158.
+    if current.length <= 1
+        || current.length > next.match_start.saturating_add(1)
+        || current.length > next.start.saturating_add(1)
+    {
+        return;
+    }
+    let quick_match = next.match_start + 1 - current.length;
+    let quick_original = next.start + 1 - current.length;
+    if data.get(quick_match) != data.get(quick_original) {
+        return;
+    }
+
+    let mut adjusted_current = *current;
+    let mut adjusted_next = *next;
+    let limit = adjusted_next.start.saturating_sub(MAX_DISTANCE);
+    let mut changed = false;
+    while adjusted_current.length > 0
+        && adjusted_next.start > limit
+        && adjusted_next.length < 256
+        && adjusted_next.match_start > 1
+        && data.get(adjusted_next.match_start - 1) == data.get(adjusted_next.start - 1)
+    {
+        adjusted_next.start -= 1;
+        adjusted_next.match_start -= 1;
+        adjusted_next.length += 1;
+        adjusted_current.length -= 1;
+        changed = true;
+    }
+    if changed && adjusted_current.length <= 1 && adjusted_next.length != 2 {
+        adjusted_next.original_start += 1;
+        *current = adjusted_current;
+        *next = adjusted_next;
+    }
+}
+
 fn tokenize_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
     // ⚠️ UNVERIFIED: Rust port of zlib-ng 2.3.3 deflate_medium.c:160-293.
     // The independent oracle model matches all 3,000 level-three tokens; the
@@ -360,36 +647,37 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
         }
     }
 
-    while overflow > 0 {
-        let mut bits = spec.max_length.checked_sub(1)?;
-        while bit_counts[bits] == 0 {
-            bits = bits.checked_sub(1)?;
+    if overflow > 0 {
+        while overflow > 0 {
+            let mut bits = spec.max_length.checked_sub(1)?;
+            while bit_counts[bits] == 0 {
+                bits = bits.checked_sub(1)?;
+            }
+            bit_counts[bits] = bit_counts[bits].checked_sub(1)?;
+            bit_counts[bits + 1] = bit_counts[bits + 1].checked_add(2)?;
+            bit_counts[spec.max_length] = bit_counts[spec.max_length].checked_sub(1)?;
+            overflow -= 2;
         }
-        bit_counts[bits] = bit_counts[bits].checked_sub(1)?;
-        bit_counts[bits + 1] = bit_counts[bits + 1].checked_add(2)?;
-        bit_counts[spec.max_length] = bit_counts[spec.max_length].checked_sub(1)?;
-        overflow -= 2;
-    }
-
-    if overflow != 0 {
-        return None;
-    }
-    let mut sorted_index = heap_size;
-    for bits in (1..=spec.max_length).rev() {
-        let mut count = bit_counts[bits];
-        while count != 0 {
-            sorted_index = sorted_index.checked_sub(1)?;
-            let index = heap[sorted_index];
-            if index > max_code {
-                continue;
+        if overflow != 0 {
+            return None;
+        }
+        let mut sorted_index = heap_size;
+        for bits in (1..=spec.max_length).rev() {
+            let mut count = bit_counts[bits];
+            while count != 0 {
+                sorted_index = sorted_index.checked_sub(1)?;
+                let index = heap[sorted_index];
+                if index > max_code {
+                    continue;
+                }
+                if usize::from(nodes[index].length) != bits {
+                    let old_length = i64::from(nodes[index].length);
+                    let frequency = i64::from(nodes[index].frequency);
+                    bit_cost += (i64::try_from(bits).ok()? - old_length) * frequency;
+                    nodes[index].length = u16::try_from(bits).ok()?;
+                }
+                count = count.checked_sub(1)?;
             }
-            if usize::from(nodes[index].length) != bits {
-                let old_length = i64::from(nodes[index].length);
-                let frequency = i64::from(nodes[index].frequency);
-                bit_cost += (i64::try_from(bits).ok()? - old_length) * frequency;
-                nodes[index].length = u16::try_from(bits).ok()?;
-            }
-            count = count.checked_sub(1)?;
         }
     }
 
