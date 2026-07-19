@@ -94,7 +94,18 @@ fn coalesce_identical_frames(
             let previous = output.last_mut()?;
             previous.duration_ms = previous.duration_ms.checked_add(frame.duration_ms)?;
         } else {
-            output.push(frame.clone());
+            let mut output_frame = frame.clone();
+            if !output.is_empty() {
+                let rgb = canvas
+                    .chunks_exact(4)
+                    .flat_map(|pixel| [pixel[0], pixel[1], pixel[2]])
+                    .collect();
+                output_frame.image =
+                    DecodedImage::new(sequence.width, sequence.height, rgb, ColorType::Rgb8);
+                output_frame.left = 0;
+                output_frame.top = 0;
+            }
+            output.push(output_frame);
             previous_render = Some(canvas.clone());
         }
         restore_canvas = before_frame;
@@ -295,6 +306,7 @@ fn write_gif(
 
     let needs_89a = frames.len() > 1
         || settings.loop_count.is_some()
+        || option_bool(opts, "transparency") == Some(true)
         || frames.iter().any(|frame| {
             prepare_image(&frame.image).is_some_and(|image| image.transparent.is_some())
         });
@@ -331,8 +343,28 @@ fn write_gif(
         output.push(0);
     }
 
+    let mut previous_rgb = None::<Vec<u8>>;
     for frame in frames {
-        let prepared = prepare_image(&frame.image)?;
+        let mut prepared = prepare_image(&frame.image)?;
+        let frame_rgb = image_rgb(&frame.image)?;
+        if let Some(previous) = previous_rgb.as_deref()
+            && prepared.transparent.is_none()
+            && prepared.palette.len() / 3 < 256
+            && previous.len() == frame_rgb.len()
+        {
+            let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
+            for (index, (before, after)) in previous
+                .chunks_exact(3)
+                .zip(frame_rgb.chunks_exact(3))
+                .enumerate()
+            {
+                if before == after {
+                    prepared.indices[index] = transparent;
+                }
+            }
+            prepared.transparent = Some(transparent);
+        }
+        previous_rgb = Some(frame_rgb);
         let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette)?;
         let mut transparent = prepared.transparent;
         if let Some(requested) = option_bool(opts, "transparency") {
@@ -366,7 +398,11 @@ fn write_gif(
         let default_interlace =
             frames.len() == 1 && frame.image.width >= 16 && frame.image.height >= 16;
         let interlaced = settings.interlaced.unwrap_or(default_interlace);
-        output.push(u8::from(local_table) << 7 | u8::from(interlaced) << 6 | size_field);
+        // Pillow 12.2.0 GifImagePlugin.py:826-873 writes local-table size
+        // bits only when include_color_table also sets the presence flag.
+        // With the global palette, the descriptor contains only interlace.
+        let local_table_fields = if local_table { 0x80 | size_field } else { 0 };
+        output.push(u8::from(interlaced) << 6 | local_table_fields);
         if local_table {
             write_color_table(&mut output, &prepared.palette, color_count)?;
         }
@@ -396,6 +432,29 @@ fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) -
         0,
     );
     Some(())
+}
+
+fn image_rgb(image: &DecodedImage) -> Option<Vec<u8>> {
+    match image.mode {
+        ImageMode::Rgb8 if image.color == ColorType::Rgb8 => Some(image.pixels.clone()),
+        ImageMode::P8 if image.color == ColorType::L8 => {
+            let palette = image.palette.as_ref()?;
+            let mut rgb = Vec::with_capacity(image.pixels.len().checked_mul(3)?);
+            for &index in &image.pixels {
+                let offset = usize::from(index).checked_mul(3)?;
+                rgb.extend_from_slice(palette.rgb.get(offset..offset + 3)?);
+            }
+            Some(rgb)
+        }
+        ImageMode::L8 if image.color == ColorType::L8 => {
+            let mut rgb = Vec::with_capacity(image.pixels.len().checked_mul(3)?);
+            for &value in &image.pixels {
+                rgb.extend_from_slice(&[value, value, value]);
+            }
+            Some(rgb)
+        }
+        _ => None,
+    }
 }
 
 fn interlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
@@ -512,32 +571,279 @@ fn quantize_rgb(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
         return None;
     }
     let mut palette: Vec<[u8; 3]> = Vec::new();
-    let mut indices = Vec::with_capacity(pixels.len() / 3);
+    let mut counts = Vec::<u32>::new();
     for chunk in pixels.chunks_exact(3) {
         let color = [chunk[0], chunk[1], chunk[2]];
         match find_color(&palette, &color) {
-            Some(idx) => indices.push(idx as u8),
+            Some(idx) => counts[idx] = counts[idx].checked_add(1)?,
             None => {
                 if palette.len() < 256 {
-                    let idx = palette.len() as u8;
                     palette.push(color);
-                    indices.push(idx);
+                    counts.push(1);
                 } else {
-                    // Palette full: find nearest neighbor
-                    let nearest = find_nearest(&palette, &color);
-                    indices.push(nearest as u8);
+                    return quantize_rgb_nearest(pixels);
                 }
             }
         }
     }
-    // Flatten palette to RGB triplets
+
+    // Pillow 12.2.0 Quant.c uses its median-cut tree even when the requested
+    // 256 colors exceed the number of distinct input colors. Every leaf then
+    // contains one color, but the tree traversal still determines palette and
+    // index order. Animated GIF frames after the first pass through this RGB
+    // adaptive-palette path in GifImagePlugin._normalize_mode.
+    let order = pillow_median_cut_order(&palette, &counts)?;
+    let mut remap = vec![0u8; palette.len()];
     let mut flat = Vec::with_capacity(palette.len() * 3);
-    for c in &palette {
-        flat.push(c[0]);
-        flat.push(c[1]);
-        flat.push(c[2]);
+    for (new_index, &old_index) in order.iter().enumerate() {
+        remap[old_index] = u8::try_from(new_index).ok()?;
+        flat.extend_from_slice(&palette[old_index]);
     }
+    let indices = pixels
+        .chunks_exact(3)
+        .map(|chunk| {
+            let color = [chunk[0], chunk[1], chunk[2]];
+            find_color(&palette, &color).map(|index| remap[index])
+        })
+        .collect::<Option<Vec<_>>>()?;
     Some((flat, indices))
+}
+
+fn quantize_rgb_nearest(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    let mut palette: Vec<[u8; 3]> = Vec::new();
+    let mut indices = Vec::with_capacity(pixels.len() / 3);
+    for chunk in pixels.chunks_exact(3) {
+        let color = [chunk[0], chunk[1], chunk[2]];
+        let index = match find_color(&palette, &color) {
+            Some(index) => index,
+            None if palette.len() < 256 => {
+                palette.push(color);
+                palette.len() - 1
+            }
+            None => find_nearest(&palette, &color),
+        };
+        indices.push(u8::try_from(index).ok()?);
+    }
+    Some((palette.into_iter().flatten().collect(), indices))
+}
+
+#[derive(Clone)]
+struct MedianBox {
+    axes: [Vec<usize>; 3],
+    pixel_count: u32,
+    children: Option<(usize, usize)>,
+}
+
+fn pillow_median_cut_order(colors: &[[u8; 3]], counts: &[u32]) -> Option<Vec<usize>> {
+    if colors.is_empty() || colors.len() != counts.len() || colors.len() > 256 {
+        return None;
+    }
+
+    let hash_order = pillow_hash_iteration_order(colors);
+    let axes = std::array::from_fn(|axis| {
+        let mut entries = (0..colors.len()).collect::<Vec<_>>();
+        entries.sort_by_key(|&index| (std::cmp::Reverse(colors[index][axis]), hash_order[index]));
+        entries
+    });
+    let pixel_count = counts
+        .iter()
+        .try_fold(0u32, |sum, &count| sum.checked_add(count))?;
+    let mut boxes = vec![MedianBox {
+        axes,
+        pixel_count,
+        children: None,
+    }];
+    let mut heap = PillowBoxHeap::default();
+    heap.add(0, &boxes);
+
+    for _ in 1..colors.len() {
+        let node = loop {
+            let candidate = heap.remove(&boxes)?;
+            if box_volume(&boxes[candidate], colors) > 1 {
+                break candidate;
+            }
+        };
+        let (left, right) = split_median_box(&boxes[node], colors, counts)?;
+        let left_index = boxes.len();
+        boxes.push(left);
+        let right_index = boxes.len();
+        boxes.push(right);
+        boxes[node].children = Some((left_index, right_index));
+        heap.add(left_index, &boxes);
+        heap.add(right_index, &boxes);
+    }
+
+    fn visit(index: usize, boxes: &[MedianBox], output: &mut Vec<usize>) {
+        if let Some((left, right)) = boxes[index].children {
+            visit(left, boxes, output);
+            visit(right, boxes, output);
+        } else if let Some(&color) = boxes[index].axes[0].first() {
+            output.push(color);
+        }
+    }
+    let mut order = Vec::with_capacity(colors.len());
+    visit(0, &boxes, &mut order);
+    (order.len() == colors.len()).then_some(order)
+}
+
+fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
+    fn hash(color: [u8; 3]) -> u32 {
+        u32::from(color[0]).wrapping_mul(463)
+            ^ u32::from(color[1]).wrapping_shl(8).wrapping_mul(10_069)
+            ^ u32::from(color[2]).wrapping_shl(16).wrapping_mul(64_997)
+    }
+
+    // QuantHash.c grows 11 -> 23 -> 47 -> 97 for this range. Its historical
+    // prime finder accepts the first candidate in this residue table.
+    const ACCEPTED_RESIDUES: [bool; 16] = [
+        false, true, false, true, false, false, false, true, false, true, false, true, false, true,
+        false, false,
+    ];
+    let mut length = 11u32;
+    for count in 1..=colors.len() as u32 {
+        if length.saturating_mul(3) < count {
+            let mut candidate = length.saturating_mul(2).saturating_add(1);
+            while !ACCEPTED_RESIDUES[(candidate & 15) as usize] {
+                candidate += 1;
+            }
+            length = candidate;
+        }
+    }
+    let mut iteration = (0..colors.len()).collect::<Vec<_>>();
+    iteration.sort_by_key(|&index| (hash(colors[index]) % length, hash(colors[index])));
+    let mut rank = vec![0usize; colors.len()];
+    for (position, index) in iteration.into_iter().enumerate() {
+        rank[index] = position;
+    }
+    rank
+}
+
+fn box_volume(node: &MedianBox, colors: &[[u8; 3]]) -> u32 {
+    (0..3)
+        .map(|axis| {
+            let entries = &node.axes[axis];
+            u32::from(colors[entries[0]][axis] - colors[*entries.last().unwrap()][axis]) + 1
+        })
+        .product()
+}
+
+fn split_median_box(
+    node: &MedianBox,
+    colors: &[[u8; 3]],
+    counts: &[u32],
+) -> Option<(MedianBox, MedianBox)> {
+    let ranges: [u32; 3] = std::array::from_fn(|axis| {
+        let entries = &node.axes[axis];
+        u32::from(colors[entries[0]][axis] - colors[*entries.last().unwrap()][axis])
+            * [77, 150, 29][axis]
+    });
+    let axis = (1..3).fold(0, |best, candidate| {
+        if ranges[candidate] > ranges[best] {
+            candidate
+        } else {
+            best
+        }
+    });
+    let sorted = &node.axes[axis];
+    let mut left_count = 0u32;
+    let mut split = 0usize;
+    while split < sorted.len() {
+        left_count = left_count.checked_add(counts[sorted[split]])?;
+        split += 1;
+        if left_count.saturating_mul(2) > node.pixel_count {
+            break;
+        }
+    }
+    if split < sorted.len() {
+        let value = colors[sorted[split - 1]][axis];
+        while split < sorted.len() && colors[sorted[split]][axis] == value {
+            left_count = left_count.checked_add(counts[sorted[split]])?;
+            split += 1;
+        }
+    }
+    if split == sorted.len() {
+        let value = colors[*sorted.last()?][axis];
+        while split > 0 && colors[sorted[split - 1]][axis] == value {
+            split -= 1;
+            left_count = left_count.checked_sub(counts[sorted[split]])?;
+        }
+    }
+    if split == 0 || split == sorted.len() {
+        return None;
+    }
+    let is_left = sorted[..split]
+        .iter()
+        .copied()
+        .collect::<std::collections::HashSet<_>>();
+    let left_axes = std::array::from_fn(|other_axis| {
+        node.axes[other_axis]
+            .iter()
+            .copied()
+            .filter(|index| is_left.contains(index))
+            .collect()
+    });
+    let right_axes = std::array::from_fn(|other_axis| {
+        node.axes[other_axis]
+            .iter()
+            .copied()
+            .filter(|index| !is_left.contains(index))
+            .collect()
+    });
+    Some((
+        MedianBox {
+            axes: left_axes,
+            pixel_count: left_count,
+            children: None,
+        },
+        MedianBox {
+            axes: right_axes,
+            pixel_count: node.pixel_count.checked_sub(left_count)?,
+            children: None,
+        },
+    ))
+}
+
+#[derive(Default)]
+struct PillowBoxHeap(Vec<usize>);
+
+impl PillowBoxHeap {
+    fn add(&mut self, value: usize, boxes: &[MedianBox]) {
+        self.0.push(value);
+        let mut child = self.0.len() - 1;
+        while child > 0 {
+            let parent = (child - 1) / 2;
+            if boxes[value].pixel_count <= boxes[self.0[parent]].pixel_count {
+                break;
+            }
+            self.0[child] = self.0[parent];
+            child = parent;
+        }
+        self.0[child] = value;
+    }
+
+    fn remove(&mut self, boxes: &[MedianBox]) -> Option<usize> {
+        let result = *self.0.first()?;
+        let value = self.0.pop()?;
+        if self.0.is_empty() {
+            return Some(result);
+        }
+        let mut parent = 0usize;
+        while parent * 2 + 1 < self.0.len() {
+            let mut child = parent * 2 + 1;
+            if child + 1 < self.0.len()
+                && boxes[self.0[child]].pixel_count < boxes[self.0[child + 1]].pixel_count
+            {
+                child += 1;
+            }
+            if boxes[value].pixel_count > boxes[self.0[child]].pixel_count {
+                break;
+            }
+            self.0[parent] = self.0[child];
+            parent = child;
+        }
+        self.0[parent] = value;
+        Some(result)
+    }
 }
 /// Quantize RGBA8 pixels to a palette with optional transparency.
 ///
