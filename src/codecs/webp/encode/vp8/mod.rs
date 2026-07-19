@@ -23,6 +23,7 @@ mod intra16;
 mod intra4;
 pub mod loopfilter;
 pub mod predict;
+mod probability;
 pub mod quant;
 pub mod segmentation;
 pub mod tokenize;

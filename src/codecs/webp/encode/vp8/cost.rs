@@ -151,7 +151,7 @@ const LEVEL_FIXED_COSTS: [u16; 2048] = [
     7631, 7656, 7662, 7671, 7677, 7688, 7694, 7703, 7709, 7729, 7735, 7744, 7750, 7761,
 ];
 
-fn bit_cost(bit: bool, probability: u8) -> u32 {
+pub(super) fn bit_cost(bit: bool, probability: u8) -> u32 {
     let index = if bit { 255 - probability } else { probability };
     u32::from(ENTROPY_COST[usize::from(index)])
 }
