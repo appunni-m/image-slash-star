@@ -47,7 +47,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     };
 
     let mut raw = img.pixels.clone();
-    if predictor == 2 {
+    if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
         apply_horizontal_predictor(
             &mut raw,
             usize::try_from(img.width).ok()?,
@@ -62,7 +62,8 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         _ => return None,
     };
 
-    let entry_count = 10u16
+    let entry_count = 9u16
+        .checked_add(u16::from(channels > 1))?
         .checked_add(u16::from(extra_sample))?
         .checked_add(u16::from(predictor == 2))?;
     let ifd_size = 2usize
@@ -109,7 +110,9 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         1,
         u32::try_from(pixel_offset).ok()?,
     );
-    write_short_entry(&mut output, endian, 277, channels);
+    if channels > 1 {
+        write_short_entry(&mut output, endian, 277, channels);
+    }
     write_entry(&mut output, endian, 278, 4, 1, img.height);
     write_entry(
         &mut output,

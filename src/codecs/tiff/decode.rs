@@ -78,7 +78,12 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         if decoded.len() != expected {
             return None;
         }
-        if predictor == 2 {
+        if predictor == 2
+            && matches!(
+                compression,
+                COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
+            )
+        {
             reverse_horizontal_predictor(
                 &mut decoded,
                 row_bytes,
