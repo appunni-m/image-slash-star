@@ -5168,12 +5168,20 @@
           "params": {
             "color": "1bit"
           },
-          "source_asset": "rgb.tiff",
+          "source_asset": "1bit.tiff",
           "source_format": "tiff",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "bilevel",
-          "gap": "Rust TIFF encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_bilevel.bin",
+          "encoded_ref_bytes": 2158,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_bilevel.bin",
+          "ref_bytes": 2048,
+          "ref_mode": "1",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -5248,12 +5256,20 @@
           "params": {
             "color": "cmyk"
           },
-          "source_asset": "rgb.tiff",
+          "source_asset": "cmyk.tiff",
           "source_format": "tiff",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "cmyk",
-          "gap": "Rust TIFF encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_cmyk.bin",
+          "encoded_ref_bytes": 65678,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_cmyk.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -5284,12 +5300,20 @@
           "params": {
             "bit_depth": 16
           },
-          "source_asset": "rgb.tiff",
+          "source_asset": "16bit.tiff",
           "source_format": "tiff",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "16bit",
-          "gap": "Rust TIFF encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_16bit.bin",
+          "encoded_ref_bytes": 32890,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_16bit.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "I;16",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -5339,7 +5363,7 @@
           "status": "planned",
           "type": "encode",
           "category": "tiled",
-          "gap": "Rust TIFF encoding does not yet match Pillow for this declared save operation."
+          "gap": "Pillow 12.2.0 Image.save cannot select tiled TIFF output."
         },
         {
           "description": "",
@@ -5375,7 +5399,7 @@
           "status": "planned",
           "type": "encode",
           "category": "multi",
-          "gap": "Rust TIFF encoding does not yet match Pillow for this declared save operation."
+          "gap": "pages=2 does not identify the second image Pillow must append."
         },
         {
           "description": "",
@@ -6220,6 +6244,6 @@
     "assets_available": 161,
     "decode_active": 160,
     "decode_planned": 8,
-    "encode_not_wired": 48
+    "encode_not_wired": 45
   }
 }

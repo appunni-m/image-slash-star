@@ -1220,7 +1220,7 @@ formats:
       params: {'byte_order': 'be'}
     - id: enc_bilevel
       description: 
-      status: planned
+      source_asset: 1bit.tiff
       params: {'color': '1bit'}
     - id: enc_grayscale
       description: 
@@ -1236,7 +1236,7 @@ formats:
       source_asset: rgba.tiff
     - id: enc_cmyk
       description: 
-      status: planned
+      source_asset: cmyk.tiff
       params: {'color': 'cmyk'}
     - id: enc_8bit
       description: 
@@ -1244,7 +1244,7 @@ formats:
       source_asset: 8bit.tiff
     - id: enc_16bit
       description: 
-      status: planned
+      source_asset: 16bit.tiff
       params: {'bit_depth': 16}
     - id: enc_32bit
       description: 
@@ -1257,6 +1257,7 @@ formats:
     - id: enc_tiled
       description: 
       status: planned
+      oracle_gap: Pillow 12.2.0 Image.save cannot select tiled TIFF output.
       params: {'organization': 'tiled'}
     - id: enc_single_page
       description: 
@@ -1264,6 +1265,7 @@ formats:
     - id: enc_multi_page
       description: 
       status: planned
+      oracle_gap: pages=2 does not identify the second image Pillow must append.
       params: {'pages': 2}
     - id: enc_predictor_none
       description: 

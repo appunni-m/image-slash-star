@@ -73,6 +73,18 @@
       "encoded_ref_bytes": 49292
     },
     {
+      "id": "enc_bilevel",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_bilevel.bin",
+      "ref_bytes": 2048,
+      "ref_mode": "1",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_bilevel.bin",
+      "encoded_ref_bytes": 2158
+    },
+    {
       "id": "enc_grayscale",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_grayscale.bin",
       "ref_bytes": 16384,
@@ -109,6 +121,18 @@
       "encoded_ref_bytes": 65690
     },
     {
+      "id": "enc_cmyk",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_cmyk.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "CMYK",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_cmyk.bin",
+      "encoded_ref_bytes": 65678
+    },
+    {
       "id": "enc_8bit",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_8bit.bin",
       "ref_bytes": 16384,
@@ -119,6 +143,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_8bit.bin",
       "encoded_ref_bytes": 16506
+    },
+    {
+      "id": "enc_16bit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_16bit.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "I;16",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_16bit.bin",
+      "encoded_ref_bytes": 32890
     },
     {
       "id": "enc_stripped",

@@ -2,7 +2,7 @@
 
 use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedImage, ImageMode};
 use std::collections::HashMap;
 
 const COMPRESSION_NONE: u16 = 1;
@@ -15,16 +15,20 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     if img.width == 0 || img.height == 0 {
         return None;
     }
-    let (photometric, channels, extra_sample) = match img.color {
-        ColorType::L8 => (1u16, 1u16, false),
-        ColorType::Rgb8 => (2, 3, false),
-        ColorType::Rgba8 => (2, 4, true),
-        _ => return None,
+    let width = usize::try_from(img.width).ok()?;
+    let height = usize::try_from(img.height).ok()?;
+    let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
+        ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
+        ImageMode::L16 => (1, 1, 16, false, width.checked_mul(2)?),
+        _ => match img.color {
+            ColorType::L8 => (1, 1, 8, false, width),
+            ColorType::Rgb8 => (2, 3, 8, false, width.checked_mul(3)?),
+            ColorType::Rgba8 => (2, 4, 8, true, width.checked_mul(4)?),
+            ColorType::Cmyk8 => (5, 4, 8, false, width.checked_mul(4)?),
+            _ => return None,
+        },
     };
-    let expected = usize::try_from(img.width)
-        .ok()?
-        .checked_mul(usize::try_from(img.height).ok()?)?
-        .checked_mul(usize::from(channels))?;
+    let expected = row_len.checked_mul(height)?;
     if img.pixels.len() != expected {
         return None;
     }
@@ -49,32 +53,20 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     let mut raw = img.pixels.clone();
     if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
-        apply_horizontal_predictor(
-            &mut raw,
-            usize::try_from(img.width).ok()?,
-            usize::from(channels),
-        )?;
+        apply_horizontal_predictor(&mut raw, width, usize::from(channels))?;
     }
     let encoded = match compression {
         COMPRESSION_NONE => raw,
         COMPRESSION_LZW => encode_lzw(&raw),
         COMPRESSION_DEFLATE => {
-            let row_len = usize::try_from(img.width)
-                .ok()?
-                .checked_mul(usize::from(channels))?;
-            let input_chunks = vec![row_len; usize::try_from(img.height).ok()?];
+            let input_chunks = vec![row_len; height];
             compress_zlib_tiff(&raw, &input_chunks)?
         }
-        COMPRESSION_PACKBITS => encode_packbits(
-            &raw,
-            usize::try_from(img.width)
-                .ok()?
-                .checked_mul(usize::from(channels))?,
-        )?,
+        COMPRESSION_PACKBITS => encode_packbits(&raw, row_len)?,
         _ => return None,
     };
 
-    let entry_count = 9u16
+    let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
         .checked_add(u16::from(channels > 1))?
         .checked_add(u16::from(extra_sample))?
         .checked_add(u16::from(predictor == 2))?;
@@ -124,8 +116,10 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         write_entry(&mut output, endian, 256, 4, 1, img.width);
         write_entry(&mut output, endian, 257, 4, 1, img.height);
     }
-    if channels == 1 {
-        write_short_entry(&mut output, endian, 258, 8);
+    if bits_per_sample == 1 {
+        // Pillow leaves the default BitsPerSample=1 implicit for bilevel TIFF.
+    } else if channels == 1 {
+        write_short_entry(&mut output, endian, 258, bits_per_sample);
     } else {
         write_entry(
             &mut output,
@@ -173,7 +167,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     if channels != 1 {
         for _ in 0..channels {
-            endian.push_u16(&mut output, 8);
+            endian.push_u16(&mut output, bits_per_sample);
         }
     }
     if !compressed_layout {

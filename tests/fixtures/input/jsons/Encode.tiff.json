@@ -116,6 +116,25 @@
       }
     },
     {
+      "id": "enc_bilevel",
+      "source_asset": "1bit.tiff",
+      "source_format": "tiff",
+      "params": {
+        "color": "1bit"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/1bit.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_grayscale",
       "source_asset": "gray.tiff",
       "source_format": "tiff",
@@ -173,6 +192,25 @@
       }
     },
     {
+      "id": "enc_cmyk",
+      "source_asset": "cmyk.tiff",
+      "source_format": "tiff",
+      "params": {
+        "color": "cmyk"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_8bit",
       "source_asset": "8bit.tiff",
       "source_format": "tiff",
@@ -181,6 +219,25 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/8bit.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_16bit",
+      "source_asset": "16bit.tiff",
+      "source_format": "tiff",
+      "params": {
+        "bit_depth": 16
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/16bit.tiff",
         "method": "PIL.Image.Image.save",
         "format": "TIFF",
         "kwargs": {},
