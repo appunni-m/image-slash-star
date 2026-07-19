@@ -322,19 +322,12 @@ fn assert_gif_contract(
         }
     }
 
-    let animated = params.get("animated").and_then(serde_json::Value::as_bool);
-    let expected_frames = params
-        .get("frames")
-        .and_then(serde_json::Value::as_u64)
-        .map(|value| usize::try_from(value).map_err(|_| "GIF frame count is too large"))
-        .transpose()?;
-    if let Some(expected) =
-        expected_frames.or_else(|| animated.map(|value| if value { 2 } else { 1 }))
-        && frames != expected
-    {
-        return Err(format!(
-            "GIF frame mismatch: encoded {frames}, requested {expected}"
-        ));
+    // `frames` selects source frames passed to Pillow. Pillow may coalesce
+    // visually identical consecutive frames, so the emitted descriptor count
+    // is an output property covered by the exact byte reference, not a direct
+    // restatement of the input selection count.
+    if frames == 0 {
+        return Err("encoded GIF has no image descriptor".to_owned());
     }
     if params.get("loop").and_then(serde_json::Value::as_bool) == Some(true) && !has_loop {
         return Err("GIF loop option did not emit NETSCAPE2.0".to_owned());

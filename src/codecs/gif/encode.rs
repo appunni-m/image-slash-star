@@ -59,7 +59,107 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Opti
         disposal_override,
         loop_count,
     };
-    write_gif(sequence, requested_frames, opts, settings)
+    let frames = coalesce_identical_frames(sequence, requested_frames)?;
+    write_gif(sequence, &frames, opts, settings)
+}
+
+fn coalesce_identical_frames(
+    sequence: &DecodedSequence,
+    requested_frames: usize,
+) -> Option<Vec<crate::types::DecodedFrame>> {
+    let width = usize::try_from(sequence.width).ok()?;
+    let height = usize::try_from(sequence.height).ok()?;
+    let mut canvas = vec![0u8; width.checked_mul(height)?.checked_mul(4)?];
+    let mut restore_canvas = canvas.clone();
+    let mut previous_frame = None::<&crate::types::DecodedFrame>;
+    let mut previous_render = None::<Vec<u8>>;
+    let mut output = Vec::<crate::types::DecodedFrame>::new();
+
+    for frame in sequence.frames.iter().take(requested_frames) {
+        if let Some(previous) = previous_frame {
+            match previous.disposal {
+                FrameDisposal::Unspecified | FrameDisposal::Keep => {}
+                FrameDisposal::Background => clear_frame_rect(&mut canvas, width, previous)?,
+                FrameDisposal::Previous => canvas.copy_from_slice(&restore_canvas),
+            }
+        }
+
+        let before_frame = canvas.clone();
+        composite_indexed_frame(&mut canvas, width, frame)?;
+        let identical = previous_render.as_deref() == Some(canvas.as_slice())
+            && output
+                .last()
+                .is_some_and(|previous| previous.disposal == frame.disposal);
+        if identical {
+            let previous = output.last_mut()?;
+            previous.duration_ms = previous.duration_ms.checked_add(frame.duration_ms)?;
+        } else {
+            output.push(frame.clone());
+            previous_render = Some(canvas.clone());
+        }
+        restore_canvas = before_frame;
+        previous_frame = Some(frame);
+    }
+    Some(output)
+}
+
+fn clear_frame_rect(
+    canvas: &mut [u8],
+    canvas_width: usize,
+    frame: &crate::types::DecodedFrame,
+) -> Option<()> {
+    let left = usize::try_from(frame.left).ok()?;
+    let top = usize::try_from(frame.top).ok()?;
+    let width = usize::try_from(frame.image.width).ok()?;
+    let height = usize::try_from(frame.image.height).ok()?;
+    for y in 0..height {
+        let start = (top
+            .checked_add(y)?
+            .checked_mul(canvas_width)?
+            .checked_add(left)?)
+        .checked_mul(4)?;
+        let end = start.checked_add(width.checked_mul(4)?)?;
+        canvas.get_mut(start..end)?.fill(0);
+    }
+    Some(())
+}
+
+fn composite_indexed_frame(
+    canvas: &mut [u8],
+    canvas_width: usize,
+    frame: &crate::types::DecodedFrame,
+) -> Option<()> {
+    let image = &frame.image;
+    if image.mode != ImageMode::P8 {
+        return None;
+    }
+    let palette = image.palette.as_ref()?;
+    let left = usize::try_from(frame.left).ok()?;
+    let top = usize::try_from(frame.top).ok()?;
+    let width = usize::try_from(image.width).ok()?;
+    let height = usize::try_from(image.height).ok()?;
+    for y in 0..height {
+        for x in 0..width {
+            let source = y.checked_mul(width)?.checked_add(x)?;
+            let index = usize::from(*image.pixels.get(source)?);
+            let alpha = palette.alpha.get(index).copied().unwrap_or(255);
+            if alpha == 0 {
+                continue;
+            }
+            let palette_offset = index.checked_mul(3)?;
+            let rgb = palette.rgb.get(palette_offset..palette_offset + 3)?;
+            let destination = (top
+                .checked_add(y)?
+                .checked_mul(canvas_width)?
+                .checked_add(left)?
+                .checked_add(x)?)
+            .checked_mul(4)?;
+            canvas
+                .get_mut(destination..destination + 4)?
+                .copy_from_slice(&[rgb[0], rgb[1], rgb[2], alpha]);
+        }
+    }
+    Some(())
 }
 
 fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
@@ -170,28 +270,32 @@ fn table_parameters(palette: &[u8]) -> Option<(usize, u8, u8)> {
     if palette.is_empty() || !palette.len().is_multiple_of(3) || palette.len() > 256 * 3 {
         return None;
     }
-    let color_count = (palette.len() / 3).max(2).next_power_of_two();
+    // Pillow's GIF writer normalizes even a one-color image to a four-entry
+    // table while retaining the GIF-mandated minimum LZW code width of two.
+    let color_count = (palette.len() / 3).max(4).next_power_of_two();
     let table_bits = usize::BITS - color_count.leading_zeros() - 1;
     let size_field = u8::try_from(table_bits.checked_sub(1)?).ok()?;
-    let minimum_code_size = u8::try_from(table_bits.max(2)).ok()?;
+    // Pillow's P-mode GIF encoder uses an eight-bit LZW root alphabet even
+    // when the emitted color table contains fewer entries.
+    let minimum_code_size = 8;
     Some((color_count, size_field, minimum_code_size))
 }
 
 fn write_gif(
     sequence: &DecodedSequence,
-    frame_count: usize,
+    frames: &[crate::types::DecodedFrame],
     opts: &EncodeOptions,
     settings: GifSettings,
 ) -> Option<Vec<u8>> {
     let width = u16::try_from(sequence.width).ok()?;
     let height = u16::try_from(sequence.height).ok()?;
-    let first = prepare_image(&sequence.frames.first()?.image)?;
+    let first = prepare_image(&frames.first()?.image)?;
     let (global_count, global_size, _) = table_parameters(&first.palette)?;
     let global_table = !settings.local_color_table;
 
-    let needs_89a = frame_count > 1
+    let needs_89a = frames.len() > 1
         || settings.loop_count.is_some()
-        || sequence.frames.iter().take(frame_count).any(|frame| {
+        || frames.iter().any(|frame| {
             prepare_image(&frame.image).is_some_and(|image| image.transparent.is_some())
         });
     let mut output = Vec::new();
@@ -204,9 +308,7 @@ fn write_gif(
         write_color_table(&mut output, &first.palette, global_count)?;
     }
 
-    if frame_count > 1
-        && let Some(loop_count) = settings.loop_count
-    {
+    if let Some(loop_count) = settings.loop_count {
         output.extend_from_slice(&[
             EXTENSION_INTRODUCER,
             0xff,
@@ -229,7 +331,7 @@ fn write_gif(
         output.push(0);
     }
 
-    for frame in sequence.frames.iter().take(frame_count) {
+    for frame in frames {
         let prepared = prepare_image(&frame.image)?;
         let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette)?;
         let mut transparent = prepared.transparent;
@@ -259,7 +361,11 @@ fn write_gif(
         output.extend_from_slice(&frame_width.to_le_bytes());
         output.extend_from_slice(&frame_height.to_le_bytes());
         let local_table = !global_table || prepared.palette != first.palette;
-        let interlaced = settings.interlaced.unwrap_or(frame.interlaced);
+        // Pillow defaults to interlacing a sufficiently large single-frame
+        // GIF, but its multi-frame writer emits non-interlaced descriptors.
+        let default_interlace =
+            frames.len() == 1 && frame.image.width >= 16 && frame.image.height >= 16;
+        let interlaced = settings.interlaced.unwrap_or(default_interlace);
         output.push(u8::from(local_table) << 7 | u8::from(interlaced) << 6 | size_field);
         if local_table {
             write_color_table(&mut output, &prepared.palette, color_count)?;

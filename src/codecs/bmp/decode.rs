@@ -42,14 +42,15 @@ fn row_size(bits_per_pixel: u16, width: u32) -> usize {
 // Palette reading
 // ---------------------------------------------------------------------------
 
-/// Read the color palette. Each entry is 4 bytes (B, G, R, reserved).
-/// Returns a flat `[B, G, R, B, G, R, …]` slice (4 bytes per palette entry,
-/// but we keep the full quad for stride simplicity).
-fn read_palette(r: &mut Cursor<&[u8]>, count: u32) -> Option<Vec<[u8; 4]>> {
+/// Read a Windows RGBQUAD or OS/2 RGBTRIPLE palette.
+fn read_palette(r: &mut Cursor<&[u8]>, count: u32, entry_bytes: usize) -> Option<Vec<[u8; 4]>> {
+    if !matches!(entry_bytes, 3 | 4) {
+        return None;
+    }
     let mut pal = Vec::with_capacity(count as usize);
     for _ in 0..count {
         let mut entry = [0u8; 4];
-        r.read_exact(&mut entry).ok()?; // B, G, R, reserved
+        r.read_exact(&mut entry[..entry_bytes]).ok()?; // B, G, R, [reserved]
         pal.push(entry);
     }
     Some(pal)
@@ -248,16 +249,36 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     // --- DIB header ---
     let header_size = read_u32_le(&mut r)?;
-    let width = read_i32_le(&mut r)?;
-    let height = read_i32_le(&mut r)?;
-    let _planes = read_u16_le(&mut r)?;
-    let bit_depth = read_u16_le(&mut r)?;
-    let compression = read_u32_le(&mut r)?;
-    let _image_size = read_u32_le(&mut r)?;
-    let _x_pels = read_i32_le(&mut r)?;
-    let _y_pels = read_i32_le(&mut r)?;
-    let colors_used = read_u32_le(&mut r)?;
-    let _colors_important = read_u32_le(&mut r)?;
+    let (width, height, bit_depth, compression, colors_used, palette_entry_bytes) =
+        if header_size == 12 {
+            // OS/2 1.x BITMAPCOREHEADER uses unsigned 16-bit dimensions and
+            // RGBTRIPLE palette entries.
+            let width = i32::from(read_u16_le(&mut r)?);
+            let height = i32::from(read_u16_le(&mut r)?);
+            let planes = read_u16_le(&mut r)?;
+            let bit_depth = read_u16_le(&mut r)?;
+            if planes != 1 {
+                return None;
+            }
+            (width, height, bit_depth, 0, 0, 3usize)
+        } else if header_size >= 40 {
+            let width = read_i32_le(&mut r)?;
+            let height = read_i32_le(&mut r)?;
+            let planes = read_u16_le(&mut r)?;
+            let bit_depth = read_u16_le(&mut r)?;
+            let compression = read_u32_le(&mut r)?;
+            let _image_size = read_u32_le(&mut r)?;
+            let _x_pels = read_i32_le(&mut r)?;
+            let _y_pels = read_i32_le(&mut r)?;
+            let colors_used = read_u32_le(&mut r)?;
+            let _colors_important = read_u32_le(&mut r)?;
+            if planes != 1 {
+                return None;
+            }
+            (width, height, bit_depth, compression, colors_used, 4usize)
+        } else {
+            return None;
+        };
 
     // After the standard 40-byte fields, the cursor is at position 14 + 40 = 54.
     let pos_after_standard = r.position();
@@ -265,8 +286,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     // Top-down if height is negative.
     let top_down = height < 0;
     let h = height.unsigned_abs();
-    let w = width as u32;
-    if w == 0 || h == 0 {
+    if width <= 0 {
+        return None;
+    }
+    let w = u32::try_from(width).ok()?;
+    if w == 0 || h == 0 || w > 16_384 || h > 16_384 {
         return None;
     }
 
@@ -274,17 +298,15 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let (rm, gm, bm, am): (u32, u32, u32, u32) = if compression == 3 {
         match header_size {
             40 => {
-                // Masks follow immediately after the 40-byte header.
+                // BITMAPINFOHEADER BI_BITFIELDS defines three color masks.
+                // Pillow does not promote an optional fourth DWORD in this
+                // legacy layout to an alpha channel; alpha is authoritative
+                // only in V4/V5 headers.
                 r.seek(SeekFrom::Start(pos_after_standard)).ok()?;
                 let r0 = read_u32_le(&mut r)?;
                 let g0 = read_u32_le(&mut r)?;
                 let b0 = read_u32_le(&mut r)?;
-                let a0 = if bit_depth == 32 {
-                    read_u32_le(&mut r).unwrap_or(0)
-                } else {
-                    0
-                };
-                (r0, g0, b0, a0)
+                (r0, g0, b0, 0)
             }
             _ => {
                 // For V4/V5 headers the masks are embedded at known offsets.
@@ -326,7 +348,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     };
 
     let palette = if pal_count > 0 {
-        read_palette(&mut r, pal_count)?
+        read_palette(&mut r, pal_count, palette_entry_bytes)?
     } else {
         Vec::new()
     };
@@ -420,7 +442,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             }
             16 => {
                 // 16 bpp — RGB555 or BI_BITFIELDS
-                let mut out = Vec::with_capacity(width_usize * height_usize * 3);
+                let channels = if am == 0 { 3 } else { 4 };
+                let mut out = Vec::with_capacity(width_usize * height_usize * channels);
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
@@ -436,6 +459,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                         let gv = extract_channel(pixel, gm);
                         let bv = extract_channel(pixel, bm);
                         out.extend_from_slice(&[rv, gv, bv]);
+                        if am != 0 {
+                            out.push(extract_channel(pixel, am));
+                        }
                     }
                 }
                 out
@@ -460,8 +486,10 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 out
             }
             32 => {
-                // 32 bpp — BGRA → RGB (strip alpha, PIL parity)
-                let mut out = Vec::with_capacity(width_usize * height_usize * 3);
+                // BI_RGB treats byte four as padding. V4/V5 BI_BITFIELDS files
+                // with an alpha mask expose that channel as Pillow RGBA.
+                let channels = if compression == 3 && am != 0 { 4 } else { 3 };
+                let mut out = Vec::with_capacity(width_usize * height_usize * channels);
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
@@ -470,11 +498,21 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     };
                     let offset = src_row * stride;
                     for col in 0..width_usize {
-                        let b = raw[offset + col * 4];
-                        let g = raw[offset + col * 4 + 1];
-                        let r = raw[offset + col * 4 + 2];
-                        // Skip alpha byte
-                        out.extend_from_slice(&[r, g, b]);
+                        let start = offset + col * 4;
+                        if compression == 3 {
+                            let pixel =
+                                u32::from_le_bytes(raw.get(start..start + 4)?.try_into().ok()?);
+                            out.extend_from_slice(&[
+                                extract_channel(pixel, rm),
+                                extract_channel(pixel, gm),
+                                extract_channel(pixel, bm),
+                            ]);
+                            if am != 0 {
+                                out.push(extract_channel(pixel, am));
+                            }
+                        } else {
+                            out.extend_from_slice(&[raw[start + 2], raw[start + 1], raw[start]]);
+                        }
                     }
                 }
                 out
@@ -486,9 +524,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     // Determine output color type
     let color = if bit_depth <= 8 || compression == 1 || compression == 2 {
         ColorType::L8
-    } else if bit_depth == 32 {
-        ColorType::Rgb8
-    } else if bit_depth == 16 && am != 0 {
+    } else if matches!(bit_depth, 16 | 32) && am != 0 {
         ColorType::Rgba8
     } else {
         ColorType::Rgb8
