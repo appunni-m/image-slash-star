@@ -121,6 +121,18 @@
       "error_message": "image has wrong mode"
     },
     {
+      "id": "enc_error_disposal",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "invalid literal for int() with base 10: 'invalid'"
+    },
+    {
       "id": "enc_opaque",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_opaque.bin",
       "ref_bytes": 16384,

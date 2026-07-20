@@ -31,16 +31,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Option<Vec<u8>> {
     sequence.validate().ok()?;
     let animated = option_bool(opts, "animated").unwrap_or(sequence.frames.len() > 1);
-    let requested_frames = if animated {
-        option_u16(opts, "frames")
-            .map(usize::from)
-            .unwrap_or(sequence.frames.len())
-    } else {
-        1
-    };
-    if requested_frames == 0 || requested_frames > sequence.frames.len() {
-        return None;
-    }
+    let requested_frames = if animated { sequence.frames.len() } else { 1 };
 
     let disposal_override = opts.extra.get("disposal").map(String::as_str);
     let disposal_override = match disposal_override {
@@ -92,10 +83,7 @@ fn coalesce_identical_frames(
         }
 
         composite_frame(&mut canvas, width, frame)?;
-        let identical = previous_render.as_deref() == Some(canvas.as_slice())
-            && output
-                .last()
-                .is_some_and(|previous| previous.disposal == frame.disposal);
+        let identical = previous_render.as_deref() == Some(canvas.as_slice());
         if identical {
             let previous = output.last_mut()?;
             previous.duration_ms = previous.duration_ms.checked_add(frame.duration_ms)?;
@@ -109,7 +97,7 @@ fn coalesce_identical_frames(
                         &canvas,
                         width,
                         usize::try_from(sequence.height).ok()?,
-                    )?;
+                    );
                     let frame_width = right.checked_sub(left)?;
                     let frame_height = bottom.checked_sub(top)?;
                     let full_image = DecodedImage::new(
@@ -168,12 +156,9 @@ fn rgba_difference_bounds(
     current: &[u8],
     width: usize,
     height: usize,
-) -> Option<(usize, usize, usize, usize)> {
-    if previous.len() != current.len()
-        || current.len() != width.checked_mul(height)?.checked_mul(4)?
-    {
-        return None;
-    }
+) -> (usize, usize, usize, usize) {
+    debug_assert_eq!(previous.len(), current.len());
+    debug_assert_eq!(current.len(), width * height * 4);
     let mut left = width;
     let mut top = height;
     let mut right = 0usize;
@@ -192,7 +177,8 @@ fn rgba_difference_bounds(
             bottom = bottom.max(y + 1);
         }
     }
-    (left < right && top < bottom).then_some((left, top, right, bottom))
+    debug_assert!(left < right && top < bottom);
+    (left, top, right, bottom)
 }
 
 fn clear_frame_rect(
@@ -289,9 +275,7 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             let pixel_count = usize::try_from(img.width)
                 .ok()?
                 .checked_mul(usize::try_from(img.height).ok()?)?;
-            if img.pixels.len() != pixel_count {
-                return None;
-            }
+            debug_assert_eq!(img.pixels.len(), pixel_count);
             // Pillow converts L input to a compact P palette containing only
             // the used grayscale values, ordered by their original index.
             let mut used = [false; 256];
@@ -328,9 +312,7 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
     let pixel_count = usize::try_from(img.width)
         .ok()?
         .checked_mul(usize::try_from(img.height).ok()?)?;
-    if indices.len() != pixel_count {
-        return None;
-    }
+    debug_assert_eq!(indices.len(), pixel_count);
     Some(PreparedImage {
         palette,
         indices,
@@ -361,10 +343,6 @@ fn option_bool(opts: &EncodeOptions, key: &str) -> Option<bool> {
     }
 }
 
-fn option_u16(opts: &EncodeOptions, key: &str) -> Option<u16> {
-    opts.extra.get(key)?.parse().ok()
-}
-
 fn parse_disposal(value: &str) -> Option<u8> {
     match value {
         "none" | "0" => Some(0),
@@ -386,19 +364,19 @@ fn parse_loop_count(opts: &EncodeOptions) -> Option<Option<u16>> {
     }
 }
 
-fn table_parameters(palette: &[u8]) -> Option<(usize, u8, u8)> {
-    if palette.is_empty() || !palette.len().is_multiple_of(3) || palette.len() > 256 * 3 {
-        return None;
-    }
+fn table_parameters(palette: &[u8]) -> (usize, u8, u8) {
+    debug_assert!(!palette.is_empty());
+    debug_assert!(palette.len().is_multiple_of(3));
+    debug_assert!(palette.len() <= 256 * 3);
     // Pillow's GIF writer normalizes even a one-color image to a four-entry
     // table while retaining the GIF-mandated minimum LZW code width of two.
     let color_count = (palette.len() / 3).max(4).next_power_of_two();
     let table_bits = usize::BITS - color_count.leading_zeros() - 1;
-    let size_field = u8::try_from(table_bits.checked_sub(1)?).ok()?;
+    let size_field = (table_bits - 1) as u8;
     // Pillow's P-mode GIF encoder uses an eight-bit LZW root alphabet even
     // when the emitted color table contains fewer entries.
     let minimum_code_size = 8;
-    Some((color_count, size_field, minimum_code_size))
+    (color_count, size_field, minimum_code_size)
 }
 
 fn write_gif(
@@ -412,7 +390,7 @@ fn write_gif(
     let first_frame = frames.first()?;
     let mut first = prepare_image(&first_frame.image)?;
     let background = prepare_background(&mut first, first_frame.image.mode, sequence.background)?;
-    let (global_count, global_size, _) = table_parameters(&first.palette)?;
+    let (global_count, global_size, _) = table_parameters(&first.palette);
     // Pillow always writes the global palette for a single frame. Its
     // include_color_table option adds a duplicate local palette rather than
     // replacing the global one.
@@ -431,7 +409,7 @@ fn write_gif(
     output.push(u8::from(global_table) << 7 | global_size);
     output.extend_from_slice(&[background, 0]); // Background index and pixel aspect ratio.
     if global_table {
-        write_color_table(&mut output, &first.palette, global_count)?;
+        write_color_table(&mut output, &first.palette, global_count);
     }
 
     if let Some(loop_count) = settings.loop_count {
@@ -491,7 +469,7 @@ fn write_gif(
             }
         }
         previous_quantized_rgb = Some(quantized_rgb);
-        let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette)?;
+        let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette);
         let mut transparent = prepared.transparent;
         if let Some(requested) = option_bool(opts, "transparency") {
             transparent = requested.then_some(transparent.unwrap_or(0));
@@ -528,18 +506,18 @@ fn write_gif(
         let local_table_fields = if local_table { 0x80 | size_field } else { 0 };
         output.push(u8::from(interlaced) << 6 | local_table_fields);
         if local_table {
-            write_color_table(&mut output, &prepared.palette, color_count)?;
+            write_color_table(&mut output, &prepared.palette, color_count);
         }
         let encoded_indices = if interlaced {
             interlace(
                 &prepared.indices,
                 usize::from(frame_width),
                 usize::from(frame_height),
-            )?
+            )
         } else {
             prepared.indices
         };
-        let compressed = encode_lzw(&encoded_indices, minimum_code_size)?;
+        let compressed = encode_lzw(&encoded_indices, minimum_code_size);
         output.push(minimum_code_size);
         write_sub_blocks(&mut output, &compressed);
     }
@@ -583,15 +561,10 @@ fn prepare_background(
     }
 }
 
-fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) -> Option<()> {
+fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) {
     output.extend_from_slice(palette);
-    output.resize(
-        output
-            .len()
-            .checked_add((color_count * 3).checked_sub(palette.len())?)?,
-        0,
-    );
-    Some(())
+    let padding = color_count * 3 - palette.len();
+    output.resize(output.len() + padding, 0);
 }
 
 fn indexed_rgb(indices: &[u8], palette: &[u8]) -> Option<Vec<u8>> {
@@ -603,36 +576,31 @@ fn indexed_rgb(indices: &[u8], palette: &[u8]) -> Option<Vec<u8>> {
     Some(rgb)
 }
 
-fn interlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
-    if indices.len() != width.checked_mul(height)? {
-        return None;
-    }
+fn interlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
+    debug_assert_eq!(indices.len(), width * height);
     let mut output = Vec::with_capacity(indices.len());
     for (start, step) in [(0, 8), (4, 8), (2, 4), (1, 2)] {
         for y in (start..height).step_by(step) {
-            let row_start = y.checked_mul(width)?;
-            output.extend_from_slice(indices.get(row_start..row_start.checked_add(width)?)?);
+            let row_start = y * width;
+            output.extend_from_slice(&indices[row_start..row_start + width]);
         }
     }
-    Some(output)
+    output
 }
 
 /// Encode indices using the GIF89a Appendix F LZW code-width rules.
-fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Option<Vec<u8>> {
-    if indices.is_empty() || !(2..=8).contains(&minimum_code_size) {
-        return None;
-    }
+fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
+    debug_assert!(!indices.is_empty());
+    debug_assert!((2..=8).contains(&minimum_code_size));
 
-    let clear_code = 1u16.checked_shl(u32::from(minimum_code_size))?;
-    let end_code = clear_code.checked_add(1)?;
-    if indices.iter().any(|&index| u16::from(index) >= clear_code) {
-        return None;
-    }
+    let clear_code = 1u16 << minimum_code_size;
+    let end_code = clear_code + 1;
+    debug_assert!(indices.iter().all(|&index| u16::from(index) < clear_code));
 
     let mut writer = BitWriter::new();
     let mut dictionary = HashMap::<(u16, u8), u16>::new();
-    let mut code_size = minimum_code_size.checked_add(1)?;
-    let mut next_code = end_code.checked_add(1)?;
+    let mut code_size = minimum_code_size + 1;
+    let mut next_code = end_code + 1;
     writer.write(clear_code, code_size);
 
     let mut prefix = u16::from(indices[0]);
@@ -645,7 +613,7 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Option<Vec<u8>> {
         writer.write(prefix, code_size);
         if next_code <= MAX_LZW_CODE {
             dictionary.insert((prefix, suffix), next_code);
-            next_code = next_code.checked_add(1)?;
+            next_code += 1;
             // The encoder's dictionary is one entry ahead of the decoder. Delay
             // the width transition by one code so both sides switch together.
             if code_size < 12 && next_code > (1u16 << code_size) {
@@ -654,15 +622,15 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Option<Vec<u8>> {
         } else {
             writer.write(clear_code, code_size);
             dictionary.clear();
-            code_size = minimum_code_size.checked_add(1)?;
-            next_code = end_code.checked_add(1)?;
+            code_size = minimum_code_size + 1;
+            next_code = end_code + 1;
         }
         prefix = u16::from(suffix);
     }
 
     writer.write(prefix, code_size);
     writer.write(end_code, code_size);
-    Some(writer.finish())
+    writer.finish()
 }
 
 fn write_sub_blocks(output: &mut Vec<u8>, data: &[u8]) {
@@ -713,9 +681,7 @@ impl BitWriter {
 /// Returns `(palette, indices)` where palette is a flat vec of RGB triplets
 /// and indices are the per-pixel palette index values.
 fn quantize_rgb(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
-    if !pixels.len().is_multiple_of(3) {
-        return None;
-    }
+    debug_assert!(pixels.len().is_multiple_of(3));
     let mut palette: Vec<[u8; 3]> = Vec::new();
     let mut counts = Vec::<u32>::new();
     for chunk in pixels.chunks_exact(3) {
@@ -1061,9 +1027,8 @@ impl PillowBoxHeap {
 ///
 /// Returns `(palette, indices, optional_transparent_index)`.
 fn quantize_rgba(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>, Option<u8>)> {
-    if !pixels.len().is_multiple_of(4) || pixels.is_empty() {
-        return None;
-    }
+    debug_assert!(!pixels.is_empty());
+    debug_assert!(pixels.len().is_multiple_of(4));
     let mut colors = pixels
         .chunks_exact(4)
         .map(|pixel| [pixel[0], pixel[1], pixel[2], pixel[3]])

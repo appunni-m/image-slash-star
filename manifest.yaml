@@ -875,6 +875,10 @@ formats:
       source_format: jpeg
       source_asset: baseline_cmyk.jpg
       expect_error: true
+    - id: enc_error_disposal
+      description: Pillow rejects a non-numeric GIF disposal value
+      params: {'disposal': 'invalid'}
+      expect_error: true
     - id: enc_opaque
       description: 
       params: {'transparency': False}

@@ -259,7 +259,11 @@ def encode_params(fmt, params):
             kwargs["transparency"] = 0
         disposal = take("disposal")
         if disposal is not None:
-            kwargs["disposal"] = {"none": 0, "background": 2, "previous": 3}[disposal]
+            kwargs["disposal"] = {
+                "none": 0,
+                "background": 2,
+                "previous": 3,
+            }.get(disposal, disposal)
         loop = take("loop")
         if loop is True:
             kwargs["loop"] = 0
