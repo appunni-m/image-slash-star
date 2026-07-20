@@ -1404,6 +1404,58 @@
       }
     },
     {
+      "id": "error_malformed_container_vp8l_header_only",
+      "asset": "vp8l_header_only.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_header_only.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_duplicate_transform",
+      "asset": "vp8l_duplicate_transform.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_duplicate_transform.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_invalid_color_cache",
+      "asset": "vp8l_invalid_color_cache.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_invalid_color_cache.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_invalid_zero_symbol",
+      "asset": "vp8l_invalid_zero_symbol.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_invalid_zero_symbol.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_vp8_partition_0",
       "asset": "vp8_partition_0.webp",
       "expect_error": true,
@@ -1669,6 +1721,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_missing_last_byte.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
+      "asset": "vp8l_unused_invalid_one_symbol.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_unused_invalid_one_symbol.webp",
         "operations": [
           "PIL.Image.open",
           "load",

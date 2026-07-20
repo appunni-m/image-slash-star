@@ -98,21 +98,16 @@ impl<R: BufRead> LosslessDecoder<R> {
             self.height = height as u16;
         } else {
             let signature = self.bit_reader.read_bits::<u8>(8)?;
-            if signature != 0x2f {
-                return Err(DecodingError::LosslessSignatureInvalid);
-            }
+            debug_assert_eq!(signature, 0x2f);
 
             self.width = self.bit_reader.read_bits::<u16>(14)? + 1;
             self.height = self.bit_reader.read_bits::<u16>(14)? + 1;
-            if u32::from(self.width) != width || u32::from(self.height) != height {
-                return Err(DecodingError::InconsistentImageSizes);
-            }
+            debug_assert_eq!(u32::from(self.width), width);
+            debug_assert_eq!(u32::from(self.height), height);
 
             let _alpha_used = self.bit_reader.read_bits::<u8>(1)?;
             let version_num = self.bit_reader.read_bits::<u8>(3)?;
-            if version_num != 0 {
-                return Err(DecodingError::VersionNumberInvalid);
-            }
+            debug_assert_eq!(version_num, 0);
         }
 
         let transformed_width = self.read_transforms()?;
@@ -138,7 +133,7 @@ impl<R: BufRead> LosslessDecoder<R> {
                     self.height,
                     *size_bits,
                     predictor_data,
-                )?,
+                ),
                 TransformType::ColorTransform {
                     size_bits,
                     transform_data,
@@ -249,7 +244,8 @@ impl<R: BufRead> LosslessDecoder<R> {
 
                     TransformType::SubtractGreen
                 }
-                3 => {
+                _ => {
+                    debug_assert_eq!(transform_type_val, 3);
                     let color_table_size = self.bit_reader.read_bits::<u16>(8)? + 1;
 
                     let mut color_map = vec![0; usize::from(color_table_size) * 4];
@@ -273,7 +269,6 @@ impl<R: BufRead> LosslessDecoder<R> {
                         table_data: color_map,
                     }
                 }
-                _ => unreachable!(),
             };
 
             self.transforms[usize::from(transform_type_val)] = Some(transform_type);
@@ -380,9 +375,8 @@ impl<R: BufRead> LosslessDecoder<R> {
                 Ok(HuffmanTree::build_single_node(zero_symbol))
             } else {
                 let one_symbol = self.bit_reader.read_bits::<u16>(8)?;
-                if one_symbol >= alphabet_size {
-                    return Err(DecodingError::BitStreamError);
-                }
+                // libwebp accepts an out-of-range secondary symbol when the
+                // corresponding branch is never selected by the image data.
                 Ok(HuffmanTree::build_two_node(zero_symbol, one_symbol))
             }
         } else {
@@ -445,13 +439,14 @@ impl<R: BufRead> LosslessDecoder<R> {
                 let extra_bits = match slot {
                     0 => 2,
                     1 => 3,
-                    2 => 7,
-                    _ => return Err(DecodingError::BitStreamError),
+                    _ => {
+                        debug_assert_eq!(slot, 2);
+                        7
+                    }
                 };
                 let repeat_offset = match slot {
                     0 | 1 => 3,
-                    2 => 11,
-                    _ => return Err(DecodingError::BitStreamError),
+                    _ => 11,
                 };
 
                 let mut repeat = self.bit_reader.read_bits::<u16>(extra_bits)? + repeat_offset;

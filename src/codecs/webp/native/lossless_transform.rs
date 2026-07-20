@@ -1,7 +1,5 @@
 use std::ops::Range;
 
-use super::decoder::DecodingError;
-
 use super::lossless::subsample_size;
 
 #[derive(Debug, Clone)]
@@ -27,7 +25,7 @@ pub(crate) fn apply_predictor_transform(
     height: u16,
     size_bits: u8,
     predictor_data: &[u8],
-) -> Result<(), DecodingError> {
+) {
     let block_xsize = usize::from(subsample_size(width, size_bits));
     let width = usize::from(width);
     let height = usize::from(height);
@@ -69,8 +67,6 @@ pub(crate) fn apply_predictor_transform(
             }
         }
     }
-
-    Ok(())
 }
 pub fn apply_predictor_transform_0(image_data: &mut [u8], range: Range<usize>, _width: usize) {
     assert!(range.end <= image_data.len());

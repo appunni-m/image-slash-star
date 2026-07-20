@@ -12789,6 +12789,58 @@
           "oracle_error_message": "could not create decoder object"
         },
         {
+          "id": "error_malformed_container_vp8l_header_only",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_header_only.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_duplicate_transform",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_duplicate_transform.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_invalid_color_cache",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_invalid_color_cache.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_invalid_zero_symbol",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_invalid_zero_symbol.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
           "id": "error_malformed_container_vp8_partition_0",
           "type": "decode",
           "format": "webp",
@@ -13165,6 +13217,24 @@
           "ref_size": [
             128,
             128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "vp8l_unused_invalid_one_symbol.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_unused_invalid_one_symbol_webp.bin",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
           ]
         }
       ],
@@ -14049,12 +14119,12 @@
     }
   },
   "summary": {
-    "total_rows": 760,
-    "decode_rows": 481,
+    "total_rows": 765,
+    "decode_rows": 486,
     "encode_rows": 247,
     "formats": 8,
-    "assets_available": 474,
-    "decode_active": 475,
+    "assets_available": 479,
+    "decode_active": 480,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

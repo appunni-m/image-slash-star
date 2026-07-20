@@ -1842,6 +1842,58 @@ def gen_webp():
         "vp8_missing_last_byte.webp": "all_but_one",
     }.items():
         write_truncated_vp8(name, keep)
+
+    def write_truncated_vp8l(name, keep):
+        source = (d / "lossless.webp").read_bytes()
+        chunk = source.find(b"VP8L")
+        length = struct.unpack_from("<I", source, chunk + 4)[0]
+        payload = source[chunk + 8 : chunk + 8 + length]
+        kept = len(payload) - 1 if keep == "all_but_one" else min(keep, len(payload))
+        malformed = bytearray(source[: chunk + 4])
+        malformed.extend(struct.pack("<I", kept))
+        malformed.extend(payload[:kept])
+        if kept & 1:
+            malformed.append(0)
+        struct.pack_into("<I", malformed, 4, len(malformed) - 8)
+        (d / name).write_bytes(malformed)
+
+    for name, keep in {"vp8l_header_only.webp": 5}.items():
+        write_truncated_vp8l(name, keep)
+
+    def write_vp8l_bits(name, bits):
+        encoded = bytearray((len(bits) + 7) // 8)
+        for index, bit in enumerate(bits):
+            encoded[index // 8] |= bit << (index % 8)
+        payload = b"\x2f\0\0\0\0" + encoded
+        chunk = b"VP8L" + struct.pack("<I", len(payload)) + payload
+        if len(payload) & 1:
+            chunk += b"\0"
+        webp = b"RIFF" + struct.pack("<I", len(chunk) + 4) + b"WEBP" + chunk
+        (d / name).write_bytes(webp)
+
+    def append_lsb(bits, value, width):
+        bits.extend((value >> offset) & 1 for offset in range(width))
+
+    write_vp8l_bits("vp8l_duplicate_transform.webp", [1, 0, 1, 1, 0, 1])
+    write_vp8l_bits("vp8l_invalid_color_cache.webp", [0, 1, 0, 0, 0, 0])
+
+    def simple_tree(bits, symbols):
+        bits.extend((1, len(symbols) - 1))
+        append_lsb(bits, int(symbols[0] > 1), 1)
+        append_lsb(bits, symbols[0], 8 if symbols[0] > 1 else 1)
+        if len(symbols) == 2:
+            append_lsb(bits, symbols[1], 8)
+
+    for name, distance_symbols in {
+        "vp8l_invalid_zero_symbol.webp": (40,),
+        "vp8l_unused_invalid_one_symbol.webp": (0, 40),
+    }.items():
+        bits = [0, 0, 0]
+        for _ in range(4):
+            simple_tree(bits, (0,))
+        simple_tree(bits, distance_symbols)
+        write_vp8l_bits(name, bits)
+
     def write_vp8_partition_size(name, size, source="lossy.webp"):
         malformed = bytearray((d / source).read_bytes())
         payload = malformed.find(b"VP8 ") + 8

@@ -1503,6 +1503,10 @@ formats:
       - vp8_short_partition_payload.webp
       - vp8_half_payload.webp
       - vp8_tail_truncated.webp
+      - vp8l_header_only.webp
+      - vp8l_duplicate_transform.webp
+      - vp8l_invalid_color_cache.webp
+      - vp8l_invalid_zero_symbol.webp
       - vp8_partition_0.webp
       - vp8_partition_1.webp
       - vp8_partition_2.webp
@@ -1528,6 +1532,7 @@ formats:
       - animated_frame_dimension_mismatch.webp
       - animated_bad_nested_chunk.webp
       - vp8_missing_last_byte.webp
+      - vp8l_unused_invalid_one_symbol.webp
     encode_edge_cases:
     - id: enc_lossy_q100
       description: 
