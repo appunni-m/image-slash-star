@@ -78,6 +78,19 @@
       }
     },
     {
+      "id": "bmp_depths_bmp_4bit",
+      "asset": "bmp_4bit.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_4bit.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "bmp_depths_bmp_8bit",
       "asset": "bmp_8bit.ico",
       "expect_error": false,
@@ -104,6 +117,19 @@
       }
     },
     {
+      "id": "cursor",
+      "asset": "cursor.cur",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "size_16x16",
       "asset": "16x16.ico",
       "expect_error": false,
@@ -122,6 +148,97 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed",
+      "asset": "empty.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/empty.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_invalid_reserved",
+      "asset": "invalid_reserved.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/invalid_reserved.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_invalid_type",
+      "asset": "invalid_type.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/invalid_type.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_zero_entries",
+      "asset": "zero_entries.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/zero_entries.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_directory",
+      "asset": "truncated_directory.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/truncated_directory.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_zero_entry",
+      "asset": "zero_entry.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/zero_entry.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_entry",
+      "asset": "truncated_entry.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/truncated_entry.ico",
         "operations": [
           "PIL.Image.open",
           "load",

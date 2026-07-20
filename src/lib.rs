@@ -56,7 +56,7 @@ pub fn detect_format(data: &[u8]) -> Option<ImageFormat> {
     if &data[0..4] == b"II\x2a\x00" || &data[0..4] == b"MM\x00\x2a" {
         return Some(ImageFormat::Tiff);
     }
-    if &data[0..4] == b"\x00\x00\x01\x00" {
+    if matches!(&data[0..4], b"\x00\x00\x01\x00" | b"\x00\x00\x02\x00") {
         return Some(ImageFormat::Ico);
     }
     if data.len() >= 12 && &data[4..12] == b"ftypavif" {

@@ -73,11 +73,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     // Decode the best entry
-    decode_entry(data, best_idx, count)
+    decode_entry(data, best_idx, icon_type == 2)
 }
 
 /// Decode a single ICO directory entry by index.
-fn decode_entry(data: &[u8], index: usize, _count: usize) -> Option<DecodedImage> {
+fn decode_entry(data: &[u8], index: usize, cursor: bool) -> Option<DecodedImage> {
     let entry_offset = ICO_HEADER_SIZE + index * ICO_DIR_ENTRY_SIZE;
     let entry = data.get(entry_offset..entry_offset + ICO_DIR_ENTRY_SIZE)?;
 
@@ -124,8 +124,48 @@ fn decode_entry(data: &[u8], index: usize, _count: usize) -> Option<DecodedImage
         // ICO BMP data starts with a BITMAPINFOHEADER (40 bytes) at offset 0,
         // but without the standard BMP file header (no "BM" signature).
         // We extract the pixel data manually.
-        decode_ico_bmp(entry_data, entry)
+        if cursor {
+            decode_cur_bmp(entry_data)
+        } else {
+            decode_ico_bmp(entry_data, entry)
+        }
     }
+}
+
+/// Decode a CUR DIB using Pillow's BMP semantics: retain its indexed mode and
+/// read only the XOR plane represented by half of the stored DIB height.
+fn decode_cur_bmp(data: &[u8]) -> Option<DecodedImage> {
+    let header_size = usize::try_from(u32::from_le_bytes(data.get(..4)?.try_into().ok()?)).ok()?;
+    if header_size < 40 || data.len() < header_size {
+        return None;
+    }
+    let stored_height = i32::from_le_bytes(data.get(8..12)?.try_into().ok()?);
+    let actual_height = stored_height.checked_div(2)?;
+    let bits = u16::from_le_bytes(data.get(14..16)?.try_into().ok()?);
+    let colors_used = u32::from_le_bytes(data.get(32..36)?.try_into().ok()?);
+    let palette_entries = if bits <= 8 {
+        usize::try_from(if colors_used == 0 {
+            1u32.checked_shl(u32::from(bits))?
+        } else {
+            colors_used
+        })
+        .ok()?
+    } else {
+        0
+    };
+    let pixel_offset = 14usize
+        .checked_add(header_size)?
+        .checked_add(palette_entries.checked_mul(4)?)?;
+    let file_size = 14usize.checked_add(data.len())?;
+    let mut bmp = Vec::with_capacity(file_size);
+    bmp.extend_from_slice(b"BM");
+    bmp.extend_from_slice(&u32::try_from(file_size).ok()?.to_le_bytes());
+    bmp.extend_from_slice(&[0; 4]);
+    bmp.extend_from_slice(&u32::try_from(pixel_offset).ok()?.to_le_bytes());
+    bmp.extend_from_slice(data);
+    bmp.get_mut(22..26)?
+        .copy_from_slice(&actual_height.to_le_bytes());
+    crate::codecs::bmp::decode::decode(&bmp)
 }
 
 /// Decode an embedded BMP/DIB entry inside an ICO file.

@@ -553,6 +553,37 @@ def validate_tiff_claim(case_id, asset_name, data):
             raise RuntimeError("TIFF does not contain multiple pages")
 
 
+def validate_ico_claim(case_id, asset_name, data):
+    if len(data) < 6:
+        raise RuntimeError("truncated ICO header")
+    reserved, icon_type, count = struct.unpack_from("<HHH", data)
+    if reserved != 0 or icon_type not in (1, 2) or count == 0:
+        raise RuntimeError("invalid ICO header")
+    if len(data) < 6 + count * 16:
+        raise RuntimeError("truncated ICO directory")
+    entries = []
+    for index in range(count):
+        entry = data[6 + index * 16 : 22 + index * 16]
+        size, offset = struct.unpack_from("<II", entry, 8)
+        payload = data[offset : offset + size]
+        entries.append((entry, payload))
+    if case_id == "single_icon" and count != 1:
+        raise RuntimeError(f"ICO has {count} entries, expected one")
+    if case_id == "multi_res" and count < 2:
+        raise RuntimeError("ICO does not contain multiple resolutions")
+    if case_id == "cursor" and icon_type != 2:
+        raise RuntimeError("fixture is not a CUR container")
+    if case_id == "png_entry" and not entries[0][1].startswith(b"\x89PNG"):
+        raise RuntimeError("ICO entry is not PNG encoded")
+    if case_id == "bmp_entry" and entries[0][1].startswith(b"\x89PNG"):
+        raise RuntimeError("ICO entry is not BMP encoded")
+    if case_id == "bmp_depths":
+        expected_depth = int(asset_name.removeprefix("bmp_").removesuffix("bit.ico"))
+        payload = entries[0][1]
+        if len(payload) < 16 or struct.unpack_from("<H", payload, 14)[0] != expected_depth:
+            raise RuntimeError(f"ICO BMP entry is not {expected_depth}-bit")
+
+
 def preflight_decode_cases(manifest, target_format=None):
     """Prove active fixture structure and Pillow success/error behavior."""
     from PIL import Image
@@ -591,6 +622,8 @@ def preflight_decode_cases(manifest, target_format=None):
                         validate_bmp_claim(case["id"], data)
                     elif fmt_name == "tiff":
                         validate_tiff_claim(case["id"], asset_name, data)
+                    elif fmt_name == "ico":
+                        validate_ico_claim(case["id"], asset_name, data)
                 except Exception as error:
                     failures.append(f"{case_name}: {error}")
     if failures:

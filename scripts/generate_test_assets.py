@@ -1026,7 +1026,7 @@ def gen_ico():
     img = pattern_img("RGB").resize((16,16))
     img.save(d / "16x16.ico", format="ICO", sizes=[(16,16)])
     img.save(d / "single.ico", format="ICO", sizes=[(16,16)])
-    img.save(d / "multi.ico", format="ICO", sizes=[(16,16),(32,32)])
+    pattern_img("RGB").save(d / "multi.ico", format="ICO", sizes=[(16,16),(32,32)])
     img.convert("RGBA").resize((32,32)).save(d / "png_entry.ico", format="ICO", sizes=[(32,32)])
     img.resize((16,16)).save(
         d / "bmp_entry.ico",
@@ -1043,6 +1043,39 @@ def gen_ico():
     img.convert("RGBA").resize((16,16)).save(
         d / "bmp_32bit.ico", format="ICO", sizes=[(16,16)], bitmap_format="bmp"
     )
+    palette = [
+        ((index * 17) & 255, (index * 53) & 255, (index * 97) & 255)
+        for index in range(16)
+    ]
+    xor_rows = bytearray()
+    for y in reversed(range(16)):
+        for x in range(0, 16, 2):
+            xor_rows.append(((x + y) % 16) << 4 | ((x + y + 1) % 16))
+    and_mask = bytes(4 * 16)
+    dib = bytearray()
+    dib.extend(struct.pack("<IiiHHIIiiII", 40, 16, 32, 1, 4, 0, len(xor_rows) + len(and_mask), 0, 0, 16, 16))
+    for red, green, blue in palette:
+        dib.extend(bytes((blue, green, red, 0)))
+    dib.extend(xor_rows)
+    dib.extend(and_mask)
+    ico = bytearray(struct.pack("<HHH", 0, 1, 1))
+    ico.extend(struct.pack("<BBBBHHII", 16, 16, 16, 0, 1, 4, len(dib), 22))
+    ico.extend(dib)
+    (d / "bmp_4bit.ico").write_bytes(ico)
+    cursor = bytearray(ico)
+    struct.pack_into("<H", cursor, 2, 2)
+    struct.pack_into("<HH", cursor, 10, 3, 5)
+    (d / "cursor.cur").write_bytes(cursor)
+
+    (d / "empty.ico").write_bytes(b"")
+    (d / "invalid_reserved.ico").write_bytes(struct.pack("<HHH", 1, 1, 0))
+    (d / "invalid_type.ico").write_bytes(struct.pack("<HHH", 0, 3, 0))
+    (d / "zero_entries.ico").write_bytes(struct.pack("<HHH", 0, 1, 0))
+    (d / "truncated_directory.ico").write_bytes(struct.pack("<HHH", 0, 1, 1) + b"\0" * 4)
+    zero_entry = bytearray(struct.pack("<HHH", 0, 1, 1))
+    zero_entry.extend(struct.pack("<BBBBHHII", 16, 16, 0, 0, 1, 32, 0, 0))
+    (d / "zero_entry.ico").write_bytes(zero_entry)
+    (d / "truncated_entry.ico").write_bytes(ico[:-20])
     img.resize((256,256)).save(d / "256x256.ico", format="ICO", sizes=[(256,256)])
     print(f"  ICO: {len(list(d.glob('*.ico')))} files")
 

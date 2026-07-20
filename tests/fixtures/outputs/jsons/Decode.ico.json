@@ -31,11 +31,11 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.ico_multi_ico.bin",
-      "ref_bytes": 768,
+      "ref_bytes": 3072,
       "ref_mode": "Rgb8",
       "ref_size": [
-        16,
-        16
+        32,
+        32
       ]
     },
     {
@@ -78,6 +78,19 @@
       ]
     },
     {
+      "id": "bmp_depths_bmp_4bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_4bit_ico.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
       "id": "bmp_depths_bmp_8bit",
       "status": "ok",
       "error_type": null,
@@ -98,6 +111,19 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_32bit_ico.bin",
       "ref_bytes": 1024,
       "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "cursor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_cursor_cur.bin",
+      "ref_bytes": 256,
+      "ref_mode": "P",
       "ref_size": [
         16,
         16
@@ -128,6 +154,76 @@
         256,
         256
       ]
+    },
+    {
+      "id": "error_malformed",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_invalid_reserved",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_invalid_type",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_zero_entries",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_directory",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_zero_entry",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_entry",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
     }
   ]
 }

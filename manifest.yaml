@@ -1448,8 +1448,13 @@ formats:
       description: Pillow BMP-in-ICO entries at indexed and true-color depths
       test_assets:
       - bmp_1bit.ico
+      - bmp_4bit.ico
       - bmp_8bit.ico
       - bmp_32bit.ico
+    - id: cursor
+      description: CUR container with hotspot coordinates
+      test_assets:
+      - cursor.cur
     - id: size_16x16
       description: 16x16 icon (most common)
       test_assets:
@@ -1458,6 +1463,17 @@ formats:
       description: 256x256 icon (modern)
       test_assets:
       - 256x256.ico
+    - id: error_malformed
+      description: Malformed ICO headers, directories, and entry payloads
+      test_assets:
+      - empty.ico
+      - invalid_reserved.ico
+      - invalid_type.ico
+      - zero_entries.ico
+      - truncated_directory.ico
+      - zero_entry.ico
+      - truncated_entry.ico
+      expect_error: true
     encode_edge_cases:
     - id: enc_16x16
       description: 16x16 icon
