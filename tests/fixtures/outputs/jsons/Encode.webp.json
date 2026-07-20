@@ -133,6 +133,54 @@
       "encoded_ref_bytes": 3634
     },
     {
+      "id": "enc_lossy_odd_alpha",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_odd_alpha.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_odd_alpha.bin",
+      "encoded_ref_bytes": 428
+    },
+    {
+      "id": "enc_lossy_horizontal",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_horizontal.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_horizontal.bin",
+      "encoded_ref_bytes": 196
+    },
+    {
+      "id": "enc_lossy_vertical",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_vertical.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_vertical.bin",
+      "encoded_ref_bytes": 204
+    },
+    {
+      "id": "enc_lossy_solid",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_solid.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_solid.bin",
+      "encoded_ref_bytes": 92
+    },
+    {
       "id": "enc_lossless_alpha",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_alpha.bin",
       "ref_bytes": 65536,

@@ -13095,6 +13095,95 @@
           ]
         },
         {
+          "id": "enc_lossy_odd_alpha",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy transparent smoothing on partial edge macroblocks",
+          "params": {
+            "lossless": false,
+            "alpha": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgba_odd.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_odd_alpha.bin",
+          "encoded_ref_bytes": 428,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_odd_alpha.bin",
+          "ref_bytes": 1292,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            17,
+            19
+          ]
+        },
+        {
+          "id": "enc_lossy_horizontal",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy horizontal prediction structure",
+          "params": {
+            "lossless": false
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_horizontal.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_horizontal.bin",
+          "encoded_ref_bytes": 196,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_horizontal.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_lossy_vertical",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy vertical prediction structure",
+          "params": {
+            "lossless": false
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_vertical.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_vertical.bin",
+          "encoded_ref_bytes": 204,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_vertical.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_lossy_solid",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy uniform-block analysis",
+          "params": {
+            "lossless": false
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_solid.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_solid.bin",
+          "encoded_ref_bytes": 92,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_solid.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_lossless_alpha",
@@ -13656,9 +13745,9 @@
     }
   },
   "summary": {
-    "total_rows": 733,
+    "total_rows": 737,
     "decode_rows": 458,
-    "encode_rows": 243,
+    "encode_rows": 247,
     "formats": 8,
     "assets_available": 451,
     "decode_active": 452,

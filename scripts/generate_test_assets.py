@@ -357,6 +357,7 @@ def save_png_variants(img, out_dir):
     alpha_draw.ellipse([32, 32, 96, 96], fill=128)
     transparent.putalpha(alpha)
     transparent.save(out_dir / "alpha_partial.png")
+    pattern_img("RGBA", (17, 19)).save(out_dir / "rgba_odd.png")
     img.convert("P", palette=Image.Palette.ADAPTIVE, colors=2).save(out_dir / "palette_2color.png", bits=1)
     img.convert("P", palette=Image.Palette.ADAPTIVE, colors=256).save(out_dir / "palette_256color.png")
 

@@ -113,42 +113,44 @@ impl TreeNode {
         index: 0,
     };
 
-    const fn prepare_branch(t: i8) -> u8 {
-        if t > 0 {
-            (t as u8) / 2
-        } else {
-            let value = -t;
-            0x80 | (value as u8)
-        }
-    }
-
     pub(crate) const fn value_from_branch(t: u8) -> i8 {
         (t & !0x80) as i8
     }
 }
 
-const fn tree_nodes_from<const N: usize, const M: usize>(
-    tree: [i8; N],
-    probs: [Prob; M],
-) -> [TreeNode; M] {
-    if N != 2 * M {
-        panic!("invalid tree with probs");
-    }
-    let mut nodes = [TreeNode::UNINIT; M];
-    let mut i = 0;
-    while i < M {
-        nodes[i].left = TreeNode::prepare_branch(tree[2 * i]);
-        nodes[i].right = TreeNode::prepare_branch(tree[2 * i + 1]);
-        nodes[i].prob = probs[i];
-        nodes[i].index = i as u8;
-        i += 1;
-    }
-    nodes
+macro_rules! tree_nodes_from {
+    ($tree:expr, $probs:expr; $len:expr) => {{
+        const LEN: usize = $len;
+        let tree = $tree;
+        let probs = $probs;
+        let mut nodes = [TreeNode::UNINIT; LEN];
+        let mut index = 0;
+        while index < LEN {
+            let left = tree[2 * index];
+            let right = tree[2 * index + 1];
+            nodes[index] = TreeNode {
+                left: if left > 0 {
+                    left as u8 / 2
+                } else {
+                    0x80 | (-left) as u8
+                },
+                right: if right > 0 {
+                    right as u8 / 2
+                } else {
+                    0x80 | (-right) as u8
+                },
+                prob: probs[index],
+                index: index as u8,
+            };
+            index += 1;
+        }
+        nodes
+    }};
 }
 
 const SEGMENT_ID_TREE: [i8; 6] = [2, 4, -0, -1, -2, -3];
 
-const SEGMENT_TREE_NODE_DEFAULTS: [TreeNode; 3] = tree_nodes_from(SEGMENT_ID_TREE, [255; 3]);
+const SEGMENT_TREE_NODE_DEFAULTS: [TreeNode; 3] = tree_nodes_from!(SEGMENT_ID_TREE, [255; 3]; 3);
 
 // Section 11.2
 // Tree for determining the keyframe luma intra prediction modes:
@@ -158,7 +160,7 @@ const KEYFRAME_YMODE_TREE: [i8; 8] = [-B_PRED, 2, 4, 6, -DC_PRED, -V_PRED, -H_PR
 const KEYFRAME_YMODE_PROBS: [Prob; 4] = [145, 156, 163, 128];
 
 const KEYFRAME_YMODE_NODES: [TreeNode; 4] =
-    tree_nodes_from(KEYFRAME_YMODE_TREE, KEYFRAME_YMODE_PROBS);
+    tree_nodes_from!(KEYFRAME_YMODE_TREE, KEYFRAME_YMODE_PROBS; 4);
 
 // Tree for determining the keyframe B_PRED mode:
 const KEYFRAME_BPRED_MODE_TREE: [i8; 18] = [
@@ -297,7 +299,7 @@ const KEYFRAME_BPRED_MODE_NODES: [[[TreeNode; 9]; 10]; 10] = {
         let mut j = 0;
         while j < output[i].len() {
             output[i][j] =
-                tree_nodes_from(KEYFRAME_BPRED_MODE_TREE, KEYFRAME_BPRED_MODE_PROBS[i][j]);
+                tree_nodes_from!(KEYFRAME_BPRED_MODE_TREE, KEYFRAME_BPRED_MODE_PROBS[i][j]; 9);
             j += 1;
         }
         i += 1;
@@ -312,7 +314,7 @@ const KEYFRAME_UV_MODE_TREE: [i8; 6] = [-DC_PRED, 2, -V_PRED, 4, -H_PRED, -TM_PR
 const KEYFRAME_UV_MODE_PROBS: [Prob; 3] = [142, 114, 183];
 
 const KEYFRAME_UV_MODE_NODES: [TreeNode; 3] =
-    tree_nodes_from(KEYFRAME_UV_MODE_TREE, KEYFRAME_UV_MODE_PROBS);
+    tree_nodes_from!(KEYFRAME_UV_MODE_TREE, KEYFRAME_UV_MODE_PROBS; 3);
 
 // Section 13.4
 type TokenProbTables = [[[[Prob; NUM_DCT_TOKENS - 1]; 3]; 8]; 4];
@@ -671,7 +673,7 @@ const COEFF_PROB_NODES: TokenProbTreeNodes = {
         while j < output[i].len() {
             let mut k = 0;
             while k < output[i][j].len() {
-                output[i][j][k] = tree_nodes_from(DCT_TOKEN_TREE, COEFF_PROBS[i][j][k]);
+                output[i][j][k] = tree_nodes_from!(DCT_TOKEN_TREE, COEFF_PROBS[i][j][k]; 11);
                 k += 1;
             }
             j += 1;
@@ -885,9 +887,6 @@ pub struct Vp8Decoder<R> {
     segment_tree_nodes: [TreeNode; 3],
     token_probs: Box<TokenProbTreeNodes>,
 
-    // Section 9.10
-    prob_intra: Prob,
-
     // Section 9.11
     prob_skip_false: Option<Prob>,
 
@@ -947,9 +946,6 @@ impl<R: Read> Vp8Decoder<R> {
 
             segment_tree_nodes: SEGMENT_TREE_NODE_DEFAULTS,
             token_probs: Box::new(COEFF_PROB_NODES),
-
-            // Section 9.10
-            prob_intra: 0u8,
 
             // Section 9.11
             prob_skip_false: None,
@@ -1234,16 +1230,6 @@ impl<R: Read> Vp8Decoder<R> {
         };
         self.b.check(res, ())?;
 
-        if !self.frame.keyframe {
-            // 9.10 remaining frame data
-            self.prob_intra = 0;
-
-            // FIXME: support this?
-            return Err(DecodingError::UnsupportedFeature);
-        } else {
-            // Reset motion vectors
-        }
-
         Ok(())
     }
 
@@ -1262,54 +1248,42 @@ impl<R: Read> Vp8Decoder<R> {
             false
         };
 
-        let inter_predicted = if !self.frame.keyframe {
-            self.b.read_bool(self.prob_intra).or_accumulate(&mut res)
-        } else {
-            false
-        };
+        // Only keyframes reach macroblock decoding; interframes are rejected
+        // after the frame-level fields have been consumed.
+        let luma = (self.b.read_with_tree(&KEYFRAME_YMODE_NODES)).or_accumulate(&mut res);
+        mb.luma_mode = LumaMode::from_i8(luma).ok_or(DecodingError::LumaPredictionModeInvalid)?;
 
-        if inter_predicted {
-            return Err(DecodingError::UnsupportedFeature);
-        }
+        match mb.luma_mode.into_intra() {
+            // `LumaMode::B` - This is predicted individually
+            None => {
+                for y in 0usize..4 {
+                    for x in 0usize..4 {
+                        let top = self.top[mbx].bpred[12 + x];
+                        let left = self.left.bpred[y];
+                        let intra = self.b.read_with_tree(
+                            &KEYFRAME_BPRED_MODE_NODES[top as usize][left as usize],
+                        );
+                        let intra = intra.or_accumulate(&mut res);
+                        let bmode = IntraMode::from_i8(intra)
+                            .ok_or(DecodingError::IntraPredictionModeInvalid)?;
+                        mb.bpred[x + y * 4] = bmode;
 
-        if self.frame.keyframe {
-            // intra prediction
-            let luma = (self.b.read_with_tree(&KEYFRAME_YMODE_NODES)).or_accumulate(&mut res);
-            mb.luma_mode =
-                LumaMode::from_i8(luma).ok_or(DecodingError::LumaPredictionModeInvalid)?;
-
-            match mb.luma_mode.into_intra() {
-                // `LumaMode::B` - This is predicted individually
-                None => {
-                    for y in 0usize..4 {
-                        for x in 0usize..4 {
-                            let top = self.top[mbx].bpred[12 + x];
-                            let left = self.left.bpred[y];
-                            let intra = self.b.read_with_tree(
-                                &KEYFRAME_BPRED_MODE_NODES[top as usize][left as usize],
-                            );
-                            let intra = intra.or_accumulate(&mut res);
-                            let bmode = IntraMode::from_i8(intra)
-                                .ok_or(DecodingError::IntraPredictionModeInvalid)?;
-                            mb.bpred[x + y * 4] = bmode;
-
-                            self.top[mbx].bpred[12 + x] = bmode;
-                            self.left.bpred[y] = bmode;
-                        }
-                    }
-                }
-                Some(mode) => {
-                    for i in 0usize..4 {
-                        mb.bpred[12 + i] = mode;
-                        self.left.bpred[i] = mode;
+                        self.top[mbx].bpred[12 + x] = bmode;
+                        self.left.bpred[y] = bmode;
                     }
                 }
             }
-
-            let chroma = (self.b.read_with_tree(&KEYFRAME_UV_MODE_NODES)).or_accumulate(&mut res);
-            mb.chroma_mode =
-                ChromaMode::from_i8(chroma).ok_or(DecodingError::ChromaPredictionModeInvalid)?;
+            Some(mode) => {
+                for i in 0usize..4 {
+                    mb.bpred[12 + i] = mode;
+                    self.left.bpred[i] = mode;
+                }
+            }
         }
+
+        let chroma = (self.b.read_with_tree(&KEYFRAME_UV_MODE_NODES)).or_accumulate(&mut res);
+        mb.chroma_mode =
+            ChromaMode::from_i8(chroma).ok_or(DecodingError::ChromaPredictionModeInvalid)?;
 
         self.top[mbx].chroma_mode = mb.chroma_mode;
         self.top[mbx].luma_mode = mb.luma_mode;
@@ -1874,21 +1848,11 @@ impl<R: Read> Vp8Decoder<R> {
         //high edge variance threshold
         let mut hev_threshold = 0;
 
-        #[allow(clippy::collapsible_else_if)]
-        if self.frame.keyframe {
-            if filter_level >= 40 {
-                hev_threshold = 2;
-            } else if filter_level >= 15 {
-                hev_threshold = 1;
-            }
-        } else {
-            if filter_level >= 40 {
-                hev_threshold = 3;
-            } else if filter_level >= 20 {
-                hev_threshold = 2;
-            } else if filter_level >= 15 {
-                hev_threshold = 1;
-            }
+        debug_assert!(self.frame.keyframe);
+        if filter_level >= 40 {
+            hev_threshold = 2;
+        } else if filter_level >= 15 {
+            hev_threshold = 1;
         }
 
         (filter_level, interior_limit, hev_threshold)

@@ -1544,6 +1544,26 @@ formats:
       source_format: png
       source_asset: rgba.png
       params: {'lossless': False, 'alpha': True}
+    - id: enc_lossy_odd_alpha
+      description: Lossy transparent smoothing on partial edge macroblocks
+      source_format: png
+      source_asset: rgba_odd.png
+      params: {'lossless': False, 'alpha': True}
+    - id: enc_lossy_horizontal
+      description: Lossy horizontal prediction structure
+      source_format: webp
+      source_asset: lossless_horizontal.webp
+      params: {'lossless': False}
+    - id: enc_lossy_vertical
+      description: Lossy vertical prediction structure
+      source_format: webp
+      source_asset: lossless_vertical.webp
+      params: {'lossless': False}
+    - id: enc_lossy_solid
+      description: Lossy uniform-block analysis
+      source_format: webp
+      source_asset: lossless_solid.webp
+      params: {'lossless': False}
     - id: enc_lossless_alpha
       description: 
       source_format: png

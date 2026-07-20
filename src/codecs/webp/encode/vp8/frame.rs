@@ -287,12 +287,14 @@ pub(super) fn select_frame(
                 quality < 98.0,
                 matrix,
                 matrix.lambda_uv as u32,
-                (method == 0).then(|| match analysis.macroblocks[block_index].chroma_mode {
-                    0 => chroma::ChromaMode::Dc,
-                    1 => chroma::ChromaMode::TrueMotion,
-                    2 => chroma::ChromaMode::Vertical,
-                    3 => chroma::ChromaMode::Horizontal,
-                    _ => unreachable!("invalid analyzed chroma mode"),
+                (method == 0).then(|| {
+                    let mode = analysis.macroblocks[block_index].chroma_mode;
+                    debug_assert!(mode <= 1);
+                    if mode == 0 {
+                        chroma::ChromaMode::Dc
+                    } else {
+                        chroma::ChromaMode::TrueMotion
+                    }
                 }),
                 coefficient_probabilities,
             );

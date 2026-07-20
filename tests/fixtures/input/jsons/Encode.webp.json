@@ -237,6 +237,91 @@
       }
     },
     {
+      "id": "enc_lossy_odd_alpha",
+      "source_asset": "rgba_odd.png",
+      "source_format": "png",
+      "params": {
+        "lossless": false,
+        "alpha": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba_odd.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_horizontal",
+      "source_asset": "lossless_horizontal.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_horizontal.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_vertical",
+      "source_asset": "lossless_vertical.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_vertical.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_solid",
+      "source_asset": "lossless_solid.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_solid.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossless_alpha",
       "source_asset": "alpha_partial.png",
       "source_format": "png",

@@ -82,47 +82,32 @@ fn predict_block<const SIZE: usize>(
             };
             output.fill(value);
         }
-        1 => match (top, left) {
-            (Some(top), Some(left)) => {
-                for row in 0..SIZE {
-                    for column in 0..SIZE {
-                        output[row * SIZE + column] =
-                            (i16::from(top[column]) + i16::from(left[row]) - i16::from(top_left))
+        _ => {
+            debug_assert_eq!(mode, 1);
+            match (top, left) {
+                (Some(top), Some(left)) => {
+                    for row in 0..SIZE {
+                        for column in 0..SIZE {
+                            output[row * SIZE + column] =
+                                (i16::from(top[column]) + i16::from(left[row])
+                                    - i16::from(top_left))
                                 .clamp(0, 255) as u8;
+                        }
                     }
                 }
-            }
-            (Some(top), None) => {
-                for row in output.chunks_exact_mut(SIZE) {
-                    row.copy_from_slice(&top[..SIZE]);
+                (Some(top), None) => {
+                    for row in output.chunks_exact_mut(SIZE) {
+                        row.copy_from_slice(&top[..SIZE]);
+                    }
                 }
-            }
-            (None, Some(left)) => {
-                for (row, &value) in output.chunks_exact_mut(SIZE).zip(left.iter()) {
-                    row.fill(value);
+                (None, Some(left)) => {
+                    for (row, &value) in output.chunks_exact_mut(SIZE).zip(left.iter()) {
+                        row.fill(value);
+                    }
                 }
-            }
-            (None, None) => output.fill(129),
-        },
-        2 => {
-            if let Some(top) = top {
-                for row in output.chunks_exact_mut(SIZE) {
-                    row.copy_from_slice(&top[..SIZE]);
-                }
-            } else {
-                output.fill(127);
+                (None, None) => output.fill(129),
             }
         }
-        3 => {
-            if let Some(left) = left {
-                for (row, &value) in output.chunks_exact_mut(SIZE).zip(left) {
-                    row.fill(value);
-                }
-            } else {
-                output.fill(129);
-            }
-        }
-        _ => unreachable!("invalid analysis prediction mode"),
     }
     output
 }
@@ -163,11 +148,8 @@ fn collect_histogram(blocks: &[(&[u8], &[u8], usize)]) -> Histogram {
 }
 
 fn histogram_alpha(histogram: Histogram) -> i32 {
-    if histogram.max_value > 1 {
-        510 * histogram.last_non_zero / histogram.max_value
-    } else {
-        0
-    }
+    debug_assert!(histogram.max_value > 1);
+    510 * histogram.last_non_zero / histogram.max_value
 }
 
 fn extract_block(
