@@ -84,6 +84,24 @@ struct DecodeRow {
     ref_size: Option<Vec<u32>>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
+    #[serde(default)]
+    sequence: Option<SequenceParityRef>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SequenceParityRef {
+    loop_count: Option<u32>,
+    frames: Vec<FrameParityRef>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FrameParityRef {
+    index: usize,
+    ref_path: String,
+    ref_bytes: usize,
+    ref_mode: String,
+    ref_size: Vec<u32>,
+    duration_ms: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1014,6 +1032,58 @@ fn assert_dynamic_bridge_parity(
         .map_err(|message| format!("DynamicImage bridge changed Pillow bytes: {message}"))
 }
 
+fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+    let Some(expected) = &row.sequence else {
+        return Ok(());
+    };
+    let actual = img::decode_sequence(data).ok_or("sequence decode returned None")?;
+    if actual.loop_count != expected.loop_count {
+        return Err(format!(
+            "loop count mismatch: actual {:?}, expected {:?}",
+            actual.loop_count, expected.loop_count
+        ));
+    }
+    if actual.frames.len() != expected.frames.len() {
+        return Err(format!(
+            "frame count mismatch: actual {}, expected {}",
+            actual.frames.len(),
+            expected.frames.len()
+        ));
+    }
+    for (actual_frame, expected_frame) in actual.frames.iter().zip(&expected.frames) {
+        if actual_frame.duration_ms != expected_frame.duration_ms {
+            return Err(format!(
+                "frame {} duration mismatch: actual {}, expected {}",
+                expected_frame.index, actual_frame.duration_ms, expected_frame.duration_ms
+            ));
+        }
+        let bytes = fs::read(manifest_dir.join(&expected_frame.ref_path)).map_err(|error| {
+            format!(
+                "frame {} reference unreadable: {error}",
+                expected_frame.index
+            )
+        })?;
+        if bytes.len() != expected_frame.ref_bytes {
+            return Err(format!(
+                "frame {} reference length mismatch: actual {}, declared {}",
+                expected_frame.index,
+                bytes.len(),
+                expected_frame.ref_bytes
+            ));
+        }
+        let reference = PixelParityRef {
+            id: format!("{} frame {}", row.id, expected_frame.index),
+            bytes,
+            width: expected_frame.ref_size.first().copied(),
+            height: expected_frame.ref_size.get(1).copied(),
+            mode: Some(expected_frame.ref_mode.clone()),
+        };
+        assert_pixel_parity(&reference, &actual_frame.image)
+            .map_err(|message| format!("frame {}: {message}", expected_frame.index))?;
+    }
+    Ok(())
+}
+
 // ── Decode Tests ─────────────────────────────────────────────────────────
 
 #[test]
@@ -1107,6 +1177,7 @@ fn test_decode_matrix() {
 
             match assert_pixel_parity(&expected, &decoded)
                 .and_then(|()| assert_dynamic_bridge_parity(&expected, &decoded))
+                .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
             {
                 Ok(()) => {
                     eprintln!(

@@ -182,11 +182,336 @@
       }
     },
     {
+      "id": "lossless_transform_variants_lossless_palette17",
+      "asset": "lossless_palette17.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_palette17.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_palette32",
+      "asset": "lossless_palette32.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_palette32.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_palette64",
+      "asset": "lossless_palette64.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_palette64.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_palette256",
+      "asset": "lossless_palette256.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_palette256.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "lossless_transform_variants_lossless_noise",
       "asset": "lossless_noise.webp",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_noise.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode0",
+      "asset": "lossless_predictor_mode0.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode0.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
+      "asset": "lossless_predictor_mode0_hybrid.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode0_hybrid.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_diag_reverse",
+      "asset": "lossless_predictor_diag_reverse.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_diag_reverse.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_xor",
+      "asset": "lossless_predictor_xor.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_xor.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_product",
+      "asset": "lossless_predictor_product.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_product.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_radial",
+      "asset": "lossless_predictor_radial.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_radial.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_diamond",
+      "asset": "lossless_predictor_diamond.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_diamond.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_bilinear",
+      "asset": "lossless_predictor_bilinear.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_bilinear.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_stripes",
+      "asset": "lossless_predictor_stripes.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_stripes.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_steps",
+      "asset": "lossless_predictor_steps.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_steps.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_saw",
+      "asset": "lossless_predictor_saw.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_saw.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_quadrants",
+      "asset": "lossless_predictor_quadrants.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_quadrants.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_random_walk",
+      "asset": "lossless_predictor_random_walk.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_random_walk.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode5",
+      "asset": "lossless_predictor_mode5.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode5.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode6",
+      "asset": "lossless_predictor_mode6.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode6.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode7",
+      "asset": "lossless_predictor_mode7.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode7.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode8",
+      "asset": "lossless_predictor_mode8.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode8.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode9",
+      "asset": "lossless_predictor_mode9.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode9.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode10",
+      "asset": "lossless_predictor_mode10.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode10.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_mode13",
+      "asset": "lossless_predictor_mode13.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_mode13.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_lossless_predictor_sparse",
+      "asset": "lossless_predictor_sparse.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_sparse.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -260,6 +585,97 @@
       }
     },
     {
+      "id": "alpha_lossless_alpha_lossy_horizontal",
+      "asset": "alpha_lossy_horizontal.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_lossy_horizontal.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "alpha_lossless_alpha_lossy_vertical",
+      "asset": "alpha_lossy_vertical.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_lossy_vertical.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "alpha_lossless_alpha_lossy_gradient",
+      "asset": "alpha_lossy_gradient.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_lossy_gradient.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "alpha_lossless_alpha_lossy_noise",
+      "asset": "alpha_lossy_noise.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_lossy_noise.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "alpha_lossless_alpha_lossy_vertical_filter",
+      "asset": "alpha_lossy_vertical_filter.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_lossy_vertical_filter.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "alpha_lossless_alpha_lossy_gradient_filter",
+      "asset": "alpha_lossy_gradient_filter.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_lossy_gradient_filter.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "alpha_lossless_alpha_uncompressed",
+      "asset": "alpha_uncompressed.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_uncompressed.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "animated",
       "asset": "animated.webp",
       "expect_error": false,
@@ -291,6 +707,45 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_blend.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_alpha_full",
+      "asset": "animated_alpha_full.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_alpha_full.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_alpha_full_dispose",
+      "asset": "animated_alpha_full_dispose.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_alpha_full_dispose.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_dispose",
+      "asset": "animated_dispose.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_dispose.webp",
         "operations": [
           "PIL.Image.open",
           "load",

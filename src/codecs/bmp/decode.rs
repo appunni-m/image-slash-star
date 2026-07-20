@@ -79,155 +79,91 @@ fn extract_channel(pixel: u32, mask: u32) -> u8 {
 // RLE8 decoder
 // ---------------------------------------------------------------------------
 
-fn decode_rle8(data: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
-    let mut out = vec![0u8; width * height];
+fn decode_rle(
+    data: &[u8],
+    width: usize,
+    height: usize,
+    rle4: bool,
+    stream_offset: usize,
+) -> Option<Vec<u8>> {
+    // Pillow 12.2.0 BmpRleDecoder builds one linear index stream. In
+    // particular, its RLE4 absolute mode reads floor(pixel_count / 2) bytes,
+    // so an unpaired final nibble is deliberately omitted and later row
+    // padding supplies a zero. Preserve that observable behavior exactly.
+    let destination_length = width.checked_mul(height)?;
+    let mut output = Vec::with_capacity(destination_length);
     let mut x = 0usize;
-    let mut y = 0usize;
-    let mut i = 0usize;
+    let mut position = 0usize;
 
-    while i + 1 < data.len() {
-        let count = data[i] as usize;
-        let value = data[i + 1];
-        i += 2;
+    while output.len() < destination_length {
+        let count = usize::from(*data.get(position)?);
+        let value = *data.get(position.checked_add(1)?)?;
+        position = position.checked_add(2)?;
 
-        if count > 0 {
-            // Encoded mode: repeat `value` `count` times
-            for _ in 0..count {
-                if x < width {
-                    out[y * width + x] = value;
-                }
-                x += 1;
+        if count != 0 {
+            let pixel_count = count.min(width.saturating_sub(x));
+            if rle4 {
+                let first = value >> 4;
+                let second = value & 0x0f;
+                output.extend((0..pixel_count).map(|index| {
+                    if index.is_multiple_of(2) {
+                        first
+                    } else {
+                        second
+                    }
+                }));
+            } else {
+                output.resize(output.len().checked_add(pixel_count)?, value);
             }
-        } else {
-            // Escape sequences
-            match value {
-                0 => {
-                    // End of line
-                    x = 0;
-                    y += 1;
-                    if y >= height {
-                        break;
-                    }
+            x = x.checked_add(pixel_count)?;
+            continue;
+        }
+
+        match value {
+            0 => {
+                let remainder = output.len() % width;
+                if remainder != 0 {
+                    output.resize(output.len().checked_add(width - remainder)?, 0);
                 }
-                1 => break, // End of bitmap
-                2 => {
-                    // Delta
-                    if i + 1 >= data.len() {
-                        return None;
+                x = 0;
+            }
+            1 => break,
+            2 => {
+                let right = usize::from(*data.get(position)?);
+                let up = usize::from(*data.get(position.checked_add(1)?)?);
+                position = position.checked_add(2)?;
+                let skipped = up.checked_mul(width)?.checked_add(right)?;
+                output.resize(output.len().checked_add(skipped)?, 0);
+                x = output.len() % width;
+            }
+            absolute_pixels => {
+                let byte_count = if rle4 {
+                    usize::from(absolute_pixels) / 2
+                } else {
+                    usize::from(absolute_pixels)
+                };
+                let end = position.checked_add(byte_count)?;
+                let literal = data.get(position..end)?;
+                if rle4 {
+                    for &byte in literal {
+                        output.extend_from_slice(&[byte >> 4, byte & 0x0f]);
                     }
-                    let dx = data[i] as usize;
-                    let dy = data[i + 1] as usize;
-                    i += 2;
-                    x += dx;
-                    y += dy;
-                    if y >= height {
-                        break;
-                    }
+                } else {
+                    output.extend_from_slice(literal);
                 }
-                _ => {
-                    // Absolute mode: `value` literal bytes follow, padded to word boundary
-                    let abs_len = value as usize;
-                    if i + abs_len > data.len() {
-                        return None;
-                    }
-                    for j in 0..abs_len {
-                        if x < width {
-                            out[y * width + x] = data[i + j];
-                        }
-                        x += 1;
-                    }
-                    i += abs_len;
-                    // Pad to 16-bit boundary
-                    if abs_len % 2 == 1 {
-                        i += 1;
-                    }
+                position = end;
+                x = x.checked_add(usize::from(absolute_pixels))?;
+
+                if stream_offset.checked_add(position)? % 2 != 0 {
+                    position = position.checked_add(1)?;
                 }
             }
         }
     }
-    Some(out)
-}
 
-// ---------------------------------------------------------------------------
-// RLE4 decoder
-// ---------------------------------------------------------------------------
-
-fn decode_rle4(data: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
-    let mut out = vec![0u8; width * height];
-    let mut x = 0usize;
-    let mut y = 0usize;
-    let mut i = 0usize;
-
-    while i + 1 < data.len() {
-        let count = data[i] as usize;
-        let value = data[i + 1];
-        i += 2;
-
-        if count > 0 {
-            // Encoded mode: the two nibbles of `value` are repeated `count` times
-            let hi = (value >> 4) & 0x0F;
-            let lo = value & 0x0F;
-            for position in 0..count {
-                if x < width {
-                    out[y * width + x] = if position % 2 == 0 { hi } else { lo };
-                }
-                x += 1;
-            }
-        } else {
-            // Escape sequences
-            match value {
-                0 => {
-                    // End of line
-                    x = 0;
-                    y += 1;
-                    if y >= height {
-                        break;
-                    }
-                }
-                1 => break, // End of bitmap
-                2 => {
-                    // Delta
-                    if i + 1 >= data.len() {
-                        return None;
-                    }
-                    let dx = data[i] as usize;
-                    let dy = data[i + 1] as usize;
-                    i += 2;
-                    x += dx;
-                    y += dy;
-                    if y >= height {
-                        break;
-                    }
-                }
-                _ => {
-                    // Absolute mode: `value` nibbles follow
-                    let nibble_count = value as usize;
-                    let byte_count = nibble_count.div_ceil(2);
-                    if i + byte_count > data.len() {
-                        return None;
-                    }
-                    for j in 0..nibble_count {
-                        let byte = data[i + j / 2];
-                        let nibble = if j % 2 == 0 {
-                            (byte >> 4) & 0x0F
-                        } else {
-                            byte & 0x0F
-                        };
-                        if x < width {
-                            out[y * width + x] = nibble;
-                        }
-                        x += 1;
-                    }
-                    i += byte_count;
-                    // Pad to 16-bit boundary
-                    if byte_count % 2 == 1 {
-                        i += 1;
-                    }
-                }
-            }
-        }
-    }
-    Some(out)
+    output.resize(destination_length, 0);
+    output.truncate(destination_length);
+    Some(output)
 }
 
 // ---------------------------------------------------------------------------
@@ -255,16 +191,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             // RGBTRIPLE palette entries.
             let width = i32::from(read_u16_le(&mut r)?);
             let height = i32::from(read_u16_le(&mut r)?);
-            let planes = read_u16_le(&mut r)?;
+            let _planes = read_u16_le(&mut r)?;
             let bit_depth = read_u16_le(&mut r)?;
-            if planes != 1 {
-                return None;
-            }
             (width, height, bit_depth, 0, 0, 3usize)
         } else if header_size >= 40 {
             let width = read_i32_le(&mut r)?;
             let height = read_i32_le(&mut r)?;
-            let planes = read_u16_le(&mut r)?;
+            let _planes = read_u16_le(&mut r)?;
             let bit_depth = read_u16_le(&mut r)?;
             let compression = read_u32_le(&mut r)?;
             let _image_size = read_u32_le(&mut r)?;
@@ -272,9 +205,6 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             let _y_pels = read_i32_le(&mut r)?;
             let colors_used = read_u32_le(&mut r)?;
             let _colors_important = read_u32_le(&mut r)?;
-            if planes != 1 {
-                return None;
-            }
             (width, height, bit_depth, compression, colors_used, 4usize)
         } else {
             return None;
@@ -352,6 +282,15 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     } else {
         Vec::new()
     };
+    let palette_is_grayscale = !palette.is_empty()
+        && palette.iter().enumerate().all(|(index, entry)| {
+            let expected = if palette.len() == 2 {
+                if index == 0 { 0 } else { 255 }
+            } else {
+                index as u8
+            };
+            entry[0] == expected && entry[1] == expected && entry[2] == expected
+        });
 
     // --- Seek to pixel data ---
     if r.position() != data_offset {
@@ -369,7 +308,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         let mut remaining = Vec::new();
         r.read_to_end(&mut remaining).ok()?;
         orient_index_rows(
-            decode_rle8(&remaining, width_usize, height_usize)?,
+            decode_rle(
+                &remaining,
+                width_usize,
+                height_usize,
+                false,
+                usize::try_from(data_offset).ok()?,
+            )?,
             width_usize,
             top_down,
         )?
@@ -378,7 +323,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         let mut remaining = Vec::new();
         r.read_to_end(&mut remaining).ok()?;
         orient_index_rows(
-            decode_rle4(&remaining, width_usize, height_usize)?,
+            decode_rle(
+                &remaining,
+                width_usize,
+                height_usize,
+                true,
+                usize::try_from(data_offset).ok()?,
+            )?,
             width_usize,
             top_down,
         )?
@@ -390,19 +341,38 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
         match bit_depth {
             1 => {
-                // 1 bpp — packed bits, skip stride padding (PIL mode '1' parity)
-                let packed_per_row = width_usize.div_ceil(8);
-                let mut out = Vec::with_capacity(packed_per_row * height_usize);
-                for row in 0..height_usize {
-                    let src_row = if top_down {
-                        row
-                    } else {
-                        height_usize - 1 - row
-                    };
-                    let offset = src_row * stride;
-                    out.extend_from_slice(&raw[offset..offset + packed_per_row]);
+                if palette_is_grayscale {
+                    // Pillow retains packed bytes only for its canonical
+                    // black/white palette and exposes mode `1`.
+                    let packed_per_row = width_usize.div_ceil(8);
+                    let mut out = Vec::with_capacity(packed_per_row * height_usize);
+                    for row in 0..height_usize {
+                        let src_row = if top_down {
+                            row
+                        } else {
+                            height_usize - 1 - row
+                        };
+                        let offset = src_row * stride;
+                        out.extend_from_slice(&raw[offset..offset + packed_per_row]);
+                    }
+                    out
+                } else {
+                    // A noncanonical two-color palette remains mode `P`, so
+                    // Pillow expands each packed bit to one palette index.
+                    let mut out = Vec::with_capacity(width_usize * height_usize);
+                    for row in 0..height_usize {
+                        let src_row = if top_down {
+                            row
+                        } else {
+                            height_usize - 1 - row
+                        };
+                        let offset = src_row * stride;
+                        for col in 0..width_usize {
+                            out.push((raw[offset + col / 8] >> (7 - col % 8)) & 1);
+                        }
+                    }
+                    out
                 }
-                out
             }
             4 => {
                 // 4 bpp — expand nibbles to full-byte indices
@@ -531,8 +501,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     };
 
     let mode = match bit_depth {
-        1 => ImageMode::L1,
-        2 | 4 | 8 => ImageMode::P8,
+        1 if palette_is_grayscale => ImageMode::L1,
+        1 | 2 | 4 | 8 if !palette_is_grayscale => ImageMode::P8,
+        2 | 4 | 8 => ImageMode::L8,
         _ => color.into(),
     };
     let mut image = DecodedImage::with_mode(w, h, pixels, mode);

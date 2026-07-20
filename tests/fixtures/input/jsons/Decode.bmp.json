@@ -117,11 +117,37 @@
       }
     },
     {
+      "id": "compression_rle8_rle8_mixed",
+      "asset": "rle8_mixed.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_mixed.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "compression_rle4",
       "asset": "rle4.bmp",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_rle4_rle4_mixed",
+      "asset": "rle4_mixed.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4_mixed.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -148,6 +174,71 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down_top_down_1",
+      "asset": "top_down_1.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down_1.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down_top_down_4",
+      "asset": "top_down_4.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down_4.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down_top_down_8",
+      "asset": "top_down_8.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down_8.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down_top_down_16",
+      "asset": "top_down_16.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down_16.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down_top_down_32",
+      "asset": "top_down_32.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down_32.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -273,11 +364,115 @@
       }
     },
     {
+      "id": "planes_nonstandard",
+      "asset": "invalid_planes.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/invalid_planes.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_not_bmp",
       "asset": "not_bmp.bmp",
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/not_bmp.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed",
+      "asset": "invalid_header_size.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/invalid_header_size.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_invalid_width",
+      "asset": "invalid_width.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/invalid_width.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_invalid_height",
+      "asset": "invalid_height.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/invalid_height.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_invalid_depth",
+      "asset": "invalid_depth.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/invalid_depth.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_header",
+      "asset": "truncated_header.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/truncated_header.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_pixels",
+      "asset": "truncated_pixels.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/truncated_pixels.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_palette",
+      "asset": "truncated_palette.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/truncated_palette.bmp",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -117,6 +117,19 @@
       ]
     },
     {
+      "id": "compression_rle8_rle8_mixed",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle8_mixed_bmp.bin",
+      "ref_bytes": 36,
+      "ref_mode": "P",
+      "ref_size": [
+        9,
+        4
+      ]
+    },
+    {
       "id": "compression_rle4",
       "status": "ok",
       "error_type": null,
@@ -127,6 +140,19 @@
       "ref_size": [
         16,
         16
+      ]
+    },
+    {
+      "id": "compression_rle4_rle4_mixed",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_mixed_bmp.bin",
+      "ref_bytes": 36,
+      "ref_mode": "P",
+      "ref_size": [
+        9,
+        4
       ]
     },
     {
@@ -153,6 +179,71 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "top_down_top_down_1",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_1_bmp.bin",
+      "ref_bytes": 45,
+      "ref_mode": "P",
+      "ref_size": [
+        9,
+        5
+      ]
+    },
+    {
+      "id": "top_down_top_down_4",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_4_bmp.bin",
+      "ref_bytes": 45,
+      "ref_mode": "P",
+      "ref_size": [
+        9,
+        5
+      ]
+    },
+    {
+      "id": "top_down_top_down_8",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_8_bmp.bin",
+      "ref_bytes": 45,
+      "ref_mode": "P",
+      "ref_size": [
+        9,
+        5
+      ]
+    },
+    {
+      "id": "top_down_top_down_16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_16_bmp.bin",
+      "ref_bytes": 135,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        9,
+        5
+      ]
+    },
+    {
+      "id": "top_down_top_down_32",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_32_bmp.bin",
+      "ref_bytes": 135,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        9,
+        5
       ]
     },
     {
@@ -273,10 +364,93 @@
       ]
     },
     {
+      "id": "planes_nonstandard",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_invalid_planes_bmp.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "error_not_bmp",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
       "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP header type (16)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_invalid_width",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_invalid_height",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_invalid_depth",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP pixel depth (2)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_pixels",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (374 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_palette",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

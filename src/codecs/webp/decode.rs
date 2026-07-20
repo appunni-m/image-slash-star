@@ -1,10 +1,12 @@
 //! WebP decoder implemented in pure Rust (zero unsafe, `#![forbid(unsafe_code)]`).
 //!
 //! The internal codec handles: lossy VP8, lossless VP8L, alpha (ALPH + VP8X),
-//! animated (first frame), metadata (ICC/EXIF/XMP), and tiling.
+//! animated frames, metadata (ICC/EXIF/XMP), and tiling.
 
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal};
 use std::io::Cursor;
+
+use super::native::LoopCount;
 
 /// Decode a WebP image from raw bytes.
 ///
@@ -27,4 +29,48 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     };
 
     Some(DecodedImage::new(width, height, pixels, color))
+}
+
+/// Decode every composited frame and its presentation timing from a WebP stream.
+pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
+    let cursor = Cursor::new(data);
+    let mut decoder = super::native::WebPDecoder::new(cursor).ok()?;
+    if !decoder.is_animated() {
+        return decode(data).map(DecodedSequence::from_image);
+    }
+
+    let (width, height) = decoder.dimensions();
+    let color = if decoder.has_alpha() {
+        ColorType::Rgba8
+    } else {
+        ColorType::Rgb8
+    };
+    let buffer_size = decoder.output_buffer_size()?;
+    let frame_count = usize::try_from(decoder.num_frames()).ok()?;
+    let mut frames = Vec::with_capacity(frame_count);
+    for _ in 0..frame_count {
+        let mut pixels = vec![0; buffer_size];
+        let duration_ms = decoder.read_frame(&mut pixels).ok()?;
+        frames.push(DecodedFrame {
+            image: DecodedImage::new(width, height, pixels, color),
+            left: 0,
+            top: 0,
+            duration_ms,
+            disposal: FrameDisposal::Unspecified,
+            interlaced: false,
+        });
+    }
+
+    let loop_count = Some(match decoder.loop_count() {
+        LoopCount::Forever => 0,
+        LoopCount::Times(count) => u32::from(count.get()),
+    });
+    let sequence = DecodedSequence {
+        width,
+        height,
+        frames,
+        loop_count,
+    };
+    sequence.validate().ok()?;
+    Some(sequence)
 }

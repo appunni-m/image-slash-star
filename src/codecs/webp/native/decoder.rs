@@ -406,7 +406,14 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                     match self.read_chunk(WebPRiffChunk::ANIM, 6) {
                         Ok(Some(chunk)) => {
                             let mut cursor = Cursor::new(chunk);
-                            cursor.read_exact(&mut info.background_color_hint)?;
+                            let mut background_bgra = [0; 4];
+                            cursor.read_exact(&mut background_bgra)?;
+                            info.background_color_hint = [
+                                background_bgra[2],
+                                background_bgra[1],
+                                background_bgra[0],
+                                background_bgra[3],
+                            ];
                             self.loop_count = match cursor.read_u16::<LittleEndian>()? {
                                 0 => LoopCount::Forever,
                                 n => LoopCount::Times(NonZeroU16::new(n).unwrap()),
@@ -688,7 +695,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
         let dispose = frame_info & 0b00000001 != 0;
 
         let clear_color = if self.animation.dispose_next_frame {
-            info.background_color
+            Some(info.background_color.unwrap_or(info.background_color_hint))
         } else {
             None
         };
@@ -770,11 +777,10 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
         if self.animation.canvas.is_none() {
             self.animation.canvas = {
                 let mut canvas = vec![0; (self.width * self.height * 4) as usize];
-                if let Some(color) = info.background_color.as_ref() {
-                    canvas
-                        .chunks_exact_mut(4)
-                        .for_each(|c| c.copy_from_slice(color))
-                }
+                let color = info.background_color.unwrap_or(info.background_color_hint);
+                canvas
+                    .chunks_exact_mut(4)
+                    .for_each(|pixel| pixel.copy_from_slice(&color));
                 Some(canvas)
             }
         }

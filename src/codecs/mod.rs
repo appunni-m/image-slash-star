@@ -73,6 +73,11 @@ pub fn decode_sequence_format(data: &[u8], format: ImageFormat) -> Option<Decode
         return gif::decode::decode_sequence(data);
     }
 
+    #[cfg(feature = "webp")]
+    if format == ImageFormat::WebP {
+        return webp::decode::decode_sequence(data);
+    }
+
     decode_format(data, format).map(DecodedSequence::from_image)
 }
 

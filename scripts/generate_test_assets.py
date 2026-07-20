@@ -382,6 +382,57 @@ def write_bmp_16(path, image):
     write_bmp(path, dib, bytes(rows))
 
 
+def write_bmp_top_down(path, depth, width=9, height=5):
+    """Write an uncompressed top-down BMP at a selected supported depth."""
+    rows = bytearray()
+    palette = b""
+    if depth == 1:
+        stride = ((width + 31) // 32) * 4
+        for y in range(height):
+            row = bytearray((width + 7) // 8)
+            for x in range(width):
+                row[x // 8] |= ((x + y) & 1) << (7 - x % 8)
+            rows.extend(row)
+            rows.extend(b"\0" * (stride - len(row)))
+        palette = bmp_palette(2)
+    elif depth == 4:
+        stride = (((width + 1) // 2) + 3) & ~3
+        for y in range(height):
+            row = bytearray()
+            for x in range(0, width, 2):
+                high = (x + y) & 0x0f
+                low = (x + y + 1) & 0x0f if x + 1 < width else 0
+                row.append((high << 4) | low)
+            rows.extend(row)
+            rows.extend(b"\0" * (stride - len(row)))
+        palette = bmp_palette(16)
+    elif depth == 8:
+        stride = (width + 3) & ~3
+        for y in range(height):
+            row = bytes((x + y) & 0xff for x in range(width))
+            rows.extend(row)
+            rows.extend(b"\0" * (stride - len(row)))
+        palette = bmp_palette(256)
+    elif depth == 16:
+        stride = ((width * 2 + 3) // 4) * 4
+        for y in range(height):
+            for x in range(width):
+                red = (x * 31) // max(1, width - 1)
+                green = (y * 31) // max(1, height - 1)
+                blue = ((x + y) * 31) // max(1, width + height - 2)
+                rows.extend(struct.pack("<H", (red << 10) | (green << 5) | blue))
+            rows.extend(b"\0" * (stride - width * 2))
+    elif depth == 32:
+        for y in range(height):
+            for x in range(width):
+                rows.extend((x * 17 & 0xff, y * 31 & 0xff, (x + y) * 13 & 0xff, 255))
+    else:
+        raise ValueError(f"unsupported top-down BMP depth {depth}")
+    color_count = 1 << depth if depth <= 8 else 0
+    dib = bmp_info_header(width, -height, depth, 0, len(rows), color_count)
+    write_bmp(path, dib, bytes(rows), palette)
+
+
 def write_bmp_rle(path, depth, width=16, height=16):
     rows = bytearray()
     color_count = 256 if depth == 8 else 16
@@ -403,6 +454,27 @@ def write_bmp_rle(path, depth, width=16, height=16):
         rows.extend((0, 0))
     rows.extend((0, 1))
     compression = 1 if depth == 8 else 2
+    dib = bmp_info_header(width, height, depth, compression, len(rows), color_count)
+    write_bmp(path, dib, bytes(rows), bmp_palette(color_count))
+
+
+def write_bmp_rle_mixed(path, depth):
+    """Write a valid RLE bitmap exercising encoded, absolute, delta, and EOB modes."""
+    width, height = 9, 4
+    if depth == 8:
+        rows = bytearray((9, 3, 0, 0))
+        rows.extend((0, 2, 2, 0, 7, 4, 0, 0))
+        rows.extend((0, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0))
+        rows.extend((9, 5, 0, 1))
+        color_count = 256
+        compression = 1
+    else:
+        rows = bytearray((9, 0x12, 0, 0))
+        rows.extend((0, 2, 2, 0, 7, 0x34, 0, 0))
+        rows.extend((0, 9, 0x12, 0x34, 0x56, 0x78, 0x90, 0, 0, 0))
+        rows.extend((9, 0xAB, 0, 1))
+        color_count = 16
+        compression = 2
     dib = bmp_info_header(width, height, depth, compression, len(rows), color_count)
     write_bmp(path, dib, bytes(rows), bmp_palette(color_count))
 
@@ -467,18 +539,43 @@ def gen_bmp():
     img.save(d / "uncompressed.bmp")
     img.save(d / "bottom_up.bmp")
     write_bmp_24(d / "top_down.bmp", img, top_down=True)
+    for depth in (1, 4, 8, 16, 32):
+        write_bmp_top_down(d / f"top_down_{depth}.bmp", depth)
     write_bmp_bitfields(d / "bitfields.bmp", pattern_img("RGBA"))
     write_bmp_bitfields(d / "v4header.bmp", pattern_img("RGBA"), header_size=108)
     write_bmp_bitfields(d / "v5header.bmp", pattern_img("RGBA"), header_size=124)
     write_bmp_24(d / "os2v1.bmp", img, core_header=True)
     write_bmp_rle(d / "rle8.bmp", 8)
     write_bmp_rle(d / "rle4.bmp", 4)
+    write_bmp_rle_mixed(d / "rle8_mixed.bmp", 8)
+    write_bmp_rle_mixed(d / "rle4_mixed.bmp", 4)
     Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.bmp")
     Image.new("RGB", (17,17), (128,0,0)).save(d / "odd_width.bmp")
     pattern_img("RGB", (2, 5)).save(d / "width2.bmp")
     pattern_img("RGB", (3, 5)).save(d / "width3.bmp")
     pattern_img("RGB", (31, 7)).save(d / "width31.bmp")
     d.joinpath("not_bmp.bmp").write_bytes(b"NOTABMP")
+    baseline = bytearray((d / "24bit.bmp").read_bytes())
+    malformed = bytearray(baseline)
+    struct.pack_into("<H", malformed, 26, 2)
+    (d / "invalid_planes.bmp").write_bytes(malformed)
+    malformed = bytearray(baseline)
+    struct.pack_into("<I", malformed, 14, 16)
+    (d / "invalid_header_size.bmp").write_bytes(malformed)
+    malformed = bytearray(baseline)
+    struct.pack_into("<i", malformed, 18, 0)
+    (d / "invalid_width.bmp").write_bytes(malformed)
+    malformed = bytearray(baseline)
+    struct.pack_into("<i", malformed, 22, 0)
+    (d / "invalid_height.bmp").write_bytes(malformed)
+    malformed = bytearray(baseline)
+    struct.pack_into("<H", malformed, 28, 2)
+    (d / "invalid_depth.bmp").write_bytes(malformed)
+    (d / "truncated_header.bmp").write_bytes(baseline[:20])
+    (d / "truncated_pixels.bmp").write_bytes(baseline[:-10])
+    paletted = (d / "8bit.bmp").read_bytes()
+    palette_end = struct.unpack_from("<I", paletted, 10)[0]
+    (d / "truncated_palette.bmp").write_bytes(paletted[: palette_end - 1])
     print(f"  BMP: {len(list(d.glob('*.bmp')))} files")
 
 
@@ -502,11 +599,173 @@ def gen_webp():
         variant = Image.new("RGB", (64, 64))
         variant.putdata([pixel(x, y) for y in range(64) for x in range(64)])
         variant.save(d / f"lossless_{name}.webp", lossless=True, method=6)
+
+    for color_count in (17, 32, 64, 256):
+        palette = [
+            ((index * 73) & 255, (index * 151) & 255, (index * 199) & 255)
+            for index in range(color_count)
+        ]
+        state = 0x9E3779B9 ^ color_count
+        indices = list(range(color_count))
+        while len(indices) < 64 * 64:
+            state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+            indices.append(state % color_count)
+        variant = Image.new("RGB", (64, 64))
+        variant.putdata([palette[index] for index in indices])
+        variant.save(d / f"lossless_palette{color_count}.webp", lossless=True, method=6)
+
+    state = 0xA341316C
+    near_black_pixels = []
+    for _ in range(96 * 96):
+        state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+        near_black_pixels.append(
+            ((state >> 28) & 15, (state >> 20) & 15, (state >> 12) & 15)
+        )
+    variant = Image.new("RGB", (96, 96))
+    variant.putdata(near_black_pixels)
+    variant.save(d / "lossless_predictor_mode0.webp", lossless=True, method=6)
+
+    state = 0xC8013EA4
+    hybrid_pixels = []
+    for y in range(192):
+        for x in range(192):
+            if 64 <= x < 128 and 64 <= y < 128:
+                state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+                hybrid_pixels.append(
+                    ((state >> 28) & 15, (state >> 20) & 15, (state >> 12) & 15)
+                )
+            else:
+                hybrid_pixels.append(
+                    ((x + y) & 255, (2 * x + y) & 255, (x + 3 * y) & 255)
+                )
+    variant = Image.new("RGB", (192, 192))
+    variant.putdata(hybrid_pixels)
+    variant.save(d / "lossless_predictor_mode0_hybrid.webp", lossless=True, method=6)
+
+    predictor_patterns = {
+        "diag_reverse": lambda x, y: ((x - y) & 255, (2 * x - y) & 255, (x - 3 * y) & 255),
+        "xor": lambda x, y: (x ^ y, (2 * x) ^ y, x ^ (3 * y)),
+        "product": lambda x, y: (x * y & 255, x * (y + 7) & 255, (x + 11) * y & 255),
+        "radial": lambda x, y: ((x * x + y * y) & 255, (x * x - y * y) & 255, (x - y) ** 2 & 255),
+        "diamond": lambda x, y: (abs(x - 48) * 5 & 255, abs(y - 48) * 5 & 255, (abs(x - 48) + abs(y - 48)) * 3 & 255),
+        "bilinear": lambda x, y: (x * y // 8 & 255, (x + 16) * (y + 8) // 16 & 255, (x * y + x + y) & 255),
+        "stripes": lambda x, y: ((x // 3) * 31 & 255, (y // 5) * 47 & 255, ((x + y) // 4) * 23 & 255),
+        "steps": lambda x, y: ((x > y) * 255, (x + y > 96) * 255, (x > 48) * 127 + (y > 48) * 128),
+        "saw": lambda x, y: ((x + 3 * y) % 17 * 15, (2 * x + y) % 29 * 8, (x + y) % 37 * 6),
+        "quadrants": lambda x, y: (((x // 24) + 4 * (y // 24)) * 17 & 255, (x // 12) * 29 & 255, (y // 12) * 43 & 255),
+    }
+    for name, pixel in predictor_patterns.items():
+        variant = Image.new("RGB", (96, 96))
+        variant.putdata([pixel(x, y) for y in range(96) for x in range(96)])
+        variant.save(d / f"lossless_predictor_{name}.webp", lossless=True, method=6)
+
+    state = 0x6D2B79F5
+    random_walk_pixels = []
+    red = green = blue = 0
+    for y in range(96):
+        for x in range(96):
+            state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+            red = (red + ((state >> 24) & 7) - 3) & 255
+            green = (green + ((state >> 20) & 7) - 3) & 255
+            blue = (blue + ((state >> 16) & 7) - 3) & 255
+            random_walk_pixels.append((red, green, blue))
+    variant = Image.new("RGB", (96, 96))
+    variant.putdata(random_walk_pixels)
+    variant.save(d / "lossless_predictor_random_walk.webp", lossless=True, method=6)
+
+    def predictor_value(mode, left, top, top_left, top_right):
+        average = lambda a, b: (a + b) // 2
+        if mode == 5:
+            return average(average(left, top_right), top)
+        if mode == 6:
+            return average(left, top_left)
+        if mode == 7:
+            return average(left, top)
+        if mode == 8:
+            return average(top_left, top)
+        if mode == 9:
+            return average(top, top_right)
+        if mode == 10:
+            return average(average(left, top_left), average(top, top_right))
+        if mode == 13:
+            center = (left + top) // 2
+            return max(0, min(255, center + int((center - top_left) / 2)))
+        raise ValueError(f"unsupported predictor mode {mode}")
+
+    for mode in (5, 6, 7, 8, 9, 10, 13):
+        width = height = 96
+        channels = [[[0] * width for _ in range(height)] for _ in range(3)]
+        for channel, plane in enumerate(channels):
+            for x in range(width):
+                plane[0][x] = (x * (37 + channel * 16) + channel * 53) & 255
+            for y in range(1, height):
+                plane[y][0] = (y * (61 + channel * 12) + channel * 29) & 255
+                for x in range(1, width):
+                    top_right = plane[y - 1][min(x + 1, width - 1)]
+                    plane[y][x] = predictor_value(
+                        mode,
+                        plane[y][x - 1],
+                        plane[y - 1][x],
+                        plane[y - 1][x - 1],
+                        top_right,
+                    )
+        variant = Image.new("RGB", (width, height))
+        variant.putdata(
+            [tuple(channels[c][y][x] for c in range(3)) for y in range(height) for x in range(width)]
+        )
+        variant.save(d / f"lossless_predictor_mode{mode}.webp", lossless=True, method=6)
+
+    sparse = Image.new("RGB", (96, 96), (0, 0, 0))
+    sparse_pixels = sparse.load()
+    for y in range(7, 96, 17):
+        for x in range(5, 96, 19):
+            sparse_pixels[x, y] = ((x * 17) & 255, (y * 29) & 255, ((x + y) * 31) & 255)
+    sparse.save(d / "lossless_predictor_sparse.webp", lossless=True, method=6)
     img.save(d / "no_alpha.webp")
     rgba = img.convert("RGBA")
     rgba.save(d / "with_alpha.webp", lossless=True)
     rgba.save(d / "alpha_lossless.webp", lossless=True)
     rgba.save(d / "alpha_lossy.webp", lossless=False, quality=80)
+    for name, alpha_value in {
+        "horizontal": lambda x, y: (x * 4) & 255,
+        "vertical": lambda x, y: (y * 4) & 255,
+        "gradient": lambda x, y: ((x + y) * 2) & 255,
+        "noise": lambda x, y: (x * 73 + y * 151) & 255,
+    }.items():
+        alpha_variant = pattern_img("RGBA", (64, 64))
+        alpha_variant.putalpha(
+            Image.frombytes(
+                "L",
+                (64, 64),
+                bytes(alpha_value(x, y) for y in range(64) for x in range(64)),
+            )
+        )
+        alpha_variant.save(
+            d / f"alpha_lossy_{name}.webp", lossless=False, quality=80, method=6
+        )
+    for name, filtering in (("vertical_filter", 2), ("gradient_filter", 3)):
+        filtered_alpha = bytearray((d / "alpha_lossy_gradient.webp").read_bytes())
+        alpha_chunk = filtered_alpha.find(b"ALPH")
+        if alpha_chunk < 0:
+            raise RuntimeError("lossy alpha WebP did not contain an ALPH chunk")
+        filtered_alpha[alpha_chunk + 8] = (
+            filtered_alpha[alpha_chunk + 8] & ~0b1100
+        ) | (filtering << 2)
+        (d / f"alpha_lossy_{name}.webp").write_bytes(filtered_alpha)
+
+    uncompressed_alpha = bytearray((d / "alpha_lossy_horizontal.webp").read_bytes())
+    alpha_chunk = uncompressed_alpha.find(b"ALPH")
+    old_size = struct.unpack_from("<I", uncompressed_alpha, alpha_chunk + 4)[0]
+    old_end = alpha_chunk + 8 + old_size + (old_size & 1)
+    alpha_payload = bytes([0]) + bytes(
+        (x * 4) & 255 for y in range(64) for x in range(64)
+    )
+    replacement = b"ALPH" + struct.pack("<I", len(alpha_payload)) + alpha_payload
+    if len(alpha_payload) & 1:
+        replacement += b"\0"
+    uncompressed_alpha[alpha_chunk:old_end] = replacement
+    struct.pack_into("<I", uncompressed_alpha, 4, len(uncompressed_alpha) - 8)
+    (d / "alpha_uncompressed.webp").write_bytes(uncompressed_alpha)
     Image.new("RGB", (16,16), (128,0,0)).save(d / "16x16.webp")
     pattern_img("RGB", (17, 19)).save(d / "odd.webp", lossless=True)
     img.save(d / "extended.webp", lossless=True)
@@ -527,12 +786,37 @@ def gen_webp():
         lossless=True,
         minimize_size=True,
     )
+    animated_full = pattern_img("RGBA", (64, 64))
+    animated_full.putalpha(
+        Image.frombytes(
+            "L", (64, 64), bytes(64 + ((x + y) & 127) for y in range(64) for x in range(64))
+        )
+    )
+    animated_full_next = animated_full.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    animated_full.save(
+        d / "animated_alpha_full.webp",
+        save_all=True,
+        append_images=[animated_full_next],
+        duration=100,
+        loop=0,
+        lossless=True,
+        minimize_size=False,
+    )
     animated_blend = bytearray((d / "animated_alpha.webp").read_bytes())
     first_frame = animated_blend.find(b"ANMF")
     if first_frame < 0:
         raise RuntimeError("animated WebP did not contain an ANMF chunk")
     animated_blend[first_frame + 4 + 4 + 15] &= ~0b10
     (d / "animated_blend.webp").write_bytes(animated_blend)
+    animated_dispose = bytearray(animated_blend)
+    animated_dispose[first_frame + 4 + 4 + 15] |= 0b1
+    (d / "animated_dispose.webp").write_bytes(animated_dispose)
+    animated_full_dispose = bytearray((d / "animated_alpha_full.webp").read_bytes())
+    full_first_frame = animated_full_dispose.find(b"ANMF")
+    if full_first_frame < 0:
+        raise RuntimeError("full-size animated WebP did not contain an ANMF chunk")
+    animated_full_dispose[full_first_frame + 4 + 4 + 15] |= 0b1
+    (d / "animated_alpha_full_dispose.webp").write_bytes(animated_full_dispose)
     d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 

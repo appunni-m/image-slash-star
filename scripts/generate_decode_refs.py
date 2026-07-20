@@ -578,12 +578,45 @@ def write_pixel_ref(row, image, ref_name):
     return raw
 
 
+def write_sequence_ref(row, image, fmt_name, asset_name):
+    """Write every Pillow-composited WebP frame as exact oracle evidence."""
+    if fmt_name != "webp" or getattr(image, "n_frames", 1) <= 1:
+        row.pop("sequence", None)
+        return
+
+    frames = []
+    for index in range(image.n_frames):
+        image.seek(index)
+        image.load()
+        raw = image.tobytes()
+        ref_name = (
+            f"Decode.{fmt_name}_{asset_name.replace('.', '_')}_frame_{index}.bin"
+        )
+        OUTPUT_RAWS.mkdir(parents=True, exist_ok=True)
+        (OUTPUT_RAWS / ref_name).write_bytes(raw)
+        frames.append(
+            {
+                "index": index,
+                "ref_path": raw_ref_path(ref_name).as_posix(),
+                "ref_bytes": len(raw),
+                "ref_mode": mode_name(image),
+                "ref_size": list(image.size),
+                "duration_ms": int(image.info.get("duration", 0)),
+            }
+        )
+    row["sequence"] = {
+        "loop_count": image.info.get("loop"),
+        "frames": frames,
+    }
+
+
 def clear_pixel_ref(row):
     row.pop("ref_sha256", None)
     row.pop("ref_path", None)
     row.pop("ref_bytes", None)
     row.pop("ref_mode", None)
     row.pop("ref_size", None)
+    row.pop("sequence", None)
 
 
 def clear_encoded_ref(row):
@@ -832,6 +865,20 @@ def validate_generated_outputs(matrix):
             path = ROOT / reference
             if not path.exists() or path.stat().st_size != row.get("ref_bytes"):
                 failures.append(f"{case_name}: decode pixel evidence is missing or has wrong size")
+            sequence = row.get("sequence")
+            if sequence:
+                frames = sequence.get("frames", [])
+                if not frames:
+                    failures.append(f"{case_name}: sequence has no frame evidence")
+                for frame in frames:
+                    frame_path = ROOT / frame.get("ref_path", "")
+                    if (
+                        not frame_path.is_file()
+                        or frame_path.stat().st_size != frame.get("ref_bytes")
+                    ):
+                        failures.append(
+                            f"{case_name}: frame {frame.get('index')} evidence is missing or has wrong size"
+                        )
 
         for row in fmt_data.get("encode", []):
             case_name = f"{fmt_name}/{row['id']}"
@@ -937,6 +984,7 @@ def generate_decode(manifest, matrix, target_format=None):
                     row.pop("oracle_error_type", None)
                     row.pop("oracle_error_message", None)
                     write_pixel_ref(row, img, ref_name)
+                    write_sequence_ref(row, img, fmt_name, asset_name)
                     generated += 1
                 except Exception as e:
                     print(f"  SKIP decode {asset_name}: {e}", file=sys.stderr)
@@ -975,6 +1023,7 @@ def generate_decode(manifest, matrix, target_format=None):
                 "ref_bytes": r.get("ref_bytes"),
                 "ref_mode": r.get("ref_mode"),
                 "ref_size": r.get("ref_size"),
+                **({"sequence": r["sequence"]} if r.get("sequence") else {}),
             }
             for r in dec_cases
         ]
