@@ -2010,6 +2010,52 @@
           ]
         },
         {
+          "id": "enc_animated_rgba_background_partial",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Preserve a partially transparent WebP animation background through GIF palette allocation",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated_alpha_holes_partial_background.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_background_partial.bin",
+          "encoded_ref_bytes": 351,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_background_partial.bin",
+          "ref_bytes": 4096,
+          "ref_mode": "P",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_animated_rgba_background_opaque",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Preserve an opaque WebP animation background through GIF palette allocation",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated_alpha_holes_opaque_background.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_background_opaque.bin",
+          "encoded_ref_bytes": 351,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_background_opaque.bin",
+          "ref_bytes": 4096,
+          "ref_mode": "P",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
           "id": "enc_animated_rgb",
           "type": "encode",
           "format": "gif",
@@ -2025,6 +2071,52 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb.bin",
           "encoded_ref_bytes": 19767,
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_animated_rgb_background_existing",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Map an opaque WebP background to an existing GIF palette entry",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated_rgb_palette_background.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_background_existing.bin",
+          "encoded_ref_bytes": 233,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_background_existing.bin",
+          "ref_bytes": 4096,
+          "ref_mode": "P",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_animated_rgb_background_full_palette",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Ignore an unallocatable opaque WebP background when the GIF palette is full",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated_rgb_opaque_background.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_background_full_palette.bin",
+          "encoded_ref_bytes": 19767,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_background_full_palette.bin",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -10431,6 +10523,186 @@
           }
         },
         {
+          "id": "animated_animated_alpha_holes_partial_background",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_alpha_holes_partial_background.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_partial_background_webp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_partial_background_webp_frame_0.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_partial_background_webp_frame_1.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
+          "id": "animated_animated_alpha_holes_opaque_background",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_alpha_holes_opaque_background.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_opaque_background_webp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_opaque_background_webp_frame_0.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_opaque_background_webp_frame_1.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
+          "id": "animated_animated_rgb_opaque_background",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_rgb_opaque_background.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_opaque_background_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_opaque_background_webp_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_opaque_background_webp_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
+          "id": "animated_animated_rgb_palette_background",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_rgb_palette_background.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_palette_background_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_palette_background_webp_frame_0.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_palette_background_webp_frame_1.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
           "id": "animated_animated_alpha_lossy",
           "type": "decode",
           "format": "webp",
@@ -12021,12 +12293,12 @@
     }
   },
   "summary": {
-    "total_rows": 646,
-    "decode_rows": 400,
-    "encode_rows": 214,
+    "total_rows": 654,
+    "decode_rows": 404,
+    "encode_rows": 218,
     "formats": 8,
-    "assets_available": 393,
-    "decode_active": 394,
+    "assets_available": 397,
+    "decode_active": 398,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

@@ -57,6 +57,11 @@ fn blend_pixel_nonpremult(src: u32, dst: u32) -> u32 {
 }
 
 pub(crate) fn do_alpha_blending(buffer: [u8; 4], canvas: [u8; 4]) -> [u8; 4] {
+    // libwebp 1.6.0 anim_decode.c:245-251 bypasses reciprocal blending for
+    // fully opaque source pixels, preserving their channels byte-for-byte.
+    if buffer[3] == 255 {
+        return buffer;
+    }
     // The original C code contained different shift functions for different endianness,
     // but they didn't work when ported to Rust directly (and probably didn't work in C either).
     // So instead we reverse the order of bytes on big-endian here, at the interface.

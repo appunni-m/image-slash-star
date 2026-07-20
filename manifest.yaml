@@ -865,10 +865,30 @@ formats:
       source_format: webp
       source_asset: animated_alpha_holes.webp
       params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgba_background_partial
+      description: Preserve a partially transparent WebP animation background through GIF palette allocation
+      source_format: webp
+      source_asset: animated_alpha_holes_partial_background.webp
+      params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgba_background_opaque
+      description: Preserve an opaque WebP animation background through GIF palette allocation
+      source_format: webp
+      source_asset: animated_alpha_holes_opaque_background.webp
+      params: {'animated': True, 'frames': 2}
     - id: enc_animated_rgb
       description: Re-encode composited RGB animation frames through Pillow's adaptive GIF palettes
       source_format: webp
       source_asset: animated.webp
+      params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgb_background_existing
+      description: Map an opaque WebP background to an existing GIF palette entry
+      source_format: webp
+      source_asset: animated_rgb_palette_background.webp
+      params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgb_background_full_palette
+      description: Ignore an unallocatable opaque WebP background when the GIF palette is full
+      source_format: webp
+      source_asset: animated_rgb_opaque_background.webp
       params: {'animated': True, 'frames': 2}
     - id: enc_error_cmyk
       description: Pillow rejects CMYK input when GIF adaptive palette conversion is requested
@@ -1261,6 +1281,10 @@ formats:
       test_assets:
       - animated.webp
       - animated_alpha.webp
+      - animated_alpha_holes_partial_background.webp
+      - animated_alpha_holes_opaque_background.webp
+      - animated_rgb_opaque_background.webp
+      - animated_rgb_palette_background.webp
       - animated_alpha_lossy.webp
       - animated_alpha_overlap.webp
       - animated_alpha_holes.webp

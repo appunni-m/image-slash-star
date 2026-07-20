@@ -1280,6 +1280,55 @@ def gen_webp():
         raise RuntimeError("alpha-hole animated WebP did not contain a second ANMF chunk")
     animated_alpha_holes[holes_second_frame + 4 + 4 + 15] &= ~0b10
     (d / "animated_alpha_holes.webp").write_bytes(animated_alpha_holes)
+    for name, rgba in (
+        ("partial_background", (17, 34, 51, 128)),
+        ("opaque_background", (17, 34, 51, 255)),
+    ):
+        background_variant = bytearray(animated_alpha_holes)
+        animation_chunk = background_variant.find(b"ANIM")
+        if animation_chunk < 0:
+            raise RuntimeError("animated WebP did not contain an ANIM chunk")
+        red, green, blue, alpha = rgba
+        background_variant[animation_chunk + 8 : animation_chunk + 12] = bytes(
+            (blue, green, red, alpha)
+        )
+        (d / f"animated_alpha_holes_{name}.webp").write_bytes(background_variant)
+
+    animated_rgb_background = bytearray((d / "animated.webp").read_bytes())
+    animation_chunk = animated_rgb_background.find(b"ANIM")
+    if animation_chunk < 0:
+        raise RuntimeError("animated RGB WebP did not contain an ANIM chunk")
+    animated_rgb_background[animation_chunk + 8 : animation_chunk + 12] = bytes(
+        (51, 34, 17, 255)
+    )
+    (d / "animated_rgb_opaque_background.webp").write_bytes(animated_rgb_background)
+
+    animated_rgb_palette = Image.new("RGB", (64, 64), (255, 0, 0))
+    animated_rgb_palette_next = animated_rgb_palette.copy()
+    ImageDraw.Draw(animated_rgb_palette_next).rectangle(
+        [24, 24, 39, 39], fill=(0, 128, 0)
+    )
+    animated_rgb_palette.save(
+        d / "animated_rgb_palette_background.webp",
+        save_all=True,
+        append_images=[animated_rgb_palette_next],
+        duration=100,
+        loop=0,
+        lossless=True,
+        minimize_size=False,
+    )
+    animated_rgb_palette_background = bytearray(
+        (d / "animated_rgb_palette_background.webp").read_bytes()
+    )
+    animation_chunk = animated_rgb_palette_background.find(b"ANIM")
+    if animation_chunk < 0:
+        raise RuntimeError("animated palette WebP did not contain an ANIM chunk")
+    animated_rgb_palette_background[animation_chunk + 8 : animation_chunk + 12] = bytes(
+        (0, 0, 255, 255)
+    )
+    (d / "animated_rgb_palette_background.webp").write_bytes(
+        animated_rgb_palette_background
+    )
     animated_full.save(
         d / "animated_alpha_lossy.webp",
         save_all=True,

@@ -97,6 +97,30 @@
       "encoded_ref_bytes": 351
     },
     {
+      "id": "enc_animated_rgba_background_partial",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_background_partial.bin",
+      "ref_bytes": 4096,
+      "ref_mode": "P",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_background_partial.bin",
+      "encoded_ref_bytes": 351
+    },
+    {
+      "id": "enc_animated_rgba_background_opaque",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_background_opaque.bin",
+      "ref_bytes": 4096,
+      "ref_mode": "P",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_background_opaque.bin",
+      "encoded_ref_bytes": 351
+    },
+    {
       "id": "enc_animated_rgb",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb.bin",
       "ref_bytes": 16384,
@@ -106,6 +130,30 @@
         128
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb.bin",
+      "encoded_ref_bytes": 19767
+    },
+    {
+      "id": "enc_animated_rgb_background_existing",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_background_existing.bin",
+      "ref_bytes": 4096,
+      "ref_mode": "P",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_background_existing.bin",
+      "encoded_ref_bytes": 233
+    },
+    {
+      "id": "enc_animated_rgb_background_full_palette",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_background_full_palette.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_background_full_palette.bin",
       "encoded_ref_bytes": 19767
     },
     {

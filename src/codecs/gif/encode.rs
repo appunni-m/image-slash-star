@@ -90,47 +90,22 @@ fn coalesce_identical_frames(
         } else {
             let mut output_frame = frame.clone();
             if !output.is_empty() {
-                output_frame.image = if frame.image.mode == ImageMode::Rgba8 {
-                    let previous = previous_render.as_deref()?;
-                    let (left, top, right, bottom) = rgba_difference_bounds(
-                        previous,
-                        &canvas,
-                        width,
-                        usize::try_from(sequence.height).ok()?,
-                    );
-                    let frame_width = right.checked_sub(left)?;
-                    let frame_height = bottom.checked_sub(top)?;
-                    let full_image = DecodedImage::new(
+                let previous = previous_render.as_deref()?;
+                let (left, top, right, bottom) = rgba_difference_bounds(
+                    previous,
+                    &canvas,
+                    width,
+                    usize::try_from(sequence.height).ok()?,
+                );
+                let frame_width = right.checked_sub(left)?;
+                let frame_height = bottom.checked_sub(top)?;
+                let full_image = if frame.image.mode == ImageMode::Rgba8 {
+                    DecodedImage::new(
                         sequence.width,
                         sequence.height,
                         canvas.clone(),
                         ColorType::Rgba8,
-                    );
-                    let mut prepared = prepare_image(&full_image)?;
-                    if prepared.transparent.is_none() && prepared.palette.len() / 3 < 256 {
-                        let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
-                        prepared.palette.extend_from_slice(&[0, 0, 0]);
-                        prepared.transparent = Some(transparent);
-                    }
-                    let mut cropped = Vec::with_capacity(frame_width.checked_mul(frame_height)?);
-                    for y in top..bottom {
-                        let start = y.checked_mul(width)?.checked_add(left)?;
-                        let end = start.checked_add(frame_width)?;
-                        cropped.extend_from_slice(prepared.indices.get(start..end)?);
-                    }
-                    output_frame.left = u32::try_from(left).ok()?;
-                    output_frame.top = u32::try_from(top).ok()?;
-                    let mut alpha = vec![255; prepared.palette.len() / 3];
-                    if let Some(transparent) = prepared.transparent {
-                        alpha[usize::from(transparent)] = 0;
-                    }
-                    DecodedImage::with_mode(
-                        u32::try_from(frame_width).ok()?,
-                        u32::try_from(frame_height).ok()?,
-                        cropped,
-                        ImageMode::P8,
                     )
-                    .with_palette(ImagePalette::new(prepared.palette, alpha).ok()?)
                 } else {
                     let rgb = canvas
                         .chunks_exact(4)
@@ -138,10 +113,31 @@ fn coalesce_identical_frames(
                         .collect();
                     DecodedImage::new(sequence.width, sequence.height, rgb, ColorType::Rgb8)
                 };
-                if frame.image.mode != ImageMode::Rgba8 {
-                    output_frame.left = 0;
-                    output_frame.top = 0;
+                let mut prepared = prepare_image(&full_image)?;
+                if prepared.transparent.is_none() && prepared.palette.len() / 3 < 256 {
+                    let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
+                    prepared.palette.extend_from_slice(&[0, 0, 0]);
+                    prepared.transparent = Some(transparent);
                 }
+                let mut cropped = Vec::with_capacity(frame_width.checked_mul(frame_height)?);
+                for y in top..bottom {
+                    let start = y.checked_mul(width)?.checked_add(left)?;
+                    let end = start.checked_add(frame_width)?;
+                    cropped.extend_from_slice(prepared.indices.get(start..end)?);
+                }
+                output_frame.left = u32::try_from(left).ok()?;
+                output_frame.top = u32::try_from(top).ok()?;
+                let mut alpha = vec![255; prepared.palette.len() / 3];
+                if let Some(transparent) = prepared.transparent {
+                    alpha[usize::from(transparent)] = 0;
+                }
+                output_frame.image = DecodedImage::with_mode(
+                    u32::try_from(frame_width).ok()?,
+                    u32::try_from(frame_height).ok()?,
+                    cropped,
+                    ImageMode::P8,
+                )
+                .with_palette(ImagePalette::new(prepared.palette, alpha).ok()?);
             }
             output.push(output_frame);
             previous_render = Some(canvas.clone());
