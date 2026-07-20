@@ -6222,42 +6222,66 @@
           "format": "webp",
           "id": "enc_exif",
           "params": {
-            "exif": true
+            "exif_hex": "45786966000049492a000800000000000000"
           },
           "source_asset": "lossless.webp",
           "source_format": "webp",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "exif",
-          "gap": "exif=true does not identify the metadata bytes Pillow must encode."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_exif.bin",
+          "encoded_ref_bytes": 3672,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_exif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
           "format": "webp",
           "id": "enc_xmp",
           "params": {
-            "xmp": true
+            "xmp_hex": "3c783a786d706d6574612f3e"
           },
           "source_asset": "lossless.webp",
           "source_format": "webp",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "xmp",
-          "gap": "xmp=true does not identify the metadata bytes Pillow must encode."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_xmp.bin",
+          "encoded_ref_bytes": 3672,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_xmp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
           "format": "webp",
           "id": "enc_icc",
           "params": {
-            "icc": true
+            "icc_hex": "70696c6c6f772d72732d696363"
           },
           "source_asset": "lossless.webp",
           "source_format": "webp",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "icc",
-          "gap": "icc=true does not identify the profile bytes Pillow must encode."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_icc.bin",
+          "encoded_ref_bytes": 3674,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_icc.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6363,6 +6387,6 @@
     "assets_available": 161,
     "decode_active": 161,
     "decode_planned": 7,
-    "encode_not_wired": 31
+    "encode_not_wired": 28
   }
 }

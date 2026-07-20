@@ -1042,19 +1042,13 @@ formats:
       params: {'method': 6}
     - id: enc_exif
       description: 
-      status: planned
-      oracle_gap: exif=true does not identify the metadata bytes Pillow must encode.
-      params: {'exif': True}
+      params: {'exif_hex': '45786966000049492a000800000000000000'}
     - id: enc_xmp
       description: 
-      status: planned
-      oracle_gap: xmp=true does not identify the metadata bytes Pillow must encode.
-      params: {'xmp': True}
+      params: {'xmp_hex': '3c783a786d706d6574612f3e'}
     - id: enc_icc
       description: 
-      status: planned
-      oracle_gap: icc=true does not identify the profile bytes Pillow must encode.
-      params: {'icc': True}
+      params: {'icc_hex': '70696c6c6f772d72732d696363'}
     - id: enc_1x1
       description: 
       source_format: png

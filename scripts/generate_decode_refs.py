@@ -271,6 +271,15 @@ def encode_params(fmt, params):
             value = take(name)
             if value is True:
                 raise RuntimeError(f"{name}=true requires explicit metadata bytes")
+        metadata_options = {
+            "exif_hex": "exif",
+            "xmp_hex": "xmp",
+            "icc_hex": "icc_profile",
+        }
+        for manifest_name, pillow_name in metadata_options.items():
+            value = take(manifest_name)
+            if value is not None:
+                kwargs[pillow_name] = bytes.fromhex(value)
     elif fmt == "tiff":
         compression = take("compression")
         if compression is not None:

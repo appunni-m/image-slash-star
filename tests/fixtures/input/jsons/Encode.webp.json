@@ -254,6 +254,78 @@
       }
     },
     {
+      "id": "enc_exif",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "exif_hex": "45786966000049492a000800000000000000"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "exif": {
+            "type": "bytes",
+            "hex": "45786966000049492a000800000000000000"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_xmp",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "xmp_hex": "3c783a786d706d6574612f3e"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "xmp": {
+            "type": "bytes",
+            "hex": "3c783a786d706d6574612f3e"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_icc",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "icc_hex": "70696c6c6f772d72732d696363"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "icc_profile": {
+            "type": "bytes",
+            "hex": "70696c6c6f772d72732d696363"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1x1",
       "source_asset": "1x1.png",
       "source_format": "png",
