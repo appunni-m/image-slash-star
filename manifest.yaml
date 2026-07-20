@@ -1490,6 +1490,11 @@ formats:
       description: Striped organization
       test_assets:
       - stripped.tiff
+    - id: stripped_leniency
+      description: Pillow derives raw strip sizes and zero-fills omitted rows
+      test_assets:
+      - uncompressed_bad_byte_count.tiff
+      - uncompressed_missing_strips.tiff
     - id: tiled
       description: Tiled organization
       test_assets:
@@ -1534,6 +1539,7 @@ formats:
       - lzw_clear_only.tiff
       - lzw_end_only.tiff
       - ascii_width.tiff
+      - uncompressed_extra_strips.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

@@ -150,10 +150,28 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     let offsets = directory.values(273)?;
-    let byte_counts = directory.values(279)?;
-    if offsets.is_empty() || offsets.len() != byte_counts.len() {
+    let declared_byte_counts = directory.values(279)?;
+    if offsets.is_empty() {
         return None;
     }
+    let expected_strips = height_usize.div_ceil(rows_per_strip);
+    if offsets.len() > expected_strips {
+        return None;
+    }
+    let byte_counts = if compression == COMPRESSION_NONE {
+        (0..offsets.len())
+            .map(|strip_index| {
+                let first_row = strip_index * rows_per_strip;
+                let strip_rows = rows_per_strip.min(height_usize - first_row);
+                u64::try_from(row_bytes * strip_rows).ok()
+            })
+            .collect::<Option<Vec<_>>>()?
+    } else {
+        if offsets.len() != declared_byte_counts.len() {
+            return None;
+        }
+        declared_byte_counts
+    };
     let mut pixels = Vec::with_capacity(expected_total);
 
     for (strip_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
@@ -161,15 +179,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         let count = usize::try_from(byte_count).ok()?;
         let encoded = data.get(start..start.checked_add(count)?)?;
         let first_row = strip_index.checked_mul(rows_per_strip)?;
-        if first_row >= height_usize {
-            return None;
-        }
         let strip_rows = rows_per_strip.min(height_usize - first_row);
         let expected = row_bytes.checked_mul(strip_rows)?;
         let mut decoded = decode_block(encoded, expected)?;
-        if decoded.len() != expected {
-            return None;
-        }
         if predictor == 2
             && matches!(
                 compression,
@@ -187,9 +199,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         }
         pixels.extend_from_slice(&decoded);
     }
-    if pixels.len() != expected_total {
-        return None;
-    }
+    pixels.resize(expected_total, 0);
 
     convert_pixels(
         width,

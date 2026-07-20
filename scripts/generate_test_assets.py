@@ -1851,6 +1851,17 @@ def gen_tiff():
     mutate_tiff_tag_type(d / "rgb.tiff", d / "byte_strip_offset.tiff", 273, 1)
     mutate_tiff_tag_type(d / "rgb_dpi.tiff", d / "unknown_field_type.tiff", 282, 13)
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_width.tiff", 256, 2)
+    mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_bad_byte_count.tiff", 279, 1)
+    mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_missing_strips.tiff", 278, 1)
+    mutate_tiff_tag(
+        d / "uncompressed_missing_strips.tiff",
+        d / "uncompressed_missing_strips.tiff",
+        279,
+        384,
+    )
+    mutate_tiff_tag(
+        d / "stripped.tiff", d / "uncompressed_extra_strips.tiff", 278, 128
+    )
     mutate_tiff_tag(
         d / "gray_alpha.tiff", d / "miniswhite_gray_alpha.tiff", 262, 0
     )

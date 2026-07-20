@@ -585,6 +585,32 @@
       ]
     },
     {
+      "id": "stripped_leniency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_uncompressed_bad_byte_count_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "stripped_leniency_uncompressed_missing_strips",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_uncompressed_missing_strips_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "tiled",
       "status": "ok",
       "error_type": null,
@@ -854,6 +880,16 @@
       "status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "Invalid dimensions",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_uncompressed_extra_strips",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

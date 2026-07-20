@@ -7048,6 +7048,42 @@
           "oracle_status": "ok"
         },
         {
+          "id": "stripped_leniency",
+          "type": "decode",
+          "format": "tiff",
+          "category": "stripped",
+          "description": "Pillow derives raw strip sizes and zero-fills omitted rows",
+          "asset": "uncompressed_bad_byte_count.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_uncompressed_bad_byte_count_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "stripped_leniency_uncompressed_missing_strips",
+          "type": "decode",
+          "format": "tiff",
+          "category": "stripped",
+          "description": "Pillow derives raw strip sizes and zero-fills omitted rows",
+          "asset": "uncompressed_missing_strips.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_uncompressed_missing_strips_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "tiled.tiff",
           "category": "tiled",
           "description": "Tiled organization",
@@ -7411,6 +7447,19 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.ValueError",
           "oracle_error_message": "Invalid dimensions"
+        },
+        {
+          "id": "error_bad_ifd_uncompressed_extra_strips",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "uncompressed_extra_strips.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (0 bytes not processed)"
         }
       ],
       "encode": [
@@ -10874,12 +10923,12 @@
     }
   },
   "summary": {
-    "total_rows": 584,
-    "decode_rows": 359,
+    "total_rows": 587,
+    "decode_rows": 362,
     "encode_rows": 193,
     "formats": 8,
-    "assets_available": 352,
-    "decode_active": 353,
+    "assets_available": 355,
+    "decode_active": 356,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
