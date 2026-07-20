@@ -221,6 +221,15 @@ def gen_png():
     img.save(d / "rgb.png")
     img.convert("RGBA").save(d / "rgba.png")
     pattern_img("RGB", (8, 8)).save(d / "gif_rgb.png")
+    high_color = Image.new("RGB", (17, 17))
+    high_color.putdata(
+        [
+            ((x * 13 + y * 7) & 255, (x * 5 + y * 17) & 255, (x * 19 + y * 3) & 255)
+            for y in range(17)
+            for x in range(17)
+        ]
+    )
+    high_color.save(d / "gif_rgb_high_color.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 255)).save(d / "gif_rgba_opaque.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 0)).save(d / "gif_rgba.png")
     img.convert("L").save(d / "gray.png")

@@ -1740,6 +1740,26 @@
           ]
         },
         {
+          "id": "enc_rgb_high_color",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgb",
+          "description": "RGB source with more than 256 colors quantized by Pillow median cut",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgb_high_color.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_high_color.bin",
+          "encoded_ref_bytes": 1128,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_high_color.bin",
+          "ref_bytes": 289,
+          "ref_mode": "P",
+          "ref_size": [
+            17,
+            17
+          ]
+        },
+        {
           "id": "enc_grayscale",
           "type": "encode",
           "format": "gif",
@@ -8791,9 +8811,9 @@
     }
   },
   "summary": {
-    "total_rows": 473,
+    "total_rows": 474,
     "decode_rows": 271,
-    "encode_rows": 170,
+    "encode_rows": 171,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

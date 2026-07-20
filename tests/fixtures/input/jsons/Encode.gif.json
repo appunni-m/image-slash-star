@@ -368,6 +368,23 @@
       }
     },
     {
+      "id": "enc_rgb_high_color",
+      "source_asset": "gif_rgb_high_color.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_high_color.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_grayscale",
       "source_asset": "gray.png",
       "source_format": "png",

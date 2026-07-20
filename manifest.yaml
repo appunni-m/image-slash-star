@@ -801,6 +801,11 @@ formats:
       source_format: png
       source_asset: gif_rgb.png
       params: {}
+    - id: enc_rgb_high_color
+      description: RGB source with more than 256 colors quantized by Pillow median cut
+      source_format: png
+      source_asset: gif_rgb_high_color.png
+      params: {}
     - id: enc_grayscale
       description: Grayscale source encoded with Pillow's grayscale palette
       source_format: png

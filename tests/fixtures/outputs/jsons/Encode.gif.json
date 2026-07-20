@@ -205,6 +205,18 @@
       "encoded_ref_bytes": 115
     },
     {
+      "id": "enc_rgb_high_color",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_high_color.bin",
+      "ref_bytes": 289,
+      "ref_mode": "P",
+      "ref_size": [
+        17,
+        17
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_high_color.bin",
+      "encoded_ref_bytes": 1128
+    },
+    {
       "id": "enc_grayscale",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_grayscale.bin",
       "ref_bytes": 16384,

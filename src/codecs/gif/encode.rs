@@ -634,21 +634,67 @@ fn quantize_rgb(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
 }
 
 fn quantize_rgb_nearest(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
-    let mut palette: Vec<[u8; 3]> = Vec::new();
-    let mut indices = Vec::with_capacity(pixels.len() / 3);
+    let mut colors = Vec::<[u8; 3]>::new();
+    let mut counts = Vec::<u32>::new();
+    let mut color_indices = HashMap::<u32, usize>::new();
     for chunk in pixels.chunks_exact(3) {
         let color = [chunk[0], chunk[1], chunk[2]];
-        let index = match find_color(&palette, &color) {
-            Some(index) => index,
-            None if palette.len() < 256 => {
-                palette.push(color);
-                palette.len() - 1
-            }
-            None => find_nearest(&palette, &color),
-        };
-        indices.push(u8::try_from(index).ok()?);
+        let hash = pillow_pixel_hash(color);
+        if let Some(&index) = color_indices.get(&hash) {
+            counts[index] = counts[index].checked_add(1)?;
+        } else {
+            let index = colors.len();
+            colors.push(color);
+            counts.push(1);
+            color_indices.insert(hash, index);
+        }
     }
-    Some((palette.into_iter().flatten().collect(), indices))
+    let leaves = pillow_median_cut_leaves(&colors, &counts, colors.len().min(256))?;
+    let mut palette = Vec::<[u8; 3]>::with_capacity(leaves.len());
+    let mut initial_palette = vec![0usize; colors.len()];
+    for (palette_index, leaf) in leaves.iter().enumerate() {
+        let mut sums = [0u64; 3];
+        let mut count = 0u64;
+        for &color_index in leaf {
+            let color_count = u64::from(counts[color_index]);
+            count = count.checked_add(color_count)?;
+            for channel in 0..3 {
+                sums[channel] = sums[channel]
+                    .checked_add(u64::from(colors[color_index][channel]) * color_count)?;
+            }
+            initial_palette[color_index] = palette_index;
+        }
+        palette.push(std::array::from_fn(|channel| {
+            u8::try_from((sums[channel] + count / 2) / count).unwrap_or(0)
+        }));
+    }
+    let mapped = colors
+        .iter()
+        .enumerate()
+        .map(|(index, color)| find_nearest_from(&palette, color, initial_palette[index]))
+        .collect::<Vec<_>>();
+    let mut used = vec![false; palette.len()];
+    for &index in &mapped {
+        used[index] = true;
+    }
+    let mut remap = vec![0usize; palette.len()];
+    let mut optimized = Vec::with_capacity(palette.len());
+    for (old_index, color) in palette.into_iter().enumerate() {
+        if used[old_index] {
+            remap[old_index] = optimized.len();
+            optimized.push(color);
+        }
+    }
+    let indices = pixels
+        .chunks_exact(3)
+        .map(|chunk| {
+            let color = [chunk[0], chunk[1], chunk[2]];
+            color_indices
+                .get(&pillow_pixel_hash(color))
+                .and_then(|&index| u8::try_from(remap[mapped[index]]).ok())
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some((optimized.into_iter().flatten().collect(), indices))
 }
 
 #[derive(Clone)]
@@ -659,7 +705,24 @@ struct MedianBox {
 }
 
 fn pillow_median_cut_order(colors: &[[u8; 3]], counts: &[u32]) -> Option<Vec<usize>> {
-    if colors.is_empty() || colors.len() != counts.len() || colors.len() > 256 {
+    let leaves = pillow_median_cut_leaves(colors, counts, colors.len())?;
+    leaves
+        .into_iter()
+        .map(|leaf| (leaf.len() == 1).then_some(leaf[0]))
+        .collect()
+}
+
+fn pillow_median_cut_leaves(
+    colors: &[[u8; 3]],
+    counts: &[u32],
+    target: usize,
+) -> Option<Vec<Vec<usize>>> {
+    if colors.is_empty()
+        || colors.len() != counts.len()
+        || target == 0
+        || target > colors.len()
+        || target > 256
+    {
         return None;
     }
 
@@ -680,7 +743,7 @@ fn pillow_median_cut_order(colors: &[[u8; 3]], counts: &[u32]) -> Option<Vec<usi
     let mut heap = PillowBoxHeap::default();
     heap.add(0, &boxes);
 
-    for _ in 1..colors.len() {
+    for _ in 1..target {
         let node = loop {
             let candidate = heap.remove(&boxes)?;
             if box_volume(&boxes[candidate], colors) > 1 {
@@ -697,26 +760,20 @@ fn pillow_median_cut_order(colors: &[[u8; 3]], counts: &[u32]) -> Option<Vec<usi
         heap.add(right_index, &boxes);
     }
 
-    fn visit(index: usize, boxes: &[MedianBox], output: &mut Vec<usize>) {
+    fn visit(index: usize, boxes: &[MedianBox], output: &mut Vec<Vec<usize>>) {
         if let Some((left, right)) = boxes[index].children {
             visit(left, boxes, output);
             visit(right, boxes, output);
-        } else if let Some(&color) = boxes[index].axes[0].first() {
-            output.push(color);
+        } else {
+            output.push(boxes[index].axes[0].clone());
         }
     }
-    let mut order = Vec::with_capacity(colors.len());
-    visit(0, &boxes, &mut order);
-    (order.len() == colors.len()).then_some(order)
+    let mut leaves = Vec::with_capacity(target);
+    visit(0, &boxes, &mut leaves);
+    (leaves.len() == target).then_some(leaves)
 }
 
 fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
-    fn hash(color: [u8; 3]) -> u32 {
-        u32::from(color[0]).wrapping_mul(463)
-            ^ u32::from(color[1]).wrapping_shl(8).wrapping_mul(10_069)
-            ^ u32::from(color[2]).wrapping_shl(16).wrapping_mul(64_997)
-    }
-
     // QuantHash.c grows 11 -> 23 -> 47 -> 97 for this range. Its historical
     // prime finder accepts the first candidate in this residue table.
     const ACCEPTED_RESIDUES: [bool; 16] = [
@@ -734,12 +791,21 @@ fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
         }
     }
     let mut iteration = (0..colors.len()).collect::<Vec<_>>();
-    iteration.sort_by_key(|&index| (hash(colors[index]) % length, hash(colors[index])));
+    iteration.sort_by_key(|&index| {
+        let hash = pillow_pixel_hash(colors[index]);
+        (hash % length, hash)
+    });
     let mut rank = vec![0usize; colors.len()];
     for (position, index) in iteration.into_iter().enumerate() {
         rank[index] = position;
     }
     rank
+}
+
+fn pillow_pixel_hash(color: [u8; 3]) -> u32 {
+    u32::from(color[0]).wrapping_mul(463)
+        ^ u32::from(color[1]).wrapping_shl(8).wrapping_mul(10_069)
+        ^ u32::from(color[2]).wrapping_shl(16).wrapping_mul(64_997)
 }
 
 fn box_volume(node: &MedianBox, colors: &[[u8; 3]]) -> u32 {
@@ -921,17 +987,31 @@ fn find_color(palette: &[[u8; 3]], color: &[u8; 3]) -> Option<usize> {
 }
 /// Find the nearest color in the palette by Euclidean distance.
 fn find_nearest(palette: &[[u8; 3]], color: &[u8; 3]) -> usize {
-    let mut best = 0;
-    let mut best_dist = u32::MAX;
-    for (i, entry) in palette.iter().enumerate() {
-        let dr = entry[0] as i32 - color[0] as i32;
-        let dg = entry[1] as i32 - color[1] as i32;
-        let db = entry[2] as i32 - color[2] as i32;
-        let dist = (dr * dr + dg * dg + db * db) as u32;
+    find_nearest_from(palette, color, 0)
+}
+
+fn find_nearest_from(palette: &[[u8; 3]], color: &[u8; 3], initial: usize) -> usize {
+    let mut best = initial;
+    let mut best_dist = color_distance(palette[initial], *color);
+    let search_limit = best_dist.saturating_mul(4);
+    let mut candidates = (0..palette.len()).collect::<Vec<_>>();
+    candidates.sort_by_key(|&index| (color_distance(palette[initial], palette[index]), index));
+    for index in candidates {
+        if color_distance(palette[initial], palette[index]) > search_limit {
+            break;
+        }
+        let dist = color_distance(palette[index], *color);
         if dist < best_dist {
             best_dist = dist;
-            best = i;
+            best = index;
         }
     }
     best
+}
+
+fn color_distance(left: [u8; 3], right: [u8; 3]) -> u32 {
+    let dr = i32::from(left[0]) - i32::from(right[0]);
+    let dg = i32::from(left[1]) - i32::from(right[1]);
+    let db = i32::from(left[2]) - i32::from(right[2]);
+    u32::try_from(dr * dr + dg * dg + db * db).unwrap_or(u32::MAX)
 }
