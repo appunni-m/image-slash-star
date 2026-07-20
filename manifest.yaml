@@ -1829,6 +1829,54 @@ formats:
     - id: enc_hotspot
       description: Pillow accepts but ignores the ICO hotspot option
       params: {'hotspot': [8, 8]}
+    - id: enc_oversized_source
+      description: Pillow downsamples sources larger than the 256px ICO ceiling
+      source_format: png
+      source_asset: large.png
+    - id: enc_gray_resize
+      description: Grayscale Lanczos resize before PNG-backed ICO encoding
+      source_format: png
+      source_asset: gray.png
+      params: {'sizes': [[16, 16]]}
+    - id: enc_rgba_resize
+      description: Alpha-aware Lanczos resize before PNG-backed ICO encoding
+      source_format: png
+      source_asset: alpha_partial.png
+      params: {'sizes': [[16, 16]]}
+    - id: enc_integer_scale_resize
+      description: Lanczos resize whose sample center has an exact sinc value
+      source_asset: 48x48.ico
+      params: {'sizes': [[16, 16]]}
+    - id: enc_bmp_rgba
+      description: 32-bit BGRA BMP-backed ICO entry
+      source_format: png
+      source_asset: rgba.png
+      params: {'entry_type': 'bmp'}
+    - id: enc_bmp_256
+      description: BMP-backed ICO directory sentinel dimensions at 256px
+      source_asset: 256x256.ico
+      params: {'entry_type': 'bmp', 'sizes': [[256, 256]]}
+    - id: enc_error_cmyk_resize
+      description: Pillow cannot resize CMYK into its PNG-backed ICO path
+      source_format: tiff
+      source_asset: cmyk.tiff
+      params: {'sizes': [[16, 16]]}
+      expect_error: true
+    - id: enc_error_cmyk_png
+      description: Pillow cannot write an unscaled CMYK PNG-backed ICO entry
+      source_format: tiff
+      source_asset: cmyk.tiff
+      params: {'sizes': [[128, 128]]}
+      expect_error: true
+    - id: enc_error_cmyk_bmp
+      description: Pillow cannot write CMYK as a BMP-backed ICO entry
+      source_format: tiff
+      source_asset: cmyk.tiff
+      params: {'entry_type': 'bmp', 'sizes': [[128, 128]]}
+      expect_error: true
+    - id: enc_malformed_sizes_ignored
+      description: Pillow ignores an incomplete size tuple after valid entries
+      params: {'sizes': [[16, 16], [32]]}
 
     - id: enc_multi
       description: Multi-resolution

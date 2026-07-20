@@ -157,6 +157,126 @@
       "encoded_ref_bytes": 839
     },
     {
+      "id": "enc_oversized_source",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_oversized_source.bin",
+      "ref_bytes": 98304,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        256,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_oversized_source.bin",
+      "encoded_ref_bytes": 1273
+    },
+    {
+      "id": "enc_gray_resize",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_gray_resize.bin",
+      "ref_bytes": 256,
+      "ref_mode": "L8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_gray_resize.bin",
+      "encoded_ref_bytes": 353
+    },
+    {
+      "id": "enc_rgba_resize",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_rgba_resize.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_rgba_resize.bin",
+      "encoded_ref_bytes": 878
+    },
+    {
+      "id": "enc_integer_scale_resize",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_integer_scale_resize.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_integer_scale_resize.bin",
+      "encoded_ref_bytes": 810
+    },
+    {
+      "id": "enc_bmp_rgba",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_rgba.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_rgba.bin",
+      "encoded_ref_bytes": 98902
+    },
+    {
+      "id": "enc_bmp_256",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_256.bin",
+      "ref_bytes": 262144,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        256,
+        256
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_256.bin",
+      "encoded_ref_bytes": 204862
+    },
+    {
+      "id": "enc_error_cmyk_resize",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode CMYK as PNG"
+    },
+    {
+      "id": "enc_error_cmyk_png",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode CMYK as PNG"
+    },
+    {
+      "id": "enc_error_cmyk_bmp",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.KeyError",
+      "error_message": "'CMYK'"
+    },
+    {
+      "id": "enc_malformed_sizes_ignored",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_malformed_sizes_ignored.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_malformed_sizes_ignored.bin",
+      "encoded_ref_bytes": 839
+    },
+    {
       "id": "enc_multi",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi.bin",
       "ref_bytes": 3072,

@@ -359,6 +359,305 @@
       }
     },
     {
+      "id": "enc_oversized_source",
+      "source_asset": "large.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_gray_resize",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba_resize",
+      "source_asset": "alpha_partial.png",
+      "source_format": "png",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/alpha_partial.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_integer_scale_resize",
+      "source_asset": "48x48.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/48x48.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bmp_rgba",
+      "source_asset": "rgba.png",
+      "source_format": "png",
+      "params": {
+        "entry_type": "bmp"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "bitmap_format": "bmp"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bmp_256",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "entry_type": "bmp",
+        "sizes": [
+          [
+            256,
+            256
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              256,
+              256
+            ]
+          ],
+          "bitmap_format": "bmp"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_cmyk_resize",
+      "source_asset": "cmyk.tiff",
+      "source_format": "tiff",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_cmyk_png",
+      "source_asset": "cmyk.tiff",
+      "source_format": "tiff",
+      "params": {
+        "sizes": [
+          [
+            128,
+            128
+          ]
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              128,
+              128
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_cmyk_bmp",
+      "source_asset": "cmyk.tiff",
+      "source_format": "tiff",
+      "params": {
+        "entry_type": "bmp",
+        "sizes": [
+          [
+            128,
+            128
+          ]
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              128,
+              128
+            ]
+          ],
+          "bitmap_format": "bmp"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_malformed_sizes_ignored",
+      "source_asset": "16x16.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ],
+          [
+            32
+          ]
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/16x16.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ],
+            [
+              32
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_multi",
       "source_asset": "256x256.ico",
       "source_format": "ico",

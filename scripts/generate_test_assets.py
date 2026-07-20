@@ -2085,6 +2085,7 @@ def gen_ico():
     (d / "zero_entry.ico").write_bytes(zero_entry)
     (d / "truncated_entry.ico").write_bytes(ico[:-20])
     img.resize((256,256)).save(d / "256x256.ico", format="ICO", sizes=[(256,256)])
+    img.resize((48, 48)).save(d / "48x48.ico", format="ICO", sizes=[(48, 48)])
     print(f"  ICO: {len(list(d.glob('*.ico')))} files")
 
 

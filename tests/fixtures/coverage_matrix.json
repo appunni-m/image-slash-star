@@ -2719,6 +2719,254 @@
           ]
         },
         {
+          "id": "enc_oversized_source",
+          "type": "encode",
+          "format": "ico",
+          "category": "oversized",
+          "description": "Pillow downsamples sources larger than the 256px ICO ceiling",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "large.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_oversized_source.bin",
+          "encoded_ref_bytes": 1273,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_oversized_source.bin",
+          "ref_bytes": 98304,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            256,
+            128
+          ]
+        },
+        {
+          "id": "enc_gray_resize",
+          "type": "encode",
+          "format": "ico",
+          "category": "gray",
+          "description": "Grayscale Lanczos resize before PNG-backed ICO encoding",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ]
+            ]
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_gray_resize.bin",
+          "encoded_ref_bytes": 353,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_gray_resize.bin",
+          "ref_bytes": 256,
+          "ref_mode": "L8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
+          "id": "enc_rgba_resize",
+          "type": "encode",
+          "format": "ico",
+          "category": "rgba",
+          "description": "Alpha-aware Lanczos resize before PNG-backed ICO encoding",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ]
+            ]
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "alpha_partial.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_rgba_resize.bin",
+          "encoded_ref_bytes": 878,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_rgba_resize.bin",
+          "ref_bytes": 1024,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
+          "id": "enc_integer_scale_resize",
+          "type": "encode",
+          "format": "ico",
+          "category": "integer",
+          "description": "Lanczos resize whose sample center has an exact sinc value",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ]
+            ]
+          },
+          "status": "active",
+          "source_format": "ico",
+          "source_asset": "48x48.ico",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_integer_scale_resize.bin",
+          "encoded_ref_bytes": 810,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_integer_scale_resize.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
+          "id": "enc_bmp_rgba",
+          "type": "encode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "32-bit BGRA BMP-backed ICO entry",
+          "params": {
+            "entry_type": "bmp"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgba.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_rgba.bin",
+          "encoded_ref_bytes": 98902,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_rgba.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_bmp_256",
+          "type": "encode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "BMP-backed ICO directory sentinel dimensions at 256px",
+          "params": {
+            "entry_type": "bmp",
+            "sizes": [
+              [
+                256,
+                256
+              ]
+            ]
+          },
+          "status": "active",
+          "source_format": "ico",
+          "source_asset": "256x256.ico",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_256.bin",
+          "encoded_ref_bytes": 204862,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_256.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            256,
+            256
+          ]
+        },
+        {
+          "id": "enc_error_cmyk_resize",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "Pillow cannot resize CMYK into its PNG-backed ICO path",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ]
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "cmyk.tiff",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode CMYK as PNG"
+        },
+        {
+          "id": "enc_error_cmyk_png",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "Pillow cannot write an unscaled CMYK PNG-backed ICO entry",
+          "params": {
+            "sizes": [
+              [
+                128,
+                128
+              ]
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "cmyk.tiff",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode CMYK as PNG"
+        },
+        {
+          "id": "enc_error_cmyk_bmp",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "Pillow cannot write CMYK as a BMP-backed ICO entry",
+          "params": {
+            "entry_type": "bmp",
+            "sizes": [
+              [
+                128,
+                128
+              ]
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "cmyk.tiff",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.KeyError",
+          "oracle_error_message": "'CMYK'"
+        },
+        {
+          "id": "enc_malformed_sizes_ignored",
+          "type": "encode",
+          "format": "ico",
+          "category": "malformed",
+          "description": "Pillow ignores an incomplete size tuple after valid entries",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ],
+              [
+                32
+              ]
+            ]
+          },
+          "status": "active",
+          "source_format": "ico",
+          "source_asset": "16x16.ico",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_malformed_sizes_ignored.bin",
+          "encoded_ref_bytes": 839,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_malformed_sizes_ignored.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
           "description": "Multi-resolution",
           "format": "ico",
           "id": "enc_multi",
@@ -11288,9 +11536,9 @@
     }
   },
   "summary": {
-    "total_rows": 609,
+    "total_rows": 619,
     "decode_rows": 382,
-    "encode_rows": 195,
+    "encode_rows": 205,
     "formats": 8,
     "assets_available": 375,
     "decode_active": 376,

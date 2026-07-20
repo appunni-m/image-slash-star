@@ -6,37 +6,15 @@ use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
 /// Encode an image using Pillow-compatible ICO save options.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let w = img.width as usize;
-    let h = img.height as usize;
-    if w == 0 || h == 0 || w > 256 || h > 256 {
-        return None;
-    }
+    img.validate().ok()?;
     if opts.extra.get("entry_type").map(String::as_str) == Some("bmp") {
-        return encode_bmp_entry(img, opts);
+        return encode_bmp_entries(img, opts);
     }
     encode_png_entries(img, opts)
 }
 
 fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let mut sizes = if let Some(value) = opts.extra.get("sizes") {
-        parse_sizes(value)?
-    } else {
-        [16, 24, 32, 48, 64, 128, 256]
-            .into_iter()
-            .map(|size| (size, size))
-            .collect()
-    };
-    sizes.retain(|&(width, height)| {
-        width <= img.width as usize
-            && height <= img.height as usize
-            && width <= 256
-            && height <= 256
-    });
-    sizes.sort_unstable();
-    sizes.dedup();
-    if sizes.is_empty() {
-        return None;
-    }
+    let sizes = ico_sizes(img, opts)?;
 
     let mut frames = Vec::with_capacity(sizes.len());
     for &(width, height) in &sizes {
@@ -51,6 +29,63 @@ fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8
         )?);
     }
 
+    encode_directory(&sizes, &frames, 32)
+}
+
+fn ico_sizes(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<(usize, usize)>> {
+    let mut bounds = if let Some(value) = opts.extra.get("sizes") {
+        parse_sizes(value)?
+    } else {
+        [16, 24, 32, 48, 64, 128, 256]
+            .into_iter()
+            .map(|size| (size, size))
+            .collect()
+    };
+    bounds.retain(|&(width, height)| {
+        width <= img.width as usize
+            && height <= img.height as usize
+            && width <= 256
+            && height <= 256
+    });
+    let mut sizes = bounds
+        .into_iter()
+        .map(|(width, height)| thumbnail_dimensions(img.width, img.height, width, height))
+        .collect::<Option<Vec<_>>>()?;
+    sizes.sort_unstable();
+    sizes.dedup();
+    (!sizes.is_empty()).then_some(sizes)
+}
+
+fn thumbnail_dimensions(
+    source_width: u32,
+    source_height: u32,
+    bound_width: usize,
+    bound_height: usize,
+) -> Option<(usize, usize)> {
+    let source_width = u64::from(source_width);
+    let source_height = u64::from(source_height);
+    let bound_width = u64::try_from(bound_width).ok()?;
+    let bound_height = u64::try_from(bound_height).ok()?;
+    let (width, height) =
+        if source_width.checked_mul(bound_height)? > source_height.checked_mul(bound_width)? {
+            let height = source_height
+                .checked_mul(bound_width)?
+                .checked_add(source_width / 2)?
+                / source_width;
+            (bound_width, height.max(1))
+        } else {
+            let width = source_width
+                .checked_mul(bound_height)?
+                .checked_add(source_height / 2)?
+                / source_height;
+            (width.max(1), bound_height)
+        };
+    Some((usize::try_from(width).ok()?, usize::try_from(height).ok()?))
+}
+
+fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> Option<Vec<u8>> {
+    debug_assert_eq!(sizes.len(), frames.len());
+
     let directory_bytes = sizes.len().checked_mul(16)?;
     let mut offset = 6usize.checked_add(directory_bytes)?;
     let total = frames
@@ -59,7 +94,7 @@ fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8
     let mut output = Vec::with_capacity(total);
     output.extend_from_slice(&[0, 0, 1, 0]);
     output.extend_from_slice(&u16::try_from(sizes.len()).ok()?.to_le_bytes());
-    for (&(width, height), frame) in sizes.iter().zip(&frames) {
+    for (&(width, height), frame) in sizes.iter().zip(frames) {
         output.push(if width == 256 {
             0
         } else {
@@ -71,15 +106,34 @@ fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8
             u8::try_from(height).ok()?
         });
         output.extend_from_slice(&[0, 0, 0, 0]);
-        output.extend_from_slice(&32u16.to_le_bytes());
+        output.extend_from_slice(&bits.to_le_bytes());
         output.extend_from_slice(&u32::try_from(frame.len()).ok()?.to_le_bytes());
         output.extend_from_slice(&u32::try_from(offset).ok()?.to_le_bytes());
         offset = offset.checked_add(frame.len())?;
     }
     for frame in frames {
-        output.extend_from_slice(&frame);
+        output.extend_from_slice(frame);
     }
     Some(output)
+}
+
+fn encode_bmp_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+    let sizes = ico_sizes(img, opts)?;
+    let mut frames = Vec::with_capacity(sizes.len());
+    let mut bits = None;
+    for &(width, height) in &sizes {
+        let frame = if (width, height) == (img.width as usize, img.height as usize) {
+            img.clone()
+        } else {
+            resize_lanczos(img, width, height)?
+        };
+        let encoded = encode_bmp_single_entry(&frame, opts)?;
+        let frame_bits = u16::from_le_bytes(encoded.get(12..14)?.try_into().ok()?);
+        debug_assert!(bits.is_none_or(|previous| previous == frame_bits));
+        bits = Some(frame_bits);
+        frames.push(encoded.get(22..)?.to_vec());
+    }
+    encode_directory(&sizes, &frames, bits?)
 }
 
 fn resize_lanczos(img: &DecodedImage, width: usize, height: usize) -> Option<DecodedImage> {
@@ -228,7 +282,7 @@ fn sinc(mut value: f64) -> f64 {
     value.sin() / value
 }
 
-fn encode_bmp_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let width = usize::try_from(img.width).ok()?;
     let height = usize::try_from(img.height).ok()?;
     let (bits, row_bytes, pixels) = match img.color {
@@ -256,9 +310,8 @@ fn encode_bmp_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>>
         _ => return None,
     };
     let pixel_bytes = row_bytes.checked_mul(height)?;
-    if pixels.len() != pixel_bytes {
-        return None;
-    }
+    // Each color arm emits exactly one validated source row at `row_bytes`.
+    debug_assert_eq!(pixels.len(), pixel_bytes);
 
     // Pillow 12.2.0 IcoImagePlugin.py:137-190 leaves `size` bound to the
     // final requested/default size when it writes a non-32-bit AND mask.
@@ -319,9 +372,6 @@ fn parse_sizes(value: &str) -> Option<Vec<(usize, usize)>> {
         .map(str::parse::<usize>)
         .collect::<Result<Vec<_>, _>>()
         .ok()?;
-    if numbers.len() % 2 != 0 {
-        return None;
-    }
     Some(
         numbers
             .chunks_exact(2)
