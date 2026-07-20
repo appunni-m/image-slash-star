@@ -44,9 +44,7 @@ fn row_size(bits_per_pixel: u16, width: u32) -> usize {
 
 /// Read a Windows RGBQUAD or OS/2 RGBTRIPLE palette.
 fn read_palette(r: &mut Cursor<&[u8]>, count: u32, entry_bytes: usize) -> Option<Vec<[u8; 4]>> {
-    if !matches!(entry_bytes, 3 | 4) {
-        return None;
-    }
+    debug_assert!(matches!(entry_bytes, 3 | 4));
     let mut pal = Vec::with_capacity(count as usize);
     for _ in 0..count {
         let mut entry = [0u8; 4];
@@ -61,9 +59,7 @@ fn read_palette(r: &mut Cursor<&[u8]>, count: u32, entry_bytes: usize) -> Option
 // ---------------------------------------------------------------------------
 
 fn extract_channel(pixel: u32, mask: u32) -> u8 {
-    if mask == 0 {
-        return 0;
-    }
+    debug_assert_ne!(mask, 0);
     let shift = mask.trailing_zeros();
     let width = (mask >> shift).count_ones();
     let value = (pixel & mask) >> shift;
@@ -264,6 +260,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             (0, 0, 0, 0)
         }
     };
+    if compression == 3 && (rm == 0 || gm == 0 || bm == 0) {
+        return None;
+    }
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
     let dib_end = 14u64 + header_size as u64;
@@ -320,7 +319,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             )?,
             width_usize,
             top_down,
-        )?
+        )
     } else if compression == 2 {
         // BI_RLE4 — return raw palette indices
         let mut remaining = Vec::new();
@@ -335,7 +334,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             )?,
             width_usize,
             top_down,
-        )?
+        )
     } else {
         // BI_RGB or BI_BITFIELDS — uncompressed scanlines
         let stride = row_size(bit_depth, w);
@@ -415,8 +414,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             }
             16 => {
                 // 16 bpp — RGB555 or BI_BITFIELDS
-                let channels = if am == 0 { 3 } else { 4 };
-                let mut out = Vec::with_capacity(width_usize * height_usize * channels);
+                let mut out = Vec::with_capacity(width_usize * height_usize * 3);
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
@@ -432,9 +430,6 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                         let gv = extract_channel(pixel, gm);
                         let bv = extract_channel(pixel, bm);
                         out.extend_from_slice(&[rv, gv, bv]);
-                        if am != 0 {
-                            out.push(extract_channel(pixel, am));
-                        }
                     }
                 }
                 out
@@ -520,22 +515,18 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     Some(image)
 }
 
-fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Option<Vec<u8>> {
+fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u8> {
     if top_down {
-        return Some(pixels);
+        return pixels;
     }
-    if width == 0 || !pixels.len().is_multiple_of(width) {
-        return None;
-    }
+    debug_assert_ne!(width, 0);
+    debug_assert!(pixels.len().is_multiple_of(width));
     let height = pixels.len() / width;
     for top in 0..height / 2 {
-        let bottom = height.checked_sub(top)?.checked_sub(1)?;
+        let bottom = height - top - 1;
         for x in 0..width {
-            pixels.swap(
-                top.checked_mul(width)?.checked_add(x)?,
-                bottom.checked_mul(width)?.checked_add(x)?,
-            );
+            pixels.swap(top * width + x, bottom * width + x);
         }
     }
-    Some(pixels)
+    pixels
 }

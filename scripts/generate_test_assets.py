@@ -736,6 +736,18 @@ def write_bmp_bitfields(path, image, header_size=40):
     write_bmp(path, dib, bytes(rows), masks=masks)
 
 
+def write_bmp_v4_16(path):
+    """Write a V4 RGB555 bitmap whose optional alpha mask is ignored by Pillow."""
+    dib = bytearray(108)
+    pixels = struct.pack("<H", 0xFFFF) + b"\0\0"
+    struct.pack_into(
+        "<IiiHHIIiiII", dib, 0, 108, 1, 1, 1, 16, 3, len(pixels), 3_780, 3_780, 0, 0
+    )
+    struct.pack_into("<IIII", dib, 40, 0x7C00, 0x03E0, 0x001F, 0x8000)
+    struct.pack_into("<I", dib, 56, 0x73524742)
+    write_bmp(path, bytes(dib), pixels)
+
+
 def gen_bmp():
     d = OUT / "bmp"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -751,9 +763,20 @@ def gen_bmp():
     write_bmp_24(d / "top_down.bmp", img, top_down=True)
     for depth in (1, 4, 8, 16, 32):
         write_bmp_top_down(d / f"top_down_{depth}.bmp", depth)
+    top_down_1 = (d / "top_down_1.bmp").read_bytes()
+    canonical_top_down_1 = bytearray(top_down_1)
+    canonical_top_down_1[58:62] = b"\xff\xff\xff\0"
+    (d / "top_down_1_canonical.bmp").write_bytes(canonical_top_down_1)
+    bottom_up_1_palette = bytearray(top_down_1)
+    struct.pack_into("<i", bottom_up_1_palette, 22, 5)
+    (d / "bottom_up_1_palette.bmp").write_bytes(bottom_up_1_palette)
     write_bmp_bitfields(d / "bitfields.bmp", pattern_img("RGBA"))
+    zero_mask = bytearray((d / "bitfields.bmp").read_bytes())
+    struct.pack_into("<I", zero_mask, 58, 0)
+    (d / "bitfields_zero_mask.bmp").write_bytes(zero_mask)
     write_bmp_bitfields(d / "v4header.bmp", pattern_img("RGBA"), header_size=108)
     write_bmp_bitfields(d / "v5header.bmp", pattern_img("RGBA"), header_size=124)
+    write_bmp_v4_16(d / "v4header16.bmp")
     write_bmp_24(d / "os2v1.bmp", img, core_header=True)
     write_bmp_rle(d / "rle8.bmp", 8)
     write_bmp_rle(d / "rle4.bmp", 4)
@@ -765,6 +788,9 @@ def gen_bmp():
     early_eob = bytes((4, 7, 0, 1))
     early_eob_dib = bmp_info_header(4, 2, 8, 1, len(early_eob), 256)
     write_bmp(d / "rle8_early_eob.bmp", early_eob_dib, early_eob, bmp_palette(256))
+    early_eob4 = bytes((4, 0x77, 0, 1))
+    early_eob4_dib = bmp_info_header(4, 2, 4, 2, len(early_eob4), 16)
+    write_bmp(d / "rle4_early_eob.bmp", early_eob4_dib, early_eob4, bmp_palette(16))
     Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.bmp")
     Image.new("RGB", (17,17), (128,0,0)).save(d / "odd_width.bmp")
     pattern_img("RGB", (2, 5)).save(d / "width2.bmp")

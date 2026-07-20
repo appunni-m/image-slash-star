@@ -936,11 +936,13 @@ formats:
       description: BI_BITFIELDS (16/32 bit with masks)
       test_assets:
       - bitfields.bmp
+      - v4header16.bmp
     - id: top_down
       description: Top-down scanline order (negative height)
       test_assets:
       - top_down.bmp
       - top_down_1.bmp
+      - top_down_1_canonical.bmp
       - top_down_4.bmp
       - top_down_8.bmp
       - top_down_16.bmp
@@ -949,6 +951,7 @@ formats:
       description: Bottom-up scanline order (standard)
       test_assets:
       - bottom_up.bmp
+      - bottom_up_1_palette.bmp
     - id: os2_v1
       description: OS/2 BMP v1 header
       test_assets:
@@ -992,6 +995,8 @@ formats:
       - truncated_pixels.bmp
       - truncated_palette.bmp
       - rle8_early_eob.bmp
+      - rle4_early_eob.bmp
+      - bitfields_zero_mask.bmp
       expect_error: true
     encode_edge_cases:
     - id: enc_1bit

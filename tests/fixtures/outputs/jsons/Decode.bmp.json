@@ -182,6 +182,19 @@
       ]
     },
     {
+      "id": "compression_bitfields_v4header16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_v4header16_bmp.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
       "id": "top_down",
       "status": "ok",
       "error_type": null,
@@ -202,6 +215,19 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_1_bmp.bin",
       "ref_bytes": 45,
       "ref_mode": "P",
+      "ref_size": [
+        9,
+        5
+      ]
+    },
+    {
+      "id": "top_down_top_down_1_canonical",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_top_down_1_canonical_bmp.bin",
+      "ref_bytes": 10,
+      "ref_mode": "1",
       "ref_size": [
         9,
         5
@@ -270,6 +296,19 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "bottom_up_bottom_up_1_palette",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_bottom_up_1_palette_bmp.bin",
+      "ref_bytes": 45,
+      "ref_mode": "P",
+      "ref_size": [
+        9,
+        5
       ]
     },
     {
@@ -474,6 +513,26 @@
       "status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle4_early_eob",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_bitfields_zero_mask",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP bitfields layout",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

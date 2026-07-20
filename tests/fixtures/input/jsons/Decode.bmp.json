@@ -182,6 +182,19 @@
       }
     },
     {
+      "id": "compression_bitfields_v4header16",
+      "asset": "v4header16.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/v4header16.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "top_down",
       "asset": "top_down.bmp",
       "expect_error": false,
@@ -200,6 +213,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_1.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "top_down_top_down_1_canonical",
+      "asset": "top_down_1_canonical.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/top_down_1_canonical.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -265,6 +291,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bottom_up.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bottom_up_bottom_up_1_palette",
+      "asset": "bottom_up_1_palette.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bottom_up_1_palette.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -499,6 +538,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_early_eob.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle4_early_eob",
+      "asset": "rle4_early_eob.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4_early_eob.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bitfields_zero_mask",
+      "asset": "bitfields_zero_mask.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bitfields_zero_mask.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
