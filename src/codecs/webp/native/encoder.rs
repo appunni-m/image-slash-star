@@ -12,10 +12,6 @@ pub(super) mod predictor;
 /// input data provided to the encoder, which can help improve compression ratio.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ColorType {
-    /// Opaque image with a single luminance byte per pixel.
-    L8,
-    /// Image with a luminance and alpha byte per pixel.
-    La8,
     /// Opaque image with a red, green, and blue byte per pixel.
     Rgb8,
     /// Image with a red, green, blue, and alpha byte per pixel.
@@ -473,57 +469,6 @@ const fn length_to_symbol(len: usize) -> (usize, u8) {
     (symbol, extra_bits as u8)
 }
 
-#[inline(always)]
-fn count_run(
-    pixel: u32,
-    it: &mut std::iter::Peekable<std::slice::Iter<'_, u32>>,
-    frequencies1: &mut [u32; 280],
-) {
-    let mut run_length = 0;
-    while run_length < 4096 && it.peek().is_some_and(|&&next| next == pixel) {
-        run_length += 1;
-        it.next();
-    }
-    if run_length > 0 {
-        if run_length <= 4 {
-            let symbol = 256 + run_length - 1;
-            frequencies1[symbol] += 1;
-        } else {
-            let (symbol, _extra_bits) = length_to_symbol(run_length);
-            frequencies1[256 + symbol] += 1;
-        }
-    }
-}
-
-#[inline(always)]
-fn write_run<W: Write>(
-    w: &mut BitWriter<W>,
-    pixel: u32,
-    it: &mut std::iter::Peekable<std::slice::Iter<'_, u32>>,
-    codes1: &[u16; 280],
-    lengths1: &[u8; 280],
-) -> io::Result<()> {
-    let mut run_length = 0;
-    while run_length < 4096 && it.peek().is_some_and(|&&next| next == pixel) {
-        run_length += 1;
-        it.next();
-    }
-    if run_length > 0 {
-        if run_length <= 4 {
-            let symbol = 256 + run_length - 1;
-            w.write_bits(u64::from(codes1[symbol]), lengths1[symbol])?;
-        } else {
-            let (symbol, extra_bits) = length_to_symbol(run_length);
-            w.write_bits(u64::from(codes1[256 + symbol]), lengths1[256 + symbol])?;
-            w.write_bits(
-                (run_length as u64 - 1) & ((1 << extra_bits) - 1),
-                extra_bits,
-            )?;
-        }
-    }
-    Ok(())
-}
-
 #[inline]
 fn channels(pixel: u32) -> [usize; 4] {
     [
@@ -675,24 +620,6 @@ fn write_token_stream<W: Write>(
     Ok(())
 }
 
-/// Allows fine-tuning some encoder parameters.
-///
-/// Pass to [`WebPEncoder::set_params()`].
-#[non_exhaustive]
-#[derive(Clone, Debug)]
-pub struct EncoderParams {
-    /// Use a predictor transform. Enabled by default.
-    pub use_predictor_transform: bool,
-}
-
-impl Default for EncoderParams {
-    fn default() -> Self {
-        Self {
-            use_predictor_transform: true,
-        }
-    }
-}
-
 /// Encode image data with the indicated color type.
 ///
 /// # Panics
@@ -704,7 +631,6 @@ fn encode_frame<W: Write>(
     width: u32,
     height: u32,
     color: ColorType,
-    params: EncoderParams,
 ) -> Result<(), EncodingError> {
     let w = &mut BitWriter {
         writer,
@@ -713,8 +639,6 @@ fn encode_frame<W: Write>(
     };
 
     let (is_alpha, bytes_per_pixel) = match color {
-        ColorType::L8 => (false, 1),
-        ColorType::La8 => (true, 2),
         ColorType::Rgb8 => (false, 3),
         ColorType::Rgba8 => (true, 4),
     };
@@ -736,21 +660,6 @@ fn encode_frame<W: Write>(
     w.write_bits(0x0, 3)?; // version
 
     let mut pixels: Vec<u32> = match color {
-        ColorType::L8 => data
-            .iter()
-            .map(|&value| {
-                0xff00_0000 | (u32::from(value) << 16) | (u32::from(value) << 8) | u32::from(value)
-            })
-            .collect(),
-        ColorType::La8 => data
-            .chunks_exact(2)
-            .map(|pixel| {
-                (u32::from(pixel[1]) << 24)
-                    | (u32::from(pixel[0]) << 16)
-                    | (u32::from(pixel[0]) << 8)
-                    | u32::from(pixel[0])
-            })
-            .collect(),
         ColorType::Rgb8 => data
             .chunks_exact(3)
             .map(|pixel| {
@@ -782,23 +691,21 @@ fn encode_frame<W: Write>(
         }
     }
 
-    if params.use_predictor_transform {
-        let (predictor_map, predictor_bits) =
-            predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3);
-        w.write_bits(1, 1)?;
-        w.write_bits(0, 2)?;
-        w.write_bits(u64::from(predictor_bits - 2), 3)?;
-        let predictor_width = (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
-        write_image_stream(w, &predictor_map, predictor_width, false)?;
+    let (predictor_map, predictor_bits) =
+        predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3);
+    w.write_bits(1, 1)?;
+    w.write_bits(0, 2)?;
+    w.write_bits(u64::from(predictor_bits - 2), 3)?;
+    let predictor_width = (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
+    write_image_stream(w, &predictor_map, predictor_width, false)?;
 
-        let (color_map, color_bits) =
-            cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
-        w.write_bits(1, 1)?;
-        w.write_bits(1, 2)?;
-        w.write_bits(u64::from(color_bits - 2), 3)?;
-        let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
-        write_image_stream(w, &color_map, color_width, false)?;
-    }
+    let (color_map, color_bits) =
+        cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
+    w.write_bits(1, 1)?;
+    w.write_bits(1, 2)?;
+    w.write_bits(u64::from(color_bits - 2), 3)?;
+    let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
+    write_image_stream(w, &color_map, color_width, false)?;
 
     w.write_bits(0, 1)?; // transforms done
     write_image_stream(w, &pixels, width as usize, true)?;
@@ -930,10 +837,6 @@ fn write_chunk<W: Write>(mut w: W, name: &[u8], data: &[u8]) -> io::Result<()> {
 /// WebP Encoder.
 pub struct WebPEncoder<W> {
     writer: W,
-    icc_profile: Vec<u8>,
-    exif_metadata: Vec<u8>,
-    xmp_metadata: Vec<u8>,
-    params: EncoderParams,
 }
 
 impl<W: Write> WebPEncoder<W> {
@@ -941,33 +844,7 @@ impl<W: Write> WebPEncoder<W> {
     ///
     /// Only supports "VP8L" lossless encoding.
     pub fn new(w: W) -> Self {
-        Self {
-            writer: w,
-            icc_profile: Vec::new(),
-            exif_metadata: Vec::new(),
-            xmp_metadata: Vec::new(),
-            params: EncoderParams::default(),
-        }
-    }
-
-    /// Set the ICC profile to use for the image.
-    pub fn set_icc_profile(&mut self, icc_profile: Vec<u8>) {
-        self.icc_profile = icc_profile;
-    }
-
-    /// Set the EXIF metadata to use for the image.
-    pub fn set_exif_metadata(&mut self, exif_metadata: Vec<u8>) {
-        self.exif_metadata = exif_metadata;
-    }
-
-    /// Set the XMP metadata to use for the image.
-    pub fn set_xmp_metadata(&mut self, xmp_metadata: Vec<u8>) {
-        self.xmp_metadata = xmp_metadata;
-    }
-
-    /// Set the `EncoderParams` to use.
-    pub fn set_params(&mut self, params: EncoderParams) {
-        self.params = params;
+        Self { writer: w }
     }
 
     /// Encode image data with the indicated color type.
@@ -983,69 +860,13 @@ impl<W: Write> WebPEncoder<W> {
         color: ColorType,
     ) -> Result<(), EncodingError> {
         let mut frame = Vec::new();
-        encode_frame(&mut frame, data, width, height, color, self.params)?;
+        encode_frame(&mut frame, data, width, height, color)?;
 
-        // If the image has no metadata, it can be encoded with the "simple" WebP container format.
-        if self.icc_profile.is_empty()
-            && self.exif_metadata.is_empty()
-            && self.xmp_metadata.is_empty()
-        {
-            self.writer.write_all(b"RIFF")?;
-            self.writer
-                .write_all(&(chunk_size(frame.len()) + 4).to_le_bytes())?;
-            self.writer.write_all(b"WEBP")?;
-            write_chunk(&mut self.writer, b"VP8L", &frame)?;
-        } else {
-            let mut total_bytes = 22 + chunk_size(frame.len());
-            if !self.icc_profile.is_empty() {
-                total_bytes += chunk_size(self.icc_profile.len());
-            }
-            if !self.exif_metadata.is_empty() {
-                total_bytes += chunk_size(self.exif_metadata.len());
-            }
-            if !self.xmp_metadata.is_empty() {
-                total_bytes += chunk_size(self.xmp_metadata.len());
-            }
-
-            let mut flags = 0;
-            if !self.xmp_metadata.is_empty() {
-                flags |= 1 << 2;
-            }
-            if !self.exif_metadata.is_empty() {
-                flags |= 1 << 3;
-            }
-            if let ColorType::La8 | ColorType::Rgba8 = color {
-                flags |= 1 << 4;
-            }
-            if !self.icc_profile.is_empty() {
-                flags |= 1 << 5;
-            }
-
-            self.writer.write_all(b"RIFF")?;
-            self.writer.write_all(&total_bytes.to_le_bytes())?;
-            self.writer.write_all(b"WEBP")?;
-
-            let mut vp8x = Vec::new();
-            vp8x.write_all(&[flags])?; // flags
-            vp8x.write_all(&[0; 3])?; // reserved
-            vp8x.write_all(&(width - 1).to_le_bytes()[..3])?; // canvas width
-            vp8x.write_all(&(height - 1).to_le_bytes()[..3])?; // canvas height
-            write_chunk(&mut self.writer, b"VP8X", &vp8x)?;
-
-            if !self.icc_profile.is_empty() {
-                write_chunk(&mut self.writer, b"ICCP", &self.icc_profile)?;
-            }
-
-            write_chunk(&mut self.writer, b"VP8L", &frame)?;
-
-            if !self.exif_metadata.is_empty() {
-                write_chunk(&mut self.writer, b"EXIF", &self.exif_metadata)?;
-            }
-
-            if !self.xmp_metadata.is_empty() {
-                write_chunk(&mut self.writer, b"XMP ", &self.xmp_metadata)?;
-            }
-        }
+        self.writer.write_all(b"RIFF")?;
+        self.writer
+            .write_all(&(chunk_size(frame.len()) + 4).to_le_bytes())?;
+        self.writer.write_all(b"WEBP")?;
+        write_chunk(&mut self.writer, b"VP8L", &frame)?;
 
         Ok(())
     }

@@ -12,8 +12,6 @@ pub(crate) struct WebPExtendedInfo {
     pub(crate) canvas_width: u32,
     pub(crate) canvas_height: u32,
 
-    #[allow(unused)]
-    pub(crate) icc_profile: bool,
     pub(crate) exif_metadata: bool,
     pub(crate) xmp_metadata: bool,
     pub(crate) animation: bool,
@@ -214,7 +212,6 @@ pub(crate) fn read_extended_header<R: Read>(
 ) -> Result<WebPExtendedInfo, DecodingError> {
     let chunk_flags = reader.read_u8()?;
 
-    let icc_profile = chunk_flags & 0b00100000 != 0;
     let alpha = chunk_flags & 0b00010000 != 0;
     let exif_metadata = chunk_flags & 0b00001000 != 0;
     let xmp_metadata = chunk_flags & 0b00000100 != 0;
@@ -232,7 +229,6 @@ pub(crate) fn read_extended_header<R: Read>(
     }
 
     let info = WebPExtendedInfo {
-        icc_profile,
         alpha,
         exif_metadata,
         xmp_metadata,

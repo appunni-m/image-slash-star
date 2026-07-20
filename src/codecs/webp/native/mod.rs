@@ -3,10 +3,6 @@
 //! Derived from image-webp 0.2.4 under MIT OR Apache-2.0. The distributed
 //! license texts and upstream README are retained in `third_party/image-webp`.
 //!
-//! The upstream public API is intentionally retained even though this crate's
-//! current wrappers use only a subset of it.
-
-#![allow(dead_code)]
 // Keep the imported codec algorithms stable and auditable against upstream;
 // project-specific Clippy policy applies at the wrapper boundary.
 #![allow(clippy::all, clippy::nursery, clippy::pedantic, clippy::restriction)]

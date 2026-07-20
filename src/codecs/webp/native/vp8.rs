@@ -14,7 +14,7 @@ use super::byteorder_lite::{LittleEndian, ReadBytesExt};
 use std::default::Default;
 use std::io::Read;
 
-use super::decoder::{DecodingError, UpsamplingMethod};
+use super::decoder::DecodingError;
 use super::yuv;
 
 use super::vp8_arithmetic_decoder::ArithmeticDecoder;
@@ -803,10 +803,6 @@ pub struct Frame {
 }
 
 impl Frame {
-    const fn chroma_width(&self) -> u16 {
-        self.width.div_ceil(2)
-    }
-
     const fn buffer_width(&self) -> u16 {
         let difference = self.width % 16;
         if difference > 0 {
@@ -817,68 +813,31 @@ impl Frame {
     }
 
     /// Fills an rgb buffer from the YUV buffers
-    pub(crate) fn fill_rgb(&self, buf: &mut [u8], upsampling_method: UpsamplingMethod) {
+    pub(crate) fn fill_rgb(&self, buf: &mut [u8]) {
         const BPP: usize = 3;
-
-        match upsampling_method {
-            UpsamplingMethod::Bilinear => {
-                yuv::fill_rgb_buffer_fancy::<BPP>(
-                    buf,
-                    &self.ybuf,
-                    &self.ubuf,
-                    &self.vbuf,
-                    usize::from(self.width),
-                    usize::from(self.height),
-                    usize::from(self.buffer_width()),
-                );
-            }
-            UpsamplingMethod::Simple => {
-                yuv::fill_rgb_buffer_simple::<BPP>(
-                    buf,
-                    &self.ybuf,
-                    &self.ubuf,
-                    &self.vbuf,
-                    usize::from(self.width),
-                    usize::from(self.chroma_width()),
-                    usize::from(self.buffer_width()),
-                );
-            }
-        }
+        yuv::fill_rgb_buffer_fancy::<BPP>(
+            buf,
+            &self.ybuf,
+            &self.ubuf,
+            &self.vbuf,
+            usize::from(self.width),
+            usize::from(self.height),
+            usize::from(self.buffer_width()),
+        );
     }
 
     /// Fills an rgba buffer from the YUV buffers
-    pub(crate) fn fill_rgba(&self, buf: &mut [u8], upsampling_method: UpsamplingMethod) {
+    pub(crate) fn fill_rgba(&self, buf: &mut [u8]) {
         const BPP: usize = 4;
-
-        match upsampling_method {
-            UpsamplingMethod::Bilinear => {
-                yuv::fill_rgb_buffer_fancy::<BPP>(
-                    buf,
-                    &self.ybuf,
-                    &self.ubuf,
-                    &self.vbuf,
-                    usize::from(self.width),
-                    usize::from(self.height),
-                    usize::from(self.buffer_width()),
-                );
-            }
-            UpsamplingMethod::Simple => {
-                yuv::fill_rgb_buffer_simple::<BPP>(
-                    buf,
-                    &self.ybuf,
-                    &self.ubuf,
-                    &self.vbuf,
-                    usize::from(self.width),
-                    usize::from(self.chroma_width()),
-                    usize::from(self.buffer_width()),
-                );
-            }
-        }
-    }
-    /// Gets the buffer size
-    #[must_use]
-    pub fn get_buf_size(&self) -> usize {
-        self.ybuf.len() * 3
+        yuv::fill_rgb_buffer_fancy::<BPP>(
+            buf,
+            &self.ybuf,
+            &self.ubuf,
+            &self.vbuf,
+            usize::from(self.width),
+            usize::from(self.height),
+            usize::from(self.buffer_width()),
+        );
     }
 }
 
