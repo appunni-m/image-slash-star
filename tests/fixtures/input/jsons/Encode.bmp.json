@@ -97,6 +97,76 @@
       }
     },
     {
+      "id": "enc_error_grayscale_alpha",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "params": {},
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_truncated_pixels",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "truncate_pixels": true
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": "PIL.Image.frombytes(mode, size, tobytes()[:-1])"
+      }
+    },
+    {
+      "id": "enc_error_oversized_dimensions",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "source_dimensions": [
+          2147483648,
+          1
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            2147483648,
+            1
+          ]
+        }
+      }
+    },
+    {
       "id": "enc_16bit",
       "source_asset": "24bit.bmp",
       "source_format": "bmp",

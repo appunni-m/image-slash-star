@@ -179,6 +179,7 @@ def encode_params(fmt, params):
         "grayscale",
         "alpha",
         "truncate_pixels",
+        "source_dimensions",
     ):
         take(source_property)
 
@@ -814,6 +815,12 @@ def describe_encode_call(fmt_name, row):
     }
     if row.get("params", {}).get("truncate_pixels"):
         call["source_transform"] = "PIL.Image.frombytes(mode, size, tobytes()[:-1])"
+    if source_dimensions := row.get("params", {}).get("source_dimensions"):
+        call["source_transform"] = {
+            "method": "PIL.Image.new",
+            "mode": "source mode",
+            "size": source_dimensions,
+        }
     return call
 
 
@@ -1201,6 +1208,8 @@ def generate_encode(manifest, matrix, target_format=None):
                 kwargs = encode_params(fmt_name, dict(params))
                 if params.get("truncate_pixels"):
                     img = Image.frombytes(img.mode, img.size, img.tobytes()[:-1])
+                if source_dimensions := params.get("source_dimensions"):
+                    img = Image.new(img.mode, tuple(source_dimensions))
                 image_to_save, kwargs = prepare_multiframe_call(img, kwargs)
                 buf = io.BytesIO()
                 image_to_save.save(buf, format=fmt_pil(fmt_name), **kwargs)

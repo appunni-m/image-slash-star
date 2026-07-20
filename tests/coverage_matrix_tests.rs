@@ -1090,6 +1090,22 @@ fn decode_direct(data: &[u8], format: &str) -> Option<img::DecodedImage> {
     }
 }
 
+fn encode_direct(
+    image: &img::DecodedImage,
+    format: img::ImageFormat,
+    options: &img::encode_options::EncodeOptions,
+) -> Option<Vec<u8>> {
+    match format {
+        img::ImageFormat::Jpeg | img::ImageFormat::Avif => None,
+        img::ImageFormat::Png => img::codecs::png::encode::encode(image, options),
+        img::ImageFormat::Gif => img::codecs::gif::encode::encode(image, options),
+        img::ImageFormat::Bmp => img::codecs::bmp::encode::encode(image, options),
+        img::ImageFormat::Tiff => img::codecs::tiff::encode::encode(image, options),
+        img::ImageFormat::WebP => img::codecs::webp::encode::encode(image, options),
+        img::ImageFormat::Ico => img::codecs::ico::encode::encode(image, options),
+    }
+}
+
 #[test]
 fn test_decode_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -1369,15 +1385,19 @@ fn test_encode_matrix() {
             let encoded = if row
                 .params
                 .get("truncate_pixels")
-                .and_then(serde_json::Value::as_bool)
-                .unwrap_or(false)
+                .is_some_and(|v| v.as_bool().unwrap_or(false))
             {
                 let mut malformed = decoded.first().unwrap().clone();
                 malformed.pixels.pop();
-                match format {
-                    img::ImageFormat::Png => img::codecs::png::encode::encode(&malformed, &opts),
-                    _ => None,
-                }
+                encode_direct(&malformed, format, &opts)
+                    .or_else(|| img::encode(&malformed, format, &opts))
+            } else if let Some(dimensions) = row.params.get("source_dimensions") {
+                let dimensions = dimensions.as_array().unwrap();
+                let mut malformed = decoded.first().unwrap().clone();
+                malformed.width = u32::try_from(dimensions[0].as_u64().unwrap()).unwrap();
+                malformed.height = u32::try_from(dimensions[1].as_u64().unwrap()).unwrap();
+                encode_direct(&malformed, format, &opts)
+                    .or_else(|| img::encode(&malformed, format, &opts))
             } else {
                 img::encode_sequence(decoded, format, &opts)
             };

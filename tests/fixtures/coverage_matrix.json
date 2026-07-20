@@ -892,6 +892,58 @@
           ]
         },
         {
+          "id": "enc_error_grayscale_alpha",
+          "type": "encode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow cannot write grayscale-alpha pixels as BMP",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray_alpha.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode LA as BMP"
+        },
+        {
+          "id": "enc_error_truncated_pixels",
+          "type": "encode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pixel buffer shorter than the declared BMP dimensions",
+          "params": {
+            "truncate_pixels": true
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "not enough image data"
+        },
+        {
+          "id": "enc_error_oversized_dimensions",
+          "type": "encode",
+          "format": "bmp",
+          "category": "error",
+          "description": "BMP dimensions exceed Pillow's signed 32-bit encoder limit",
+          "params": {
+            "source_dimensions": [
+              2147483648,
+              1
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OverflowError",
+          "oracle_error_message": "signed integer is greater than maximum"
+        },
+        {
           "id": "enc_16bit",
           "type": "encode",
           "format": "bmp",
@@ -10414,9 +10466,9 @@
     }
   },
   "summary": {
-    "total_rows": 555,
+    "total_rows": 558,
     "decode_rows": 333,
-    "encode_rows": 190,
+    "encode_rows": 193,
     "formats": 8,
     "assets_available": 326,
     "decode_active": 327,
