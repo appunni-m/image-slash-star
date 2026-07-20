@@ -716,9 +716,10 @@ def gen_webp():
         ],
     }
     if cwebp:
-        version = subprocess.run(
+        version_output = subprocess.run(
             [cwebp, "-version"], check=True, capture_output=True, text=True
         ).stdout.strip()
+        version = version_output.splitlines()[0]
         if version != "1.6.0":
             raise RuntimeError(f"CWEBP must be version 1.6.0, found {version}")
         with tempfile.TemporaryDirectory(prefix="image-star-webp-") as temporary:
