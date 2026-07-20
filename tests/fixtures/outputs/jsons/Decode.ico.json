@@ -57,8 +57,47 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_entry_ico.bin",
-      "ref_bytes": 768,
-      "ref_mode": "Rgb8",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bmp_depths",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_1bit_ico.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bmp_depths_bmp_8bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_8bit_ico.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bmp_depths_bmp_32bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_32bit_ico.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
       "ref_size": [
         16,
         16

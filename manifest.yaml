@@ -1370,6 +1370,12 @@ formats:
       description: ICO with embedded BMP data (classic)
       test_assets:
       - bmp_entry.ico
+    - id: bmp_depths
+      description: Pillow BMP-in-ICO entries at indexed and true-color depths
+      test_assets:
+      - bmp_1bit.ico
+      - bmp_8bit.ico
+      - bmp_32bit.ico
     - id: size_16x16
       description: 16x16 icon (most common)
       test_assets:

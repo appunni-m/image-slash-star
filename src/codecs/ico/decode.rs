@@ -150,7 +150,7 @@ fn decode_ico_bmp(data: &[u8], _entry: &[u8]) -> Option<DecodedImage> {
     let bpp = u16::from_le_bytes([data[14], data[15]]);
     let _compression = u32::from_le_bytes([data[16], data[17], data[18], data[19]]);
     let _image_size = u32::from_le_bytes([data[20], data[21], data[22], data[23]]);
-    let _colors_used = u32::from_le_bytes([data[24], data[25], data[26], data[27]]);
+    let colors_used = u32::from_le_bytes([data[32], data[33], data[34], data[35]]);
 
     if width == 0 || actual_height == 0 || width > 16384 || actual_height > 16384 {
         return None;
@@ -159,9 +159,9 @@ fn decode_ico_bmp(data: &[u8], _entry: &[u8]) -> Option<DecodedImage> {
     match bpp {
         32 => decode_ico_bmp_32bpp(data, width, actual_height),
         24 => decode_ico_bmp_24bpp(data, width, actual_height),
-        8 => decode_ico_bmp_8bpp(data, width, actual_height),
-        4 => decode_ico_bmp_4bpp(data, width, actual_height),
-        1 => decode_ico_bmp_1bpp(data, width, actual_height),
+        8 => decode_ico_bmp_8bpp(data, width, actual_height, colors_used),
+        4 => decode_ico_bmp_4bpp(data, width, actual_height, colors_used),
+        1 => decode_ico_bmp_1bpp(data, width, actual_height, colors_used),
         _ => None,
     }
 }
@@ -213,9 +213,12 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
     let pixel_end = pixel_start + pixel_data_size;
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
-    let mask_row_size = (width as usize).div_ceil(32) * 4;
+    // Pillow IcoImagePlugin reads the padded AND mask from the end of the DIB
+    // entry. Its BMP writer may emit fewer explicit mask bytes, in which case
+    // this deliberately overlaps the tail of the XOR bitmap as Pillow does.
+    let mask_row_size = (width as usize).div_ceil(32).checked_mul(4)?;
     let mask_size = mask_row_size.checked_mul(height as usize)?;
-    let mask = data.get(pixel_end..pixel_end.checked_add(mask_size)?);
+    let mask = data.get(data.len().checked_sub(mask_size)?..);
     let channels = if mask.is_some() { 4 } else { 3 };
     let mut pixels = Vec::with_capacity(width as usize * height as usize * channels);
 
@@ -252,10 +255,15 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
 }
 
 /// Decode an 8-bit indexed ICO BMP entry (palette + indices).
-fn decode_ico_bmp_8bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedImage> {
+fn decode_ico_bmp_8bpp(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    colors_used: u32,
+) -> Option<DecodedImage> {
     let header_size = 40;
-    // Palette: 256 colors * 4 bytes each (BGRA)
-    let palette_size = 256 * 4;
+    let color_count = usize::try_from(if colors_used == 0 { 256 } else { colors_used }).ok()?;
+    let palette_size = color_count.checked_mul(4)?;
     let palette_end = header_size + palette_size;
 
     let row_size = width as usize;
@@ -268,33 +276,33 @@ fn decode_ico_bmp_8bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
 
     // Read palette (BGRA → RGBA)
     let palette_raw = data.get(header_size..palette_end)?;
-    let mut palette = Vec::with_capacity(256);
-    for i in 0..256 {
+    let mut palette = Vec::with_capacity(color_count);
+    for i in 0..color_count {
         let offset = i * 4;
         if offset + 4 <= palette_raw.len() {
             let b = palette_raw[offset];
             let g = palette_raw[offset + 1];
             let r = palette_raw[offset + 2];
-            let a = palette_raw[offset + 3];
-            palette.push([r, g, b, a]);
+            palette.push([r, g, b]);
         } else {
-            palette.push([0, 0, 0, 255]);
+            palette.push([0, 0, 0]);
         }
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let (mask, mask_row_size) = ico_and_mask(data, width, height)?;
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
         let row_end = row_start + row_size;
         let row = &pixels_raw[row_start..row_end];
 
-        for &idx in row {
+        for (x, &idx) in row.iter().enumerate() {
             let color = palette[idx as usize];
             pixels.push(color[0]);
             pixels.push(color[1]);
             pixels.push(color[2]);
-            pixels.push(color[3]);
+            pixels.push(mask_alpha(mask, mask_row_size, x, y));
         }
     }
 
@@ -302,10 +310,15 @@ fn decode_ico_bmp_8bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
 }
 
 /// Decode a 4-bit indexed ICO BMP entry.
-fn decode_ico_bmp_4bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedImage> {
+fn decode_ico_bmp_4bpp(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    colors_used: u32,
+) -> Option<DecodedImage> {
     let header_size = 40;
-    // Palette: 16 colors * 4 bytes each
-    let palette_size = 16 * 4;
+    let color_count = usize::try_from(if colors_used == 0 { 16 } else { colors_used }).ok()?;
+    let palette_size = color_count.checked_mul(4)?;
     let palette_end = header_size + palette_size;
 
     // 4bpp: 2 pixels per byte
@@ -319,21 +332,21 @@ fn decode_ico_bmp_4bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
 
     // Read palette
     let palette_raw = data.get(header_size..palette_end)?;
-    let mut palette = Vec::with_capacity(16);
-    for i in 0..16 {
+    let mut palette = Vec::with_capacity(color_count);
+    for i in 0..color_count {
         let offset = i * 4;
         if offset + 4 <= palette_raw.len() {
             let b = palette_raw[offset];
             let g = palette_raw[offset + 1];
             let r = palette_raw[offset + 2];
-            let a = palette_raw[offset + 3];
-            palette.push([r, g, b, a]);
+            palette.push([r, g, b]);
         } else {
-            palette.push([0, 0, 0, 255]);
+            palette.push([0, 0, 0]);
         }
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let (mask, mask_row_size) = ico_and_mask(data, width, height)?;
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
@@ -349,7 +362,7 @@ fn decode_ico_bmp_4bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
                 pixels.push(color[0]);
                 pixels.push(color[1]);
                 pixels.push(color[2]);
-                pixels.push(color[3]);
+                pixels.push(mask_alpha(mask, mask_row_size, col, y));
             }
             col += 1;
             if col < width as usize {
@@ -357,7 +370,7 @@ fn decode_ico_bmp_4bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
                 pixels.push(color[0]);
                 pixels.push(color[1]);
                 pixels.push(color[2]);
-                pixels.push(color[3]);
+                pixels.push(mask_alpha(mask, mask_row_size, col, y));
             }
             col += 1;
         }
@@ -367,10 +380,15 @@ fn decode_ico_bmp_4bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
 }
 
 /// Decode a 1-bit indexed ICO BMP entry.
-fn decode_ico_bmp_1bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedImage> {
+fn decode_ico_bmp_1bpp(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    colors_used: u32,
+) -> Option<DecodedImage> {
     let header_size = 40;
-    // Palette: 2 colors * 4 bytes each
-    let palette_size = 2 * 4;
+    let color_count = usize::try_from(if colors_used == 0 { 2 } else { colors_used }).ok()?;
+    let palette_size = color_count.checked_mul(4)?;
     let palette_end = header_size + palette_size;
 
     // 1bpp: 8 pixels per byte
@@ -384,21 +402,21 @@ fn decode_ico_bmp_1bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
 
     // Read palette
     let palette_raw = data.get(header_size..palette_end)?;
-    let mut palette = Vec::with_capacity(2);
-    for i in 0..2 {
+    let mut palette = Vec::with_capacity(color_count);
+    for i in 0..color_count {
         let offset = i * 4;
         if offset + 4 <= palette_raw.len() {
             let b = palette_raw[offset];
             let g = palette_raw[offset + 1];
             let r = palette_raw[offset + 2];
-            let a = palette_raw[offset + 3];
-            palette.push([r, g, b, a]);
+            palette.push([r, g, b]);
         } else {
-            palette.push([0, 0, 0, 255]);
+            palette.push([0, 0, 0]);
         }
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let (mask, mask_row_size) = ico_and_mask(data, width, height)?;
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
@@ -416,11 +434,22 @@ fn decode_ico_bmp_1bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedIm
                 pixels.push(color[0]);
                 pixels.push(color[1]);
                 pixels.push(color[2]);
-                pixels.push(color[3]);
+                pixels.push(mask_alpha(mask, mask_row_size, col, y));
                 col += 1;
             }
         }
     }
 
     Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8))
+}
+
+fn ico_and_mask(data: &[u8], width: u32, height: u32) -> Option<(&[u8], usize)> {
+    let row_size = (width as usize).div_ceil(32).checked_mul(4)?;
+    let size = row_size.checked_mul(height as usize)?;
+    Some((data.get(data.len().checked_sub(size)?..)?, row_size))
+}
+
+fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
+    let transparent = mask[y * row_size + x / 8] & (0x80 >> (x % 8)) != 0;
+    if transparent { 0 } else { 255 }
 }

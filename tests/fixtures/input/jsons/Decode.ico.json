@@ -65,6 +65,45 @@
       }
     },
     {
+      "id": "bmp_depths",
+      "asset": "bmp_1bit.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_1bit.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bmp_depths_bmp_8bit",
+      "asset": "bmp_8bit.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_8bit.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bmp_depths_bmp_32bit",
+      "asset": "bmp_32bit.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_32bit.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "size_16x16",
       "asset": "16x16.ico",
       "expect_error": false,

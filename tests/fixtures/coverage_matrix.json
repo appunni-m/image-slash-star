@@ -1231,13 +1231,67 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_entry_ico.bin",
-          "ref_bytes": 768,
-          "ref_mode": "Rgb8",
+          "ref_bytes": 1024,
+          "ref_mode": "Rgba8",
           "ref_size": [
             16,
             16
           ],
           "oracle_status": "ok"
+        },
+        {
+          "id": "bmp_depths",
+          "type": "decode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "Pillow BMP-in-ICO entries at indexed and true-color depths",
+          "asset": "bmp_1bit.ico",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_1bit_ico.bin",
+          "ref_bytes": 1024,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
+          "id": "bmp_depths_bmp_8bit",
+          "type": "decode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "Pillow BMP-in-ICO entries at indexed and true-color depths",
+          "asset": "bmp_8bit.ico",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_8bit_ico.bin",
+          "ref_bytes": 1024,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
+          "id": "bmp_depths_bmp_32bit",
+          "type": "decode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "Pillow BMP-in-ICO entries at indexed and true-color depths",
+          "asset": "bmp_32bit.ico",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_32bit_ico.bin",
+          "ref_bytes": 1024,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            16,
+            16
+          ]
         },
         {
           "asset": "16x16.ico",
@@ -6014,12 +6068,12 @@
     }
   },
   "summary": {
-    "total_rows": 329,
-    "decode_rows": 167,
+    "total_rows": 332,
+    "decode_rows": 170,
     "encode_rows": 130,
     "formats": 8,
-    "assets_available": 160,
-    "decode_active": 161,
+    "assets_available": 163,
+    "decode_active": 164,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

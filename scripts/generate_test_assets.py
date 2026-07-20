@@ -543,7 +543,21 @@ def gen_ico():
     img.save(d / "single.ico", format="ICO", sizes=[(16,16)])
     img.save(d / "multi.ico", format="ICO", sizes=[(16,16),(32,32)])
     img.convert("RGBA").resize((32,32)).save(d / "png_entry.ico", format="ICO", sizes=[(32,32)])
-    img.resize((16,16)).save(d / "bmp_entry.ico", format="ICO", sizes=[(16,16)])
+    img.resize((16,16)).save(
+        d / "bmp_entry.ico",
+        format="ICO",
+        sizes=[(16,16)],
+        bitmap_format="bmp",
+    )
+    img.convert("1").resize((16,16)).save(
+        d / "bmp_1bit.ico", format="ICO", sizes=[(16,16)], bitmap_format="bmp"
+    )
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=64).resize((16,16)).save(
+        d / "bmp_8bit.ico", format="ICO", sizes=[(16,16)], bitmap_format="bmp"
+    )
+    img.convert("RGBA").resize((16,16)).save(
+        d / "bmp_32bit.ico", format="ICO", sizes=[(16,16)], bitmap_format="bmp"
+    )
     img.resize((256,256)).save(d / "256x256.ico", format="ICO", sizes=[(256,256)])
     print(f"  ICO: {len(list(d.glob('*.ico')))} files")
 
