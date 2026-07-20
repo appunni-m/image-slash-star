@@ -39,6 +39,7 @@ pub(super) struct SegmentParams {
 #[derive(Debug, PartialEq, Eq)]
 pub(super) struct FrameParams {
     pub(super) segments: [SegmentParams; NUM_SEGMENTS],
+    pub(super) num_segments: usize,
     pub(super) chroma_dc_delta: i8,
     pub(super) chroma_ac_delta: i8,
 }
@@ -424,6 +425,7 @@ pub(super) fn segment_params(analysis: &FrameAnalysis, quality: f64) -> FramePar
     let chroma_dc_delta = (-4_i32 * 50 / 100).clamp(-15, 15) as i8;
     FrameParams {
         segments,
+        num_segments: NUM_SEGMENTS,
         chroma_dc_delta,
         chroma_ac_delta,
     }

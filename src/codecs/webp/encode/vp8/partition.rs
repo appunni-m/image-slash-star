@@ -45,6 +45,7 @@ fn segment_probabilities(decisions: &[MacroblockDecision]) -> [u8; 3] {
 fn adjusted_frame_params(decisions: &[MacroblockDecision], params: &FrameParams) -> FrameParams {
     let mut adjusted = FrameParams {
         segments: params.segments,
+        num_segments: params.num_segments,
         chroma_dc_delta: params.chroma_dc_delta,
         chroma_ac_delta: params.chroma_ac_delta,
     };
@@ -85,7 +86,11 @@ fn adjusted_frame_params(decisions: &[MacroblockDecision], params: &FrameParams)
 }
 
 fn write_segment_header(writer: &mut BoolEncoder, params: &FrameParams, probabilities: [u8; 3]) {
-    writer.encode_bool(128, true); // four segments
+    let segmentation_enabled = params.num_segments > 1;
+    writer.encode_bool(128, segmentation_enabled);
+    if !segmentation_enabled {
+        return;
+    }
     writer.encode_bool(128, true); // update map
     writer.encode_bool(128, true); // update data
     writer.encode_bool(128, true); // absolute feature values
@@ -194,12 +199,15 @@ fn write_modes(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     segment_probabilities: [u8; 3],
+    segmentation_enabled: bool,
 ) {
     let mode_stride = macroblock_width * 4;
     let macroblock_height = decisions.len() / macroblock_width;
     let mut modes = vec![Intra4Mode::Dc; mode_stride * macroblock_height * 4];
     for decision in decisions {
-        write_segment(writer, decision.segment, segment_probabilities);
+        if segmentation_enabled {
+            write_segment(writer, decision.segment, segment_probabilities);
+        }
         let is_intra16 = matches!(decision.luma, LumaDecision::Intra16(_));
         writer.encode_bool(145, is_intra16);
         match &decision.luma {
@@ -279,6 +287,7 @@ pub(super) fn encode_first_partition(
         decisions,
         macroblock_width,
         segment_probabilities,
+        params.num_segments > 1,
     );
     writer.finish()
 }

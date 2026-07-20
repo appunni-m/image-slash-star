@@ -260,6 +260,7 @@ pub(super) fn select_frame(
                 left_chroma_nonzero,
                 top_errors[macroblock_x],
                 left_errors,
+                quality < 98.0,
                 matrix,
                 matrix.lambda_uv as u32,
             );

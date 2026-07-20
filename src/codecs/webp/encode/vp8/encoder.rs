@@ -13,7 +13,7 @@
 //! and the remaining bytes become `self.partitions[0]` for coefficient decoding.
 
 use super::{
-    analysis::{analyze, segment_params},
+    analysis::{FrameParams, analyze, segment_params},
     frame::select_frame,
     partition::encode_first_partition,
     probability::adapt_coefficients,
@@ -59,8 +59,8 @@ pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec
         padded_width as usize,
         padded_height as usize,
     );
-    let params = segment_params(&analysis, f64::from(quality));
-    let decisions = select_frame(
+    let mut params = segment_params(&analysis, f64::from(quality));
+    let mut decisions = select_frame(
         &y_plane,
         &u_plane,
         &v_plane,
@@ -68,6 +68,10 @@ pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec
         padded_height as usize,
         f64::from(quality),
     );
+    let segment_map = simplify_segments(&mut params);
+    for decision in &mut decisions {
+        decision.segment = segment_map[usize::from(decision.segment)];
+    }
     let macroblock_width = padded_width as usize / 16;
     let probabilities = adapt_coefficients(&decisions, macroblock_width);
     let header_data = encode_first_partition(&decisions, macroblock_width, &params, &probabilities);
@@ -79,6 +83,33 @@ pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec
     vp8_data.extend_from_slice(&coeff_data);
 
     build_webp_container(&vp8_data, width, height)
+}
+
+fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {
+    let mut map = [0, 1, 2, 3];
+    let mut final_segments = 1;
+
+    for source in 1..params.num_segments {
+        let mut destination = 0;
+        while destination < final_segments
+            && params.segments[source] != params.segments[destination]
+        {
+            destination += 1;
+        }
+        map[source] = destination as u8;
+        if destination == final_segments {
+            if destination != source {
+                params.segments[destination] = params.segments[source];
+            }
+            final_segments += 1;
+        }
+    }
+
+    params.num_segments = final_segments;
+    for segment in final_segments..params.segments.len() {
+        params.segments[segment] = params.segments[final_segments - 1];
+    }
+    map
 }
 
 fn pad_plane(

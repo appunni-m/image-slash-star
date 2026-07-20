@@ -142,6 +142,7 @@ fn evaluate(
     left_nonzero: [u8; 4],
     top_errors: [[i8; 2]; 2],
     left_errors: [[i8; 2]; 2],
+    error_diffusion: bool,
     matrices: &SegmentMatrices,
     lambda_uv: u32,
 ) -> ChromaCandidate {
@@ -171,12 +172,14 @@ fn evaluate(
                 coefficients[block] = vp8_fdct_4x4(&residual);
             }
         }
-        errors[plane] = correct_dc(
-            &mut coefficients,
-            &matrices.uv,
-            top_errors[plane],
-            left_errors[plane],
-        );
+        if error_diffusion {
+            errors[plane] = correct_dc(
+                &mut coefficients,
+                &matrices.uv,
+                top_errors[plane],
+                left_errors[plane],
+            );
+        }
         for block_y in 0..2 {
             for block_x in 0..2 {
                 let block = block_y * 2 + block_x;
@@ -277,6 +280,7 @@ pub(super) fn select(
     left_nonzero: [u8; 4],
     top_errors: [[i8; 2]; 2],
     left_errors: [[i8; 2]; 2],
+    error_diffusion: bool,
     matrices: &SegmentMatrices,
     lambda_uv: u32,
 ) -> ChromaCandidate {
@@ -299,6 +303,7 @@ pub(super) fn select(
                 left_nonzero,
                 top_errors,
                 left_errors,
+                error_diffusion,
                 matrices,
                 lambda_uv,
             )

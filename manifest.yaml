@@ -990,22 +990,18 @@ formats:
     encode_edge_cases:
     - id: enc_lossy_q100
       description: 
-      status: planned
       params: {'lossless': False, 'quality': 100}
     - id: enc_lossy_q80
       description: 
       params: {'lossless': False, 'quality': 80}
     - id: enc_lossy_q50
       description: 
-      status: planned
       params: {'lossless': False, 'quality': 50}
     - id: enc_lossy_q10
       description: 
-      status: planned
       params: {'lossless': False, 'quality': 10}
     - id: enc_lossy_q1
       description: 
-      status: planned
       params: {'lossless': False, 'quality': 1}
     - id: enc_lossless
       description: 
@@ -1023,7 +1019,6 @@ formats:
       params: {'lossless': True, 'alpha': True}
     - id: enc_no_alpha
       description: 
-      status: planned
       params: {'alpha': False}
     - id: enc_hint_photo
       description: 
@@ -1065,25 +1060,21 @@ formats:
       params: {'icc': True}
     - id: enc_1x1
       description: 
-      status: planned
       source_format: png
       source_asset: 1x1.png
       params: {'size': [1, 1]}
 
     - id: enc_lossy
       description: Lossy WebP
-      status: planned
       params:
         lossless: false
     - id: enc_lossy_quality_100
       description: Lossy quality 100
-      status: planned
       params:
         lossless: false
         quality: 100
     - id: enc_lossy_quality_10
       description: Lossy quality 10
-      status: planned
       params:
         lossless: false
         quality: 10
