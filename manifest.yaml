@@ -775,11 +775,43 @@ formats:
       description: Local per-frame color table
       test_assets:
       - local_ct.gif
+      - local_palette_only.gif
+    - id: palette_absent
+      description: Pillow exposes palette-less GIF samples as luminance bytes
+      test_assets:
+      - no_palette.gif
+    - id: ignored_extension
+      description: Comment extension sub-blocks are skipped before image data
+      test_assets:
+      - comment_extension.gif
+      - unknown_application.gif
+    - id: alternate_loop_extension
+      description: ANIMEXTS1.0 carries the same loop payload as NETSCAPE2.0
+      test_assets:
+      - animext_loop.gif
     - id: extension_gce
       description: Graphic Control Extension (delay, disposal)
       test_assets:
       - gce.gif
       - gce_previous.gif
+      - disposal_keep.gif
+      - disposal_reserved.gif
+      - nonstandard_gce_size.gif
+    - id: logical_canvas_fallback
+      description: Zero logical dimensions fall back to the image descriptor bounds
+      test_assets:
+      - zero_logical_size.gif
+    - id: transparency_index_leniency
+      description: Pillow tolerates a transparency index beyond the color table
+      test_assets:
+      - out_of_range_transparency.gif
+    - id: lzw_boundary_leniency
+      description: KwKwK expansion, output clipping, missing EOI, and full dictionary behavior
+      test_assets:
+      - lzw_kwkwk.gif
+      - lzw_kwkwk_clipped.gif
+      - lzw_no_eoi.gif
+      - lzw_dictionary_saturation.gif
     - id: size_1x1
       description: Single pixel GIF
       test_assets:
@@ -798,6 +830,10 @@ formats:
       - min_code_one.gif
       - min_code_nine.gif
       - bad_gce_terminator.gif
+      - lzw_invalid_first.gif
+      - lzw_end_only.gif
+      - lzw_invalid_future.gif
+      - lzw_truncated_output.gif
       expect_error: true
     encode_edge_cases:
     - id: enc_static

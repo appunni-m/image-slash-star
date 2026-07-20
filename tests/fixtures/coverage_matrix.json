@@ -1392,6 +1392,96 @@
           "oracle_status": "ok"
         },
         {
+          "id": "color_table_local_local_palette_only",
+          "type": "decode",
+          "format": "gif",
+          "category": "color",
+          "description": "Local per-frame color table",
+          "asset": "local_palette_only.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_local_palette_only_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "palette_absent",
+          "type": "decode",
+          "format": "gif",
+          "category": "palette",
+          "description": "Pillow exposes palette-less GIF samples as luminance bytes",
+          "asset": "no_palette.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_no_palette_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "ignored_extension",
+          "type": "decode",
+          "format": "gif",
+          "category": "ignored",
+          "description": "Comment extension sub-blocks are skipped before image data",
+          "asset": "comment_extension.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_comment_extension_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "ignored_extension_unknown_application",
+          "type": "decode",
+          "format": "gif",
+          "category": "ignored",
+          "description": "Comment extension sub-blocks are skipped before image data",
+          "asset": "unknown_application.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_unknown_application_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "alternate_loop_extension",
+          "type": "decode",
+          "format": "gif",
+          "category": "alternate",
+          "description": "ANIMEXTS1.0 carries the same loop payload as NETSCAPE2.0",
+          "asset": "animext_loop.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animext_loop_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "gce.gif",
           "asset_path": "tests/fixtures/input/images/gif/gce.gif",
           "category": "extension",
@@ -1426,6 +1516,168 @@
           "ref_size": [
             128,
             128
+          ]
+        },
+        {
+          "id": "extension_gce_disposal_keep",
+          "type": "decode",
+          "format": "gif",
+          "category": "extension",
+          "description": "Graphic Control Extension (delay, disposal)",
+          "asset": "disposal_keep.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_disposal_keep_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "extension_gce_disposal_reserved",
+          "type": "decode",
+          "format": "gif",
+          "category": "extension",
+          "description": "Graphic Control Extension (delay, disposal)",
+          "asset": "disposal_reserved.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_disposal_reserved_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "extension_gce_nonstandard_gce_size",
+          "type": "decode",
+          "format": "gif",
+          "category": "extension",
+          "description": "Graphic Control Extension (delay, disposal)",
+          "asset": "nonstandard_gce_size.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_nonstandard_gce_size_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "logical_canvas_fallback",
+          "type": "decode",
+          "format": "gif",
+          "category": "logical",
+          "description": "Zero logical dimensions fall back to the image descriptor bounds",
+          "asset": "zero_logical_size.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_zero_logical_size_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "transparency_index_leniency",
+          "type": "decode",
+          "format": "gif",
+          "category": "transparency",
+          "description": "Pillow tolerates a transparency index beyond the color table",
+          "asset": "out_of_range_transparency.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_out_of_range_transparency_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "lzw_boundary_leniency",
+          "type": "decode",
+          "format": "gif",
+          "category": "lzw",
+          "description": "KwKwK expansion, output clipping, missing EOI, and full dictionary behavior",
+          "asset": "lzw_kwkwk.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_kwkwk_gif.bin",
+          "ref_bytes": 3,
+          "ref_mode": "P",
+          "ref_size": [
+            3,
+            1
+          ]
+        },
+        {
+          "id": "lzw_boundary_leniency_lzw_kwkwk_clipped",
+          "type": "decode",
+          "format": "gif",
+          "category": "lzw",
+          "description": "KwKwK expansion, output clipping, missing EOI, and full dictionary behavior",
+          "asset": "lzw_kwkwk_clipped.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_kwkwk_clipped_gif.bin",
+          "ref_bytes": 2,
+          "ref_mode": "P",
+          "ref_size": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "lzw_boundary_leniency_lzw_no_eoi",
+          "type": "decode",
+          "format": "gif",
+          "category": "lzw",
+          "description": "KwKwK expansion, output clipping, missing EOI, and full dictionary behavior",
+          "asset": "lzw_no_eoi.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_no_eoi_gif.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "lzw_boundary_leniency_lzw_dictionary_saturation",
+          "type": "decode",
+          "format": "gif",
+          "category": "lzw",
+          "description": "KwKwK expansion, output clipping, missing EOI, and full dictionary behavior",
+          "asset": "lzw_dictionary_saturation.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_dictionary_saturation_gif.bin",
+          "ref_bytes": 4100,
+          "ref_mode": "P",
+          "ref_size": [
+            4100,
+            1
           ]
         },
         {
@@ -1539,6 +1791,58 @@
           "oracle_status": "error",
           "oracle_error_type": "PIL.Image.DecompressionBombError",
           "oracle_error_message": "Image size (3018810564 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
+        },
+        {
+          "id": "error_malformed_lzw_invalid_first",
+          "type": "decode",
+          "format": "gif",
+          "category": "error",
+          "description": "Invalid headers, descriptors, controls, and LZW roots",
+          "asset": "lzw_invalid_first.gif",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "error_malformed_lzw_end_only",
+          "type": "decode",
+          "format": "gif",
+          "category": "error",
+          "description": "Invalid headers, descriptors, controls, and LZW roots",
+          "asset": "lzw_end_only.gif",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (2 bytes not processed)"
+        },
+        {
+          "id": "error_malformed_lzw_invalid_future",
+          "type": "decode",
+          "format": "gif",
+          "category": "error",
+          "description": "Invalid headers, descriptors, controls, and LZW roots",
+          "asset": "lzw_invalid_future.gif",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "error_malformed_lzw_truncated_output",
+          "type": "decode",
+          "format": "gif",
+          "category": "error",
+          "description": "Invalid headers, descriptors, controls, and LZW roots",
+          "asset": "lzw_truncated_output.gif",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (1 bytes not processed)"
         }
       ],
       "encode": [
@@ -11536,12 +11840,12 @@
     }
   },
   "summary": {
-    "total_rows": 619,
-    "decode_rows": 382,
+    "total_rows": 637,
+    "decode_rows": 400,
     "encode_rows": 205,
     "formats": 8,
-    "assets_available": 375,
-    "decode_active": 376,
+    "assets_available": 393,
+    "decode_active": 394,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

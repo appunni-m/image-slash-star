@@ -32,9 +32,6 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
 
     let logical_width = input.read_u16()?;
     let logical_height = input.read_u16()?;
-    if logical_width == 0 || logical_height == 0 {
-        return None;
-    }
     let packed = input.read_u8()?;
     input.skip(2)?; // Background color index and pixel aspect ratio.
 
@@ -57,9 +54,8 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
                     let identifier_len = usize::from(input.read_u8()?);
                     let identifier = input.read_bytes(identifier_len)?;
                     let payload = input.read_sub_blocks()?;
-                    if matches!(identifier, b"NETSCAPE2.0" | b"ANIMEXTS1.0")
-                        && payload.first() == Some(&1)
-                    {
+                    let is_loop_extension = matches!(identifier, b"NETSCAPE2.0" | b"ANIMEXTS1.0");
+                    if is_loop_extension && payload.first() == Some(&1) {
                         let bytes: [u8; 2] = payload.get(1..3)?.try_into().ok()?;
                         loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
                     }
@@ -88,9 +84,25 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         }
     }
 
+    let fallback_width = frames
+        .iter()
+        .filter_map(|frame| frame.left.checked_add(frame.image.width))
+        .max()?;
+    let fallback_height = frames
+        .iter()
+        .filter_map(|frame| frame.top.checked_add(frame.image.height))
+        .max()?;
     let sequence = DecodedSequence {
-        width: u32::from(logical_width),
-        height: u32::from(logical_height),
+        width: if logical_width == 0 {
+            fallback_width
+        } else {
+            u32::from(logical_width)
+        },
+        height: if logical_height == 0 {
+            fallback_height
+        } else {
+            u32::from(logical_height)
+        },
         frames,
         loop_count,
     };
@@ -116,9 +128,7 @@ impl Default for GraphicControl {
 }
 
 fn read_graphic_control(input: &mut Input<'_>) -> Option<GraphicControl> {
-    if input.read_u8()? != 4 {
-        return None;
-    }
+    let _declared_size = input.read_u8()?;
     let packed = input.read_u8()?;
     let delay_cs = input.read_u16()?;
     let index = input.read_u8()?;
@@ -130,7 +140,7 @@ fn read_graphic_control(input: &mut Input<'_>) -> Option<GraphicControl> {
         1 => FrameDisposal::Keep,
         2 => FrameDisposal::Background,
         3 => FrameDisposal::Previous,
-        _ => return None,
+        value => FrameDisposal::Reserved(value),
     };
     Some(GraphicControl {
         delay_cs,
@@ -159,7 +169,7 @@ fn decode_image(
     } else {
         None
     };
-    let palette_rgb = local_palette.or(global_palette)?;
+    let palette_rgb = local_palette.or(global_palette);
 
     let minimum_code_size = input.read_u8()?;
     let compressed = input.read_sub_blocks()?;
@@ -170,19 +180,21 @@ fn decode_image(
         indices = deinterlace(&indices, usize::from(width), usize::from(height))?;
     }
 
-    let entries = palette_rgb.len() / 3;
-    let mut alpha = Vec::new();
-    if let Some(index) = transparent_index {
-        if usize::from(index) >= entries {
-            return None;
+    let image = if let Some(palette_rgb) = palette_rgb {
+        let entries = palette_rgb.len() / 3;
+        let mut alpha = Vec::new();
+        if let Some(index) = transparent_index {
+            if usize::from(index) < entries {
+                alpha = vec![255; entries];
+                alpha[usize::from(index)] = 0;
+            }
         }
-        alpha = vec![255; entries];
-        alpha[usize::from(index)] = 0;
-    }
-    let palette = ImagePalette::new(palette_rgb.to_vec(), alpha).ok()?;
-    let image =
+        let palette = ImagePalette::new(palette_rgb.to_vec(), alpha).ok()?;
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
-            .with_palette(palette);
+            .with_palette(palette)
+    } else {
+        DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::L8)
+    };
     Some((image, left, top, interlaced))
 }
 
@@ -232,6 +244,9 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
                 return None;
             }
             output.push(code as u8);
+            if output.len() == expected_len {
+                return Some(output);
+            }
             previous_code = Some(code);
             continue;
         };
@@ -245,7 +260,7 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
                 &mut stack,
                 &mut output,
                 expected_len,
-            )?
+            )
         } else if code == next_code {
             let first = append_code(
                 previous,
@@ -255,15 +270,18 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
                 &mut stack,
                 &mut output,
                 expected_len,
-            )?;
-            if output.len() >= expected_len {
-                return None;
+            );
+            if output.len() < expected_len {
+                output.push(first);
             }
-            output.push(first);
             first
         } else {
             return None;
         };
+
+        if output.len() == expected_len {
+            return Some(output);
+        }
 
         if usize::from(next_code) < MAX_LZW_CODE {
             prefixes[usize::from(next_code)] = previous;
@@ -290,35 +308,27 @@ fn append_code(
     stack: &mut [u8; MAX_LZW_CODE],
     output: &mut Vec<u8>,
     expected_len: usize,
-) -> Option<u8> {
+) -> u8 {
     let mut len = 0usize;
     while code >= clear_code {
-        if usize::from(code) >= MAX_LZW_CODE || len >= MAX_LZW_CODE {
-            return None;
-        }
+        debug_assert!(usize::from(code) < MAX_LZW_CODE && len < MAX_LZW_CODE);
         stack[len] = suffixes[usize::from(code)];
         len += 1;
         code = prefixes[usize::from(code)];
     }
 
     let first = code as u8;
-    if len >= MAX_LZW_CODE {
-        return None;
-    }
+    debug_assert!(len < MAX_LZW_CODE);
     stack[len] = first;
     len += 1;
 
-    if output.len().checked_add(len)? > expected_len {
-        return None;
-    }
-    output.extend(stack[..len].iter().rev());
-    Some(first)
+    let remaining = expected_len - output.len();
+    output.extend(stack[..len].iter().rev().take(remaining));
+    first
 }
 
 fn deinterlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
-    if indices.len() != width.checked_mul(height)? {
-        return None;
-    }
+    debug_assert_eq!(indices.len(), width.checked_mul(height)?);
 
     let mut output = vec![0; indices.len()];
     let mut source_row = 0usize;

@@ -104,6 +104,71 @@
       ]
     },
     {
+      "id": "color_table_local_local_palette_only",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_local_palette_only_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "palette_absent",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_no_palette_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "ignored_extension",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_comment_extension_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "ignored_extension_unknown_application",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_unknown_application_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "alternate_loop_extension",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animext_loop_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "extension_gce",
       "status": "ok",
       "error_type": null,
@@ -127,6 +192,123 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "extension_gce_disposal_keep",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_disposal_keep_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "extension_gce_disposal_reserved",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_disposal_reserved_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "extension_gce_nonstandard_gce_size",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_nonstandard_gce_size_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "logical_canvas_fallback",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_zero_logical_size_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "transparency_index_leniency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_out_of_range_transparency_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "lzw_boundary_leniency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_kwkwk_gif.bin",
+      "ref_bytes": 3,
+      "ref_mode": "P",
+      "ref_size": [
+        3,
+        1
+      ]
+    },
+    {
+      "id": "lzw_boundary_leniency_lzw_kwkwk_clipped",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_kwkwk_clipped_gif.bin",
+      "ref_bytes": 2,
+      "ref_mode": "P",
+      "ref_size": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "lzw_boundary_leniency_lzw_no_eoi",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_no_eoi_gif.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "lzw_boundary_leniency_lzw_dictionary_saturation",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_lzw_dictionary_saturation_gif.bin",
+      "ref_bytes": 4100,
+      "ref_mode": "P",
+      "ref_size": [
+        4100,
+        1
       ]
     },
     {
@@ -207,6 +389,46 @@
       "status": "error",
       "error_type": "PIL.Image.DecompressionBombError",
       "error_message": "Image size (3018810564 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_lzw_invalid_first",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_lzw_end_only",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (2 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_lzw_invalid_future",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_lzw_truncated_output",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (1 bytes not processed)",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

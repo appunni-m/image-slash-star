@@ -80,7 +80,10 @@ fn coalesce_identical_frames(
     for frame in sequence.frames.iter().take(requested_frames) {
         if let Some(previous) = previous_frame {
             match previous.disposal {
-                FrameDisposal::Unspecified | FrameDisposal::Keep | FrameDisposal::Previous => {}
+                FrameDisposal::Unspecified
+                | FrameDisposal::Keep
+                | FrameDisposal::Previous
+                | FrameDisposal::Reserved(_) => {}
                 FrameDisposal::Background => clear_frame_rect(&mut canvas, width, previous)?,
             }
         }

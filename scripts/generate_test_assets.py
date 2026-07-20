@@ -451,6 +451,60 @@ def gen_png():
     print(f"  PNG: {len(list(d.glob('*.png')))} files")
 
 
+def pack_gif_lzw_codes(codes, minimum_code_size):
+    """Pack GIF LZW codes least-significant bit first with growing widths."""
+    clear = 1 << minimum_code_size
+    end = clear + 1
+    first_free = end + 1
+    code_width = minimum_code_size + 1
+    next_code = first_free
+    previous = None
+    bits = []
+    for code in codes:
+        bits.extend((code >> shift) & 1 for shift in range(code_width))
+        if code == clear:
+            code_width = minimum_code_size + 1
+            next_code = first_free
+            previous = None
+            continue
+        if code == end:
+            continue
+        if previous is None:
+            previous = code
+            continue
+        if next_code < 4096:
+            next_code += 1
+            if code_width < 12 and next_code == 1 << code_width:
+                code_width += 1
+        previous = code
+    output = bytearray((len(bits) + 7) // 8)
+    for index, bit in enumerate(bits):
+        output[index // 8] |= bit << (index % 8)
+    return bytes(output)
+
+
+def write_gif_lzw_fixture(path, width, codes, minimum_code_size=2):
+    """Write a one-row four-color GIF around an explicit LZW code stream."""
+    palette = bytes((0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 255, 0))
+    payload = pack_gif_lzw_codes(codes, minimum_code_size)
+    blocks = b"".join(
+        bytes((len(payload[offset : offset + 255]),))
+        + payload[offset : offset + 255]
+        for offset in range(0, len(payload), 255)
+    ) + b"\0"
+    output = bytearray(b"GIF89a")
+    output.extend(struct.pack("<HH", width, 1))
+    output.extend((0x81, 0, 0))
+    output.extend(palette)
+    output.extend(b"\x2c\0\0\0\0")
+    output.extend(struct.pack("<HH", width, 1))
+    output.append(0)
+    output.append(minimum_code_size)
+    output.extend(blocks)
+    output.append(0x3B)
+    path.write_bytes(output)
+
+
 def gen_gif():
     d = OUT / "gif"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB").convert("P")
@@ -497,11 +551,77 @@ def gen_gif():
     min_code_nine[image_offset + 10] = 9
     (d / "min_code_nine.gif").write_bytes(min_code_nine)
 
+    zero_logical_size = bytearray(static)
+    zero_logical_size[6:10] = b"\0\0\0\0"
+    (d / "zero_logical_size.gif").write_bytes(zero_logical_size)
+
+    comment_extension = bytearray(static)
+    comment_extension[image_offset:image_offset] = b"\x21\xfe\x03abc\x00"
+    (d / "comment_extension.gif").write_bytes(comment_extension)
+
+    unknown_application = bytearray(static)
+    unknown_application[image_offset:image_offset] = (
+        b"\x21\xff\x0bUNKNOWNAPP1\x03\x01\x02\x03\x00"
+    )
+    (d / "unknown_application.gif").write_bytes(unknown_application)
+
+    no_palette = bytearray(static)
+    no_palette[10] &= 0x7F
+    del no_palette[13:table_end]
+    (d / "no_palette.gif").write_bytes(no_palette)
+
+    local_only = bytearray(static)
+    palette = bytes(local_only[13:table_end])
+    local_only[10] &= 0x7F
+    del local_only[13:table_end]
+    local_image_offset = local_only.index(0x2C, 13)
+    local_only[local_image_offset + 9] = 0x80 | (static[10] & 7)
+    local_only[local_image_offset + 10 : local_image_offset + 10] = palette
+    (d / "local_palette_only.gif").write_bytes(local_only)
+
+    animext = bytearray((d / "animated.gif").read_bytes())
+    netscape = animext.index(b"NETSCAPE2.0")
+    animext[netscape : netscape + 11] = b"ANIMEXTS1.0"
+    (d / "animext_loop.gif").write_bytes(animext)
+
     gce = bytearray((d / "gce.gif").read_bytes())
     gce_offset = gce.index(b"\x21\xf9")
     bad_gce_terminator = bytearray(gce)
     bad_gce_terminator[gce_offset + 7] = 1
     (d / "bad_gce_terminator.gif").write_bytes(bad_gce_terminator)
+    nonstandard_gce_size = bytearray(gce)
+    nonstandard_gce_size[gce_offset + 2] = 3
+    (d / "nonstandard_gce_size.gif").write_bytes(nonstandard_gce_size)
+    disposal_keep = bytearray(gce)
+    disposal_keep[gce_offset + 3] = (disposal_keep[gce_offset + 3] & 0xE3) | (1 << 2)
+    (d / "disposal_keep.gif").write_bytes(disposal_keep)
+    disposal_reserved = bytearray(gce)
+    disposal_reserved[gce_offset + 3] = (disposal_reserved[gce_offset + 3] & 0xE3) | (4 << 2)
+    (d / "disposal_reserved.gif").write_bytes(disposal_reserved)
+
+    out_of_range_transparency = bytearray((d / "local_ct.gif").read_bytes())
+    local_table_end = 13 + 3 * (1 << ((out_of_range_transparency[10] & 7) + 1))
+    local_image_offset = out_of_range_transparency.index(0x2C, local_table_end)
+    out_of_range_transparency[local_image_offset:local_image_offset] = (
+        b"\x21\xf9\x04\x01\x00\x00\xff\x00"
+    )
+    (d / "out_of_range_transparency.gif").write_bytes(out_of_range_transparency)
+
+    clear, end = 4, 5
+    write_gif_lzw_fixture(d / "lzw_kwkwk.gif", 3, [clear, 0, 6, end])
+    write_gif_lzw_fixture(d / "lzw_kwkwk_clipped.gif", 2, [clear, 0, 6, end])
+    write_gif_lzw_fixture(d / "lzw_no_eoi.gif", 1, [clear, 0])
+    write_gif_lzw_fixture(d / "lzw_invalid_first.gif", 1, [6])
+    write_gif_lzw_fixture(d / "lzw_end_only.gif", 1, [clear, end])
+    write_gif_lzw_fixture(d / "lzw_invalid_future.gif", 2, [clear, 0, 7])
+    write_gif_lzw_fixture(d / "lzw_truncated_output.gif", 2, [clear, 0])
+    literal_count = 4100
+    write_gif_lzw_fixture(
+        d / "lzw_dictionary_saturation.gif",
+        literal_count,
+        [256] + [0] * literal_count + [257],
+        minimum_code_size=8,
+    )
     print(f"  GIF: {len(list(d.glob('*.gif')))} files")
 
 

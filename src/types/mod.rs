@@ -322,6 +322,8 @@ pub enum FrameDisposal {
     Background,
     /// Restore the canvas to its state before this frame.
     Previous,
+    /// Preserve a GIF reserved disposal value exactly as decoded.
+    Reserved(u8),
 }
 
 /// One decoded animation frame and its presentation metadata.
