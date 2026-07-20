@@ -133,6 +133,30 @@
       "encoded_ref_bytes": 3431
     },
     {
+      "id": "enc_optimize",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_optimize.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_optimize.bin",
+      "encoded_ref_bytes": 3431
+    },
+    {
+      "id": "enc_optimize_average",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_optimize_average.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        4
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_optimize_average.bin",
+      "encoded_ref_bytes": 81
+    },
+    {
       "id": "enc_l8",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_l8.bin",
       "ref_bytes": 16384,

@@ -223,6 +223,22 @@ def gen_png():
     img.save(d / "16x16.png")
     img.save(d / "rgb.png")
     img.convert("RGBA").save(d / "rgba.png")
+    average_width, average_height = 64, 4
+    average_pixels = []
+    previous_row = [200] * average_width
+    for y in range(average_height):
+        if y == 0:
+            row = previous_row.copy()
+        else:
+            row = []
+            for x in range(average_width):
+                left = row[x - 1] if x != 0 else 0
+                row.append((left + previous_row[x]) // 2)
+        average_pixels.extend((value, value, value) for value in row)
+        previous_row = row
+    average_image = Image.new("RGB", (average_width, average_height))
+    average_image.putdata(average_pixels)
+    average_image.save(d / "average_filter_source.png")
     pattern_img("RGB", (8, 8)).save(d / "gif_rgb.png")
     high_color = Image.new("RGB", (17, 17))
     high_color.putdata(

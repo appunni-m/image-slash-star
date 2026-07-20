@@ -5182,6 +5182,50 @@
           ]
         },
         {
+          "id": "enc_optimize",
+          "type": "encode",
+          "format": "png",
+          "category": "optimize",
+          "description": "Optimized adaptive filters with forced maximum compression",
+          "params": {
+            "optimize": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_optimize.bin",
+          "encoded_ref_bytes": 3431,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_optimize.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_optimize_average",
+          "type": "encode",
+          "format": "png",
+          "category": "optimize",
+          "description": "Optimized PNG selecting the Average row filter",
+          "params": {
+            "optimize": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "average_filter_source.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_optimize_average.bin",
+          "encoded_ref_bytes": 81,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_optimize_average.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            4
+          ]
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_l8",
@@ -10080,9 +10124,9 @@
     }
   },
   "summary": {
-    "total_rows": 535,
+    "total_rows": 537,
     "decode_rows": 322,
-    "encode_rows": 181,
+    "encode_rows": 183,
     "formats": 8,
     "assets_available": 315,
     "decode_active": 316,

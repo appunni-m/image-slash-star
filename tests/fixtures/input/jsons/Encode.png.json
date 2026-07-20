@@ -223,6 +223,48 @@
       }
     },
     {
+      "id": "enc_optimize",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "optimize": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "optimize": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_optimize_average",
+      "source_asset": "average_filter_source.png",
+      "source_format": "png",
+      "params": {
+        "optimize": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/average_filter_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "optimize": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_l8",
       "source_asset": "gray.png",
       "source_format": "png",
