@@ -1818,6 +1818,40 @@ def gen_webp():
     bad_animated_vp8_magic[animated_vp8_chunk + 11] ^= 0xFF
     (d / "bad_animated_vp8_magic.webp").write_bytes(bad_animated_vp8_magic)
 
+    def write_truncated_vp8(name, keep):
+        source = (d / "lossy.webp").read_bytes()
+        chunk = source.find(b"VP8 ")
+        length = struct.unpack_from("<I", source, chunk + 4)[0]
+        payload = source[chunk + 8 : chunk + 8 + length]
+        kept = len(payload) - 1 if keep == "all_but_one" else min(keep, len(payload))
+        malformed = bytearray(source[: chunk + 4])
+        malformed.extend(struct.pack("<I", kept))
+        malformed.extend(payload[:kept])
+        if kept & 1:
+            malformed.append(0)
+        struct.pack_into("<I", malformed, 4, len(malformed) - 8)
+        (d / name).write_bytes(malformed)
+
+    for name, keep in {
+        "vp8_empty_payload.webp": 0,
+        "vp8_three_byte_payload.webp": 3,
+        "vp8_short_header_payload.webp": 10,
+        "vp8_short_partition_payload.webp": 50,
+        "vp8_half_payload.webp": len((d / "lossy.webp").read_bytes()) // 2,
+        "vp8_tail_truncated.webp": 20,
+        "vp8_missing_last_byte.webp": "all_but_one",
+    }.items():
+        write_truncated_vp8(name, keep)
+    def write_vp8_partition_size(name, size, source="lossy.webp"):
+        malformed = bytearray((d / source).read_bytes())
+        payload = malformed.find(b"VP8 ") + 8
+        tag = int.from_bytes(malformed[payload : payload + 3], "little")
+        malformed[payload : payload + 3] = ((tag & 0x1F) | (size << 5)).to_bytes(3, "little")
+        (d / name).write_bytes(malformed)
+
+    for size in (*range(13), 16, 24, 32):
+        write_vp8_partition_size(f"vp8_partition_{size}.webp", size)
+
     def write_mutated_webp(name, source, mutate):
         malformed = bytearray((d / source).read_bytes())
         mutate(malformed)

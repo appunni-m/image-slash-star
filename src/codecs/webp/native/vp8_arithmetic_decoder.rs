@@ -81,9 +81,9 @@ impl ArithmeticDecoder {
             0
         } else {
             // Pop the last chunk (which is partial), then get length.
-            let Some(last_chunk) = buf.pop() else {
-                return Err(DecodingError::NotEnoughInitData);
-            };
+            let last_chunk = buf
+                .pop()
+                .expect("partial length always allocates one chunk");
             let len_rounded_down = 4 * buf.len();
             let num_bytes_popped = len - len_rounded_down;
             debug_assert!(num_bytes_popped <= 3);
@@ -267,17 +267,13 @@ impl ArithmeticDecoder {
 
     fn cold_read_bit(&mut self, probability: u8) -> BitResult<bool> {
         if self.state.bit_count < 0 {
-            if let Some(chunk) = self.chunks.get(self.state.chunk_index).copied() {
-                let v = u32::from_be_bytes(chunk);
-                self.state.chunk_index += 1;
-                self.state.value <<= 32;
-                self.state.value |= u64::from(v);
-                self.state.bit_count += 32;
-            } else {
-                self.load_from_final_bytes();
-                if self.is_past_eof() {
-                    return BitResult::err();
-                }
+            // Every fast operation consumes at most one 32-bit chunk. If that
+            // chunk existed, `commit_if_valid` committed it, so a cold retry
+            // can only begin at the partial final bytes or EOF.
+            debug_assert!(self.state.chunk_index >= self.chunks.len());
+            self.load_from_final_bytes();
+            if self.is_past_eof() {
+                return BitResult::err();
             }
         }
         debug_assert!(self.state.bit_count >= 0);
@@ -347,11 +343,7 @@ impl ArithmeticDecoder {
         let magnitude = self.cold_read_literal(n).or_accumulate(&mut res);
         let sign = self.cold_read_flag().or_accumulate(&mut res);
 
-        let value = if sign {
-            -i32::from(magnitude)
-        } else {
-            i32::from(magnitude)
-        };
+        let value = i32::from(magnitude) * (1 - 2 * i32::from(sign));
         self.keep_accumulating(res, value)
     }
 

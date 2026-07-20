@@ -28,7 +28,6 @@ pub enum DecodingError {
     BitStreamError,
     TransformError,
     Vp8MagicInvalid,
-    NotEnoughInitData,
     ColorSpaceInvalid,
     LumaPredictionModeInvalid,
     IntraPredictionModeInvalid,

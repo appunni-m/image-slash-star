@@ -1497,6 +1497,28 @@ formats:
       - animated_alpha_vp8_too_large.webp
       - alpha_invalid_preprocessing.webp
       - alpha_invalid_compression.webp
+      - vp8_empty_payload.webp
+      - vp8_three_byte_payload.webp
+      - vp8_short_header_payload.webp
+      - vp8_short_partition_payload.webp
+      - vp8_half_payload.webp
+      - vp8_tail_truncated.webp
+      - vp8_partition_0.webp
+      - vp8_partition_1.webp
+      - vp8_partition_2.webp
+      - vp8_partition_3.webp
+      - vp8_partition_4.webp
+      - vp8_partition_5.webp
+      - vp8_partition_6.webp
+      - vp8_partition_7.webp
+      - vp8_partition_8.webp
+      - vp8_partition_9.webp
+      - vp8_partition_10.webp
+      - vp8_partition_11.webp
+      - vp8_partition_12.webp
+      - vp8_partition_16.webp
+      - vp8_partition_24.webp
+      - vp8_partition_32.webp
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed WebP structures tolerated by Pillow
@@ -1505,6 +1527,7 @@ formats:
       - animated_frame_too_large.webp
       - animated_frame_dimension_mismatch.webp
       - animated_bad_nested_chunk.webp
+      - vp8_missing_last_byte.webp
     encode_edge_cases:
     - id: enc_lossy_q100
       description: 

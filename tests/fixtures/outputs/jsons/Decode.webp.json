@@ -1749,6 +1749,226 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_container_vp8_empty_payload",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_three_byte_payload",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_short_header_payload",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_short_partition_payload",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_half_payload",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_tail_truncated",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_0",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_1",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_2",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_3",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_4",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_5",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_6",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_7",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_8",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_9",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_10",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_11",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_12",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_16",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_24",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_32",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "status": "ok",
       "error_type": null,
@@ -1874,6 +2094,19 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_bad_nested_chunk_webp.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8_missing_last_byte_webp.bin",
       "ref_bytes": 49152,
       "ref_mode": "Rgb8",
       "ref_size": [
