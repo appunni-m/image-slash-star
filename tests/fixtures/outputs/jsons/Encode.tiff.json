@@ -73,6 +73,18 @@
       "encoded_ref_bytes": 49292
     },
     {
+      "id": "enc_byte_be",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_byte_be.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_byte_be.bin",
+      "encoded_ref_bytes": 49292
+    },
+    {
       "id": "enc_bilevel",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_bilevel.bin",
       "ref_bytes": 2048,
@@ -181,6 +193,18 @@
       "encoded_ref_bytes": 49292
     },
     {
+      "id": "enc_tiled",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_tiled.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_tiled.bin",
+      "encoded_ref_bytes": 49292
+    },
+    {
       "id": "enc_single_page",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_single_page.bin",
       "ref_bytes": 49152,
@@ -190,6 +214,18 @@
         128
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_single_page.bin",
+      "encoded_ref_bytes": 49292
+    },
+    {
+      "id": "enc_multi_page",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_multi_page.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_multi_page.bin",
       "encoded_ref_bytes": 49292
     },
     {
@@ -274,6 +310,18 @@
         128
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_le.bin",
+      "encoded_ref_bytes": 49292
+    },
+    {
+      "id": "enc_be",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_be.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_be.bin",
       "encoded_ref_bytes": 49292
     }
   ]

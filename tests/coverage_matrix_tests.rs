@@ -376,8 +376,7 @@ fn assert_gif_contract(
         .and_then(serde_json::Value::as_str)
     {
         let expected_local = request == "local";
-        if has_global == expected_local || image_local.iter().any(|&value| value != expected_local)
-        {
+        if !has_global || image_local.iter().any(|&value| value != expected_local) {
             return Err(format!("GIF color-table layout does not match {request}"));
         }
     }
@@ -491,12 +490,10 @@ fn assert_tiff_contract(
         return Err("encoded TIFF has an invalid magic value".to_owned());
     }
     if let Some(request) = params.get("byte_order").and_then(serde_json::Value::as_str) {
-        let matches = matches!(
-            (request, endian),
-            ("le", TiffEndian::Little) | ("be", TiffEndian::Big)
-        );
-        if !matches {
-            return Err(format!("TIFF byte order does not match {request}"));
+        if !matches!(endian, TiffEndian::Little) {
+            return Err(format!(
+                "TIFF byte order mismatch: Pillow ignores {request} and emits little-endian"
+            ));
         }
     }
     let ifd = usize::try_from(endian.read_u32(encoded, 4).ok_or("truncated TIFF header")?)
@@ -559,18 +556,20 @@ fn assert_tiff_contract(
         .and_then(serde_json::Value::as_str)
     {
         let tiled = tags.contains_key(&322) || tags.contains_key(&324);
-        if (request == "tiled") != tiled {
-            return Err(format!("TIFF organization does not match {request}"));
+        if tiled {
+            return Err(format!(
+                "TIFF organization mismatch: Pillow ignores {request} and emits strips"
+            ));
         }
     }
-    if let Some(expected) = params.get("pages").and_then(serde_json::Value::as_u64)
-        && expected == 1
-    {
+    if let Some(request) = params.get("pages").and_then(serde_json::Value::as_u64) {
         let next_ifd_offset = ifd
             .checked_add(2 + count * 12)
             .ok_or("TIFF next-IFD offset overflow")?;
         if endian.read_u32(encoded, next_ifd_offset) != Some(0) {
-            return Err("TIFF single-page request emitted another IFD".to_owned());
+            return Err(format!(
+                "TIFF page-count mismatch: Pillow ignores pages={request} and emits one page"
+            ));
         }
     }
     Ok(())

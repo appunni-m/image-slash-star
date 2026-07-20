@@ -192,6 +192,9 @@ def encode_params(fmt, params):
         restart_interval = take("restart_interval")
         if restart_interval is not None:
             kwargs["restart_marker_rows"] = restart_interval
+        dct_method = take("dct_method")
+        if dct_method is not None:
+            kwargs["dct_method"] = dct_method
         exif = take("exif")
         if exif is False:
             kwargs["exif"] = b""
@@ -256,9 +259,10 @@ def encode_params(fmt, params):
             kwargs["_manifest_frames"] = frames
         color_table = take("color_table")
         if color_table == "local":
-            raise RuntimeError("Pillow cannot save a single-frame GIF with only a local color table")
+            kwargs["include_color_table"] = True
         if color_table not in (None, "global"):
-            raise RuntimeError(f"unknown GIF color_table value {color_table!r}")
+            if color_table != "local":
+                raise RuntimeError(f"unknown GIF color_table value {color_table!r}")
     elif fmt == "bmp":
         bit_depth = params.get("bit_depth")
         if bit_depth is not None:
@@ -277,6 +281,9 @@ def encode_params(fmt, params):
             value = take(name)
             if value is not None:
                 kwargs[name] = value
+        hint = take("hint")
+        if hint is not None:
+            kwargs["hint"] = hint
         for name in ("exif", "xmp", "icc"):
             value = take(name)
             if value is True:
@@ -300,16 +307,14 @@ def encode_params(fmt, params):
                 "packbits": "packbits",
             }[compression]
         byte_order = take("byte_order")
-        if byte_order == "be":
-            raise RuntimeError("Pillow TIFF cannot select big-endian output through Image.save")
-        if byte_order not in (None, "le"):
-            raise RuntimeError(f"unknown TIFF byte_order value {byte_order!r}")
+        if byte_order is not None:
+            kwargs["byte_order"] = byte_order
         organization = take("organization")
-        if organization not in (None, "stripped"):
-            raise RuntimeError(f"Pillow TIFF cannot encode {organization} output")
+        if organization is not None:
+            kwargs["organization"] = organization
         pages = take("pages")
-        if pages not in (None, 1):
-            raise RuntimeError("multi-page TIFF requires explicit append_images")
+        if pages is not None:
+            kwargs["pages"] = pages
         predictor = take("predictor")
         if predictor == "horizontal":
             from PIL.TiffImagePlugin import ImageFileDirectory_v2
@@ -327,8 +332,8 @@ def encode_params(fmt, params):
         if entry_type is not None:
             kwargs["bitmap_format"] = entry_type
         hotspot = take("hotspot")
-        if hotspot not in (None, False):
-            raise RuntimeError("ICO does not support cursor hotspots")
+        if hotspot is not None:
+            kwargs["hotspot"] = tuple(hotspot) if isinstance(hotspot, list) else hotspot
 
     if remaining:
         names = ", ".join(sorted(remaining))

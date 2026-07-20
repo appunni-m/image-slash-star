@@ -145,6 +145,18 @@
       "encoded_ref_bytes": 839
     },
     {
+      "id": "enc_hotspot",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_hotspot.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_hotspot.bin",
+      "encoded_ref_bytes": 839
+    },
+    {
       "id": "enc_multi",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi.bin",
       "ref_bytes": 3072,

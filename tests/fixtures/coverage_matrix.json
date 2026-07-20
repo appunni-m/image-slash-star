@@ -1673,6 +1673,28 @@
           ]
         },
         {
+          "id": "enc_local_ct",
+          "type": "encode",
+          "format": "gif",
+          "category": "local",
+          "description": "Global color table plus Pillow's requested local color table",
+          "params": {
+            "color_table": "local"
+          },
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "static.gif",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_local_ct.bin",
+          "encoded_ref_bytes": 15308,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_local_ct.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "gif",
           "id": "enc_1x1",
@@ -2357,6 +2379,31 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_no_hotspot.bin",
           "encoded_ref_bytes": 839,
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_no_hotspot.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
+          "id": "enc_hotspot",
+          "type": "encode",
+          "format": "ico",
+          "category": "hotspot",
+          "description": "Pillow accepts but ignores the ICO hotspot option",
+          "params": {
+            "hotspot": [
+              8,
+              8
+            ]
+          },
+          "status": "active",
+          "source_format": "ico",
+          "source_asset": "16x16.ico",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_hotspot.bin",
+          "encoded_ref_bytes": 839,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_hotspot.bin",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -3480,6 +3527,50 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_restart.bin",
           "encoded_ref_bytes": 4899,
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_no_restart.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_dct_fast",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "dct",
+          "description": "Pillow accepts but ignores the JPEG DCT method option",
+          "params": {
+            "dct_method": "fast"
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_444.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_dct_fast.bin",
+          "encoded_ref_bytes": 4899,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_dct_fast.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_dct_slow",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "dct",
+          "description": "Pillow accepts but ignores the JPEG DCT method option",
+          "params": {
+            "dct_method": "slow"
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_444.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_dct_slow.bin",
+          "encoded_ref_bytes": 4899,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_dct_slow.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -6425,6 +6516,28 @@
           ]
         },
         {
+          "id": "enc_byte_be",
+          "type": "encode",
+          "format": "tiff",
+          "category": "byte",
+          "description": "Pillow accepts but ignores the TIFF byte-order option",
+          "params": {
+            "byte_order": "be"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_byte_be.bin",
+          "encoded_ref_bytes": 49292,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_byte_be.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "tiff",
           "id": "enc_bilevel",
@@ -6623,6 +6736,28 @@
           ]
         },
         {
+          "id": "enc_tiled",
+          "type": "encode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "Pillow accepts but ignores the TIFF organization option",
+          "params": {
+            "organization": "tiled"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_tiled.bin",
+          "encoded_ref_bytes": 49292,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_tiled.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "tiff",
           "id": "enc_single_page",
@@ -6637,6 +6772,28 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_single_page.bin",
           "encoded_ref_bytes": 49292,
           "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_single_page.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_multi_page",
+          "type": "encode",
+          "format": "tiff",
+          "category": "multi",
+          "description": "Pillow accepts but ignores the non-standard pages option",
+          "params": {
+            "pages": 2
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_multi_page.bin",
+          "encoded_ref_bytes": 49292,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_multi_page.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -6794,6 +6951,28 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_le.bin",
           "encoded_ref_bytes": 49292,
           "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_le.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_be",
+          "type": "encode",
+          "format": "tiff",
+          "category": "be",
+          "description": "Pillow accepts but ignores the TIFF byte-order option",
+          "params": {
+            "byte_order": "be"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_be.bin",
+          "encoded_ref_bytes": 49292,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_be.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -8318,6 +8497,72 @@
           ]
         },
         {
+          "id": "enc_hint_photo",
+          "type": "encode",
+          "format": "webp",
+          "category": "hint",
+          "description": "Pillow accepts but ignores the WebP image hint option",
+          "params": {
+            "hint": "photo"
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_photo.bin",
+          "encoded_ref_bytes": 3634,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_photo.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_hint_graph",
+          "type": "encode",
+          "format": "webp",
+          "category": "hint",
+          "description": "Pillow accepts but ignores the WebP image hint option",
+          "params": {
+            "hint": "graph"
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_graph.bin",
+          "encoded_ref_bytes": 3634,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_graph.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_hint_picture",
+          "type": "encode",
+          "format": "webp",
+          "category": "hint",
+          "description": "Pillow accepts but ignores the WebP image hint option",
+          "params": {
+            "hint": "picture"
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_picture.bin",
+          "encoded_ref_bytes": 3634,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_picture.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_method_0",
@@ -8524,9 +8769,9 @@
     }
   },
   "summary": {
-    "total_rows": 461,
+    "total_rows": 472,
     "decode_rows": 271,
-    "encode_rows": 158,
+    "encode_rows": 169,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

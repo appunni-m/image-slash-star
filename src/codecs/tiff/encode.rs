@@ -1,4 +1,4 @@
-//! Classic TIFF encoder with selectable byte order, compression, and predictor.
+//! Classic TIFF encoder with Pillow-compatible compression and predictor options.
 
 use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::encode_options::EncodeOptions;
@@ -34,11 +34,8 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         return None;
     }
 
-    let endian = match opts.extra.get("byte_order").map(String::as_str) {
-        Some("be" | "big" | "MM") => Endian::Big,
-        Some("le" | "little" | "II") | None => Endian::Little,
-        Some(_) => return None,
-    };
+    // Pillow 12.2.0 accepts byte_order but always emits little-endian TIFF.
+    let endian = Endian::Little;
     let compression = match opts.extra.get("compression").map(String::as_str) {
         Some("lzw" | "tiff_lzw") => COMPRESSION_LZW,
         Some("deflate" | "tiff_adobe_deflate") => COMPRESSION_DEFLATE,
@@ -101,7 +98,6 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(match endian {
         Endian::Little => b"II",
-        Endian::Big => b"MM",
     });
     endian.push_u16(&mut output, 42);
     endian.push_u32(&mut output, u32::try_from(ifd_offset).ok()?);
@@ -417,21 +413,18 @@ impl MsbWriter {
 #[derive(Clone, Copy)]
 enum Endian {
     Little,
-    Big,
 }
 
 impl Endian {
     fn push_u16(self, output: &mut Vec<u8>, value: u16) {
         output.extend_from_slice(&match self {
             Self::Little => value.to_le_bytes(),
-            Self::Big => value.to_be_bytes(),
         });
     }
 
     fn push_u32(self, output: &mut Vec<u8>, value: u32) {
         output.extend_from_slice(&match self {
             Self::Little => value.to_le_bytes(),
-            Self::Big => value.to_be_bytes(),
         });
     }
 }

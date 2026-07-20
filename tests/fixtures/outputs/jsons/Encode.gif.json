@@ -169,6 +169,18 @@
       "encoded_ref_bytes": 14540
     },
     {
+      "id": "enc_local_ct",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_local_ct.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_local_ct.bin",
+      "encoded_ref_bytes": 15308
+    },
+    {
       "id": "enc_1x1",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_1x1.bin",
       "ref_bytes": 1,

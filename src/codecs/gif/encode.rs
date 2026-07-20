@@ -318,7 +318,10 @@ fn write_gif(
     let height = u16::try_from(sequence.height).ok()?;
     let first = prepare_image(&frames.first()?.image)?;
     let (global_count, global_size, _) = table_parameters(&first.palette)?;
-    let global_table = !settings.local_color_table;
+    // Pillow always writes the global palette for a single frame. Its
+    // include_color_table option adds a duplicate local palette rather than
+    // replacing the global one.
+    let global_table = true;
 
     let needs_89a = frames.len() > 1
         || settings.loop_count.is_some()
@@ -406,7 +409,7 @@ fn write_gif(
         let frame_height = u16::try_from(frame.image.height).ok()?;
         output.extend_from_slice(&frame_width.to_le_bytes());
         output.extend_from_slice(&frame_height.to_le_bytes());
-        let local_table = !global_table || prepared.palette != first.palette;
+        let local_table = settings.local_color_table || prepared.palette != first.palette;
         // Pillow defaults to interlacing a sufficiently large single-frame
         // GIF, but its multi-frame writer emits non-interlaced descriptors.
         let default_interlace =

@@ -435,6 +435,48 @@
       }
     },
     {
+      "id": "enc_dct_fast",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "dct_method": "fast"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "dct_method": "fast"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_dct_slow",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "dct_method": "slow"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "dct_method": "slow"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_optimize",
       "source_asset": "baseline_444.jpg",
       "source_format": "jpeg",

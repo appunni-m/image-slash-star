@@ -321,7 +321,36 @@
         "open": "tests/fixtures/input/images/ico/16x16.ico",
         "method": "PIL.Image.Image.save",
         "format": "ICO",
-        "kwargs": {},
+        "kwargs": {
+          "hotspot": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_hotspot",
+      "source_asset": "16x16.ico",
+      "source_format": "ico",
+      "params": {
+        "hotspot": [
+          8,
+          8
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/16x16.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "hotspot": [
+            8,
+            8
+          ]
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",

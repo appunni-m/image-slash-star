@@ -121,6 +121,42 @@
       "encoded_ref_bytes": 3634
     },
     {
+      "id": "enc_hint_photo",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_photo.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_photo.bin",
+      "encoded_ref_bytes": 3634
+    },
+    {
+      "id": "enc_hint_graph",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_graph.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_graph.bin",
+      "encoded_ref_bytes": 3634
+    },
+    {
+      "id": "enc_hint_picture",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_picture.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_picture.bin",
+      "encoded_ref_bytes": 3634
+    },
+    {
       "id": "enc_method_0",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_method_0.bin",
       "ref_bytes": 49152,

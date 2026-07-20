@@ -300,14 +300,10 @@ formats:
       description: 
       params: {'restart_interval': 0}
     - id: enc_dct_fast
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose a JPEG DCT method selector.
+      description: Pillow accepts but ignores the JPEG DCT method option
       params: {'dct_method': 'fast'}
     - id: enc_dct_slow
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose a JPEG DCT method selector.
+      description: Pillow accepts but ignores the JPEG DCT method option
       params: {'dct_method': 'slow'}
     - id: enc_optimize
       description: 
@@ -796,9 +792,7 @@ formats:
       description: 
       params: {'color_table': 'global'}
     - id: enc_local_ct
-      description: 
-      status: planned
-      oracle_gap: Pillow cannot save a single-frame GIF with only a local color table.
+      description: Global color table plus Pillow's requested local color table
       params: {'color_table': 'local'}
     - id: enc_1x1
       description: 
@@ -1162,19 +1156,13 @@ formats:
       description: 
       params: {'alpha': False}
     - id: enc_hint_photo
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose the libwebp image-hint selector.
+      description: Pillow accepts but ignores the WebP image hint option
       params: {'hint': 'photo'}
     - id: enc_hint_graph
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose the libwebp image-hint selector.
+      description: Pillow accepts but ignores the WebP image hint option
       params: {'hint': 'graph'}
     - id: enc_hint_picture
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose the libwebp image-hint selector.
+      description: Pillow accepts but ignores the WebP image hint option
       params: {'hint': 'picture'}
     - id: enc_method_0
       description: 
@@ -1379,9 +1367,7 @@ formats:
       description: 
       params: {'byte_order': 'le'}
     - id: enc_byte_be
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 Image.save cannot select big-endian TIFF output.
+      description: Pillow accepts but ignores the TIFF byte-order option
       params: {'byte_order': 'be'}
     - id: enc_bilevel
       description: 
@@ -1420,17 +1406,13 @@ formats:
       params: {'organization': 'stripped'}
       source_asset: stripped.tiff
     - id: enc_tiled
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 Image.save cannot select tiled TIFF output.
+      description: Pillow accepts but ignores the TIFF organization option
       params: {'organization': 'tiled'}
     - id: enc_single_page
       description: 
       params: {'pages': 1}
     - id: enc_multi_page
-      description: 
-      status: planned
-      oracle_gap: pages=2 does not identify the second image Pillow must append.
+      description: Pillow accepts but ignores the non-standard pages option
       params: {'pages': 2}
     - id: enc_predictor_none
       description: 
@@ -1461,9 +1443,7 @@ formats:
       params:
         byte_order: le
     - id: enc_be
-      description: Big-endian
-      status: planned
-      oracle_gap: Pillow 12.2.0 Image.save cannot select big-endian TIFF output.
+      description: Pillow accepts but ignores the TIFF byte-order option
       params:
         byte_order: be
   ico:
@@ -1576,9 +1556,7 @@ formats:
       description: 
       params: {'hotspot': False}
     - id: enc_hotspot
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 ICO save cannot emit cursor hotspots.
+      description: Pillow accepts but ignores the ICO hotspot option
       params: {'hotspot': [8, 8]}
 
     - id: enc_multi

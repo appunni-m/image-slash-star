@@ -308,6 +308,27 @@
       }
     },
     {
+      "id": "enc_local_ct",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "color_table": "local"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "include_color_table": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1x1",
       "source_asset": "1x1.gif",
       "source_format": "gif",

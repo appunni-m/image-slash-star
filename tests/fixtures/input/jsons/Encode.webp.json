@@ -212,6 +212,69 @@
       }
     },
     {
+      "id": "enc_hint_photo",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "hint": "photo"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "hint": "photo"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_hint_graph",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "hint": "graph"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "hint": "graph"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_hint_picture",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "hint": "picture"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "hint": "picture"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_method_0",
       "source_asset": "lossless.webp",
       "source_format": "webp",
