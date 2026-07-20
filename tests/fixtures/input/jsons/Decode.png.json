@@ -832,6 +832,188 @@
       }
     },
     {
+      "id": "error_malformed_structure_zlib_short_header",
+      "asset": "zlib_short_header.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_short_header.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_invalid_header",
+      "asset": "zlib_invalid_header.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_invalid_header.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_reserved_block",
+      "asset": "zlib_reserved_block.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_reserved_block.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_bad_stored_complement",
+      "asset": "zlib_bad_stored_complement.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_bad_stored_complement.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_bad_adler",
+      "asset": "zlib_bad_adler.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_bad_adler.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_backreference_before_output",
+      "asset": "zlib_backreference_before_output.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_backreference_before_output.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_reserved_distance_symbol",
+      "asset": "zlib_reserved_distance_symbol.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_reserved_distance_symbol.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_reserved_literal_symbol",
+      "asset": "zlib_reserved_literal_symbol.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_reserved_literal_symbol.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_truncated_fixed_block",
+      "asset": "zlib_truncated_fixed_block.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_truncated_fixed_block.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_empty_code_length_tree",
+      "asset": "zlib_empty_code_length_tree.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_empty_code_length_tree.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_oversubscribed_code_length_tree",
+      "asset": "zlib_oversubscribed_code_length_tree.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_oversubscribed_code_length_tree.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_dynamic_repeat_overflow",
+      "asset": "zlib_dynamic_repeat_overflow.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_dynamic_repeat_overflow.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_undecodable_code_length",
+      "asset": "zlib_undecodable_code_length.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_undecodable_code_length.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zlib_dynamic_backreference_before_output",
+      "asset": "zlib_dynamic_backreference_before_output.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_dynamic_backreference_before_output.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_structure_adam7_invalid_scanline_filter",
       "asset": "adam7_invalid_scanline_filter.png",
       "expect_error": true,
@@ -889,6 +1071,58 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_trns_too_long.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
+      "asset": "zlib_oversized_scanline.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_oversized_scanline.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
+      "asset": "zlib_oversized_stored_scanline.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_oversized_stored_scanline.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
+      "asset": "zlib_oversized_backreference_scanline.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_oversized_backreference_scanline.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_dynamic_manual",
+      "asset": "zlib_minimal_dynamic.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_minimal_dynamic.png",
         "operations": [
           "PIL.Image.open",
           "load",

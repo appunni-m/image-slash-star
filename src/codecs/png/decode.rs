@@ -1,6 +1,6 @@
 //! PNG decoder implemented from the PNG chunk and filtering specifications.
 
-use crate::codecs::compression::deflate::decompress_zlib;
+use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -55,7 +55,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     let expected_inflated = inflated_len(width, height, channels, depth, interlace)?;
-    let inflated = decompress_zlib(&compressed, expected_inflated)?;
+    let inflated = decompress_zlib_prefix(&compressed, expected_inflated)?;
     if inflated.len() != expected_inflated {
         return None;
     }

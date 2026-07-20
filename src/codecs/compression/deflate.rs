@@ -21,6 +21,30 @@ const CODE_LENGTH_ORDER: [usize; 19] = [
 
 /// Inflate a zlib stream while enforcing an exact output-size ceiling.
 pub(crate) fn decompress_zlib(data: &[u8], max_output: usize) -> Option<Vec<u8>> {
+    decompress_zlib_with_limit(data, max_output, false)
+}
+
+/// Inflate the requested prefix of a zlib stream.
+///
+/// Pillow's PNG decoder stops once its scanline buffer is full, so extra
+/// inflated bytes and the remainder of that zlib stream are deliberately
+/// ignored. TIFF decoding continues to use [`decompress_zlib`] and validates
+/// the complete stream.
+pub(crate) fn decompress_zlib_prefix(data: &[u8], max_output: usize) -> Option<Vec<u8>> {
+    decompress_zlib_with_limit(data, max_output, true)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DecodeStatus {
+    Complete,
+    OutputFull,
+}
+
+fn decompress_zlib_with_limit(
+    data: &[u8],
+    max_output: usize,
+    allow_trailing_output: bool,
+) -> Option<Vec<u8>> {
     if data.len() < 6 {
         return None;
     }
@@ -39,18 +63,35 @@ pub(crate) fn decompress_zlib(data: &[u8], max_output: usize) -> Option<Vec<u8>>
     let mut output = Vec::with_capacity(max_output.min(64 * 1024));
     loop {
         let final_block = bits.read(1)? != 0;
-        match bits.read(2)? {
-            0 => decode_stored(&mut bits, &mut output, max_output)?,
+        let status = match bits.read(2)? {
+            0 => decode_stored(&mut bits, &mut output, max_output, allow_trailing_output)?,
             1 => {
                 let literal = fixed_literal_table()?;
                 let distance = Huffman::from_lengths(&[5; 32])?;
-                decode_compressed(&mut bits, &literal, &distance, &mut output, max_output)?;
+                decode_compressed(
+                    &mut bits,
+                    &literal,
+                    &distance,
+                    &mut output,
+                    max_output,
+                    allow_trailing_output,
+                )?
             }
             2 => {
                 let (literal, distance) = read_dynamic_tables(&mut bits)?;
-                decode_compressed(&mut bits, &literal, &distance, &mut output, max_output)?;
+                decode_compressed(
+                    &mut bits,
+                    &literal,
+                    &distance,
+                    &mut output,
+                    max_output,
+                    allow_trailing_output,
+                )?
             }
             _ => return None,
+        };
+        if status == DecodeStatus::OutputFull {
+            return Some(output);
         }
         if final_block {
             break;
@@ -79,15 +120,10 @@ pub(crate) fn compress_zlib_chunked(
     level: u8,
     input_chunks: &[usize],
 ) -> Option<Vec<u8>> {
-    if level > 9 {
-        return None;
-    }
     let input_len = input_chunks
         .iter()
         .try_fold(0usize, |total, &length| total.checked_add(length))?;
-    if input_len != data.len() {
-        return None;
-    }
+    debug_assert_eq!(input_len, data.len());
     match level {
         0 => compress_zlib_stored_chunked(data, input_chunks),
         1 => super::zlib_ng::compress_level1(data, input_chunks),
@@ -135,17 +171,28 @@ fn write_stored_block(output: &mut Vec<u8>, block: &[u8], final_block: bool) -> 
     Some(())
 }
 
-fn decode_stored(bits: &mut BitReader<'_>, output: &mut Vec<u8>, max_output: usize) -> Option<()> {
+fn decode_stored(
+    bits: &mut BitReader<'_>,
+    output: &mut Vec<u8>,
+    max_output: usize,
+    allow_trailing_output: bool,
+) -> Option<DecodeStatus> {
     bits.align_to_byte();
     let len = bits.read(16)? as u16;
     let complement = bits.read(16)? as u16;
-    if len != !complement || output.len().checked_add(usize::from(len))? > max_output {
+    if len != !complement {
         return None;
     }
-    for _ in 0..len {
+    let available = max_output.checked_sub(output.len())?;
+    let copied = usize::from(len).min(available);
+    for _ in 0..copied {
         output.push(bits.read(8)? as u8);
     }
-    Some(())
+    if copied < usize::from(len) {
+        allow_trailing_output.then_some(DecodeStatus::OutputFull)
+    } else {
+        Some(DecodeStatus::Complete)
+    }
 }
 
 fn fixed_literal_table() -> Option<Huffman> {
@@ -170,7 +217,8 @@ fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
     let total = literal_count.checked_add(distance_count)?;
     let mut lengths = Vec::with_capacity(total);
     while lengths.len() < total {
-        match code_length_table.decode(bits)? {
+        let symbol = code_length_table.decode(bits)?;
+        match symbol {
             symbol @ 0..=15 => lengths.push(symbol as u8),
             16 => {
                 let previous = *lengths.last()?;
@@ -181,11 +229,12 @@ fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
                 let repeat = bits.read(3)? as usize + 3;
                 extend_repeated(&mut lengths, 0, repeat, total)?;
             }
-            18 => {
+            _ => {
+                // The code-length alphabet has exactly 19 symbols.
+                debug_assert_eq!(symbol, 18);
                 let repeat = bits.read(7)? as usize + 11;
                 extend_repeated(&mut lengths, 0, repeat, total)?;
             }
-            _ => return None,
         }
     }
 
@@ -208,16 +257,17 @@ fn decode_compressed(
     distance: &Huffman,
     output: &mut Vec<u8>,
     max_output: usize,
-) -> Option<()> {
+    allow_trailing_output: bool,
+) -> Option<DecodeStatus> {
     loop {
         match literal.decode(bits)? {
             byte @ 0..=255 => {
                 if output.len() >= max_output {
-                    return None;
+                    return allow_trailing_output.then_some(DecodeStatus::OutputFull);
                 }
                 output.push(byte as u8);
             }
-            256 => return Some(()),
+            256 => return Some(DecodeStatus::Complete),
             symbol @ 257..=285 => {
                 let length_index = usize::from(symbol - 257);
                 let length = LENGTH_BASE[length_index]
@@ -229,15 +279,17 @@ fn decode_compressed(
                 let distance_index = usize::from(distance_symbol);
                 let backwards = DISTANCE_BASE[distance_index]
                     .checked_add(bits.read(DISTANCE_EXTRA[distance_index])? as usize)?;
-                if backwards == 0
-                    || backwards > output.len()
-                    || output.len().checked_add(length)? > max_output
-                {
+                if backwards == 0 || backwards > output.len() {
                     return None;
                 }
-                for _ in 0..length {
+                let available = max_output.checked_sub(output.len())?;
+                let copied = length.min(available);
+                for _ in 0..copied {
                     let source = output.len().checked_sub(backwards)?;
                     output.push(*output.get(source)?);
+                }
+                if copied < length {
+                    return allow_trailing_output.then_some(DecodeStatus::OutputFull);
                 }
             }
             _ => return None,
@@ -270,15 +322,12 @@ struct HuffmanEntry {
 impl Huffman {
     fn from_lengths(lengths: &[u8]) -> Option<Self> {
         let maximum_length = lengths.iter().copied().max()?;
-        if maximum_length == 0 || maximum_length > 15 {
+        if maximum_length == 0 {
             return None;
         }
 
         let mut counts = [0u16; 16];
         for &length in lengths {
-            if length > 15 {
-                return None;
-            }
             if length != 0 {
                 counts[usize::from(length)] = counts[usize::from(length)].checked_add(1)?;
             }

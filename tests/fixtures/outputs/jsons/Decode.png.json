@@ -793,6 +793,146 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_structure_zlib_short_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_invalid_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_reserved_block",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_bad_stored_complement",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_bad_adler",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_backreference_before_output",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_reserved_distance_symbol",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_reserved_literal_symbol",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_truncated_fixed_block",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_empty_code_length_tree",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_oversubscribed_code_length_tree",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_dynamic_repeat_overflow",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_undecodable_code_length",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zlib_dynamic_backreference_before_output",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_structure_adam7_invalid_scanline_filter",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -846,6 +986,58 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_too_long_png.bin",
       "ref_bytes": 1,
       "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_zlib_oversized_scanline_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_zlib_oversized_stored_scanline_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_zlib_oversized_backreference_scanline_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "compression_dynamic_manual",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_zlib_minimal_dynamic_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
       "ref_size": [
         1,
         1

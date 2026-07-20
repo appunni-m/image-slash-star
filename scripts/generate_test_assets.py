@@ -75,6 +75,134 @@ def png_chunk(kind, payload):
     )
 
 
+def deflate_bits(fields):
+    """Pack ``(value, width)`` DEFLATE fields in least-significant-bit order."""
+    output = bytearray()
+    accumulator = 0
+    bit_count = 0
+    for value, width in fields:
+        accumulator |= value << bit_count
+        bit_count += width
+        while bit_count >= 8:
+            output.append(accumulator & 0xFF)
+            accumulator >>= 8
+            bit_count -= 8
+    if bit_count:
+        output.append(accumulator & 0xFF)
+    return bytes(output)
+
+
+def reverse_bits(value, width):
+    reversed_value = 0
+    for _ in range(width):
+        reversed_value = (reversed_value << 1) | (value & 1)
+        value >>= 1
+    return reversed_value
+
+
+def fixed_deflate_symbol(symbol):
+    """Return the bit-reversed canonical code and width for a fixed tree symbol."""
+    if symbol <= 143:
+        code, width = symbol + 0x30, 8
+    elif symbol <= 255:
+        code, width = symbol - 144 + 0x190, 9
+    elif symbol <= 279:
+        code, width = symbol - 256, 7
+    elif symbol <= 287:
+        code, width = symbol - 280 + 0xC0, 8
+    else:
+        raise ValueError("invalid fixed DEFLATE symbol")
+    return reverse_bits(code, width), width
+
+
+def malformed_fixed_zlib(symbols, distances=()):
+    """Build a zlib stream with a final fixed-Huffman DEFLATE block."""
+    fields = [(1, 1), (1, 2)]
+    distance_iter = iter(distances)
+    for symbol in symbols:
+        fields.append(fixed_deflate_symbol(symbol))
+        if 257 <= symbol <= 285:
+            # These fixtures use symbol 257, whose length has no extra bits.
+            distance = next(distance_iter)
+            fields.append((reverse_bits(distance, 5), 5))
+    payload = deflate_bits(fields)
+    return b"\x78\x01" + payload + b"\x00\x00\x00\x01"
+
+
+def malformed_dynamic_zlib(code_length_lengths, encoded_fields=()):
+    """Build a zlib stream around a malformed final dynamic DEFLATE block."""
+    if len(code_length_lengths) < 4:
+        raise ValueError("dynamic blocks encode at least four code lengths")
+    fields = [
+        (1, 1),
+        (2, 2),
+        (0, 5),  # HLIT: 257 literal/length symbols
+        (0, 5),  # HDIST: one distance symbol
+        (len(code_length_lengths) - 4, 4),
+    ]
+    fields.extend((length, 3) for length in code_length_lengths)
+    fields.extend(encoded_fields)
+    return b"\x78\x01" + deflate_bits(fields) + b"\x00\x00\x00\x01"
+
+
+def minimal_dynamic_zlib():
+    """Encode one black RGB scanline with a deliberately small dynamic tree."""
+    # Code-length symbols 0, 1, 17, and 18 each have width two. Their reversed
+    # canonical codes are respectively 00, 10, 01, and 11.
+    code_length_lengths = [0, 2, 2, 2] + [0] * 13 + [2]
+    encoded_lengths = [
+        (2, 2),  # literal symbol 0 has length one
+        (3, 2),
+        (127, 7),  # 138 zero lengths
+        (3, 2),
+        (106, 7),  # 117 zero lengths
+        (2, 2),  # end-of-block symbol 256 has length one
+        (2, 2),  # distance symbol 0 has length one
+    ]
+    fields = [
+        (1, 1),
+        (2, 2),
+        (0, 5),
+        (0, 5),
+        (14, 4),
+    ]
+    fields.extend((length, 3) for length in code_length_lengths)
+    fields.extend(encoded_lengths)
+    fields.extend([(0, 1)] * 4)  # filter byte and black RGB pixel
+    fields.append((1, 1))  # end-of-block
+    return b"\x78\x01" + deflate_bits(fields) + b"\x00\x04\x00\x01"
+
+
+def invalid_dynamic_backreference_zlib():
+    """Encode valid dynamic tables followed by a back-reference before output."""
+    # Symbols 0, 1, 2, and 18 form a complete width-two code-length tree.
+    code_length_lengths = [0, 0, 2, 2] + [0] * 11 + [2, 0, 2]
+    fields = [
+        (1, 1),
+        (2, 2),
+        (1, 5),  # HLIT: include literal/length symbol 257
+        (0, 5),
+        (14, 4),
+    ]
+    fields.extend((length, 3) for length in code_length_lengths)
+    fields.extend(
+        [
+            (1, 2),
+            (1, 2),  # symbols 0 and 1 have length two
+            (3, 2),
+            (127, 7),  # 138 zero lengths
+            (3, 2),
+            (105, 7),  # 116 zero lengths
+            (1, 2),
+            (1, 2),  # symbols 256 and 257 have length two
+            (2, 2),  # distance symbol 0 has length one
+            (3, 2),  # literal/length symbol 257
+            (0, 1),  # distance one, invalid before any output
+        ]
+    )
+    return b"\x78\x01" + deflate_bits(fields) + b"\x00\x00\x00\x01"
+
+
 def paeth_predictor(left, above, upper_left):
     value = left + above - upper_left
     left_distance = abs(value - left)
@@ -463,6 +591,81 @@ def gen_png():
         + png_chunk(b"IHDR", rgb_header)
         + png_chunk(b"IDAT", zlib.compress(b"\x00\x80"))
         + png_chunk(b"IEND", b"")
+    )
+
+    def write_raw_zlib_png(name, payload):
+        (d / name).write_bytes(
+            b"\x89PNG\r\n\x1a\n"
+            + png_chunk(b"IHDR", rgb_header)
+            + png_chunk(b"IDAT", payload)
+            + png_chunk(b"IEND", b"")
+        )
+
+    write_raw_zlib_png("zlib_short_header.png", b"\x78\x01\x00\x00\x00")
+    write_raw_zlib_png("zlib_invalid_header.png", b"\x00\x00\x00\x00\x00\x00")
+    write_raw_zlib_png("zlib_reserved_block.png", b"\x78\x01\x07\x00\x00\x00\x00")
+    write_raw_zlib_png(
+        "zlib_bad_stored_complement.png",
+        b"\x78\x01\x01\x01\x00\x01\x00\x00\x00\x00\x00\x00",
+    )
+    bad_adler = bytearray(zlib.compress(b"\x00\x80\x00\x00", level=0))
+    bad_adler[-1] ^= 0x01
+    write_raw_zlib_png("zlib_bad_adler.png", bytes(bad_adler))
+    write_raw_zlib_png(
+        "zlib_oversized_scanline.png", zlib.compress(b"\x00\x80\x00\x00\x00", level=6)
+    )
+    stored_scanline = b"\x00\x80\x00\x00\x00"
+    write_raw_zlib_png(
+        "zlib_oversized_stored_scanline.png",
+        b"\x78\x01\x01"
+        + struct.pack("<HH", len(stored_scanline), 0xFFFF ^ len(stored_scanline))
+        + stored_scanline
+        + struct.pack(">I", zlib.adler32(stored_scanline)),
+    )
+    write_raw_zlib_png(
+        "zlib_oversized_backreference_scanline.png",
+        malformed_fixed_zlib([0, 0, 0, 0, 257, 256], distances=[0]),
+    )
+    write_raw_zlib_png("zlib_minimal_dynamic.png", minimal_dynamic_zlib())
+    write_raw_zlib_png(
+        "zlib_dynamic_backreference_before_output.png",
+        invalid_dynamic_backreference_zlib(),
+    )
+    write_raw_zlib_png(
+        "zlib_backreference_before_output.png",
+        malformed_fixed_zlib([257, 256], distances=[0]),
+    )
+    write_raw_zlib_png(
+        "zlib_reserved_distance_symbol.png",
+        malformed_fixed_zlib([ord("A"), 257, 256], distances=[30]),
+    )
+    write_raw_zlib_png(
+        "zlib_reserved_literal_symbol.png", malformed_fixed_zlib([286])
+    )
+    # A final fixed block without enough bits to decode its first symbol.
+    write_raw_zlib_png("zlib_truncated_fixed_block.png", b"\x78\x01\x03\x00\x00\x00\x01")
+    write_raw_zlib_png(
+        "zlib_empty_code_length_tree.png", malformed_dynamic_zlib([0, 0, 0, 0])
+    )
+    write_raw_zlib_png(
+        "zlib_oversubscribed_code_length_tree.png",
+        malformed_dynamic_zlib([1, 1, 1, 0]),
+    )
+    write_raw_zlib_png(
+        "zlib_dynamic_repeat_overflow.png",
+        malformed_dynamic_zlib(
+            [0, 0, 1, 0],
+            [
+                (0, 1),
+                (127, 7),  # symbol 18, repeat 138 zeroes
+                (0, 1),
+                (127, 7),  # another 138 exceeds the 258-symbol limit
+            ],
+        ),
+    )
+    write_raw_zlib_png(
+        "zlib_undecodable_code_length.png",
+        malformed_dynamic_zlib([0, 0, 2, 0], [(3, 2)]),
     )
     adam7_rgb_header = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 1)
     (d / "adam7_invalid_scanline_filter.png").write_bytes(

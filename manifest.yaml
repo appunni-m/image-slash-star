@@ -534,6 +534,20 @@ formats:
       - empty_idat.png
       - invalid_scanline_filter.png
       - short_inflated_scanline.png
+      - zlib_short_header.png
+      - zlib_invalid_header.png
+      - zlib_reserved_block.png
+      - zlib_bad_stored_complement.png
+      - zlib_bad_adler.png
+      - zlib_backreference_before_output.png
+      - zlib_reserved_distance_symbol.png
+      - zlib_reserved_literal_symbol.png
+      - zlib_truncated_fixed_block.png
+      - zlib_empty_code_length_tree.png
+      - zlib_oversubscribed_code_length_tree.png
+      - zlib_dynamic_repeat_overflow.png
+      - zlib_undecodable_code_length.png
+      - zlib_dynamic_backreference_before_output.png
       - adam7_invalid_scanline_filter.png
       - adam7_giant_dimensions.png
       expect_error: true
@@ -543,6 +557,13 @@ formats:
       - invalid_compression.png
       - missing_iend.png
       - palette_trns_too_long.png
+      - zlib_oversized_scanline.png
+      - zlib_oversized_stored_scanline.png
+      - zlib_oversized_backreference_scanline.png
+    - id: compression_dynamic_manual
+      description: Minimal valid dynamic-Huffman zlib stream
+      test_assets:
+      - zlib_minimal_dynamic.png
     - id: apng_static
       description: APNG with single frame (backward compatible)
       test_assets:

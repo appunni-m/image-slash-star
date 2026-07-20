@@ -11,7 +11,7 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// emits non-interlaced rows. Compression levels select the corresponding
 /// strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    if img.width == 0 || img.height == 0 || opts.compression.is_some_and(|level| level > 9) {
+    if img.width == 0 || img.height == 0 {
         return None;
     }
 
