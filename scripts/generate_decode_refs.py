@@ -845,9 +845,12 @@ def sync_encode_rows(manifest, matrix):
                     "category": case_id.removeprefix("enc_").split("_", 1)[0],
                     "description": specification.get("description") or "",
                     "params": specification.get("params", {}),
-                    "expect_error": bool(specification.get("expect_error", False)),
                 }
             )
+            if specification.get("expect_error"):
+                row["expect_error"] = True
+            else:
+                row.pop("expect_error", None)
             row["status"] = specification.get("status", "active")
             if row["status"] == "planned":
                 row["gap"] = (
@@ -1226,7 +1229,7 @@ def generate_encode(manifest, matrix, target_format=None):
                     "source_asset": r["source_asset"],
                     "source_format": r.get("source_format", fmt_name),
                     "params": r.get("params", {}),
-                    "expect_error": bool(r.get("expect_error", False)),
+                    **({"expect_error": True} if r.get("expect_error") else {}),
                     "pillow_call": describe_encode_call(fmt_name, r),
                 }
                 for r in enc_cases
@@ -1248,9 +1251,15 @@ def generate_encode(manifest, matrix, target_format=None):
                     "ref_size": r.get("ref_size"),
                     "encoded_ref_path": r.get("encoded_ref_path"),
                     "encoded_ref_bytes": r.get("encoded_ref_bytes"),
-                    "oracle_status": r.get("oracle_status"),
-                    "error_type": r.get("oracle_error_type"),
-                    "error_message": r.get("oracle_error_message"),
+                    **(
+                        {
+                            "oracle_status": r.get("oracle_status"),
+                            "error_type": r.get("oracle_error_type"),
+                            "error_message": r.get("oracle_error_message"),
+                        }
+                        if r.get("expect_error")
+                        else {}
+                    ),
                 }
                 for r in enc_cases
             ]

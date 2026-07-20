@@ -5226,6 +5226,38 @@
           ]
         },
         {
+          "id": "enc_error_compression_level",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "Compression level outside Pillow's accepted range",
+          "params": {
+            "compression": 10
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "codec configuration error when writing image file"
+        },
+        {
+          "id": "enc_error_cmyk",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "Pillow cannot write CMYK pixels as PNG",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_cmyk.jpg",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode CMYK as PNG"
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_l8",
@@ -10124,9 +10156,9 @@
     }
   },
   "summary": {
-    "total_rows": 537,
+    "total_rows": 539,
     "decode_rows": 322,
-    "encode_rows": 183,
+    "encode_rows": 185,
     "formats": 8,
     "assets_available": 315,
     "decode_active": 316,

@@ -157,6 +157,30 @@
       "encoded_ref_bytes": 81
     },
     {
+      "id": "enc_error_compression_level",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "codec configuration error when writing image file"
+    },
+    {
+      "id": "enc_error_cmyk",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode CMYK as PNG"
+    },
+    {
       "id": "enc_l8",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_l8.bin",
       "ref_bytes": 16384,

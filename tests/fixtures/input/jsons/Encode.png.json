@@ -265,6 +265,46 @@
       }
     },
     {
+      "id": "enc_error_compression_level",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": 10
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 10
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_cmyk",
+      "source_asset": "baseline_cmyk.jpg",
+      "source_format": "jpeg",
+      "params": {},
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_l8",
       "source_asset": "gray.png",
       "source_format": "png",
