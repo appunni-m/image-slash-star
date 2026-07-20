@@ -200,6 +200,9 @@ def encode_params(fmt, params):
             kwargs["exif"] = b""
         elif exif is not None:
             raise RuntimeError("exif=true requires explicit EXIF bytes")
+        exif_hex = take("exif_hex")
+        if exif_hex is not None:
+            kwargs["exif"] = bytes.fromhex(exif_hex)
     elif fmt == "png":
         compression = take("compression")
         if compression is not None:

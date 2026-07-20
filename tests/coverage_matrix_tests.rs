@@ -656,6 +656,9 @@ fn assert_jpeg_contract(
     if params.get("exif").and_then(serde_json::Value::as_bool) == Some(false) && has_exif {
         return Err("JPEG exif=false emitted EXIF metadata".to_owned());
     }
+    if params.get("exif_hex").is_some() && !has_exif {
+        return Err("JPEG EXIF metadata request did not emit APP1 EXIF".to_owned());
+    }
     if params
         .get("restart_interval")
         .and_then(serde_json::Value::as_u64)

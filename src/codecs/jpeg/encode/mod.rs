@@ -220,6 +220,10 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     let mut out = Vec::new();
     marker::write_soi(&mut out);
     marker::write_jfif_app0(&mut out);
+    if let Some(exif_hex) = opts.extra.get("exif_hex") {
+        let exif = decode_hex(exif_hex)?;
+        marker::write_exif_app1(&mut out, &exif)?;
+    }
 
     // Write DQT tables (one per unique quant slot).
     let mut emitted = [false; 4];
@@ -313,6 +317,16 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
 
     marker::write_eoi(&mut out);
     Some(out)
+}
+
+fn decode_hex(value: &str) -> Option<Vec<u8>> {
+    (0..value.len())
+        .step_by(2)
+        .map(|index| {
+            let end = index.checked_add(2)?;
+            u8::from_str_radix(value.get(index..end)?, 16).ok()
+        })
+        .collect()
 }
 
 // ── Color conversion (jccolor.c) ─────────────────────────────────────────

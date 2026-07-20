@@ -3469,6 +3469,28 @@
           ]
         },
         {
+          "id": "enc_exif",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "exif",
+          "description": "JPEG with deterministic EXIF metadata bytes",
+          "params": {
+            "exif_hex": "45786966000049492a000800000000000000"
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_444.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif.bin",
+          "encoded_ref_bytes": 4921,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_exif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "jpeg",
           "id": "enc_no_exif",
@@ -8769,9 +8791,9 @@
     }
   },
   "summary": {
-    "total_rows": 472,
+    "total_rows": 473,
     "decode_rows": 271,
-    "encode_rows": 169,
+    "encode_rows": 170,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

@@ -369,6 +369,30 @@
       }
     },
     {
+      "id": "enc_exif",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "exif_hex": "45786966000049492a000800000000000000"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "exif": {
+            "type": "bytes",
+            "hex": "45786966000049492a000800000000000000"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_no_exif",
       "source_asset": "baseline_444.jpg",
       "source_format": "jpeg",

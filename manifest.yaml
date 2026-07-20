@@ -286,10 +286,8 @@ formats:
       params: {'size': [17, 17]}
       source_asset: 17x17.jpg
     - id: enc_exif
-      description: 
-      status: planned
-      oracle_gap: exif=true does not identify the metadata bytes Pillow must encode.
-      params: {'exif': True}
+      description: JPEG with deterministic EXIF metadata bytes
+      params: {'exif_hex': '45786966000049492a000800000000000000'}
     - id: enc_no_exif
       description: 
       params: {'exif': False}
