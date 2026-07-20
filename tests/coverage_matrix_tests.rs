@@ -978,6 +978,24 @@ fn assert_pixel_parity(
     ))
 }
 
+fn assert_dynamic_bridge_parity(
+    expected: &PixelParityRef,
+    decoded: &img::DecodedImage,
+) -> Result<(), String> {
+    if decoded.mode != decoded.color.into()
+        || decoded.palette.is_some()
+        || matches!(decoded.color, img::ColorType::Cmyk8 | img::ColorType::L32F)
+    {
+        return Ok(());
+    }
+
+    let dynamic = img::DynamicImage::from_decoded(decoded)
+        .ok_or("canonical decoded image could not enter the DynamicImage bridge")?;
+    let bridged = dynamic.into_decoded();
+    assert_pixel_parity(expected, &bridged)
+        .map_err(|message| format!("DynamicImage bridge changed Pillow bytes: {message}"))
+}
+
 // ── Decode Tests ─────────────────────────────────────────────────────────
 
 #[test]
@@ -1069,7 +1087,9 @@ fn test_decode_matrix() {
                 continue;
             };
 
-            match assert_pixel_parity(&expected, &decoded) {
+            match assert_pixel_parity(&expected, &decoded)
+                .and_then(|()| assert_dynamic_bridge_parity(&expected, &decoded))
+            {
                 Ok(()) => {
                     eprintln!(
                         "  OK   [{}] {} bytes pixel-parity (mode={})",
@@ -1288,7 +1308,9 @@ fn test_encode_matrix() {
                             row.ref_mode.as_deref(),
                         )
                     }) {
-                        match assert_pixel_parity(&expected, &redecoded) {
+                        match assert_pixel_parity(&expected, &redecoded)
+                            .and_then(|()| assert_dynamic_bridge_parity(&expected, &redecoded))
+                        {
                             Ok(()) => {
                                 eprintln!(
                                     "  OK   [{}] {}B, re-decoded {}x{} pixel-parity (mode={})",
