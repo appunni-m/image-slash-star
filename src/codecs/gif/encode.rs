@@ -1244,15 +1244,10 @@ fn swap_bucket_ranges(values: &mut [OctreeBucket], left: usize, right: usize, le
     }
 }
 
-fn apple_qsort_buckets(values: &mut [OctreeBucket], mut depth: usize) {
+fn apple_qsort_buckets(values: &mut [OctreeBucket]) {
     let mut start = 0usize;
     let mut length = values.len();
     loop {
-        if depth == 0 {
-            values[start..start + length].sort_by(bucket_order);
-            return;
-        }
-        depth -= 1;
         if length <= 7 {
             insertion_sort_buckets(&mut values[start..start + length], None);
             return;
@@ -1321,7 +1316,7 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket], mut depth: usize) {
         let right_length = equal_right - scan_right;
         if left_length <= right_length {
             if left_length > 1 {
-                apple_qsort_buckets(&mut values[start..start + left_length], depth);
+                apple_qsort_buckets(&mut values[start..start + left_length]);
             }
             if right_length <= 1 {
                 return;
@@ -1330,7 +1325,7 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket], mut depth: usize) {
             length = right_length;
         } else {
             if right_length > 1 {
-                apple_qsort_buckets(&mut values[end - right_length..end], depth);
+                apple_qsort_buckets(&mut values[end - right_length..end]);
             }
             if left_length <= 1 {
                 return;
@@ -1342,8 +1337,7 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket], mut depth: usize) {
 
 fn sorted_octree_buckets(cube: &OctreeCube) -> Vec<OctreeBucket> {
     let mut buckets = cube.buckets.clone();
-    let depth = 2 * (usize::BITS as usize - buckets.len().leading_zeros() as usize - 1);
-    apple_qsort_buckets(&mut buckets, depth);
+    apple_qsort_buckets(&mut buckets);
     buckets
 }
 
