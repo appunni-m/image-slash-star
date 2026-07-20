@@ -1008,7 +1008,6 @@ formats:
       params: {'lossless': True}
     - id: enc_lossy_alpha
       description: 
-      status: planned
       source_format: png
       source_asset: alpha_partial.png
       params: {'lossless': False, 'alpha': True}

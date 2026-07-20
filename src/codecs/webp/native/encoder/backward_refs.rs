@@ -32,9 +32,8 @@ fn match_length(pixels: &[u32], first: usize, second: usize, limit: usize) -> us
     length
 }
 
-/// Builds the same best-distance/best-length table as `VP8LHashChainFill()` at
-/// Pillow's lossless quality=80, method=4 settings.
-fn fill_hash_chain(pixels: &[u32], width: usize) -> Vec<(usize, usize)> {
+/// Builds the same best-distance/best-length table as `VP8LHashChainFill()`.
+fn fill_hash_chain(pixels: &[u32], width: usize, quality: u32) -> Vec<(usize, usize)> {
     let size = pixels.len();
     let mut result = vec![(0, 0); size];
     if size <= 2 {
@@ -77,14 +76,24 @@ fn fill_hash_chain(pixels: &[u32], width: usize) -> Vec<(usize, usize)> {
         }
     }
     chain[position] = first[pair_hash(pixels, position)];
-    let iterations = 8 + 80 * 80 / 128;
+    let iterations = 8 + quality * quality / 128;
+    let window_size = if quality > 75 {
+        WINDOW_SIZE
+    } else if quality > 50 {
+        width << 8
+    } else if quality > 25 {
+        width << 6
+    } else {
+        width << 4
+    }
+    .min(WINDOW_SIZE);
     let mut base = size - 2;
     while base > 0 {
         let max_length = MAX_LENGTH.min(size - 1 - base);
         let mut remaining = iterations;
         let mut best_length = 0;
         let mut best_distance = 0;
-        let minimum = base.saturating_sub(WINDOW_SIZE);
+        let minimum = base.saturating_sub(window_size);
 
         if base >= width {
             let current = match_length(pixels, base - width, base, max_length);
@@ -784,16 +793,28 @@ fn trace_backwards(
     output
 }
 
-pub(super) fn trace(pixels: &[u32], width: usize, source: &[Token], cache_bits: u8) -> Vec<Token> {
-    let chain = fill_hash_chain(pixels, width);
+pub(super) fn trace(
+    pixels: &[u32],
+    width: usize,
+    source: &[Token],
+    cache_bits: u8,
+    quality: u32,
+) -> Vec<Token> {
+    let chain = fill_hash_chain(pixels, width, quality);
     trace_backwards(pixels, width, &chain, source, cache_bits)
 }
 
-pub(super) fn candidates(pixels: &[u32], width: usize, allow_cache: bool) -> Vec<(Vec<Token>, u8)> {
+pub(super) fn candidates(
+    pixels: &[u32],
+    width: usize,
+    allow_cache: bool,
+    quality: u32,
+    max_cache_bits: u8,
+) -> Vec<(Vec<Token>, u8)> {
     if pixels.is_empty() {
         return vec![(Vec::new(), 0)];
     }
-    let chain = fill_hash_chain(pixels, width);
+    let chain = fill_hash_chain(pixels, width, quality);
     let refs = lz77(pixels, width, &chain);
     let refs_rle = rle(pixels, width);
     if !allow_cache {
@@ -802,7 +823,7 @@ pub(super) fn candidates(pixels: &[u32], width: usize, allow_cache: bool) -> Vec
     let candidates: Vec<_> = [refs, refs_rle]
         .into_iter()
         .map(|source| {
-            (0..=11)
+            (0..=max_cache_bits)
                 .map(|bits| {
                     let cached = with_cache(pixels, &source, bits);
                     let cost = cache_estimated_bits(&cached, bits);

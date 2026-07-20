@@ -540,7 +540,24 @@ fn write_image_stream<W: Write>(
     width: usize,
     write_meta_huffman_bit: bool,
 ) -> io::Result<()> {
-    let candidates = backward_refs::candidates(pixels, width, write_meta_huffman_bit);
+    write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 80, 11)
+}
+
+fn write_image_stream_configured<W: Write>(
+    w: &mut BitWriter<W>,
+    pixels: &[u32],
+    width: usize,
+    write_meta_huffman_bit: bool,
+    quality: u32,
+    max_cache_bits: u8,
+) -> io::Result<()> {
+    let candidates = backward_refs::candidates(
+        pixels,
+        width,
+        write_meta_huffman_bit,
+        quality,
+        max_cache_bits,
+    );
     let token_cost = |tokens: &[backward_refs::Token], cache_bits: u8| {
         backward_refs::estimated_bits(tokens, cache_bits)
     };
@@ -548,8 +565,8 @@ fn write_image_stream<W: Write>(
         .into_iter()
         .min_by_key(|(tokens, cache_bits)| token_cost(tokens, *cache_bits))
         .unwrap();
-    if write_meta_huffman_bit {
-        let traced = backward_refs::trace(pixels, width, &tokens, cache_bits);
+    if write_meta_huffman_bit && quality >= 25 {
+        let traced = backward_refs::trace(pixels, width, &tokens, cache_bits, quality);
         if token_cost(&traced, cache_bits) < token_cost(&tokens, cache_bits) {
             tokens = traced;
         }
@@ -788,6 +805,106 @@ fn encode_frame<W: Write>(
 
     w.flush()?;
     Ok(())
+}
+
+pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> io::Result<Vec<u8>> {
+    assert_eq!(alpha.len(), width as usize * height as usize);
+
+    let mut palette_values = alpha
+        .iter()
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let mut signs = 0u8;
+    let mut predicted = 0u8;
+    for &value in &palette_values {
+        let delta = value.wrapping_sub(predicted);
+        if delta != 0 {
+            signs |= if delta < 0x80 { 1 } else { 2 };
+        }
+        predicted = value;
+    }
+    if signs == 3 {
+        let mut sortable_len = palette_values.len();
+        if sortable_len > 17 && palette_values[0] == 0 {
+            sortable_len -= 1;
+            palette_values.swap(0, sortable_len);
+        }
+        predicted = 0;
+        for index in 0..sortable_len {
+            let (offset, _) = palette_values[index..sortable_len]
+                .iter()
+                .enumerate()
+                .map(|(offset, &value)| {
+                    let delta = value.wrapping_sub(predicted);
+                    (offset, delta.min(0u8.wrapping_sub(delta)))
+                })
+                .min_by_key(|&(_, distance)| distance)
+                .unwrap();
+            palette_values.swap(index, index + offset);
+            predicted = palette_values[index];
+        }
+    }
+    let palette = palette_values
+        .iter()
+        .map(|&value| u32::from(value) << 8)
+        .collect::<Vec<_>>();
+    let mut palette_indices = [0u8; 256];
+    for (index, &value) in palette_values.iter().enumerate() {
+        palette_indices[usize::from(value)] = index as u8;
+    }
+    let mut palette_delta = Vec::with_capacity(palette.len());
+    let mut previous = 0u32;
+    for &pixel in &palette {
+        let alpha = (pixel >> 24).wrapping_sub(previous >> 24) & 0xff;
+        let red = ((pixel >> 16) & 0xff).wrapping_sub((previous >> 16) & 0xff) & 0xff;
+        let green = ((pixel >> 8) & 0xff).wrapping_sub((previous >> 8) & 0xff) & 0xff;
+        let blue = (pixel & 0xff).wrapping_sub(previous & 0xff) & 0xff;
+        palette_delta.push(alpha << 24 | red << 16 | green << 8 | blue);
+        previous = pixel;
+    }
+
+    let mut encoded = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut encoded,
+        buffer: 0,
+        nbits: 0,
+    };
+    writer.write_bits(1, 1)?; // transform present
+    writer.write_bits(3, 2)?; // color-indexing transform
+    writer.write_bits((palette.len() - 1) as u64, 8)?;
+    write_image_stream_configured(&mut writer, &palette_delta, palette.len(), false, 20, 0)?;
+
+    let xbits = match palette.len() {
+        0..=2 => 3,
+        3..=4 => 2,
+        5..=16 => 1,
+        _ => 0,
+    };
+    let pixels_per_group = 1usize << xbits;
+    let bits_per_pixel = 8 >> xbits;
+    let packed_width = width.div_ceil(pixels_per_group as u32) as usize;
+    let mut packed = Vec::with_capacity(packed_width * height as usize);
+    for row in alpha.chunks_exact(width as usize) {
+        for group in row.chunks(pixels_per_group) {
+            let mut pixel = 0xff00_0000u32;
+            for (index, &value) in group.iter().enumerate() {
+                let palette_index = u32::from(palette_indices[usize::from(value)]);
+                pixel |= palette_index << (8 + bits_per_pixel * index);
+            }
+            packed.push(pixel);
+        }
+    }
+
+    writer.write_bits(0, 1)?; // transforms done
+    write_image_stream_configured(&mut writer, &packed, packed_width, true, 32, 2)?;
+    writer.flush()?;
+
+    let mut chunk = Vec::with_capacity(encoded.len() + 1);
+    chunk.push(1); // lossless compression, no filtering, no preprocessing
+    chunk.extend_from_slice(&encoded);
+    Ok(chunk)
 }
 
 const fn chunk_size(inner_bytes: usize) -> u32 {

@@ -85,6 +85,18 @@
       "encoded_ref_bytes": 3578
     },
     {
+      "id": "enc_lossy_alpha",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha.bin",
+      "encoded_ref_bytes": 2858
+    },
+    {
       "id": "enc_lossless_alpha",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_alpha.bin",
       "ref_bytes": 65536,

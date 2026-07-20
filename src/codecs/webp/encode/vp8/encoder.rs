@@ -25,6 +25,30 @@ use super::{
 /// Returns the complete RIFF/WEBP container bytes.
 pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec<u8> {
     let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height);
+    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality);
+    build_webp_container(&vp8_data, width, height)
+}
+
+pub(crate) fn encode_vp8_lossy_rgba(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    quality: u8,
+    alpha_chunk: &[u8],
+) -> Vec<u8> {
+    let (y_plane, u_plane, v_plane) = rgba_to_yuv_planes_internal(rgba, width, height);
+    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality);
+    build_extended_webp_container(&vp8_data, alpha_chunk, width, height)
+}
+
+fn encode_vp8_planes(
+    y_plane: Vec<u8>,
+    u_plane: Vec<u8>,
+    v_plane: Vec<u8>,
+    width: u32,
+    height: u32,
+    quality: u8,
+) -> Vec<u8> {
     let padded_width = width.div_ceil(16) * 16;
     let padded_height = height.div_ceil(16) * 16;
     let chroma_width = width.div_ceil(2);
@@ -82,7 +106,7 @@ pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec
     vp8_data.extend_from_slice(&header_data);
     vp8_data.extend_from_slice(&coeff_data);
 
-    build_webp_container(&vp8_data, width, height)
+    vp8_data
 }
 
 fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {
@@ -242,6 +266,205 @@ pub(super) fn rgb_to_yuv_planes_internal(
     (y_plane, u_plane, v_plane)
 }
 
+fn smoothen_transparent_luma(
+    rgba: &[u8],
+    image_width: usize,
+    y_plane: &mut [u8],
+    origin_x: usize,
+    origin_y: usize,
+    width: usize,
+    height: usize,
+) -> bool {
+    let mut sum = 0usize;
+    let mut count = 0usize;
+    for y in origin_y..origin_y + height {
+        for x in origin_x..origin_x + width {
+            if rgba[(y * image_width + x) * 4 + 3] != 0 {
+                count += 1;
+                sum += usize::from(y_plane[y * image_width + x]);
+            }
+        }
+    }
+    if count > 0 && count < width * height {
+        let average = (sum / count) as u8;
+        for y in origin_y..origin_y + height {
+            for x in origin_x..origin_x + width {
+                if rgba[(y * image_width + x) * 4 + 3] == 0 {
+                    y_plane[y * image_width + x] = average;
+                }
+            }
+        }
+    }
+    count == 0
+}
+
+fn fill_block(
+    plane: &mut [u8],
+    stride: usize,
+    origin_x: usize,
+    origin_y: usize,
+    size: usize,
+    value: u8,
+) {
+    for y in origin_y..origin_y + size {
+        plane[y * stride + origin_x..y * stride + origin_x + size].fill(value);
+    }
+}
+
+fn cleanup_transparent_area(
+    rgba: &[u8],
+    width: usize,
+    height: usize,
+    y_plane: &mut [u8],
+    u_plane: &mut [u8],
+    v_plane: &mut [u8],
+) {
+    const BLOCK: usize = 8;
+    let uv_width = width.div_ceil(2);
+    let full_width = width / BLOCK * BLOCK;
+    let full_height = height / BLOCK * BLOCK;
+
+    for origin_y in (0..full_height).step_by(BLOCK) {
+        let mut flattened_values = None;
+        for origin_x in (0..full_width).step_by(BLOCK) {
+            if smoothen_transparent_luma(rgba, width, y_plane, origin_x, origin_y, BLOCK, BLOCK) {
+                let values = *flattened_values.get_or_insert_with(|| {
+                    [
+                        y_plane[origin_y * width + origin_x],
+                        u_plane[(origin_y / 2) * uv_width + origin_x / 2],
+                        v_plane[(origin_y / 2) * uv_width + origin_x / 2],
+                    ]
+                });
+                fill_block(y_plane, width, origin_x, origin_y, BLOCK, values[0]);
+                fill_block(
+                    u_plane,
+                    uv_width,
+                    origin_x / 2,
+                    origin_y / 2,
+                    BLOCK / 2,
+                    values[1],
+                );
+                fill_block(
+                    v_plane,
+                    uv_width,
+                    origin_x / 2,
+                    origin_y / 2,
+                    BLOCK / 2,
+                    values[2],
+                );
+            } else {
+                flattened_values = None;
+            }
+        }
+        if full_width < width {
+            smoothen_transparent_luma(
+                rgba,
+                width,
+                y_plane,
+                full_width,
+                origin_y,
+                width - full_width,
+                BLOCK,
+            );
+        }
+    }
+    if full_height < height {
+        for origin_x in (0..full_width).step_by(BLOCK) {
+            smoothen_transparent_luma(
+                rgba,
+                width,
+                y_plane,
+                origin_x,
+                full_height,
+                BLOCK,
+                height - full_height,
+            );
+        }
+        if full_width < width {
+            smoothen_transparent_luma(
+                rgba,
+                width,
+                y_plane,
+                full_width,
+                full_height,
+                width - full_width,
+                height - full_height,
+            );
+        }
+    }
+}
+
+fn rgba_to_yuv_planes_internal(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    let w = width as usize;
+    let h = height as usize;
+    let mut y_plane = vec![0u8; w * h];
+    let uv_w = w.div_ceil(2);
+    let uv_h = h.div_ceil(2);
+    let mut u_plane = vec![0u8; uv_w * uv_h];
+    let mut v_plane = vec![0u8; uv_w * uv_h];
+
+    for row in 0..h {
+        for col in 0..w {
+            let index = (row * w + col) * 4;
+            y_plane[row * w + col] = rgb_to_y(
+                i32::from(rgba[index]),
+                i32::from(rgba[index + 1]),
+                i32::from(rgba[index + 2]),
+            );
+        }
+    }
+
+    let (gamma_to_linear, _) = gamma_tables();
+    for row in 0..uv_h {
+        for col in 0..uv_w {
+            let y0 = row * 2;
+            let x0 = col * 2;
+            let y1 = (y0 + 1).min(h - 1);
+            let x1 = (x0 + 1).min(w - 1);
+            let indices = [
+                (y0 * w + x0) * 4,
+                (y0 * w + x1) * 4,
+                (y1 * w + x0) * 4,
+                (y1 * w + x1) * 4,
+            ];
+            let total_alpha = indices
+                .iter()
+                .map(|&index| u32::from(rgba[index + 3]))
+                .sum::<u32>();
+            let channel_sum = |channel: usize| {
+                if matches!(total_alpha, 0 | 1020) {
+                    indices
+                        .iter()
+                        .map(|&index| u32::from(gamma_to_linear[rgba[index + channel] as usize]))
+                        .sum()
+                } else {
+                    let weighted = indices
+                        .iter()
+                        .map(|&index| {
+                            u32::from(rgba[index + 3])
+                                * u32::from(gamma_to_linear[rgba[index + channel] as usize])
+                        })
+                        .sum::<u32>();
+                    weighted * ((1 << 19) / total_alpha) >> 17
+                }
+            };
+            let r = linear_to_gamma(channel_sum(0));
+            let g = linear_to_gamma(channel_sum(1));
+            let b = linear_to_gamma(channel_sum(2));
+            let uv_index = row * uv_w + col;
+            u_plane[uv_index] = rgb_to_u(r, g, b);
+            v_plane[uv_index] = rgb_to_v(r, g, b);
+        }
+    }
+
+    cleanup_transparent_area(rgba, w, h, &mut y_plane, &mut u_plane, &mut v_plane);
+    (y_plane, u_plane, v_plane)
+}
+
 /// Build the uncompressed VP8 keyframe header (NOT bool-encoded).
 fn build_frame_header(width: u32, height: u32, partition0_size: u32) -> Vec<u8> {
     let mut hdr = Vec::new();
@@ -302,6 +525,35 @@ fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
     out
 }
 
-// ===========================================================================
-// Tests
-// ===========================================================================
+fn append_chunk(output: &mut Vec<u8>, name: &[u8; 4], data: &[u8]) {
+    output.extend_from_slice(name);
+    output.extend_from_slice(&(data.len() as u32).to_le_bytes());
+    output.extend_from_slice(data);
+    if data.len() & 1 != 0 {
+        output.push(0);
+    }
+}
+
+fn build_extended_webp_container(
+    vp8_data: &[u8],
+    alpha_chunk: &[u8],
+    width: u32,
+    height: u32,
+) -> Vec<u8> {
+    let mut output = Vec::new();
+    output.extend_from_slice(b"RIFF");
+    output.extend_from_slice(&[0; 4]);
+    output.extend_from_slice(b"WEBP");
+
+    let mut vp8x = Vec::with_capacity(10);
+    vp8x.extend_from_slice(&[0x10, 0, 0, 0]);
+    vp8x.extend_from_slice(&(width - 1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&(height - 1).to_le_bytes()[..3]);
+    append_chunk(&mut output, b"VP8X", &vp8x);
+    append_chunk(&mut output, b"ALPH", alpha_chunk);
+    append_chunk(&mut output, b"VP8 ", vp8_data);
+
+    let riff_size = (output.len() - 8) as u32;
+    output[4..8].copy_from_slice(&riff_size.to_le_bytes());
+    output
+}

@@ -6073,10 +6073,18 @@
           },
           "source_asset": "alpha_partial.png",
           "source_format": "png",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "lossy",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha.bin",
+          "encoded_ref_bytes": 2858,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6339,6 +6347,6 @@
     "assets_available": 161,
     "decode_active": 161,
     "decode_planned": 7,
-    "encode_not_wired": 34
+    "encode_not_wired": 33
   }
 }

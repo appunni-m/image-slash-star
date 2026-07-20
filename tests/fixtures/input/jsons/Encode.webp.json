@@ -149,6 +149,28 @@
       }
     },
     {
+      "id": "enc_lossy_alpha",
+      "source_asset": "alpha_partial.png",
+      "source_format": "png",
+      "params": {
+        "lossless": false,
+        "alpha": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/alpha_partial.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossless_alpha",
       "source_asset": "alpha_partial.png",
       "source_format": "png",

@@ -12,6 +12,7 @@
 #![allow(clippy::all, clippy::nursery, clippy::pedantic, clippy::restriction)]
 
 pub(crate) use self::decoder::WebPDecoder;
+pub(crate) use self::encoder::encode_alpha;
 pub(crate) use self::encoder::{ColorType, WebPEncoder};
 
 mod alpha_blending;
