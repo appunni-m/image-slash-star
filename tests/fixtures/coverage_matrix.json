@@ -5432,6 +5432,150 @@
           "oracle_status": "ok"
         },
         {
+          "id": "lossless_transform_variants",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_solid.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_solid_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_horizontal",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_horizontal.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_horizontal_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_vertical",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_vertical.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_vertical_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_diagonal",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_diagonal.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_diagonal_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_checker2",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_checker2.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_checker2_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_palette4",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_palette4.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_palette4_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_palette16",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_palette16.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_palette16_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_lossless_noise",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "lossless_noise.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_noise_webp.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
           "asset": "extended.webp",
           "asset_path": "tests/fixtures/input/images/webp/extended.webp",
           "category": "extended",
@@ -6068,12 +6212,12 @@
     }
   },
   "summary": {
-    "total_rows": 332,
-    "decode_rows": 170,
+    "total_rows": 340,
+    "decode_rows": 178,
     "encode_rows": 130,
     "formats": 8,
-    "assets_available": 163,
-    "decode_active": 164,
+    "assets_available": 171,
+    "decode_active": 172,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

@@ -489,6 +489,19 @@ def gen_webp():
     for quality in (10, 50, 90, 100):
         img.save(d / f"lossy_q{quality}.webp", lossless=False, quality=quality)
     img.save(d / "lossless.webp", lossless=True)
+    Image.new("RGB", (64, 64), (17, 89, 203)).save(d / "lossless_solid.webp", lossless=True)
+    for name, pixel in {
+        "horizontal": lambda x, y: (x * 4, x * 2, x),
+        "vertical": lambda x, y: (y * 4, y * 2, y),
+        "diagonal": lambda x, y: ((x + y) * 2, (x - y) & 255, (x * y) & 255),
+        "checker2": lambda x, y: (255, 0, 0) if (x + y) % 2 else (0, 0, 255),
+        "palette4": lambda x, y: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)][(x + y) % 4],
+        "palette16": lambda x, y: (((x + y) % 16) * 17, ((x + y) % 16) * 7, ((x + y) % 16) * 13),
+        "noise": lambda x, y: ((x * 73 + y * 151) & 255, (x * 199 + y * 37) & 255, (x * 17 + y * 109) & 255),
+    }.items():
+        variant = Image.new("RGB", (64, 64))
+        variant.putdata([pixel(x, y) for y in range(64) for x in range(64)])
+        variant.save(d / f"lossless_{name}.webp", lossless=True, method=6)
     img.save(d / "no_alpha.webp")
     rgba = img.convert("RGBA")
     rgba.save(d / "with_alpha.webp", lossless=True)

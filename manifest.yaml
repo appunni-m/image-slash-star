@@ -984,6 +984,17 @@ formats:
       description: Lossless WebP (VP8L codec)
       test_assets:
       - lossless.webp
+    - id: lossless_transform_variants
+      description: VP8L predictor, palette, color, and subtract-green transform corpus
+      test_assets:
+      - lossless_solid.webp
+      - lossless_horizontal.webp
+      - lossless_vertical.webp
+      - lossless_diagonal.webp
+      - lossless_checker2.webp
+      - lossless_palette4.webp
+      - lossless_palette16.webp
+      - lossless_noise.webp
     - id: extended
       description: Extended WebP (VP8X container)
       test_assets:
