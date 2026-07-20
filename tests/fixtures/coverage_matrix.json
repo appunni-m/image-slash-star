@@ -482,20 +482,6 @@
         {
           "description": "",
           "format": "bmp",
-          "id": "enc_4bit",
-          "params": {
-            "bit_depth": 4
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "4bit",
-          "gap": "Pillow 12.2.0 saves P-mode BMP as 8-bit and cannot select 4-bit output."
-        },
-        {
-          "description": "",
-          "format": "bmp",
           "id": "enc_8bit",
           "params": {
             "bit_depth": 8
@@ -514,20 +500,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "",
-          "format": "bmp",
-          "id": "enc_16bit",
-          "params": {
-            "bit_depth": 16
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "16bit",
-          "gap": "Pillow 12.2.0 saves RGB BMP as 24-bit and cannot select 16-bit output."
         },
         {
           "description": "",
@@ -598,62 +570,6 @@
         {
           "description": "",
           "format": "bmp",
-          "id": "enc_bi_rle8",
-          "params": {
-            "compression": "BI_RLE8"
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "bi",
-          "gap": "Pillow 12.2.0 BMP save cannot select BI_RLE8 compression."
-        },
-        {
-          "description": "",
-          "format": "bmp",
-          "id": "enc_bi_rle4",
-          "params": {
-            "compression": "BI_RLE4"
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "bi",
-          "gap": "Pillow 12.2.0 BMP save cannot select BI_RLE4 compression."
-        },
-        {
-          "description": "",
-          "format": "bmp",
-          "id": "enc_bi_bitfields",
-          "params": {
-            "compression": "BI_BITFIELDS"
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "bi",
-          "gap": "Pillow 12.2.0 BMP save does not expose BI_BITFIELDS."
-        },
-        {
-          "description": "",
-          "format": "bmp",
-          "id": "enc_top_down",
-          "params": {
-            "top_down": true
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "top",
-          "gap": "Pillow 12.2.0 BMP save cannot emit top-down rows."
-        },
-        {
-          "description": "",
-          "format": "bmp",
           "id": "enc_bottom_up",
           "params": {
             "top_down": false
@@ -694,34 +610,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "",
-          "format": "bmp",
-          "id": "enc_v4_header",
-          "params": {
-            "header": "V4"
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "v4",
-          "gap": "Pillow 12.2.0 BMP save cannot select a V4 header."
-        },
-        {
-          "description": "",
-          "format": "bmp",
-          "id": "enc_v5_header",
-          "params": {
-            "header": "V5"
-          },
-          "source_asset": "24bit.bmp",
-          "source_format": "bmp",
-          "status": "planned",
-          "type": "encode",
-          "category": "v5",
-          "gap": "Pillow 12.2.0 BMP save cannot select a V5 header."
         },
         {
           "description": "",
@@ -1210,20 +1098,6 @@
         {
           "description": "",
           "format": "gif",
-          "id": "enc_local_ct",
-          "params": {
-            "color_table": "local"
-          },
-          "source_asset": "static.gif",
-          "source_format": "gif",
-          "status": "planned",
-          "type": "encode",
-          "category": "local",
-          "gap": "Pillow cannot save a single-frame GIF with only a local color table."
-        },
-        {
-          "description": "",
-          "format": "gif",
           "id": "enc_1x1",
           "params": {
             "size": [
@@ -1651,23 +1525,6 @@
             16,
             16
           ]
-        },
-        {
-          "description": "",
-          "format": "ico",
-          "id": "enc_hotspot",
-          "params": {
-            "hotspot": [
-              8,
-              8
-            ]
-          },
-          "source_asset": "16x16.ico",
-          "source_format": "ico",
-          "status": "planned",
-          "type": "encode",
-          "category": "hotspot",
-          "gap": "Pillow 12.2.0 ICO save cannot emit cursor hotspots."
         },
         {
           "description": "Multi-resolution",
@@ -2729,20 +2586,6 @@
         {
           "description": "",
           "format": "jpeg",
-          "id": "enc_exif",
-          "params": {
-            "exif": true
-          },
-          "source_asset": "baseline_444.jpg",
-          "source_format": "jpeg",
-          "status": "planned",
-          "type": "encode",
-          "category": "exif",
-          "gap": "exif=true does not identify the metadata bytes Pillow must encode."
-        },
-        {
-          "description": "",
-          "format": "jpeg",
           "id": "enc_no_exif",
           "params": {
             "exif": false
@@ -2805,34 +2648,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "",
-          "format": "jpeg",
-          "id": "enc_dct_fast",
-          "params": {
-            "dct_method": "fast"
-          },
-          "source_asset": "baseline_444.jpg",
-          "source_format": "jpeg",
-          "status": "planned",
-          "type": "encode",
-          "category": "dct",
-          "gap": "Pillow 12.2.0 does not expose a JPEG DCT method selector."
-        },
-        {
-          "description": "",
-          "format": "jpeg",
-          "id": "enc_dct_slow",
-          "params": {
-            "dct_method": "slow"
-          },
-          "source_asset": "baseline_444.jpg",
-          "source_format": "jpeg",
-          "status": "planned",
-          "type": "encode",
-          "category": "dct",
-          "gap": "Pillow 12.2.0 does not expose a JPEG DCT method selector."
         },
         {
           "description": "",
@@ -4101,20 +3916,6 @@
         {
           "description": "",
           "format": "png",
-          "id": "enc_adam7",
-          "params": {
-            "interlace": true
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "adam7",
-          "gap": "Pillow 12.2.0 cannot encode Adam7 PNG output."
-        },
-        {
-          "description": "",
-          "format": "png",
           "id": "enc_no_interlace",
           "params": {
             "interlace": false
@@ -4177,90 +3978,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "",
-          "format": "png",
-          "id": "enc_filter_none",
-          "params": {
-            "filter": "none"
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "filter",
-          "gap": "Pillow 12.2.0 does not expose PNG row-filter selection."
-        },
-        {
-          "description": "",
-          "format": "png",
-          "id": "enc_filter_sub",
-          "params": {
-            "filter": "sub"
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "filter",
-          "gap": "Pillow 12.2.0 does not expose PNG row-filter selection."
-        },
-        {
-          "description": "",
-          "format": "png",
-          "id": "enc_filter_up",
-          "params": {
-            "filter": "up"
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "filter",
-          "gap": "Pillow 12.2.0 does not expose PNG row-filter selection."
-        },
-        {
-          "description": "",
-          "format": "png",
-          "id": "enc_filter_avg",
-          "params": {
-            "filter": "average"
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "filter",
-          "gap": "Pillow 12.2.0 does not expose PNG row-filter selection."
-        },
-        {
-          "description": "",
-          "format": "png",
-          "id": "enc_filter_paeth",
-          "params": {
-            "filter": "paeth"
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "filter",
-          "gap": "Pillow 12.2.0 does not expose PNG row-filter selection."
-        },
-        {
-          "description": "",
-          "format": "png",
-          "id": "enc_filter_adaptive",
-          "params": {
-            "filter": "adaptive"
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "filter",
-          "gap": "Pillow 12.2.0 does not expose PNG row-filter selection."
         },
         {
           "description": "",
@@ -4487,20 +4204,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "Adam7 interlaced",
-          "format": "png",
-          "id": "enc_interlaced",
-          "params": {
-            "interlaced": true
-          },
-          "source_asset": "rgb.png",
-          "source_format": "png",
-          "status": "planned",
-          "type": "encode",
-          "category": "interlaced",
-          "gap": "Pillow 12.2.0 cannot encode Adam7 PNG output."
         },
         {
           "description": "RGB output",
@@ -4873,17 +4576,6 @@
           ]
         },
         {
-          "asset": "ycbcr.tiff",
-          "category": "ycbcr",
-          "description": "YCbCr",
-          "expect_error": false,
-          "format": "tiff",
-          "id": "ycbcr",
-          "status": "planned",
-          "type": "decode",
-          "gap": "Pillow 12.2.0 cannot load the generated ycbcr.tiff fixture (truncated image data)."
-        },
-        {
           "asset": "1bit.tiff",
           "category": "depth",
           "description": "1-bit",
@@ -5157,20 +4849,6 @@
         {
           "description": "",
           "format": "tiff",
-          "id": "enc_byte_be",
-          "params": {
-            "byte_order": "be"
-          },
-          "source_asset": "rgb.tiff",
-          "source_format": "tiff",
-          "status": "planned",
-          "type": "encode",
-          "category": "byte",
-          "gap": "Pillow 12.2.0 Image.save cannot select big-endian TIFF output."
-        },
-        {
-          "description": "",
-          "format": "tiff",
           "id": "enc_bilevel",
           "params": {
             "color": "1bit"
@@ -5369,20 +5047,6 @@
         {
           "description": "",
           "format": "tiff",
-          "id": "enc_tiled",
-          "params": {
-            "organization": "tiled"
-          },
-          "source_asset": "rgb.tiff",
-          "source_format": "tiff",
-          "status": "planned",
-          "type": "encode",
-          "category": "tiled",
-          "gap": "Pillow 12.2.0 Image.save cannot select tiled TIFF output."
-        },
-        {
-          "description": "",
-          "format": "tiff",
           "id": "enc_single_page",
           "params": {
             "pages": 1
@@ -5401,20 +5065,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "",
-          "format": "tiff",
-          "id": "enc_multi_page",
-          "params": {
-            "pages": 2
-          },
-          "source_asset": "rgb.tiff",
-          "source_format": "tiff",
-          "status": "planned",
-          "type": "encode",
-          "category": "multi",
-          "gap": "pages=2 does not identify the second image Pillow must append."
         },
         {
           "description": "",
@@ -5572,20 +5222,6 @@
             128,
             128
           ]
-        },
-        {
-          "description": "Big-endian",
-          "format": "tiff",
-          "id": "enc_be",
-          "params": {
-            "byte_order": "be"
-          },
-          "source_asset": "rgb.tiff",
-          "source_format": "tiff",
-          "status": "planned",
-          "type": "encode",
-          "category": "be",
-          "gap": "Pillow 12.2.0 Image.save cannot select big-endian TIFF output."
         }
       ]
     },
@@ -6134,48 +5770,6 @@
         {
           "description": "",
           "format": "webp",
-          "id": "enc_hint_photo",
-          "params": {
-            "hint": "photo"
-          },
-          "source_asset": "lossless.webp",
-          "source_format": "webp",
-          "status": "planned",
-          "type": "encode",
-          "category": "hint",
-          "gap": "Pillow 12.2.0 does not expose the libwebp image-hint selector."
-        },
-        {
-          "description": "",
-          "format": "webp",
-          "id": "enc_hint_graph",
-          "params": {
-            "hint": "graph"
-          },
-          "source_asset": "lossless.webp",
-          "source_format": "webp",
-          "status": "planned",
-          "type": "encode",
-          "category": "hint",
-          "gap": "Pillow 12.2.0 does not expose the libwebp image-hint selector."
-        },
-        {
-          "description": "",
-          "format": "webp",
-          "id": "enc_hint_picture",
-          "params": {
-            "hint": "picture"
-          },
-          "source_asset": "lossless.webp",
-          "source_format": "webp",
-          "status": "planned",
-          "type": "encode",
-          "category": "hint",
-          "gap": "Pillow 12.2.0 does not expose the libwebp image-hint selector."
-        },
-        {
-          "description": "",
-          "format": "webp",
           "id": "enc_method_0",
           "params": {
             "method": 0
@@ -6380,13 +5974,13 @@
     }
   },
   "summary": {
-    "total_rows": 324,
-    "decode_rows": 168,
-    "encode_rows": 156,
+    "total_rows": 295,
+    "decode_rows": 167,
+    "encode_rows": 128,
     "formats": 8,
-    "assets_available": 161,
+    "assets_available": 160,
     "decode_active": 161,
-    "decode_planned": 7,
-    "encode_not_wired": 28
+    "decode_planned": 6,
+    "encode_not_wired": 0
   }
 }

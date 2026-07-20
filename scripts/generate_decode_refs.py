@@ -105,6 +105,10 @@ def sync_decode_rows(manifest, matrix):
         synchronized = []
         seen = set()
         for case in fmt_manifest.get("edge_cases", []):
+            # Keep format capabilities documented in manifest.yaml, but only
+            # put operations Pillow can actually express into its oracle matrix.
+            if case.get("status") == "planned" and case.get("oracle_gap"):
+                continue
             for asset_name in case.get("test_assets", []):
                 row_id = decode_row_id(case, asset_name)
                 if row_id in seen:
@@ -685,6 +689,10 @@ def sync_encode_rows(manifest, matrix):
         default_source_asset = default_source.get("asset")
         synchronized = []
         for specification in specifications:
+            # An oracle gap is not an implementation failure: Pillow has no
+            # public call capable of producing the requested variant.
+            if specification.get("status") == "planned" and specification.get("oracle_gap"):
+                continue
             case_id = specification["id"]
             row = dict(existing.get(case_id, {}))
             row.update(
@@ -839,6 +847,8 @@ def generate_decode(manifest, matrix, target_format=None):
         if target_format and fmt_name != target_format:
             continue
         for case in fmt_data.get("edge_cases", []):
+            if case.get("status") == "planned" and case.get("oracle_gap"):
+                continue
             for asset_name in case.get("test_assets", []):
                 row = ensure_decode_row(matrix, fmt_name, case, asset_name)
                 if fmt_data.get("status") == "planned" or case.get("status") == "planned":
