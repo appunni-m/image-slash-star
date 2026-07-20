@@ -312,80 +312,17 @@ impl DynamicImage {
             + FromColor<color::Luma<u16>>
             + FromColor<color::LumaA<u16>>,
     {
-        use ColorType::*;
-        match self.color() {
-            L8 => {
-                let Some(img) = self.as_luma8() else {
-                    panic!("BUG: as_luma8 returned None for L8 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            La8 => {
-                let Some(img) = self.as_luma_alpha8() else {
-                    panic!("BUG: as_luma_alpha8 returned None for La8 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Rgb8 => {
-                let Some(img) = self.as_rgb8() else {
-                    panic!("BUG: as_rgb8 returned None for Rgb8 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Rgba8 => {
-                let Some(img) = self.as_rgba8() else {
-                    panic!("BUG: as_rgba8 returned None for Rgba8 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Cmyk8 => unreachable!("DynamicImage has no native CMYK representation"),
-            L16 => {
-                let Some(img) = self.as_luma16() else {
-                    panic!("BUG: as_luma16 returned None for L16 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            La16 => {
-                let Some(img) = self.as_luma_alpha16() else {
-                    panic!("BUG: as_luma_alpha16 returned None for La16 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Rgb16 => {
-                let Some(img) = self.as_rgb16() else {
-                    panic!("BUG: as_rgb16 returned None for Rgb16 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Rgba16 => {
-                let Some(img) = self.as_rgba16() else {
-                    panic!("BUG: as_rgba16 returned None for Rgba16 image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Rgb32F => {
-                let Some(img) = self.as_rgb32f() else {
-                    panic!("BUG: as_rgb32f returned None for Rgb32F image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            Rgba32F => {
-                let Some(img) = self.as_rgba32f() else {
-                    panic!("BUG: as_rgba32f returned None for Rgba32F image");
-                };
-                let buf: ImageBuffer<Px, Vec<Px::Subpixel>> = img.convert();
-                buf
-            }
-            L32F => unreachable!("DynamicImage has no native scalar-f32 representation"),
+        match self {
+            DynamicImage::ImageLuma8(img) => img.convert(),
+            DynamicImage::ImageLumaA8(img) => img.convert(),
+            DynamicImage::ImageRgb8(img) => img.convert(),
+            DynamicImage::ImageRgba8(img) => img.convert(),
+            DynamicImage::ImageLuma16(img) => img.convert(),
+            DynamicImage::ImageLumaA16(img) => img.convert(),
+            DynamicImage::ImageRgb16(img) => img.convert(),
+            DynamicImage::ImageRgba16(img) => img.convert(),
+            DynamicImage::ImageRgb32F(img) => img.convert(),
+            DynamicImage::ImageRgba32F(img) => img.convert(),
         }
     }
 

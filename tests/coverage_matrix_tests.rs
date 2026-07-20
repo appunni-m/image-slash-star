@@ -1466,6 +1466,7 @@ fn test_operation_matrix() {
 fn exercise_buffer<P>(buffer: &mut img::ImageBuffer<P, Vec<P::Subpixel>>)
 where
     P: img::Pixel,
+    P::Subpixel: std::fmt::Debug,
 {
     use img::{GenericImage, GenericImageView, Primitive};
 
@@ -1478,12 +1479,26 @@ where
 
     let mut pixels = buffer.pixels();
     assert_eq!(pixels.size_hint().0, (width * height) as usize);
+    assert_eq!(pixels.len(), (width * height) as usize);
+    let _ = format!("{pixels:?}");
     let _ = pixels.clone().next();
     let _ = pixels.next_back();
-    let _ = buffer.rows().next();
-    let _ = buffer.rows().next_back();
-    let _ = buffer.enumerate_pixels().next();
-    let _ = buffer.enumerate_rows().next();
+    let mut rows = buffer.rows();
+    let _ = rows.size_hint();
+    let _ = rows.len();
+    let _ = format!("{rows:?}");
+    let _ = rows.clone().next();
+    let _ = rows.next_back();
+    let enumerate_pixels = buffer.enumerate_pixels();
+    let _ = enumerate_pixels.size_hint();
+    let _ = enumerate_pixels.len();
+    let _ = format!("{enumerate_pixels:?}");
+    let _ = enumerate_pixels.clone().count();
+    let enumerate_rows = buffer.enumerate_rows();
+    let _ = enumerate_rows.size_hint();
+    let _ = enumerate_rows.len();
+    let _ = format!("{enumerate_rows:?}");
+    let _ = enumerate_rows.clone().count();
 
     let pixel = *buffer.get_pixel(0, 0);
     assert!(buffer.get_pixel_checked(0, 0).is_some());
@@ -1494,13 +1509,35 @@ where
     assert!(buffer.get_pixel_mut_checked(0, 0).is_some());
     assert!(buffer.get_pixel_mut_checked(width, 0).is_none());
     assert!(buffer.get_pixel_mut_checked(0, height).is_none());
-    for value in buffer.pixels_mut().take(1) {
-        *value = pixel;
+    {
+        let mut pixels = buffer.pixels_mut();
+        let _ = pixels.size_hint();
+        let _ = pixels.len();
+        let _ = format!("{pixels:?}");
+        let _ = pixels.next_back();
     }
-    let _ = buffer.rows_mut().next();
-    let _ = buffer.rows_mut().next_back();
-    let _ = buffer.enumerate_pixels_mut().next();
-    let _ = buffer.enumerate_rows_mut().next();
+    {
+        let mut rows = buffer.rows_mut();
+        let _ = rows.size_hint();
+        let _ = rows.len();
+        let _ = format!("{rows:?}");
+        let _ = rows.next();
+        let _ = rows.next_back();
+    }
+    {
+        let pixels = buffer.enumerate_pixels_mut();
+        let _ = pixels.size_hint();
+        let _ = pixels.len();
+        let _ = format!("{pixels:?}");
+        let _ = pixels.count();
+    }
+    {
+        let rows = buffer.enumerate_rows_mut();
+        let _ = rows.size_hint();
+        let _ = rows.len();
+        let _ = format!("{rows:?}");
+        let _ = rows.count();
+    }
 
     assert!(GenericImageView::in_bounds(buffer, 0, 0));
     assert!(!GenericImageView::in_bounds(buffer, width, height));
@@ -1508,6 +1545,53 @@ where
     let _ = GenericImageView::buffer_like(buffer);
     let _ = GenericImageView::buffer_with_dimensions(buffer, 1, 1);
     GenericImage::copy_from(buffer, &clone, 0, 0).unwrap();
+    let _ = GenericImage::get_pixel_mut(buffer, 0, 0);
+    #[allow(deprecated)]
+    GenericImage::blend_pixel(buffer, 0, 0, pixel);
+    let mut too_small = img::ImageBuffer::<P, Vec<P::Subpixel>>::new(1, 1);
+    assert!(GenericImage::copy_from(&mut too_small, &clone, 0, 0).is_err());
+
+    let mut copy = img::ImageBuffer::from_pixel(3, 3, pixel);
+    let rects = [
+        (img::Rect::new(0, 0, 1, 1), 1, 1),
+        (img::Rect::new(0, 1, 1, 1), 1, 0),
+        (img::Rect::new(1, 0, 1, 1), 0, 1),
+        (img::Rect::new(1, 1, 1, 1), 0, 0),
+    ];
+    for (source, x, y) in rects {
+        assert!(GenericImage::copy_within(&mut copy, source, x, y));
+    }
+    assert!(!GenericImage::copy_within(
+        &mut copy,
+        img::Rect::new(3, 0, 1, 1),
+        0,
+        0,
+    ));
+    assert!(!GenericImage::copy_within(
+        &mut copy,
+        img::Rect::new(0, 3, 1, 1),
+        0,
+        0,
+    ));
+    assert!(!GenericImage::copy_within(
+        &mut copy,
+        img::Rect::new(0, 0, 3, 3),
+        1,
+        1,
+    ));
+
+    let generated = img::ImageBuffer::from_fn(2, 2, |_x, _y| pixel);
+    assert_eq!(
+        generated.into_vec().len(),
+        4 * usize::from(P::CHANNEL_COUNT)
+    );
+    assert!(img::ImageBuffer::<P, Vec<P::Subpixel>>::from_vec(1, 1, vec![]).is_none());
+    let default = img::ImageBuffer::<P, Vec<P::Subpixel>>::default();
+    assert_eq!(default.dimensions(), (0, 0));
+    assert_eq!(default.rows().count(), 0);
+    let mut default_mut = default;
+    assert_eq!(default_mut.rows_mut().count(), 0);
+    let _: &mut [P::Subpixel] = &mut default_mut;
 
     let mut local = pixel;
     let _ = local.channels();
@@ -1664,6 +1748,8 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
     }
     let short = img::DecodedImage::new(1, 1, vec![], img::ColorType::Rgb8);
     assert!(img::DynamicImage::from_decoded(&short).is_none());
+    let short_alpha = img::DecodedImage::new(1, 1, vec![], img::ColorType::La8);
+    assert!(img::DynamicImage::from_decoded(&short_alpha).is_none());
 }
 
 fn exercise_primitive<T>(value: T)
@@ -1685,7 +1771,7 @@ where
 }
 
 fn exercise_type_metadata() {
-    use img::{EncodableLayout, ExtendedColorType as E, GenericImage};
+    use img::{EncodableLayout, ExtendedColorType as E, GenericImage, Pixel};
 
     let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::Cmyk8));
     let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::L32F));
@@ -1694,6 +1780,39 @@ fn exercise_type_metadata() {
         #[allow(deprecated)]
         let _ = GenericImage::get_pixel_mut(&mut dynamic, 0, 0);
     }));
+    let immutable = img::RgbaImage::new(1, 1);
+    let _ = std::panic::catch_unwind(|| immutable.get_pixel(1, 0));
+    let mut mutable = img::RgbaImage::new(1, 1);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = mutable.get_pixel_mut(0, 1);
+    }));
+    let _ = std::panic::catch_unwind(|| img::RgbaImage::new(u32::MAX, u32::MAX));
+
+    let mut luma: img::Luma<u8> = [1].into();
+    luma[0] = 2;
+    let mut luma_alpha: img::LumaA<u8> = [1, 2].into();
+    luma_alpha[1] = 3;
+    let mut rgb: img::Rgb<u8> = [1, 2, 3].into();
+    rgb[2] = 4;
+    let mut rgba: img::Rgba<u8> = [1, 2, 3, 4].into();
+    rgba[3] = 5;
+
+    let mut gray_bg = img::LumaA([10u8, 100]);
+    gray_bg.blend(&img::LumaA([20, 255]));
+    gray_bg.blend(&img::LumaA([20, 0]));
+    gray_bg.blend(&img::LumaA([20, 128]));
+    let mut gray_zero = img::LumaA([0.0f32, -1.0]);
+    gray_zero.blend(&img::LumaA([0.0, 0.5]));
+    let mut rgba_bg = img::Rgba([10u8, 20, 30, 100]);
+    rgba_bg.blend(&img::Rgba([20, 30, 40, 255]));
+    rgba_bg.blend(&img::Rgba([20, 30, 40, 0]));
+    rgba_bg.blend(&img::Rgba([20, 30, 40, 128]));
+    let mut rgba_zero = img::Rgba([0.0f32, 0.0, 0.0, -1.0]);
+    rgba_zero.blend(&img::Rgba([0.0, 0.0, 0.0, 0.5]));
+    let mut flat_luma = img::Luma([1u8]);
+    flat_luma.blend(&img::Luma([2]));
+    let mut flat_rgb = img::Rgb([1u8, 2, 3]);
+    flat_rgb.blend(&img::Rgb([4, 5, 6]));
 
     let colors = [
         img::ColorType::L8,
