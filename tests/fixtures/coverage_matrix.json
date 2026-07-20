@@ -9440,6 +9440,52 @@
           ]
         },
         {
+          "id": "enc_lossy_grayscale",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy grayscale WebP converted through Pillow's RGB path",
+          "params": {
+            "lossless": false,
+            "grayscale": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_grayscale.bin",
+          "encoded_ref_bytes": 2146,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_grayscale.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_lossless_grayscale",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless grayscale WebP converted through Pillow's RGB path",
+          "params": {
+            "lossless": true,
+            "grayscale": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_grayscale.bin",
+          "encoded_ref_bytes": 3404,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_grayscale.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_lossy_alpha",
@@ -9463,6 +9509,29 @@
           ]
         },
         {
+          "id": "enc_lossy_opaque_rgba",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy WebP strips an all-opaque alpha channel",
+          "params": {
+            "lossless": false,
+            "alpha": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgba.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_opaque_rgba.bin",
+          "encoded_ref_bytes": 3634,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_opaque_rgba.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_lossless_alpha",
@@ -9478,6 +9547,30 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_alpha.bin",
           "encoded_ref_bytes": 2774,
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_alpha.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_lossy_alpha_exif",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy alpha WebP with EXIF metadata on an existing VP8X container",
+          "params": {
+            "lossless": false,
+            "alpha": true,
+            "exif_hex": "45786966000049492a000800000000000000"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "alpha_partial.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_exif.bin",
+          "encoded_ref_bytes": 2878,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_exif.bin",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -9780,9 +9873,9 @@
     }
   },
   "summary": {
-    "total_rows": 517,
+    "total_rows": 521,
     "decode_rows": 308,
-    "encode_rows": 177,
+    "encode_rows": 181,
     "formats": 8,
     "assets_available": 301,
     "decode_active": 302,

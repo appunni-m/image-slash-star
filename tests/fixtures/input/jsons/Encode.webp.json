@@ -149,6 +149,50 @@
       }
     },
     {
+      "id": "enc_lossy_grayscale",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {
+        "lossless": false,
+        "grayscale": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_grayscale",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {
+        "lossless": true,
+        "grayscale": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossy_alpha",
       "source_asset": "alpha_partial.png",
       "source_format": "png",
@@ -158,6 +202,28 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/alpha_partial.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_opaque_rgba",
+      "source_asset": "rgba.png",
+      "source_format": "png",
+      "params": {
+        "lossless": false,
+        "alpha": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba.png",
         "method": "PIL.Image.Image.save",
         "format": "WEBP",
         "kwargs": {
@@ -184,6 +250,33 @@
         "format": "WEBP",
         "kwargs": {
           "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_exif",
+      "source_asset": "alpha_partial.png",
+      "source_format": "png",
+      "params": {
+        "lossless": false,
+        "alpha": true,
+        "exif_hex": "45786966000049492a000800000000000000"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/alpha_partial.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false,
+          "exif": {
+            "type": "bytes",
+            "hex": "45786966000049492a000800000000000000"
+          }
         },
         "roundtrip": [
           "PIL.Image.open",

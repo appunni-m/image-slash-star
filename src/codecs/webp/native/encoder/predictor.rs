@@ -263,3 +263,23 @@ pub(crate) fn select_and_apply(
     );
     (modes, best_bits)
 }
+
+pub(crate) fn apply_fixed(
+    source: &mut [u32],
+    width: usize,
+    height: usize,
+    bits: u8,
+    mode: usize,
+) -> (Vec<u32>, u8) {
+    let tile_size = 1_usize << bits;
+    let tiles_per_row = (width + tile_size - 1) >> bits;
+    let tiles_per_column = (height + tile_size - 1) >> bits;
+    let mut modes = vec![ARGB_BLACK | ((mode as u32) << 8); tiles_per_row * tiles_per_column];
+    apply_modes(source, width, height, bits, &modes);
+    let best_bits = optimize_sampling(&mut modes, width, height, bits);
+    modes.truncate(
+        ((width + (1 << best_bits) - 1) >> best_bits)
+            * ((height + (1 << best_bits) - 1) >> best_bits),
+    );
+    (modes, best_bits)
+}

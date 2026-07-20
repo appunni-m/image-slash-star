@@ -672,21 +672,42 @@ fn encode_frame<W: Write>(
         }
     }
 
-    let (predictor_map, predictor_bits) =
-        predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3);
+    let grayscale = pixels.iter().all(|&pixel| {
+        let red = (pixel >> 16) & 0xff;
+        let green = (pixel >> 8) & 0xff;
+        let blue = pixel & 0xff;
+        red == green && green == blue
+    });
+    if grayscale {
+        w.write_bits(1, 1)?;
+        w.write_bits(2, 2)?;
+        for pixel in &mut pixels {
+            let alpha = *pixel & 0xff00_0000;
+            let green = *pixel & 0x0000_ff00;
+            *pixel = alpha | green;
+        }
+    }
+
+    let (predictor_map, predictor_bits) = if grayscale {
+        predictor::apply_fixed(&mut pixels, width as usize, height as usize, 3, 12)
+    } else {
+        predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3)
+    };
     w.write_bits(1, 1)?;
     w.write_bits(0, 2)?;
     w.write_bits(u64::from(predictor_bits - 2), 3)?;
     let predictor_width = (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
     write_image_stream(w, &predictor_map, predictor_width, false)?;
 
-    let (color_map, color_bits) =
-        cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
-    w.write_bits(1, 1)?;
-    w.write_bits(1, 2)?;
-    w.write_bits(u64::from(color_bits - 2), 3)?;
-    let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
-    write_image_stream(w, &color_map, color_width, false)?;
+    if !grayscale {
+        let (color_map, color_bits) =
+            cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
+        w.write_bits(1, 1)?;
+        w.write_bits(1, 2)?;
+        w.write_bits(u64::from(color_bits - 2), 3)?;
+        let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
+        write_image_stream(w, &color_map, color_width, false)?;
+    }
 
     w.write_bits(0, 1)?; // transforms done
     write_image_stream(w, &pixels, width as usize, true)?;

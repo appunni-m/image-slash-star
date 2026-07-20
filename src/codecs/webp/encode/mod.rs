@@ -106,15 +106,22 @@ fn attach_metadata(
 /// Lossless VP8L encoding via the internal `WebPEncoder`.
 fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>> {
     let (width, height) = (img.width, img.height);
+    let expanded_luma = (img.color == ColorType::L8).then(|| {
+        img.pixels
+            .iter()
+            .flat_map(|&value| [value; 3])
+            .collect::<Vec<_>>()
+    });
+    let pixels = expanded_luma.as_deref().unwrap_or(&img.pixels);
     let color = match img.color {
-        ColorType::Rgb8 => super::native::ColorType::Rgb8,
+        ColorType::L8 | ColorType::Rgb8 => super::native::ColorType::Rgb8,
         ColorType::Rgba8 => super::native::ColorType::Rgba8,
         _ => return None,
     };
 
     let mut out = Cursor::new(Vec::new());
     let encoder = super::native::WebPEncoder::new(&mut out);
-    encoder.encode(&img.pixels, width, height, color).ok()?;
+    encoder.encode(pixels, width, height, color).ok()?;
 
     Some(out.into_inner())
 }
@@ -126,6 +133,14 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let quality = opts.quality.unwrap_or(80).min(100);
     let method = opts.method.unwrap_or(4).min(6);
     let encoded = match img.color {
+        ColorType::L8 => {
+            let rgb = img
+                .pixels
+                .iter()
+                .flat_map(|&value| [value; 3])
+                .collect::<Vec<_>>();
+            vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
+        }
         ColorType::Rgb8 => {
             vp8::encoder::encode_vp8_lossy(&img.pixels, img.width, img.height, quality, method)
         }

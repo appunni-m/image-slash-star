@@ -1200,16 +1200,36 @@ formats:
     - id: enc_lossless
       description: 
       params: {'lossless': True}
+    - id: enc_lossy_grayscale
+      description: Lossy grayscale WebP converted through Pillow's RGB path
+      source_format: png
+      source_asset: gray.png
+      params: {'lossless': False, 'grayscale': True}
+    - id: enc_lossless_grayscale
+      description: Lossless grayscale WebP converted through Pillow's RGB path
+      source_format: png
+      source_asset: gray.png
+      params: {'lossless': True, 'grayscale': True}
     - id: enc_lossy_alpha
       description: 
       source_format: png
       source_asset: alpha_partial.png
+      params: {'lossless': False, 'alpha': True}
+    - id: enc_lossy_opaque_rgba
+      description: Lossy WebP strips an all-opaque alpha channel
+      source_format: png
+      source_asset: rgba.png
       params: {'lossless': False, 'alpha': True}
     - id: enc_lossless_alpha
       description: 
       source_format: png
       source_asset: alpha_partial.png
       params: {'lossless': True, 'alpha': True}
+    - id: enc_lossy_alpha_exif
+      description: Lossy alpha WebP with EXIF metadata on an existing VP8X container
+      source_format: png
+      source_asset: alpha_partial.png
+      params: {'lossless': False, 'alpha': True, 'exif_hex': '45786966000049492a000800000000000000'}
     - id: enc_no_alpha
       description: 
       params: {'alpha': False}
