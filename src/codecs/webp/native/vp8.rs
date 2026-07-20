@@ -1140,7 +1140,7 @@ impl<R: Read> Vp8Decoder<R> {
             self.r.read_exact(&mut tag)?;
 
             if tag != [0x9d, 0x01, 0x2a] {
-                return Err(DecodingError::Vp8MagicInvalid(tag));
+                return Err(DecodingError::Vp8MagicInvalid);
             }
 
             let w = self.r.read_u16::<LittleEndian>()?;
@@ -1188,7 +1188,7 @@ impl<R: Read> Vp8Decoder<R> {
             self.frame.pixel_type = self.b.read_literal(1).or_accumulate(&mut res);
 
             if color_space != 0 {
-                return Err(DecodingError::ColorSpaceInvalid(color_space));
+                return Err(DecodingError::ColorSpaceInvalid);
             }
         }
 
@@ -1217,9 +1217,7 @@ impl<R: Read> Vp8Decoder<R> {
         if !self.frame.keyframe {
             // 9.7 refresh golden frame and altref frame
             // FIXME: support this?
-            return Err(DecodingError::UnsupportedFeature(
-                "Non-keyframe frames".to_owned(),
-            ));
+            return Err(DecodingError::UnsupportedFeature);
         }
 
         // Refresh entropy probs ?????
@@ -1241,9 +1239,7 @@ impl<R: Read> Vp8Decoder<R> {
             self.prob_intra = 0;
 
             // FIXME: support this?
-            return Err(DecodingError::UnsupportedFeature(
-                "Non-keyframe frames".to_owned(),
-            ));
+            return Err(DecodingError::UnsupportedFeature);
         } else {
             // Reset motion vectors
         }
@@ -1273,16 +1269,14 @@ impl<R: Read> Vp8Decoder<R> {
         };
 
         if inter_predicted {
-            return Err(DecodingError::UnsupportedFeature(
-                "VP8 inter-prediction".to_owned(),
-            ));
+            return Err(DecodingError::UnsupportedFeature);
         }
 
         if self.frame.keyframe {
             // intra prediction
             let luma = (self.b.read_with_tree(&KEYFRAME_YMODE_NODES)).or_accumulate(&mut res);
             mb.luma_mode =
-                LumaMode::from_i8(luma).ok_or(DecodingError::LumaPredictionModeInvalid(luma))?;
+                LumaMode::from_i8(luma).ok_or(DecodingError::LumaPredictionModeInvalid)?;
 
             match mb.luma_mode.into_intra() {
                 // `LumaMode::B` - This is predicted individually
@@ -1296,7 +1290,7 @@ impl<R: Read> Vp8Decoder<R> {
                             );
                             let intra = intra.or_accumulate(&mut res);
                             let bmode = IntraMode::from_i8(intra)
-                                .ok_or(DecodingError::IntraPredictionModeInvalid(intra))?;
+                                .ok_or(DecodingError::IntraPredictionModeInvalid)?;
                             mb.bpred[x + y * 4] = bmode;
 
                             self.top[mbx].bpred[12 + x] = bmode;
@@ -1313,8 +1307,8 @@ impl<R: Read> Vp8Decoder<R> {
             }
 
             let chroma = (self.b.read_with_tree(&KEYFRAME_UV_MODE_NODES)).or_accumulate(&mut res);
-            mb.chroma_mode = ChromaMode::from_i8(chroma)
-                .ok_or(DecodingError::ChromaPredictionModeInvalid(chroma))?;
+            mb.chroma_mode =
+                ChromaMode::from_i8(chroma).ok_or(DecodingError::ChromaPredictionModeInvalid)?;
         }
 
         self.top[mbx].chroma_mode = mb.chroma_mode;

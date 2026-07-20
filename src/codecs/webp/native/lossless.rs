@@ -99,7 +99,7 @@ impl<R: BufRead> LosslessDecoder<R> {
         } else {
             let signature = self.bit_reader.read_bits::<u8>(8)?;
             if signature != 0x2f {
-                return Err(DecodingError::LosslessSignatureInvalid(signature));
+                return Err(DecodingError::LosslessSignatureInvalid);
             }
 
             self.width = self.bit_reader.read_bits::<u16>(14)? + 1;
@@ -111,7 +111,7 @@ impl<R: BufRead> LosslessDecoder<R> {
             let _alpha_used = self.bit_reader.read_bits::<u8>(1)?;
             let version_num = self.bit_reader.read_bits::<u8>(3)?;
             if version_num != 0 {
-                return Err(DecodingError::VersionNumberInvalid(version_num));
+                return Err(DecodingError::VersionNumberInvalid);
             }
         }
 
@@ -627,7 +627,7 @@ impl<R: BufRead> LosslessDecoder<R> {
             let code_bits = self.bit_reader.read_bits::<u8>(4)?;
 
             if !(1..=11).contains(&code_bits) {
-                return Err(DecodingError::InvalidColorCacheBits(code_bits));
+                return Err(DecodingError::InvalidColorCacheBits);
             }
 
             Ok(Some(code_bits))

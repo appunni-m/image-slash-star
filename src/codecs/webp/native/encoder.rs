@@ -20,33 +20,14 @@ pub enum ColorType {
 
 /// Error encountered while encoding lossless WebP data.
 #[derive(Debug)]
-#[non_exhaustive]
 pub enum EncodingError {
-    IoError(io::Error),
+    IoError,
     InvalidDimensions,
 }
 
 impl From<io::Error> for EncodingError {
-    fn from(error: io::Error) -> Self {
-        Self::IoError(error)
-    }
-}
-
-impl std::fmt::Display for EncodingError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IoError(error) => write!(formatter, "WebP I/O error: {error}"),
-            Self::InvalidDimensions => formatter.write_str("invalid WebP dimensions"),
-        }
-    }
-}
-
-impl std::error::Error for EncodingError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::IoError(error) => Some(error),
-            Self::InvalidDimensions => None,
-        }
+    fn from(_error: io::Error) -> Self {
+        Self::IoError
     }
 }
 

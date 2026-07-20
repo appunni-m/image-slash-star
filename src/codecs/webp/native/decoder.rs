@@ -12,86 +12,36 @@ use super::vp8::Vp8Decoder;
 
 /// Errors encountered while decoding WebP container, VP8, or VP8L data.
 #[derive(Debug)]
-#[non_exhaustive]
 pub enum DecodingError {
-    IoError(io::Error),
-    WebpSignatureInvalid([u8; 4]),
+    IoError(io::ErrorKind),
+    WebpSignatureInvalid,
     ChunkMissing,
-    ChunkHeaderInvalid([u8; 4]),
+    ChunkHeaderInvalid,
     InvalidAlphaPreprocessing,
     InvalidCompressionMethod,
     ImageTooLarge,
     FrameOutsideImage,
-    LosslessSignatureInvalid(u8),
-    VersionNumberInvalid(u8),
-    InvalidColorCacheBits(u8),
+    LosslessSignatureInvalid,
+    VersionNumberInvalid,
+    InvalidColorCacheBits,
     HuffmanError,
     BitStreamError,
     TransformError,
-    Vp8MagicInvalid([u8; 3]),
+    Vp8MagicInvalid,
     NotEnoughInitData,
-    ColorSpaceInvalid(u8),
-    LumaPredictionModeInvalid(i8),
-    IntraPredictionModeInvalid(i8),
-    ChromaPredictionModeInvalid(i8),
+    ColorSpaceInvalid,
+    LumaPredictionModeInvalid,
+    IntraPredictionModeInvalid,
+    ChromaPredictionModeInvalid,
     InconsistentImageSizes,
-    UnsupportedFeature(String),
+    UnsupportedFeature,
     InvalidChunkSize,
     NoMoreFrames,
 }
 
 impl From<io::Error> for DecodingError {
     fn from(error: io::Error) -> Self {
-        Self::IoError(error)
-    }
-}
-
-impl std::fmt::Display for DecodingError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IoError(error) => write!(formatter, "WebP I/O error: {error}"),
-            Self::WebpSignatureInvalid(value) => {
-                write!(formatter, "invalid WebP signature: {value:?}")
-            }
-            Self::ChunkHeaderInvalid(value) => {
-                write!(formatter, "invalid WebP chunk header: {value:?}")
-            }
-            Self::LosslessSignatureInvalid(value) => {
-                write!(formatter, "invalid WebP lossless signature: {value:#04x}")
-            }
-            Self::VersionNumberInvalid(value) => {
-                write!(formatter, "invalid WebP version number: {value}")
-            }
-            Self::InvalidColorCacheBits(value) => {
-                write!(formatter, "invalid WebP color-cache width: {value}")
-            }
-            Self::Vp8MagicInvalid(value) => write!(formatter, "invalid VP8 magic: {value:?}"),
-            Self::ColorSpaceInvalid(value) => {
-                write!(formatter, "invalid VP8 color space: {value}")
-            }
-            Self::LumaPredictionModeInvalid(value) => {
-                write!(formatter, "invalid VP8 luma prediction mode: {value}")
-            }
-            Self::IntraPredictionModeInvalid(value) => {
-                write!(formatter, "invalid VP8 intra prediction mode: {value}")
-            }
-            Self::ChromaPredictionModeInvalid(value) => {
-                write!(formatter, "invalid VP8 chroma prediction mode: {value}")
-            }
-            Self::UnsupportedFeature(value) => {
-                write!(formatter, "unsupported WebP feature: {value}")
-            }
-            other => write!(formatter, "WebP decoding error: {other:?}"),
-        }
-    }
-}
-
-impl std::error::Error for DecodingError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::IoError(error) => Some(error),
-            _ => None,
-        }
+        Self::IoError(error.kind())
     }
 }
 
@@ -128,23 +78,6 @@ impl WebPRiffChunk {
             b"EXIF" => Self::EXIF,
             b"XMP " => Self::XMP,
             _ => Self::Unknown(chunk_fourcc),
-        }
-    }
-
-    pub(crate) const fn to_fourcc(self) -> [u8; 4] {
-        match self {
-            Self::RIFF => *b"RIFF",
-            Self::WEBP => *b"WEBP",
-            Self::VP8 => *b"VP8 ",
-            Self::VP8L => *b"VP8L",
-            Self::VP8X => *b"VP8X",
-            Self::ANIM => *b"ANIM",
-            Self::ANMF => *b"ANMF",
-            Self::ALPH => *b"ALPH",
-            Self::ICCP => *b"ICCP",
-            Self::EXIF => *b"EXIF",
-            Self::XMP => *b"XMP ",
-            Self::Unknown(fourcc) => fourcc,
         }
     }
 
@@ -237,12 +170,12 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
 
     fn read_data(&mut self) -> Result<(), DecodingError> {
         let (WebPRiffChunk::RIFF, riff_size, _) = read_chunk_header(&mut self.r)? else {
-            return Err(DecodingError::ChunkHeaderInvalid(*b"RIFF"));
+            return Err(DecodingError::ChunkHeaderInvalid);
         };
 
         match &read_fourcc(&mut self.r)? {
             WebPRiffChunk::WEBP => {}
-            fourcc => return Err(DecodingError::WebpSignatureInvalid(fourcc.to_fourcc())),
+            _ => return Err(DecodingError::WebpSignatureInvalid),
         }
 
         let (chunk, chunk_size, chunk_size_rounded) = read_chunk_header(&mut self.r)?;
@@ -254,15 +187,13 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
 
                 let keyframe = tag & 1 == 0;
                 if !keyframe {
-                    return Err(DecodingError::UnsupportedFeature(
-                        "Non-keyframe frames".to_owned(),
-                    ));
+                    return Err(DecodingError::UnsupportedFeature);
                 }
 
                 let mut tag = [0u8; 3];
                 self.r.read_exact(&mut tag)?;
                 if tag != [0x9d, 0x01, 0x2a] {
-                    return Err(DecodingError::Vp8MagicInvalid(tag));
+                    return Err(DecodingError::Vp8MagicInvalid);
                 }
 
                 let w = self.r.read_u16::<LittleEndian>()?;
@@ -281,13 +212,13 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             WebPRiffChunk::VP8L => {
                 let signature = self.r.read_u8()?;
                 if signature != 0x2f {
-                    return Err(DecodingError::LosslessSignatureInvalid(signature));
+                    return Err(DecodingError::LosslessSignatureInvalid);
                 }
 
                 let header = self.r.read_u32::<LittleEndian>()?;
                 let version = header >> 29;
                 if version != 0 {
-                    return Err(DecodingError::VersionNumberInvalid(version as u8));
+                    return Err(DecodingError::VersionNumberInvalid);
                 }
 
                 self.width = (1 + header) & 0x3FFF;
@@ -331,9 +262,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
 
                             self.r.seek_relative(chunk_size_rounded as i64)?;
                         }
-                        Err(DecodingError::IoError(e))
-                            if e.kind() == io::ErrorKind::UnexpectedEof =>
-                        {
+                        Err(DecodingError::IoError(e)) if e == io::ErrorKind::UnexpectedEof => {
                             break;
                         }
                         Err(e) => return Err(e),
@@ -405,7 +334,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                 self.has_alpha = info.alpha;
                 self.kind = ImageKind::Extended(info);
             }
-            _ => return Err(DecodingError::ChunkHeaderInvalid(chunk.to_fourcc())),
+            _ => return Err(DecodingError::ChunkHeaderInvalid),
         };
 
         Ok(())
@@ -553,7 +482,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
 
         let anmf_size = match read_chunk_header(&mut self.r)? {
             (WebPRiffChunk::ANMF, size, _) if size >= 32 => size,
-            _ => return Err(DecodingError::ChunkHeaderInvalid(*b"ANMF")),
+            _ => return Err(DecodingError::ChunkHeaderInvalid),
         };
 
         // Read ANMF chunk
@@ -581,7 +510,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
         // Read normal bitstream now
         let (chunk, chunk_size, chunk_size_rounded) = read_chunk_header(&mut self.r)?;
         if chunk_size_rounded + 24 > anmf_size {
-            return Err(DecodingError::ChunkHeaderInvalid(chunk.to_fourcc()));
+            return Err(DecodingError::ChunkHeaderInvalid);
         }
 
         let (frame, frame_has_alpha): (Vec<u8>, bool) = match chunk {
@@ -606,7 +535,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             }
             WebPRiffChunk::ALPH => {
                 if chunk_size_rounded + 32 > anmf_size {
-                    return Err(DecodingError::ChunkHeaderInvalid(chunk.to_fourcc()));
+                    return Err(DecodingError::ChunkHeaderInvalid);
                 }
 
                 // read alpha
@@ -617,9 +546,9 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
 
                 // read opaque
                 self.r.seek(io::SeekFrom::Start(next_chunk_start))?;
-                let (next_chunk, next_chunk_size, _) = read_chunk_header(&mut self.r)?;
+                let (_next_chunk, next_chunk_size, _) = read_chunk_header(&mut self.r)?;
                 if chunk_size + next_chunk_size + 32 > anmf_size {
-                    return Err(DecodingError::ChunkHeaderInvalid(next_chunk.to_fourcc()));
+                    return Err(DecodingError::ChunkHeaderInvalid);
                 }
 
                 let frame = Vp8Decoder::decode_frame((&mut self.r).take(next_chunk_size))?;
@@ -648,7 +577,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
 
                 (rgba_frame, true)
             }
-            _ => return Err(DecodingError::ChunkHeaderInvalid(chunk.to_fourcc())),
+            _ => return Err(DecodingError::ChunkHeaderInvalid),
         };
 
         // fill starting canvas with clear color
