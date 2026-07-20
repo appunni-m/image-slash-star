@@ -282,13 +282,12 @@ pub(crate) fn read_alpha_chunk<R: BufRead>(
         _ => return Err(DecodingError::InvalidAlphaPreprocessing),
     };
 
-    let filtering_method = match filtering {
-        0 => FilteringMethod::None,
-        1 => FilteringMethod::Horizontal,
-        2 => FilteringMethod::Vertical,
-        3 => FilteringMethod::Gradient,
-        _ => unreachable!(),
-    };
+    let filtering_method = [
+        FilteringMethod::None,
+        FilteringMethod::Horizontal,
+        FilteringMethod::Vertical,
+        FilteringMethod::Gradient,
+    ][usize::from(filtering)];
 
     let lossless_compression = match compression {
         0 => false,
