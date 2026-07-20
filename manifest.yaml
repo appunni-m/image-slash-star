@@ -1495,6 +1495,10 @@ formats:
     - id: enc_compress_packbits
       description: 
       params: {'compression': 'packbits'}
+    - id: enc_error_compression_type
+      description: Pillow rejects a numeric TIFF compression selector
+      params: {'compression': 7}
+      expect_error: true
     - id: enc_packbits_runs
       description: PackBits long runs, literal blocks, and run-to-literal transitions
       source_format: png
@@ -1577,6 +1581,10 @@ formats:
     - id: enc_predictor_horiz
       description: 
       params: {'predictor': 'horizontal'}
+    - id: enc_error_predictor_range
+      description: Pillow rejects a Predictor tag outside the unsigned-short range
+      params: {'predictor': 65536}
+      expect_error: true
     - id: enc_lzw_predictor_horiz
       description: LZW-compressed TIFF with horizontal differencing predictor
       params: {'compression': 'lzw', 'predictor': 'horizontal'}

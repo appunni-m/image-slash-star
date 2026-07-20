@@ -61,6 +61,18 @@
       "encoded_ref_bytes": 47170
     },
     {
+      "id": "enc_error_compression_type",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.TypeError",
+      "error_message": "argument 3 must be str, not int"
+    },
+    {
       "id": "enc_packbits_runs",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_packbits_runs.bin",
       "ref_bytes": 520,
@@ -311,6 +323,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_predictor_horiz.bin",
       "encoded_ref_bytes": 49304
+    },
+    {
+      "id": "enc_error_predictor_range",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "struct.error",
+      "error_message": "'H' format requires 0 <= number <= 65535"
     },
     {
       "id": "enc_lzw_predictor_horiz",

@@ -316,7 +316,7 @@ def encode_params(fmt, params):
                 "lzw": "tiff_lzw",
                 "deflate": "tiff_adobe_deflate",
                 "packbits": "packbits",
-            }[compression]
+            }.get(compression, compression)
         byte_order = take("byte_order")
         if byte_order is not None:
             kwargs["byte_order"] = byte_order
@@ -327,11 +327,11 @@ def encode_params(fmt, params):
         if pages is not None:
             kwargs["pages"] = pages
         predictor = take("predictor")
-        if predictor == "horizontal":
+        if predictor == "horizontal" or isinstance(predictor, int):
             from PIL.TiffImagePlugin import ImageFileDirectory_v2
 
             tiffinfo = ImageFileDirectory_v2()
-            tiffinfo[317] = 2
+            tiffinfo[317] = 2 if predictor == "horizontal" else predictor
             kwargs["tiffinfo"] = tiffinfo
         elif predictor not in (None, "none"):
             raise RuntimeError(f"unknown TIFF predictor value {predictor!r}")

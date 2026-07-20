@@ -6932,6 +6932,23 @@
           ]
         },
         {
+          "id": "enc_error_compression_type",
+          "type": "encode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Pillow rejects a numeric TIFF compression selector",
+          "params": {
+            "compression": 7
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.TypeError",
+          "oracle_error_message": "argument 3 must be str, not int"
+        },
+        {
           "id": "enc_packbits_runs",
           "type": "encode",
           "format": "tiff",
@@ -7392,6 +7409,23 @@
             128,
             128
           ]
+        },
+        {
+          "id": "enc_error_predictor_range",
+          "type": "encode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Pillow rejects a Predictor tag outside the unsigned-short range",
+          "params": {
+            "predictor": 65536
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "oracle_status": "error",
+          "oracle_error_type": "struct.error",
+          "oracle_error_message": "'H' format requires 0 <= number <= 65535"
         },
         {
           "id": "enc_lzw_predictor_horiz",
@@ -10269,9 +10303,9 @@
     }
   },
   "summary": {
-    "total_rows": 546,
+    "total_rows": 548,
     "decode_rows": 326,
-    "encode_rows": 188,
+    "encode_rows": 190,
     "formats": 8,
     "assets_available": 319,
     "decode_active": 320,

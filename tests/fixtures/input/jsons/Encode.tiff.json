@@ -97,6 +97,28 @@
       }
     },
     {
+      "id": "enc_error_compression_type",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": 7
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": 7
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_packbits_runs",
       "source_asset": "tiff_packbits_runs.png",
       "source_format": "png",
@@ -512,6 +534,33 @@
             "type": "ImageFileDirectory_v2",
             "tags": {
               "317": 2
+            }
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_predictor_range",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "predictor": 65536
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "tiffinfo": {
+            "type": "ImageFileDirectory_v2",
+            "tags": {
+              "317": 65536
             }
           }
         },
