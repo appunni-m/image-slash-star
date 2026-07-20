@@ -85,6 +85,30 @@
       "encoded_ref_bytes": 414
     },
     {
+      "id": "enc_lzw_width_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_width_boundary.bin",
+      "ref_bytes": 255,
+      "ref_mode": "L8",
+      "ref_size": [
+        255,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_width_boundary.bin",
+      "encoded_ref_bytes": 412
+    },
+    {
+      "id": "enc_lzw_clear_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_clear_boundary.bin",
+      "ref_bytes": 3952,
+      "ref_mode": "L8",
+      "ref_size": [
+        3952,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_clear_boundary.bin",
+      "encoded_ref_bytes": 5530
+    },
+    {
       "id": "enc_byte_le",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_byte_le.bin",
       "ref_bytes": 49152,
@@ -131,6 +155,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_grayscale.bin",
       "encoded_ref_bytes": 16506
+    },
+    {
+      "id": "enc_grayscale_alpha",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_grayscale_alpha.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "La8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_grayscale_alpha.bin",
+      "encoded_ref_bytes": 32914
     },
     {
       "id": "enc_rgb",

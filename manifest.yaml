@@ -1376,6 +1376,16 @@ formats:
       source_format: png
       source_asset: tiff_lzw_solid.png
       params: {'compression': 'lzw'}
+    - id: enc_lzw_width_boundary
+      description: TIFF LZW stream ending exactly at a code-width transition
+      source_format: png
+      source_asset: tiff_lzw_width_boundary.png
+      params: {'compression': 'lzw'}
+    - id: enc_lzw_clear_boundary
+      description: TIFF LZW stream ending exactly at the dictionary-clear threshold
+      source_format: png
+      source_asset: tiff_lzw_clear_boundary.png
+      params: {'compression': 'lzw'}
     - id: enc_byte_le
       description: 
       params: {'byte_order': 'le'}
@@ -1390,6 +1400,11 @@ formats:
       description: 
       params: {'color': 'gray'}
       source_asset: gray.tiff
+    - id: enc_grayscale_alpha
+      description: Grayscale TIFF with an associated alpha sample
+      source_format: png
+      source_asset: gray_alpha.png
+      params: {'color': 'gray_alpha'}
     - id: enc_rgb
       description: 
       params: {'color': 'rgb'}

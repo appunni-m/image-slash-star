@@ -6580,6 +6580,50 @@
           ]
         },
         {
+          "id": "enc_lzw_width_boundary",
+          "type": "encode",
+          "format": "tiff",
+          "category": "lzw",
+          "description": "TIFF LZW stream ending exactly at a code-width transition",
+          "params": {
+            "compression": "lzw"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "tiff_lzw_width_boundary.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_width_boundary.bin",
+          "encoded_ref_bytes": 412,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_width_boundary.bin",
+          "ref_bytes": 255,
+          "ref_mode": "L8",
+          "ref_size": [
+            255,
+            1
+          ]
+        },
+        {
+          "id": "enc_lzw_clear_boundary",
+          "type": "encode",
+          "format": "tiff",
+          "category": "lzw",
+          "description": "TIFF LZW stream ending exactly at the dictionary-clear threshold",
+          "params": {
+            "compression": "lzw"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "tiff_lzw_clear_boundary.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_clear_boundary.bin",
+          "encoded_ref_bytes": 5530,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_clear_boundary.bin",
+          "ref_bytes": 3952,
+          "ref_mode": "L8",
+          "ref_size": [
+            3952,
+            1
+          ]
+        },
+        {
           "description": "",
           "format": "tiff",
           "id": "enc_byte_le",
@@ -6662,6 +6706,28 @@
           "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_grayscale.bin",
           "ref_bytes": 16384,
           "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_grayscale_alpha",
+          "type": "encode",
+          "format": "tiff",
+          "category": "grayscale",
+          "description": "Grayscale TIFF with an associated alpha sample",
+          "params": {
+            "color": "gray_alpha"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray_alpha.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_grayscale_alpha.bin",
+          "encoded_ref_bytes": 32914,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_grayscale_alpha.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "La8",
           "ref_size": [
             128,
             128
@@ -8878,9 +8944,9 @@
     }
   },
   "summary": {
-    "total_rows": 477,
+    "total_rows": 480,
     "decode_rows": 271,
-    "encode_rows": 174,
+    "encode_rows": 177,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

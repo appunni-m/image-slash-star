@@ -231,6 +231,19 @@ fn convert_pixels(
             }
             Some(DecodedImage::new(width, height, pixels, ColorType::L8))
         }
+        (0 | 1, 2, 8) => {
+            if photometric == 0 {
+                for pixel in pixels.chunks_exact_mut(2) {
+                    pixel[0] = !pixel[0];
+                }
+            }
+            Some(DecodedImage::with_mode(
+                width,
+                height,
+                pixels,
+                ImageMode::La8,
+            ))
+        }
         (0 | 1, 1, bits @ (2 | 4)) => {
             let maximum = (1u16 << bits) - 1;
             let output = unpack_indices(&pixels, width, height, bits)?

@@ -240,6 +240,15 @@ def gen_png():
     packbits_runs.putdata(packbits_values)
     packbits_runs.save(d / "tiff_packbits_runs.png")
     Image.new("L", (512, 64), 37).save(d / "tiff_lzw_solid.png")
+    lzw_values = []
+    lzw_state = 1
+    for _ in range(3_952):
+        lzw_state = (1_664_525 * lzw_state + 1_013_904_223) & 0xFFFF_FFFF
+        lzw_values.append((lzw_state >> 24) & 255)
+    for name, length in (("width_boundary", 255), ("clear_boundary", 3_952)):
+        lzw_boundary = Image.new("L", (length, 1))
+        lzw_boundary.putdata(lzw_values[:length])
+        lzw_boundary.save(d / f"tiff_lzw_{name}.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 255)).save(d / "gif_rgba_opaque.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 0)).save(d / "gif_rgba.png")
     img.convert("L").save(d / "gray.png")

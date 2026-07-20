@@ -12,13 +12,12 @@ const COMPRESSION_PACKBITS: u16 = 32_773;
 
 /// Encode an image as a single-strip classic TIFF.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    if img.width == 0 || img.height == 0 {
-        return None;
-    }
+    img.validate().ok()?;
     let width = usize::try_from(img.width).ok()?;
     let height = usize::try_from(img.height).ok()?;
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
         ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
+        ImageMode::La8 => (1, 2, 8, true, width.checked_mul(2)?),
         ImageMode::L16 => (1, 1, 16, false, width.checked_mul(2)?),
         ImageMode::F32 => (1, 1, 32, false, width.checked_mul(4)?),
         _ => match img.color {
@@ -29,11 +28,6 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             _ => return None,
         },
     };
-    let expected = row_len.checked_mul(height)?;
-    if img.pixels.len() != expected {
-        return None;
-    }
-
     // Pillow 12.2.0 accepts byte_order but always emits little-endian TIFF.
     let endian = Endian::Little;
     let compression = match opts.extra.get("compression").map(String::as_str) {
@@ -51,17 +45,17 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     let mut raw = img.pixels.clone();
     if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
-        apply_horizontal_predictor(&mut raw, width, usize::from(channels))?;
+        apply_horizontal_predictor(&mut raw, width, usize::from(channels));
     }
-    let encoded = match compression {
-        COMPRESSION_NONE => raw,
-        COMPRESSION_LZW => encode_lzw(&raw),
-        COMPRESSION_DEFLATE => {
-            let input_chunks = vec![row_len; height];
-            compress_zlib_tiff(&raw, &input_chunks)?
-        }
-        COMPRESSION_PACKBITS => encode_packbits(&raw, row_len)?,
-        _ => return None,
+    let encoded = if compression == COMPRESSION_NONE {
+        raw
+    } else if compression == COMPRESSION_LZW {
+        encode_lzw(&raw)?
+    } else if compression == COMPRESSION_DEFLATE {
+        let input_chunks = vec![row_len; height];
+        compress_zlib_tiff(&raw, &input_chunks)?
+    } else {
+        encode_packbits(&raw, row_len)
     };
 
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
@@ -72,7 +66,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let ifd_size = 2usize
         .checked_add(usize::from(entry_count).checked_mul(12)?)?
         .checked_add(4)?;
-    let bits_len = if channels == 1 {
+    let bits_len = if channels <= 2 {
         0
     } else {
         usize::from(channels).checked_mul(2)?
@@ -118,6 +112,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         // Pillow leaves the default BitsPerSample=1 implicit for bilevel TIFF.
     } else if channels == 1 {
         write_short_entry(&mut output, endian, 258, bits_per_sample);
+    } else if channels == 2 {
+        write_entry(
+            &mut output,
+            endian,
+            258,
+            3,
+            2,
+            u32::from(bits_per_sample) | (u32::from(bits_per_sample) << 16),
+        );
     } else {
         write_entry(
             &mut output,
@@ -166,7 +169,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     }
     endian.push_u32(&mut output, 0);
 
-    if channels != 1 {
+    if channels > 2 {
         for _ in 0..channels {
             endian.push_u16(&mut output, bits_per_sample);
         }
@@ -178,29 +181,21 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     Some(output)
 }
 
-fn apply_horizontal_predictor(data: &mut [u8], width: usize, channels: usize) -> Option<()> {
-    let row_len = width.checked_mul(channels)?;
-    if row_len == 0 || !data.len().is_multiple_of(row_len) {
-        return None;
-    }
+fn apply_horizontal_predictor(data: &mut [u8], width: usize, channels: usize) {
+    let row_len = width * channels;
     for row in data.chunks_exact_mut(row_len) {
         for index in (channels..row.len()).rev() {
             row[index] = row[index].wrapping_sub(row[index - channels]);
         }
     }
-    Some(())
 }
 
-fn encode_packbits(data: &[u8], row_len: usize) -> Option<Vec<u8>> {
-    if row_len == 0 || !data.len().is_multiple_of(row_len) {
-        return None;
-    }
-
+fn encode_packbits(data: &[u8], row_len: usize) -> Vec<u8> {
     let mut output = Vec::with_capacity(data.len().saturating_add(data.len().div_ceil(128)));
     for row in data.chunks_exact(row_len) {
         encode_packbits_row(row, &mut output);
     }
-    Some(output)
+    output
 }
 
 fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
@@ -296,19 +291,15 @@ fn emit_packbits_run(output: &mut Vec<u8>, byte: u8, run_len: &mut usize) {
     *run_len -= emitted;
 }
 
-fn encode_lzw(data: &[u8]) -> Vec<u8> {
+fn encode_lzw(data: &[u8]) -> Option<Vec<u8>> {
     const CLEAR: u16 = 256;
     const END: u16 = 257;
     const FIRST: u16 = 258;
     const MAX_CODE: u16 = 4095;
     const CHECK_GAP: usize = 10_000;
 
+    let (&first, rest) = data.split_first()?;
     let mut writer = MsbWriter::default();
-    if data.is_empty() {
-        writer.write(CLEAR, 9);
-        writer.write(END, 9);
-        return writer.finish();
-    }
 
     let mut dictionary = HashMap::<(u16, u8), u16>::with_capacity(4096);
     let mut width = 9u8;
@@ -321,9 +312,9 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
 
     writer.write(CLEAR, width);
     output_bits += usize::from(width);
-    let mut entry = u16::from(data[0]);
+    let mut entry = u16::from(first);
 
-    for &byte in &data[1..] {
+    for &byte in rest {
         input_count += 1;
         if let Some(&code) = dictionary.get(&(entry, byte)) {
             entry = code;
@@ -378,7 +369,7 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
         width += 1;
     }
     writer.write(END, width);
-    writer.finish()
+    Some(writer.finish())
 }
 
 #[derive(Default)]

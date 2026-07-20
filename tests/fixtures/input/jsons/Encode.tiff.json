@@ -139,6 +139,48 @@
       }
     },
     {
+      "id": "enc_lzw_width_boundary",
+      "source_asset": "tiff_lzw_width_boundary.png",
+      "source_format": "png",
+      "params": {
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/tiff_lzw_width_boundary.png",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lzw_clear_boundary",
+      "source_asset": "tiff_lzw_clear_boundary.png",
+      "source_format": "png",
+      "params": {
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/tiff_lzw_clear_boundary.png",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_byte_le",
       "source_asset": "rgb.tiff",
       "source_format": "tiff",
@@ -208,6 +250,25 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_alpha",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "params": {
+        "color": "gray_alpha"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
         "method": "PIL.Image.Image.save",
         "format": "TIFF",
         "kwargs": {},
