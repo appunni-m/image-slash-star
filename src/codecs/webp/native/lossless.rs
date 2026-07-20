@@ -3,7 +3,6 @@
 //! [Lossless spec](https://developers.google.com/speed/webp/docs/webp_lossless_bitstream_specification)
 
 use std::io::BufRead;
-use std::mem;
 
 use super::decoder::DecodingError;
 use super::lossless_transform::{
@@ -772,8 +771,8 @@ impl<R: BufRead> BitReader<R> {
     }
 
     /// Convenience function to read a number of bits and convert them to a type.
-    pub(crate) fn read_bits<T: TryFrom<u32>>(&mut self, num: u8) -> Result<T, DecodingError> {
-        debug_assert!(num as usize <= 8 * mem::size_of::<T>());
+    fn read_bits<T: LosslessBitValue>(&mut self, num: u8) -> Result<T, DecodingError> {
+        debug_assert!(num <= T::BITS);
         debug_assert!(num <= 32);
 
         if self.nbits < num {
@@ -782,9 +781,28 @@ impl<R: BufRead> BitReader<R> {
         let value = self.peek(num) as u32;
         self.consume(num)?;
 
-        value.try_into().map_err(|_| {
-            debug_assert!(false, "Value too large to fit in type");
-            DecodingError::BitStreamError
-        })
+        Ok(T::from_u32(value))
     }
 }
+
+trait LosslessBitValue {
+    const BITS: u8;
+
+    fn from_u32(value: u32) -> Self;
+}
+
+macro_rules! impl_lossless_bit_value {
+    ($type:ty) => {
+        impl LosslessBitValue for $type {
+            const BITS: u8 = <$type>::BITS as u8;
+
+            fn from_u32(value: u32) -> Self {
+                value as Self
+            }
+        }
+    };
+}
+
+impl_lossless_bit_value!(u8);
+impl_lossless_bit_value!(u16);
+impl_lossless_bit_value!(usize);
