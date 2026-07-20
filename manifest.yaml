@@ -1407,6 +1407,7 @@ formats:
       - gray_deflate.tiff
       - rgb_deflate_predictor.tiff
       - gray16_deflate_predictor.tiff
+      - float32_deflate_predictor.tiff
     - id: compression_packbits
       description: PackBits compression
       test_assets:
@@ -1446,6 +1447,9 @@ formats:
       description: RGB
       test_assets:
       - rgb.tiff
+      - rgb_dpi.tiff
+      - byte_strip_offset.tiff
+      - unknown_field_type.tiff
     - id: rgba
       description: RGBA with extrasamples
       test_assets:
@@ -1528,6 +1532,8 @@ formats:
       - lzw_invalid_first.tiff
       - lzw_invalid_future_code.tiff
       - lzw_clear_only.tiff
+      - lzw_end_only.tiff
+      - ascii_width.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

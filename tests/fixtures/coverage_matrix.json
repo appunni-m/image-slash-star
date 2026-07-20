@@ -6522,6 +6522,24 @@
           ]
         },
         {
+          "id": "compression_deflate_float32_deflate_predictor",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "Deflate/ZIP compression",
+          "asset": "float32_deflate_predictor.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_float32_deflate_predictor_tiff.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "F",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "packbits.tiff",
           "category": "compression",
           "description": "PackBits compression",
@@ -6793,6 +6811,60 @@
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_tiff.bin",
           "oracle_status": "ok"
+        },
+        {
+          "id": "rgb_rgb_dpi",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb",
+          "description": "RGB",
+          "asset": "rgb_dpi.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_dpi_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "rgb_byte_strip_offset",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb",
+          "description": "RGB",
+          "asset": "byte_strip_offset.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_byte_strip_offset_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "rgb_unknown_field_type",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb",
+          "description": "RGB",
+          "asset": "unknown_field_type.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_unknown_field_type_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "rgba.tiff",
@@ -7313,6 +7385,32 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "decoder error -2"
+        },
+        {
+          "id": "error_bad_ifd_lzw_end_only",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "lzw_end_only.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "decoder error -2"
+        },
+        {
+          "id": "error_bad_ifd_ascii_width",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "ascii_width.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Invalid dimensions"
         }
       ],
       "encode": [
@@ -10776,12 +10874,12 @@
     }
   },
   "summary": {
-    "total_rows": 578,
-    "decode_rows": 353,
+    "total_rows": 584,
+    "decode_rows": 359,
     "encode_rows": 193,
     "formats": 8,
-    "assets_available": 346,
-    "decode_active": 347,
+    "assets_available": 352,
+    "decode_active": 353,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

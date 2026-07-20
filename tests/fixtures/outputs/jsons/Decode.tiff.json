@@ -208,6 +208,19 @@
       ]
     },
     {
+      "id": "compression_deflate_float32_deflate_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_float32_deflate_predictor_tiff.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "F",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "compression_packbits",
       "status": "ok",
       "error_type": null,
@@ -395,6 +408,45 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb_rgb_dpi",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_dpi_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb_byte_strip_offset",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_byte_strip_offset_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb_unknown_field_type",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_unknown_field_type_tiff.bin",
       "ref_bytes": 49152,
       "ref_mode": "Rgb8",
       "ref_size": [
@@ -782,6 +834,26 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_lzw_end_only",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_ascii_width",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid dimensions",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

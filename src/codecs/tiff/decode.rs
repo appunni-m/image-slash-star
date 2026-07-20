@@ -40,7 +40,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let planar = directory.one_or(284, 1);
     let sample_format = directory.one_or(339, 1);
     let color_map = directory.values(320);
-    if rows_per_strip == 0 || planar != 1 || !matches!(predictor, 1 | 2) {
+    if samples_per_pixel == 0 || rows_per_strip == 0 || planar != 1 || !matches!(predictor, 1 | 2) {
         return None;
     }
 
@@ -110,6 +110,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     compression,
                     COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
                 )
+                && matches!(bits_per_sample, 8 | 16 | 32)
             {
                 reverse_horizontal_predictor(
                     &mut decoded,
@@ -117,7 +118,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     samples_per_pixel,
                     bits_per_sample,
                     endian,
-                )?;
+                );
             }
             let tile_x = (tile_index % tiles_across).checked_mul(tile_width)?;
             let tile_y = (tile_index / tiles_across).checked_mul(tile_height)?;
@@ -174,6 +175,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 compression,
                 COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
             )
+            && matches!(bits_per_sample, 8 | 16 | 32)
         {
             reverse_horizontal_predictor(
                 &mut decoded,
@@ -181,7 +183,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 samples_per_pixel,
                 bits_per_sample,
                 endian,
-            )?;
+            );
         }
         pixels.extend_from_slice(&decoded);
     }
@@ -333,7 +335,7 @@ fn reverse_horizontal_predictor(
     samples: usize,
     bits: u8,
     endian: Endian,
-) -> Option<()> {
+) {
     match bits {
         8 => {
             for row in data.chunks_exact_mut(row_bytes) {
@@ -343,19 +345,37 @@ fn reverse_horizontal_predictor(
             }
         }
         16 => {
-            let sample_stride = samples.checked_mul(2)?;
+            let sample_stride = samples * 2;
             for row in data.chunks_exact_mut(row_bytes) {
                 for offset in (sample_stride..row.len()).step_by(2) {
-                    let previous =
-                        endian.u16(row.get(offset - sample_stride..offset - sample_stride + 2)?)?;
-                    let current = endian.u16(row.get(offset..offset + 2)?)?;
+                    let previous = endian
+                        .u16_exact([row[offset - sample_stride], row[offset - sample_stride + 1]]);
+                    let current = endian.u16_exact([row[offset], row[offset + 1]]);
                     endian.write_u16(current.wrapping_add(previous), &mut row[offset..offset + 2]);
                 }
             }
         }
-        _ => return None,
+        _ => {
+            let sample_stride = samples * 4;
+            for row in data.chunks_exact_mut(row_bytes) {
+                for offset in (sample_stride..row.len()).step_by(4) {
+                    let previous = endian.u32_exact([
+                        row[offset - sample_stride],
+                        row[offset - sample_stride + 1],
+                        row[offset - sample_stride + 2],
+                        row[offset - sample_stride + 3],
+                    ]);
+                    let current = endian.u32_exact([
+                        row[offset],
+                        row[offset + 1],
+                        row[offset + 2],
+                        row[offset + 3],
+                    ]);
+                    endian.write_u32(current.wrapping_add(previous), &mut row[offset..offset + 4]);
+                }
+            }
+        }
     }
-    Some(())
 }
 
 fn decode_packbits(data: &[u8], expected: usize) -> Option<Vec<u8>> {
@@ -431,7 +451,7 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
                 &mut stack,
                 &mut output,
                 expected,
-            )?
+            )
         } else if code == next_code {
             let first = append_lzw(
                 old_code,
@@ -440,7 +460,7 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
                 &mut stack,
                 &mut output,
                 expected,
-            )?;
+            );
             if output.len() >= expected {
                 return Some(output);
             }
@@ -474,7 +494,7 @@ fn append_lzw(
     stack: &mut [u8; 4096],
     output: &mut Vec<u8>,
     expected: usize,
-) -> Option<u8> {
+) -> u8 {
     let mut count = 0usize;
     while code >= 256 {
         stack[count] = suffixes[usize::from(code)];
@@ -484,9 +504,9 @@ fn append_lzw(
     let first = code as u8;
     stack[count] = first;
     count += 1;
-    let remaining = expected.checked_sub(output.len())?;
+    let remaining = expected - output.len();
     output.extend(stack[..count].iter().rev().take(remaining));
-    Some(first)
+    first
 }
 
 struct MsbBits<'a> {
@@ -523,12 +543,26 @@ enum Endian {
 }
 
 impl Endian {
+    fn u16_exact(self, bytes: [u8; 2]) -> u16 {
+        match self {
+            Endian::Little => u16::from_le_bytes(bytes),
+            Endian::Big => u16::from_be_bytes(bytes),
+        }
+    }
+
     fn u16(self, bytes: &[u8]) -> Option<u16> {
         let bytes: [u8; 2] = bytes.try_into().ok()?;
         Some(match self {
             Endian::Little => u16::from_le_bytes(bytes),
             Endian::Big => u16::from_be_bytes(bytes),
         })
+    }
+
+    fn u32_exact(self, bytes: [u8; 4]) -> u32 {
+        match self {
+            Endian::Little => u32::from_le_bytes(bytes),
+            Endian::Big => u32::from_be_bytes(bytes),
+        }
     }
 
     fn u32(self, bytes: &[u8]) -> Option<u32> {
@@ -540,6 +574,14 @@ impl Endian {
     }
 
     fn write_u16(self, value: u16, destination: &mut [u8]) {
+        let bytes = match self {
+            Endian::Little => value.to_le_bytes(),
+            Endian::Big => value.to_be_bytes(),
+        };
+        destination.copy_from_slice(&bytes);
+    }
+
+    fn write_u32(self, value: u32, destination: &mut [u8]) {
         let bytes = match self {
             Endian::Little => value.to_le_bytes(),
             Endian::Big => value.to_be_bytes(),
@@ -581,7 +623,7 @@ impl<'a> Directory<'a> {
                 3 | 8 => 2,
                 4 | 9 | 11 => 4,
                 5 | 10 | 12 => 8,
-                _ => return None,
+                _ => continue,
             };
             let byte_len = value_count.checked_mul(type_size)?;
             let value_position = if byte_len <= 4 {

@@ -1739,10 +1739,27 @@ def mutate_tiff_tag_count(source, destination, tag, count):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
+def mutate_tiff_tag_type(source, destination, tag, field_type):
+    """Patch the type of one classic-TIFF directory entry."""
+    data = bytearray(source.read_bytes())
+    byte_order = "<" if data[:2] == b"II" else ">"
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        actual_tag = struct.unpack_from(byte_order + "H", data, start)[0]
+        if actual_tag == tag:
+            struct.pack_into(byte_order + "H", data, start + 2, field_type)
+            destination.write_bytes(data)
+            return
+    raise ValueError(f"TIFF tag {tag} not found")
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
     img.save(d / "rgb.tiff")
+    img.save(d / "rgb_dpi.tiff", dpi=(96, 96))
     img.save(d / "single.tiff")
     img.convert("L").save(d / "gray.tiff")
     img.convert("1").save(d / "1bit.tiff")
@@ -1777,8 +1794,14 @@ def gen_tiff():
     write_lzw_tiff(d / "lzw_invalid_first.tiff", [258])
     write_lzw_tiff(d / "lzw_invalid_future_code.tiff", [256, 0, 300], width=2)
     write_lzw_tiff(d / "lzw_clear_only.tiff", [256])
+    write_lzw_tiff(d / "lzw_end_only.tiff", [256, 257])
     img.convert("L").save(d / "gray_lzw.tiff", compression="tiff_lzw")
     img.convert("L").save(d / "gray_deflate.tiff", compression="tiff_adobe_deflate")
+    img.convert("F").save(
+        d / "float32_deflate_predictor.tiff",
+        compression="tiff_adobe_deflate",
+        tiffinfo={317: 2},
+    )
     img.convert("RGBA").save(d / "rgba_lzw.tiff", compression="tiff_lzw")
     img.save(d / "le.tiff")  # little-endian default
     write_rgb_tiff(d / "be.tiff", img, byte_order=">")
@@ -1825,6 +1848,9 @@ def gen_tiff():
     mutate_tiff_tag(d / "rgb.tiff", d / "rows_zero.tiff", 278, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "unknown_compression.tiff", 259, 999)
     mutate_tiff_tag(d / "rgb.tiff", d / "unsupported_photometric.tiff", 262, 4)
+    mutate_tiff_tag_type(d / "rgb.tiff", d / "byte_strip_offset.tiff", 273, 1)
+    mutate_tiff_tag_type(d / "rgb_dpi.tiff", d / "unknown_field_type.tiff", 282, 13)
+    mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_width.tiff", 256, 2)
     mutate_tiff_tag(
         d / "gray_alpha.tiff", d / "miniswhite_gray_alpha.tiff", 262, 0
     )
