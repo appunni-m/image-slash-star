@@ -968,6 +968,16 @@ def gen_webp():
     )
     animated_full_next = animated_full.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     animated_full.save(
+        d / "animated_alpha_lossy.webp",
+        save_all=True,
+        append_images=[animated_full_next],
+        duration=100,
+        loop=0,
+        lossless=False,
+        quality=80,
+        minimize_size=False,
+    )
+    animated_full.save(
         d / "animated_alpha_full.webp",
         save_all=True,
         append_images=[animated_full_next],
@@ -992,6 +1002,18 @@ def gen_webp():
     animated_full_dispose[full_first_frame + 4 + 4 + 15] |= 0b1
     (d / "animated_alpha_full_dispose.webp").write_bytes(animated_full_dispose)
     d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
+    bad_vp8_magic = bytearray((d / "lossy.webp").read_bytes())
+    vp8_chunk = bad_vp8_magic.find(b"VP8 ")
+    if vp8_chunk < 0:
+        raise RuntimeError("lossy WebP did not contain a VP8 chunk")
+    bad_vp8_magic[vp8_chunk + 11] ^= 0xFF
+    (d / "bad_vp8_magic.webp").write_bytes(bad_vp8_magic)
+    bad_animated_vp8_magic = bytearray((d / "animated.webp").read_bytes())
+    animated_vp8_chunk = bad_animated_vp8_magic.find(b"VP8 ", first_frame)
+    if animated_vp8_chunk < 0:
+        raise RuntimeError("animated WebP did not contain a VP8 frame")
+    bad_animated_vp8_magic[animated_vp8_chunk + 11] ^= 0xFF
+    (d / "bad_animated_vp8_magic.webp").write_bytes(bad_animated_vp8_magic)
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 
 

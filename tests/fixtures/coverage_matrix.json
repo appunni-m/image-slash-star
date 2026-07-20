@@ -8265,6 +8265,51 @@
           }
         },
         {
+          "id": "animated_animated_alpha_lossy",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_alpha_lossy.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_lossy_webp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_lossy_webp_frame_0.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_lossy_webp_frame_1.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
           "id": "animated_animated_blend",
           "type": "decode",
           "format": "webp",
@@ -8553,6 +8598,32 @@
           "oracle_status": "error",
           "oracle_error_type": "PIL.UnidentifiedImageError",
           "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_vp8_magic",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "VP8 keyframe with an invalid start code",
+          "asset": "bad_vp8_magic.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_animated_vp8_magic",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Animated VP8 frame with an invalid start code",
+          "asset": "bad_animated_vp8_magic.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
         }
       ],
       "encode": [
@@ -9034,12 +9105,12 @@
     }
   },
   "summary": {
-    "total_rows": 485,
-    "decode_rows": 276,
+    "total_rows": 488,
+    "decode_rows": 279,
     "encode_rows": 177,
     "formats": 8,
-    "assets_available": 269,
-    "decode_active": 270,
+    "assets_available": 272,
+    "decode_active": 273,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

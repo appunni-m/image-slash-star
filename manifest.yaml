@@ -1105,6 +1105,7 @@ formats:
       test_assets:
       - animated.webp
       - animated_alpha.webp
+      - animated_alpha_lossy.webp
       - animated_blend.webp
       - animated_alpha_full.webp
       - animated_alpha_full_dispose.webp
@@ -1133,6 +1134,16 @@ formats:
       description: Truncated RIFF chunk
       test_assets:
       - truncated.webp
+      expect_error: true
+    - id: error_vp8_magic
+      description: VP8 keyframe with an invalid start code
+      test_assets:
+      - bad_vp8_magic.webp
+      expect_error: true
+    - id: error_animated_vp8_magic
+      description: Animated VP8 frame with an invalid start code
+      test_assets:
+      - bad_animated_vp8_magic.webp
       expect_error: true
     encode_edge_cases:
     - id: enc_lossy_q100
