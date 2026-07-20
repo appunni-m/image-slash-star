@@ -7251,6 +7251,78 @@
           "oracle_status": "ok"
         },
         {
+          "id": "lossy_vp8_filter_variants",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters",
+          "asset": "lossy_simple_filter.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_simple_filter_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters",
+          "asset": "lossy_strong_sharp7.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_strong_sharp7_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "lossy_vp8_filter_variants_lossy_filter_off",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters",
+          "asset": "lossy_filter_off.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_filter_off_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "lossy_vp8_filter_variants_lossy_segment_one",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters",
+          "asset": "lossy_segment_one.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_segment_one_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "lossless.webp",
           "asset_path": "tests/fixtures/input/images/webp/lossless.webp",
           "category": "lossless",
@@ -8944,12 +9016,12 @@
     }
   },
   "summary": {
-    "total_rows": 480,
-    "decode_rows": 271,
+    "total_rows": 484,
+    "decode_rows": 275,
     "encode_rows": 177,
     "formats": 8,
-    "assets_available": 264,
-    "decode_active": 265,
+    "assets_available": 268,
+    "decode_active": 269,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

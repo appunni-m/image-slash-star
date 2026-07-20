@@ -15,7 +15,10 @@ Output: tests/fixtures/input/images/{format}/ — committed to repo
 """
 import argparse
 import binascii
+import os
 import struct
+import subprocess
+import tempfile
 import zlib
 from pathlib import Path
 
@@ -701,6 +704,38 @@ def gen_webp():
     img.save(d / "lossy.webp", lossless=False)
     for quality in (10, 50, 90, 100):
         img.save(d / f"lossy_q{quality}.webp", lossless=False, quality=quality)
+    cwebp = os.environ.get("CWEBP")
+    vp8_variants = {
+        "lossy_simple_filter.webp": ["-q", "75", "-m", "4", "-nostrong", "-f", "60"],
+        "lossy_strong_sharp7.webp": [
+            "-q", "75", "-m", "4", "-strong", "-f", "100", "-sharpness", "7"
+        ],
+        "lossy_filter_off.webp": ["-q", "75", "-m", "4", "-f", "0"],
+        "lossy_segment_one.webp": [
+            "-q", "75", "-m", "4", "-segments", "1", "-sns", "0"
+        ],
+    }
+    if cwebp:
+        version = subprocess.run(
+            [cwebp, "-version"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        if version != "1.6.0":
+            raise RuntimeError(f"CWEBP must be version 1.6.0, found {version}")
+        with tempfile.TemporaryDirectory(prefix="image-star-webp-") as temporary:
+            ppm = Path(temporary) / "source.ppm"
+            img.save(ppm)
+            for filename, options in vp8_variants.items():
+                subprocess.run(
+                    [cwebp, "-quiet", *options, str(ppm), "-o", str(d / filename)],
+                    check=True,
+                )
+    else:
+        missing = [filename for filename in vp8_variants if not (d / filename).exists()]
+        if missing:
+            raise RuntimeError(
+                "set CWEBP to the pinned libwebp 1.6.0 cwebp executable to generate: "
+                + ", ".join(missing)
+            )
     img.save(d / "lossless.webp", lossless=True)
     Image.new("RGB", (64, 64), (17, 89, 203)).save(d / "lossless_solid.webp", lossless=True)
     for name, pixel in {

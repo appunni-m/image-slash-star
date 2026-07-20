@@ -1028,6 +1028,13 @@ formats:
       - lossy_q50.webp
       - lossy_q90.webp
       - lossy_q100.webp
+    - id: lossy_vp8_filter_variants
+      description: libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters
+      test_assets:
+      - lossy_simple_filter.webp
+      - lossy_strong_sharp7.webp
+      - lossy_filter_off.webp
+      - lossy_segment_one.webp
     - id: lossless_vp8l
       description: Lossless WebP (VP8L codec)
       test_assets:

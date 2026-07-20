@@ -78,6 +78,58 @@
       }
     },
     {
+      "id": "lossy_vp8_filter_variants",
+      "asset": "lossy_simple_filter.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_simple_filter.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
+      "asset": "lossy_strong_sharp7.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_strong_sharp7.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossy_vp8_filter_variants_lossy_filter_off",
+      "asset": "lossy_filter_off.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_filter_off.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossy_vp8_filter_variants_lossy_segment_one",
+      "asset": "lossy_segment_one.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_segment_one.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "lossless_vp8l",
       "asset": "lossless.webp",
       "expect_error": false,
