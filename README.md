@@ -50,6 +50,19 @@ mode, dimensions, frames, metadata, decoded pixels, and deterministic encoded
 file bytes. The committed fixtures are cached observations from that oracle;
 they are not a substitute for the pinned oracle identity.
 
+### AVIF implementation boundary
+
+The pinned Pillow wheel implements AVIF through libavif 1.4.1, using dav1d
+1.5.3 for decoding and libaom 3.13.2 for encoding. Those native libraries are
+the AVIF oracle only; this crate must not link or call them at runtime.
+
+Exact AVIF parity therefore requires a Rust implementation of libavif's
+ISOBMFF, metadata, color-conversion, alpha, grid, and sequence behavior; a Rust
+port of the observable dav1d decoding behavior; and a Rust port of libaom's
+deterministic encoding behavior. A rav1e-based encoder is not an acceptable
+substitute because it cannot reproduce the pinned libaom byte stream. The
+`avif` feature remains opt-in while this work is incomplete.
+
 ## Fixture Workflow
 
 Run the full local workflow from the repository root:

@@ -1471,8 +1471,8 @@ formats:
     - 118
     - 105
     - 102
-    decoder: own container parser placeholder (codec implementation pending)
-    encoder: placeholder (codec implementation pending)
+    decoder: Rust port matching libavif 1.4.1 and dav1d 1.5.3 observable behavior
+    encoder: Rust port matching libavif 1.4.1 and libaom 3.13.2 deterministic bytes
     status: planned
     planned_gap_defaults:
       decode: The pure-Rust AVIF container and AV1 decoder are not implemented yet.
