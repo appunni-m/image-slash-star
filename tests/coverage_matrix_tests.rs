@@ -1876,6 +1876,71 @@ fn exercise_type_metadata() {
         let _ = color.color_type();
     }
 
+    for mode in [
+        img::ImageMode::La16,
+        img::ImageMode::Rgb16,
+        img::ImageMode::Rgba16,
+        img::ImageMode::Rgb32F,
+        img::ImageMode::Rgba32F,
+    ] {
+        let _ = mode.color_type();
+    }
+    for (rgb, alpha) in [
+        (vec![], vec![]),
+        (vec![0], vec![]),
+        (vec![0; 257 * 3], vec![]),
+        (vec![0, 0, 0], vec![0, 0]),
+    ] {
+        assert!(img::ImagePalette::new(rgb, alpha).is_err());
+    }
+    let palette = img::ImagePalette::new(vec![0, 0, 0], vec![255]).unwrap();
+    let invalid_images = [
+        img::DecodedImage::new(0, 1, vec![], img::ColorType::L8),
+        img::DecodedImage {
+            width: 1,
+            height: 1,
+            pixels: vec![0],
+            color: img::ColorType::Rgb8,
+            mode: img::ImageMode::L8,
+            palette: None,
+        },
+        img::DecodedImage::with_mode(1, 1, vec![1], img::ImageMode::P8)
+            .with_palette(palette.clone()),
+        img::DecodedImage::new(1, 1, vec![0], img::ColorType::L8).with_palette(palette.clone()),
+    ];
+    for image in invalid_images {
+        assert!(image.validate().is_err());
+    }
+    let valid = img::DecodedImage::new(1, 1, vec![0, 0, 0], img::ColorType::Rgb8);
+    let empty = img::DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![],
+        loop_count: None,
+    };
+    assert!(empty.validate().is_err());
+    let outside = img::DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![img::DecodedFrame {
+            image: valid.clone(),
+            left: 1,
+            top: 0,
+            duration_ms: 0,
+            disposal: img::FrameDisposal::Unspecified,
+            interlaced: false,
+        }],
+        loop_count: None,
+    };
+    assert!(outside.validate().is_err());
+    assert_eq!(
+        img::detect_format(b"\0\0\0\x18ftypavif\0\0\0\0"),
+        Some(img::ImageFormat::Avif)
+    );
+    assert!(img::decode(b"\0\0\0\x18ftypavif\0\0\0\0").is_none());
+    assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_none());
+    assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_none());
+
     exercise_primitive(1u8);
     exercise_primitive(1u16);
     exercise_primitive(1u32);
