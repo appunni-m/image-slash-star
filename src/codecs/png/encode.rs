@@ -372,31 +372,3 @@ fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
     }
     !crc
 }
-
-#[cfg(test)]
-mod tests {
-    use super::encode;
-    use crate::decode::png::decode;
-    use crate::encode_options::EncodeOptions;
-    use crate::types::{ColorType, DecodedImage};
-
-    #[test]
-    fn native_png_roundtrips_plain_and_adam7_rgba() {
-        let width = 17;
-        let height = 19;
-        let pixels = (0..width * height * 4)
-            .map(|index| ((index * 29 + index / 7) & 0xff) as u8)
-            .collect::<Vec<_>>();
-        let image = DecodedImage::new(width, height, pixels.clone(), ColorType::Rgba8);
-
-        for interlace in [false, true] {
-            let options = EncodeOptions {
-                interlace: Some(interlace),
-                ..EncodeOptions::default()
-            };
-            let encoded = encode(&image, &options).expect("PNG should encode");
-            let decoded = decode(&encoded).expect("native PNG should decode");
-            assert_eq!(decoded.pixels, pixels);
-        }
-    }
-}

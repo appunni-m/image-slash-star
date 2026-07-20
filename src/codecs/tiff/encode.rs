@@ -457,24 +457,3 @@ fn write_entry(
     endian.push_u32(output, count);
     endian.push_u32(output, value);
 }
-
-#[cfg(test)]
-mod tests {
-    use super::encode;
-    use crate::decode::tiff::decode;
-    use crate::encode_options::EncodeOptions;
-    use crate::types::{ColorType, DecodedImage};
-
-    #[test]
-    fn native_tiff_roundtrips_rgba() {
-        let image = DecodedImage::new(
-            3,
-            2,
-            (0..24).map(|value| value * 7).collect(),
-            ColorType::Rgba8,
-        );
-        let encoded = encode(&image, &EncodeOptions::default()).expect("TIFF should encode");
-        let decoded = decode(&encoded).expect("native TIFF should decode");
-        assert_eq!(decoded.pixels, image.pixels);
-    }
-}

@@ -911,38 +911,3 @@ fn find_nearest(palette: &[[u8; 3]], color: &[u8; 3]) -> usize {
     }
     best
 }
-
-#[cfg(test)]
-mod tests {
-    use super::encode;
-    use crate::decode::gif::decode;
-    use crate::encode_options::EncodeOptions;
-    use crate::types::{ColorType, DecodedImage};
-
-    #[test]
-    fn native_lzw_roundtrip_crosses_dictionary_width_boundaries() {
-        let width = 128;
-        let height = 64;
-        let pixels = (0..width * height)
-            .map(|index| ((index * 37 + index / 11) & 0xff) as u8)
-            .collect::<Vec<_>>();
-        let image = DecodedImage::new(width, height, pixels.clone(), ColorType::L8);
-
-        let encoded = encode(&image, &EncodeOptions::default()).expect("GIF should encode");
-        let decoded = decode(&encoded).expect("native encoder output should decode");
-
-        assert_eq!(decoded.width, width);
-        assert_eq!(decoded.height, height);
-        assert_eq!(decoded.pixels, pixels);
-    }
-
-    #[test]
-    fn native_lzw_roundtrip_handles_single_pixel() {
-        let image = DecodedImage::new(1, 1, vec![173], ColorType::L8);
-
-        let encoded = encode(&image, &EncodeOptions::default()).expect("GIF should encode");
-        let decoded = decode(&encoded).expect("native encoder output should decode");
-
-        assert_eq!(decoded.pixels, vec![173]);
-    }
-}

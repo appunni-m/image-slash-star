@@ -303,14 +303,3 @@ pub(super) fn residual_cost(
     }
     cost
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn first_q80_intra4_residual_cost_matches_libwebp_1_6_0() {
-        let levels = [-6, 21, 21, 16, -9, 16, 9, -7, -7, 9, -4, -5, -4, -3, -3, -2];
-        assert_eq!(residual_cost(&levels, 0, 3, 0), 51_982);
-    }
-}

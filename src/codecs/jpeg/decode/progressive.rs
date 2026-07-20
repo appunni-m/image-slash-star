@@ -193,13 +193,6 @@ fn ac_refine_block(
 }
 
 pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<DecodedImage> {
-    // Run the test on first call for debugging
-    #[cfg(test)]
-    {
-        // This is a hack — we can't run tests from here.
-        // Instead, the test module above will be compiled.
-    }
-
     let mcu_width = (info.max_h_samp as u32) * 8;
     let mcu_height = (info.max_v_samp as u32) * 8;
     let num_mcus_x = ((info.width as u32) + mcu_width - 1) / mcu_width;
