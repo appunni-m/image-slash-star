@@ -1987,6 +1987,29 @@
           ]
         },
         {
+          "id": "enc_animated_rgb",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Re-encode composited RGB animation frames through Pillow's adaptive GIF palettes",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb.bin",
+          "encoded_ref_bytes": 19767,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "gif",
           "id": "enc_opaque",
@@ -11923,9 +11946,9 @@
     }
   },
   "summary": {
-    "total_rows": 641,
+    "total_rows": 642,
     "decode_rows": 400,
-    "encode_rows": 209,
+    "encode_rows": 210,
     "formats": 8,
     "assets_available": 393,
     "decode_active": 394,

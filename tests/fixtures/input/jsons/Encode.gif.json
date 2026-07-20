@@ -171,6 +171,33 @@
       }
     },
     {
+      "id": "enc_animated_rgb",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "params": {
+        "animated": true,
+        "frames": 2
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_opaque",
       "source_asset": "static.gif",
       "source_format": "gif",

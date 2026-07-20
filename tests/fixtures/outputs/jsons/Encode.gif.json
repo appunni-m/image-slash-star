@@ -85,6 +85,18 @@
       "encoded_ref_bytes": 279
     },
     {
+      "id": "enc_animated_rgb",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb.bin",
+      "encoded_ref_bytes": 19767
+    },
+    {
       "id": "enc_opaque",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_opaque.bin",
       "ref_bytes": 16384,

@@ -465,19 +465,19 @@ fn write_gif(
         output.push(0);
     }
 
-    let mut previous_rgb = None::<Vec<u8>>;
+    let mut previous_quantized_rgb = None::<Vec<u8>>;
     for frame in frames {
         let mut prepared = prepare_image(&frame.image)?;
-        let frame_rgb = image_rgb(&frame.image)?;
-        if let Some(previous) = previous_rgb.as_deref()
+        let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette)?;
+        if let Some(previous) = previous_quantized_rgb.as_deref()
             && prepared.transparent.is_none()
             && prepared.palette.len() / 3 < 256
-            && previous.len() == frame_rgb.len()
+            && previous.len() == quantized_rgb.len()
         {
             let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
             for (index, (before, after)) in previous
                 .chunks_exact(3)
-                .zip(frame_rgb.chunks_exact(3))
+                .zip(quantized_rgb.chunks_exact(3))
                 .enumerate()
             {
                 if before == after {
@@ -486,7 +486,7 @@ fn write_gif(
             }
             prepared.transparent = Some(transparent);
         }
-        previous_rgb = Some(frame_rgb);
+        previous_quantized_rgb = Some(quantized_rgb);
         let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette)?;
         let mut transparent = prepared.transparent;
         if let Some(requested) = option_bool(opts, "transparency") {
@@ -554,34 +554,13 @@ fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) -
     Some(())
 }
 
-fn image_rgb(image: &DecodedImage) -> Option<Vec<u8>> {
-    match image.mode {
-        ImageMode::Rgb8 if image.color == ColorType::Rgb8 => Some(image.pixels.clone()),
-        ImageMode::Rgba8 if image.color == ColorType::Rgba8 => Some(
-            image
-                .pixels
-                .chunks_exact(4)
-                .flat_map(|pixel| pixel[..3].iter().copied())
-                .collect(),
-        ),
-        ImageMode::P8 if image.color == ColorType::L8 => {
-            let palette = image.palette.as_ref()?;
-            let mut rgb = Vec::with_capacity(image.pixels.len().checked_mul(3)?);
-            for &index in &image.pixels {
-                let offset = usize::from(index).checked_mul(3)?;
-                rgb.extend_from_slice(palette.rgb.get(offset..offset + 3)?);
-            }
-            Some(rgb)
-        }
-        ImageMode::L8 if image.color == ColorType::L8 => {
-            let mut rgb = Vec::with_capacity(image.pixels.len().checked_mul(3)?);
-            for &value in &image.pixels {
-                rgb.extend_from_slice(&[value, value, value]);
-            }
-            Some(rgb)
-        }
-        _ => None,
+fn indexed_rgb(indices: &[u8], palette: &[u8]) -> Option<Vec<u8>> {
+    let mut rgb = Vec::with_capacity(indices.len().checked_mul(3)?);
+    for &index in indices {
+        let offset = usize::from(index).checked_mul(3)?;
+        rgb.extend_from_slice(palette.get(offset..offset + 3)?);
     }
+    Some(rgb)
 }
 
 fn interlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
