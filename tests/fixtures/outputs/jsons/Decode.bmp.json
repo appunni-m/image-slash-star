@@ -130,6 +130,19 @@
       ]
     },
     {
+      "id": "compression_rle8_rle8_top_down",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle8_top_down_bmp.bin",
+      "ref_bytes": 256,
+      "ref_mode": "P",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
       "id": "compression_rle4",
       "status": "ok",
       "error_type": null,
@@ -451,6 +464,16 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle8_early_eob",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

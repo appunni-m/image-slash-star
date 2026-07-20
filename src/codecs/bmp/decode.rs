@@ -127,7 +127,10 @@ fn decode_rle(
                 }
                 x = 0;
             }
-            1 => break,
+            // The loop exits before reading EOB once the declared canvas is
+            // complete. Reaching EOB here therefore means Pillow would report
+            // insufficient image data rather than pad the missing pixels.
+            1 => return None,
             2 => {
                 let right = usize::from(*data.get(position)?);
                 let up = usize::from(*data.get(position.checked_add(1)?)?);

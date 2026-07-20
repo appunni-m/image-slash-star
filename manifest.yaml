@@ -926,6 +926,7 @@ formats:
       test_assets:
       - rle8.bmp
       - rle8_mixed.bmp
+      - rle8_top_down.bmp
     - id: compression_rle4
       description: BI_RLE4 (4-bit RLE)
       test_assets:
@@ -990,6 +991,7 @@ formats:
       - truncated_header.bmp
       - truncated_pixels.bmp
       - truncated_palette.bmp
+      - rle8_early_eob.bmp
       expect_error: true
     encode_edge_cases:
     - id: enc_1bit

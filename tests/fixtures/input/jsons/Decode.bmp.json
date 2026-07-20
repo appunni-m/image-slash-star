@@ -130,6 +130,19 @@
       }
     },
     {
+      "id": "compression_rle8_rle8_top_down",
+      "asset": "rle8_top_down.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_top_down.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "compression_rle4",
       "asset": "rle4.bmp",
       "expect_error": false,
@@ -473,6 +486,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_palette.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle8_early_eob",
+      "asset": "rle8_early_eob.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_early_eob.bmp",
         "operations": [
           "PIL.Image.open",
           "load",

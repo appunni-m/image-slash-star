@@ -241,6 +241,24 @@
           ]
         },
         {
+          "id": "compression_rle8_rle8_top_down",
+          "type": "decode",
+          "format": "bmp",
+          "category": "compression",
+          "description": "BI_RLE8 (8-bit RLE)",
+          "asset": "rle8_top_down.bmp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle8_top_down_bmp.bin",
+          "ref_bytes": 256,
+          "ref_mode": "P",
+          "ref_size": [
+            16,
+            16
+          ]
+        },
+        {
           "asset": "rle4.bmp",
           "category": "compression",
           "description": "BI_RLE4 (4-bit RLE)",
@@ -689,6 +707,19 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "image file is truncated (0 bytes not processed)"
+        },
+        {
+          "id": "error_malformed_rle8_early_eob",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "rle8_early_eob.bmp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "not enough image data"
         }
       ],
       "encode": [
@@ -10303,12 +10334,12 @@
     }
   },
   "summary": {
-    "total_rows": 548,
-    "decode_rows": 326,
+    "total_rows": 550,
+    "decode_rows": 328,
     "encode_rows": 190,
     "formats": 8,
-    "assets_available": 319,
-    "decode_active": 320,
+    "assets_available": 321,
+    "decode_active": 322,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
