@@ -1568,7 +1568,6 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
         let created = img::DynamicImage::new(1, 1, color);
         assert_eq!(created.color(), color);
     }
-
     let mut same = image.clone();
     same.clone_from(image);
     let mut different = if image.color() == img::ColorType::L8 {
@@ -1588,6 +1587,7 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
     let _ = image.to_luma_alpha16();
     let _ = image.to_rgb32f();
     let _ = image.to_rgba32f();
+    let _: img::RgbaImage = image.to::<img::Rgba<u8>>();
     let _ = image.clone().into_rgb8();
     let _ = image.clone().into_rgba8();
     let _ = image.clone().into_luma8();
@@ -1626,12 +1626,44 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
     let decoded = image.clone().into_decoded();
     let roundtrip = img::DynamicImage::from_decoded(&decoded).unwrap();
     assert_eq!(roundtrip.as_bytes(), image.as_bytes());
+    let _ = image.crop_imm(0, 0, 1, 1);
     assert_eq!(GenericImageView::dimensions(image), (width, height));
     let pixel = GenericImageView::get_pixel(image, 0, 0);
     let mut writable = image.clone();
     GenericImage::put_pixel(&mut writable, 0, 0, pixel);
     #[allow(deprecated)]
     GenericImage::blend_pixel(&mut writable, 0, 0, pixel);
+    let _: img::RgbImage = image.clone().into();
+    let _: img::RgbaImage = image.clone().into();
+    let _: img::GrayImage = image.clone().into();
+    let _: img::GrayAlphaImage = image.clone().into();
+    let _: img::DynamicImage = image.to_rgb8().into();
+    let _: img::DynamicImage = image.to_rgba8().into();
+    let _: img::DynamicImage = image.to_luma8().into();
+    let _: img::DynamicImage = image.to_luma_alpha8().into();
+
+    let invalid_mode = img::DecodedImage {
+        width: 1,
+        height: 1,
+        pixels: vec![0, 0, 0],
+        color: img::ColorType::Rgb8,
+        mode: img::ImageMode::L8,
+        palette: None,
+    };
+    assert!(img::DynamicImage::from_decoded(&invalid_mode).is_none());
+    let invalid_palette = img::DecodedImage {
+        mode: img::ImageMode::Rgb8,
+        palette: Some(img::ImagePalette::default()),
+        ..invalid_mode.clone()
+    };
+    assert!(img::DynamicImage::from_decoded(&invalid_palette).is_none());
+    for color in [img::ColorType::Cmyk8, img::ColorType::L32F] {
+        let decoded =
+            img::DecodedImage::new(1, 1, vec![0; usize::from(color.bytes_per_pixel())], color);
+        assert!(img::DynamicImage::from_decoded(&decoded).is_none());
+    }
+    let short = img::DecodedImage::new(1, 1, vec![], img::ColorType::Rgb8);
+    assert!(img::DynamicImage::from_decoded(&short).is_none());
 }
 
 fn exercise_primitive<T>(value: T)
@@ -1653,7 +1685,15 @@ where
 }
 
 fn exercise_type_metadata() {
-    use img::{EncodableLayout, ExtendedColorType as E};
+    use img::{EncodableLayout, ExtendedColorType as E, GenericImage};
+
+    let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::Cmyk8));
+    let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::L32F));
+    let mut dynamic = img::DynamicImage::new_rgba8(1, 1);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        #[allow(deprecated)]
+        let _ = GenericImage::get_pixel_mut(&mut dynamic, 0, 0);
+    }));
 
     let colors = [
         img::ColorType::L8,
