@@ -2307,6 +2307,26 @@
           ]
         },
         {
+          "id": "enc_rgba_octree",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "Dense RGBA source populates every Pillow FASTOCTREE bucket with varied frequencies",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_octree.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_octree.bin",
+          "encoded_ref_bytes": 7469,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_octree.bin",
+          "ref_bytes": 16385,
+          "ref_mode": "P",
+          "ref_size": [
+            16385,
+            1
+          ]
+        },
+        {
           "id": "enc_rgba_opaque",
           "type": "encode",
           "format": "gif",
@@ -11880,9 +11900,9 @@
     }
   },
   "summary": {
-    "total_rows": 639,
+    "total_rows": 640,
     "decode_rows": 400,
-    "encode_rows": 207,
+    "encode_rows": 208,
     "formats": 8,
     "assets_available": 393,
     "decode_active": 394,

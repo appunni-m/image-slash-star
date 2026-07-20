@@ -287,6 +287,22 @@ def gen_png():
     gif_rgba_high_color = high_color.convert("RGBA")
     gif_rgba_high_color.putpixel((0, 0), (17, 19, 23, 0))
     gif_rgba_high_color.save(d / "gif_rgba_high_color.png")
+    octree_colors = []
+    for r_bucket in range(8):
+        for g_bucket in range(16):
+            for b_bucket in range(8):
+                for a_bucket in range(8):
+                    offset = (((r_bucket * 16 + g_bucket) * 8 + b_bucket) * 8) + a_bucket
+                    color = (
+                        r_bucket * 32 + 15,
+                        g_bucket * 16 + 7,
+                        b_bucket * 32 + 15,
+                        a_bucket * 32 + 15,
+                    )
+                    octree_colors.extend([color] * (1 + ((offset * 17 + 5) % 3)))
+    gif_rgba_octree = Image.new("RGBA", (len(octree_colors), 1))
+    gif_rgba_octree.putdata(octree_colors)
+    gif_rgba_octree.save(d / "gif_rgba_octree.png")
     img.convert("L").save(d / "gray.png")
     img.convert("LA").save(d / "gray_alpha.png")
     img.convert("P").save(d / "indexed.png")

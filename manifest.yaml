@@ -916,6 +916,11 @@ formats:
       source_format: png
       source_asset: gif_rgba_high_color.png
       params: {}
+    - id: enc_rgba_octree
+      description: Dense RGBA source populates every Pillow FASTOCTREE bucket with varied frequencies
+      source_format: png
+      source_asset: gif_rgba_octree.png
+      params: {}
     - id: enc_rgba_opaque
       description: Opaque RGBA source quantized through Pillow's RGB path
       source_format: png
