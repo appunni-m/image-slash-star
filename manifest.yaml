@@ -537,6 +537,9 @@ formats:
     - id: enc_compress_0
       description: 
       params: {'compression': 0}
+    - id: enc_compress_1
+      description: zlib-ng quick strategy at compression level 1
+      params: {'compression': 1}
     - id: enc_compress_3
       description: 
       params: {'compression': 3}

@@ -34,6 +34,27 @@
       }
     },
     {
+      "id": "enc_compress_1",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "compression": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_compress_3",
       "source_asset": "rgb.png",
       "source_format": "png",

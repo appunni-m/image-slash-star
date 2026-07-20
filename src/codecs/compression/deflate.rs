@@ -91,6 +91,9 @@ pub(crate) fn compress_zlib_chunked(
     if level == 0 {
         return compress_zlib_stored_chunked(data, input_chunks);
     }
+    if level == 1 {
+        return super::zlib_ng::compress_level1(data, input_chunks);
+    }
     if level == 3 {
         return super::zlib_ng::compress_level3(data, input_chunks);
     }

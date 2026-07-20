@@ -33,6 +33,106 @@ enum Token {
     Match { length: usize, distance: usize },
 }
 
+/// Compress using Pillow's zlib-ng 2.3.3 level-one quick strategy.
+///
+/// `deflate_quick` retains only the newest four-byte hash candidate, emits
+/// fixed Huffman codes directly, and deliberately does not insert positions
+/// skipped by a match.
+pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let input_len = input_chunks
+        .iter()
+        .try_fold(0usize, |total, &length| total.checked_add(length))?;
+    if input_len != data.len() {
+        return None;
+    }
+
+    let (tokens, final_tokens) = tokenize_level1(data, input_chunks)?;
+    let mut writer = BitWriter::default();
+    // deflate_quick opens its first block during Z_NO_FLUSH calls. On
+    // Z_FINISH it closes that block as non-final, then emits the remaining
+    // short lookahead in a final fixed block.
+    emit_fixed_block(&tokens, false, &mut writer)?;
+    emit_fixed_block(&final_tokens, true, &mut writer)?;
+    let mut output = vec![0x78, 0x01];
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> Option<(Vec<Token>, Vec<Token>)> {
+    let mut head = vec![0usize; HASH_SIZE];
+    let mut tokens = Vec::new();
+    let mut position = 0usize;
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        available = available.checked_add(chunk_length)?;
+        if available > data.len() {
+            return None;
+        }
+
+        // fill_window() re-inserts strstart - 1 whenever a new input call
+        // makes another four-byte hash available. This includes positions
+        // skipped by the preceding quick match.
+        if position >= 1 && available.checked_sub(position)? >= 3 {
+            quick_insert_level1(data, position - 1, &mut head)?;
+        }
+        while available.checked_sub(position)? >= MIN_LOOKAHEAD {
+            tokenize_level1_position(data, available, &mut position, &mut head, &mut tokens)?;
+        }
+    }
+    if available != data.len() {
+        return None;
+    }
+    let mut final_tokens = Vec::new();
+    while position < available {
+        tokenize_level1_position(data, available, &mut position, &mut head, &mut final_tokens)?;
+    }
+    Some((tokens, final_tokens))
+}
+
+fn tokenize_level1_position(
+    data: &[u8],
+    available: usize,
+    position: &mut usize,
+    head: &mut [usize],
+    tokens: &mut Vec<Token>,
+) -> Option<()> {
+    let lookahead = available.checked_sub(*position)?;
+    if lookahead >= MIN_MATCH {
+        let candidate = quick_insert_level1(data, *position, head)?;
+        let distance = position.checked_sub(candidate)?;
+        if distance != 0
+            && distance <= MAX_DISTANCE
+            && data.get(candidate..candidate + 2)? == data.get(*position..*position + 2)?
+        {
+            let length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
+            if length >= MIN_MATCH {
+                tokens.push(Token::Match { length, distance });
+                *position = position.checked_add(length)?;
+                return Some(());
+            }
+        }
+    }
+
+    tokens.push(Token::Literal(*data.get(*position)?));
+    *position = position.checked_add(1)?;
+    Some(())
+}
+
+fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {
+    let word = u32::from_le_bytes(
+        data.get(position..position.checked_add(4)?)?
+            .try_into()
+            .ok()?,
+    );
+    let hash = usize::try_from(word.wrapping_mul(2_654_435_761) >> 16).ok()?;
+    let candidate = *head.get(hash)?;
+    if candidate != position {
+        *head.get_mut(hash)? = position;
+    }
+    Some(candidate)
+}
+
 /// Compress using Pillow's zlib-ng 2.3.3 level-three configuration.
 ///
 /// Pillow's `ZipEncode.c` selects `Z_FILTERED`, a 32 KiB window, and

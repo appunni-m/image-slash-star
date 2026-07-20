@@ -4358,6 +4358,28 @@
           ]
         },
         {
+          "id": "enc_compress_1",
+          "type": "encode",
+          "format": "png",
+          "category": "compress",
+          "description": "zlib-ng quick strategy at compression level 1",
+          "params": {
+            "compression": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_1.bin",
+          "encoded_ref_bytes": 5818,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_1.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_compress_3",
@@ -7908,9 +7930,9 @@
     }
   },
   "summary": {
-    "total_rows": 433,
+    "total_rows": 434,
     "decode_rows": 271,
-    "encode_rows": 130,
+    "encode_rows": 131,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,
