@@ -48,9 +48,6 @@ impl HuffTable {
         for l in 1..=16 {
             let cnt = counts[l - 1] as usize;
             for _ in 0..cnt {
-                if p >= numsymbols {
-                    break;
-                }
                 huffcode[p] = code;
                 code += 1;
                 p += 1;
@@ -63,9 +60,6 @@ impl HuffTable {
         for l in 1..=16 {
             let cnt = counts[l - 1] as usize;
             for _ in 0..cnt {
-                if p >= numsymbols {
-                    break;
-                }
                 if huffcode[p] as i64 >= (1i64 << l) {
                     // Bad table — return a minimal valid table
                     return HuffTable::empty();
@@ -97,9 +91,6 @@ impl HuffTable {
         for l in 1..=HUFF_LOOKAHEAD {
             let cnt = counts[(l - 1) as usize] as usize;
             for _ in 0..cnt {
-                if p >= numsymbols {
-                    break;
-                }
                 // Left-justify the code followed by all possible bit sequences
                 let lookbits = (huffcode[p] << (HUFF_LOOKAHEAD - l)) as usize;
                 let entry: u16 = ((l as u16) << 8) | values[p] as u16;

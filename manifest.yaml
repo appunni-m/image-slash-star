@@ -220,6 +220,46 @@ formats:
       test_assets:
       - corrupt.jpg
       expect_error: true
+    - id: malformed_markers
+      description: Invalid JPEG marker, table, frame, and scan structures
+      test_assets:
+      - dangling_marker.jpg
+      - markerless_tail.jpg
+      - sof_precision_12.jpg
+      - sof_two_components.jpg
+      - sof_zero_sampling.jpg
+      - sof_bad_quant_table.jpg
+      - sof_missing_quant_table.jpg
+      - dqt_bad_table.jpg
+      - dht_bad_table.jpg
+      - dht_oversubscribed.jpg
+      - sos_zero_components.jpg
+      - sos_bad_dc_table.jpg
+      - sos_missing_dc_table.jpg
+      - sos_missing_ac_table.jpg
+      - duplicate_sof.jpg
+      - sos_before_sof.jpg
+      - eoi_without_sos.jpg
+      - wrong_soi.jpg
+      - truncated_sof_payload.jpg
+      - app14_truncated_payload.jpg
+      - tem_marker.jpg
+      expect_error: true
+    - id: pillow_tolerated_malformed
+      description: Malformed optional JPEG marker ignored by Pillow
+      test_assets:
+      - app14_short_length.jpg
+      - app14_non_adobe.jpg
+      - prefixed_stuffed_marker.jpg
+    - id: dqt_16bit
+      description: Baseline JPEG using sixteen-bit quantization table entries
+      test_assets:
+      - dqt_16bit.jpg
+    - id: missing_eoi
+      description: JPEG entropy stream without a final EOI marker
+      test_assets:
+      - missing_eoi.jpg
+      expect_error: true
     - id: baseline_standard
       description: Baseline DCT sequential
       test_assets:

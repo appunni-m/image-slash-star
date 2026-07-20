@@ -263,7 +263,8 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
             pixels,
             ColorType::Rgb8,
         ))
-    } else if info.num_components == 4 {
+    } else {
+        debug_assert_eq!(info.num_components, 4);
         // Pillow exposes Adobe four-component JPEGs as CMYK and selects its
         // inverted CMYK raw mode whenever APP14 identifies Adobe data.
         let inverted = info.adobe_transform.is_some();
@@ -289,8 +290,6 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
             pixels,
             ColorType::Cmyk8,
         ))
-    } else {
-        None
     }
 }
 
@@ -365,9 +364,7 @@ pub(super) struct EntropySegments {
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let info = parse_jpeg(data)?;
 
-    if info.scan_components.is_empty() {
-        return None;
-    }
+    debug_assert!(!info.scan_components.is_empty());
 
     for comp in &info.components {
         if info.quant_tables.len() <= comp.quant_tbl as usize

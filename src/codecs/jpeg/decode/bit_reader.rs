@@ -35,11 +35,6 @@ impl<'a> BitReader<'a> {
         }
     }
 
-    #[allow(dead_code)]
-    pub(super) fn bits_left(&self) -> u32 {
-        self.bits
-    }
-
     // ── jpeg_fill_bit_buffer (simplified: no suspension, no data source callbacks) ──
 
     /// Fill the bit buffer to at least MIN_GET_BITS bits.
@@ -106,10 +101,7 @@ impl<'a> BitReader<'a> {
     /// PEEK_BITS(n): peek at top n bits without consuming. Caller must ensure n ≤ bits.
     #[inline]
     pub(super) fn peek_bits(&self, n: u32) -> u32 {
-        debug_assert!(n <= self.bits);
-        if n == 0 {
-            return 0;
-        }
+        debug_assert!(n > 0 && n <= self.bits);
         ((self.buf >> (self.bits - n)) as u32) & ((1u32 << n) - 1)
     }
 
@@ -131,9 +123,7 @@ impl<'a> BitReader<'a> {
     /// High-level "read n bits" used by non-Huffman callers (DC refinement, sign bits).
     /// Returns None if data is exhausted.
     pub(super) fn read_bits(&mut self, n: u32) -> Option<u32> {
-        if n == 0 {
-            return Some(0);
-        }
+        debug_assert!(n > 0);
         if !self.ensure(n) {
             return None;
         }

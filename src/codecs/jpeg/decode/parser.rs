@@ -382,11 +382,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                         entropy_start = Some(scan_start);
                     }
                     saw_sos = true;
-                    if let Some(eoi) = find_eoi(data, pos) {
-                        let _pos = eoi;
-                    } else {
-                        let _pos = data.len();
-                    }
+                    find_eoi(data, pos)?;
                     break;
                 } else {
                     saw_sos = true;
@@ -402,7 +398,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
             }
             M_APP14 => {
                 let length = usize::from(read_u16(data, &mut pos)?);
-                if length < 2 || pos.checked_add(length - 2)? > data.len() {
+                if length < 2 {
+                    continue;
+                }
+                if pos.checked_add(length - 2)? > data.len() {
                     return None;
                 }
                 let payload_end = pos + length - 2;
@@ -415,7 +414,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 break;
             }
             0xFFD0..=0xFFD7 => {}
-            0xFF01 => {}
+            0xFF01 => return None,
             _ => {
                 let length = read_u16(data, &mut pos)? as usize;
                 pos += length - 2;
@@ -426,7 +425,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
     if !saw_sos {
         return None;
     }
-    let eoi_pos = find_eoi(data, 0).unwrap_or(data.len());
+    let eoi_pos = find_eoi(data, 0)?;
 
     Some(JpegInfo {
         width,

@@ -66,6 +66,41 @@ def corrupt_png_crc(src, dst):
     dst.write_bytes(data)
 
 
+def jpeg_segment(data, marker):
+    """Return ``(start, payload_start, end)`` for a pre-scan JPEG segment."""
+    position = 2
+    while position + 3 < len(data):
+        if data[position] != 0xFF:
+            position += 1
+            continue
+        while position < len(data) and data[position] == 0xFF:
+            position += 1
+        if position >= len(data):
+            break
+        code = data[position]
+        start = position - 1
+        position += 1
+        if code in (0xD8, 0xD9) or 0xD0 <= code <= 0xD7:
+            continue
+        if position + 2 > len(data):
+            break
+        length = struct.unpack(">H", data[position : position + 2])[0]
+        end = position + length
+        if code == marker:
+            return start, position + 2, end
+        if code == 0xDA:
+            break
+        position = end
+    raise ValueError(f"JPEG marker FF{marker:02X} not found")
+
+
+def mutate_jpeg_payload(data, marker, offset, value):
+    mutated = bytearray(data)
+    _, payload_start, _ = jpeg_segment(mutated, marker)
+    mutated[payload_start + offset] = value
+    return bytes(mutated)
+
+
 def png_chunk(kind, payload):
     return (
         struct.pack(">I", len(payload))
@@ -342,6 +377,81 @@ def gen_jpeg():
     d.joinpath("empty.jpg").write_bytes(b"")
     d.joinpath("truncated.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00")
     d.joinpath("corrupt.jpg").write_bytes(b"\xff\xd8\xde\xad\xbe\xef")
+    baseline = (d / "baseline.jpg").read_bytes()
+    d.joinpath("dangling_marker.jpg").write_bytes(b"\xff\xd8\xff")
+    d.joinpath("markerless_tail.jpg").write_bytes(b"\xff\xd8NO-MARKER")
+    d.joinpath("sof_precision_12.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 0, 12)
+    )
+    d.joinpath("sof_two_components.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 5, 2)
+    )
+    d.joinpath("sof_zero_sampling.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 7, 0)
+    )
+    d.joinpath("sof_bad_quant_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 8, 4)
+    )
+    d.joinpath("sof_missing_quant_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 8, 2)
+    )
+    d.joinpath("dqt_bad_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xDB, 0, 4)
+    )
+    d.joinpath("dht_bad_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC4, 0, 4)
+    )
+    dht_start, _, dht_end = jpeg_segment(baseline, 0xC4)
+    oversubscribed_dht = b"\xff\xc4" + struct.pack(">H", 22) + bytes([0, 3] + [0] * 15 + [0, 1, 2])
+    d.joinpath("dht_oversubscribed.jpg").write_bytes(
+        baseline[:dht_start] + oversubscribed_dht + baseline[dht_end:]
+    )
+    d.joinpath("sos_zero_components.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xDA, 0, 0)
+    )
+    d.joinpath("sos_bad_dc_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xDA, 2, 0x40)
+    )
+    d.joinpath("sos_missing_dc_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xDA, 2, 0x20)
+    )
+    d.joinpath("sos_missing_ac_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xDA, 2, 0x02)
+    )
+    sof_start, _, sof_end = jpeg_segment(baseline, 0xC0)
+    d.joinpath("duplicate_sof.jpg").write_bytes(
+        baseline[:sof_end] + baseline[sof_start:sof_end] + baseline[sof_end:]
+    )
+    sos_start, _, sos_end = jpeg_segment(baseline, 0xDA)
+    d.joinpath("sos_before_sof.jpg").write_bytes(
+        baseline[:2] + baseline[sos_start:sos_end] + b"\xff\xd9"
+    )
+    d.joinpath("eoi_without_sos.jpg").write_bytes(baseline[:sos_start] + b"\xff\xd9")
+    d.joinpath("missing_eoi.jpg").write_bytes(baseline[:-2])
+    d.joinpath("wrong_soi.jpg").write_bytes(b"\xff\xd7" + baseline[2:])
+    d.joinpath("truncated_sof_payload.jpg").write_bytes(b"\xff\xd8\xff\xc0\x00\x02")
+    d.joinpath("prefixed_stuffed_marker.jpg").write_bytes(
+        baseline[:2] + b"\xff\x00" + baseline[2:]
+    )
+    d.joinpath("app14_short_length.jpg").write_bytes(
+        baseline[:2] + b"\xff\xee\x00\x01" + baseline[2:]
+    )
+    d.joinpath("app14_truncated_payload.jpg").write_bytes(
+        baseline[:2] + b"\xff\xee\xff\xff"
+    )
+    d.joinpath("app14_non_adobe.jpg").write_bytes(
+        baseline[:2] + b"\xff\xee\x00\x0eNotAdobeData" + baseline[2:]
+    )
+    d.joinpath("tem_marker.jpg").write_bytes(baseline[:2] + b"\xff\x01" + baseline[2:])
+    dqt_start, dqt_payload, dqt_end = jpeg_segment(baseline, 0xDB)
+    dqt_source = baseline[dqt_payload:dqt_end]
+    wide_dqt_payload = bytes([0x10 | (dqt_source[0] & 0x0F)]) + b"".join(
+        struct.pack(">H", value) for value in dqt_source[1:65]
+    )
+    wide_dqt = b"\xff\xdb" + struct.pack(">H", len(wide_dqt_payload) + 2) + wide_dqt_payload
+    d.joinpath("dqt_16bit.jpg").write_bytes(
+        baseline[:dqt_start] + wide_dqt + baseline[dqt_end:]
+    )
     print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
 
 
