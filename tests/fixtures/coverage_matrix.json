@@ -2010,6 +2010,21 @@
           ]
         },
         {
+          "id": "enc_error_cmyk",
+          "type": "encode",
+          "format": "gif",
+          "category": "error",
+          "description": "Pillow rejects CMYK input when GIF adaptive palette conversion is requested",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_cmyk.jpg",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "image has wrong mode"
+        },
+        {
           "description": "",
           "format": "gif",
           "id": "enc_opaque",
@@ -11946,9 +11961,9 @@
     }
   },
   "summary": {
-    "total_rows": 642,
+    "total_rows": 643,
     "decode_rows": 400,
-    "encode_rows": 210,
+    "encode_rows": 211,
     "formats": 8,
     "assets_available": 393,
     "decode_active": 394,
