@@ -221,6 +221,32 @@
       ]
     },
     {
+      "id": "photometric_miniswhite_miniswhite_2bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_2bit_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
+      "ref_size": [
+        17,
+        13
+      ]
+    },
+    {
+      "id": "photometric_miniswhite_miniswhite_4bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_4bit_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
+      "ref_size": [
+        17,
+        13
+      ]
+    },
+    {
       "id": "grayscale",
       "status": "ok",
       "error_type": null,
@@ -228,6 +254,19 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray_tiff.bin",
       "ref_bytes": 16384,
       "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "grayscale_alpha",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray_alpha_tiff.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "La8",
       "ref_size": [
         128,
         128
@@ -625,6 +664,16 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_miniswhite_gray_alpha",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

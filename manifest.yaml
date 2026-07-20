@@ -1417,10 +1417,16 @@ formats:
       test_assets:
       - miniswhite_1bit.tiff
       - miniswhite_8bit.tiff
+      - miniswhite_2bit.tiff
+      - miniswhite_4bit.tiff
     - id: grayscale
       description: Grayscale
       test_assets:
       - gray.tiff
+    - id: grayscale_alpha
+      description: Grayscale with alpha
+      test_assets:
+      - gray_alpha.tiff
     - id: palette
       description: Palette/indexed color
       test_assets:
@@ -1512,6 +1518,7 @@ formats:
       - zero_tile_width.tiff
       - empty_tile_offsets.tiff
       - compressed_empty_tile_byte_counts.tiff
+      - miniswhite_gray_alpha.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

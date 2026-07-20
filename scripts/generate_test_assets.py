@@ -1706,6 +1706,7 @@ def gen_tiff():
     img.convert("I;16").save(d / "16bit.tiff")
     img.convert("F").save(d / "float32.tiff")
     img.convert("RGBA").save(d / "rgba.tiff")
+    img.convert("LA").save(d / "gray_alpha.tiff")
     img.convert("P").save(d / "palette.tiff")
     img.convert("CMYK").save(d / "cmyk.tiff")
     write_ycbcr_tiff(d / "ycbcr.tiff", img.resize((17, 13)))
@@ -1715,6 +1716,8 @@ def gen_tiff():
     write_low_depth_tiff(d / "miniswhite_8bit.tiff", low_depth, 8, 0)
     write_low_depth_tiff(d / "gray2.tiff", low_depth, 2, 1)
     write_low_depth_tiff(d / "gray4.tiff", low_depth, 4, 1)
+    write_low_depth_tiff(d / "miniswhite_2bit.tiff", low_depth, 2, 0)
+    write_low_depth_tiff(d / "miniswhite_4bit.tiff", low_depth, 4, 0)
     write_low_depth_tiff(d / "palette2.tiff", low_depth, 2, 3)
     write_low_depth_tiff(d / "palette4.tiff", low_depth, 4, 3)
     img.save(d / "uncompressed.tiff", compression=None)
@@ -1769,6 +1772,9 @@ def gen_tiff():
     mutate_tiff_tag(d / "rgb.tiff", d / "rows_zero.tiff", 278, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "unknown_compression.tiff", 259, 999)
     mutate_tiff_tag(d / "rgb.tiff", d / "unsupported_photometric.tiff", 262, 4)
+    mutate_tiff_tag(
+        d / "gray_alpha.tiff", d / "miniswhite_gray_alpha.tiff", 262, 0
+    )
     mutate_tiff_tag(
         d / "rgb_deflate_predictor.tiff",
         d / "invalid_predictor.tiff",

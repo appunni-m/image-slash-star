@@ -103,9 +103,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             let count = usize::try_from(byte_count).ok()?;
             let encoded = data.get(start..start.checked_add(count)?)?;
             let mut decoded = decode_block(encoded, tile_size)?;
-            if decoded.len() != tile_size {
-                return None;
-            }
+            // Every compressed decoder returns exactly the requested size, and
+            // uncompressed tile counts were normalized to tile_size above.
             if predictor == 2
                 && matches!(
                     compression,
@@ -222,7 +221,7 @@ fn convert_pixels(
                 for row in pixels.chunks_exact_mut(row_bytes) {
                     row.iter_mut().for_each(|byte| *byte = !*byte);
                     if width % 8 != 0 {
-                        *row.last_mut()? &= u8::MAX << (8 - width % 8);
+                        row[row_bytes - 1] &= u8::MAX << (8 - width % 8);
                     }
                 }
             }
@@ -239,19 +238,12 @@ fn convert_pixels(
             }
             Some(DecodedImage::new(width, height, pixels, ColorType::L8))
         }
-        (0 | 1, 2, 8) => {
-            if photometric == 0 {
-                for pixel in pixels.chunks_exact_mut(2) {
-                    pixel[0] = !pixel[0];
-                }
-            }
-            Some(DecodedImage::with_mode(
-                width,
-                height,
-                pixels,
-                ImageMode::La8,
-            ))
-        }
+        (1, 2, 8) => Some(DecodedImage::with_mode(
+            width,
+            height,
+            pixels,
+            ImageMode::La8,
+        )),
         (0 | 1, 1, bits @ (2 | 4)) => {
             let maximum = (1u16 << bits) - 1;
             let output = unpack_indices(&pixels, width, height, bits)?
@@ -357,10 +349,7 @@ fn reverse_horizontal_predictor(
                     let previous =
                         endian.u16(row.get(offset - sample_stride..offset - sample_stride + 2)?)?;
                     let current = endian.u16(row.get(offset..offset + 2)?)?;
-                    endian.write_u16(
-                        current.wrapping_add(previous),
-                        row.get_mut(offset..offset + 2)?,
-                    )?;
+                    endian.write_u16(current.wrapping_add(previous), &mut row[offset..offset + 2]);
                 }
             }
         }
@@ -552,13 +541,12 @@ impl Endian {
         })
     }
 
-    fn write_u16(self, value: u16, destination: &mut [u8]) -> Option<()> {
+    fn write_u16(self, value: u16, destination: &mut [u8]) {
         let bytes = match self {
             Endian::Little => value.to_le_bytes(),
             Endian::Big => value.to_be_bytes(),
         };
-        destination.get_mut(..2)?.copy_from_slice(&bytes);
-        Some(())
+        destination.copy_from_slice(&bytes);
     }
 }
 

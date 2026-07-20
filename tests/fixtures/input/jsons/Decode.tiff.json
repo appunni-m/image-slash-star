@@ -221,11 +221,50 @@
       }
     },
     {
+      "id": "photometric_miniswhite_miniswhite_2bit",
+      "asset": "miniswhite_2bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_2bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "photometric_miniswhite_miniswhite_4bit",
+      "asset": "miniswhite_4bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_4bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "grayscale",
       "asset": "gray.tiff",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "grayscale_alpha",
+      "asset": "gray_alpha.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray_alpha.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -668,6 +707,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/compressed_empty_tile_byte_counts.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_miniswhite_gray_alpha",
+      "asset": "miniswhite_gray_alpha.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_gray_alpha.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
