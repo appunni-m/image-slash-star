@@ -61,6 +61,30 @@
       "encoded_ref_bytes": 47170
     },
     {
+      "id": "enc_packbits_runs",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_packbits_runs.bin",
+      "ref_bytes": 520,
+      "ref_mode": "L8",
+      "ref_size": [
+        520,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_packbits_runs.bin",
+      "encoded_ref_bytes": 392
+    },
+    {
+      "id": "enc_lzw_solid",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_solid.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "L8",
+      "ref_size": [
+        512,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_solid.bin",
+      "encoded_ref_bytes": 414
+    },
+    {
       "id": "enc_byte_le",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_byte_le.bin",
       "ref_bytes": 49152,
@@ -251,6 +275,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_predictor_horiz.bin",
       "encoded_ref_bytes": 49304
+    },
+    {
+      "id": "enc_lzw_predictor_horiz",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_predictor_horiz.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_predictor_horiz.bin",
+      "encoded_ref_bytes": 6796
     },
     {
       "id": "enc_1x1",

@@ -230,6 +230,16 @@ def gen_png():
         ]
     )
     high_color.save(d / "gif_rgb_high_color.png")
+    packbits_values = (
+        [7] * 260
+        + list(range(126))
+        + [200, 200, 201]
+        + [((index * 37) + 11) & 255 for index in range(131)]
+    )
+    packbits_runs = Image.new("L", (520, 1))
+    packbits_runs.putdata(packbits_values)
+    packbits_runs.save(d / "tiff_packbits_runs.png")
+    Image.new("L", (512, 64), 37).save(d / "tiff_lzw_solid.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 255)).save(d / "gif_rgba_opaque.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 0)).save(d / "gif_rgba.png")
     img.convert("L").save(d / "gray.png")

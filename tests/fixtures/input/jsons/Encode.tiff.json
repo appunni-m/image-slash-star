@@ -97,6 +97,48 @@
       }
     },
     {
+      "id": "enc_packbits_runs",
+      "source_asset": "tiff_packbits_runs.png",
+      "source_format": "png",
+      "params": {
+        "compression": "packbits"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/tiff_packbits_runs.png",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "packbits"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lzw_solid",
+      "source_asset": "tiff_lzw_solid.png",
+      "source_format": "png",
+      "params": {
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/tiff_lzw_solid.png",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_byte_le",
       "source_asset": "rgb.tiff",
       "source_format": "tiff",
@@ -405,6 +447,34 @@
         "method": "PIL.Image.Image.save",
         "format": "TIFF",
         "kwargs": {
+          "tiffinfo": {
+            "type": "ImageFileDirectory_v2",
+            "tags": {
+              "317": 2
+            }
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lzw_predictor_horiz",
+      "source_asset": "rgb.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "lzw",
+        "predictor": "horizontal"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw",
           "tiffinfo": {
             "type": "ImageFileDirectory_v2",
             "tags": {

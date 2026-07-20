@@ -1366,6 +1366,16 @@ formats:
     - id: enc_compress_packbits
       description: 
       params: {'compression': 'packbits'}
+    - id: enc_packbits_runs
+      description: PackBits long runs, literal blocks, and run-to-literal transitions
+      source_format: png
+      source_asset: tiff_packbits_runs.png
+      params: {'compression': 'packbits'}
+    - id: enc_lzw_solid
+      description: Highly compressible TIFF data crossing the LZW ratio checkpoint
+      source_format: png
+      source_asset: tiff_lzw_solid.png
+      params: {'compression': 'lzw'}
     - id: enc_byte_le
       description: 
       params: {'byte_order': 'le'}
@@ -1423,6 +1433,9 @@ formats:
     - id: enc_predictor_horiz
       description: 
       params: {'predictor': 'horizontal'}
+    - id: enc_lzw_predictor_horiz
+      description: LZW-compressed TIFF with horizontal differencing predictor
+      params: {'compression': 'lzw', 'predictor': 'horizontal'}
     - id: enc_1x1
       description: 
       params: {'size': [1, 1]}

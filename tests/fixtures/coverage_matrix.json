@@ -6536,6 +6536,50 @@
           ]
         },
         {
+          "id": "enc_packbits_runs",
+          "type": "encode",
+          "format": "tiff",
+          "category": "packbits",
+          "description": "PackBits long runs, literal blocks, and run-to-literal transitions",
+          "params": {
+            "compression": "packbits"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "tiff_packbits_runs.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_packbits_runs.bin",
+          "encoded_ref_bytes": 392,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_packbits_runs.bin",
+          "ref_bytes": 520,
+          "ref_mode": "L8",
+          "ref_size": [
+            520,
+            1
+          ]
+        },
+        {
+          "id": "enc_lzw_solid",
+          "type": "encode",
+          "format": "tiff",
+          "category": "lzw",
+          "description": "Highly compressible TIFF data crossing the LZW ratio checkpoint",
+          "params": {
+            "compression": "lzw"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "tiff_lzw_solid.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_solid.bin",
+          "encoded_ref_bytes": 414,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_solid.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            64
+          ]
+        },
+        {
           "description": "",
           "format": "tiff",
           "id": "enc_byte_le",
@@ -6880,6 +6924,29 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_predictor_horiz.bin",
           "encoded_ref_bytes": 49304,
           "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_predictor_horiz.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_lzw_predictor_horiz",
+          "type": "encode",
+          "format": "tiff",
+          "category": "lzw",
+          "description": "LZW-compressed TIFF with horizontal differencing predictor",
+          "params": {
+            "compression": "lzw",
+            "predictor": "horizontal"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "rgb.tiff",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_predictor_horiz.bin",
+          "encoded_ref_bytes": 6796,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_predictor_horiz.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -8811,9 +8878,9 @@
     }
   },
   "summary": {
-    "total_rows": 474,
+    "total_rows": 477,
     "decode_rows": 271,
-    "encode_rows": 171,
+    "encode_rows": 174,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,
