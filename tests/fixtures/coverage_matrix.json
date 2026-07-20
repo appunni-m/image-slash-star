@@ -2428,6 +2428,26 @@
           ]
         },
         {
+          "id": "enc_rgba_octree_sorted",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "RGBA source presents all coarse FASTOCTREE buckets in descending frequency order",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_octree_sorted.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_octree_sorted.bin",
+          "encoded_ref_bytes": 6256,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_octree_sorted.bin",
+          "ref_bytes": 32896,
+          "ref_mode": "P",
+          "ref_size": [
+            32896,
+            1
+          ]
+        },
+        {
           "id": "enc_rgba_opaque",
           "type": "encode",
           "format": "gif",
@@ -12001,9 +12021,9 @@
     }
   },
   "summary": {
-    "total_rows": 645,
+    "total_rows": 646,
     "decode_rows": 400,
-    "encode_rows": 213,
+    "encode_rows": 214,
     "formats": 8,
     "assets_available": 393,
     "decode_active": 394,

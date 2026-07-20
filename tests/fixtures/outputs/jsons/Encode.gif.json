@@ -337,6 +337,18 @@
       "encoded_ref_bytes": 7469
     },
     {
+      "id": "enc_rgba_octree_sorted",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_octree_sorted.bin",
+      "ref_bytes": 32896,
+      "ref_mode": "P",
+      "ref_size": [
+        32896,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_octree_sorted.bin",
+      "encoded_ref_bytes": 6256
+    },
+    {
       "id": "enc_rgba_opaque",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_opaque.bin",
       "ref_bytes": 1,

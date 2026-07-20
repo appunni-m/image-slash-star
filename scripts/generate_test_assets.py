@@ -303,6 +303,22 @@ def gen_png():
     gif_rgba_octree = Image.new("RGBA", (len(octree_colors), 1))
     gif_rgba_octree.putdata(octree_colors)
     gif_rgba_octree.save(d / "gif_rgba_octree.png")
+    sorted_octree_colors = []
+    for coarse_offset in range(256):
+        r_bucket = (coarse_offset >> 6) & 3
+        g_bucket = (coarse_offset >> 4) & 3
+        b_bucket = (coarse_offset >> 2) & 3
+        a_bucket = coarse_offset & 3
+        color = (
+            r_bucket * 64 + 31,
+            g_bucket * 64 + 31,
+            b_bucket * 64 + 31,
+            a_bucket * 64 + 31,
+        )
+        sorted_octree_colors.extend([color] * (256 - coarse_offset))
+    gif_rgba_octree_sorted = Image.new("RGBA", (len(sorted_octree_colors), 1))
+    gif_rgba_octree_sorted.putdata(sorted_octree_colors)
+    gif_rgba_octree_sorted.save(d / "gif_rgba_octree_sorted.png")
     img.convert("L").save(d / "gray.png")
     img.convert("LA").save(d / "gray_alpha.png")
     img.convert("P").save(d / "indexed.png")

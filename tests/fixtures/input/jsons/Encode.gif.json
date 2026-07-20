@@ -591,6 +591,23 @@
       }
     },
     {
+      "id": "enc_rgba_octree_sorted",
+      "source_asset": "gif_rgba_octree_sorted.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_octree_sorted.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_rgba_opaque",
       "source_asset": "gif_rgba_opaque.png",
       "source_format": "png",

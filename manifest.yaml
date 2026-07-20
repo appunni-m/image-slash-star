@@ -945,6 +945,11 @@ formats:
       source_format: png
       source_asset: gif_rgba_octree.png
       params: {}
+    - id: enc_rgba_octree_sorted
+      description: RGBA source presents all coarse FASTOCTREE buckets in descending frequency order
+      source_format: png
+      source_asset: gif_rgba_octree_sorted.png
+      params: {}
     - id: enc_rgba_opaque
       description: Opaque RGBA source quantized through Pillow's RGB path
       source_format: png
