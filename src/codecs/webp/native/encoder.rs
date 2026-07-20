@@ -69,18 +69,6 @@ impl<W: Write> BitWriter<W> {
     }
 }
 
-fn write_single_entry_huffman_tree<W: Write>(w: &mut BitWriter<W>, symbol: u8) -> io::Result<()> {
-    w.write_bits(1, 2)?;
-    if symbol <= 1 {
-        w.write_bits(0, 1)?;
-        w.write_bits(u64::from(symbol), 1)?;
-    } else {
-        w.write_bits(1, 1)?;
-        w.write_bits(u64::from(symbol), 8)?;
-    }
-    Ok(())
-}
-
 fn build_huffman_tree(
     frequencies: &[u32],
     lengths: &mut [u8],
@@ -90,12 +78,6 @@ fn build_huffman_tree(
     assert_eq!(frequencies.len(), lengths.len());
     assert_eq!(frequencies.len(), codes.len());
 
-    if frequencies.iter().filter(|&&f| f > 0).count() <= 1 {
-        lengths.fill(0);
-        codes.fill(0);
-        return false;
-    }
-
     #[derive(Clone)]
     enum Node {
         Leaf(usize),
@@ -104,12 +86,24 @@ fn build_huffman_tree(
     #[derive(Clone)]
     struct WeightedNode {
         count: u32,
-        sort_value: usize,
+        sort_value: isize,
         node: Node,
     }
 
     let mut optimized = frequencies.to_vec();
     optimize_huffman_for_rle(&mut optimized);
+    let optimized_symbol_count = optimized
+        .iter()
+        .filter(|&&frequency| frequency != 0)
+        .count();
+    if optimized_symbol_count <= 1 {
+        lengths.fill(0);
+        codes.fill(0);
+        if let Some(symbol) = optimized.iter().position(|&frequency| frequency != 0) {
+            lengths[symbol] = 1;
+        }
+        return false;
+    }
     let mut count_min = 1_u32;
     loop {
         let mut nodes = optimized
@@ -118,7 +112,7 @@ fn build_huffman_tree(
             .filter(|&(_, &frequency)| frequency != 0)
             .map(|(value, &frequency)| WeightedNode {
                 count: frequency.max(count_min),
-                sort_value: value,
+                sort_value: value as isize,
                 node: Node::Leaf(value),
             })
             .collect::<Vec<_>>();
@@ -140,7 +134,7 @@ fn build_huffman_tree(
                 position,
                 WeightedNode {
                     count,
-                    sort_value: usize::MAX,
+                    sort_value: -1,
                     node: Node::Branch(Box::new(left.node), Box::new(right.node)),
                 },
             );
@@ -313,10 +307,11 @@ fn write_huffman_tree<W: Write>(
     lengths: &mut [u8],
     codes: &mut [u16],
 ) -> io::Result<()> {
-    let symbols = frequencies
+    build_huffman_tree(frequencies, lengths, codes, 15);
+    let symbols = lengths
         .iter()
         .enumerate()
-        .filter_map(|(symbol, &frequency)| (frequency != 0).then_some(symbol))
+        .filter_map(|(symbol, &length)| (length != 0).then_some(symbol))
         .take(3)
         .collect::<Vec<_>>();
     if symbols.len() <= 2 && symbols.iter().all(|&symbol| symbol < 256) {
@@ -332,20 +327,15 @@ fn write_huffman_tree<W: Write>(
         }
         if symbols.len() == 2 {
             w.write_bits(symbols[1] as u64, 8)?;
-            lengths.fill(0);
-            codes.fill(0);
+        }
+        lengths.fill(0);
+        codes.fill(0);
+        if symbols.len() == 2 {
             lengths[symbols[0]] = 1;
             lengths[symbols[1]] = 1;
             codes[symbols[1]] = 1;
         }
         return Ok(());
-    }
-    if !build_huffman_tree(frequencies, lengths, codes, 15) {
-        let symbol = frequencies
-            .iter()
-            .position(|&frequency| frequency > 0)
-            .unwrap_or(0);
-        return write_single_entry_huffman_tree(w, symbol as u8);
     }
     let tokens = compressed_huffman_tokens(lengths);
     let mut code_length_lengths = [0u8; 19];
@@ -354,19 +344,12 @@ fn write_huffman_tree<W: Write>(
     for token in &tokens {
         code_length_frequencies[usize::from(token.code)] += 1;
     }
-    let code_length_tree_is_nontrivial = build_huffman_tree(
+    build_huffman_tree(
         &code_length_frequencies,
         &mut code_length_lengths,
         &mut code_length_codes,
         7,
     );
-    if !code_length_tree_is_nontrivial {
-        let symbol = code_length_frequencies
-            .iter()
-            .position(|&frequency| frequency != 0)
-            .unwrap_or(0);
-        code_length_lengths[symbol] = 1;
-    }
     const CODE_LENGTH_ORDER: [usize; 19] = [
         17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ];
@@ -488,11 +471,11 @@ fn write_image_stream_configured<W: Write>(
     let token_cost = |tokens: &[backward_refs::Token], cache_bits: u8| {
         backward_refs::estimated_bits(tokens, cache_bits)
     };
-    let (mut tokens, cache_bits) = candidates
+    let (mut tokens, cache_bits, is_standard) = candidates
         .into_iter()
-        .min_by_key(|(tokens, cache_bits)| token_cost(tokens, *cache_bits))
+        .min_by_key(|(tokens, cache_bits, _)| token_cost(tokens, *cache_bits))
         .unwrap();
-    if write_meta_huffman_bit && quality >= 25 {
+    if is_standard && quality >= 25 {
         let traced = backward_refs::trace(pixels, width, &tokens, cache_bits, quality);
         if token_cost(&traced, cache_bits) < token_cost(&tokens, cache_bits) {
             tokens = traced;
@@ -623,6 +606,262 @@ fn write_token_stream<W: Write>(
     Ok(())
 }
 
+fn subtract_pixels(color: u32, previous: u32) -> u32 {
+    let alpha = (color >> 24).wrapping_sub(previous >> 24) & 0xff;
+    let red = ((color >> 16) & 0xff).wrapping_sub((previous >> 16) & 0xff) & 0xff;
+    let green = ((color >> 8) & 0xff).wrapping_sub((previous >> 8) & 0xff) & 0xff;
+    let blue = (color & 0xff).wrapping_sub(previous & 0xff) & 0xff;
+    alpha << 24 | red << 16 | green << 8 | blue
+}
+
+fn palette_color_distance(color: u32, previous: u32) -> u32 {
+    let difference = subtract_pixels(color, previous);
+    let component_distance = |value: u32| value.min(256 - value);
+    let rgb = component_distance(difference & 0xff)
+        + component_distance((difference >> 8) & 0xff)
+        + component_distance((difference >> 16) & 0xff);
+    9 * rgb + component_distance(difference >> 24)
+}
+
+fn minimize_palette_deltas(palette: &mut Vec<u32>) {
+    let mut signs = 0_u8;
+    let mut previous = 0_u32;
+    for &color in palette.iter() {
+        let difference = subtract_pixels(color, previous);
+        for (shift, positive, negative) in [(16, 1, 2), (8, 8, 16), (0, 64, 128)] {
+            let component = ((difference >> shift) & 0xff) as u8;
+            if component != 0 {
+                signs |= if component < 0x80 { positive } else { negative };
+            }
+        }
+        previous = color;
+    }
+    if signs & (signs << 1) == 0 {
+        return;
+    }
+    let mut sortable_length = palette.len();
+    if sortable_length > 17 && palette[0] == 0 {
+        sortable_length -= 1;
+        palette.swap(0, sortable_length);
+    }
+    previous = 0;
+    for index in 0..sortable_length {
+        let (offset, _) = palette[index..sortable_length]
+            .iter()
+            .enumerate()
+            .map(|(offset, &color)| (offset, palette_color_distance(color, previous)))
+            .min_by_key(|&(_, distance)| distance)
+            .unwrap();
+        palette.swap(index, index + offset);
+        previous = palette[index];
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EntropyMode {
+    Direct,
+    Spatial,
+    SubtractGreen,
+    SpatialSubtractGreen,
+    Palette,
+}
+
+fn analyze_entropy(
+    pixels: &[u32],
+    width: usize,
+    height: usize,
+    palette_size: Option<usize>,
+    transform_bits: u8,
+) -> (EntropyMode, bool) {
+    if palette_size.is_some_and(|size| size <= 16) {
+        return (EntropyMode::Palette, true);
+    }
+    const ALPHA: usize = 0;
+    const ALPHA_PREDICTED: usize = 1;
+    const GREEN: usize = 2;
+    const GREEN_PREDICTED: usize = 3;
+    const RED: usize = 4;
+    const RED_PREDICTED: usize = 5;
+    const BLUE: usize = 6;
+    const BLUE_PREDICTED: usize = 7;
+    const RED_SUB_GREEN: usize = 8;
+    const RED_PREDICTED_SUB_GREEN: usize = 9;
+    const BLUE_SUB_GREEN: usize = 10;
+    const BLUE_PREDICTED_SUB_GREEN: usize = 11;
+    const PALETTE: usize = 12;
+    let mut histograms = vec![[0_u32; 256]; 13];
+    let mut previous_pixel = pixels[0];
+    for y in 0..height {
+        for x in 0..width {
+            let pixel = pixels[y * width + x];
+            let difference = subtract_pixels(pixel, previous_pixel);
+            previous_pixel = pixel;
+            if difference == 0 || (y != 0 && pixel == pixels[(y - 1) * width + x]) {
+                continue;
+            }
+            let add_channels = |histograms: &mut [[u32; 256]], base: [usize; 4], color: u32| {
+                for (channel, shift) in [24, 16, 8, 0].into_iter().enumerate() {
+                    histograms[base[channel]][((color >> shift) & 0xff) as usize] += 1;
+                }
+            };
+            add_channels(&mut histograms, [ALPHA, RED, GREEN, BLUE], pixel);
+            add_channels(
+                &mut histograms,
+                [
+                    ALPHA_PREDICTED,
+                    RED_PREDICTED,
+                    GREEN_PREDICTED,
+                    BLUE_PREDICTED,
+                ],
+                difference,
+            );
+            let add_sub_green =
+                |histograms: &mut [[u32; 256]], red: usize, blue: usize, color: u32| {
+                    let green = ((color >> 8) & 0xff) as u8;
+                    let red_value = ((color >> 16) & 0xff) as u8;
+                    let blue_value = (color & 0xff) as u8;
+                    histograms[red][usize::from(red_value.wrapping_sub(green))] += 1;
+                    histograms[blue][usize::from(blue_value.wrapping_sub(green))] += 1;
+                };
+            add_sub_green(&mut histograms, RED_SUB_GREEN, BLUE_SUB_GREEN, pixel);
+            add_sub_green(
+                &mut histograms,
+                RED_PREDICTED_SUB_GREEN,
+                BLUE_PREDICTED_SUB_GREEN,
+                difference,
+            );
+            let hash = ((((u64::from(pixel) + u64::from(pixel >> 19)) * 0x39c5_fba7) & 0xffff_ffff)
+                >> 24) as usize;
+            histograms[PALETTE][hash] += 1;
+        }
+    }
+    for category in [
+        RED_PREDICTED_SUB_GREEN,
+        BLUE_PREDICTED_SUB_GREEN,
+        RED_PREDICTED,
+        GREEN_PREDICTED,
+        BLUE_PREDICTED,
+        ALPHA_PREDICTED,
+    ] {
+        histograms[category][0] += 1;
+    }
+    let costs = histograms
+        .iter()
+        .map(|histogram| histogram::bits_entropy(histogram))
+        .collect::<Vec<_>>();
+    let transform_width = width.div_ceil(1 << transform_bits);
+    let transform_height = height.div_ceil(1 << transform_bits);
+    let fast_log = |value: u32| (f64::from(value).log2() * f64::from(1_u32 << 23)).round() as u64;
+    let mut modes = vec![
+        (
+            EntropyMode::Direct,
+            costs[ALPHA] + costs[RED] + costs[GREEN] + costs[BLUE],
+        ),
+        (
+            EntropyMode::Spatial,
+            costs[ALPHA_PREDICTED]
+                + costs[RED_PREDICTED]
+                + costs[GREEN_PREDICTED]
+                + costs[BLUE_PREDICTED]
+                + (transform_width * transform_height) as u64 * fast_log(14),
+        ),
+        (
+            EntropyMode::SubtractGreen,
+            costs[ALPHA] + costs[RED_SUB_GREEN] + costs[GREEN] + costs[BLUE_SUB_GREEN],
+        ),
+        (
+            EntropyMode::SpatialSubtractGreen,
+            costs[ALPHA_PREDICTED]
+                + costs[RED_PREDICTED_SUB_GREEN]
+                + costs[GREEN_PREDICTED]
+                + costs[BLUE_PREDICTED_SUB_GREEN]
+                + (transform_width * transform_height) as u64 * fast_log(24),
+        ),
+    ];
+    if let Some(size) = palette_size {
+        modes.push((
+            EntropyMode::Palette,
+            costs[PALETTE] + ((size as u64 * 8) << 23),
+        ));
+    }
+    let mode = modes
+        .into_iter()
+        .min_by_key(|&(_, cost)| cost)
+        .map(|(mode, _)| mode)
+        .unwrap();
+    let (red_histogram, blue_histogram) = match mode {
+        EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE),
+        EntropyMode::Spatial => (RED_PREDICTED, BLUE_PREDICTED),
+        EntropyMode::SubtractGreen => (RED_SUB_GREEN, BLUE_SUB_GREEN),
+        EntropyMode::SpatialSubtractGreen => (RED_PREDICTED_SUB_GREEN, BLUE_PREDICTED_SUB_GREEN),
+    };
+    let red_and_blue_zero = (1..256).all(|index| {
+        histograms[red_histogram][index] == 0 && histograms[blue_histogram][index] == 0
+    });
+    (mode, red_and_blue_zero)
+}
+
+fn subtract_green(pixels: &mut [u32]) {
+    for pixel in pixels {
+        let green = (*pixel >> 8) & 0xff;
+        let red = ((*pixel >> 16) & 0xff).wrapping_sub(green) & 0xff;
+        let blue = (*pixel & 0xff).wrapping_sub(green) & 0xff;
+        *pixel = (*pixel & 0xff00_ff00) | (red << 16) | blue;
+    }
+}
+
+fn apply_palette<W: Write>(
+    w: &mut BitWriter<W>,
+    pixels: &[u32],
+    width: usize,
+    height: usize,
+    mut palette: Vec<u32>,
+) -> io::Result<()> {
+    minimize_palette_deltas(&mut palette);
+    let encoded_length = if palette.len() > 17 && palette.last() == Some(&0) {
+        palette.len() - 1
+    } else {
+        palette.len()
+    };
+    w.write_bits(1, 1)?;
+    w.write_bits(3, 2)?;
+    w.write_bits((encoded_length - 1) as u64, 8)?;
+    let mut previous = 0;
+    let palette_delta = palette[..encoded_length]
+        .iter()
+        .map(|&color| {
+            let difference = subtract_pixels(color, previous);
+            previous = color;
+            difference
+        })
+        .collect::<Vec<_>>();
+    write_image_stream_configured(w, &palette_delta, encoded_length, false, 20, 0)?;
+
+    let packing_bits = match palette.len() {
+        0..=2 => 3,
+        3..=4 => 2,
+        5..=16 => 1,
+        _ => 0,
+    };
+    let pixels_per_group = 1 << packing_bits;
+    let bits_per_pixel = 8 >> packing_bits;
+    let packed_width = width.div_ceil(pixels_per_group);
+    let mut packed = Vec::with_capacity(packed_width * height);
+    for row in pixels.chunks_exact(width) {
+        for group in row.chunks(pixels_per_group) {
+            let mut packed_pixel = 0xff00_0000_u32;
+            for (index, &color) in group.iter().enumerate() {
+                let palette_index = palette.iter().position(|&entry| entry == color).unwrap();
+                packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
+            }
+            packed.push(packed_pixel);
+        }
+    }
+    w.write_bits(0, 1)?;
+    let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
+    write_image_stream_configured(w, &packed, packed_width, true, 80, maximum_cache_bits)
+}
+
 /// Encode image data with the indicated color type.
 ///
 /// # Panics
@@ -694,36 +933,79 @@ fn encode_frame<W: Write>(
         }
     }
 
+    let palette = pixels
+        .iter()
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let palette_size = (palette.len() <= 256).then_some(palette.len());
+    let transform_bits = if palette_size.is_some() { 5 } else { 3 };
+    let (entropy_mode, red_and_blue_zero) = analyze_entropy(
+        &pixels,
+        width as usize,
+        height as usize,
+        palette_size,
+        transform_bits,
+    );
+    if entropy_mode == EntropyMode::Palette {
+        apply_palette(w, &pixels, width as usize, height as usize, palette)?;
+        w.flush()?;
+        return Ok(());
+    }
+
     let grayscale = pixels.iter().all(|&pixel| {
         let red = (pixel >> 16) & 0xff;
         let green = (pixel >> 8) & 0xff;
         let blue = pixel & 0xff;
         red == green && green == blue
     });
-    if grayscale {
+    let use_subtract_green = matches!(
+        entropy_mode,
+        EntropyMode::SubtractGreen | EntropyMode::SpatialSubtractGreen
+    );
+    let use_predictor = matches!(
+        entropy_mode,
+        EntropyMode::Spatial | EntropyMode::SpatialSubtractGreen
+    );
+    if use_subtract_green {
         w.write_bits(1, 1)?;
         w.write_bits(2, 2)?;
-        for pixel in &mut pixels {
-            let alpha = *pixel & 0xff00_0000;
-            let green = *pixel & 0x0000_ff00;
-            *pixel = alpha | green;
-        }
+        subtract_green(&mut pixels);
     }
 
-    let (predictor_map, predictor_bits) = if grayscale {
-        predictor::apply_fixed(&mut pixels, width as usize, height as usize, 3, 12)
-    } else {
-        predictor::select_and_apply(&mut pixels, width as usize, height as usize, 3)
-    };
-    w.write_bits(1, 1)?;
-    w.write_bits(0, 2)?;
-    w.write_bits(u64::from(predictor_bits - 2), 3)?;
-    let predictor_width = (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
-    write_image_stream(w, &predictor_map, predictor_width, false)?;
+    if use_predictor {
+        let (predictor_map, predictor_bits) = if grayscale {
+            predictor::apply_fixed(
+                &mut pixels,
+                width as usize,
+                height as usize,
+                transform_bits,
+                12,
+            )
+        } else {
+            predictor::select_and_apply(
+                &mut pixels,
+                width as usize,
+                height as usize,
+                transform_bits,
+            )
+        };
+        w.write_bits(1, 1)?;
+        w.write_bits(0, 2)?;
+        w.write_bits(u64::from(predictor_bits - 2), 3)?;
+        let predictor_width = (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
+        write_image_stream(w, &predictor_map, predictor_width, false)?;
+    }
 
-    if !grayscale {
-        let (color_map, color_bits) =
-            cross_color::select_and_apply(&mut pixels, width as usize, height as usize, 3, 80);
+    if use_predictor && !red_and_blue_zero {
+        let (color_map, color_bits) = cross_color::select_and_apply(
+            &mut pixels,
+            width as usize,
+            height as usize,
+            transform_bits,
+            80,
+        );
         w.write_bits(1, 1)?;
         w.write_bits(1, 2)?;
         w.write_bits(u64::from(color_bits - 2), 3)?;

@@ -1467,6 +1467,46 @@ formats:
       source_format: jpeg
       source_asset: baseline_cmyk.jpg
       params: {'lossless': True}
+    - id: enc_lossless_noise
+      description: Re-encode high-entropy lossless pixels with Pillow's spatial Huffman clustering
+      source_format: webp
+      source_asset: lossless_noise.webp
+      params: {'lossless': True}
+    - id: enc_lossless_checker
+      description: Re-encode a repeated lossless checker pattern
+      source_format: webp
+      source_asset: lossless_checker2.webp
+      params: {'lossless': True}
+    - id: enc_lossless_solid
+      description: Re-encode a solid-color lossless image
+      source_format: webp
+      source_asset: lossless_solid.webp
+      params: {'lossless': True}
+    - id: enc_lossless_palette256
+      description: Re-encode a full-palette lossless image
+      source_format: webp
+      source_asset: lossless_palette256.webp
+      params: {'lossless': True}
+    - id: enc_lossless_predictor_sparse
+      description: Re-encode sparse predictor residuals
+      source_format: webp
+      source_asset: lossless_predictor_sparse.webp
+      params: {'lossless': True}
+    - id: enc_lossless_predictor_random_walk
+      description: Re-encode random-walk predictor residuals
+      source_format: webp
+      source_asset: lossless_predictor_random_walk.webp
+      params: {'lossless': True}
+    - id: enc_lossless_predictor_radial
+      description: Re-encode radial predictor residuals
+      source_format: webp
+      source_asset: lossless_predictor_radial.webp
+      params: {'lossless': True}
+    - id: enc_lossless_predictor_quadrants
+      description: Re-encode quadrant predictor residuals
+      source_format: webp
+      source_asset: lossless_predictor_quadrants.webp
+      params: {'lossless': True}
     - id: enc_1x1
       description: 
       source_format: png

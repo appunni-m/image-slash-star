@@ -12386,6 +12386,182 @@
           ]
         },
         {
+          "id": "enc_lossless_noise",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode high-entropy lossless pixels with Pillow's spatial Huffman clustering",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_noise.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_noise.bin",
+          "encoded_ref_bytes": 58,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_noise.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_lossless_checker",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode a repeated lossless checker pattern",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_checker2.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_checker.bin",
+          "encoded_ref_bytes": 54,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_checker.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_lossless_solid",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode a solid-color lossless image",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_solid.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_solid.bin",
+          "encoded_ref_bytes": 44,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_solid.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_lossless_palette256",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode a full-palette lossless image",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_palette256.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_palette256.bin",
+          "encoded_ref_bytes": 586,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette256.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
+          "id": "enc_lossless_predictor_sparse",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode sparse predictor residuals",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_predictor_sparse.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_sparse.bin",
+          "encoded_ref_bytes": 172,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_sparse.bin",
+          "ref_bytes": 27648,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            96,
+            96
+          ]
+        },
+        {
+          "id": "enc_lossless_predictor_random_walk",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode random-walk predictor residuals",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_predictor_random_walk.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_random_walk.bin",
+          "encoded_ref_bytes": 10804,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_random_walk.bin",
+          "ref_bytes": 27648,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            96,
+            96
+          ]
+        },
+        {
+          "id": "enc_lossless_predictor_radial",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode radial predictor residuals",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_predictor_radial.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_radial.bin",
+          "encoded_ref_bytes": 9734,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_radial.bin",
+          "ref_bytes": 27648,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            96,
+            96
+          ]
+        },
+        {
+          "id": "enc_lossless_predictor_quadrants",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Re-encode quadrant predictor residuals",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "lossless_predictor_quadrants.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_quadrants.bin",
+          "encoded_ref_bytes": 82,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_quadrants.bin",
+          "ref_bytes": 27648,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            96,
+            96
+          ]
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_1x1",
@@ -12482,9 +12658,9 @@
     }
   },
   "summary": {
-    "total_rows": 662,
+    "total_rows": 670,
     "decode_rows": 406,
-    "encode_rows": 224,
+    "encode_rows": 232,
     "formats": 8,
     "assets_available": 399,
     "decode_active": 400,

@@ -524,6 +524,174 @@
       }
     },
     {
+      "id": "enc_lossless_noise",
+      "source_asset": "lossless_noise.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_noise.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_checker",
+      "source_asset": "lossless_checker2.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_checker2.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_solid",
+      "source_asset": "lossless_solid.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_solid.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_palette256",
+      "source_asset": "lossless_palette256.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_palette256.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_predictor_sparse",
+      "source_asset": "lossless_predictor_sparse.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_sparse.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_predictor_random_walk",
+      "source_asset": "lossless_predictor_random_walk.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_random_walk.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_predictor_radial",
+      "source_asset": "lossless_predictor_radial.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_radial.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_predictor_quadrants",
+      "source_asset": "lossless_predictor_quadrants.webp",
+      "source_format": "webp",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_predictor_quadrants.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1x1",
       "source_asset": "1x1.png",
       "source_format": "png",

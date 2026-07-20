@@ -289,6 +289,102 @@
       "encoded_ref_bytes": 16780
     },
     {
+      "id": "enc_lossless_noise",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_noise.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_noise.bin",
+      "encoded_ref_bytes": 58
+    },
+    {
+      "id": "enc_lossless_checker",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_checker.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_checker.bin",
+      "encoded_ref_bytes": 54
+    },
+    {
+      "id": "enc_lossless_solid",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_solid.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_solid.bin",
+      "encoded_ref_bytes": 44
+    },
+    {
+      "id": "enc_lossless_palette256",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette256.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_palette256.bin",
+      "encoded_ref_bytes": 586
+    },
+    {
+      "id": "enc_lossless_predictor_sparse",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_sparse.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_sparse.bin",
+      "encoded_ref_bytes": 172
+    },
+    {
+      "id": "enc_lossless_predictor_random_walk",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_random_walk.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_random_walk.bin",
+      "encoded_ref_bytes": 10804
+    },
+    {
+      "id": "enc_lossless_predictor_radial",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_radial.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_radial.bin",
+      "encoded_ref_bytes": 9734
+    },
+    {
+      "id": "enc_lossless_predictor_quadrants",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_quadrants.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_quadrants.bin",
+      "encoded_ref_bytes": 82
+    },
+    {
       "id": "enc_1x1",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_1x1.bin",
       "ref_bytes": 3,

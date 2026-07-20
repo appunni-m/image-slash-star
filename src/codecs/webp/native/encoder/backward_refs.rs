@@ -2,7 +2,7 @@
 // `src/enc/backward_references_enc.c`.
 
 const MIN_LENGTH: usize = 4;
-const MAX_LENGTH: usize = 4096;
+const MAX_LENGTH: usize = (1 << 12) - 1;
 const WINDOW_SIZE: usize = (1 << 20) - 120;
 const HASH_BITS: usize = 18;
 const HASH_SIZE: usize = 1 << HASH_BITS;
@@ -810,19 +810,19 @@ pub(super) fn candidates(
     allow_cache: bool,
     quality: u32,
     max_cache_bits: u8,
-) -> Vec<(Vec<Token>, u8)> {
+) -> Vec<(Vec<Token>, u8, bool)> {
     if pixels.is_empty() {
-        return vec![(Vec::new(), 0)];
+        return vec![(Vec::new(), 0, true)];
     }
     let chain = fill_hash_chain(pixels, width, quality);
     let refs = lz77(pixels, width, &chain);
     let refs_rle = rle(pixels, width);
     if !allow_cache {
-        return vec![(refs, 0), (refs_rle, 0)];
+        return vec![(refs, 0, true), (refs_rle, 0, false)];
     }
-    let candidates: Vec<_> = [refs, refs_rle]
+    let candidates: Vec<_> = [(refs, true), (refs_rle, false)]
         .into_iter()
-        .map(|source| {
+        .map(|(source, is_standard)| {
             (0..=max_cache_bits)
                 .map(|bits| {
                     let cached = with_cache(pixels, &source, bits);
@@ -830,7 +830,7 @@ pub(super) fn candidates(
                     (cached, bits, cost)
                 })
                 .min_by_key(|candidate| candidate.2)
-                .map(|(tokens, bits, _)| (tokens, bits))
+                .map(|(tokens, bits, _)| (tokens, bits, is_standard))
                 .unwrap()
         })
         .collect();

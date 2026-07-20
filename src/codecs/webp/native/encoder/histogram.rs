@@ -204,6 +204,11 @@ fn population_cost(population: &[u32]) -> (u64, u16, bool) {
     )
 }
 
+pub(super) fn bits_entropy(population: &[u32]) -> u64 {
+    let (entropy, _) = entropy_unrefined(population, None);
+    refined_entropy(&entropy)
+}
+
 fn combined_channel_cost(a: &Histogram, b: &Histogram, channel: usize) -> u64 {
     if (a.trivial[channel] != NON_TRIVIAL && a.trivial[channel] == b.trivial[channel])
         || !a.used[channel]
