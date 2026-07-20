@@ -117,6 +117,32 @@
       ]
     },
     {
+      "id": "bmp_mask_transparency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_24bit_transparent_ico.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bmp_odd_width",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_1bit_odd_ico.bin",
+      "ref_bytes": 960,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        15,
+        16
+      ]
+    },
+    {
       "id": "cursor",
       "status": "ok",
       "error_type": null,
@@ -124,6 +150,32 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.ico_cursor_cur.bin",
       "ref_bytes": 256,
       "ref_mode": "P",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "cursor_cursor_default_palette",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_cursor_default_palette_cur.bin",
+      "ref_bytes": 256,
+      "ref_mode": "P",
+      "ref_size": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "cursor_cursor_24bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_cursor_24bit_cur.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
       "ref_size": [
         16,
         16
@@ -220,6 +272,46 @@
       "status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_short_dib",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_zero_width",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_unsupported_bpp",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP pixel depth (2)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_cursor_short_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP header type (20)",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

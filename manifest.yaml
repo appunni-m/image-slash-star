@@ -1745,10 +1745,20 @@ formats:
       - bmp_4bit.ico
       - bmp_8bit.ico
       - bmp_32bit.ico
+    - id: bmp_mask_transparency
+      description: 24-bit BMP entry transparency supplied by the ICO AND mask
+      test_assets:
+      - bmp_24bit_transparent.ico
+    - id: bmp_odd_width
+      description: Packed one-bit BMP entry with a partial final source byte
+      test_assets:
+      - bmp_1bit_odd.ico
     - id: cursor
       description: CUR container with hotspot coordinates
       test_assets:
       - cursor.cur
+      - cursor_default_palette.cur
+      - cursor_24bit.cur
     - id: size_16x16
       description: 16x16 icon (most common)
       test_assets:
@@ -1767,6 +1777,10 @@ formats:
       - truncated_directory.ico
       - zero_entry.ico
       - truncated_entry.ico
+      - short_dib.ico
+      - zero_width.ico
+      - unsupported_bpp.ico
+      - cursor_short_header.cur
       expect_error: true
     encode_edge_cases:
     - id: enc_16x16

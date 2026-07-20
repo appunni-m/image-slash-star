@@ -117,11 +117,63 @@
       }
     },
     {
+      "id": "bmp_mask_transparency",
+      "asset": "bmp_24bit_transparent.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_24bit_transparent.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bmp_odd_width",
+      "asset": "bmp_1bit_odd.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_1bit_odd.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "cursor",
       "asset": "cursor.cur",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "cursor_cursor_default_palette",
+      "asset": "cursor_default_palette.cur",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor_default_palette.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "cursor_cursor_24bit",
+      "asset": "cursor_24bit.cur",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor_24bit.cur",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -239,6 +291,58 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/truncated_entry.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_short_dib",
+      "asset": "short_dib.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/short_dib.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_zero_width",
+      "asset": "zero_width.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/zero_width.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_unsupported_bpp",
+      "asset": "unsupported_bpp.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/unsupported_bpp.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_cursor_short_header",
+      "asset": "cursor_short_header.cur",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor_short_header.cur",
         "operations": [
           "PIL.Image.open",
           "load",

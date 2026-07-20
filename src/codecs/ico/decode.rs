@@ -258,9 +258,11 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
     // this deliberately overlaps the tail of the XOR bitmap as Pillow does.
     let mask_row_size = (width as usize).div_ceil(32).checked_mul(4)?;
     let mask_size = mask_row_size.checked_mul(height as usize)?;
-    let mask = data.get(data.len().checked_sub(mask_size)?..);
-    let channels = if mask.is_some() { 4 } else { 3 };
-    let mut pixels = Vec::with_capacity(width as usize * height as usize * channels);
+    // A valid 24-bit XOR plane is always larger than its mask, so the slice is
+    // present once `pixels_raw` above succeeded. Pillow overlaps the XOR tail
+    // when explicit mask bytes are omitted.
+    let mask = data.get(data.len().checked_sub(mask_size)?..)?;
+    let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
@@ -274,24 +276,13 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
             pixels.push(r);
             pixels.push(g);
             pixels.push(b);
-            if let Some(mask) = mask {
-                let byte = mask[y * mask_row_size + x / 8];
-                let transparent = byte & (0x80 >> (x % 8)) != 0;
-                pixels.push(if transparent { 0 } else { 255 });
-            }
+            let byte = mask[y * mask_row_size + x / 8];
+            let transparent = byte & (0x80 >> (x % 8)) != 0;
+            pixels.push(if transparent { 0 } else { 255 });
         }
     }
 
-    Some(DecodedImage::new(
-        width,
-        height,
-        pixels,
-        if mask.is_some() {
-            ColorType::Rgba8
-        } else {
-            ColorType::Rgb8
-        },
-    ))
+    Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8))
 }
 
 /// Decode an 8-bit indexed ICO BMP entry (palette + indices).
@@ -319,14 +310,10 @@ fn decode_ico_bmp_8bpp(
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
         let offset = i * 4;
-        if offset + 4 <= palette_raw.len() {
-            let b = palette_raw[offset];
-            let g = palette_raw[offset + 1];
-            let r = palette_raw[offset + 2];
-            palette.push([r, g, b]);
-        } else {
-            palette.push([0, 0, 0]);
-        }
+        let b = palette_raw[offset];
+        let g = palette_raw[offset + 1];
+        let r = palette_raw[offset + 2];
+        palette.push([r, g, b]);
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
@@ -375,14 +362,10 @@ fn decode_ico_bmp_4bpp(
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
         let offset = i * 4;
-        if offset + 4 <= palette_raw.len() {
-            let b = palette_raw[offset];
-            let g = palette_raw[offset + 1];
-            let r = palette_raw[offset + 2];
-            palette.push([r, g, b]);
-        } else {
-            palette.push([0, 0, 0]);
-        }
+        let b = palette_raw[offset];
+        let g = palette_raw[offset + 1];
+        let r = palette_raw[offset + 2];
+        palette.push([r, g, b]);
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
@@ -445,14 +428,10 @@ fn decode_ico_bmp_1bpp(
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
         let offset = i * 4;
-        if offset + 4 <= palette_raw.len() {
-            let b = palette_raw[offset];
-            let g = palette_raw[offset + 1];
-            let r = palette_raw[offset + 2];
-            palette.push([r, g, b]);
-        } else {
-            palette.push([0, 0, 0]);
-        }
+        let b = palette_raw[offset];
+        let g = palette_raw[offset + 1];
+        let r = palette_raw[offset + 2];
+        palette.push([r, g, b]);
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);

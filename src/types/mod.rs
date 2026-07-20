@@ -282,8 +282,8 @@ impl DecodedImage {
                 "decoded color type does not match its byte mode".to_owned(),
             ));
         }
-        match (self.mode, &self.palette) {
-            (ImageMode::P8, Some(palette)) => {
+        match &self.palette {
+            Some(palette) if self.mode == ImageMode::P8 => {
                 if palette.is_empty()
                     || self
                         .pixels
@@ -295,13 +295,12 @@ impl DecodedImage {
                     ));
                 }
             }
-            (ImageMode::P8, None) => {}
-            (_, Some(_)) => {
+            Some(_) => {
                 return Err(ImageError::Parameter(
                     "only indexed images may carry a palette".to_owned(),
                 ));
             }
-            (_, None) => {}
+            None => {}
         }
         Ok(())
     }

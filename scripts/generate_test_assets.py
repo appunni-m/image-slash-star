@@ -2044,6 +2044,37 @@ def gen_ico():
     struct.pack_into("<HH", cursor, 10, 3, 5)
     (d / "cursor.cur").write_bytes(cursor)
 
+    cursor_default_palette = bytearray(cursor)
+    struct.pack_into("<I", cursor_default_palette, 22 + 32, 0)
+    (d / "cursor_default_palette.cur").write_bytes(cursor_default_palette)
+
+    cursor_24bit = bytearray((d / "bmp_entry.ico").read_bytes())
+    struct.pack_into("<H", cursor_24bit, 2, 2)
+    struct.pack_into("<HH", cursor_24bit, 10, 3, 5)
+    (d / "cursor_24bit.cur").write_bytes(cursor_24bit)
+
+    transparent_24bit = bytearray((d / "bmp_entry.ico").read_bytes())
+    transparent_24bit[-64] |= 0x80
+    (d / "bmp_24bit_transparent.ico").write_bytes(transparent_24bit)
+
+    odd_1bit = bytearray((d / "bmp_1bit.ico").read_bytes())
+    odd_1bit[6] = 15
+    struct.pack_into("<I", odd_1bit, 22 + 4, 15)
+    (d / "bmp_1bit_odd.ico").write_bytes(odd_1bit)
+
+    short_dib = bytearray(ico[: 22 + 20])
+    struct.pack_into("<I", short_dib, 14, 20)
+    (d / "short_dib.ico").write_bytes(short_dib)
+    zero_width = bytearray(ico)
+    struct.pack_into("<I", zero_width, 22 + 4, 0)
+    (d / "zero_width.ico").write_bytes(zero_width)
+    unsupported_bpp = bytearray(ico)
+    struct.pack_into("<H", unsupported_bpp, 22 + 14, 2)
+    (d / "unsupported_bpp.ico").write_bytes(unsupported_bpp)
+    cursor_short_header = bytearray(cursor)
+    struct.pack_into("<I", cursor_short_header, 22, 20)
+    (d / "cursor_short_header.cur").write_bytes(cursor_short_header)
+
     (d / "empty.ico").write_bytes(b"")
     (d / "invalid_reserved.ico").write_bytes(struct.pack("<HHH", 1, 1, 0))
     (d / "invalid_type.ico").write_bytes(struct.pack("<HHH", 0, 3, 0))
