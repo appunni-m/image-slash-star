@@ -967,6 +967,27 @@ def gen_webp():
         )
     )
     animated_full_next = animated_full.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    animated_holes_base = Image.new("RGBA", (64, 64), (255, 0, 0, 128))
+    animated_holes_next = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    holes_draw = ImageDraw.Draw(animated_holes_next)
+    holes_draw.rectangle([0, 0, 7, 7], fill=(0, 0, 255, 128))
+    holes_draw.rectangle([56, 56, 63, 63], fill=(0, 255, 0, 128))
+    animated_holes_base.save(
+        d / "animated_alpha_holes.webp",
+        save_all=True,
+        append_images=[animated_holes_next],
+        duration=100,
+        loop=0,
+        lossless=True,
+        minimize_size=False,
+    )
+    animated_alpha_holes = bytearray((d / "animated_alpha_holes.webp").read_bytes())
+    holes_first_frame = animated_alpha_holes.find(b"ANMF")
+    holes_second_frame = animated_alpha_holes.find(b"ANMF", holes_first_frame + 4)
+    if holes_second_frame < 0:
+        raise RuntimeError("alpha-hole animated WebP did not contain a second ANMF chunk")
+    animated_alpha_holes[holes_second_frame + 4 + 4 + 15] &= ~0b10
+    (d / "animated_alpha_holes.webp").write_bytes(animated_alpha_holes)
     animated_full.save(
         d / "animated_alpha_lossy.webp",
         save_all=True,
@@ -995,12 +1016,57 @@ def gen_webp():
     animated_dispose = bytearray(animated_blend)
     animated_dispose[first_frame + 4 + 4 + 15] |= 0b1
     (d / "animated_dispose.webp").write_bytes(animated_dispose)
+    animated_overlap = bytearray((d / "animated_alpha.webp").read_bytes())
+    overlap_first_frame = animated_overlap.find(b"ANMF")
+    overlap_second_frame = animated_overlap.find(b"ANMF", overlap_first_frame + 4)
+    if overlap_second_frame < 0:
+        raise RuntimeError("alpha animated WebP did not contain a second ANMF chunk")
+    animated_overlap[overlap_second_frame + 8 : overlap_second_frame + 14] = (
+        b"\x04\x00\x00\x04\x00\x00"
+    )
+    animated_overlap[overlap_second_frame + 4 + 4 + 15] &= ~0b10
+    (d / "animated_alpha_overlap.webp").write_bytes(animated_overlap)
     animated_full_dispose = bytearray((d / "animated_alpha_full.webp").read_bytes())
     full_first_frame = animated_full_dispose.find(b"ANMF")
     if full_first_frame < 0:
         raise RuntimeError("full-size animated WebP did not contain an ANMF chunk")
     animated_full_dispose[full_first_frame + 4 + 4 + 15] |= 0b1
     (d / "animated_alpha_full_dispose.webp").write_bytes(animated_full_dispose)
+    animated_full_blend_after_dispose = bytearray(animated_full_dispose)
+    full_second_frame = animated_full_blend_after_dispose.find(b"ANMF", full_first_frame + 4)
+    if full_second_frame < 0:
+        raise RuntimeError("full-size animated WebP did not contain a second ANMF chunk")
+    animated_full_blend_after_dispose[full_second_frame + 4 + 4 + 15] &= ~0b10
+    (d / "animated_alpha_full_blend_after_dispose.webp").write_bytes(
+        animated_full_blend_after_dispose
+    )
+    animated_rgb_full_dispose = bytearray((d / "animated.webp").read_bytes())
+    rgb_first_frame = animated_rgb_full_dispose.find(b"ANMF")
+    if rgb_first_frame < 0:
+        raise RuntimeError("RGB animated WebP did not contain an ANMF chunk")
+    animated_rgb_full_dispose[rgb_first_frame + 4 + 4 + 15] |= 0b1
+    (d / "animated_rgb_full_dispose.webp").write_bytes(animated_rgb_full_dispose)
+    animated_rgb_base = Image.new("RGB", (64, 64), (0, 0, 0))
+    ImageDraw.Draw(animated_rgb_base).rectangle([8, 8, 23, 23], fill=(255, 0, 0))
+    animated_rgb_next = animated_rgb_base.copy()
+    ImageDraw.Draw(animated_rgb_next).rectangle([32, 32, 47, 47], fill=(0, 0, 255))
+    animated_rgb_base.save(
+        d / "animated_rgb_partial.webp",
+        save_all=True,
+        append_images=[animated_rgb_next],
+        duration=100,
+        loop=0,
+        lossless=False,
+        quality=80,
+        minimize_size=True,
+    )
+    animated_rgb_partial_dispose = bytearray((d / "animated_rgb_partial.webp").read_bytes())
+    rgb_partial_first = animated_rgb_partial_dispose.find(b"ANMF")
+    if rgb_partial_first < 0:
+        raise RuntimeError("partial RGB animated WebP did not contain an ANMF chunk")
+    animated_rgb_partial_dispose[rgb_partial_first + 4 + 4 + 15] |= 0b1
+    (d / "animated_rgb_partial_dispose.webp").write_bytes(animated_rgb_partial_dispose)
+    (d / "animated_rgb_partial.webp").unlink()
     d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
     bad_vp8_magic = bytearray((d / "lossy.webp").read_bytes())
     vp8_chunk = bad_vp8_magic.find(b"VP8 ")
@@ -1058,7 +1124,13 @@ def gen_webp():
         image_chunk = data.find(b"VP8L")
         data[image_chunk : image_chunk + 4] = b"JUNK"
 
-    write_mutated_webp("extended_missing_image_chunk.webp", "extended.webp", remove_extended_image_chunk)
+    write_mutated_webp("extended_missing_image_chunk.webp", "icc.webp", remove_extended_image_chunk)
+
+    def overflow_extended_canvas(data):
+        vp8x = data.find(b"VP8X")
+        data[vp8x + 12 : vp8x + 18] = b"\xff" * 6
+
+    write_mutated_webp("extended_canvas_too_large.webp", "animated.webp", overflow_extended_canvas)
 
     def set_first_anmf_size(data, size):
         anmf = data.find(b"ANMF")
@@ -1163,6 +1235,11 @@ def gen_webp():
         "alpha_invalid_compression.webp",
         "alpha_lossy_horizontal.webp",
         lambda data: set_alpha_info(data, 0x03, 0x02),
+    )
+    write_mutated_webp(
+        "alpha_preprocessing.webp",
+        "alpha_lossy_horizontal.webp",
+        lambda data: set_alpha_info(data, 0x30, 0x10),
     )
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 

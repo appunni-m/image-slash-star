@@ -741,6 +741,19 @@
       }
     },
     {
+      "id": "alpha_lossless_alpha_preprocessing",
+      "asset": "alpha_preprocessing.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_preprocessing.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "animated",
       "asset": "animated.webp",
       "expect_error": false,
@@ -772,6 +785,32 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_lossy.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_alpha_overlap",
+      "asset": "animated_alpha_overlap.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_alpha_overlap.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_alpha_holes",
+      "asset": "animated_alpha_holes.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_alpha_holes.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -832,11 +871,50 @@
       }
     },
     {
+      "id": "animated_animated_alpha_full_blend_after_dispose",
+      "asset": "animated_alpha_full_blend_after_dispose.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_alpha_full_blend_after_dispose.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "animated_animated_dispose",
       "asset": "animated_dispose.webp",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_dispose.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_rgb_full_dispose",
+      "asset": "animated_rgb_full_dispose.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_rgb_full_dispose.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_rgb_partial_dispose",
+      "asset": "animated_rgb_partial_dispose.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_rgb_partial_dispose.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1045,6 +1123,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_image_chunk.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_extended_canvas_too_large",
+      "asset": "extended_canvas_too_large.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_canvas_too_large.webp",
         "operations": [
           "PIL.Image.open",
           "load",

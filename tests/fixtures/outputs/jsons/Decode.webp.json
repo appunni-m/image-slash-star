@@ -741,6 +741,19 @@
       ]
     },
     {
+      "id": "alpha_lossless_alpha_preprocessing",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_alpha_preprocessing_webp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
+      ]
+    },
+    {
       "id": "animated",
       "status": "ok",
       "error_type": null,
@@ -849,6 +862,86 @@
           {
             "index": 1,
             "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_lossy_webp_frame_1.bin",
+            "ref_bytes": 16384,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_alpha_overlap",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_overlap_webp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "sequence": {
+        "loop_count": 0,
+        "frames": [
+          {
+            "index": 0,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_overlap_webp_frame_0.bin",
+            "ref_bytes": 16384,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          },
+          {
+            "index": 1,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_overlap_webp_frame_1.bin",
+            "ref_bytes": 16384,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_alpha_holes",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_webp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "sequence": {
+        "loop_count": 0,
+        "frames": [
+          {
+            "index": 0,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_webp_frame_0.bin",
+            "ref_bytes": 16384,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          },
+          {
+            "index": 1,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_webp_frame_1.bin",
             "ref_bytes": 16384,
             "ref_mode": "Rgba8",
             "ref_size": [
@@ -1021,6 +1114,46 @@
       }
     },
     {
+      "id": "animated_animated_alpha_full_blend_after_dispose",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_blend_after_dispose_webp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "sequence": {
+        "loop_count": 0,
+        "frames": [
+          {
+            "index": 0,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_blend_after_dispose_webp_frame_0.bin",
+            "ref_bytes": 16384,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          },
+          {
+            "index": 1,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_blend_after_dispose_webp_frame_1.bin",
+            "ref_bytes": 16384,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          }
+        ]
+      }
+    },
+    {
       "id": "animated_animated_dispose",
       "status": "ok",
       "error_type": null,
@@ -1051,6 +1184,86 @@
             "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_dispose_webp_frame_1.bin",
             "ref_bytes": 16384,
             "ref_mode": "Rgba8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_rgb_full_dispose",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_dispose_webp.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "sequence": {
+        "loop_count": 0,
+        "frames": [
+          {
+            "index": 0,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_dispose_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "duration_ms": 100
+          },
+          {
+            "index": 1,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_dispose_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "duration_ms": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "animated_animated_rgb_partial_dispose",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_partial_dispose_webp.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "sequence": {
+        "loop_count": 0,
+        "frames": [
+          {
+            "index": 0,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_partial_dispose_webp_frame_0.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "duration_ms": 100
+          },
+          {
+            "index": 1,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_partial_dispose_webp_frame_1.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
             "ref_size": [
               64,
               64
@@ -1228,8 +1441,18 @@
     {
       "id": "error_malformed_container_extended_missing_image_chunk",
       "status": "error",
-      "error_type": "PIL.UnidentifiedImageError",
-      "error_message": "cannot identify image file <bytes>",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_extended_canvas_too_large",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

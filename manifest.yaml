@@ -1100,17 +1100,23 @@ formats:
       - alpha_lossy_vertical_filter.webp
       - alpha_lossy_gradient_filter.webp
       - alpha_uncompressed.webp
+      - alpha_preprocessing.webp
     - id: animated
       description: Animated WebP (all composited frames)
       test_assets:
       - animated.webp
       - animated_alpha.webp
       - animated_alpha_lossy.webp
+      - animated_alpha_overlap.webp
+      - animated_alpha_holes.webp
       - animated_loop_twice.webp
       - animated_blend.webp
       - animated_alpha_full.webp
       - animated_alpha_full_dispose.webp
+      - animated_alpha_full_blend_after_dispose.webp
       - animated_dispose.webp
+      - animated_rgb_full_dispose.webp
+      - animated_rgb_partial_dispose.webp
     - id: size_small
       description: Small image (16x16)
       test_assets:
@@ -1157,6 +1163,7 @@ formats:
       - bad_vp8l_version.webp
       - bad_initial_chunk.webp
       - extended_missing_image_chunk.webp
+      - extended_canvas_too_large.webp
       - bad_anmf_scan_size.webp
       - bad_anmf_decode_size.webp
       - anim_chunk_too_small.webp
