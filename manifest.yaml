@@ -1,4 +1,37 @@
 version: 0.1.0
+operations:
+  - {id: convert_rgba_l, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: L}}
+  - {id: convert_rgba_la, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: LA}}
+  - {id: convert_rgba_rgb, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: RGB}}
+  - {id: convert_rgba_rgba, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: RGBA}}
+  - {id: l_fliph, source_format: png, source_asset: gray.png, action: fliph}
+  - {id: l_flipv, source_format: png, source_asset: gray.png, action: flipv}
+  - {id: l_rotate90, source_format: png, source_asset: gray.png, action: rotate90}
+  - {id: l_rotate180, source_format: png, source_asset: gray.png, action: rotate180}
+  - {id: l_rotate270, source_format: png, source_asset: gray.png, action: rotate270}
+  - {id: la_fliph, source_format: png, source_asset: gray_alpha.png, action: fliph}
+  - {id: la_flipv, source_format: png, source_asset: gray_alpha.png, action: flipv}
+  - {id: la_rotate90, source_format: png, source_asset: gray_alpha.png, action: rotate90}
+  - {id: la_rotate180, source_format: png, source_asset: gray_alpha.png, action: rotate180}
+  - {id: la_rotate270, source_format: png, source_asset: gray_alpha.png, action: rotate270}
+  - {id: rgb_fliph, source_format: png, source_asset: 2x3.png, action: fliph}
+  - {id: rgb_flipv, source_format: png, source_asset: 2x3.png, action: flipv}
+  - {id: rgb_rotate90, source_format: png, source_asset: 2x3.png, action: rotate90}
+  - {id: rgb_rotate180, source_format: png, source_asset: 2x3.png, action: rotate180}
+  - {id: rgb_rotate270, source_format: png, source_asset: 2x3.png, action: rotate270}
+  - {id: rgba_fliph, source_format: png, source_asset: alpha_partial.png, action: fliph}
+  - {id: rgba_flipv, source_format: png, source_asset: alpha_partial.png, action: flipv}
+  - {id: rgba_rotate90, source_format: png, source_asset: alpha_partial.png, action: rotate90}
+  - {id: rgba_rotate180, source_format: png, source_asset: alpha_partial.png, action: rotate180}
+  - {id: rgba_rotate270, source_format: png, source_asset: alpha_partial.png, action: rotate270}
+  - {id: rgb_crop, source_format: png, source_asset: 2x3.png, action: crop, params: {x: 0, y: 1, width: 2, height: 2}}
+  - {id: rgba_crop, source_format: png, source_asset: alpha_partial.png, action: crop, params: {x: 7, y: 9, width: 11, height: 13}}
+  - {id: l16_fliph, source_format: png, source_asset: gray.png, action: fliph, params: {intermediate: L16, mode: L}}
+  - {id: la16_flipv, source_format: png, source_asset: gray_alpha.png, action: flipv, params: {intermediate: LA16, mode: LA}}
+  - {id: rgb16_rotate90, source_format: png, source_asset: 2x3.png, action: rotate90, params: {intermediate: RGB16, mode: RGB}}
+  - {id: rgba16_rotate180, source_format: png, source_asset: alpha_partial.png, action: rotate180, params: {intermediate: RGBA16, mode: RGBA}}
+  - {id: rgb32f_rotate270, source_format: png, source_asset: 2x3.png, action: rotate270, params: {intermediate: RGB32F, mode: RGB}}
+  - {id: rgba32f_crop, source_format: png, source_asset: alpha_partial.png, action: crop, params: {intermediate: RGBA32F, mode: RGBA, x: 7, y: 9, width: 11, height: 13}}
 reference_oracles:
   primary:
     implementation: Pillow

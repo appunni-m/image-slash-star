@@ -43,6 +43,22 @@ fn coverage_matrix() -> Option<&'static CoverageMatrix> {
 struct CoverageMatrix {
     formats: HashMap<String, FormatData>,
     summary: Summary,
+    #[serde(default)]
+    operations: Vec<OperationRow>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OperationRow {
+    id: String,
+    source_format: String,
+    source_asset: String,
+    action: String,
+    #[serde(default)]
+    params: HashMap<String, serde_json::Value>,
+    ref_path: String,
+    ref_bytes: usize,
+    ref_mode: String,
+    ref_size: Vec<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -109,6 +125,8 @@ struct Summary {
     decode_active: usize,
     decode_planned: usize,
     encode_not_wired: usize,
+    #[serde(default)]
+    operation_rows: usize,
 }
 
 #[derive(Debug)]
@@ -1354,6 +1372,177 @@ fn test_encode_matrix() {
     }
 }
 
+#[test]
+fn test_operation_matrix() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let matrix = coverage_matrix().expect("coverage_matrix.json is required");
+    let mut failed = Vec::new();
+
+    for row in &matrix.operations {
+        let source_path = manifest_dir
+            .join("tests/fixtures/input/images")
+            .join(&row.source_format)
+            .join(&row.source_asset);
+        let source = fs::read(source_path).unwrap();
+        let decoded = img::decode(&source).unwrap();
+        let mut dynamic = img::DynamicImage::from_decoded(&decoded).unwrap();
+        dynamic = match row
+            .params
+            .get("intermediate")
+            .and_then(|value| value.as_str())
+        {
+            Some("L16") => img::DynamicImage::ImageLuma16(dynamic.to_luma16()),
+            Some("LA16") => img::DynamicImage::ImageLumaA16(dynamic.to_luma_alpha16()),
+            Some("RGB16") => img::DynamicImage::ImageRgb16(dynamic.to_rgb16()),
+            Some("RGBA16") => img::DynamicImage::ImageRgba16(dynamic.to_rgba16()),
+            Some("RGB32F") => img::DynamicImage::ImageRgb32F(dynamic.to_rgb32f()),
+            Some("RGBA32F") => img::DynamicImage::ImageRgba32F(dynamic.to_rgba32f()),
+            Some(value) => panic!("unknown intermediate mode {value}"),
+            None => dynamic,
+        };
+        exercise_dynamic_buffer(&mut dynamic);
+        let result = match row.action.as_str() {
+            "convert" => dynamic,
+            "fliph" => dynamic.fliph(),
+            "flipv" => dynamic.flipv(),
+            "rotate90" => dynamic.rotate90(),
+            "rotate180" => dynamic.rotate180(),
+            "rotate270" => dynamic.rotate270(),
+            "crop" => dynamic.crop_imm(
+                row.params["x"].as_u64().unwrap() as u32,
+                row.params["y"].as_u64().unwrap() as u32,
+                row.params["width"].as_u64().unwrap() as u32,
+                row.params["height"].as_u64().unwrap() as u32,
+            ),
+            action => panic!("unknown operation {action}"),
+        };
+        let actual = match row.ref_mode.as_str() {
+            "L" => result.to_luma8().into_raw(),
+            "LA" => result.to_luma_alpha8().into_raw(),
+            "RGB" => result.to_rgb8().into_raw(),
+            "RGBA" => result.to_rgba8().into_raw(),
+            mode => panic!("unsupported oracle operation mode {mode}"),
+        };
+        let expected = fs::read(manifest_dir.join(&row.ref_path)).unwrap();
+        if actual != expected
+            || actual.len() != row.ref_bytes
+            || vec![result.width(), result.height()] != row.ref_size
+        {
+            let mismatch = actual
+                .iter()
+                .zip(&expected)
+                .position(|(actual, expected)| actual != expected)
+                .map(|index| {
+                    format!(
+                        " at byte {index}: actual {}, expected {}",
+                        actual[index], expected[index]
+                    )
+                })
+                .unwrap_or_default();
+            failed.push(format!(
+                "{}: actual {} bytes {}x{}, expected {} bytes {:?}{}",
+                row.id,
+                actual.len(),
+                result.width(),
+                result.height(),
+                expected.len(),
+                row.ref_size,
+                mismatch,
+            ));
+        }
+    }
+    assert!(
+        failed.is_empty(),
+        "operation parity failures:\n{}",
+        failed.join("\n")
+    );
+}
+
+fn exercise_buffer<P>(buffer: &mut img::ImageBuffer<P, Vec<P::Subpixel>>)
+where
+    P: img::Pixel,
+{
+    use img::{GenericImage, GenericImageView, Primitive};
+
+    let (width, height) = buffer.dimensions();
+    assert_eq!(buffer.width(), width);
+    assert_eq!(buffer.height(), height);
+    assert_eq!(buffer.as_raw().len(), buffer.len());
+    let mut clone = buffer.clone();
+    clone.clone_from(buffer);
+
+    let mut pixels = buffer.pixels();
+    assert_eq!(pixels.size_hint().0, (width * height) as usize);
+    let _ = pixels.clone().next();
+    let _ = pixels.next_back();
+    let _ = buffer.rows().next();
+    let _ = buffer.rows().next_back();
+    let _ = buffer.enumerate_pixels().next();
+    let _ = buffer.enumerate_rows().next();
+
+    let pixel = *buffer.get_pixel(0, 0);
+    assert!(buffer.get_pixel_checked(0, 0).is_some());
+    assert!(buffer.get_pixel_checked(width, 0).is_none());
+    assert!(buffer.get_pixel_checked(0, height).is_none());
+    buffer.put_pixel(0, 0, pixel);
+    buffer[(0, 0)] = pixel;
+    assert!(buffer.get_pixel_mut_checked(0, 0).is_some());
+    assert!(buffer.get_pixel_mut_checked(width, 0).is_none());
+    assert!(buffer.get_pixel_mut_checked(0, height).is_none());
+    for value in buffer.pixels_mut().take(1) {
+        *value = pixel;
+    }
+    let _ = buffer.rows_mut().next();
+    let _ = buffer.rows_mut().next_back();
+    let _ = buffer.enumerate_pixels_mut().next();
+    let _ = buffer.enumerate_rows_mut().next();
+
+    assert!(GenericImageView::in_bounds(buffer, 0, 0));
+    assert!(!GenericImageView::in_bounds(buffer, width, height));
+    let _ = GenericImageView::pixels(buffer).next();
+    let _ = GenericImageView::buffer_like(buffer);
+    let _ = GenericImageView::buffer_with_dimensions(buffer, 1, 1);
+    GenericImage::copy_from(buffer, &clone, 0, 0).unwrap();
+
+    let mut local = pixel;
+    let _ = local.channels();
+    let _ = local.channels_mut();
+    let _ = local.alpha();
+    #[allow(deprecated)]
+    let _ = local.channels4();
+    let _ = local.to_rgb();
+    let _ = local.to_rgba();
+    let _ = local.to_luma();
+    let _ = local.to_luma_alpha();
+    let _ = local.map(|value| value);
+    local.apply(|value| value);
+    let _ = local.map_with_alpha(|value| value, |alpha| alpha);
+    local.apply_with_alpha(|value| value, |alpha| alpha);
+    let _ = local.map_without_alpha(|value| value);
+    local.apply_without_alpha(|value| value);
+    let _ = local.map2(&pixel, |left, _right| left);
+    local.apply2(&pixel, |left, _right| left);
+    local.invert();
+    local.blend(&pixel);
+    let _ = P::Subpixel::DEFAULT_MIN_VALUE;
+}
+
+fn exercise_dynamic_buffer(image: &mut img::DynamicImage) {
+    match image {
+        img::DynamicImage::ImageLuma8(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageLumaA8(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageRgb8(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageRgba8(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageLuma16(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageLumaA16(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageRgb16(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageRgba16(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageRgb32F(buffer) => exercise_buffer(buffer),
+        img::DynamicImage::ImageRgba32F(buffer) => exercise_buffer(buffer),
+        _ => panic!("unsupported dynamic image variant"),
+    }
+}
+
 // ── Manifest Coverage ────────────────────────────────────────────────────
 
 #[test]
@@ -1364,10 +1553,18 @@ fn test_coverage_matrix() {
 
     let s = &matrix.summary;
     eprintln!(
-        "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} assets",
-        s.decode_active, s.decode_rows, s.decode_planned, s.encode_not_wired, s.assets_available
+        "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} operations, {} assets",
+        s.decode_active,
+        s.decode_rows,
+        s.decode_planned,
+        s.encode_not_wired,
+        s.operation_rows,
+        s.assets_available
     );
 
     assert!(s.total_rows > 0, "Matrix must have rows");
-    assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
+    assert_eq!(
+        s.total_rows,
+        s.decode_rows + s.encode_rows + s.operation_rows
+    );
 }

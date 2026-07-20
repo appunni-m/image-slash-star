@@ -62,16 +62,20 @@ pub(super) fn normalize_float(float: f32, max: f32) -> f32 {
 // Color conversion coefficients
 // ---------------------------------------------------------------------------
 
-/// Coefficients to transform from sRGB to a CIE Y (luminance) value.
-const SRGB_LUMA: [u32; 3] = [2126, 7152, 722];
-const SRGB_LUMA_DIV: u32 = 10000;
+/// Pillow/libImaging fixed-point RGB-to-luminance coefficients.
+const SRGB_LUMA: [u32; 3] = [19_595, 38_470, 7_471];
+const SRGB_LUMA_DIV: u32 = 65_536;
 
 #[inline]
 pub(super) fn rgb_to_luma<T: Primitive + Enlargeable>(rgb: &[T]) -> T {
-    let l = <T::Larger as Primitive>::from_f32(
-        rgb[0].to_f32() * (SRGB_LUMA[0] as f32 / SRGB_LUMA_DIV as f32)
-            + rgb[1].to_f32() * (SRGB_LUMA[1] as f32 / SRGB_LUMA_DIV as f32)
-            + rgb[2].to_f32() * (SRGB_LUMA[2] as f32 / SRGB_LUMA_DIV as f32),
-    );
+    let luma = rgb[0].to_f32() * (SRGB_LUMA[0] as f32 / SRGB_LUMA_DIV as f32)
+        + rgb[1].to_f32() * (SRGB_LUMA[1] as f32 / SRGB_LUMA_DIV as f32)
+        + rgb[2].to_f32() * (SRGB_LUMA[2] as f32 / SRGB_LUMA_DIV as f32);
+    let rounded = if T::DEFAULT_MAX_VALUE.to_f32() <= 1.0 {
+        luma
+    } else {
+        luma + 0.5
+    };
+    let l = <T::Larger as Primitive>::from_f32(rounded);
     T::clamp_from(l)
 }

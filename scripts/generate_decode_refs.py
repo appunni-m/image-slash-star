@@ -743,7 +743,7 @@ def update_summary(matrix):
         and (ASSETS_DIR / str(row.get("format")) / str(row.get("asset"))).exists()
     }
     matrix["summary"] = {
-        "total_rows": len(decode_rows) + len(encode_rows),
+        "total_rows": len(decode_rows) + len(encode_rows) + len(matrix.get("operations", [])),
         "decode_rows": len(decode_rows),
         "encode_rows": len(encode_rows),
         "formats": len(formats),
@@ -751,7 +751,62 @@ def update_summary(matrix):
         "decode_active": sum(row.get("status") == "active" for row in decode_rows),
         "decode_planned": sum(row.get("status") == "planned" for row in decode_rows),
         "encode_not_wired": sum(row.get("status") == "planned" for row in encode_rows),
+        "operation_rows": len(matrix.get("operations", [])),
     }
+
+
+def generate_operations(manifest, matrix):
+    """Generate exact Pillow results for public image operations."""
+    from PIL import Image, ImageOps
+
+    output_dir = OUTPUT_RAWS.parent / "operations"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    rows = []
+    transpose = {
+        "fliph": Image.Transpose.FLIP_LEFT_RIGHT,
+        "flipv": Image.Transpose.FLIP_TOP_BOTTOM,
+        "rotate90": Image.Transpose.ROTATE_270,
+        "rotate180": Image.Transpose.ROTATE_180,
+        "rotate270": Image.Transpose.ROTATE_90,
+    }
+    for specification in manifest.get("operations", []):
+        source = ASSETS_DIR / specification["source_format"] / specification["source_asset"]
+        params = dict(specification.get("params", {}))
+        with pillow_open_asset(source) as opened:
+            image = opened.copy()
+        action = specification["action"]
+        if action == "convert":
+            result = image.convert(params["mode"])
+        elif action in transpose:
+            result = image.transpose(transpose[action])
+        elif action == "crop":
+            x, y = params["x"], params["y"]
+            result = image.crop((x, y, x + params["width"], y + params["height"]))
+        elif action == "invert":
+            if image.mode == "RGBA":
+                rgb = ImageOps.invert(image.convert("RGB"))
+                rgb.putalpha(image.getchannel("A"))
+                result = rgb
+            else:
+                result = ImageOps.invert(image)
+        else:
+            raise RuntimeError(f"unknown Pillow operation {action!r}")
+        if params.get("mode") and action != "convert":
+            result = result.convert(params["mode"])
+        reference = output_dir / f"{specification['id']}.bin"
+        reference.write_bytes(result.tobytes())
+        rows.append(
+            {
+                **specification,
+                "status": "active",
+                "ref_path": str(reference.relative_to(ROOT)),
+                "ref_bytes": reference.stat().st_size,
+                "ref_mode": result.mode,
+                "ref_size": list(result.size),
+            }
+        )
+    matrix["operations"] = rows
+    return len(rows)
 
 
 def validate_generated_outputs(matrix):
@@ -1051,6 +1106,8 @@ def generate(target_format=None):
     # Encode
     n_enc = generate_encode(manifest, matrix, target_format)
     print(f"Encode: {n_enc} refs")
+    n_operations = generate_operations(manifest, matrix)
+    print(f"Operations: {n_operations} refs")
     update_summary(matrix)
     validate_generated_outputs(matrix)
 

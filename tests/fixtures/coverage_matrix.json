@@ -5974,13 +5974,516 @@
     }
   },
   "summary": {
-    "total_rows": 295,
+    "total_rows": 327,
     "decode_rows": 167,
     "encode_rows": 128,
     "formats": 8,
     "assets_available": 160,
     "decode_active": 161,
     "decode_planned": 6,
-    "encode_not_wired": 0
-  }
+    "encode_not_wired": 0,
+    "operation_rows": 32
+  },
+  "operations": [
+    {
+      "id": "convert_rgba_l",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "convert",
+      "params": {
+        "mode": "L"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/convert_rgba_l.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "convert_rgba_la",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "convert",
+      "params": {
+        "mode": "LA"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/convert_rgba_la.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "convert_rgba_rgb",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "convert",
+      "params": {
+        "mode": "RGB"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/convert_rgba_rgb.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "RGB",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "convert_rgba_rgba",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "convert",
+      "params": {
+        "mode": "RGBA"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/convert_rgba_rgba.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "l_fliph",
+      "source_format": "png",
+      "source_asset": "gray.png",
+      "action": "fliph",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/l_fliph.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "l_flipv",
+      "source_format": "png",
+      "source_asset": "gray.png",
+      "action": "flipv",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/l_flipv.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "l_rotate90",
+      "source_format": "png",
+      "source_asset": "gray.png",
+      "action": "rotate90",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/l_rotate90.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "l_rotate180",
+      "source_format": "png",
+      "source_asset": "gray.png",
+      "action": "rotate180",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/l_rotate180.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "l_rotate270",
+      "source_format": "png",
+      "source_asset": "gray.png",
+      "action": "rotate270",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/l_rotate270.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "la_fliph",
+      "source_format": "png",
+      "source_asset": "gray_alpha.png",
+      "action": "fliph",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/la_fliph.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "la_flipv",
+      "source_format": "png",
+      "source_asset": "gray_alpha.png",
+      "action": "flipv",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/la_flipv.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "la_rotate90",
+      "source_format": "png",
+      "source_asset": "gray_alpha.png",
+      "action": "rotate90",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/la_rotate90.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "la_rotate180",
+      "source_format": "png",
+      "source_asset": "gray_alpha.png",
+      "action": "rotate180",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/la_rotate180.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "la_rotate270",
+      "source_format": "png",
+      "source_asset": "gray_alpha.png",
+      "action": "rotate270",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/la_rotate270.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb_fliph",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "fliph",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb_fliph.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "rgb_flipv",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "flipv",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb_flipv.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "rgb_rotate90",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "rotate90",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb_rotate90.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "rgb_rotate180",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "rotate180",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb_rotate180.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "rgb_rotate270",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "rotate270",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb_rotate270.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "rgba_fliph",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "fliph",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba_fliph.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgba_flipv",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "flipv",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba_flipv.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgba_rotate90",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "rotate90",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba_rotate90.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgba_rotate180",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "rotate180",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba_rotate180.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgba_rotate270",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "rotate270",
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba_rotate270.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb_crop",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "crop",
+      "params": {
+        "x": 0,
+        "y": 1,
+        "width": 2,
+        "height": 2
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb_crop.bin",
+      "ref_bytes": 12,
+      "ref_mode": "RGB",
+      "ref_size": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": "rgba_crop",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "crop",
+      "params": {
+        "x": 7,
+        "y": 9,
+        "width": 11,
+        "height": 13
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba_crop.bin",
+      "ref_bytes": 572,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        11,
+        13
+      ]
+    },
+    {
+      "id": "l16_fliph",
+      "source_format": "png",
+      "source_asset": "gray.png",
+      "action": "fliph",
+      "params": {
+        "intermediate": "L16",
+        "mode": "L"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/l16_fliph.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "la16_flipv",
+      "source_format": "png",
+      "source_asset": "gray_alpha.png",
+      "action": "flipv",
+      "params": {
+        "intermediate": "LA16",
+        "mode": "LA"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/la16_flipv.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "LA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb16_rotate90",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "rotate90",
+      "params": {
+        "intermediate": "RGB16",
+        "mode": "RGB"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb16_rotate90.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "rgba16_rotate180",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "rotate180",
+      "params": {
+        "intermediate": "RGBA16",
+        "mode": "RGBA"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba16_rotate180.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "rgb32f_rotate270",
+      "source_format": "png",
+      "source_asset": "2x3.png",
+      "action": "rotate270",
+      "params": {
+        "intermediate": "RGB32F",
+        "mode": "RGB"
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgb32f_rotate270.bin",
+      "ref_bytes": 18,
+      "ref_mode": "RGB",
+      "ref_size": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "rgba32f_crop",
+      "source_format": "png",
+      "source_asset": "alpha_partial.png",
+      "action": "crop",
+      "params": {
+        "intermediate": "RGBA32F",
+        "mode": "RGBA",
+        "x": 7,
+        "y": 9,
+        "width": 11,
+        "height": 13
+      },
+      "status": "active",
+      "ref_path": "tests/fixtures/outputs/operations/rgba32f_crop.bin",
+      "ref_bytes": 572,
+      "ref_mode": "RGBA",
+      "ref_size": [
+        11,
+        13
+      ]
+    }
+  ]
 }
