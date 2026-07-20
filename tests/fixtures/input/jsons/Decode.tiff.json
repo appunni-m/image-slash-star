@@ -182,6 +182,45 @@
       }
     },
     {
+      "id": "compression_packbits_packbits_noop",
+      "asset": "packbits_noop.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/packbits_noop.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_packbits_packbits_literal_overrun",
+      "asset": "packbits_literal_overrun.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/packbits_literal_overrun.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_packbits_packbits_run_overrun",
+      "asset": "packbits_run_overrun.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/packbits_run_overrun.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "bilevel",
       "asset": "bilevel.tiff",
       "expect_error": false,

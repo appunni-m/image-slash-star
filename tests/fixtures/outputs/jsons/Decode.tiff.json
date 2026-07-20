@@ -182,6 +182,45 @@
       ]
     },
     {
+      "id": "compression_packbits_packbits_noop",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_packbits_noop_tiff.bin",
+      "ref_bytes": 1,
+      "ref_mode": "L8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "compression_packbits_packbits_literal_overrun",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_packbits_literal_overrun_tiff.bin",
+      "ref_bytes": 1,
+      "ref_mode": "L8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "compression_packbits_packbits_run_overrun",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_packbits_run_overrun_tiff.bin",
+      "ref_bytes": 1,
+      "ref_mode": "L8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
       "id": "bilevel",
       "status": "ok",
       "error_type": null,

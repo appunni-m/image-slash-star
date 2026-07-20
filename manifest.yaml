@@ -1408,6 +1408,9 @@ formats:
       description: PackBits compression
       test_assets:
       - packbits.tiff
+      - packbits_noop.tiff
+      - packbits_literal_overrun.tiff
+      - packbits_run_overrun.tiff
     - id: bilevel
       description: Black and white (PHOTOMETRIC_MINISWHITE/BLACK)
       test_assets:

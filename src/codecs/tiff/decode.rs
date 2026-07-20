@@ -368,20 +368,16 @@ fn decode_packbits(data: &[u8], expected: usize) -> Option<Vec<u8>> {
             0..=127 => {
                 let count = usize::from(header as u8) + 1;
                 let end = position.checked_add(count)?;
-                if output.len().checked_add(count)? > expected {
-                    return None;
-                }
-                output.extend_from_slice(data.get(position..end)?);
+                let packet = data.get(position..end)?;
+                let remaining = expected.checked_sub(output.len())?;
+                output.extend_from_slice(&packet[..count.min(remaining)]);
                 position = end;
             }
             -127..=-1 => {
                 let count = usize::from((1i16 - i16::from(header)) as u16);
                 let value = *data.get(position)?;
                 position += 1;
-                if output.len().checked_add(count)? > expected {
-                    return None;
-                }
-                output.resize(output.len() + count, value);
+                output.resize(output.len() + count.min(expected - output.len()), value);
             }
             -128 => {}
         }

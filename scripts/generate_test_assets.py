@@ -1601,6 +1601,35 @@ def write_low_depth_tiff(path, image, bits, photometric):
     path.write_bytes(output)
 
 
+def write_packbits_tiff(path, payload):
+    """Write a one-pixel grayscale TIFF around an explicit PackBits stream."""
+    entries = [
+        (256, 4, 1, 1),
+        (257, 4, 1, 1),
+        (258, 3, 1, 8),
+        (259, 3, 1, 32773),
+        (262, 3, 1, 1),
+        (273, 4, 1, "pixels"),
+        (277, 3, 1, 1),
+        (278, 4, 1, 1),
+        (279, 4, 1, len(payload)),
+    ]
+    pixel_offset = 8 + 2 + len(entries) * 12 + 4
+    output = bytearray(b"II*\0\x08\0\0\0")
+    output.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, value in entries:
+        output.extend(struct.pack("<HHI", tag, field_type, count))
+        if value == "pixels":
+            output.extend(struct.pack("<I", pixel_offset))
+        elif field_type == 3:
+            output.extend(struct.pack("<H", value) + b"\0\0")
+        else:
+            output.extend(struct.pack("<I", value))
+    output.extend(struct.pack("<I", 0))
+    output.extend(payload)
+    path.write_bytes(output)
+
+
 def write_ycbcr_tiff(path, image):
     """Write Pillow's baseline four-byte RGBX storage for YCbCr TIFF."""
     width, height = image.size
@@ -1724,6 +1753,9 @@ def gen_tiff():
     img.save(d / "lzw.tiff", compression="tiff_lzw")
     img.save(d / "deflate.tiff", compression="tiff_adobe_deflate")
     img.save(d / "packbits.tiff", compression="packbits")
+    write_packbits_tiff(d / "packbits_noop.tiff", b"\x80\x00\x7f")
+    write_packbits_tiff(d / "packbits_literal_overrun.tiff", b"\x01\x00\x01")
+    write_packbits_tiff(d / "packbits_run_overrun.tiff", b"\xff\x00")
     img.convert("L").save(d / "gray_lzw.tiff", compression="tiff_lzw")
     img.convert("L").save(d / "gray_deflate.tiff", compression="tiff_adobe_deflate")
     img.convert("RGBA").save(d / "rgba_lzw.tiff", compression="tiff_lzw")

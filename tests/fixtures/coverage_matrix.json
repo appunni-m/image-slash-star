@@ -6486,6 +6486,60 @@
           "oracle_status": "ok"
         },
         {
+          "id": "compression_packbits_packbits_noop",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "PackBits compression",
+          "asset": "packbits_noop.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_packbits_noop_tiff.bin",
+          "ref_bytes": 1,
+          "ref_mode": "L8",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "compression_packbits_packbits_literal_overrun",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "PackBits compression",
+          "asset": "packbits_literal_overrun.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_packbits_literal_overrun_tiff.bin",
+          "ref_bytes": 1,
+          "ref_mode": "L8",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "compression_packbits_packbits_run_overrun",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "PackBits compression",
+          "asset": "packbits_run_overrun.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_packbits_run_overrun_tiff.bin",
+          "ref_bytes": 1,
+          "ref_mode": "L8",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
           "asset": "bilevel.tiff",
           "asset_path": "tests/fixtures/input/images/tiff/bilevel.tiff",
           "category": "bilevel",
@@ -10629,12 +10683,12 @@
     }
   },
   "summary": {
-    "total_rows": 569,
-    "decode_rows": 344,
+    "total_rows": 572,
+    "decode_rows": 347,
     "encode_rows": 193,
     "formats": 8,
-    "assets_available": 337,
-    "decode_active": 338,
+    "assets_available": 340,
+    "decode_active": 341,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
