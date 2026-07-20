@@ -264,8 +264,8 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
         };
         let scan_total_mcus = scan_mcus_x * scan_mcus_y;
 
-        let mcus_per_seg = if info.restart_interval > 0 {
-            info.restart_interval as usize
+        let mcus_per_seg = if scan.restart_interval > 0 {
+            scan.restart_interval as usize
         } else {
             scan_total_mcus
         };
@@ -471,6 +471,29 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
             ColorType::Rgb8,
         ))
     } else {
-        None
+        debug_assert_eq!(info.num_components, 4);
+        let inverted = info.adobe_transform.is_some();
+        let mut pixels = Vec::with_capacity(w * h * 4);
+        for y in 0..h {
+            for x in 0..w {
+                for component in 0..4 {
+                    let horizontal_ratio =
+                        usize::from(info.max_h_samp / info.components[component].h_samp);
+                    let vertical_ratio =
+                        usize::from(info.max_v_samp / info.components[component].v_samp);
+                    let source_x = x / horizontal_ratio;
+                    let source_y = y / vertical_ratio;
+                    let sample =
+                        comp_buffers[component][source_y * comp_buf_width[component] + source_x];
+                    pixels.push(if inverted { 255 - sample } else { sample });
+                }
+            }
+        }
+        Some(DecodedImage::new(
+            info.width as u32,
+            info.height as u32,
+            pixels,
+            ColorType::Cmyk8,
+        ))
     }
 }

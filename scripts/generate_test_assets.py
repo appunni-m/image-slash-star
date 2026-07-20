@@ -362,6 +362,14 @@ def gen_jpeg():
     img.convert("CMYK").save(d / "baseline_cmyk.jpg", quality=85)
     img.save(d / "progressive.jpg", quality=85, progressive=True)
     img.save(d / "progressive_spectral.jpg", quality=70, progressive=True)
+    img.convert("L").save(d / "progressive_gray.jpg", quality=85, progressive=True)
+    img.convert("CMYK").save(d / "progressive_cmyk.jpg", quality=85, progressive=True)
+    img.save(
+        d / "progressive_restart.jpg",
+        quality=85,
+        progressive=True,
+        restart_marker_rows=2,
+    )
     img.save(d / "restart.jpg", quality=85, restart_marker_rows=4)
     pattern_img("RGB", (1, 1)).save(d / "1x1.jpg", quality=95)
     pattern_img("RGB", (8, 8)).save(d / "8x8.jpg", quality=95)

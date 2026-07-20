@@ -40,6 +40,7 @@ pub(super) struct ScanInfo {
     pub(super) se: u8,
     pub(super) ah: u8,
     pub(super) al: u8,
+    pub(super) restart_interval: u16,
     pub(super) dc_huff_tables: Vec<Option<HuffTable>>,
     pub(super) ac_huff_tables: Vec<Option<HuffTable>>,
 }
@@ -371,6 +372,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                     se,
                     ah,
                     al,
+                    restart_interval,
                     dc_huff_tables: dc_huff_tables.clone(),
                     ac_huff_tables: ac_huff_tables.clone(),
                 };

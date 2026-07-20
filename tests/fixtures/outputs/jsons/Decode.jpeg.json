@@ -729,6 +729,45 @@
         128,
         128
       ]
+    },
+    {
+      "id": "progressive_modes",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_gray_jpg.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "progressive_modes_progressive_cmyk",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_cmyk_jpg.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "CMYK",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "progressive_restart",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_restart_jpg.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
     }
   ]
 }

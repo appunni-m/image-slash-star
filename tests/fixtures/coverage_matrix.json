@@ -4672,6 +4672,60 @@
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_spectral_jpg.bin",
           "oracle_status": "ok"
+        },
+        {
+          "id": "progressive_modes",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive grayscale and CMYK component layouts",
+          "asset": "progressive_gray.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_gray_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "progressive_modes_progressive_cmyk",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive grayscale and CMYK component layouts",
+          "asset": "progressive_cmyk.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_cmyk_jpg.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "progressive_restart",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive scans with restart markers",
+          "asset": "progressive_restart.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_restart_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         }
       ],
       "encode": [
@@ -13402,12 +13456,12 @@
     }
   },
   "summary": {
-    "total_rows": 720,
-    "decode_rows": 450,
+    "total_rows": 723,
+    "decode_rows": 453,
     "encode_rows": 238,
     "formats": 8,
-    "assets_available": 443,
-    "decode_active": 444,
+    "assets_available": 446,
+    "decode_active": 447,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

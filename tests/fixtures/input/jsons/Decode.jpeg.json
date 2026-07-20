@@ -804,6 +804,45 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "progressive_modes",
+      "asset": "progressive_gray.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_gray.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "progressive_modes_progressive_cmyk",
+      "asset": "progressive_cmyk.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_cmyk.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "progressive_restart",
+      "asset": "progressive_restart.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_restart.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }
