@@ -1014,6 +1014,156 @@ def gen_webp():
         raise RuntimeError("animated WebP did not contain a VP8 frame")
     bad_animated_vp8_magic[animated_vp8_chunk + 11] ^= 0xFF
     (d / "bad_animated_vp8_magic.webp").write_bytes(bad_animated_vp8_magic)
+
+    def write_mutated_webp(name, source, mutate):
+        malformed = bytearray((d / source).read_bytes())
+        mutate(malformed)
+        (d / name).write_bytes(malformed)
+
+    write_mutated_webp(
+        "bad_riff_chunk.webp", "lossy.webp", lambda data: data.__setitem__(slice(0, 4), b"RIFX")
+    )
+    write_mutated_webp(
+        "bad_webp_signature.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(slice(8, 12), b"WEPB"),
+    )
+    write_mutated_webp(
+        "vp8_interframe.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(data.find(b"VP8 ") + 8, data[data.find(b"VP8 ") + 8] | 1),
+    )
+    write_mutated_webp(
+        "vp8_zero_width.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(slice(data.find(b"VP8 ") + 14, data.find(b"VP8 ") + 16), b"\0\0"),
+    )
+    write_mutated_webp(
+        "bad_vp8l_signature.webp",
+        "lossless.webp",
+        lambda data: data.__setitem__(data.find(b"VP8L") + 8, 0),
+    )
+    write_mutated_webp(
+        "bad_vp8l_version.webp",
+        "lossless.webp",
+        lambda data: data.__setitem__(data.find(b"VP8L") + 12, data[data.find(b"VP8L") + 12] | 0x20),
+    )
+    write_mutated_webp(
+        "bad_initial_chunk.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(slice(12, 16), b"JUNK"),
+    )
+
+    def remove_extended_image_chunk(data):
+        image_chunk = data.find(b"VP8L")
+        data[image_chunk : image_chunk + 4] = b"JUNK"
+
+    write_mutated_webp("extended_missing_image_chunk.webp", "extended.webp", remove_extended_image_chunk)
+
+    def set_first_anmf_size(data, size):
+        anmf = data.find(b"ANMF")
+        struct.pack_into("<I", data, anmf + 4, size)
+
+    write_mutated_webp(
+        "bad_anmf_scan_size.webp", "animated.webp", lambda data: set_first_anmf_size(data, 20)
+    )
+    write_mutated_webp(
+        "bad_anmf_decode_size.webp", "animated.webp", lambda data: set_first_anmf_size(data, 24)
+    )
+
+    def enlarge_anim_chunk(data):
+        anim = data.find(b"ANIM")
+        end = anim + 8 + 6
+        data[end:end] = b"\0\0"
+        struct.pack_into("<I", data, anim + 4, 8)
+        struct.pack_into("<I", data, 4, len(data) - 8)
+
+    write_mutated_webp("bad_anim_size.webp", "animated.webp", enlarge_anim_chunk)
+
+    def shrink_anim_chunk(data):
+        anim = data.find(b"ANIM")
+        del data[anim + 8 + 4 : anim + 8 + 6]
+        struct.pack_into("<I", data, anim + 4, 4)
+        struct.pack_into("<I", data, 4, len(data) - 8)
+
+    write_mutated_webp("anim_chunk_too_small.webp", "animated.webp", shrink_anim_chunk)
+
+    def set_animation_loop(data, count):
+        anim = data.find(b"ANIM")
+        struct.pack_into("<H", data, anim + 12, count)
+
+    write_mutated_webp("animated_loop_twice.webp", "animated.webp", lambda data: set_animation_loop(data, 2))
+
+    def mutate_anmf_field(data, offset, value):
+        anmf = data.find(b"ANMF")
+        data[anmf + 8 + offset : anmf + 8 + offset + len(value)] = value
+
+    write_mutated_webp(
+        "animated_frame_too_large.webp",
+        "animated.webp",
+        lambda data: mutate_anmf_field(data, 6, b"\xff\xff\x00"),
+    )
+    write_mutated_webp(
+        "animated_frame_outside.webp",
+        "animated.webp",
+        lambda data: mutate_anmf_field(data, 0, b"\x01\x00\x00"),
+    )
+    write_mutated_webp(
+        "animated_frame_dimension_mismatch.webp",
+        "animated.webp",
+        lambda data: mutate_anmf_field(data, 6, b"\x3e\x00\x00"),
+    )
+
+    def set_nested_chunk_size(data, chunk_name, size):
+        anmf = data.find(b"ANMF")
+        chunk = data.find(chunk_name, anmf + 8)
+        struct.pack_into("<I", data, chunk + 4, size)
+
+    write_mutated_webp(
+        "animated_nested_chunk_too_large.webp",
+        "animated.webp",
+        lambda data: set_nested_chunk_size(data, b"VP8 ", 0x100000),
+    )
+
+    def replace_nested_chunk(data):
+        anmf = data.find(b"ANMF")
+        chunk = data.find(b"VP8 ", anmf + 8)
+        data[chunk : chunk + 4] = b"JUNK"
+
+    write_mutated_webp("animated_bad_nested_chunk.webp", "animated.webp", replace_nested_chunk)
+    write_mutated_webp(
+        "animated_alpha_chunk_too_large.webp",
+        "animated_alpha_lossy.webp",
+        lambda data: set_nested_chunk_size(
+            data, b"ALPH", struct.unpack_from("<I", data, data.find(b"ANMF") + 4)[0] - 28
+        ),
+    )
+
+    def enlarge_nested_vp8(data):
+        anmf = data.find(b"ANMF")
+        vp8 = data.find(b"VP8 ", anmf + 8)
+        struct.pack_into("<I", data, vp8 + 4, 0x100000)
+
+    write_mutated_webp(
+        "animated_alpha_vp8_too_large.webp", "animated_alpha_lossy.webp", enlarge_nested_vp8
+    )
+
+    def set_alpha_info(data, mask, value):
+        alpha = data.find(b"ALPH")
+        if alpha < 0:
+            raise RuntimeError("WebP did not contain an ALPH chunk")
+        data[alpha + 8] = (data[alpha + 8] & ~mask) | value
+
+    write_mutated_webp(
+        "alpha_invalid_preprocessing.webp",
+        "alpha_lossy_horizontal.webp",
+        lambda data: set_alpha_info(data, 0x30, 0x20),
+    )
+    write_mutated_webp(
+        "alpha_invalid_compression.webp",
+        "alpha_lossy_horizontal.webp",
+        lambda data: set_alpha_info(data, 0x03, 0x02),
+    )
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 
 

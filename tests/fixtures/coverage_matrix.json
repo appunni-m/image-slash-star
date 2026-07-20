@@ -8310,6 +8310,51 @@
           }
         },
         {
+          "id": "animated_animated_loop_twice",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_loop_twice.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_loop_twice_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "sequence": {
+            "loop_count": 2,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_loop_twice_webp_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_loop_twice_webp_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
           "id": "animated_animated_blend",
           "type": "decode",
           "format": "webp",
@@ -8624,6 +8669,380 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_riff_chunk.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_container_bad_webp_signature",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_webp_signature.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_container_vp8_interframe",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8_interframe.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_vp8_zero_width",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8_zero_width.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_bad_vp8l_signature",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_vp8l_signature.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_bad_vp8l_version",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_vp8l_version.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_bad_initial_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_initial_chunk.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_container_extended_missing_image_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "extended_missing_image_chunk.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_container_bad_anmf_scan_size",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_anmf_scan_size.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_bad_anmf_decode_size",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "bad_anmf_decode_size.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_anim_chunk_too_small",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "anim_chunk_too_small.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_frame_outside",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_frame_outside.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_nested_chunk_too_large",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_nested_chunk_too_large.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_alpha_chunk_too_large",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_alpha_chunk_too_large.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_alpha_vp8_too_large",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_alpha_vp8_too_large.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_alpha_invalid_preprocessing",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "alpha_invalid_preprocessing.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_alpha_invalid_compression",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "alpha_invalid_compression.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "pillow_tolerated_malformed",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "bad_anim_size.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_bad_anim_size_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_bad_anim_size_webp_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_bad_anim_size_webp_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
+          "id": "pillow_tolerated_malformed_animated_frame_too_large",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "animated_frame_too_large.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_too_large_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_too_large_webp_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_too_large_webp_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
+          "id": "pillow_tolerated_malformed_animated_frame_dimension_mismatch",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "animated_frame_dimension_mismatch.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_dimension_mismatch_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_dimension_mismatch_webp_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_dimension_mismatch_webp_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
+          "id": "pillow_tolerated_malformed_animated_bad_nested_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "animated_bad_nested_chunk.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_bad_nested_chunk_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         }
       ],
       "encode": [
@@ -9105,12 +9524,12 @@
     }
   },
   "summary": {
-    "total_rows": 488,
-    "decode_rows": 279,
+    "total_rows": 510,
+    "decode_rows": 301,
     "encode_rows": 177,
     "formats": 8,
-    "assets_available": 272,
-    "decode_active": 273,
+    "assets_available": 294,
+    "decode_active": 295,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

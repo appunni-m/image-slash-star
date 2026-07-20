@@ -173,9 +173,8 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             return Err(DecodingError::ChunkHeaderInvalid);
         };
 
-        match &read_fourcc(&mut self.r)? {
-            WebPRiffChunk::WEBP => {}
-            _ => return Err(DecodingError::WebpSignatureInvalid),
+        if read_fourcc(&mut self.r)? != WebPRiffChunk::WEBP {
+            return Err(DecodingError::WebpSignatureInvalid);
         }
 
         let (chunk, chunk_size, chunk_size_rounded) = read_chunk_header(&mut self.r)?;
@@ -243,21 +242,29 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                             let range = position + 8..position + 8 + chunk_size;
                             position += 8 + chunk_size_rounded;
 
-                            if !chunk.is_unknown() {
-                                self.chunks.entry(chunk).or_insert(range);
-                            }
-
                             if chunk == WebPRiffChunk::ANMF {
-                                self.num_frames += 1;
                                 if chunk_size < 24 {
                                     return Err(DecodingError::InvalidChunkSize);
                                 }
 
                                 self.r.seek_relative(12)?;
                                 let _duration = self.r.read_u32::<LittleEndian>()? & 0xffffff;
-                                self.r.seek_relative(chunk_size_rounded as i64 - 16)?;
+                                let frame_chunk = read_fourcc(&mut self.r)?;
+                                self.r.seek(io::SeekFrom::Start(position))?;
+
+                                if matches!(
+                                    frame_chunk,
+                                    WebPRiffChunk::VP8 | WebPRiffChunk::VP8L | WebPRiffChunk::ALPH
+                                ) {
+                                    self.num_frames += 1;
+                                    self.chunks.entry(chunk).or_insert(range);
+                                }
 
                                 continue;
+                            }
+
+                            if !chunk.is_unknown() {
+                                self.chunks.entry(chunk).or_insert(range);
                             }
 
                             self.r.seek_relative(chunk_size_rounded as i64)?;
@@ -289,7 +296,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                         .get(&WebPRiffChunk::ANIM)
                         .cloned()
                         .ok_or(DecodingError::ChunkMissing)?;
-                    if range.end - range.start > 6 {
+                    if range.end - range.start < 6 {
                         return Err(DecodingError::InvalidChunkSize);
                     }
                     self.r.seek(io::SeekFrom::Start(range.start))?;
@@ -488,14 +495,8 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
         // Read ANMF chunk
         let frame_x = extended::read_3_bytes(&mut self.r)? * 2;
         let frame_y = extended::read_3_bytes(&mut self.r)? * 2;
-        let frame_width = extended::read_3_bytes(&mut self.r)? + 1;
-        let frame_height = extended::read_3_bytes(&mut self.r)? + 1;
-        if frame_width > 16384 || frame_height > 16384 {
-            return Err(DecodingError::ImageTooLarge);
-        }
-        if frame_x + frame_width > self.width || frame_y + frame_height > self.height {
-            return Err(DecodingError::FrameOutsideImage);
-        }
+        let mut frame_width = extended::read_3_bytes(&mut self.r)? + 1;
+        let mut frame_height = extended::read_3_bytes(&mut self.r)? + 1;
         let duration = extended::read_3_bytes(&mut self.r)?;
         let frame_info = self.r.read_u8()?;
         let use_alpha_blending = frame_info & 0b00000010 == 0;
@@ -517,11 +518,8 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             WebPRiffChunk::VP8 => {
                 let reader = (&mut self.r).take(chunk_size);
                 let raw_frame = Vp8Decoder::decode_frame(reader)?;
-                if u32::from(raw_frame.width) != frame_width
-                    || u32::from(raw_frame.height) != frame_height
-                {
-                    return Err(DecodingError::InconsistentImageSizes);
-                }
+                frame_width = u32::from(raw_frame.width);
+                frame_height = u32::from(raw_frame.height);
                 let mut rgb_frame = vec![0; frame_width as usize * frame_height as usize * 3];
                 raw_frame.fill_rgb(&mut rgb_frame);
                 (rgb_frame, false)
@@ -579,6 +577,13 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             }
             _ => return Err(DecodingError::ChunkHeaderInvalid),
         };
+
+        if frame_width > 16384 || frame_height > 16384 {
+            return Err(DecodingError::ImageTooLarge);
+        }
+        if frame_x + frame_width > self.width || frame_y + frame_height > self.height {
+            return Err(DecodingError::FrameOutsideImage);
+        }
 
         // fill starting canvas with clear color
         if self.animation.canvas.is_none() {

@@ -8,7 +8,7 @@ compatibility with a pinned Pillow distribution. It has no native runtime
 dependencies, works on WASM, keeps every image format behind a Cargo feature,
 and uses `bytemuck` as its only runtime utility dependency.
 
-The project is pre-release software. All 482 currently active manifest rows
+The project is pre-release software. All 504 currently active manifest rows
 compare exact decoded pixels or exact encoded files successfully. Six AVIF
 decode rows remain explicitly planned; AVIF is not represented as complete.
 

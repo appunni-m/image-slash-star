@@ -1106,6 +1106,7 @@ formats:
       - animated.webp
       - animated_alpha.webp
       - animated_alpha_lossy.webp
+      - animated_loop_twice.webp
       - animated_blend.webp
       - animated_alpha_full.webp
       - animated_alpha_full_dispose.webp
@@ -1145,6 +1146,34 @@ formats:
       test_assets:
       - bad_animated_vp8_magic.webp
       expect_error: true
+    - id: error_malformed_container
+      description: Malformed WebP container and codec headers
+      test_assets:
+      - bad_riff_chunk.webp
+      - bad_webp_signature.webp
+      - vp8_interframe.webp
+      - vp8_zero_width.webp
+      - bad_vp8l_signature.webp
+      - bad_vp8l_version.webp
+      - bad_initial_chunk.webp
+      - extended_missing_image_chunk.webp
+      - bad_anmf_scan_size.webp
+      - bad_anmf_decode_size.webp
+      - anim_chunk_too_small.webp
+      - animated_frame_outside.webp
+      - animated_nested_chunk_too_large.webp
+      - animated_alpha_chunk_too_large.webp
+      - animated_alpha_vp8_too_large.webp
+      - alpha_invalid_preprocessing.webp
+      - alpha_invalid_compression.webp
+      expect_error: true
+    - id: pillow_tolerated_malformed
+      description: Malformed WebP structures tolerated by Pillow
+      test_assets:
+      - bad_anim_size.webp
+      - animated_frame_too_large.webp
+      - animated_frame_dimension_mismatch.webp
+      - animated_bad_nested_chunk.webp
     encode_edge_cases:
     - id: enc_lossy_q100
       description: 
