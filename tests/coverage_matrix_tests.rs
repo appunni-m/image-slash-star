@@ -1077,6 +1077,19 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
 
 // ── Decode Tests ─────────────────────────────────────────────────────────
 
+fn decode_direct(data: &[u8], format: &str) -> Option<img::DecodedImage> {
+    match format {
+        "jpeg" => img::codecs::jpeg::decode::decode(data),
+        "png" => img::codecs::png::decode::decode(data),
+        "gif" => img::codecs::gif::decode::decode(data),
+        "bmp" => img::codecs::bmp::decode::decode(data),
+        "tiff" => img::codecs::tiff::decode::decode(data),
+        "webp" => img::codecs::webp::decode::decode(data),
+        "ico" => img::codecs::ico::decode::decode(data),
+        _ => None,
+    }
+}
+
 #[test]
 fn test_decode_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -1128,12 +1141,18 @@ fn test_decode_matrix() {
             };
 
             let decoded = img::decode(&data);
+            let direct = decode_direct(&data, fmt_name);
             if row.expect_error.unwrap_or(false) {
-                if decoded.is_none() {
+                if decoded.is_none() && direct.is_none() {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
-                    eprintln!("  FAIL [{}]: invalid input decoded successfully", row.id);
+                    eprintln!(
+                        "  FAIL [{}]: invalid input decoded successfully (auto={}, direct={})",
+                        row.id,
+                        decoded.is_some(),
+                        direct.is_some()
+                    );
                     failed += 1;
                 }
                 continue;
@@ -1143,6 +1162,22 @@ fn test_decode_matrix() {
                 Some(d) => d,
                 None => {
                     eprintln!("  FAIL [{}]: decode returned None", row.id);
+                    failed += 1;
+                    continue;
+                }
+            };
+            let direct = match direct {
+                Some(image) if image == decoded => image,
+                Some(_) => {
+                    eprintln!(
+                        "  FAIL [{}]: direct and auto-detected decoders differ",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                None => {
+                    eprintln!("  FAIL [{}]: direct decoder returned None", row.id);
                     failed += 1;
                     continue;
                 }
@@ -1167,6 +1202,7 @@ fn test_decode_matrix() {
             };
 
             match assert_pixel_parity(&expected, &decoded)
+                .and_then(|()| assert_pixel_parity(&expected, &direct))
                 .and_then(|()| assert_dynamic_bridge_parity(&expected, &decoded))
                 .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
             {
