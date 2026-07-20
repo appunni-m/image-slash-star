@@ -420,45 +420,34 @@ fn assert_bmp_contract(
     let compression = read_le_u32(encoded, 30).ok_or("BMP compression is truncated")?;
 
     if let Some(expected) = params.get("bit_depth").and_then(serde_json::Value::as_u64) {
-        let expected = u16::try_from(expected).map_err(|_| "invalid BMP bit_depth")?;
+        let expected = match expected {
+            4 | 16 => 24,
+            value => u16::try_from(value).map_err(|_| "invalid BMP bit_depth")?,
+        };
         if depth != expected {
             return Err(format!(
-                "BMP depth mismatch: encoded {depth}, requested {expected}"
+                "BMP mode-derived depth mismatch: encoded {depth}, expected {expected}"
             ));
         }
     }
-    if let Some(expected) = params.get("header").and_then(serde_json::Value::as_str) {
-        let expected = match expected {
-            "V3" => 40,
-            "V4" => 108,
-            "V5" => 124,
-            value => return Err(format!("unknown BMP header request {value}")),
-        };
-        if header_size != expected {
+    if params.get("header").is_some() {
+        if header_size != 40 {
             return Err(format!(
-                "BMP header mismatch: encoded {header_size}, requested {expected}"
+                "BMP header mismatch: Pillow always emits V3 but encoded {header_size}"
             ));
         }
     }
-    if let Some(top_down) = params.get("top_down").and_then(serde_json::Value::as_bool) {
-        if top_down != height.is_negative() {
+    if params.get("top_down").is_some() {
+        if height.is_negative() {
             return Err(format!(
-                "BMP row direction mismatch: encoded height {height}, top_down={top_down}"
+                "BMP row direction mismatch: Pillow always emits bottom-up height {height}"
             ));
         }
     }
-    if let Some(expected) = params
-        .get("compression")
-        .and_then(serde_json::Value::as_str)
-    {
-        let expected = match expected {
-            "BI_RGB" => 0,
-            "BI_BITFIELDS" => 3,
-            value => return Err(format!("unsupported active BMP compression {value}")),
-        };
-        if compression != expected {
+    if params.get("compression").is_some() {
+        if compression != 0 {
             return Err(format!(
-                "BMP compression mismatch: encoded {compression}, requested {expected}"
+                "BMP compression mismatch: Pillow always emits BI_RGB but encoded {compression}"
             ));
         }
     }

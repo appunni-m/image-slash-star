@@ -260,15 +260,18 @@ def encode_params(fmt, params):
         if color_table not in (None, "global"):
             raise RuntimeError(f"unknown GIF color_table value {color_table!r}")
     elif fmt == "bmp":
+        bit_depth = params.get("bit_depth")
+        if bit_depth is not None:
+            kwargs["bit_depth"] = bit_depth
         compression = take("compression")
-        if compression not in (None, "BI_RGB"):
-            raise RuntimeError(f"Pillow BMP cannot encode {compression}")
+        if compression is not None:
+            kwargs["compression"] = compression
         top_down = take("top_down")
-        if top_down is True:
-            raise RuntimeError("Pillow BMP cannot encode top-down rows")
+        if top_down is not None:
+            kwargs["top_down"] = top_down
         header = take("header")
-        if header not in (None, "V3"):
-            raise RuntimeError(f"Pillow BMP cannot encode a {header} header")
+        if header is not None:
+            kwargs["header"] = header
     elif fmt == "webp":
         for name in ("quality", "lossless", "method"):
             value = take(name)
@@ -333,7 +336,7 @@ def encode_params(fmt, params):
     return kwargs
 
 
-def validate_source_params(image, params):
+def validate_source_params(image, params, fmt_name=None):
     """Prove manifest parameters that are represented by the source image."""
     expected_size = params.get("size")
     if expected_size is not None and list(image.size) != list(expected_size):
@@ -364,7 +367,7 @@ def validate_source_params(image, params):
         raise RuntimeError(f"source mode {image.mode} does not satisfy alpha={alpha}")
 
     bit_depth = params.get("bit_depth")
-    if bit_depth is not None:
+    if bit_depth is not None and fmt_name != "bmp":
         source_depth = {"1": 1, "L": 8, "P": 8, "I;16": 16, "F": 32, "RGB": 24, "RGBA": 32}.get(image.mode)
         if source_depth != bit_depth:
             raise RuntimeError(f"source mode {image.mode} has depth {source_depth}, expected {bit_depth}")
@@ -1031,7 +1034,7 @@ def preflight_encode_cases(matrix, target_format=None):
             try:
                 kwargs = encode_params(fmt_name, dict(row.get("params", {})))
                 with pillow_open_asset(source_path) as image:
-                    validate_source_params(image, row.get("params", {}))
+                    validate_source_params(image, row.get("params", {}), fmt_name)
                     prepare_multiframe_call(image, kwargs)
             except Exception as error:
                 failures.append(f"{case_name}: {error}")
@@ -1164,7 +1167,7 @@ def generate_encode(manifest, matrix, target_format=None):
             try:
                 img = pillow_open_asset(src_path)
                 params = row.get("params", {})
-                validate_source_params(img, params)
+                validate_source_params(img, params, fmt_name)
                 kwargs = encode_params(fmt_name, dict(params))
                 image_to_save, kwargs = prepare_multiframe_call(img, kwargs)
                 buf = io.BytesIO()

@@ -715,6 +715,28 @@
           ]
         },
         {
+          "id": "enc_4bit",
+          "type": "encode",
+          "format": "bmp",
+          "category": "4bit",
+          "description": "Pillow accepts but ignores the BMP bit-depth option",
+          "params": {
+            "bit_depth": 4
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_4bit.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_4bit.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "bmp",
           "id": "enc_8bit",
@@ -731,6 +753,50 @@
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_8bit.bin",
           "ref_bytes": 16384,
           "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_grayscale",
+          "type": "encode",
+          "format": "bmp",
+          "category": "grayscale",
+          "description": "Grayscale source with Pillow's 256-entry BMP palette",
+          "params": {
+            "bit_depth": 8
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_grayscale.bin",
+          "encoded_ref_bytes": 17462,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_grayscale.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_16bit",
+          "type": "encode",
+          "format": "bmp",
+          "category": "16bit",
+          "description": "Pillow accepts but ignores the BMP bit-depth option",
+          "params": {
+            "bit_depth": 16
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_16bit.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_16bit.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
           "ref_size": [
             128,
             128
@@ -803,6 +869,94 @@
           ]
         },
         {
+          "id": "enc_bi_rle8",
+          "type": "encode",
+          "format": "bmp",
+          "category": "bi",
+          "description": "Pillow accepts but ignores the BMP compression option",
+          "params": {
+            "compression": "BI_RLE8"
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_rle8.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_rle8.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_bi_rle4",
+          "type": "encode",
+          "format": "bmp",
+          "category": "bi",
+          "description": "Pillow accepts but ignores the BMP compression option",
+          "params": {
+            "compression": "BI_RLE4"
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_rle4.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_rle4.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_bi_bitfields",
+          "type": "encode",
+          "format": "bmp",
+          "category": "bi",
+          "description": "Pillow accepts but ignores the BMP compression option",
+          "params": {
+            "compression": "BI_BITFIELDS"
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_bitfields.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_bitfields.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_top_down",
+          "type": "encode",
+          "format": "bmp",
+          "category": "top",
+          "description": "Pillow accepts but ignores the BMP top-down option",
+          "params": {
+            "top_down": true
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_top_down.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_top_down.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "bmp",
           "id": "enc_bottom_up",
@@ -839,6 +993,50 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v3_header.bin",
           "encoded_ref_bytes": 49206,
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v3_header.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_v4_header",
+          "type": "encode",
+          "format": "bmp",
+          "category": "v4",
+          "description": "Pillow accepts but ignores the BMP header option",
+          "params": {
+            "header": "V4"
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v4_header.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v4_header.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_v5_header",
+          "type": "encode",
+          "format": "bmp",
+          "category": "v5",
+          "description": "Pillow accepts but ignores the BMP header option",
+          "params": {
+            "header": "V5"
+          },
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v5_header.bin",
+          "encoded_ref_bytes": 49206,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v5_header.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -8326,9 +8524,9 @@
     }
   },
   "summary": {
-    "total_rows": 452,
+    "total_rows": 461,
     "decode_rows": 271,
-    "encode_rows": 149,
+    "encode_rows": 158,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

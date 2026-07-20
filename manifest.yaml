@@ -946,18 +946,19 @@ formats:
       source_asset: 1bit.bmp
       params: {'bit_depth': 1}
     - id: enc_4bit
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 saves P-mode BMP as 8-bit and cannot select 4-bit output.
+      description: Pillow accepts but ignores the BMP bit-depth option
       params: {'bit_depth': 4}
     - id: enc_8bit
       description: 
       params: {'bit_depth': 8}
       source_asset: 8bit.bmp
+    - id: enc_grayscale
+      description: Grayscale source with Pillow's 256-entry BMP palette
+      source_format: png
+      source_asset: gray.png
+      params: {'bit_depth': 8}
     - id: enc_16bit
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 saves RGB BMP as 24-bit and cannot select 16-bit output.
+      description: Pillow accepts but ignores the BMP bit-depth option
       params: {'bit_depth': 16}
     - id: enc_24bit
       description: 
@@ -971,24 +972,16 @@ formats:
       description: 
       params: {'compression': 'BI_RGB'}
     - id: enc_bi_rle8
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 BMP save cannot select BI_RLE8 compression.
+      description: Pillow accepts but ignores the BMP compression option
       params: {'compression': 'BI_RLE8'}
     - id: enc_bi_rle4
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 BMP save cannot select BI_RLE4 compression.
+      description: Pillow accepts but ignores the BMP compression option
       params: {'compression': 'BI_RLE4'}
     - id: enc_bi_bitfields
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 BMP save does not expose BI_BITFIELDS.
+      description: Pillow accepts but ignores the BMP compression option
       params: {'compression': 'BI_BITFIELDS'}
     - id: enc_top_down
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 BMP save cannot emit top-down rows.
+      description: Pillow accepts but ignores the BMP top-down option
       params: {'top_down': True}
     - id: enc_bottom_up
       description: 
@@ -997,14 +990,10 @@ formats:
       description: 
       params: {'header': 'V3'}
     - id: enc_v4_header
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 BMP save cannot select a V4 header.
+      description: Pillow accepts but ignores the BMP header option
       params: {'header': 'V4'}
     - id: enc_v5_header
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 BMP save cannot select a V5 header.
+      description: Pillow accepts but ignores the BMP header option
       params: {'header': 'V5'}
     - id: enc_1x1
       description: 

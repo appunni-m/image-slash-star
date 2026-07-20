@@ -23,7 +23,30 @@
         "open": "tests/fixtures/input/images/bmp/1bit.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "bit_depth": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_4bit",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "bit_depth": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "bit_depth": 4
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -42,7 +65,51 @@
         "open": "tests/fixtures/input/images/bmp/8bit.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "bit_depth": 8
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {
+        "bit_depth": 8
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "bit_depth": 8
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_16bit",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "bit_depth": 16
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "bit_depth": 16
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -61,7 +128,9 @@
         "open": "tests/fixtures/input/images/bmp/24bit.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "bit_depth": 24
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -80,7 +149,9 @@
         "open": "tests/fixtures/input/images/png/rgba.png",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "bit_depth": 32
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -99,7 +170,93 @@
         "open": "tests/fixtures/input/images/bmp/24bit.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "compression": "BI_RGB"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bi_rle8",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "compression": "BI_RLE8"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "compression": "BI_RLE8"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bi_rle4",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "compression": "BI_RLE4"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "compression": "BI_RLE4"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bi_bitfields",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "compression": "BI_BITFIELDS"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "compression": "BI_BITFIELDS"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_top_down",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "top_down": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "top_down": true
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -118,7 +275,9 @@
         "open": "tests/fixtures/input/images/bmp/24bit.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "top_down": false
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -137,7 +296,51 @@
         "open": "tests/fixtures/input/images/bmp/24bit.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
-        "kwargs": {},
+        "kwargs": {
+          "header": "V3"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_v4_header",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "header": "V4"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "header": "V4"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_v5_header",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "header": "V5"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {
+          "header": "V5"
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",

@@ -1,7 +1,7 @@
 //! Pure-Rust BMP encoder for indexed grayscale and true-color images.
 
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
+use crate::types::{DecodedImage, ImageMode, ImagePalette};
 
 const FILE_HEADER_SIZE: usize = 14;
 const INFO_HEADER_SIZE: u32 = 40;
@@ -22,47 +22,14 @@ fn row_size(bits_per_pixel: u16, width: u32) -> Option<usize> {
 
 /// Encode a `DecodedImage` as BMP bytes.
 ///
-/// The `bit_depth` entry in [`EncodeOptions::extra`] selects Pillow's
-/// mode-derived 1/8/24/32-bit output. Pillow emits bottom-up BI_RGB images
-/// with a BITMAPINFOHEADER; unsupported BMP save options are rejected.
+/// Pillow derives 1/8/24/32-bit output from the source mode and ignores save
+/// options requesting compression, row direction, or alternate DIB headers.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    if img.width == 0 || img.height == 0 {
-        return None;
-    }
-    let channels = match img.color {
-        ColorType::L8 => 1usize,
-        ColorType::Rgb8 => 3,
-        ColorType::Rgba8 => 4,
-        _ => return None,
-    };
-    let depth = opts
-        .extra
-        .get("bit_depth")
-        .and_then(|value| value.parse::<u16>().ok());
-    if opts
-        .extra
-        .get("top_down")
-        .is_some_and(|value| value != "false")
-        || opts.extra.get("header").is_some_and(|value| value != "V3")
-        || opts
-            .extra
-            .get("compression")
-            .is_some_and(|value| value != "BI_RGB")
-    {
-        return None;
-    }
-
-    let unpacked_len = usize::try_from(img.width)
-        .ok()?
-        .checked_mul(usize::try_from(img.height).ok()?)?
-        .checked_mul(channels)?;
-    let valid_unpacked = img.pixels.len() == unpacked_len;
-
-    match (img.color, depth) {
-        (ColorType::L8, Some(1)) => {
-            encode_1bit(img.width, img.height, &img.pixels, INFO_HEADER_SIZE)
-        }
-        (ColorType::L8, None | Some(8)) if valid_unpacked => encode_l8(
+    let _ = opts;
+    img.validate().ok()?;
+    match img.mode {
+        ImageMode::L1 => encode_1bit(img.width, img.height, &img.pixels, INFO_HEADER_SIZE),
+        ImageMode::P8 | ImageMode::L8 => encode_l8(
             img.width,
             img.height,
             &img.pixels,
@@ -71,18 +38,8 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 .flatten(),
             INFO_HEADER_SIZE,
         ),
-        (ColorType::Rgb8, None | Some(24)) if valid_unpacked => {
-            encode_rgb24(img.width, img.height, &img.pixels, INFO_HEADER_SIZE)
-        }
-        (ColorType::Rgba8, None | Some(32)) if valid_unpacked => {
-            encode_rgb32(img.width, img.height, &img.pixels, INFO_HEADER_SIZE)
-        }
-        (ColorType::Rgba8, Some(24)) if valid_unpacked => encode_rgb24(
-            img.width,
-            img.height,
-            &rgba_to_rgb(&img.pixels),
-            INFO_HEADER_SIZE,
-        ),
+        ImageMode::Rgb8 => encode_rgb24(img.width, img.height, &img.pixels, INFO_HEADER_SIZE),
+        ImageMode::Rgba8 => encode_rgb32(img.width, img.height, &img.pixels, INFO_HEADER_SIZE),
         _ => None,
     }
 }
@@ -92,8 +49,7 @@ fn encode_1bit(width: u32, height: u32, pixels: &[u8], header_size: u32) -> Opti
     let height = usize::try_from(height).ok()?;
     let packed_width = width.div_ceil(8);
     let packed_len = packed_width.checked_mul(height)?;
-    let sample_len = width.checked_mul(height)?;
-    if pixels.len() != packed_len && pixels.len() != sample_len {
+    if pixels.len() != packed_len {
         return None;
     }
     let stride = row_size(1, u32::try_from(width).ok()?)?;
@@ -114,25 +70,8 @@ fn encode_1bit(width: u32, height: u32, pixels: &[u8], header_size: u32) -> Opti
     output.extend_from_slice(&[0, 0, 0, 0, 255, 255, 255, 0]);
     for output_row in 0..height {
         let source_row = source_row(output_row, height)?;
-        let row_start = source_row.checked_mul(if pixels.len() == packed_len {
-            packed_width
-        } else {
-            width
-        })?;
-        if pixels.len() == packed_len {
-            output.extend_from_slice(pixels.get(row_start..row_start + packed_width)?);
-        } else {
-            let row = pixels.get(row_start..row_start + width)?;
-            for byte_start in (0..width).step_by(8) {
-                let mut packed = 0u8;
-                for bit in 0..8 {
-                    if row.get(byte_start + bit).is_some_and(|&value| value >= 128) {
-                        packed |= 0x80 >> bit;
-                    }
-                }
-                output.push(packed);
-            }
-        }
+        let row_start = source_row.checked_mul(packed_width)?;
+        output.extend_from_slice(pixels.get(row_start..row_start + packed_width)?);
         output.resize(
             output
                 .len()
@@ -297,12 +236,4 @@ fn write_rows(
         );
     }
     Some(())
-}
-
-fn rgba_to_rgb(pixels: &[u8]) -> Vec<u8> {
-    let mut output = Vec::with_capacity(pixels.len() / 4 * 3);
-    for pixel in pixels.chunks_exact(4) {
-        output.extend_from_slice(&pixel[..3]);
-    }
-    output
 }
