@@ -44,12 +44,6 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
 
-    let offsets = directory.values(273)?;
-    let byte_counts = directory.values(279)?;
-    if offsets.is_empty() || offsets.len() != byte_counts.len() {
-        return None;
-    }
-
     let width_usize = usize::try_from(width).ok()?;
     let height_usize = usize::try_from(height).ok()?;
     let row_bytes = width_usize
@@ -58,6 +52,93 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         .checked_add(7)?
         / 8;
     let expected_total = row_bytes.checked_mul(height_usize)?;
+    let decode_block = |encoded: &[u8], expected: usize| -> Option<Vec<u8>> {
+        match compression {
+            COMPRESSION_NONE => Some(encoded.to_vec()),
+            COMPRESSION_LZW => decode_lzw(encoded, expected),
+            COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE => decompress_zlib(encoded, expected),
+            COMPRESSION_PACKBITS => decode_packbits(encoded, expected),
+            _ => None,
+        }
+    };
+
+    let tile_offsets = directory.values(324);
+    let tile_byte_counts = directory.values(325);
+    if tile_offsets.is_some() || tile_byte_counts.is_some() {
+        let offsets = tile_offsets?;
+        let byte_counts = tile_byte_counts?;
+        let tile_width = usize::try_from(directory.one(322)?).ok()?;
+        let tile_height = usize::try_from(directory.one(323)?).ok()?;
+        if tile_width == 0 || tile_height == 0 || bits_per_sample % 8 != 0 {
+            return None;
+        }
+        let tiles_across = width_usize.div_ceil(tile_width);
+        let tiles_down = height_usize.div_ceil(tile_height);
+        if offsets.len() != tiles_across.checked_mul(tiles_down)?
+            || offsets.len() != byte_counts.len()
+        {
+            return None;
+        }
+        let bytes_per_pixel = samples_per_pixel.checked_mul(usize::from(bits_per_sample) / 8)?;
+        let tile_row_bytes = tile_width.checked_mul(bytes_per_pixel)?;
+        let tile_size = tile_row_bytes.checked_mul(tile_height)?;
+        let mut pixels = vec![0; expected_total];
+        for (tile_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
+            let start = usize::try_from(offset).ok()?;
+            let count = usize::try_from(byte_count).ok()?;
+            let encoded = data.get(start..start.checked_add(count)?)?;
+            let mut decoded = decode_block(encoded, tile_size)?;
+            if decoded.len() != tile_size {
+                return None;
+            }
+            if predictor == 2
+                && matches!(
+                    compression,
+                    COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
+                )
+            {
+                reverse_horizontal_predictor(
+                    &mut decoded,
+                    tile_row_bytes,
+                    samples_per_pixel,
+                    bits_per_sample,
+                    endian,
+                )?;
+            }
+            let tile_x = (tile_index % tiles_across).checked_mul(tile_width)?;
+            let tile_y = (tile_index / tiles_across).checked_mul(tile_height)?;
+            let copied_width = tile_width.min(width_usize.checked_sub(tile_x)?);
+            let copied_height = tile_height.min(height_usize.checked_sub(tile_y)?);
+            let copied_bytes = copied_width.checked_mul(bytes_per_pixel)?;
+            for y in 0..copied_height {
+                let source = y.checked_mul(tile_row_bytes)?;
+                let destination = tile_y
+                    .checked_add(y)?
+                    .checked_mul(row_bytes)?
+                    .checked_add(tile_x.checked_mul(bytes_per_pixel)?)?;
+                pixels
+                    .get_mut(destination..destination.checked_add(copied_bytes)?)?
+                    .copy_from_slice(decoded.get(source..source.checked_add(copied_bytes)?)?);
+            }
+        }
+        return convert_pixels(
+            width,
+            height,
+            pixels,
+            photometric,
+            samples_per_pixel,
+            bits_per_sample,
+            endian,
+            color_map.as_deref(),
+            sample_format,
+        );
+    }
+
+    let offsets = directory.values(273)?;
+    let byte_counts = directory.values(279)?;
+    if offsets.is_empty() || offsets.len() != byte_counts.len() {
+        return None;
+    }
     let mut pixels = Vec::with_capacity(expected_total);
 
     for (strip_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
@@ -70,13 +151,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         }
         let strip_rows = rows_per_strip.min(height_usize - first_row);
         let expected = row_bytes.checked_mul(strip_rows)?;
-        let mut decoded = match compression {
-            COMPRESSION_NONE => encoded.to_vec(),
-            COMPRESSION_LZW => decode_lzw(encoded, expected)?,
-            COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE => decompress_zlib(encoded, expected)?,
-            COMPRESSION_PACKBITS => decode_packbits(encoded, expected)?,
-            _ => return None,
-        };
+        let mut decoded = decode_block(encoded, expected)?;
         if decoded.len() != expected {
             return None;
         }

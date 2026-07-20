@@ -517,6 +517,42 @@ def validate_bmp_claim(case_id, data):
         raise RuntimeError(f"DIB header size is {dib_size}, expected {header_claims[case_id]}")
 
 
+def validate_tiff_claim(case_id, asset_name, data):
+    from PIL import Image
+
+    if len(data) < 8 or data[:2] not in (b"II", b"MM"):
+        raise RuntimeError("invalid classic TIFF header")
+    if case_id == "byte_order_le" and data[:2] != b"II":
+        raise RuntimeError("TIFF is not little-endian")
+    if case_id == "byte_order_be" and data[:2] != b"MM":
+        raise RuntimeError("TIFF is not big-endian")
+    with Image.open(io.BytesIO(data)) as image:
+        compression_claims = {
+            "compression_none": 1,
+            "compression_lzw": 5,
+            "compression_deflate": {8, 32946},
+            "compression_packbits": 32773,
+        }
+        expected = compression_claims.get(case_id)
+        actual = image.tag_v2.get(259, 1)
+        if expected is not None and (
+            actual not in expected if isinstance(expected, set) else actual != expected
+        ):
+            raise RuntimeError(f"TIFF compression is {actual}, expected {expected}")
+        if case_id == "tiled" and not all(
+            image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
+        ):
+            raise RuntimeError("TIFF has no tile organization tags")
+        if case_id == "stripped" and len(image.tag_v2.get(273, ())) < 2:
+            raise RuntimeError("TIFF does not contain multiple strips")
+        if "predictor" in asset_name and image.tag_v2.get(317) != 2:
+            raise RuntimeError("TIFF does not declare horizontal predictor 2")
+        if case_id == "single_page" and image.n_frames != 1:
+            raise RuntimeError(f"TIFF has {image.n_frames} pages, expected one")
+        if case_id == "multi_page" and image.n_frames < 2:
+            raise RuntimeError("TIFF does not contain multiple pages")
+
+
 def preflight_decode_cases(manifest, target_format=None):
     """Prove active fixture structure and Pillow success/error behavior."""
     from PIL import Image
@@ -553,6 +589,8 @@ def preflight_decode_cases(manifest, target_format=None):
                         validate_png_claim(case["id"], data)
                     elif fmt_name == "bmp":
                         validate_bmp_claim(case["id"], data)
+                    elif fmt_name == "tiff":
+                        validate_tiff_claim(case["id"], asset_name, data)
                 except Exception as error:
                     failures.append(f"{case_name}: {error}")
     if failures:

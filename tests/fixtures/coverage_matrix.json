@@ -4738,6 +4738,42 @@
           "oracle_status": "ok"
         },
         {
+          "id": "compression_lzw_rgb_lzw_predictor",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "LZW compression",
+          "asset": "rgb_lzw_predictor.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_lzw_predictor_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "compression_lzw_gray16_lzw_predictor",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "LZW compression",
+          "asset": "gray16_lzw_predictor.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray16_lzw_predictor_tiff.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "I;16",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "deflate.tiff",
           "asset_path": "tests/fixtures/input/images/tiff/deflate.tiff",
           "category": "compression",
@@ -4773,6 +4809,42 @@
             128
           ],
           "oracle_status": "ok"
+        },
+        {
+          "id": "compression_deflate_rgb_deflate_predictor",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "Deflate/ZIP compression",
+          "asset": "rgb_deflate_predictor.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_deflate_predictor_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "compression_deflate_gray16_deflate_predictor",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compression",
+          "description": "Deflate/ZIP compression",
+          "asset": "gray16_deflate_predictor.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray16_deflate_predictor_tiff.bin",
+          "ref_bytes": 32768,
+          "ref_mode": "I;16",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "packbits.tiff",
@@ -7275,12 +7347,12 @@
     }
   },
   "summary": {
-    "total_rows": 392,
-    "decode_rows": 230,
+    "total_rows": 396,
+    "decode_rows": 234,
     "encode_rows": 130,
     "formats": 8,
-    "assets_available": 223,
-    "decode_active": 224,
+    "assets_available": 227,
+    "decode_active": 228,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

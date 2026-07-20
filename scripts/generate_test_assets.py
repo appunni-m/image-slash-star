@@ -821,6 +821,155 @@ def gen_webp():
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 
 
+def write_rgb_tiff(path, image, byte_order="<", tile_size=None):
+    """Write a minimal classic RGB TIFF with explicit byte order/organization."""
+    width, height = image.size
+    pixels = image.convert("RGB").tobytes()
+    marker = b"II" if byte_order == "<" else b"MM"
+    entries = []
+
+    def entry(tag, field_type, count, value):
+        entries.append((tag, field_type, count, value))
+
+    entry(256, 4, 1, width)
+    entry(257, 4, 1, height)
+    entry(258, 3, 3, "bits")
+    entry(259, 3, 1, 1)
+    entry(262, 3, 1, 2)
+    entry(277, 3, 1, 3)
+    entry(284, 3, 1, 1)
+    if tile_size is None:
+        entry(273, 4, 1, "pixels")
+        entry(278, 4, 1, height)
+        entry(279, 4, 1, len(pixels))
+    else:
+        tiles_across = (width + tile_size - 1) // tile_size
+        tiles_down = (height + tile_size - 1) // tile_size
+        tile_payloads = []
+        for tile_y in range(tiles_down):
+            for tile_x in range(tiles_across):
+                payload = bytearray(tile_size * tile_size * 3)
+                for y in range(tile_size):
+                    source_y = tile_y * tile_size + y
+                    if source_y >= height:
+                        break
+                    copy_width = min(tile_size, width - tile_x * tile_size)
+                    source = (source_y * width + tile_x * tile_size) * 3
+                    destination = y * tile_size * 3
+                    payload[destination : destination + copy_width * 3] = pixels[
+                        source : source + copy_width * 3
+                    ]
+                tile_payloads.append(bytes(payload))
+        entry(322, 4, 1, tile_size)
+        entry(323, 4, 1, tile_size)
+        entry(324, 4, len(tile_payloads), "tile_offsets")
+        entry(325, 4, len(tile_payloads), "tile_counts")
+
+    entries.sort()
+    ifd_size = 2 + len(entries) * 12 + 4
+    cursor = 8 + ifd_size
+    bits_offset = cursor
+    cursor += 6
+    if cursor & 1:
+        cursor += 1
+    if tile_size is None:
+        pixel_offset = cursor
+    else:
+        offsets_offset = cursor
+        cursor += len(tile_payloads) * 4
+        counts_offset = cursor
+        cursor += len(tile_payloads) * 4
+        tile_offsets = []
+        for payload in tile_payloads:
+            tile_offsets.append(cursor)
+            cursor += len(payload)
+
+    output = bytearray(marker + struct.pack(byte_order + "H", 42) + struct.pack(byte_order + "I", 8))
+    output.extend(struct.pack(byte_order + "H", len(entries)))
+    for tag, field_type, count, value in entries:
+        output.extend(struct.pack(byte_order + "HHI", tag, field_type, count))
+        if value == "bits":
+            output.extend(struct.pack(byte_order + "I", bits_offset))
+        elif value == "pixels":
+            output.extend(struct.pack(byte_order + "I", pixel_offset))
+        elif value == "tile_offsets":
+            output.extend(struct.pack(byte_order + "I", offsets_offset))
+        elif value == "tile_counts":
+            output.extend(struct.pack(byte_order + "I", counts_offset))
+        elif field_type == 3:
+            output.extend(struct.pack(byte_order + "H", value) + b"\0\0")
+        else:
+            output.extend(struct.pack(byte_order + "I", value))
+    output.extend(struct.pack(byte_order + "I", 0))
+    output.extend(struct.pack(byte_order + "HHH", 8, 8, 8))
+    if len(output) & 1:
+        output.append(0)
+    if tile_size is None:
+        output.extend(pixels)
+    else:
+        output.extend(struct.pack(byte_order + f"{len(tile_offsets)}I", *tile_offsets))
+        output.extend(
+            struct.pack(
+                byte_order + f"{len(tile_payloads)}I",
+                *(len(payload) for payload in tile_payloads),
+            )
+        )
+        for payload in tile_payloads:
+            output.extend(payload)
+    path.write_bytes(output)
+
+
+def write_rgb_multistrip_tiff(path, image, rows_per_strip):
+    """Write a minimal little-endian RGB TIFF with multiple strips."""
+    width, height = image.size
+    pixels = image.convert("RGB").tobytes()
+    row_bytes = width * 3
+    strips = [
+        pixels[start * row_bytes : min(start + rows_per_strip, height) * row_bytes]
+        for start in range(0, height, rows_per_strip)
+    ]
+    entry_count = 10
+    cursor = 8 + 2 + entry_count * 12 + 4
+    bits_offset = cursor
+    cursor += 6
+    offsets_offset = cursor
+    cursor += len(strips) * 4
+    counts_offset = cursor
+    cursor += len(strips) * 4
+    strip_offsets = []
+    for strip in strips:
+        strip_offsets.append(cursor)
+        cursor += len(strip)
+
+    entries = [
+        (256, 4, 1, width),
+        (257, 4, 1, height),
+        (258, 3, 3, bits_offset),
+        (259, 3, 1, 1),
+        (262, 3, 1, 2),
+        (273, 4, len(strips), offsets_offset),
+        (277, 3, 1, 3),
+        (278, 4, 1, rows_per_strip),
+        (279, 4, len(strips), counts_offset),
+        (284, 3, 1, 1),
+    ]
+    output = bytearray(b"II*\0\x08\0\0\0")
+    output.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, value in entries:
+        output.extend(struct.pack("<HHI", tag, field_type, count))
+        if field_type == 3 and count == 1:
+            output.extend(struct.pack("<H", value) + b"\0\0")
+        else:
+            output.extend(struct.pack("<I", value))
+    output.extend(struct.pack("<I", 0))
+    output.extend(struct.pack("<HHH", 8, 8, 8))
+    output.extend(struct.pack(f"<{len(strips)}I", *strip_offsets))
+    output.extend(struct.pack(f"<{len(strips)}I", *(len(strip) for strip in strips)))
+    for strip in strips:
+        output.extend(strip)
+    path.write_bytes(output)
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -844,9 +993,29 @@ def gen_tiff():
     img.convert("L").save(d / "gray_deflate.tiff", compression="tiff_adobe_deflate")
     img.convert("RGBA").save(d / "rgba_lzw.tiff", compression="tiff_lzw")
     img.save(d / "le.tiff")  # little-endian default
-    img.save(d / "be.tiff", byteorder="MM")
-    img.save(d / "stripped.tiff", rows_per_strip=16)
-    img.save(d / "tiled.tiff")
+    write_rgb_tiff(d / "be.tiff", img, byte_order=">")
+    write_rgb_multistrip_tiff(d / "stripped.tiff", img, rows_per_strip=16)
+    write_rgb_tiff(d / "tiled.tiff", img, tile_size=32)
+    img.save(
+        d / "rgb_lzw_predictor.tiff",
+        compression="tiff_lzw",
+        tiffinfo={317: 2},
+    )
+    img.save(
+        d / "rgb_deflate_predictor.tiff",
+        compression="tiff_adobe_deflate",
+        tiffinfo={317: 2},
+    )
+    img.convert("I;16").save(
+        d / "gray16_lzw_predictor.tiff",
+        compression="tiff_lzw",
+        tiffinfo={317: 2},
+    )
+    img.convert("I;16").save(
+        d / "gray16_deflate_predictor.tiff",
+        compression="tiff_adobe_deflate",
+        tiffinfo={317: 2},
+    )
     img.save(d / "multipage.tiff", save_all=True, append_images=[img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)])
     d.joinpath("bad_ifd.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\xff\xff\xff")
     print(f"  TIFF: {len(list(d.glob('*.tiff')))} files")

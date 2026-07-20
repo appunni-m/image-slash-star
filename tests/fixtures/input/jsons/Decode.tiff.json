@@ -91,6 +91,32 @@
       }
     },
     {
+      "id": "compression_lzw_rgb_lzw_predictor",
+      "asset": "rgb_lzw_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb_lzw_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw_gray16_lzw_predictor",
+      "asset": "gray16_lzw_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray16_lzw_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "compression_deflate",
       "asset": "deflate.tiff",
       "expect_error": false,
@@ -109,6 +135,32 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray_deflate.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_deflate_rgb_deflate_predictor",
+      "asset": "rgb_deflate_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgb_deflate_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_deflate_gray16_deflate_predictor",
+      "asset": "gray16_deflate_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray16_deflate_predictor.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

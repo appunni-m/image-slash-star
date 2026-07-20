@@ -91,6 +91,32 @@
       ]
     },
     {
+      "id": "compression_lzw_rgb_lzw_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_lzw_predictor_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "compression_lzw_gray16_lzw_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray16_lzw_predictor_tiff.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "I;16",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "compression_deflate",
       "status": "ok",
       "error_type": null,
@@ -111,6 +137,32 @@
       "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray_deflate_tiff.bin",
       "ref_bytes": 16384,
       "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "compression_deflate_rgb_deflate_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_deflate_predictor_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "compression_deflate_gray16_deflate_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray16_deflate_predictor_tiff.bin",
+      "ref_bytes": 32768,
+      "ref_mode": "I;16",
       "ref_size": [
         128,
         128

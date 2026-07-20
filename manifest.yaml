@@ -1225,11 +1225,15 @@ formats:
       - lzw.tiff
       - gray_lzw.tiff
       - rgba_lzw.tiff
+      - rgb_lzw_predictor.tiff
+      - gray16_lzw_predictor.tiff
     - id: compression_deflate
       description: Deflate/ZIP compression
       test_assets:
       - deflate.tiff
       - gray_deflate.tiff
+      - rgb_deflate_predictor.tiff
+      - gray16_deflate_predictor.tiff
     - id: compression_packbits
       description: PackBits compression
       test_assets:
