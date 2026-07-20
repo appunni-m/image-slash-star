@@ -1478,6 +1478,10 @@ formats:
       description: Tiled organization
       test_assets:
       - tiled.tiff
+    - id: tiled_missing_byte_counts
+      description: Pillow derives uncompressed tile lengths when TileByteCounts is empty
+      test_assets:
+      - empty_tile_byte_counts.tiff
     - id: tiled_predictor
       description: Deflate-compressed tiles with horizontal prediction
       test_assets:
@@ -1506,6 +1510,8 @@ formats:
       - oob_strip.tiff
       - empty_strip_offsets.tiff
       - zero_tile_width.tiff
+      - empty_tile_offsets.tiff
+      - compressed_empty_tile_byte_counts.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

@@ -81,14 +81,22 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         }
         let tiles_across = width_usize.div_ceil(tile_width);
         let tiles_down = height_usize.div_ceil(tile_height);
-        if offsets.len() != tiles_across.checked_mul(tiles_down)?
-            || offsets.len() != byte_counts.len()
-        {
+        if offsets.len() != tiles_across.checked_mul(tiles_down)? {
             return None;
         }
         let bytes_per_pixel = samples_per_pixel.checked_mul(usize::from(bits_per_sample) / 8)?;
         let tile_row_bytes = tile_width.checked_mul(bytes_per_pixel)?;
         let tile_size = tile_row_bytes.checked_mul(tile_height)?;
+        // libtiff, and therefore Pillow, derives uncompressed tile lengths from
+        // the tile geometry even when TileByteCounts is empty or inconsistent.
+        let byte_counts = if compression == COMPRESSION_NONE {
+            vec![u64::try_from(tile_size).ok()?; offsets.len()]
+        } else {
+            if offsets.len() != byte_counts.len() {
+                return None;
+            }
+            byte_counts
+        };
         let mut pixels = vec![0; expected_total];
         for (tile_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
             let start = usize::try_from(offset).ok()?;

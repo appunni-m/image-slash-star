@@ -429,6 +429,19 @@
       }
     },
     {
+      "id": "tiled_missing_byte_counts",
+      "asset": "empty_tile_byte_counts.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/empty_tile_byte_counts.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "tiled_predictor",
       "asset": "tiled_deflate_predictor.tiff",
       "expect_error": false,
@@ -629,6 +642,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/zero_tile_width.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_empty_tile_offsets",
+      "asset": "empty_tile_offsets.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/empty_tile_offsets.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_compressed_empty_tile_byte_counts",
+      "asset": "compressed_empty_tile_byte_counts.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/compressed_empty_tile_byte_counts.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -586,6 +586,11 @@ def validate_tiff_claim(case_id, asset_name, data):
             image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
         ):
             raise RuntimeError("TIFF has no tile organization tags")
+        if case_id == "tiled_missing_byte_counts" and (
+            not all(image.tag_v2.get(tag) is not None for tag in (322, 323, 324))
+            or image.tag_v2.get(325) is not None
+        ):
+            raise RuntimeError("TIFF does not have an empty TileByteCounts entry")
         if case_id == "tiled_predictor" and (
             image.tag_v2.get(259) not in (8, 32946) or image.tag_v2.get(317) != 2
         ):

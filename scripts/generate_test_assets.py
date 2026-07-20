@@ -1778,6 +1778,14 @@ def gen_tiff():
     mutate_tiff_tag(d / "rgb.tiff", d / "oob_strip.tiff", 273, 0xFFFF_FFF0)
     mutate_tiff_tag_count(d / "rgb.tiff", d / "empty_strip_offsets.tiff", 273, 0)
     mutate_tiff_tag(d / "tiled.tiff", d / "zero_tile_width.tiff", 322, 0)
+    mutate_tiff_tag_count(d / "tiled.tiff", d / "empty_tile_offsets.tiff", 324, 0)
+    mutate_tiff_tag_count(d / "tiled.tiff", d / "empty_tile_byte_counts.tiff", 325, 0)
+    mutate_tiff_tag_count(
+        d / "tiled_deflate_predictor.tiff",
+        d / "compressed_empty_tile_byte_counts.tiff",
+        325,
+        0,
+    )
     print(f"  TIFF: {len(list(d.glob('*.tiff')))} files")
 
 
