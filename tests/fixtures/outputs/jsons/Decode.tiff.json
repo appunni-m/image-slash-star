@@ -260,6 +260,45 @@
       ]
     },
     {
+      "id": "sample_format_i32",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_le_unsigned32_predictor_tiff.bin",
+      "ref_bytes": 32,
+      "ref_mode": "I",
+      "ref_size": [
+        4,
+        2
+      ]
+    },
+    {
+      "id": "sample_format_i32_be_signed32_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_be_signed32_predictor_tiff.bin",
+      "ref_bytes": 32,
+      "ref_mode": "I",
+      "ref_size": [
+        4,
+        2
+      ]
+    },
+    {
+      "id": "sample_format_i32_signed32",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_signed32_tiff.bin",
+      "ref_bytes": 32,
+      "ref_mode": "I",
+      "ref_size": [
+        4,
+        2
+      ]
+    },
+    {
       "id": "compression_packbits",
       "status": "ok",
       "error_type": null,
@@ -985,6 +1024,16 @@
     },
     {
       "id": "error_bad_ifd_be_16bit_unsupported_photometric",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_unsupported_sample_format",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
       "error_message": "cannot identify image file <bytes>",

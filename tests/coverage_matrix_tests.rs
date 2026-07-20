@@ -841,7 +841,7 @@ fn mode_bytes_per_pixel(mode: Option<&str>) -> Option<usize> {
         Some("1") | Some("P") | Some("L") | Some("L8") => Some(1),
         Some("I;16") | Some("I;16B") | Some("I;16L") | Some("L16") | Some("La8") => Some(2),
         Some("RGB") | Some("Rgb8") => Some(3),
-        Some("RGBA") | Some("Rgba8") | Some("La16") => Some(4),
+        Some("RGBA") | Some("Rgba8") | Some("La16") | Some("I") | Some("I32") => Some(4),
         Some("Rgb16") => Some(6),
         Some("Rgba16") => Some(8),
         _ => None,
@@ -862,6 +862,7 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "Rgb16" => Some(img::ImageMode::Rgb16),
         "Rgba16" => Some(img::ImageMode::Rgba16),
         "F" | "F32" => Some(img::ImageMode::F32),
+        "I" | "I32" => Some(img::ImageMode::I32),
         _ => None,
     }
 }
@@ -1011,7 +1012,10 @@ fn assert_dynamic_bridge_parity(
 ) -> Result<(), String> {
     if decoded.mode != decoded.color.into()
         || decoded.palette.is_some()
-        || matches!(decoded.color, img::ColorType::Cmyk8 | img::ColorType::L32F)
+        || matches!(
+            decoded.color,
+            img::ColorType::Cmyk8 | img::ColorType::L32F | img::ColorType::L32I
+        )
     {
         return Ok(());
     }
@@ -1902,7 +1906,11 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
         ..invalid_mode
     };
     assert!(img::DynamicImage::from_decoded(&invalid_palette).is_none());
-    for color in [img::ColorType::Cmyk8, img::ColorType::L32F] {
+    for color in [
+        img::ColorType::Cmyk8,
+        img::ColorType::L32F,
+        img::ColorType::L32I,
+    ] {
         let decoded =
             img::DecodedImage::new(1, 1, vec![0; usize::from(color.bytes_per_pixel())], color);
         assert!(img::DynamicImage::from_decoded(&decoded).is_none());
@@ -1936,6 +1944,7 @@ fn exercise_type_metadata() {
 
     let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::Cmyk8));
     let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::L32F));
+    let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::L32I));
     let mut dynamic = img::DynamicImage::new_rgba8(1, 1);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         #[allow(deprecated)]
@@ -1988,6 +1997,7 @@ fn exercise_type_metadata() {
         img::ColorType::Rgb32F,
         img::ColorType::Rgba32F,
         img::ColorType::L32F,
+        img::ColorType::L32I,
     ];
     for color in colors {
         assert_eq!(
@@ -2027,6 +2037,7 @@ fn exercise_type_metadata() {
         E::Rgb32F,
         E::Rgba32F,
         E::L32F,
+        E::L32I,
         E::Cmyk8,
         E::Cmyk16,
         E::Unknown(7),
@@ -2043,6 +2054,7 @@ fn exercise_type_metadata() {
         img::ImageMode::Rgba16,
         img::ImageMode::Rgb32F,
         img::ImageMode::Rgba32F,
+        img::ImageMode::I32,
     ] {
         let _ = mode.color_type();
     }

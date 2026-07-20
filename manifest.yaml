@@ -1411,6 +1411,12 @@ formats:
       - gray16_deflate_predictor.tiff
       - float32_deflate_predictor.tiff
       - be_float32_predictor.tiff
+    - id: sample_format_i32
+      description: Unsigned and signed 32-bit grayscale samples exposed as Pillow I mode
+      test_assets:
+      - le_unsigned32_predictor.tiff
+      - be_signed32_predictor.tiff
+      - signed32.tiff
     - id: compression_packbits
       description: PackBits compression
       test_assets:
@@ -1554,6 +1560,7 @@ formats:
       - uncompressed_extra_strips.tiff
       - compressed_bad_strip_counts.tiff
       - be_16bit_unsupported_photometric.tiff
+      - unsupported_sample_format.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none
@@ -1635,6 +1642,10 @@ formats:
       description: 
       source_asset: float32.tiff
       params: {'bit_depth': 32}
+    - id: enc_i32
+      description: Signed 32-bit grayscale Pillow I mode
+      source_asset: signed32.tiff
+      params: {'bit_depth': 32}
     - id: enc_stripped
       description: 
       params: {'organization': 'stripped'}
@@ -1657,6 +1668,11 @@ formats:
     - id: enc_error_predictor_range
       description: Pillow rejects a Predictor tag outside the unsigned-short range
       params: {'predictor': 65536}
+      expect_error: true
+    - id: enc_error_bilevel_predictor
+      description: Pillow/libtiff rejects horizontal prediction for one-bit samples
+      source_asset: 1bit.tiff
+      params: {'compression': 'deflate', 'predictor': 'horizontal'}
       expect_error: true
     - id: enc_lzw_predictor_horiz
       description: LZW-compressed TIFF with horizontal differencing predictor

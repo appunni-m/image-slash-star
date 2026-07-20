@@ -105,13 +105,12 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             let mut decoded = decode_block(encoded, tile_size)?;
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
-            if predictor == 2
-                && matches!(
-                    compression,
-                    COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
-                )
-                && matches!(bits_per_sample, 8 | 16 | 32)
-            {
+            let compressed_predictor = matches!(
+                compression,
+                COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
+            );
+            let supported_sample_width = matches!(bits_per_sample, 8 | 16 | 32);
+            if predictor == 2 && compressed_predictor && supported_sample_width {
                 reverse_horizontal_predictor(
                     &mut decoded,
                     tile_row_bytes,
@@ -299,17 +298,21 @@ fn convert_pixels(
             }
             Some(DecodedImage::new(width, height, output, ColorType::L16))
         }
-        (0 | 1, 1, 32) if sample_format == 3 => {
-            let mut output = Vec::with_capacity(pixels.len());
-            for bytes in pixels.chunks_exact(4) {
-                let bits = endian.u32(bytes)?;
-                match endian {
-                    Endian::Little => output.extend_from_slice(&bits.to_le_bytes()),
-                    Endian::Big => output.extend_from_slice(&bits.to_be_bytes()),
-                }
-            }
-            Some(DecodedImage::new(width, height, output, ColorType::L32F))
-        }
+        (0 | 1, 1, 32) => match sample_format {
+            1 | 2 => Some(DecodedImage::with_mode(
+                width,
+                height,
+                pixels,
+                ImageMode::I32,
+            )),
+            3 => Some(DecodedImage::with_mode(
+                width,
+                height,
+                pixels,
+                ImageMode::F32,
+            )),
+            _ => None,
+        },
         (2, 3, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgb8)),
         (2, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8)),
         (3, 1, 1 | 2 | 4 | 8) => {

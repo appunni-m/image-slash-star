@@ -1669,7 +1669,9 @@ def write_lzw_dictionary_saturation_tiff(path, pixel_count=4100):
     write_compressed_grayscale_tiff(path, payload, 5, pixel_count)
 
 
-def write_grayscale_predictor_tiff(path, bits, byte_order, photometric=1):
+def write_grayscale_predictor_tiff(
+    path, bits, byte_order, photometric=1, sample_format=3
+):
     """Write Deflate-compressed grayscale samples with horizontal prediction."""
     width, height = 4, 2
     marker = b"II" if byte_order == "<" else b"MM"
@@ -1704,7 +1706,7 @@ def write_grayscale_predictor_tiff(path, bits, byte_order, photometric=1):
         (317, 3, 1, 2),
     ]
     if bits == 32:
-        entries.append((339, 3, 1, 3))
+        entries.append((339, 3, 1, sample_format))
     entries.sort()
     pixel_offset = 8 + 2 + len(entries) * 12 + 4
     output = bytearray(marker + struct.pack(byte_order + "H", 42) + struct.pack(byte_order + "I", 8))
@@ -1907,6 +1909,18 @@ def gen_tiff():
         predictor=2,
     )
     write_grayscale_predictor_tiff(d / "be_float32_predictor.tiff", 32, ">")
+    write_grayscale_predictor_tiff(
+        d / "le_unsigned32_predictor.tiff", 32, "<", sample_format=1
+    )
+    write_grayscale_predictor_tiff(
+        d / "be_signed32_predictor.tiff", 32, ">", sample_format=2
+    )
+    write_grayscale_predictor_tiff(
+        d / "unsupported_sample_format.tiff", 32, "<", sample_format=4
+    )
+    signed32 = Image.new("I", (4, 2))
+    signed32.putdata([-2, -1, 0, 1, 2, 1024, -1024, 2_147_483_647])
+    signed32.save(d / "signed32.tiff")
     write_grayscale_predictor_tiff(
         d / "be_16bit_unsupported_photometric.tiff", 16, ">", photometric=4
     )

@@ -20,6 +20,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         ImageMode::La8 => (1, 2, 8, true, width.checked_mul(2)?),
         ImageMode::L16 => (1, 1, 16, false, width.checked_mul(2)?),
         ImageMode::F32 => (1, 1, 32, false, width.checked_mul(4)?),
+        ImageMode::I32 => (1, 1, 32, false, width.checked_mul(4)?),
         _ => match img.color {
             ColorType::L8 => (1, 1, 8, false, width),
             ColorType::Rgb8 => (2, 3, 8, false, width.checked_mul(3)?),
@@ -42,10 +43,13 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         Some("none" | "1") | None => 1,
         Some(_) => return None,
     };
+    if predictor == 2 && !matches!(bits_per_sample, 8 | 16 | 32) {
+        return None;
+    }
 
     let mut raw = img.pixels.clone();
     if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
-        apply_horizontal_predictor(&mut raw, width, usize::from(channels));
+        apply_horizontal_predictor(&mut raw, row_len, usize::from(channels), bits_per_sample);
     }
     let encoded = if compression == COMPRESSION_NONE {
         raw
@@ -58,11 +62,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         encode_packbits(&raw, row_len)
     };
 
+    let has_sample_format = matches!(img.mode, ImageMode::F32 | ImageMode::I32);
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
         .checked_add(u16::from(channels > 1))?
         .checked_add(u16::from(extra_sample))?
         .checked_add(u16::from(predictor == 2))?
-        .checked_add(u16::from(img.mode == ImageMode::F32))?;
+        .checked_add(u16::from(has_sample_format))?;
     let ifd_size = 2usize
         .checked_add(usize::from(entry_count).checked_mul(12)?)?
         .checked_add(4)?;
@@ -164,8 +169,10 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     if extra_sample {
         write_short_entry(&mut output, endian, 338, 2);
     }
-    if img.mode == ImageMode::F32 {
-        write_short_entry(&mut output, endian, 339, 3);
+    match img.mode {
+        ImageMode::F32 => write_short_entry(&mut output, endian, 339, 3),
+        ImageMode::I32 => write_short_entry(&mut output, endian, 339, 2),
+        _ => {}
     }
     endian.push_u32(&mut output, 0);
 
@@ -181,11 +188,24 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     Some(output)
 }
 
-fn apply_horizontal_predictor(data: &mut [u8], width: usize, channels: usize) {
-    let row_len = width * channels;
+fn apply_horizontal_predictor(
+    data: &mut [u8],
+    row_len: usize,
+    channels: usize,
+    bits_per_sample: u16,
+) {
+    let sample_bytes = usize::from(bits_per_sample / 8);
+    let stride = channels * sample_bytes;
     for row in data.chunks_exact_mut(row_len) {
-        for index in (channels..row.len()).rev() {
-            row[index] = row[index].wrapping_sub(row[index - channels]);
+        for offset in (stride..row.len()).step_by(sample_bytes).rev() {
+            let previous = offset - stride;
+            let mut borrow = 0u16;
+            for byte in 0..sample_bytes {
+                let value = u16::from(row[offset + byte]);
+                let subtrahend = u16::from(row[previous + byte]) + borrow;
+                row[offset + byte] = value.wrapping_sub(subtrahend) as u8;
+                borrow = u16::from(value < subtrahend);
+            }
         }
     }
 }

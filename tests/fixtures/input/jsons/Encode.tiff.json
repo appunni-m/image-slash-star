@@ -416,6 +416,25 @@
       }
     },
     {
+      "id": "enc_i32",
+      "source_asset": "signed32.tiff",
+      "source_format": "tiff",
+      "params": {
+        "bit_depth": 32
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/signed32.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_stripped",
       "source_asset": "stripped.tiff",
       "source_format": "tiff",
@@ -561,6 +580,35 @@
             "type": "ImageFileDirectory_v2",
             "tags": {
               "317": 65536
+            }
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_bilevel_predictor",
+      "source_asset": "1bit.tiff",
+      "source_format": "tiff",
+      "params": {
+        "compression": "deflate",
+        "predictor": "horizontal"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/1bit.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_adobe_deflate",
+          "tiffinfo": {
+            "type": "ImageFileDirectory_v2",
+            "tags": {
+              "317": 2
             }
           }
         },

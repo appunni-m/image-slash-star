@@ -124,6 +124,7 @@ impl DynamicImage {
             Rgb32F => Self::new_rgb32f(w, h),
             Rgba32F => Self::new_rgba32f(w, h),
             L32F => panic!("DynamicImage has no native scalar-f32 representation"),
+            L32I => panic!("DynamicImage has no native scalar-i32 representation"),
         }
     }
 
@@ -1031,7 +1032,7 @@ impl DynamicImage {
                     .collect();
                 DynamicImage::ImageRgba32F(ImageBuffer::from_raw(d.width, d.height, f32_data)?)
             }
-            L32F => return None,
+            L32F | L32I => return None,
         };
         Some(img)
     }

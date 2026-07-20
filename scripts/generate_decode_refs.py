@@ -385,7 +385,7 @@ def validate_source_params(image, params, fmt_name=None):
 
     bit_depth = params.get("bit_depth")
     if bit_depth is not None and fmt_name != "bmp":
-        source_depth = {"1": 1, "L": 8, "P": 8, "I;16": 16, "F": 32, "RGB": 24, "RGBA": 32}.get(image.mode)
+        source_depth = {"1": 1, "L": 8, "P": 8, "I;16": 16, "I": 32, "F": 32, "RGB": 24, "RGBA": 32}.get(image.mode)
         if source_depth != bit_depth:
             raise RuntimeError(f"source mode {image.mode} has depth {source_depth}, expected {bit_depth}")
 
