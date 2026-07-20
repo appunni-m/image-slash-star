@@ -73,7 +73,6 @@ fn coalesce_identical_frames(
     let width = usize::try_from(sequence.width).ok()?;
     let height = usize::try_from(sequence.height).ok()?;
     let mut canvas = vec![0u8; width.checked_mul(height)?.checked_mul(4)?];
-    let mut restore_canvas = canvas.clone();
     let mut previous_frame = None::<&crate::types::DecodedFrame>;
     let mut previous_render = None::<Vec<u8>>;
     let mut output = Vec::<crate::types::DecodedFrame>::new();
@@ -81,13 +80,11 @@ fn coalesce_identical_frames(
     for frame in sequence.frames.iter().take(requested_frames) {
         if let Some(previous) = previous_frame {
             match previous.disposal {
-                FrameDisposal::Unspecified | FrameDisposal::Keep => {}
+                FrameDisposal::Unspecified | FrameDisposal::Keep | FrameDisposal::Previous => {}
                 FrameDisposal::Background => clear_frame_rect(&mut canvas, width, previous)?,
-                FrameDisposal::Previous => canvas.copy_from_slice(&restore_canvas),
             }
         }
 
-        let before_frame = canvas.clone();
         composite_indexed_frame(&mut canvas, width, frame)?;
         let identical = previous_render.as_deref() == Some(canvas.as_slice())
             && output
@@ -111,7 +108,6 @@ fn coalesce_identical_frames(
             output.push(output_frame);
             previous_render = Some(canvas.clone());
         }
-        restore_canvas = before_frame;
         previous_frame = Some(frame);
     }
     Some(output)
@@ -194,12 +190,28 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             if img.pixels.len() != pixel_count {
                 return None;
             }
-            let mut palette = Vec::with_capacity(256 * 3);
-            for i in 0u16..256 {
-                let v = i as u8;
-                palette.extend_from_slice(&[v, v, v]);
+            // Pillow converts L input to a compact P palette containing only
+            // the used grayscale values, ordered by their original index.
+            let mut used = [false; 256];
+            for &value in &img.pixels {
+                used[usize::from(value)] = true;
             }
-            (palette, img.pixels.clone(), None)
+            let mut palette = Vec::new();
+            let mut remap = [0u8; 256];
+            for (value, is_used) in used.into_iter().enumerate() {
+                if is_used {
+                    let index = u8::try_from(palette.len() / 3).ok()?;
+                    remap[value] = index;
+                    let value = u8::try_from(value).ok()?;
+                    palette.extend_from_slice(&[value, value, value]);
+                }
+            }
+            let indices = img
+                .pixels
+                .iter()
+                .map(|&value| remap[usize::from(value)])
+                .collect();
+            (palette, indices, None)
         }
         (ImageMode::Rgb8, ColorType::Rgb8) => {
             let (palette, indices) = quantize_rgb(&img.pixels)?;
@@ -278,15 +290,6 @@ fn parse_loop_count(opts: &EncodeOptions) -> Option<Option<u16>> {
         "true" | "infinite" => Some(Some(0)),
         "false" => Some(None),
         number => number.parse().ok().map(Some),
-    }
-}
-
-fn frame_disposal(disposal: FrameDisposal) -> u8 {
-    match disposal {
-        FrameDisposal::Unspecified => 0,
-        FrameDisposal::Keep => 1,
-        FrameDisposal::Background => 2,
-        FrameDisposal::Previous => 3,
     }
 }
 
@@ -383,9 +386,7 @@ fn write_gif(
         if let Some(requested) = option_bool(opts, "transparency") {
             transparent = requested.then_some(transparent.unwrap_or(0));
         }
-        let disposal = settings
-            .disposal_override
-            .unwrap_or_else(|| frame_disposal(frame.disposal));
+        let disposal = settings.disposal_override.unwrap_or(0);
         let delay_cs = u16::try_from(frame.duration_ms / 10).ok()?;
         if transparent.is_some() || disposal != 0 || delay_cs != 0 {
             output.extend_from_slice(&[

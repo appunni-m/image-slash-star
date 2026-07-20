@@ -1251,6 +1251,54 @@
           ]
         },
         {
+          "id": "enc_animated_background",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Re-encode animation whose frames request background disposal",
+          "params": {
+            "animated": true,
+            "frames": 2,
+            "loop": 1
+          },
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "gce.gif",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_background.bin",
+          "encoded_ref_bytes": 13328,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_background.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_animated_previous",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Re-encode animation whose frames request previous-frame disposal",
+          "params": {
+            "animated": true,
+            "frames": 2,
+            "loop": 1
+          },
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "gce_previous.gif",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_previous.bin",
+          "encoded_ref_bytes": 14567,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_previous.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "gif",
           "id": "enc_opaque",
@@ -1472,6 +1520,26 @@
           ]
         },
         {
+          "id": "enc_grayscale",
+          "type": "encode",
+          "format": "gif",
+          "category": "grayscale",
+          "description": "Grayscale source encoded with Pillow's grayscale palette",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_grayscale.bin",
+          "encoded_ref_bytes": 8067,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_grayscale.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "id": "enc_rgba",
           "type": "encode",
           "format": "gif",
@@ -1484,6 +1552,26 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba.bin",
           "encoded_ref_bytes": 51,
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "enc_rgba_opaque",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "Opaque RGBA source quantized through Pillow's RGB path",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_opaque.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_opaque.bin",
+          "encoded_ref_bytes": 43,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_opaque.bin",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -8040,9 +8128,9 @@
     }
   },
   "summary": {
-    "total_rows": 439,
+    "total_rows": 443,
     "decode_rows": 271,
-    "encode_rows": 136,
+    "encode_rows": 140,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

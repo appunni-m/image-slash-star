@@ -49,6 +49,30 @@
       "encoded_ref_bytes": 25731
     },
     {
+      "id": "enc_animated_background",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_background.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_background.bin",
+      "encoded_ref_bytes": 13328
+    },
+    {
+      "id": "enc_animated_previous",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_previous.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_previous.bin",
+      "encoded_ref_bytes": 14567
+    },
+    {
       "id": "enc_opaque",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_opaque.bin",
       "ref_bytes": 16384,
@@ -169,6 +193,18 @@
       "encoded_ref_bytes": 115
     },
     {
+      "id": "enc_grayscale",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_grayscale.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_grayscale.bin",
+      "encoded_ref_bytes": 8067
+    },
+    {
       "id": "enc_rgba",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba.bin",
       "ref_bytes": 1,
@@ -179,6 +215,18 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba.bin",
       "encoded_ref_bytes": 51
+    },
+    {
+      "id": "enc_rgba_opaque",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_opaque.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_opaque.bin",
+      "encoded_ref_bytes": 43
     }
   ]
 }

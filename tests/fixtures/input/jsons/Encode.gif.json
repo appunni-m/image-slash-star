@@ -88,6 +88,62 @@
       }
     },
     {
+      "id": "enc_animated_background",
+      "source_asset": "gce.gif",
+      "source_format": "gif",
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "loop": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_previous",
+      "source_asset": "gce_previous.gif",
+      "source_format": "gif",
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "loop": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_previous.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_opaque",
       "source_asset": "static.gif",
       "source_format": "gif",
@@ -291,12 +347,46 @@
       }
     },
     {
+      "id": "enc_grayscale",
+      "source_asset": "gray.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_rgba",
       "source_asset": "gif_rgba.png",
       "source_format": "png",
       "params": {},
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gif_rgba.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba_opaque",
+      "source_asset": "gif_rgba_opaque.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_opaque.png",
         "method": "PIL.Image.Image.save",
         "format": "GIF",
         "kwargs": {},
