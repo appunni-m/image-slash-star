@@ -39,9 +39,10 @@ fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>>
 /// Encodes VP8 keyframe bitstream in RIFF/WEBP container.
 fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let quality = opts.quality.unwrap_or(80).min(100);
+    let method = opts.method.unwrap_or(4).min(6);
     let encoded = match img.color {
         ColorType::Rgb8 => {
-            vp8::encoder::encode_vp8_lossy(&img.pixels, img.width, img.height, quality)
+            vp8::encoder::encode_vp8_lossy(&img.pixels, img.width, img.height, quality, method)
         }
         ColorType::Rgba8 => {
             let has_alpha = img.pixels.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX);
@@ -58,6 +59,7 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                     img.width,
                     img.height,
                     quality,
+                    method,
                     &alpha_chunk,
                 )
             } else {
@@ -66,7 +68,7 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                     .chunks_exact(4)
                     .flat_map(|pixel| pixel[..3].iter().copied())
                     .collect::<Vec<_>>();
-                vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality)
+                vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
             }
         }
         _ => return None,

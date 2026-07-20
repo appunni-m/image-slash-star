@@ -203,9 +203,25 @@ pub(super) fn select(
     matrices: &SegmentMatrices,
     lambda_i16: u32,
     texture_lambda: u32,
+    fixed_mode: Option<Intra16Mode>,
+    distortion_only: bool,
 ) -> Intra16Candidate {
+    let selected_mode = distortion_only.then(|| {
+        Intra16Mode::ALL
+            .into_iter()
+            .min_by_key(|&mode| {
+                let prediction = predict(mode, top, left, top_left, has_top, has_left);
+                256 * squared_error_16x16(source, &prediction)
+                    + 106 * FIXED_MODE_COSTS[mode as usize]
+            })
+            .expect("VP8 always has intra16 candidates")
+    });
     Intra16Mode::ALL
         .into_iter()
+        .filter(|&mode| {
+            fixed_mode.is_none_or(|fixed| fixed == mode)
+                && selected_mode.is_none_or(|selected| selected == mode)
+        })
         .map(|mode| {
             evaluate(
                 mode,

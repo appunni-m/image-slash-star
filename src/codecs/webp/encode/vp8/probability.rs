@@ -27,6 +27,7 @@ fn record_block(
     first: usize,
     coefficient_type: usize,
     initial_context: usize,
+    token_buffer: bool,
 ) -> u8 {
     let Some(last) = (first..16).rev().find(|&position| levels[position] != 0) else {
         record_event(
@@ -92,8 +93,9 @@ fn record_block(
                         // libwebp's token-buffer path encodes node 10 but
                         // deliberately/ historically accumulates its stats in
                         // node 9 (`s + 9` in VP8RecordCoeffTokens).
+                        let node = if token_buffer { 9 } else { 10 };
                         record_event(
-                            &mut statistics[coefficient_type][band][context][9],
+                            &mut statistics[coefficient_type][band][context][node],
                             magnitude >= 67,
                         );
                     } else {
@@ -118,13 +120,17 @@ fn record_block(
     1
 }
 
-fn collect_statistics(decisions: &[MacroblockDecision], macroblock_width: usize) -> Statistics {
+fn collect_statistics(
+    decisions: &[MacroblockDecision],
+    macroblock_width: usize,
+    token_buffer: bool,
+) -> Statistics {
     let mut statistics = [[[[0; 11]; 3]; 8]; 4];
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
     let mut top_y2 = vec![0u8; macroblock_width];
 
-    for row in decisions.chunks_exact(macroblock_width) {
+    for row in decisions.chunks(macroblock_width) {
         let mut left_y = [0u8; 4];
         let mut left_uv = [0u8; 4];
         let mut left_y2 = 0u8;
@@ -138,6 +144,7 @@ fn collect_statistics(decisions: &[MacroblockDecision], macroblock_width: usize)
                         0,
                         1,
                         usize::from(top_y2[x] + left_y2),
+                        token_buffer,
                     );
                     top_y2[x] = nonzero;
                     left_y2 = nonzero;
@@ -150,6 +157,7 @@ fn collect_statistics(decisions: &[MacroblockDecision], macroblock_width: usize)
                                 1,
                                 0,
                                 context,
+                                token_buffer,
                             );
                             top_y[x][block_x] = nonzero;
                             left_y[block_y] = nonzero;
@@ -166,6 +174,7 @@ fn collect_statistics(decisions: &[MacroblockDecision], macroblock_width: usize)
                                 0,
                                 3,
                                 context,
+                                token_buffer,
                             );
                             top_y[x][block_x] = nonzero;
                             left_y[block_y] = nonzero;
@@ -186,6 +195,7 @@ fn collect_statistics(decisions: &[MacroblockDecision], macroblock_width: usize)
                             0,
                             2,
                             context,
+                            token_buffer,
                         );
                         top_uv[x][context_index] = nonzero;
                         left_uv[left_index] = nonzero;
@@ -200,8 +210,9 @@ fn collect_statistics(decisions: &[MacroblockDecision], macroblock_width: usize)
 pub(super) fn adapt_coefficients(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
+    token_buffer: bool,
 ) -> AdaptedProbabilities {
-    let statistics = collect_statistics(decisions, macroblock_width);
+    let statistics = collect_statistics(decisions, macroblock_width, token_buffer);
     let mut coefficients = COEFF_PROBS;
     let mut updates = [[[[false; 11]; 3]; 8]; 4];
     for coefficient_type in 0..4 {

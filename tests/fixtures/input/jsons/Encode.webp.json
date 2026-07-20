@@ -212,6 +212,27 @@
       }
     },
     {
+      "id": "enc_method_0",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "method": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1x1",
       "source_asset": "1x1.png",
       "source_format": "png",

@@ -17,6 +17,8 @@ pub struct EncodeOptions {
     pub subsampling: Option<String>,
     /// Lossless mode (WebP)
     pub lossless: Option<bool>,
+    /// Encoder effort method 0-6 (WebP)
+    pub method: Option<u8>,
     /// Interlaced (PNG Adam7, GIF)
     pub interlace: Option<bool>,
     /// Catch-all for future params

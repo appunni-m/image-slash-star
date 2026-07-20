@@ -6182,10 +6182,18 @@
           },
           "source_asset": "lossless.webp",
           "source_format": "webp",
-          "status": "planned",
+          "status": "active",
           "type": "encode",
           "category": "method",
-          "gap": "Rust WebP encoding does not yet match Pillow for this declared save operation."
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_method_0.bin",
+          "encoded_ref_bytes": 4112,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_method_0.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "description": "",
@@ -6347,6 +6355,6 @@
     "assets_available": 161,
     "decode_active": 161,
     "decode_planned": 7,
-    "encode_not_wired": 33
+    "encode_not_wired": 32
   }
 }

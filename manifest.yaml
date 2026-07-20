@@ -1036,7 +1036,6 @@ formats:
       params: {'hint': 'picture'}
     - id: enc_method_0
       description: 
-      status: planned
       params: {'method': 0}
     - id: enc_method_6
       description: 

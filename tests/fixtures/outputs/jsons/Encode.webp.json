@@ -121,6 +121,18 @@
       "encoded_ref_bytes": 3634
     },
     {
+      "id": "enc_method_0",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_method_0.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_method_0.bin",
+      "encoded_ref_bytes": 4112
+    },
+    {
       "id": "enc_1x1",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_1x1.bin",
       "ref_bytes": 3,

@@ -42,13 +42,20 @@ fn segment_probabilities(decisions: &[MacroblockDecision]) -> [u8; 3] {
     ]
 }
 
-fn adjusted_frame_params(decisions: &[MacroblockDecision], params: &FrameParams) -> FrameParams {
+fn adjusted_frame_params(
+    decisions: &[MacroblockDecision],
+    params: &FrameParams,
+    adjust_filter_edges: bool,
+) -> FrameParams {
     let mut adjusted = FrameParams {
         segments: params.segments,
         num_segments: params.num_segments,
         chroma_dc_delta: params.chroma_dc_delta,
         chroma_ac_delta: params.chroma_ac_delta,
     };
+    if !adjust_filter_edges {
+        return adjusted;
+    }
     let mut maximum_edges = [0u16; 4];
     for decision in decisions {
         let LumaDecision::Intra16(luma) = &decision.luma else {
@@ -256,8 +263,9 @@ pub(super) fn encode_first_partition(
     macroblock_width: usize,
     params: &FrameParams,
     probabilities: &AdaptedProbabilities,
+    adjust_filter_edges: bool,
 ) -> Vec<u8> {
-    let params = adjusted_frame_params(decisions, params);
+    let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
     let segment_probabilities = segment_probabilities(decisions);
     let mut writer = BoolEncoder::new();
     writer.encode_bool(128, false); // colorspace

@@ -95,13 +95,22 @@ pub(super) fn select_frame(
     width: usize,
     height: usize,
     quality: f64,
+    method: u8,
 ) -> Vec<MacroblockDecision> {
     assert_eq!(width % 16, 0);
     assert_eq!(height % 16, 0);
     let macroblock_width = width / 16;
     let macroblock_height = height / 16;
     let chroma_stride = width / 2;
-    let analysis = analyze(y_plane, u_plane, v_plane, width, height);
+    let analysis = analyze(
+        y_plane,
+        u_plane,
+        v_plane,
+        width,
+        height,
+        quality as u8,
+        method,
+    );
     let params = segment_params(&analysis, quality);
     let matrices: [SegmentMatrices; 4] = std::array::from_fn(|segment| {
         libwebp_segment_matrices(
@@ -197,6 +206,8 @@ pub(super) fn select_frame(
                 matrix,
                 matrix.lambda_i16 as u32,
                 matrix.texture_lambda as u32,
+                None,
+                method <= 1,
             );
             let intra16_mode_score = rd_score(
                 intra16.rate_cost,
@@ -218,8 +229,15 @@ pub(super) fn select_frame(
                 matrix.lambda_i4 as u32,
                 matrix.lambda_mode as u32,
                 matrix.texture_lambda as u32,
+                method <= 1,
             );
-            let luma = if intra4.score < intra16_mode_score {
+            let luma = if method <= 1 {
+                if analysis.macroblocks[block_index].use_intra4 {
+                    LumaDecision::Intra4(intra4)
+                } else {
+                    LumaDecision::Intra16(intra16)
+                }
+            } else if intra4.score < intra16_mode_score {
                 LumaDecision::Intra4(intra4)
             } else {
                 LumaDecision::Intra16(intra16)
@@ -263,6 +281,13 @@ pub(super) fn select_frame(
                 quality < 98.0,
                 matrix,
                 matrix.lambda_uv as u32,
+                (method == 0).then(|| match analysis.macroblocks[block_index].chroma_mode {
+                    0 => chroma::ChromaMode::Dc,
+                    1 => chroma::ChromaMode::TrueMotion,
+                    2 => chroma::ChromaMode::Vertical,
+                    3 => chroma::ChromaMode::Horizontal,
+                    _ => unreachable!("invalid analyzed chroma mode"),
+                }),
             );
             let nonzero = luma_nz | chroma.nonzero;
             decisions.push(MacroblockDecision {
@@ -320,8 +345,10 @@ pub(super) fn select_frame(
                 left_y2_nonzero = bit(nonzero, 24);
             }
             packed_nonzero[macroblock_x] = left_packed;
-            left_errors =
-                store_diffusion_errors(decision.chroma.errors, &mut top_errors[macroblock_x]);
+            if method >= 3 {
+                left_errors =
+                    store_diffusion_errors(decision.chroma.errors, &mut top_errors[macroblock_x]);
+            }
         }
     }
     decisions

@@ -23,9 +23,9 @@ use super::{
 /// Encode an RGB image to a lossy VP8 WebP bitstream.
 ///
 /// Returns the complete RIFF/WEBP container bytes.
-pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8) -> Vec<u8> {
+pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8, method: u8) -> Vec<u8> {
     let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height);
-    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality);
+    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality, method);
     build_webp_container(&vp8_data, width, height)
 }
 
@@ -34,10 +34,11 @@ pub(crate) fn encode_vp8_lossy_rgba(
     width: u32,
     height: u32,
     quality: u8,
+    method: u8,
     alpha_chunk: &[u8],
 ) -> Vec<u8> {
     let (y_plane, u_plane, v_plane) = rgba_to_yuv_planes_internal(rgba, width, height);
-    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality);
+    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality, method);
     build_extended_webp_container(&vp8_data, alpha_chunk, width, height)
 }
 
@@ -48,6 +49,7 @@ fn encode_vp8_planes(
     width: u32,
     height: u32,
     quality: u8,
+    method: u8,
 ) -> Vec<u8> {
     let padded_width = width.div_ceil(16) * 16;
     let padded_height = height.div_ceil(16) * 16;
@@ -82,6 +84,8 @@ fn encode_vp8_planes(
         &v_plane,
         padded_width as usize,
         padded_height as usize,
+        quality,
+        method,
     );
     let mut params = segment_params(&analysis, f64::from(quality));
     let mut decisions = select_frame(
@@ -91,14 +95,30 @@ fn encode_vp8_planes(
         padded_width as usize,
         padded_height as usize,
         f64::from(quality),
+        method,
     );
     let segment_map = simplify_segments(&mut params);
     for decision in &mut decisions {
         decision.segment = segment_map[usize::from(decision.segment)];
     }
     let macroblock_width = padded_width as usize / 16;
-    let probabilities = adapt_coefficients(&decisions, macroblock_width);
-    let header_data = encode_first_partition(&decisions, macroblock_width, &params, &probabilities);
+    let statistics_count = if method == 0 {
+        decisions.len().min(50)
+    } else {
+        decisions.len()
+    };
+    let probabilities = adapt_coefficients(
+        &decisions[..statistics_count],
+        macroblock_width,
+        method >= 3,
+    );
+    let header_data = encode_first_partition(
+        &decisions,
+        macroblock_width,
+        &params,
+        &probabilities,
+        method >= 3,
+    );
     let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities);
     let frame_header = build_frame_header(width, height, header_data.len() as u32);
 

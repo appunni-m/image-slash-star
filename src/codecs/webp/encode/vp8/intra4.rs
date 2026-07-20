@@ -190,6 +190,7 @@ pub(super) fn select_macroblock(
     lambda_i4: u32,
     lambda_mode: u32,
     texture_lambda: u32,
+    distortion_only: bool,
 ) -> Intra4Result {
     let mut result = Intra4Result {
         modes: [Intra4Mode::Dc; 16],
@@ -249,9 +250,22 @@ pub(super) fn select_macroblock(
                 result.modes[block_index - 1]
             };
             let context = usize::from(top_nonzero[block_x] + left_nonzero[block_y]);
+            let selected_mode = distortion_only.then(|| {
+                Intra4Mode::ALL
+                    .into_iter()
+                    .min_by_key(|&mode| {
+                        let prediction = predict(mode, &top, &left, block_top_left);
+                        256 * squared_error_4x4(&block_source, &prediction)
+                            + 11 * u32::from(fixed_mode_cost(top_mode, left_mode, mode))
+                    })
+                    .expect("VP8 always has intra4 candidates")
+            });
 
             let mut best: Option<(u64, Intra4Mode, [i16; 16], [u8; 16], u32, u32, u32, u32)> = None;
-            for mode in Intra4Mode::ALL {
+            for mode in Intra4Mode::ALL
+                .into_iter()
+                .filter(|&mode| selected_mode.is_none_or(|selected| selected == mode))
+            {
                 let prediction = predict(mode, &top, &left, block_top_left);
                 let (nonzero, levels, reconstructed) =
                     quantize_reconstruct_block(&block_source, &prediction, &matrices.y1);
@@ -268,15 +282,16 @@ pub(super) fn select_macroblock(
                 };
                 let preliminary_score =
                     rd_score(flat_penalty, header, distortion + spectral, lambda_i4);
-                if best
-                    .as_ref()
-                    .is_some_and(|best| preliminary_score >= best.0)
+                if !distortion_only
+                    && best
+                        .as_ref()
+                        .is_some_and(|best| preliminary_score >= best.0)
                 {
                     continue;
                 }
                 let rate = flat_penalty + residual_cost(&levels, 0, 3, context);
                 let score = rd_score(rate, header, distortion + spectral, lambda_i4);
-                if best.as_ref().is_none_or(|best| score < best.0) {
+                if distortion_only || best.as_ref().is_none_or(|best| score < best.0) {
                     best = Some((
                         score,
                         mode,

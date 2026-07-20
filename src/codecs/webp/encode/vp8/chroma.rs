@@ -283,9 +283,11 @@ pub(super) fn select(
     error_diffusion: bool,
     matrices: &SegmentMatrices,
     lambda_uv: u32,
+    fixed_mode: Option<ChromaMode>,
 ) -> ChromaCandidate {
     ChromaMode::ALL
         .into_iter()
+        .filter(|&mode| fixed_mode.is_none_or(|fixed| fixed == mode))
         .map(|mode| {
             evaluate(
                 mode,

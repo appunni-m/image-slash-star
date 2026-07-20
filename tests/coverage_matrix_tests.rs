@@ -1216,6 +1216,11 @@ fn test_encode_matrix() {
                     .and_then(|v| v.as_u64())
                     .and_then(|v| u8::try_from(v).ok()),
                 lossless: row.params.get("lossless").and_then(|v| v.as_bool()),
+                method: row
+                    .params
+                    .get("method")
+                    .and_then(|v| v.as_u64())
+                    .and_then(|v| u8::try_from(v).ok()),
                 progressive: row.params.get("progressive").and_then(|v| v.as_bool()),
                 optimize: row.params.get("optimize").and_then(|v| v.as_bool()),
                 subsampling: row.params.get("subsampling").map(option_text),

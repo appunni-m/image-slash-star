@@ -12,6 +12,7 @@ const MAX_COEFFICIENT_THRESHOLD: usize = 31;
 pub(super) struct MacroblockAnalysis {
     pub(super) alpha: u8,
     pub(super) segment: u8,
+    pub(super) use_intra4: bool,
     pub(super) luma_mode: u8,
     pub(super) chroma_mode: u8,
 }
@@ -103,7 +104,25 @@ fn predict_block<const SIZE: usize>(
             }
             (None, None) => output.fill(129),
         },
-        _ => unreachable!("analysis only evaluates DC and true-motion modes"),
+        2 => {
+            if let Some(top) = top {
+                for row in output.chunks_exact_mut(SIZE) {
+                    row.copy_from_slice(&top[..SIZE]);
+                }
+            } else {
+                output.fill(127);
+            }
+        }
+        3 => {
+            if let Some(left) = left {
+                for (row, &value) in output.chunks_exact_mut(SIZE).zip(left) {
+                    row.fill(value);
+                }
+            } else {
+                output.fill(129);
+            }
+        }
+        _ => unreachable!("invalid analysis prediction mode"),
     }
     output
 }
@@ -283,6 +302,8 @@ pub(super) fn analyze(
     v_plane: &[u8],
     width: usize,
     height: usize,
+    quality: u8,
+    method: u8,
 ) -> FrameAnalysis {
     let chroma_width = width.div_ceil(2);
     let chroma_height = height.div_ceil(2);
@@ -300,17 +321,37 @@ pub(super) fn analyze(
             let y_block = extract_block(y_plane, width, width, height, y_x, y_y, 16);
             let (y_top, y_left, y_top_left) = boundary(y_plane, width, width, height, y_x, y_y, 16);
 
-            let mut best_luma_alpha = -1;
-            let mut luma_mode = 0;
-            for mode in 0..2 {
-                let prediction =
-                    predict_block::<16>(y_top.as_deref(), y_left.as_deref(), y_top_left, mode);
-                let alpha = histogram_alpha(collect_histogram(&[(&y_block, &prediction, 16)]));
-                if alpha > best_luma_alpha {
-                    best_luma_alpha = alpha;
-                    luma_mode = mode;
+            let (best_luma_alpha, luma_mode, use_intra4) = if method <= 1 {
+                let strip_sums = std::array::from_fn::<_, 16, _>(|strip| {
+                    let block_x = strip % 4;
+                    let block_y = strip / 4;
+                    (0..4)
+                        .flat_map(|row| &y_block[(block_y * 4 + row) * 16 + block_x * 4..][..4])
+                        .map(|&value| u32::from(value))
+                        .sum::<u32>()
+                });
+                let mean = strip_sums.iter().sum::<u32>();
+                let squared_mean = strip_sums.iter().map(|&value| value * value).sum::<u32>();
+                let threshold = 8 + 9 * u32::from(quality) / 100;
+                (
+                    0,
+                    0,
+                    threshold.wrapping_mul(squared_mean) >= mean.wrapping_mul(mean),
+                )
+            } else {
+                let mut best_luma_alpha = -1;
+                let mut luma_mode = 0;
+                for mode in 0..2 {
+                    let prediction =
+                        predict_block::<16>(y_top.as_deref(), y_left.as_deref(), y_top_left, mode);
+                    let alpha = histogram_alpha(collect_histogram(&[(&y_block, &prediction, 16)]));
+                    if alpha > best_luma_alpha {
+                        best_luma_alpha = alpha;
+                        luma_mode = mode;
+                    }
                 }
-            }
+                (best_luma_alpha, luma_mode, false)
+            };
 
             let uv_x = macroblock_x * 8;
             let uv_y = macroblock_y * 8;
@@ -377,6 +418,7 @@ pub(super) fn analyze(
             macroblocks.push(MacroblockAnalysis {
                 alpha: mixed_alpha as u8,
                 segment: 0,
+                use_intra4,
                 luma_mode,
                 chroma_mode,
             });
