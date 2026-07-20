@@ -770,6 +770,26 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_structure_short_inflated_scanline",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_adam7_invalid_scanline_filter",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "unrecognized data stream contents when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "status": "ok",
       "error_type": null,

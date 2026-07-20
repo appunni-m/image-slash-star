@@ -806,6 +806,32 @@
       }
     },
     {
+      "id": "error_malformed_structure_short_inflated_scanline",
+      "asset": "short_inflated_scanline.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/short_inflated_scanline.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_adam7_invalid_scanline_filter",
+      "asset": "adam7_invalid_scanline_filter.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/adam7_invalid_scanline_filter.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "asset": "invalid_compression.png",
       "expect_error": false,

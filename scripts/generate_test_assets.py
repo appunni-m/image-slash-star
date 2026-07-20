@@ -409,6 +409,19 @@ def gen_png():
         + png_chunk(b"IDAT", zlib.compress(b"\x05\x80\x00\x00"))
         + png_chunk(b"IEND", b"")
     )
+    (d / "short_inflated_scanline.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80"))
+        + png_chunk(b"IEND", b"")
+    )
+    adam7_rgb_header = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 1)
+    (d / "adam7_invalid_scanline_filter.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", adam7_rgb_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x05\x80\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
     palette_header = struct.pack(">IIBBBBB", 1, 1, 1, 3, 0, 0, 0)
     (d / "palette_trns_too_long.png").write_bytes(
         b"\x89PNG\r\n\x1a\n"

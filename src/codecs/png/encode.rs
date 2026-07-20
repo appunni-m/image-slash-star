@@ -62,19 +62,17 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize)?;
     let compression_level = if optimize {
         9
+    } else if let Some(level) = opts.compression {
+        level
+    } else if let Some(value) = opts.extra.get("compression") {
+        match value.as_str() {
+            "none" => 0,
+            "default" => 6,
+            "max" => 9,
+            _ => value.parse().ok()?,
+        }
     } else {
-        opts.compression
-            .or_else(|| {
-                opts.extra
-                    .get("compression")
-                    .and_then(|value| match value.as_str() {
-                        "none" => Some(0),
-                        "default" => Some(6),
-                        "max" => Some(9),
-                        _ => value.parse().ok(),
-                    })
-            })
-            .unwrap_or(6)
+        6
     };
     let compressed = compress_zlib_chunked(&filtered, compression_level, &input_chunks)?;
 

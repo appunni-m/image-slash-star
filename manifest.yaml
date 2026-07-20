@@ -532,6 +532,8 @@ formats:
       - invalid_color_depth.png
       - empty_idat.png
       - invalid_scanline_filter.png
+      - short_inflated_scanline.png
+      - adam7_invalid_scanline_filter.png
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
@@ -589,6 +591,10 @@ formats:
     - id: enc_error_compression_level
       description: Compression level outside Pillow's accepted range
       params: {'compression': 10}
+      expect_error: true
+    - id: enc_error_compression_text
+      description: Nonnumeric compression level rejected by Pillow
+      params: {'compression': 'invalid'}
       expect_error: true
     - id: enc_error_cmyk
       description: Pillow cannot write CMYK pixels as PNG

@@ -4870,6 +4870,32 @@
           "oracle_error_message": "unrecognized data stream contents when reading image file"
         },
         {
+          "id": "error_malformed_structure_short_inflated_scanline",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "short_inflated_scanline.png",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (0 bytes not processed)"
+        },
+        {
+          "id": "error_malformed_structure_adam7_invalid_scanline_filter",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "adam7_invalid_scanline_filter.png",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "unrecognized data stream contents when reading image file"
+        },
+        {
           "id": "pillow_tolerated_malformed",
           "type": "decode",
           "format": "png",
@@ -5241,6 +5267,23 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "codec configuration error when writing image file"
+        },
+        {
+          "id": "enc_error_compression_text",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "Nonnumeric compression level rejected by Pillow",
+          "params": {
+            "compression": "invalid"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.TypeError",
+          "oracle_error_message": "'str' object cannot be interpreted as an integer"
         },
         {
           "id": "enc_error_cmyk",
@@ -10156,12 +10199,12 @@
     }
   },
   "summary": {
-    "total_rows": 539,
-    "decode_rows": 322,
-    "encode_rows": 185,
+    "total_rows": 542,
+    "decode_rows": 324,
+    "encode_rows": 186,
     "formats": 8,
-    "assets_available": 315,
-    "decode_active": 316,
+    "assets_available": 317,
+    "decode_active": 318,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
