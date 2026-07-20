@@ -312,6 +312,45 @@
       ]
     },
     {
+      "id": "narrow_422",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_1x8_422_jpg.bin",
+      "ref_bytes": 24,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        8
+      ]
+    },
+    {
+      "id": "unusual_sampling",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_sampling_3x1_jpg.bin",
+      "ref_bytes": 576,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        24,
+        8
+      ]
+    },
+    {
+      "id": "unusual_sampling_sampling_1x3",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_sampling_1x3_jpg.bin",
+      "ref_bytes": 576,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        24
+      ]
+    },
+    {
       "id": "restart_none",
       "status": "ok",
       "error_type": null,
@@ -643,6 +682,16 @@
       "ref_size": null
     },
     {
+      "id": "malformed_markers_entropy_unexpected_marker",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "status": "ok",
       "error_type": null,
@@ -674,6 +723,19 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_prefixed_stuffed_marker_jpg.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_entropy_eoi_padding",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_eoi_padding_jpg.bin",
       "ref_bytes": 49152,
       "ref_mode": "Rgb8",
       "ref_size": [

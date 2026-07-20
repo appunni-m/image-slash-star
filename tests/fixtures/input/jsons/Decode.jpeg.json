@@ -312,6 +312,45 @@
       }
     },
     {
+      "id": "narrow_422",
+      "asset": "1x8_422.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/1x8_422.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "unusual_sampling",
+      "asset": "sampling_3x1.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sampling_3x1.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "unusual_sampling_sampling_1x3",
+      "asset": "sampling_1x3.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sampling_1x3.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "restart_none",
       "asset": "baseline_default.jpg",
       "expect_error": false,
@@ -715,6 +754,19 @@
       }
     },
     {
+      "id": "malformed_markers_entropy_unexpected_marker",
+      "asset": "entropy_unexpected_marker.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_unexpected_marker.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "asset": "app14_short_length.jpg",
       "expect_error": false,
@@ -746,6 +798,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/prefixed_stuffed_marker.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_entropy_eoi_padding",
+      "asset": "entropy_eoi_padding.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_eoi_padding.jpg",
         "operations": [
           "PIL.Image.open",
           "load",

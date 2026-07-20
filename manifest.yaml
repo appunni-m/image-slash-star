@@ -177,6 +177,15 @@ formats:
       description: Single pixel
       test_assets:
       - 1x1.jpg
+    - id: narrow_422
+      description: One-column 4:2:2 edge upsampling
+      test_assets:
+      - 1x8_422.jpg
+    - id: unusual_sampling
+      description: Valid integral three-times chroma sampling ratios
+      test_assets:
+      - sampling_3x1.jpg
+      - sampling_1x3.jpg
     - id: restart_none
       description: No restart markers
       test_assets:
@@ -244,6 +253,7 @@ formats:
       - truncated_sof_payload.jpg
       - app14_truncated_payload.jpg
       - tem_marker.jpg
+      - entropy_unexpected_marker.jpg
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed optional JPEG marker ignored by Pillow
@@ -251,6 +261,7 @@ formats:
       - app14_short_length.jpg
       - app14_non_adobe.jpg
       - prefixed_stuffed_marker.jpg
+      - entropy_eoi_padding.jpg
     - id: dqt_16bit
       description: Baseline JPEG using sixteen-bit quantization table entries
       test_assets:
@@ -326,6 +337,10 @@ formats:
       description: 
       params: {'size': [1, 1]}
       source_asset: 1x1.jpg
+    - id: enc_zero_width
+      description: Zero-width source is rejected
+      params: {'source_dimensions': [0, 1]}
+      expect_error: true
     - id: enc_8x8
       description: 
       params: {'size': [8, 8]}
@@ -355,6 +370,21 @@ formats:
     - id: enc_optimize
       description: 
       params: {'optimize': True}
+    - id: enc_optimize_odd
+      description: Optimized Huffman tables with partial edge MCUs
+      params: {'optimize': True, 'size': [17, 17]}
+      source_asset: 17x17.jpg
+    - id: enc_optimize_restart
+      description: Optimized Huffman tables with predictor restarts
+      params: {'optimize': True, 'restart_interval': 4}
+    - id: enc_progressive_grayscale
+      description: Progressive grayscale scan script
+      params: {'progressive': True, 'grayscale': True}
+      source_asset: baseline_gray.jpg
+    - id: enc_progressive_eob_limit
+      description: Progressive EOB run flush at the JPEG limit
+      params: {'progressive': True, 'grayscale': True}
+      source_asset: progressive_eob_source.jpg
     - id: enc_no_optimize
       description: 
       params: {'optimize': False}

@@ -325,6 +325,37 @@
       }
     },
     {
+      "id": "enc_zero_width",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "source_dimensions": [
+          0,
+          1
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
       "id": "enc_8x8",
       "source_asset": "8x8.jpg",
       "source_format": "jpeg",
@@ -513,6 +544,98 @@
         "format": "JPEG",
         "kwargs": {
           "optimize": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_optimize_odd",
+      "source_asset": "17x17.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "optimize": true,
+        "size": [
+          17,
+          17
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/17x17.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "optimize": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_optimize_restart",
+      "source_asset": "baseline_444.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "optimize": true,
+        "restart_interval": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "optimize": true,
+          "restart_marker_rows": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_progressive_grayscale",
+      "source_asset": "baseline_gray.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "progressive": true,
+        "grayscale": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_gray.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "progressive": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_progressive_eob_limit",
+      "source_asset": "progressive_eob_source.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "progressive": true,
+        "grayscale": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_eob_source.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "progressive": true
         },
         "roundtrip": [
           "PIL.Image.open",

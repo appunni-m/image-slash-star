@@ -45,10 +45,6 @@ pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
 
     while outrow < dst_h {
         for v in 0..2 {
-            if outrow >= dst_h {
-                break;
-            }
-
             let inptr0 = &src[inrow * src_w..];
             let inptr1 = if v == 0 {
                 if inrow > 0 {

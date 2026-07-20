@@ -45,9 +45,7 @@ struct CompData {
 pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let w = img.width as usize;
     let h = img.height as usize;
-    if w == 0 || h == 0 {
-        return None;
-    }
+    debug_assert!(w > 0 && h > 0);
     let pixels = img.as_bytes();
 
     let num_components: u8 = match img.color {
@@ -230,7 +228,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     for c in &comps {
         let slot = c.quant_slot as usize;
         if !emitted[slot] {
-            marker::write_dqt(&mut out, c.quant_slot, 0, &params.quant_tables[slot]);
+            marker::write_dqt(&mut out, c.quant_slot, &params.quant_tables[slot]);
             emitted[slot] = true;
         }
     }
@@ -390,12 +388,10 @@ fn downsample(
             }
             // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:227-299.
             // h2v1 alternates 0/1; h2v2 alternates 1/2 for each output row.
-            let bias = match (hr, vr) {
-                (2, 1) => (x & 1) as u32,
-                (2, 2) => 1 + (x & 1) as u32,
-                _ => 0,
-            };
-            out[y * dw + x] = ((sum + bias) / u32::try_from(hr * vr).unwrap_or(1)) as u8;
+            debug_assert_eq!(hr, 2);
+            debug_assert!(vr == 1 || vr == 2);
+            let bias = (x & 1) as u32 + u32::from(vr == 2);
+            out[y * dw + x] = ((sum + bias) / (hr * vr) as u32) as u8;
         }
     }
     out
@@ -879,7 +875,8 @@ fn dc_progressive_events(
                                     component_index,
                                     &component.blocks
                                         [block_row * component.blocks_per_row + block_column],
-                                )?;
+                                )
+                                .expect("progressive DC event inputs are encoder-controlled");
                             }
                         }
                     }
@@ -890,7 +887,8 @@ fn dc_progressive_events(
         let component_index = scan.comps[0];
         let component = &components[component_index];
         for block in &component.blocks {
-            append(0, component_index, block)?;
+            append(0, component_index, block)
+                .expect("progressive DC event inputs are encoder-controlled");
         }
     }
     Some(events)
@@ -914,7 +912,8 @@ fn ac_progressive_events(
                 table,
                 &mut eob_run,
                 &mut correction_bits,
-            )?;
+            )
+            .expect("progressive AC-first inputs are encoder-controlled");
         } else {
             append_ac_refine_events(
                 &mut events,
@@ -923,7 +922,8 @@ fn ac_progressive_events(
                 table,
                 &mut eob_run,
                 &mut correction_bits,
-            )?;
+            )
+            .expect("progressive AC-refine inputs are encoder-controlled");
         }
     }
     flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits)?;
@@ -949,7 +949,8 @@ fn append_ac_first_events(
             continue;
         }
         if eob_run != &0 {
-            flush_progressive_eob(events, table, eob_run, correction_bits)?;
+            flush_progressive_eob(events, table, eob_run, correction_bits)
+                .expect("progressive EOB state is encoder-controlled");
         }
         while run > 15 {
             events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
@@ -970,7 +971,8 @@ fn append_ac_first_events(
     if last_nonzero != Some(scan.se) {
         *eob_run = eob_run.checked_add(1)?;
         if *eob_run == 0x7fff {
-            flush_progressive_eob(events, table, eob_run, correction_bits)?;
+            flush_progressive_eob(events, table, eob_run, correction_bits)
+                .expect("progressive EOB state is encoder-controlled");
         }
     }
     Some(())

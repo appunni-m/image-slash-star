@@ -101,6 +101,23 @@ def mutate_jpeg_payload(data, marker, offset, value):
     return bytes(mutated)
 
 
+def zero_sample_jpeg(base, width, height, y_sampling):
+    """Build a one-MCU RGB JPEG with standard-table zero coefficient blocks."""
+    data = bytearray(base)
+    _, sof_payload, _ = jpeg_segment(data, 0xC0)
+    data[sof_payload + 1 : sof_payload + 3] = struct.pack(">H", height)
+    data[sof_payload + 3 : sof_payload + 5] = struct.pack(">H", width)
+    data[sof_payload + 7] = y_sampling
+
+    _, _, entropy_start = jpeg_segment(data, 0xDA)
+    y_blocks = (y_sampling >> 4) * (y_sampling & 0x0F)
+    # Standard tables: luminance DC(0)+EOB = 00 1010; chroma = 00 00.
+    bits = "001010" * y_blocks + "0000" * 2
+    bits += "1" * ((-len(bits)) % 8)
+    entropy = bytes(int(bits[offset : offset + 8], 2) for offset in range(0, len(bits), 8))
+    return bytes(data[:entropy_start]) + entropy + b"\xff\xd9"
+
+
 def png_chunk(kind, payload):
     return (
         struct.pack(">I", len(payload))
@@ -360,6 +377,7 @@ def gen_jpeg():
     img.save(d / "baseline_411.jpg", quality=85, subsampling=2)
     img.convert("L").save(d / "baseline_gray.jpg", quality=85)
     img.convert("CMYK").save(d / "baseline_cmyk.jpg", quality=85)
+    Image.new("L", (2048, 1024), 128).save(d / "progressive_eob_source.jpg", quality=85)
     img.save(d / "progressive.jpg", quality=85, progressive=True)
     img.save(d / "progressive_spectral.jpg", quality=70, progressive=True)
     img.convert("L").save(d / "progressive_gray.jpg", quality=85, progressive=True)
@@ -372,6 +390,9 @@ def gen_jpeg():
     )
     img.save(d / "restart.jpg", quality=85, restart_marker_rows=4)
     pattern_img("RGB", (1, 1)).save(d / "1x1.jpg", quality=95)
+    pattern_img("RGB", (1, 8)).save(
+        d / "1x8_422.jpg", quality=95, subsampling=1
+    )
     pattern_img("RGB", (8, 8)).save(d / "8x8.jpg", quality=95)
     pattern_img("RGB", (17, 17)).save(d / "17x17.jpg", quality=85)
     pattern_img("RGB", (33, 33)).save(d / "33x33.jpg", quality=85)
@@ -386,6 +407,18 @@ def gen_jpeg():
     d.joinpath("truncated.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00")
     d.joinpath("corrupt.jpg").write_bytes(b"\xff\xd8\xde\xad\xbe\xef")
     baseline = (d / "baseline.jpg").read_bytes()
+    d.joinpath("sampling_3x1.jpg").write_bytes(
+        zero_sample_jpeg(baseline, 24, 8, 0x31)
+    )
+    d.joinpath("sampling_1x3.jpg").write_bytes(
+        zero_sample_jpeg(baseline, 8, 24, 0x13)
+    )
+    d.joinpath("entropy_eoi_padding.jpg").write_bytes(
+        baseline[:-2] + b"\xff\xff\xd9"
+    )
+    d.joinpath("entropy_unexpected_marker.jpg").write_bytes(
+        baseline.replace(b"\xff\x00", b"\xff\x02\x00\x02", 1)
+    )
     d.joinpath("dangling_marker.jpg").write_bytes(b"\xff\xd8\xff")
     d.joinpath("markerless_tail.jpg").write_bytes(b"\xff\xd8NO-MARKER")
     d.joinpath("sof_precision_12.jpg").write_bytes(

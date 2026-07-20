@@ -307,29 +307,33 @@ pub(super) fn extract_entropy_segments(
 
     while pos < end_hint {
         if data[pos] == 0xFF {
-            if pos + 1 >= end_hint {
+            let marker_start = pos;
+            pos += 1;
+            while pos < end_hint && data[pos] == 0xFF {
+                pos += 1;
+            }
+            if pos >= end_hint {
                 break;
             }
-            match data[pos + 1] {
+            match data[pos] {
                 0x00 => {
-                    pos += 2;
+                    pos += 1;
                 }
                 0xD0..=0xD7 => {
-                    segments.push((seg_start, pos));
-                    pos += 2;
+                    segments.push((seg_start, marker_start));
+                    pos += 1;
                     seg_start = pos;
                 }
                 0xD9 => {
-                    segments.push((seg_start, pos));
-                    eoi_pos = pos;
+                    segments.push((seg_start, marker_start));
+                    eoi_pos = marker_start;
                     break;
                 }
                 _ => {
-                    pos += 2;
-                    if pos + 1 < end_hint {
-                        let len = (data[pos] as u16) << 8 | data[pos + 1] as u16;
-                        pos += len as usize;
-                    }
+                    return EntropySegments {
+                        segments: Vec::new(),
+                        eoi_pos: 0,
+                    };
                 }
             }
         } else {

@@ -185,9 +185,7 @@ pub(crate) fn derive_table(bits: &[u8; 16], huffval: &[u8]) -> DerivedTable {
     let mut idx = 0usize;
     for l in 1..=16usize {
         for _ in 0..bits[l - 1] as usize {
-            if idx >= huffval.len() {
-                break;
-            }
+            debug_assert!(idx < huffval.len());
             let sym = huffval[idx] as usize;
             codes[sym] = code;
             lengths[sym] = l as u8;
@@ -218,9 +216,7 @@ impl BitWriter {
 
     /// Write `len` bits of `code` (MSB-first).
     pub(crate) fn write_bits(&mut self, code: u32, len: u8) {
-        if len == 0 {
-            return;
-        }
+        debug_assert!(len > 0);
         // Accumulate into a 32-bit buffer; flush bytes when ≥ 8 bits available.
         self.buf = (self.buf << len) | (code & ((1u32 << len) - 1));
         self.bits += len as u32;

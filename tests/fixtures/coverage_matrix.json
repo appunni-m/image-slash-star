@@ -4106,6 +4106,60 @@
           "oracle_status": "ok"
         },
         {
+          "id": "narrow_422",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "narrow",
+          "description": "One-column 4:2:2 edge upsampling",
+          "asset": "1x8_422.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_1x8_422_jpg.bin",
+          "ref_bytes": 24,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            8
+          ]
+        },
+        {
+          "id": "unusual_sampling",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "unusual",
+          "description": "Valid integral three-times chroma sampling ratios",
+          "asset": "sampling_3x1.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_sampling_3x1_jpg.bin",
+          "ref_bytes": 576,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            24,
+            8
+          ]
+        },
+        {
+          "id": "unusual_sampling_sampling_1x3",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "unusual",
+          "description": "Valid integral three-times chroma sampling ratios",
+          "asset": "sampling_1x3.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_sampling_1x3_jpg.bin",
+          "ref_bytes": 576,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            24
+          ]
+        },
+        {
           "asset": "baseline_default.jpg",
           "category": "restart",
           "description": "No restart markers",
@@ -4551,6 +4605,19 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "malformed_markers_entropy_unexpected_marker",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "entropy_unexpected_marker.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
           "id": "pillow_tolerated_malformed",
           "type": "decode",
           "format": "jpeg",
@@ -4597,6 +4664,24 @@
           "status": "active",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_prefixed_stuffed_marker_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_entropy_eoi_padding",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "entropy_eoi_padding.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_eoi_padding_jpg.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -5063,6 +5148,26 @@
           ]
         },
         {
+          "id": "enc_zero_width",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "zero",
+          "description": "Zero-width source is rejected",
+          "params": {
+            "source_dimensions": [
+              0,
+              1
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_444.jpg",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "cannot write empty image"
+        },
+        {
           "description": "",
           "format": "jpeg",
           "id": "enc_8x8",
@@ -5264,6 +5369,101 @@
           "ref_size": [
             128,
             128
+          ]
+        },
+        {
+          "id": "enc_optimize_odd",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "optimize",
+          "description": "Optimized Huffman tables with partial edge MCUs",
+          "params": {
+            "optimize": true,
+            "size": [
+              17,
+              17
+            ]
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "17x17.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_odd.bin",
+          "encoded_ref_bytes": 511,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_odd.bin",
+          "ref_bytes": 867,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            17
+          ]
+        },
+        {
+          "id": "enc_optimize_restart",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "optimize",
+          "description": "Optimized Huffman tables with predictor restarts",
+          "params": {
+            "optimize": true,
+            "restart_interval": 4
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_444.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_restart.bin",
+          "encoded_ref_bytes": 4441,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_restart.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_progressive_grayscale",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive grayscale scan script",
+          "params": {
+            "progressive": true,
+            "grayscale": true
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_gray.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_grayscale.bin",
+          "encoded_ref_bytes": 3227,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_grayscale.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_progressive_eob_limit",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive EOB run flush at the JPEG limit",
+          "params": {
+            "progressive": true,
+            "grayscale": true
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "progressive_eob_source.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_eob_limit.bin",
+          "encoded_ref_bytes": 8486,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_eob_limit.bin",
+          "ref_bytes": 2097152,
+          "ref_mode": "L8",
+          "ref_size": [
+            2048,
+            1024
           ]
         },
         {
@@ -13456,12 +13656,12 @@
     }
   },
   "summary": {
-    "total_rows": 723,
-    "decode_rows": 453,
-    "encode_rows": 238,
+    "total_rows": 733,
+    "decode_rows": 458,
+    "encode_rows": 243,
     "formats": 8,
-    "assets_available": 446,
-    "decode_active": 447,
+    "assets_available": 451,
+    "decode_active": 452,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

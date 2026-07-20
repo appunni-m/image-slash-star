@@ -193,6 +193,18 @@
       "encoded_ref_bytes": 633
     },
     {
+      "id": "enc_zero_width",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "cannot write empty image"
+    },
+    {
       "id": "enc_8x8",
       "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_8x8.bin",
       "ref_bytes": 192,
@@ -299,6 +311,54 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize.bin",
       "encoded_ref_bytes": 4437
+    },
+    {
+      "id": "enc_optimize_odd",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_odd.bin",
+      "ref_bytes": 867,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        17
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_odd.bin",
+      "encoded_ref_bytes": 511
+    },
+    {
+      "id": "enc_optimize_restart",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_restart.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_restart.bin",
+      "encoded_ref_bytes": 4441
+    },
+    {
+      "id": "enc_progressive_grayscale",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_grayscale.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_grayscale.bin",
+      "encoded_ref_bytes": 3227
+    },
+    {
+      "id": "enc_progressive_eob_limit",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_eob_limit.bin",
+      "ref_bytes": 2097152,
+      "ref_mode": "L8",
+      "ref_size": [
+        2048,
+        1024
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_eob_limit.bin",
+      "encoded_ref_bytes": 8486
     },
     {
       "id": "enc_no_optimize",

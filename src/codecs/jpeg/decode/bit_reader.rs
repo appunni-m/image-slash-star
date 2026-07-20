@@ -68,12 +68,6 @@ impl<'a> BitReader<'a> {
                         // Padding 0xFF — skip it, continue looking
                         self.pos += 1;
                         // continue the inner loop
-                    } else if (0xD0..=0xD7).contains(&next) {
-                        // RSTn marker — skip, stop filling (marker byte consumed)
-                        // In pre-segmented data this shouldn't appear mid-segment,
-                        // but handle gracefully.
-                        self.pos += 1;
-                        return;
                     } else {
                         // Other marker byte — end of entropy data
                         // IJG: save marker, goto no_more_bytes

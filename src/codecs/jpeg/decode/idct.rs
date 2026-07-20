@@ -177,9 +177,7 @@ pub(crate) const JPEG_NATURAL_ORDER: [usize; 64] = [
 /// Sign extension for DC/AC coefficient additional bits (Figure F.12).
 #[inline(always)]
 pub(crate) fn extend(value: u32, size: u8) -> i32 {
-    if size == 0 {
-        return 0;
-    }
+    debug_assert!(size > 0);
     let threshold = 1u32 << (size - 1);
     if value < threshold {
         (value as i32) - ((1i32 << size) - 1)
