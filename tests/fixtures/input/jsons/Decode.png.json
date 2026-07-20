@@ -299,6 +299,32 @@
       }
     },
     {
+      "id": "interlace_adam7_adam7_1x1",
+      "asset": "adam7_1x1.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/adam7_1x1.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "interlace_adam7_adam7_2x3",
+      "asset": "adam7_2x3.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/adam7_2x3.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "filter_none",
       "asset": "filter_none.png",
       "expect_error": false,
@@ -655,6 +681,162 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/not_a_png.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure",
+      "asset": "wrong_ihdr_kind.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/wrong_ihdr_kind.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_short_ihdr",
+      "asset": "short_ihdr.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/short_ihdr.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_zero_width",
+      "asset": "zero_width.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zero_width.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_invalid_filter_method",
+      "asset": "invalid_filter_method.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/invalid_filter_method.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_invalid_interlace",
+      "asset": "invalid_interlace.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/invalid_interlace.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_invalid_color_type",
+      "asset": "invalid_color_type.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/invalid_color_type.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_invalid_color_depth",
+      "asset": "invalid_color_depth.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/invalid_color_depth.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_empty_idat",
+      "asset": "empty_idat.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/empty_idat.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_invalid_scanline_filter",
+      "asset": "invalid_scanline_filter.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/invalid_scanline_filter.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed",
+      "asset": "invalid_compression.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/invalid_compression.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_missing_iend",
+      "asset": "missing_iend.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/missing_iend.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_trns_too_long",
+      "asset": "palette_trns_too_long.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_trns_too_long.png",
         "operations": [
           "PIL.Image.open",
           "load",

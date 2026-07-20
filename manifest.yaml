@@ -418,6 +418,8 @@ formats:
       description: Adam7 interlacing
       test_assets:
       - adam7.png
+      - adam7_1x1.png
+      - adam7_2x3.png
     - id: filter_none
       description: No filter
       test_assets:
@@ -518,6 +520,25 @@ formats:
       test_assets:
       - not_a_png.png
       expect_error: true
+    - id: error_malformed_structure
+      description: Invalid PNG headers, chunks, and scanline filters
+      test_assets:
+      - wrong_ihdr_kind.png
+      - short_ihdr.png
+      - zero_width.png
+      - invalid_filter_method.png
+      - invalid_interlace.png
+      - invalid_color_type.png
+      - invalid_color_depth.png
+      - empty_idat.png
+      - invalid_scanline_filter.png
+      expect_error: true
+    - id: pillow_tolerated_malformed
+      description: Malformed PNG structures tolerated by Pillow
+      test_assets:
+      - invalid_compression.png
+      - missing_iend.png
+      - palette_trns_too_long.png
     - id: apng_static
       description: APNG with single frame (backward compatible)
       test_assets:

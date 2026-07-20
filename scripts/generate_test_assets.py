@@ -309,6 +309,8 @@ def gen_png():
     # Pillow decodes Adam7 but does not expose Adam7 encoding. Build the input
     # scan passes directly, then continue to use Pillow as the output oracle.
     write_rgb_png(d / "adam7.png", img, interlace=True)
+    write_rgb_png(d / "adam7_1x1.png", Image.new("RGB", (1, 1), (128, 0, 0)), interlace=True)
+    write_rgb_png(d / "adam7_2x3.png", pattern_img("RGB", (2, 3)), interlace=True)
     write_rgb_png(d / "no_interlace.png", img)
     # Chunks
     from PIL.PngImagePlugin import PngInfo
@@ -357,6 +359,49 @@ def gen_png():
     d.joinpath("truncated.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00")
     d.joinpath("not_a_png.png").write_bytes(b"NOTAPNG!")
     corrupt_png_crc(d / "rgb.png", d / "bad_crc.png")
+
+    def write_mutated_ihdr(name, mutate, kind=b"IHDR", payload_size=13):
+        source = (d / "rgb.png").read_bytes()
+        payload = bytearray(source[16:29])
+        mutate(payload)
+        (d / name).write_bytes(source[:8] + png_chunk(kind, bytes(payload[:payload_size])) + source[33:])
+
+    write_mutated_ihdr("wrong_ihdr_kind.png", lambda payload: None, kind=b"JHDR")
+    write_mutated_ihdr("short_ihdr.png", lambda payload: None, payload_size=12)
+    write_mutated_ihdr(
+        "zero_width.png", lambda payload: payload.__setitem__(slice(0, 4), b"\0\0\0\0")
+    )
+    write_mutated_ihdr("invalid_compression.png", lambda payload: payload.__setitem__(10, 1))
+    write_mutated_ihdr("invalid_filter_method.png", lambda payload: payload.__setitem__(11, 1))
+    write_mutated_ihdr("invalid_interlace.png", lambda payload: payload.__setitem__(12, 2))
+    write_mutated_ihdr("invalid_color_type.png", lambda payload: payload.__setitem__(9, 7))
+    write_mutated_ihdr(
+        "invalid_color_depth.png",
+        lambda payload: (payload.__setitem__(8, 4), payload.__setitem__(9, 2)),
+    )
+    (d / "missing_iend.png").write_bytes((d / "rgb.png").read_bytes()[:-12])
+    rgb_header = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
+    (d / "empty_idat.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IDAT", b"")
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "invalid_scanline_filter.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x05\x80\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
+    palette_header = struct.pack(">IIBBBBB", 1, 1, 1, 3, 0, 0, 0)
+    (d / "palette_trns_too_long.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
+        + png_chunk(b"tRNS", b"\0\x80\xff")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
     print(f"  PNG: {len(list(d.glob('*.png')))} files")
 
 

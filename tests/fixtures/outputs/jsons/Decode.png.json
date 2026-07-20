@@ -299,6 +299,32 @@
       ]
     },
     {
+      "id": "interlace_adam7_adam7_1x1",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_adam7_1x1_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "interlace_adam7_adam7_2x3",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_adam7_2x3_png.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ]
+    },
+    {
       "id": "filter_none",
       "status": "ok",
       "error_type": null,
@@ -652,6 +678,135 @@
       "ref_bytes": null,
       "ref_mode": null,
       "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_short_ihdr",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Truncated IHDR chunk",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_zero_width",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_invalid_filter_method",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_invalid_interlace",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "unrecognized data stream contents when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_invalid_color_type",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_invalid_color_depth",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_empty_idat",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_invalid_scanline_filter",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "unrecognized data stream contents when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "pillow_tolerated_malformed",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_invalid_compression_png.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_missing_iend",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_missing_iend_png.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_trns_too_long",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_too_long_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
     },
     {
       "id": "apng_static",

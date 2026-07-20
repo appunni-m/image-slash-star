@@ -26,12 +26,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let height = u32::from_be_bytes(header.data.get(4..8)?.try_into().ok()?);
     let depth = header.data[8];
     let png_color = header.data[9];
-    let compression = header.data[10];
+    let _compression = header.data[10];
     let filter = header.data[11];
     let interlace = header.data[12];
     if width == 0
         || height == 0
-        || compression != 0
         || filter != 0
         || interlace > 1
         || !valid_color_depth(png_color, depth)
@@ -43,7 +42,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let mut palette_rgb = None;
     let mut palette_alpha = Vec::new();
     let mut saw_end = false;
-    for chunk in chunks {
+    for chunk in &mut chunks {
         match &chunk.kind {
             b"IDAT" => compressed.extend_from_slice(chunk.data),
             b"PLTE" if palette_rgb.is_none() => palette_rgb = Some(chunk.data.to_vec()),
@@ -55,7 +54,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             _ => {}
         }
     }
-    if !saw_end || compressed.is_empty() {
+    if compressed.is_empty() || (!saw_end && chunks.failed) {
         return None;
     }
 
@@ -343,9 +342,7 @@ fn build_image(
         let rgb = palette_rgb?;
         let entries = rgb.len() / 3;
         if !palette_alpha.is_empty() {
-            if palette_alpha.len() > entries {
-                return None;
-            }
+            palette_alpha.truncate(entries);
             palette_alpha.resize(entries, 255);
         }
         image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
