@@ -1279,8 +1279,6 @@ formats:
       - cmyk.tiff
     - id: ycbcr
       description: YCbCr
-      status: planned
-      oracle_gap: Pillow 12.2.0 cannot load the generated ycbcr.tiff fixture (truncated image data).
       test_assets:
       - ycbcr.tiff
     - id: depth_1
@@ -1315,6 +1313,10 @@ formats:
       description: Tiled organization
       test_assets:
       - tiled.tiff
+    - id: tiled_predictor
+      description: Deflate-compressed tiles with horizontal prediction
+      test_assets:
+      - tiled_deflate_predictor.tiff
     - id: single_page
       description: Single IFD TIFF
       test_assets:
@@ -1324,9 +1326,17 @@ formats:
       test_assets:
       - multipage.tiff
     - id: error_bad_ifd
-      description: Corrupt IFD entry
+      description: Corrupt headers, dimensions, tags, and strip bounds
       test_assets:
       - bad_ifd.tiff
+      - invalid_magic.tiff
+      - zero_width.tiff
+      - zero_height.tiff
+      - mixed_bits.tiff
+      - rows_zero.tiff
+      - unknown_compression.tiff
+      - invalid_predictor.tiff
+      - oob_strip.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

@@ -46,8 +46,15 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     let width_usize = usize::try_from(width).ok()?;
     let height_usize = usize::try_from(height).ok()?;
+    // Pillow's baseline YCbCr TIFF raw mode is RGBX: the IFD declares three
+    // samples, but each stored pixel occupies four bytes.
+    let stored_samples = if photometric == 6 && samples_per_pixel == 3 && bits_per_sample == 8 {
+        4
+    } else {
+        samples_per_pixel
+    };
     let row_bytes = width_usize
-        .checked_mul(samples_per_pixel)?
+        .checked_mul(stored_samples)?
         .checked_mul(usize::from(bits_per_sample))?
         .checked_add(7)?
         / 8;
@@ -276,18 +283,9 @@ fn convert_pixels(
         }
         (5, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Cmyk8)),
         (6, 3, 8) => {
-            let mut rgb = Vec::with_capacity(pixels.len());
-            for ycbcr in pixels.chunks_exact(3) {
-                let y = f32::from(ycbcr[0]);
-                let cb = f32::from(ycbcr[1]) - 128.0;
-                let cr = f32::from(ycbcr[2]) - 128.0;
-                rgb.push((y + 1.402 * cr).round().clamp(0.0, 255.0) as u8);
-                rgb.push(
-                    (y - 0.344_136 * cb - 0.714_136 * cr)
-                        .round()
-                        .clamp(0.0, 255.0) as u8,
-                );
-                rgb.push((y + 1.772 * cb).round().clamp(0.0, 255.0) as u8);
+            let mut rgb = Vec::with_capacity(pixels.len() / 4 * 3);
+            for pixel in pixels.chunks_exact(4) {
+                rgb.extend_from_slice(&pixel[..3]);
             }
             Some(DecodedImage::new(width, height, rgb, ColorType::Rgb8))
         }

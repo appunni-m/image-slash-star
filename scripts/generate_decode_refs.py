@@ -555,10 +555,18 @@ def validate_tiff_claim(case_id, asset_name, data):
             depth = depth[0] if isinstance(depth, tuple) else depth
             if image.tag_v2.get(262) != 3 or depth not in (2, 4):
                 raise RuntimeError("TIFF is not a packed low-depth palette image")
-        if case_id == "tiled" and not all(
+        if case_id == "ycbcr" and (
+            image.tag_v2.get(262) != 6 or image.tag_v2.get(530) != (1, 1)
+        ):
+            raise RuntimeError("TIFF is not un-sub-sampled baseline YCbCr")
+        if case_id in ("tiled", "tiled_predictor") and not all(
             image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
         ):
             raise RuntimeError("TIFF has no tile organization tags")
+        if case_id == "tiled_predictor" and (
+            image.tag_v2.get(259) not in (8, 32946) or image.tag_v2.get(317) != 2
+        ):
+            raise RuntimeError("TIFF is not Deflate-tiled with horizontal prediction")
         if case_id == "stripped" and len(image.tag_v2.get(273, ())) < 2:
             raise RuntimeError("TIFF does not contain multiple strips")
         if "predictor" in asset_name and image.tag_v2.get(317) != 2:

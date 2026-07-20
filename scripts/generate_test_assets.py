@@ -875,7 +875,9 @@ def gen_webp():
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 
 
-def write_rgb_tiff(path, image, byte_order="<", tile_size=None):
+def write_rgb_tiff(
+    path, image, byte_order="<", tile_size=None, compression=1, predictor=1
+):
     """Write a minimal classic RGB TIFF with explicit byte order/organization."""
     width, height = image.size
     pixels = image.convert("RGB").tobytes()
@@ -888,10 +890,12 @@ def write_rgb_tiff(path, image, byte_order="<", tile_size=None):
     entry(256, 4, 1, width)
     entry(257, 4, 1, height)
     entry(258, 3, 3, "bits")
-    entry(259, 3, 1, 1)
+    entry(259, 3, 1, compression)
     entry(262, 3, 1, 2)
     entry(277, 3, 1, 3)
     entry(284, 3, 1, 1)
+    if predictor != 1:
+        entry(317, 3, 1, predictor)
     if tile_size is None:
         entry(273, 4, 1, "pixels")
         entry(278, 4, 1, height)
@@ -913,7 +917,20 @@ def write_rgb_tiff(path, image, byte_order="<", tile_size=None):
                     payload[destination : destination + copy_width * 3] = pixels[
                         source : source + copy_width * 3
                     ]
-                tile_payloads.append(bytes(payload))
+                if predictor == 2:
+                    row_bytes = tile_size * 3
+                    for row_start in range(0, len(payload), row_bytes):
+                        for index in range(row_bytes - 1, 2, -1):
+                            position = row_start + index
+                            payload[position] = (
+                                payload[position] - payload[position - 3]
+                            ) & 255
+                if compression in (8, 32946):
+                    tile_payloads.append(zlib.compress(payload))
+                elif compression == 1:
+                    tile_payloads.append(bytes(payload))
+                else:
+                    raise ValueError(f"unsupported tiled TIFF compression {compression}")
         entry(322, 4, 1, tile_size)
         entry(323, 4, 1, tile_size)
         entry(324, 4, len(tile_payloads), "tile_offsets")
@@ -1092,6 +1109,84 @@ def write_low_depth_tiff(path, image, bits, photometric):
     path.write_bytes(output)
 
 
+def write_ycbcr_tiff(path, image):
+    """Write Pillow's baseline four-byte RGBX storage for YCbCr TIFF."""
+    width, height = image.size
+    ycbcr = image.convert("YCbCr").tobytes()
+    pixels = b"".join(
+        ycbcr[offset : offset + 3] + b"\0" for offset in range(0, len(ycbcr), 3)
+    )
+    entries = [
+        (256, 4, 1, width),
+        (257, 4, 1, height),
+        (258, 3, 3, "bits"),
+        (259, 3, 1, 1),
+        (262, 3, 1, 6),
+        (273, 4, 1, "pixels"),
+        (277, 3, 1, 3),
+        (278, 4, 1, height),
+        (279, 4, 1, len(pixels)),
+        (284, 3, 1, 1),
+        (530, 3, 2, "subsampling"),
+    ]
+    entries.sort()
+    cursor = 8 + 2 + len(entries) * 12 + 4
+    bits_offset = cursor
+    cursor += 6
+    pixel_offset = cursor
+    output = bytearray(b"II*\0\x08\0\0\0")
+    output.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, value in entries:
+        output.extend(struct.pack("<HHI", tag, field_type, count))
+        if value == "bits":
+            output.extend(struct.pack("<I", bits_offset))
+        elif value == "pixels":
+            output.extend(struct.pack("<I", pixel_offset))
+        elif value == "subsampling":
+            output.extend(struct.pack("<HH", 1, 1))
+        elif field_type == 3:
+            output.extend(struct.pack("<H", value) + b"\0\0")
+        else:
+            output.extend(struct.pack("<I", value))
+    output.extend(struct.pack("<I", 0))
+    output.extend(struct.pack("<HHH", 8, 8, 8))
+    output.extend(pixels)
+    path.write_bytes(output)
+
+
+def mutate_tiff_tag(source, destination, tag, value, value_index=0):
+    """Patch one classic-TIFF integer tag value for malformed fixtures."""
+    data = bytearray(source.read_bytes())
+    byte_order = "<" if data[:2] == b"II" else ">"
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        actual_tag, field_type, count = struct.unpack_from(
+            byte_order + "HHI", data, start
+        )
+        if actual_tag != tag:
+            continue
+        if value_index >= count or field_type not in (3, 4):
+            raise ValueError(f"cannot patch TIFF tag {tag} value {value_index}")
+        item_size = 2 if field_type == 3 else 4
+        value_position = (
+            start + 8
+            if count * item_size <= 4
+            else struct.unpack_from(byte_order + "I", data, start + 8)[0]
+        )
+        format_code = "H" if field_type == 3 else "I"
+        struct.pack_into(
+            byte_order + format_code,
+            data,
+            value_position + value_index * item_size,
+            value,
+        )
+        destination.write_bytes(data)
+        return
+    raise ValueError(f"TIFF tag {tag} not found")
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -1105,7 +1200,7 @@ def gen_tiff():
     img.convert("RGBA").save(d / "rgba.tiff")
     img.convert("P").save(d / "palette.tiff")
     img.convert("CMYK").save(d / "cmyk.tiff")
-    img.convert("YCbCr").save(d / "ycbcr.tiff")
+    write_ycbcr_tiff(d / "ycbcr.tiff", img.resize((17, 13)))
     img.convert("1").save(d / "bilevel.tiff")
     low_depth = img.convert("L").resize((17, 13))
     write_low_depth_tiff(d / "miniswhite_1bit.tiff", low_depth, 1, 0)
@@ -1125,6 +1220,13 @@ def gen_tiff():
     write_rgb_tiff(d / "be.tiff", img, byte_order=">")
     write_rgb_multistrip_tiff(d / "stripped.tiff", img, rows_per_strip=16)
     write_rgb_tiff(d / "tiled.tiff", img, tile_size=32)
+    write_rgb_tiff(
+        d / "tiled_deflate_predictor.tiff",
+        img,
+        tile_size=32,
+        compression=8,
+        predictor=2,
+    )
     img.save(
         d / "rgb_lzw_predictor.tiff",
         compression="tiff_lzw",
@@ -1147,6 +1249,21 @@ def gen_tiff():
     )
     img.save(d / "multipage.tiff", save_all=True, append_images=[img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)])
     d.joinpath("bad_ifd.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\xff\xff\xff")
+    invalid_magic = bytearray((d / "rgb.tiff").read_bytes())
+    invalid_magic[2:4] = b"+\0"
+    (d / "invalid_magic.tiff").write_bytes(invalid_magic)
+    mutate_tiff_tag(d / "rgb.tiff", d / "zero_width.tiff", 256, 0)
+    mutate_tiff_tag(d / "rgb.tiff", d / "zero_height.tiff", 257, 0)
+    mutate_tiff_tag(d / "rgb.tiff", d / "mixed_bits.tiff", 258, 16, 1)
+    mutate_tiff_tag(d / "rgb.tiff", d / "rows_zero.tiff", 278, 0)
+    mutate_tiff_tag(d / "rgb.tiff", d / "unknown_compression.tiff", 259, 999)
+    mutate_tiff_tag(
+        d / "rgb_deflate_predictor.tiff",
+        d / "invalid_predictor.tiff",
+        317,
+        3,
+    )
+    mutate_tiff_tag(d / "rgb.tiff", d / "oob_strip.tiff", 273, 0xFFFF_FFF0)
     print(f"  TIFF: {len(list(d.glob('*.tiff')))} files")
 
 
