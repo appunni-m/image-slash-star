@@ -367,6 +367,16 @@ def gen_png():
     average_image = Image.new("RGB", (average_width, average_height))
     average_image.putdata(average_pixels)
     average_image.save(d / "average_filter_source.png")
+    noise_state = 0x51A7_E123
+    noise_pixels = []
+    for _ in range(64 * 64):
+        noise_state = (1_664_525 * noise_state + 1_013_904_223) & 0xFFFF_FFFF
+        noise_pixels.append(
+            ((noise_state >> 24) & 255, (noise_state >> 16) & 255, (noise_state >> 8) & 255)
+        )
+    zlib_stored_source = Image.new("RGB", (64, 64))
+    zlib_stored_source.putdata(noise_pixels)
+    zlib_stored_source.save(d / "zlib_stored_source.png")
     pattern_img("RGB", (8, 8)).save(d / "gif_rgb.png")
     high_color = Image.new("RGB", (17, 17))
     high_color.putdata(

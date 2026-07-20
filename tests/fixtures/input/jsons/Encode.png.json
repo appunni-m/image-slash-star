@@ -55,6 +55,27 @@
       }
     },
     {
+      "id": "enc_compress_1_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "compression": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_compress_2",
       "source_asset": "rgb.png",
       "source_format": "png",
@@ -84,6 +105,27 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_3_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "compression": 3
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
         "method": "PIL.Image.Image.save",
         "format": "PNG",
         "kwargs": {
@@ -214,6 +256,90 @@
         "format": "PNG",
         "kwargs": {
           "compress_level": 9
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_7_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "compression": 7
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 7
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_8_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "compression": 8
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 8
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_9_1x1",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "params": {
+        "compression": 9
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 9
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_stored",
+      "source_asset": "zlib_stored_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 6
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_stored_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 6
         },
         "roundtrip": [
           "PIL.Image.open",

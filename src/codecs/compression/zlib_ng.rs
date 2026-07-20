@@ -24,7 +24,6 @@ const CODE_LENGTH_ORDER: [usize; BIT_LENGTH_CODES] = [
 const EXTRA_BIT_LENGTH_BITS: [u8; BIT_LENGTH_CODES] =
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7];
 
-#[derive(Clone, Copy)]
 enum Token {
     Literal(u8),
     Match { length: usize, distance: usize },
@@ -39,17 +38,19 @@ pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let input_len = input_chunks
         .iter()
         .try_fold(0usize, |total, &length| total.checked_add(length))?;
-    if input_len != data.len() {
-        return None;
-    }
+    debug_assert_eq!(input_len, data.len());
 
     let (tokens, final_tokens) = tokenize_level1(data, input_chunks)?;
     let mut writer = BitWriter::default();
-    // deflate_quick opens its first block during Z_NO_FLUSH calls. On
-    // Z_FINISH it closes that block as non-final, then emits the remaining
-    // short lookahead in a final fixed block.
-    emit_fixed_block(&tokens, false, &mut writer)?;
-    emit_fixed_block(&final_tokens, true, &mut writer)?;
+    // deflate_quick opens its first block only after a Z_NO_FLUSH call has
+    // enough lookahead to process. On Z_FINISH it closes an opened block as
+    // non-final, then emits the remaining short lookahead in a final block.
+    if tokens.is_empty() {
+        emit_fixed_block(&final_tokens, true, &mut writer)?;
+    } else {
+        emit_fixed_block(&tokens, false, &mut writer)?;
+        emit_fixed_block(&final_tokens, true, &mut writer)?;
+    }
     let mut output = vec![0x78, 0x01];
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
@@ -63,9 +64,7 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> Option<(Vec<Token>, V
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         available = available.checked_add(chunk_length)?;
-        if available > data.len() {
-            return None;
-        }
+        debug_assert!(available <= data.len());
 
         // fill_window() re-inserts strstart - 1 whenever a new input call
         // makes another four-byte hash available. This includes positions
@@ -77,9 +76,7 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> Option<(Vec<Token>, V
             tokenize_level1_position(data, available, &mut position, &mut head, &mut tokens)?;
         }
     }
-    if available != data.len() {
-        return None;
-    }
+    debug_assert_eq!(available, data.len());
     let mut final_tokens = Vec::new();
     while position < available {
         tokenize_level1_position(data, available, &mut position, &mut head, &mut final_tokens)?;
@@ -103,11 +100,12 @@ fn tokenize_level1_position(
             && data.get(candidate..candidate + 2)? == data.get(*position..*position + 2)?
         {
             let length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
-            if length >= MIN_MATCH {
-                tokens.push(Token::Match { length, distance });
-                *position = position.checked_add(length)?;
-                return Some(());
-            }
+            // With this multiplicative hash, equal hashes and equal low
+            // sixteen input bits imply equal four-byte words.
+            debug_assert!(length >= MIN_MATCH);
+            tokens.push(Token::Match { length, distance });
+            *position = position.checked_add(length)?;
+            return Some(());
         }
     }
 
@@ -208,14 +206,13 @@ fn compress_slow_level(
     max_chain: usize,
     header: u8,
 ) -> Option<Vec<u8>> {
-    let tokens = tokenize_slow_level(
-        data,
-        input_chunks,
+    let settings = SlowSettings {
         max_lazy,
         good_match,
         nice_match,
         max_chain,
-    )?;
+    };
+    let tokens = slow(data, input_chunks, settings)?;
     let mut output = vec![0x78, header];
     let mut writer = BitWriter::default();
     emit_blocks(&tokens, 32_767, &mut writer)?;
@@ -224,26 +221,28 @@ fn compress_slow_level(
     Some(output)
 }
 
-fn tokenize_slow_level(
-    data: &[u8],
-    input_chunks: &[usize],
+struct SlowSettings {
     max_lazy: usize,
     good_match: usize,
     nice_match: usize,
     max_chain: usize,
-) -> Option<Vec<Token>> {
-    let mut matcher = SlowMatcher::new(data, max_lazy, good_match, nice_match, max_chain);
+}
+
+fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Option<Vec<Token>> {
+    let mut matcher = SlowMatcher::new(
+        data,
+        settings.max_lazy,
+        settings.good_match,
+        settings.nice_match,
+        settings.max_chain,
+    );
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         available = available.checked_add(chunk_length)?;
-        if available > data.len() {
-            return None;
-        }
+        debug_assert!(available <= data.len());
         matcher.process(available, false)?;
     }
-    if available != data.len() {
-        return None;
-    }
+    debug_assert_eq!(available, data.len());
     matcher.process(available, true)?;
     Some(matcher.tokens)
 }
@@ -326,13 +325,11 @@ impl SlowMatcher {
                 });
                 let maximum_insert = self.position.checked_add(lookahead)?.checked_sub(3)?;
                 let move_forward = self.previous_length.checked_sub(2)?;
-                if maximum_insert > self.position {
-                    let insert_count = move_forward.min(maximum_insert - self.position);
-                    for insert_position in
-                        self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
-                    {
-                        self.quick_insert(insert_position)?;
-                    }
+                let insert_count = move_forward.min(maximum_insert.saturating_sub(self.position));
+                for insert_position in
+                    self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
+                {
+                    self.quick_insert(insert_position)?;
                 }
                 self.position = self
                     .position
@@ -385,10 +382,7 @@ impl SlowMatcher {
             chain_length >>= 2;
         }
         let limit = self.position.saturating_sub(MAX_DISTANCE);
-        loop {
-            if candidate >= self.position {
-                break;
-            }
+        while candidate < self.position {
             if medium_candidate_can_improve(&self.data, candidate, self.position, best_length)? {
                 let length = match_length(
                     &self.data,
@@ -445,14 +439,10 @@ fn tokenize_lookahead_medium(
             matcher.refill_boundary()?;
         }
         available = available.checked_add(chunk_length)?;
-        if available > data.len() {
-            return None;
-        }
+        debug_assert!(available <= data.len());
         matcher.process(available, false)?;
     }
-    if available != data.len() {
-        return None;
-    }
+    debug_assert_eq!(available, data.len());
     matcher.process(available, true)?;
     Some(matcher.tokens)
 }
@@ -698,14 +688,10 @@ fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
             matcher.refill_boundary()?;
         }
         available = available.checked_add(chunk_length)?;
-        if available > data.len() {
-            return None;
-        }
+        debug_assert!(available <= data.len());
         matcher.process(available, false)?;
     }
-    if available != data.len() {
-        return None;
-    }
+    debug_assert_eq!(available, data.len());
     matcher.process(available, true)?;
     Some(matcher.tokens)
 }
@@ -785,13 +771,11 @@ impl Level9Matcher {
                 });
                 let maximum_insert = self.position.checked_add(lookahead)?.checked_sub(3)?;
                 let move_forward = self.previous_length.checked_sub(2)?;
-                if maximum_insert > self.position {
-                    let insert_count = move_forward.min(maximum_insert - self.position);
-                    for insert_position in
-                        self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
-                    {
-                        self.quick_insert(insert_position)?;
-                    }
+                let insert_count = move_forward.min(maximum_insert.saturating_sub(self.position));
+                for insert_position in
+                    self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
+                {
+                    self.quick_insert(insert_position)?;
                 }
                 self.position = self
                     .position
@@ -856,10 +840,7 @@ impl Level9Matcher {
         if candidate <= limit {
             return Some((best_length.min(lookahead), best_start));
         }
-        loop {
-            if candidate < match_offset || candidate >= self.position.checked_add(match_offset)? {
-                break;
-            }
+        while candidate >= match_offset && candidate < self.position.checked_add(match_offset)? {
             let aligned = candidate.checked_sub(match_offset)?;
             if medium_candidate_can_improve(&self.data, aligned, self.position, best_length)? {
                 let length =
@@ -886,18 +867,19 @@ impl Level9Matcher {
                         }
                         candidate = next_position;
 
-                        let hash_start = self.position.checked_add(best_length)?.checked_sub(4)?;
+                        let hash_start = self
+                            .position
+                            .checked_add(best_length)?
+                            .checked_sub(MIN_MATCH.checked_add(1)?)?;
                         let mut hash = rolling_hash(0, *self.data.get(hash_start)?);
                         hash = rolling_hash(hash, *self.data.get(hash_start + 1)?);
                         hash = rolling_hash(hash, *self.data.get(hash_start + 2)?);
                         let position = *self.head.get(hash)?;
-                        if position < candidate {
-                            match_offset = best_length.checked_sub(4)?;
-                            if position <= base_limit.checked_add(match_offset)? {
-                                return Some((best_length.min(lookahead), best_start));
-                            }
-                            candidate = position;
-                        }
+                        // Unlike zlib-ng's sliding C window, this matcher
+                        // eagerly inserts every absolute position in a match.
+                        // The matching tail is therefore never older than the
+                        // chain candidate selected above.
+                        debug_assert!(position >= candidate);
                         limit = base_limit.checked_add(match_offset)?;
                         continue;
                     }
@@ -1001,14 +983,10 @@ fn tokenize_early_matcher(
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         available = available.checked_add(chunk_length)?;
-        if available > data.len() {
-            return None;
-        }
+        debug_assert!(available <= data.len());
         matcher.process(available, false)?;
     }
-    if available != data.len() {
-        return None;
-    }
+    debug_assert_eq!(available, data.len());
     matcher.process(available, true)?;
     Some(matcher.tokens)
 }
@@ -1266,9 +1244,12 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
         heap[heap_len] = index;
         nodes[index].frequency = 1;
         bit_cost -= 1;
-        if let Some(static_lengths) = spec.static_lengths {
-            static_cost -= i64::from(*static_lengths.get(index)?);
-        }
+        let static_length = spec
+            .static_lengths
+            .and_then(|lengths| lengths.get(index))
+            .copied()
+            .unwrap_or(0);
+        static_cost -= i64::from(static_length);
     }
     let max_code = max_code?;
 
@@ -1338,9 +1319,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
             bit_counts[spec.max_length] = bit_counts[spec.max_length].checked_sub(1)?;
             overflow -= 2;
         }
-        if overflow != 0 {
-            return None;
-        }
+        debug_assert_eq!(overflow, 0);
         let mut sorted_index = heap_size;
         for bits in (1..=spec.max_length).rev() {
             let mut count = bit_counts[bits];
@@ -1421,6 +1400,8 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS +
 
 fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) -> Option<()> {
     let block_count = tokens.len().div_ceil(block_tokens);
+    let uncompressed = expand_tokens(tokens)?;
+    let mut uncompressed_start = 0usize;
     for (index, block) in tokens.chunks(block_tokens).enumerate() {
         let stored_length = block.iter().try_fold(0usize, |length, token| {
             length.checked_add(match token {
@@ -1428,14 +1409,33 @@ fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) ->
                 Token::Match { length, .. } => *length,
             })
         })?;
-        emit_block(block, stored_length, index + 1 == block_count, writer)?;
+        let uncompressed_end = uncompressed_start.checked_add(stored_length)?;
+        let uncompressed_block = uncompressed.get(uncompressed_start..uncompressed_end)?;
+        write_block(block, uncompressed_block, index + 1 == block_count, writer)?;
+        uncompressed_start = uncompressed_end;
     }
     Some(())
 }
 
-fn emit_block(
+fn expand_tokens(tokens: &[Token]) -> Option<Vec<u8>> {
+    let mut output = Vec::new();
+    for token in tokens {
+        match token {
+            Token::Literal(value) => output.push(*value),
+            Token::Match { length, distance } => {
+                for _ in 0..*length {
+                    let source = output.len().checked_sub(*distance)?;
+                    output.push(*output.get(source)?);
+                }
+            }
+        }
+    }
+    Some(output)
+}
+
+fn write_block(
     tokens: &[Token],
-    stored_length: usize,
+    uncompressed: &[u8],
     final_block: bool,
     writer: &mut BitWriter,
 ) -> Option<()> {
@@ -1443,48 +1443,36 @@ fn emit_block(
     let (literal_frequencies, distance_frequencies) = frequencies(tokens)?;
     let static_literal_lengths = static_literal_lengths();
     let static_distance_lengths = [5u8; DISTANCE_CODES];
-    let literal_tree = build_tree(
-        &literal_frequencies,
-        TreeSpec {
-            elements: LITERAL_CODES,
-            max_length: MAX_BITS,
-            extra_bits: &LENGTH_EXTRA,
-            extra_base: 257,
-            static_lengths: Some(&static_literal_lengths),
-        },
-    )?;
-    let distance_tree = build_tree(
-        &distance_frequencies,
-        TreeSpec {
-            elements: DISTANCE_CODES,
-            max_length: MAX_BITS,
-            extra_bits: &DISTANCE_EXTRA,
-            extra_base: 0,
-            static_lengths: Some(&static_distance_lengths),
-        },
-    )?;
+    let literal_spec = TreeSpec {
+        elements: LITERAL_CODES,
+        max_length: MAX_BITS,
+        extra_bits: &LENGTH_EXTRA,
+        extra_base: 257,
+        static_lengths: Some(&static_literal_lengths),
+    };
+    let literal_tree = build_tree(&literal_frequencies, literal_spec)?;
+    let distance_spec = TreeSpec {
+        elements: DISTANCE_CODES,
+        max_length: MAX_BITS,
+        extra_bits: &DISTANCE_EXTRA,
+        extra_base: 0,
+        static_lengths: Some(&static_distance_lengths),
+    };
+    let distance_tree = build_tree(&distance_frequencies, distance_spec)?;
 
-    let mut bit_length_frequencies = [0u32; BIT_LENGTH_CODES];
-    scan_tree(
-        &literal_tree.nodes,
-        literal_tree.max_code,
-        &mut bit_length_frequencies,
-    )?;
-    scan_tree(
-        &distance_tree.nodes,
-        distance_tree.max_code,
-        &mut bit_length_frequencies,
-    )?;
-    let bit_length_tree = build_tree(
-        &bit_length_frequencies,
-        TreeSpec {
-            elements: BIT_LENGTH_CODES,
-            max_length: MAX_BIT_LENGTH_BITS,
-            extra_bits: &EXTRA_BIT_LENGTH_BITS,
-            extra_base: 0,
-            static_lengths: None,
-        },
-    )?;
+    let mut bit_frequencies = [0u32; BIT_LENGTH_CODES];
+    let literal_nodes = &literal_tree.nodes;
+    scan_tree(literal_nodes, literal_tree.max_code, &mut bit_frequencies)?;
+    let distance_nodes = &distance_tree.nodes;
+    scan_tree(distance_nodes, distance_tree.max_code, &mut bit_frequencies)?;
+    let bit_length_spec = TreeSpec {
+        elements: BIT_LENGTH_CODES,
+        max_length: MAX_BIT_LENGTH_BITS,
+        extra_bits: &EXTRA_BIT_LENGTH_BITS,
+        extra_base: 0,
+        static_lengths: None,
+    };
+    let bit_length_tree = build_tree(&bit_frequencies, bit_length_spec)?;
     let max_bit_length_index = (3..BIT_LENGTH_CODES)
         .rev()
         .find(|&index| bit_length_tree.nodes[CODE_LENGTH_ORDER[index]].length != 0)
@@ -1501,20 +1489,28 @@ fn emit_block(
     let dynamic_bytes = usize::try_from((dynamic_cost + 10) >> 3).ok()?;
     let static_bytes = usize::try_from((static_cost + 10) >> 3).ok()?;
 
-    if stored_length.checked_add(4)? <= dynamic_bytes.min(static_bytes) {
-        return None;
+    let stored_cost = if uncompressed.len() <= usize::from(u16::MAX) {
+        uncompressed.len().checked_add(4)?
+    } else {
+        usize::MAX
+    };
+    if stored_cost <= dynamic_bytes.min(static_bytes) {
+        // The stored-cost guard above proves this conversion cannot truncate.
+        #[allow(clippy::cast_possible_truncation)]
+        let length = uncompressed.len() as u16;
+        writer.write_bits(u32::from(final_block), 3); // BTYPE=stored (00).
+        writer.align_to_byte();
+        writer.write_aligned_bytes(&length.to_le_bytes());
+        writer.write_aligned_bytes(&(!length).to_le_bytes());
+        writer.write_aligned_bytes(uncompressed);
+        return Some(());
     }
     if static_bytes <= dynamic_bytes {
         emit_fixed_block(tokens, final_block, writer)?;
     } else {
         writer.write_bits(4 | u32::from(final_block), 3); // BTYPE=dynamic (10).
-        send_all_trees(
-            &literal_tree,
-            &distance_tree,
-            &bit_length_tree,
-            max_bit_length_index,
-            writer,
-        )?;
+        let trees = [&literal_tree, &distance_tree, &bit_length_tree];
+        send_trees(trees, max_bit_length_index, writer)?;
         emit_tokens(tokens, &literal_tree, &distance_tree, writer)?;
         send_code(writer, &literal_tree, 256)?;
     }
@@ -1525,18 +1521,18 @@ fn frequencies(tokens: &[Token]) -> Option<([u32; LITERAL_CODES], [u32; DISTANCE
     let mut literal = [0u32; LITERAL_CODES];
     let mut distance = [0u32; DISTANCE_CODES];
     literal[256] = 1;
-    for &token in tokens {
+    for token in tokens {
         match token {
             Token::Literal(value) => {
-                literal[usize::from(value)] = literal[usize::from(value)].checked_add(1)?;
+                literal[usize::from(*value)] = literal[usize::from(*value)].checked_add(1)?;
             }
             Token::Match {
                 length,
                 distance: match_distance,
             } => {
-                let length_index = length_index(length)?;
+                let length_index = length_index(*length)?;
                 literal[257 + length_index] = literal[257 + length_index].checked_add(1)?;
-                let distance_index = distance_index(match_distance)?;
+                let distance_index = distance_index(*match_distance)?;
                 distance[distance_index] = distance[distance_index].checked_add(1)?;
             }
         }
@@ -1593,13 +1589,12 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Op
     Some(())
 }
 
-fn send_all_trees(
-    literal: &HuffmanTree,
-    distance: &HuffmanTree,
-    bit_length: &HuffmanTree,
+fn send_trees(
+    trees: [&HuffmanTree; 3],
     max_bit_length_index: usize,
     writer: &mut BitWriter,
 ) -> Option<()> {
+    let [literal, distance, bit_length] = trees;
     writer.write_bits(
         u32::try_from(literal.max_code.checked_add(1)?.checked_sub(257)?).ok()?,
         5,
@@ -1679,17 +1674,17 @@ fn emit_tokens(
     distance_tree: &HuffmanTree,
     writer: &mut BitWriter,
 ) -> Option<()> {
-    for &token in tokens {
+    for token in tokens {
         match token {
-            Token::Literal(value) => send_code(writer, literal_tree, usize::from(value))?,
+            Token::Literal(value) => send_code(writer, literal_tree, usize::from(*value))?,
             Token::Match { length, distance } => {
-                let length_index = length_index(length)?;
+                let length_index = length_index(*length)?;
                 send_code(writer, literal_tree, 257 + length_index)?;
                 writer.write_bits(
                     u32::try_from(length.checked_sub(LENGTH_BASE[length_index])?).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
-                let distance_index = distance_index(distance)?;
+                let distance_index = distance_index(*distance)?;
                 send_code(writer, distance_tree, distance_index)?;
                 writer.write_bits(
                     u32::try_from(distance.checked_sub(DISTANCE_BASE[distance_index])?).ok()?,
@@ -1703,17 +1698,17 @@ fn emit_tokens(
 
 fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter) -> Option<()> {
     writer.write_bits(2 | u32::from(final_block), 3); // BTYPE=fixed (01).
-    for &token in tokens {
+    for token in tokens {
         match token {
-            Token::Literal(value) => write_fixed_symbol(writer, u16::from(value)),
+            Token::Literal(value) => write_fixed_symbol(writer, u16::from(*value)),
             Token::Match { length, distance } => {
-                let length_index = length_index(length)?;
+                let length_index = length_index(*length)?;
                 write_fixed_symbol(writer, u16::try_from(257 + length_index).ok()?);
                 writer.write_bits(
                     u32::try_from(length.checked_sub(LENGTH_BASE[length_index])?).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
-                let distance_index = distance_index(distance)?;
+                let distance_index = distance_index(*distance)?;
                 writer.write_bits(
                     u32::from(reverse_bits(u16::try_from(distance_index).ok()?, 5)),
                     5,
@@ -1761,12 +1756,15 @@ fn static_literal_lengths() -> [u8; LITERAL_CODES] {
 }
 
 fn write_fixed_symbol(writer: &mut BitWriter, symbol: u16) {
-    let (canonical, width) = match symbol {
-        0..=143 => (0x30 + symbol, 8),
-        144..=255 => (0x190 + symbol - 144, 9),
-        256..=279 => (symbol - 256, 7),
-        280..=287 => (0xc0 + symbol - 280, 8),
-        _ => return,
+    let (canonical, width) = if symbol <= 143 {
+        (0x30 + symbol, 8)
+    } else if symbol <= 255 {
+        (0x190 + symbol - 144, 9)
+    } else if symbol <= 279 {
+        (symbol - 256, 7)
+    } else {
+        debug_assert!(symbol <= 287);
+        (0xc0 + symbol - 280, 8)
     };
     writer.write_bits(u32::from(reverse_bits(canonical, width)), width);
 }
@@ -1798,6 +1796,20 @@ impl BitWriter {
                 self.used = 0;
             }
         }
+    }
+
+    fn align_to_byte(&mut self) {
+        // Stored-block headers contribute three bits, so this helper is only
+        // called with a partial byte pending.
+        debug_assert_ne!(self.used, 0);
+        self.bytes.push(self.current);
+        self.current = 0;
+        self.used = 0;
+    }
+
+    fn write_aligned_bytes(&mut self, bytes: &[u8]) {
+        debug_assert_eq!(self.used, 0);
+        self.bytes.extend_from_slice(bytes);
     }
 
     fn finish(mut self) -> Vec<u8> {

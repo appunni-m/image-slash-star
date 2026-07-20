@@ -580,11 +580,19 @@ formats:
     - id: enc_compress_1
       description: zlib-ng quick strategy at compression level 1
       params: {'compression': 1}
+    - id: enc_compress_1_1x1
+      description: Quick strategy finishing with less than one hash
+      source_asset: 1x1.png
+      params: {'compression': 1}
     - id: enc_compress_2
       description: zlib-ng fast strategy at compression level 2
       params: {'compression': 2}
     - id: enc_compress_3
       description: 
+      params: {'compression': 3}
+    - id: enc_compress_3_1x1
+      description: Early matcher finishing with less than one match
+      source_asset: 1x1.png
       params: {'compression': 3}
     - id: enc_compress_4
       description: zlib-ng medium strategy at compression level 4
@@ -604,6 +612,22 @@ formats:
     - id: enc_compress_9
       description: 
       params: {'compression': 9}
+    - id: enc_compress_7_1x1
+      description: Slow strategy finishing with less than one match
+      source_asset: 1x1.png
+      params: {'compression': 7}
+    - id: enc_compress_8_1x1
+      description: Maximum slow strategy finishing with less than one match
+      source_asset: 1x1.png
+      params: {'compression': 8}
+    - id: enc_compress_9_1x1
+      description: Filtered strategy finishing with less than one match
+      source_asset: 1x1.png
+      params: {'compression': 9}
+    - id: enc_compress_stored
+      description: Incompressible scanlines selecting a stored DEFLATE block
+      source_asset: zlib_stored_source.png
+      params: {'compression': 6}
     - id: enc_optimize
       description: Optimized adaptive filters with forced maximum compression
       params: {'optimize': True}
