@@ -286,6 +286,19 @@
       }
     },
     {
+      "id": "animated_animated_blend",
+      "asset": "animated_blend.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_blend.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "size_small",
       "asset": "16x16.webp",
       "expect_error": false,

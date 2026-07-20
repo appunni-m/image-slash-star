@@ -1017,6 +1017,7 @@ formats:
       test_assets:
       - animated.webp
       - animated_alpha.webp
+      - animated_blend.webp
     - id: size_small
       description: Small image (16x16)
       test_assets:

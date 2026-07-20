@@ -527,6 +527,12 @@ def gen_webp():
         lossless=True,
         minimize_size=True,
     )
+    animated_blend = bytearray((d / "animated_alpha.webp").read_bytes())
+    first_frame = animated_blend.find(b"ANMF")
+    if first_frame < 0:
+        raise RuntimeError("animated WebP did not contain an ANMF chunk")
+    animated_blend[first_frame + 4 + 4 + 15] &= ~0b10
+    (d / "animated_blend.webp").write_bytes(animated_blend)
     d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 

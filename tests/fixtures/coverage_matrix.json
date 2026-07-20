@@ -5707,6 +5707,24 @@
           ]
         },
         {
+          "id": "animated_animated_blend",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (decode first frame)",
+          "asset": "animated_blend.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_blend_webp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
           "asset": "16x16.webp",
           "asset_path": "tests/fixtures/input/images/webp/16x16.webp",
           "category": "size",
@@ -6230,12 +6248,12 @@
     }
   },
   "summary": {
-    "total_rows": 341,
-    "decode_rows": 179,
+    "total_rows": 342,
+    "decode_rows": 180,
     "encode_rows": 130,
     "formats": 8,
-    "assets_available": 172,
-    "decode_active": 173,
+    "assets_available": 173,
+    "decode_active": 174,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

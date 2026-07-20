@@ -286,6 +286,19 @@
       ]
     },
     {
+      "id": "animated_animated_blend",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_blend_webp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
+      ]
+    },
+    {
       "id": "size_small",
       "status": "ok",
       "error_type": null,
