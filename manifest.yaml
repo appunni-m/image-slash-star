@@ -855,6 +855,11 @@ formats:
       description: Re-encode animation whose frames request previous-frame disposal
       source_asset: gce_previous.gif
       params: {'animated': True, 'frames': 2, 'loop': 1}
+    - id: enc_animated_rgba
+      description: Re-encode composited RGBA animation frames through Pillow's adaptive GIF palettes
+      source_format: webp
+      source_asset: animated_alpha.webp
+      params: {'animated': True, 'frames': 2}
     - id: enc_opaque
       description: 
       params: {'transparency': False}

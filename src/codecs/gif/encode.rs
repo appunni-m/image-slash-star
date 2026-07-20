@@ -5,7 +5,9 @@
 //! - `Rgb8`: quantized to a 256-color palette
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode};
+use crate::types::{
+    ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode, ImagePalette,
+};
 use std::collections::HashMap;
 
 const GIF_TRAILER: u8 = 0x3b;
@@ -88,7 +90,7 @@ fn coalesce_identical_frames(
             }
         }
 
-        composite_indexed_frame(&mut canvas, width, frame)?;
+        composite_frame(&mut canvas, width, frame)?;
         let identical = previous_render.as_deref() == Some(canvas.as_slice())
             && output
                 .last()
@@ -99,14 +101,60 @@ fn coalesce_identical_frames(
         } else {
             let mut output_frame = frame.clone();
             if !output.is_empty() {
-                let rgb = canvas
-                    .chunks_exact(4)
-                    .flat_map(|pixel| [pixel[0], pixel[1], pixel[2]])
-                    .collect();
-                output_frame.image =
-                    DecodedImage::new(sequence.width, sequence.height, rgb, ColorType::Rgb8);
-                output_frame.left = 0;
-                output_frame.top = 0;
+                output_frame.image = if frame.image.mode == ImageMode::Rgba8 {
+                    let previous = previous_render.as_deref()?;
+                    let (left, top, right, bottom) = rgba_difference_bounds(
+                        previous,
+                        &canvas,
+                        width,
+                        usize::try_from(sequence.height).ok()?,
+                    )?;
+                    let frame_width = right.checked_sub(left)?;
+                    let frame_height = bottom.checked_sub(top)?;
+                    let full_image = DecodedImage::new(
+                        sequence.width,
+                        sequence.height,
+                        canvas.clone(),
+                        ColorType::Rgba8,
+                    );
+                    let mut prepared = prepare_image(&full_image)?;
+                    if prepared.transparent.is_none() && prepared.palette.len() / 3 < 256 {
+                        prepared.palette.splice(0..0, [0, 0, 0]);
+                        for index in &mut prepared.indices {
+                            *index = index.checked_add(1)?;
+                        }
+                        prepared.transparent = Some(0);
+                    }
+                    let mut cropped = Vec::with_capacity(frame_width.checked_mul(frame_height)?);
+                    for y in top..bottom {
+                        let start = y.checked_mul(width)?.checked_add(left)?;
+                        let end = start.checked_add(frame_width)?;
+                        cropped.extend_from_slice(prepared.indices.get(start..end)?);
+                    }
+                    output_frame.left = u32::try_from(left).ok()?;
+                    output_frame.top = u32::try_from(top).ok()?;
+                    let mut alpha = vec![255; prepared.palette.len() / 3];
+                    if let Some(transparent) = prepared.transparent {
+                        alpha[usize::from(transparent)] = 0;
+                    }
+                    DecodedImage::with_mode(
+                        u32::try_from(frame_width).ok()?,
+                        u32::try_from(frame_height).ok()?,
+                        cropped,
+                        ImageMode::P8,
+                    )
+                    .with_palette(ImagePalette::new(prepared.palette, alpha).ok()?)
+                } else {
+                    let rgb = canvas
+                        .chunks_exact(4)
+                        .flat_map(|pixel| [pixel[0], pixel[1], pixel[2]])
+                        .collect();
+                    DecodedImage::new(sequence.width, sequence.height, rgb, ColorType::Rgb8)
+                };
+                if frame.image.mode != ImageMode::Rgba8 {
+                    output_frame.left = 0;
+                    output_frame.top = 0;
+                }
             }
             output.push(output_frame);
             previous_render = Some(canvas.clone());
@@ -114,6 +162,38 @@ fn coalesce_identical_frames(
         previous_frame = Some(frame);
     }
     Some(output)
+}
+
+fn rgba_difference_bounds(
+    previous: &[u8],
+    current: &[u8],
+    width: usize,
+    height: usize,
+) -> Option<(usize, usize, usize, usize)> {
+    if previous.len() != current.len()
+        || current.len() != width.checked_mul(height)?.checked_mul(4)?
+    {
+        return None;
+    }
+    let mut left = width;
+    let mut top = height;
+    let mut right = 0usize;
+    let mut bottom = 0usize;
+    for (index, (before, after)) in previous
+        .chunks_exact(4)
+        .zip(current.chunks_exact(4))
+        .enumerate()
+    {
+        if before != after {
+            let x = index % width;
+            let y = index / width;
+            left = left.min(x);
+            top = top.min(y);
+            right = right.max(x + 1);
+            bottom = bottom.max(y + 1);
+        }
+    }
+    (left < right && top < bottom).then_some((left, top, right, bottom))
 }
 
 fn clear_frame_rect(
@@ -137,16 +217,12 @@ fn clear_frame_rect(
     Some(())
 }
 
-fn composite_indexed_frame(
+fn composite_frame(
     canvas: &mut [u8],
     canvas_width: usize,
     frame: &crate::types::DecodedFrame,
 ) -> Option<()> {
     let image = &frame.image;
-    if image.mode != ImageMode::P8 {
-        return None;
-    }
-    let palette = image.palette.as_ref()?;
     let left = usize::try_from(frame.left).ok()?;
     let top = usize::try_from(frame.top).ok()?;
     let width = usize::try_from(image.width).ok()?;
@@ -154,13 +230,37 @@ fn composite_indexed_frame(
     for y in 0..height {
         for x in 0..width {
             let source = y.checked_mul(width)?.checked_add(x)?;
-            let index = usize::from(*image.pixels.get(source)?);
-            let alpha = palette.alpha.get(index).copied().unwrap_or(255);
-            if alpha == 0 {
+            let rgba = match image.mode {
+                ImageMode::P8 => {
+                    let palette = image.palette.as_ref()?;
+                    let index = usize::from(*image.pixels.get(source)?);
+                    let palette_offset = index.checked_mul(3)?;
+                    let rgb = palette.rgb.get(palette_offset..palette_offset + 3)?;
+                    [
+                        rgb[0],
+                        rgb[1],
+                        rgb[2],
+                        palette.alpha.get(index).copied().unwrap_or(255),
+                    ]
+                }
+                ImageMode::L8 => {
+                    let value = *image.pixels.get(source)?;
+                    [value, value, value, 255]
+                }
+                ImageMode::Rgb8 => {
+                    let offset = source.checked_mul(3)?;
+                    let rgb = image.pixels.get(offset..offset + 3)?;
+                    [rgb[0], rgb[1], rgb[2], 255]
+                }
+                ImageMode::Rgba8 => {
+                    let offset = source.checked_mul(4)?;
+                    image.pixels.get(offset..offset + 4)?.try_into().ok()?
+                }
+                _ => return None,
+            };
+            if rgba[3] == 0 && image.mode == ImageMode::P8 {
                 continue;
             }
-            let palette_offset = index.checked_mul(3)?;
-            let rgb = palette.rgb.get(palette_offset..palette_offset + 3)?;
             let destination = (top
                 .checked_add(y)?
                 .checked_mul(canvas_width)?
@@ -169,7 +269,7 @@ fn composite_indexed_frame(
             .checked_mul(4)?;
             canvas
                 .get_mut(destination..destination + 4)?
-                .copy_from_slice(&[rgb[0], rgb[1], rgb[2], alpha]);
+                .copy_from_slice(&rgba);
         }
     }
     Some(())
