@@ -37,6 +37,18 @@
       "encoded_ref_bytes": 5818
     },
     {
+      "id": "enc_compress_2",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_2.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_2.bin",
+      "encoded_ref_bytes": 5058
+    },
+    {
       "id": "enc_compress_3",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_3.bin",
       "ref_bytes": 49152,
@@ -49,6 +61,30 @@
       "encoded_ref_bytes": 4715
     },
     {
+      "id": "enc_compress_4",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_4.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_4.bin",
+      "encoded_ref_bytes": 4046
+    },
+    {
+      "id": "enc_compress_5",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_5.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_5.bin",
+      "encoded_ref_bytes": 3859
+    },
+    {
       "id": "enc_compress_6",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_6.bin",
       "ref_bytes": 49152,
@@ -59,6 +95,30 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_6.bin",
       "encoded_ref_bytes": 3655
+    },
+    {
+      "id": "enc_compress_7",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_7.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_7.bin",
+      "encoded_ref_bytes": 3650
+    },
+    {
+      "id": "enc_compress_8",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_8.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_8.bin",
+      "encoded_ref_bytes": 3484
     },
     {
       "id": "enc_compress_9",

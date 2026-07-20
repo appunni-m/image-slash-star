@@ -4380,6 +4380,28 @@
           ]
         },
         {
+          "id": "enc_compress_2",
+          "type": "encode",
+          "format": "png",
+          "category": "compress",
+          "description": "zlib-ng fast strategy at compression level 2",
+          "params": {
+            "compression": 2
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_2.bin",
+          "encoded_ref_bytes": 5058,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_2.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_compress_3",
@@ -4402,6 +4424,50 @@
           ]
         },
         {
+          "id": "enc_compress_4",
+          "type": "encode",
+          "format": "png",
+          "category": "compress",
+          "description": "zlib-ng medium strategy at compression level 4",
+          "params": {
+            "compression": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_4.bin",
+          "encoded_ref_bytes": 4046,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_4.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_compress_5",
+          "type": "encode",
+          "format": "png",
+          "category": "compress",
+          "description": "zlib-ng medium strategy at compression level 5",
+          "params": {
+            "compression": 5
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_5.bin",
+          "encoded_ref_bytes": 3859,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_5.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_compress_6",
@@ -4416,6 +4482,50 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_6.bin",
           "encoded_ref_bytes": 3655,
           "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_6.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_compress_7",
+          "type": "encode",
+          "format": "png",
+          "category": "compress",
+          "description": "zlib-ng slow strategy at compression level 7",
+          "params": {
+            "compression": 7
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_7.bin",
+          "encoded_ref_bytes": 3650,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_7.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_compress_8",
+          "type": "encode",
+          "format": "png",
+          "category": "compress",
+          "description": "zlib-ng slow strategy at compression level 8",
+          "params": {
+            "compression": 8
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_8.bin",
+          "encoded_ref_bytes": 3484,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_8.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -7930,9 +8040,9 @@
     }
   },
   "summary": {
-    "total_rows": 434,
+    "total_rows": 439,
     "decode_rows": 271,
-    "encode_rows": 131,
+    "encode_rows": 136,
     "formats": 8,
     "assets_available": 264,
     "decode_active": 265,

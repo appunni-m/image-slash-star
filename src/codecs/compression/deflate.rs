@@ -88,31 +88,19 @@ pub(crate) fn compress_zlib_chunked(
     if input_len != data.len() {
         return None;
     }
-    if level == 0 {
-        return compress_zlib_stored_chunked(data, input_chunks);
+    match level {
+        0 => compress_zlib_stored_chunked(data, input_chunks),
+        1 => super::zlib_ng::compress_level1(data, input_chunks),
+        2 => super::zlib_ng::compress_level2(data, input_chunks),
+        3 => super::zlib_ng::compress_level3(data, input_chunks),
+        4 => super::zlib_ng::compress_level4(data, input_chunks),
+        5 => super::zlib_ng::compress_level5(data, input_chunks),
+        6 => super::zlib_ng::compress_level6(data, input_chunks),
+        7 => super::zlib_ng::compress_level7(data, input_chunks),
+        8 => super::zlib_ng::compress_level8(data, input_chunks),
+        9 => super::zlib_ng::compress_level9(data, input_chunks),
+        _ => None,
     }
-    if level == 1 {
-        return super::zlib_ng::compress_level1(data, input_chunks);
-    }
-    if level == 3 {
-        return super::zlib_ng::compress_level3(data, input_chunks);
-    }
-    if level == 6 {
-        return super::zlib_ng::compress_level6(data, input_chunks);
-    }
-    if level == 9 {
-        return super::zlib_ng::compress_level9(data, input_chunks);
-    }
-
-    let mut output = zlib_header(level);
-    let mut writer = DeflateWriter::default();
-    writer.write_bits(1, 1); // BFINAL
-    writer.write_bits(1, 2); // BTYPE=fixed Huffman (LSB first: 01)
-    encode_fixed_payload(data, level, &mut writer)?;
-    write_fixed_symbol(&mut writer, 256);
-    output.extend_from_slice(&writer.finish());
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
@@ -145,156 +133,6 @@ fn write_stored_block(output: &mut Vec<u8>, block: &[u8], final_block: bool) -> 
     output.extend_from_slice(&(!len).to_le_bytes());
     output.extend_from_slice(block);
     Some(())
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn zlib_header(level: u8) -> Vec<u8> {
-    let cmf = 0x78u8;
-    let compression_class = match level {
-        0..=1 => 0u8,
-        2..=5 => 1,
-        6..=7 => 2,
-        _ => 3,
-    };
-    let mut flg = compression_class << 6;
-    let remainder = (u16::from(cmf) * 256 + u16::from(flg)) % 31;
-    if remainder != 0 {
-        flg = flg.wrapping_add(u8::try_from(31 - remainder).unwrap_or(0));
-    }
-    vec![cmf, flg]
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn encode_fixed_payload(data: &[u8], level: u8, writer: &mut DeflateWriter) -> Option<()> {
-    const HASH_SIZE: usize = 1 << 16;
-    const WINDOW: usize = 32_768;
-    let max_match = match level {
-        1..=2 => 32,
-        3..=5 => 96,
-        _ => 258,
-    };
-    let mut previous = vec![usize::MAX; HASH_SIZE];
-    let mut position = 0usize;
-    while position < data.len() {
-        let candidate = hash_at(data, position).map(|hash| previous[hash]);
-        let match_len = candidate
-            .filter(|&start| start != usize::MAX && position - start <= WINDOW)
-            .map_or(0, |start| match_length(data, start, position, max_match));
-
-        if match_len >= 3 {
-            let distance = position.checked_sub(candidate?)?;
-            write_length_distance(writer, match_len, distance)?;
-            let end = position.checked_add(match_len)?;
-            while position < end {
-                if let Some(hash) = hash_at(data, position) {
-                    previous[hash] = position;
-                }
-                position += 1;
-            }
-        } else {
-            write_fixed_symbol(writer, u16::from(data[position]));
-            if let Some(hash) = hash_at(data, position) {
-                previous[hash] = position;
-            }
-            position += 1;
-        }
-    }
-    Some(())
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn hash_at(data: &[u8], position: usize) -> Option<usize> {
-    let bytes = data.get(position..position.checked_add(3)?)?;
-    Some(
-        ((usize::from(bytes[0]) * 251 + usize::from(bytes[1])) * 251 + usize::from(bytes[2]))
-            & 0xffff,
-    )
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn match_length(data: &[u8], left: usize, right: usize, maximum: usize) -> usize {
-    let available = data.len().saturating_sub(right).min(maximum);
-    let mut length = 0usize;
-    while length < available && data[left + length] == data[right + length] {
-        length += 1;
-    }
-    length
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn write_length_distance(writer: &mut DeflateWriter, length: usize, distance: usize) -> Option<()> {
-    let length_index = LENGTH_BASE
-        .iter()
-        .enumerate()
-        .rev()
-        .find(|&(_, &base)| length >= base)?
-        .0;
-    let length_symbol = 257u16.checked_add(u16::try_from(length_index).ok()?)?;
-    write_fixed_symbol(writer, length_symbol);
-    let length_extra = LENGTH_EXTRA[length_index];
-    writer.write_bits(
-        u32::try_from(length.checked_sub(LENGTH_BASE[length_index])?).ok()?,
-        length_extra,
-    );
-
-    let distance_index = DISTANCE_BASE
-        .iter()
-        .enumerate()
-        .rev()
-        .find(|&(_, &base)| distance >= base)?
-        .0;
-    writer.write_bits(
-        reverse_low_bits(u16::try_from(distance_index).ok()?, 5).into(),
-        5,
-    );
-    let distance_extra = DISTANCE_EXTRA[distance_index];
-    writer.write_bits(
-        u32::try_from(distance.checked_sub(DISTANCE_BASE[distance_index])?).ok()?,
-        distance_extra,
-    );
-    Some(())
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn write_fixed_symbol(writer: &mut DeflateWriter, symbol: u16) {
-    let (canonical, width) = match symbol {
-        0..=143 => (0x30 + symbol, 8),
-        144..=255 => (0x190 + symbol - 144, 9),
-        256..=279 => (symbol - 256, 7),
-        280..=287 => (0xc0 + symbol - 280, 8),
-        _ => return,
-    };
-    writer.write_bits(u32::from(reverse_low_bits(canonical, width)), width);
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-#[derive(Default)]
-struct DeflateWriter {
-    bytes: Vec<u8>,
-    current: u8,
-    used: u8,
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-impl DeflateWriter {
-    fn write_bits(&mut self, value: u32, width: u8) {
-        for bit in 0..width {
-            self.current |= ((value >> bit) as u8 & 1) << self.used;
-            self.used += 1;
-            if self.used == 8 {
-                self.bytes.push(self.current);
-                self.current = 0;
-                self.used = 0;
-            }
-        }
-    }
-
-    fn finish(mut self) -> Vec<u8> {
-        if self.used != 0 {
-            self.bytes.push(self.current);
-        }
-        self.bytes
-    }
 }
 
 fn decode_stored(bits: &mut BitReader<'_>, output: &mut Vec<u8>, max_output: usize) -> Option<()> {

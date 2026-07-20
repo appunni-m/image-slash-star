@@ -18,9 +18,6 @@ const MAX_MATCH: usize = 258;
 const MIN_MATCH: usize = 4;
 const HASH_SIZE: usize = 65_536;
 const WINDOW_MASK: usize = 32_767;
-const LEVEL3_MAX_CHAIN: usize = 6;
-const LEVEL3_NICE_MATCH: usize = 16;
-const LEVEL3_MAX_INSERT: usize = 6;
 const CODE_LENGTH_ORDER: [usize; BIT_LENGTH_CODES] = [
     16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
 ];
@@ -139,7 +136,29 @@ fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Opti
 /// `memLevel=9`. zlib-ng maps level three to `deflate_medium` with the
 /// `{ good: 4, lazy: 6, nice: 16, chain: 6 }` configuration.
 pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_level3(data, input_chunks)?;
+    let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false)?;
+    let mut output = vec![0x78, 0x5e];
+    let mut writer = BitWriter::default();
+    emit_blocks(&tokens, 32_767, &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+/// Compress using Pillow's zlib-ng 2.3.3 level-two fast strategy.
+pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true)?;
+    let mut output = vec![0x78, 0x5e];
+    let mut writer = BitWriter::default();
+    emit_blocks(&tokens, 32_767, &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+/// Compress using Pillow's zlib-ng 2.3.3 level-four medium strategy.
+pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false)?;
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
     emit_blocks(&tokens, 32_767, &mut writer)?;
@@ -150,7 +169,7 @@ pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-six configuration.
 pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_level6(data, input_chunks)?;
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)?;
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
     emit_blocks(&tokens, 32_767, &mut writer)?;
@@ -159,9 +178,248 @@ pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     Some(output)
 }
 
+/// Compress using Pillow's zlib-ng 2.3.3 level-five medium strategy.
+pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16)?;
+    let mut output = vec![0x78, 0x5e];
+    let mut writer = BitWriter::default();
+    emit_blocks(&tokens, 32_767, &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+/// Compress using Pillow's zlib-ng 2.3.3 level-seven slow strategy.
+pub(super) fn compress_level7(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    compress_slow_level(data, input_chunks, 32, 8, 128, 256, 0xda)
+}
+
+/// Compress using Pillow's zlib-ng 2.3.3 level-eight slow strategy.
+pub(super) fn compress_level8(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+    compress_slow_level(data, input_chunks, 128, 32, 258, 1024, 0xda)
+}
+
+fn compress_slow_level(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_lazy: usize,
+    good_match: usize,
+    nice_match: usize,
+    max_chain: usize,
+    header: u8,
+) -> Option<Vec<u8>> {
+    let tokens = tokenize_slow_level(
+        data,
+        input_chunks,
+        max_lazy,
+        good_match,
+        nice_match,
+        max_chain,
+    )?;
+    let mut output = vec![0x78, header];
+    let mut writer = BitWriter::default();
+    emit_blocks(&tokens, 32_767, &mut writer)?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    Some(output)
+}
+
+fn tokenize_slow_level(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_lazy: usize,
+    good_match: usize,
+    nice_match: usize,
+    max_chain: usize,
+) -> Option<Vec<Token>> {
+    let mut matcher = SlowMatcher::new(data, max_lazy, good_match, nice_match, max_chain);
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        available = available.checked_add(chunk_length)?;
+        if available > data.len() {
+            return None;
+        }
+        matcher.process(available, false)?;
+    }
+    if available != data.len() {
+        return None;
+    }
+    matcher.process(available, true)?;
+    Some(matcher.tokens)
+}
+
+struct SlowMatcher {
+    data: Vec<u8>,
+    head: Vec<usize>,
+    previous: Vec<usize>,
+    position: usize,
+    previous_length: usize,
+    match_start: usize,
+    match_available: bool,
+    tokens: Vec<Token>,
+    max_lazy: usize,
+    good_match: usize,
+    nice_match: usize,
+    max_chain: usize,
+}
+
+impl SlowMatcher {
+    fn new(
+        data: &[u8],
+        max_lazy: usize,
+        good_match: usize,
+        nice_match: usize,
+        max_chain: usize,
+    ) -> Self {
+        let mut window = Vec::with_capacity(data.len().saturating_add(MAX_MATCH));
+        window.extend_from_slice(data);
+        window.resize(data.len().saturating_add(MAX_MATCH), 0);
+        Self {
+            data: window,
+            head: vec![0; HASH_SIZE],
+            previous: vec![0; WINDOW_MASK + 1],
+            position: 0,
+            previous_length: 2,
+            match_start: 0,
+            match_available: false,
+            tokens: Vec::new(),
+            max_lazy,
+            good_match,
+            nice_match,
+            max_chain,
+        }
+    }
+
+    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+        loop {
+            let lookahead = available.checked_sub(self.position)?;
+            if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
+                break;
+            }
+
+            let candidate = if lookahead >= MIN_MATCH {
+                self.quick_insert(self.position)?
+            } else {
+                0
+            };
+            let previous_match = self.match_start;
+            let mut match_length = 2usize;
+            if candidate != 0
+                && candidate < self.position
+                && self.position.checked_sub(candidate)? <= MAX_DISTANCE
+                && self.previous_length < self.max_lazy
+            {
+                let found = self.longest_match(candidate, lookahead)?;
+                match_length = found.0;
+                if match_length > self.previous_length {
+                    self.match_start = found.1;
+                }
+                if match_length <= 5 {
+                    match_length = 2;
+                }
+            }
+
+            if self.previous_length >= 3 && match_length <= self.previous_length {
+                self.tokens.push(Token::Match {
+                    length: self.previous_length,
+                    distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
+                });
+                let maximum_insert = self.position.checked_add(lookahead)?.checked_sub(3)?;
+                let move_forward = self.previous_length.checked_sub(2)?;
+                if maximum_insert > self.position {
+                    let insert_count = move_forward.min(maximum_insert - self.position);
+                    for insert_position in
+                        self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
+                    {
+                        self.quick_insert(insert_position)?;
+                    }
+                }
+                self.position = self
+                    .position
+                    .checked_add(self.previous_length.checked_sub(1)?)?;
+                self.previous_length = 0;
+                self.match_available = false;
+            } else if self.match_available {
+                self.tokens.push(Token::Literal(
+                    *self.data.get(self.position.checked_sub(1)?)?,
+                ));
+                self.previous_length = match_length;
+                self.position = self.position.checked_add(1)?;
+            } else {
+                self.previous_length = match_length;
+                self.match_available = true;
+                self.position = self.position.checked_add(1)?;
+            }
+        }
+
+        if finishing && self.position == available && self.match_available {
+            self.tokens.push(Token::Literal(
+                *self.data.get(self.position.checked_sub(1)?)?,
+            ));
+            self.match_available = false;
+        }
+        Some(())
+    }
+
+    fn quick_insert(&mut self, position: usize) -> Option<usize> {
+        let word = u32::from_le_bytes(
+            self.data
+                .get(position..position.checked_add(4)?)?
+                .try_into()
+                .ok()?,
+        );
+        let hash = usize::try_from(word.wrapping_mul(2_654_435_761) >> 16).ok()?;
+        let candidate = *self.head.get(hash)?;
+        if candidate != position {
+            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            *self.head.get_mut(hash)? = position;
+        }
+        Some(candidate)
+    }
+
+    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> Option<(usize, usize)> {
+        let mut best_length = self.previous_length.max(2);
+        let mut best_start = self.match_start;
+        let mut chain_length = self.max_chain;
+        if best_length >= self.good_match {
+            chain_length >>= 2;
+        }
+        let limit = self.position.saturating_sub(MAX_DISTANCE);
+        loop {
+            if candidate >= self.position {
+                break;
+            }
+            if medium_candidate_can_improve(&self.data, candidate, self.position, best_length)? {
+                let length = match_length(
+                    &self.data,
+                    candidate,
+                    self.position,
+                    lookahead.min(MAX_MATCH),
+                );
+                if length > best_length {
+                    best_length = length;
+                    best_start = candidate;
+                    if best_length >= lookahead || best_length >= self.nice_match {
+                        break;
+                    }
+                }
+            }
+            chain_length = chain_length.checked_sub(1)?;
+            if chain_length == 0 {
+                break;
+            }
+            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            if candidate <= limit {
+                break;
+            }
+        }
+        Some((best_length.min(lookahead), best_start))
+    }
+}
+
 #[cfg(feature = "tiff")]
 pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_level6(data, input_chunks)?;
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)?;
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
     emit_blocks(&tokens, 16_383, &mut writer)?;
@@ -170,11 +428,17 @@ pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Optio
     Some(output)
 }
 
-fn tokenize_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
+fn tokenize_lookahead_medium(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+) -> Option<Vec<Token>> {
     // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:102-128 and
     // deflate_medium.c:160-293. The oracle and Rust models produce the same
     // 2,272 tokens for the level-six PNG parity input.
-    let mut matcher = Level6Matcher::new(data);
+    let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         if available != 0 {
@@ -208,10 +472,13 @@ struct Level6Matcher {
     position: usize,
     window_base: usize,
     tokens: Vec<Token>,
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
 }
 
 impl Level6Matcher {
-    fn new(data: &[u8]) -> Self {
+    fn new(data: &[u8], max_chain: usize, nice_match: usize, max_insert: usize) -> Self {
         // zlib-ng's window is zero-initialized through WIN_INIT bytes beyond
         // the supplied input. Its medium matcher intentionally probes that
         // region while evaluating the match following the current match.
@@ -225,6 +492,9 @@ impl Level6Matcher {
             position: 0,
             window_base: 0,
             tokens: Vec::new(),
+            max_chain,
+            nice_match,
+            max_insert,
         }
     }
 
@@ -354,7 +624,7 @@ impl Level6Matcher {
         if lookahead <= found.length.checked_add(MIN_MATCH)? || found.length < MIN_MATCH {
             return Some(());
         }
-        if found.length <= 16 * 16 {
+        if found.length <= 16 * self.max_insert {
             let start = found.start.checked_add(1)?;
             let count = found.length.checked_sub(1)?;
             let insertion_start = start.max(found.original_start);
@@ -378,7 +648,7 @@ impl Level6Matcher {
         // {good: 8, lazy: 16, nice: 128, chain: 128} configuration.
         let mut best_length = 2usize;
         let mut best_start = 0usize;
-        let mut chain_length = 128usize;
+        let mut chain_length = self.max_chain;
         let limit = position.saturating_sub(MAX_DISTANCE);
         loop {
             if candidate >= position {
@@ -390,7 +660,7 @@ impl Level6Matcher {
                 if length > best_length {
                     best_length = length;
                     best_start = candidate;
-                    if best_length >= 128 || best_length >= lookahead {
+                    if best_length >= self.nice_match || best_length >= lookahead {
                         break;
                     }
                 }
@@ -716,11 +986,18 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
     }
 }
 
-fn tokenize_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
+fn tokenize_early_matcher(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+    fast: bool,
+) -> Option<Vec<Token>> {
     // ⚠️ UNVERIFIED: Rust port of zlib-ng 2.3.3 deflate_medium.c:160-293.
     // The independent oracle model matches all 3,000 level-three tokens; the
     // Rust path still requires the managed byte-parity run.
-    let mut matcher = Level3Matcher::new(data);
+    let mut matcher = Level3Matcher::new(data, max_chain, nice_match, max_insert, fast);
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         available = available.checked_add(chunk_length)?;
@@ -742,16 +1019,30 @@ struct Level3Matcher<'a> {
     previous: Vec<usize>,
     position: usize,
     tokens: Vec<Token>,
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+    fast: bool,
 }
 
 impl<'a> Level3Matcher<'a> {
-    fn new(data: &'a [u8]) -> Self {
+    fn new(
+        data: &'a [u8],
+        max_chain: usize,
+        nice_match: usize,
+        max_insert: usize,
+        fast: bool,
+    ) -> Self {
         Self {
             data,
             head: vec![0; HASH_SIZE],
             previous: vec![0; WINDOW_MASK + 1],
             position: 0,
             tokens: Vec::new(),
+            max_chain,
+            nice_match,
+            max_insert,
+            fast,
         }
     }
 
@@ -813,10 +1104,18 @@ impl<'a> Level3Matcher<'a> {
 
     fn insert_match(&mut self, length: usize, lookahead: usize) -> Option<()> {
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94.
-        if lookahead <= length.checked_add(MIN_MATCH)? {
-            return Some(());
-        }
-        if length <= 16 * LEVEL3_MAX_INSERT {
+        let insert_limit = if self.fast {
+            if lookahead.checked_sub(length)? < MIN_MATCH {
+                return Some(());
+            }
+            self.max_insert
+        } else {
+            if lookahead <= length.checked_add(MIN_MATCH)? {
+                return Some(());
+            }
+            16 * self.max_insert
+        };
+        if length <= insert_limit {
             for offset in 1..length {
                 self.quick_insert(self.position.checked_add(offset)?)?;
             }
@@ -832,7 +1131,7 @@ impl<'a> Level3Matcher<'a> {
         // level three's early-exit, nice-length, and chain limits.
         let mut best_length = 2usize;
         let mut best_start = 0usize;
-        let mut chain_length = LEVEL3_MAX_CHAIN;
+        let mut chain_length = self.max_chain;
         let limit = self.position.saturating_sub(MAX_DISTANCE);
 
         loop {
@@ -846,7 +1145,7 @@ impl<'a> Level3Matcher<'a> {
                 if length > best_length {
                     best_length = length;
                     best_start = candidate;
-                    if best_length >= LEVEL3_NICE_MATCH || best_length >= lookahead {
+                    if best_length >= self.nice_match || best_length >= lookahead {
                         break;
                     }
                 } else {

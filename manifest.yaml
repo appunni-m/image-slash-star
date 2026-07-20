@@ -540,12 +540,27 @@ formats:
     - id: enc_compress_1
       description: zlib-ng quick strategy at compression level 1
       params: {'compression': 1}
+    - id: enc_compress_2
+      description: zlib-ng fast strategy at compression level 2
+      params: {'compression': 2}
     - id: enc_compress_3
       description: 
       params: {'compression': 3}
+    - id: enc_compress_4
+      description: zlib-ng medium strategy at compression level 4
+      params: {'compression': 4}
+    - id: enc_compress_5
+      description: zlib-ng medium strategy at compression level 5
+      params: {'compression': 5}
     - id: enc_compress_6
       description: 
       params: {'compression': 6}
+    - id: enc_compress_7
+      description: zlib-ng slow strategy at compression level 7
+      params: {'compression': 7}
+    - id: enc_compress_8
+      description: zlib-ng slow strategy at compression level 8
+      params: {'compression': 8}
     - id: enc_compress_9
       description: 
       params: {'compression': 9}
