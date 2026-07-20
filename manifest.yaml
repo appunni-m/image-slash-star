@@ -774,6 +774,16 @@ formats:
       description: 
       params: {'size': [1, 1]}
       source_asset: 1x1.gif
+    - id: enc_rgb
+      description: RGB source quantized by Pillow to a GIF palette
+      source_format: png
+      source_asset: gif_rgb.png
+      params: {}
+    - id: enc_rgba
+      description: RGBA source quantized by Pillow with transparency
+      source_format: png
+      source_asset: gif_rgba.png
+      params: {}
 
   bmp:
     name: BMP

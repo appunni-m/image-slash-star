@@ -1119,6 +1119,46 @@
             1,
             1
           ]
+        },
+        {
+          "id": "enc_rgb",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgb",
+          "description": "RGB source quantized by Pillow to a GIF palette",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgb.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb.bin",
+          "encoded_ref_bytes": 115,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb.bin",
+          "ref_bytes": 64,
+          "ref_mode": "P",
+          "ref_size": [
+            8,
+            8
+          ]
+        },
+        {
+          "id": "enc_rgba",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "RGBA source quantized by Pillow with transparency",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba.bin",
+          "encoded_ref_bytes": 51,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ]
         }
       ]
     },
@@ -5974,9 +6014,9 @@
     }
   },
   "summary": {
-    "total_rows": 327,
+    "total_rows": 329,
     "decode_rows": 167,
-    "encode_rows": 128,
+    "encode_rows": 130,
     "formats": 8,
     "assets_available": 160,
     "decode_active": 161,

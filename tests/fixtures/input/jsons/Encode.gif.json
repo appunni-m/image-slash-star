@@ -272,6 +272,40 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_rgb",
+      "source_asset": "gif_rgb.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba",
+      "source_asset": "gif_rgba.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }

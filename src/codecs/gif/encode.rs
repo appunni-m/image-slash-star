@@ -67,6 +67,9 @@ fn coalesce_identical_frames(
     sequence: &DecodedSequence,
     requested_frames: usize,
 ) -> Option<Vec<crate::types::DecodedFrame>> {
+    if requested_frames == 1 {
+        return Some(vec![sequence.frames.first()?.clone()]);
+    }
     let width = usize::try_from(sequence.width).ok()?;
     let height = usize::try_from(sequence.height).ok()?;
     let mut canvas = vec![0u8; width.checked_mul(height)?.checked_mul(4)?];
@@ -203,8 +206,18 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             (palette, indices, None)
         }
         (ImageMode::Rgba8, ColorType::Rgba8) => {
-            let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels);
-            (palette, indices, transparent_idx)
+            if img.pixels.chunks_exact(4).all(|pixel| pixel[3] >= 128) {
+                let rgb = img
+                    .pixels
+                    .chunks_exact(4)
+                    .flat_map(|pixel| pixel[..3].iter().copied())
+                    .collect::<Vec<_>>();
+                let (palette, indices) = quantize_rgb(&rgb)?;
+                (palette, indices, None)
+            } else {
+                let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels);
+                (palette, indices, transparent_idx)
+            }
         }
         _ => return None,
     };
@@ -437,6 +450,13 @@ fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) -
 fn image_rgb(image: &DecodedImage) -> Option<Vec<u8>> {
     match image.mode {
         ImageMode::Rgb8 if image.color == ColorType::Rgb8 => Some(image.pixels.clone()),
+        ImageMode::Rgba8 if image.color == ColorType::Rgba8 => Some(
+            image
+                .pixels
+                .chunks_exact(4)
+                .flat_map(|pixel| pixel[..3].iter().copied())
+                .collect(),
+        ),
         ImageMode::P8 if image.color == ColorType::L8 => {
             let palette = image.palette.as_ref()?;
             let mut rgb = Vec::with_capacity(image.pixels.len().checked_mul(3)?);

@@ -206,6 +206,8 @@ def gen_png():
     img.save(d / "16x16.png")
     img.save(d / "rgb.png")
     img.convert("RGBA").save(d / "rgba.png")
+    pattern_img("RGB", (8, 8)).save(d / "gif_rgb.png")
+    Image.new("RGBA", (1, 1), (128, 0, 0, 0)).save(d / "gif_rgba.png")
     img.convert("L").save(d / "gray.png")
     img.convert("LA").save(d / "gray_alpha.png")
     img.convert("P").save(d / "indexed.png")

@@ -155,6 +155,30 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_1x1.bin",
       "encoded_ref_bytes": 43
+    },
+    {
+      "id": "enc_rgb",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb.bin",
+      "ref_bytes": 64,
+      "ref_mode": "P",
+      "ref_size": [
+        8,
+        8
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb.bin",
+      "encoded_ref_bytes": 115
+    },
+    {
+      "id": "enc_rgba",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba.bin",
+      "encoded_ref_bytes": 51
     }
   ]
 }
