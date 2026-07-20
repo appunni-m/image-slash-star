@@ -1,7 +1,5 @@
 //! Frame-wide libwebp-compatible VP8 macroblock decisions.
 
-#![allow(dead_code)]
-
 use super::{
     analysis::{analyze, segment_params},
     chroma::{self, ChromaCandidate},

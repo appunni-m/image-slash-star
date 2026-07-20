@@ -22,8 +22,6 @@
 //!
 //! Zero `unsafe` code.
 
-#![allow(dead_code)]
-
 /// VP8 boolean entropy encoder.
 ///
 /// Encodes a sequence of boolean values into a byte stream using
@@ -145,117 +143,10 @@ impl BoolEncoder {
             self.encode_bool(128, bit);
         }
     }
-
-    /// Encode a value using a VP8-style binary decision tree.
-    ///
-    /// # Tree format
-    ///
-    /// `tree` is a flat slice of `i8` pairs encoding a binary tree:
-    /// `[left_0, right_0, left_1, right_1, ...]`.
-    ///
-    /// * A **positive** child value is the index of the next interior node
-    ///   (multiply by 2 to get the child's index in the tree array).
-    /// * A **negative** child value is a leaf: the decoded value is
-    ///   `(-child) as u32`.
-    ///
-    /// `probs` provides the probability for each interior node.  There
-    /// must be at least `tree.len() / 2` entries.
-    ///
-    /// # Traversal
-    ///
-    /// Starting at the root (node index 0), the function follows
-    /// left/right branches until it reaches a leaf whose stored value
-    /// matches `value`.
-    pub fn encode_tree(&mut self, tree: &[i8], probs: &[u8], value: u32) {
-        let mut node: usize = 0; // start at root
-        loop {
-            let prob = probs[node];
-            let left = tree[2 * node] as i32;
-            let right = tree[2 * node + 1] as i32;
-
-            // Both children being leaves is VIRTUAL_ROOT (value comes
-            // directly from the bit, not from the tree structure).
-            let go_left = if left < 0 && right < 0 {
-                // Both leaves: VP8 stores -(token+1); extract as -leaf-1
-                // VP8 stores leaf as -(token+1); extract: token = -(leaf + 1)
-                let left_val = (-(left + 1)) as u32;
-                let _right_val = (-(right + 1)) as u32;
-                value == left_val
-            } else if left < 0 {
-                // Left leaf only
-                let left_val = (-(left + 1)) as u32;
-                value == left_val
-            } else if right < 0 {
-                // Right leaf only — go left if value is NOT right leaf
-                let right_val = (-(right + 1)) as u32;
-                value != right_val
-            } else {
-                // Both interior — naive: go left (correct for VP8 token trees)
-                true
-            };
-
-            self.encode_bool(prob, !go_left);
-
-            if go_left {
-                if left < 0 {
-                    break;
-                }
-                // left is a DIRECT index into the tree array; convert to node number
-                node = (left as usize) / 2;
-            } else {
-                if right < 0 {
-                    break;
-                }
-                node = (right as usize) / 2;
-            }
-        }
-    }
-
-    /// Encode a signed value using VP8's signalling:
-    ///
-    /// 1. `encode_bool(128, abs > 0)` — whether the value is non-zero.
-    /// 2. If non-zero: `encode_literal((abs - 1), 3)` — 3-bit magnitude.
-    /// 3. If non-zero: `encode_bool(128, sign)` — sign bit.
-    pub fn encode_signed(&mut self, value: i32) {
-        let abs = value.unsigned_abs();
-        self.encode_bool(128, abs > 0);
-        if abs > 0 {
-            self.encode_literal(abs - 1, 3);
-            self.encode_bool(128, value < 0);
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Inspection helpers
-    // ------------------------------------------------------------------
-
-    /// Return the current number of emitted bytes.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.output.len()
-    }
-
-    /// Return `true` if no bytes have been emitted yet.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.output.len() == 0
-    }
 }
 
 impl Default for BoolEncoder {
     fn default() -> Self {
         Self::new()
     }
-}
-
-// -----------------------------------------------------------------------
-// Standalone helpers
-// -----------------------------------------------------------------------
-
-/// Encode a signed value using VP8's encoding convention.
-///
-/// This is identical to `BoolEncoder::encode_signed` and is provided for
-/// call sites that prefer a free function.
-pub fn encode_signed(enc: &mut BoolEncoder, value: i32) {
-    enc.encode_signed(value);
 }

@@ -1,7 +1,5 @@
 //! Exact libwebp-compatible VP8 chroma mode evaluation.
 
-#![allow(dead_code)]
-
 use super::{
     cost::{rd_score, residual_cost},
     dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
@@ -102,14 +100,13 @@ fn correct_dc(
     top_errors: [i8; 2],
     left_errors: [i8; 2],
 ) -> [i8; 3] {
-    coefficients[0][0] +=
-        ((7 * i16::from(top_errors[0]) + 8 * i16::from(left_errors[0])) >> 3) as i16;
+    coefficients[0][0] += (7 * i16::from(top_errors[0]) + 8 * i16::from(left_errors[0])) >> 3;
     let error0 = quantize_single(&mut coefficients[0][0], matrix);
-    coefficients[1][0] += ((7 * i16::from(top_errors[1]) + 8 * i16::from(error0)) >> 3) as i16;
+    coefficients[1][0] += (7 * i16::from(top_errors[1]) + 8 * i16::from(error0)) >> 3;
     let error1 = quantize_single(&mut coefficients[1][0], matrix);
-    coefficients[2][0] += ((7 * i16::from(error0) + 8 * i16::from(left_errors[1])) >> 3) as i16;
+    coefficients[2][0] += (7 * i16::from(error0) + 8 * i16::from(left_errors[1])) >> 3;
     let error2 = quantize_single(&mut coefficients[2][0], matrix);
-    coefficients[3][0] += ((7 * i16::from(error1) + 8 * i16::from(error2)) >> 3) as i16;
+    coefficients[3][0] += (7 * i16::from(error1) + 8 * i16::from(error2)) >> 3;
     let error3 = quantize_single(&mut coefficients[3][0], matrix);
     [error1, error2, error3]
 }

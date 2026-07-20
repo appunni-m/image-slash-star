@@ -1,7 +1,5 @@
 //! Exact libwebp-compatible VP8 4×4 intra predictions.
 
-#![allow(dead_code)]
-
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
     quant::{SegmentMatrices, quantize_reconstruct_block},

@@ -1,7 +1,5 @@
 //! Exact VP8 rate costs used by libwebp's mode decisions.
 
-#![allow(dead_code)]
-
 use super::tokenize::{COEFF_BANDS, COEFF_PROBS};
 
 const ENTROPY_COST: [u16; 256] = [

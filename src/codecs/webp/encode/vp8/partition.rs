@@ -1,7 +1,5 @@
 //! VP8 first-partition syntax matching libwebp 1.6.0.
 
-#![allow(dead_code)]
-
 use super::{
     analysis::FrameParams,
     bool_enc::BoolEncoder,

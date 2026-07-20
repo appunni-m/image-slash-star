@@ -1,7 +1,5 @@
 //! Coefficient statistics and probability adaptation matching libwebp 1.6.0.
 
-#![allow(dead_code)]
-
 use super::{
     cost::bit_cost,
     frame::{LumaDecision, MacroblockDecision},

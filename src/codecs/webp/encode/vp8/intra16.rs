@@ -1,7 +1,5 @@
 //! Exact libwebp-compatible VP8 intra-16 mode evaluation.
 
-#![allow(dead_code)]
-
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_16x16, squared_error_16x16},
     dct::{vp8_fdct_4x4, vp8_fwht_4x4, vp8_idct_add_4x4, vp8_iwht_4x4},

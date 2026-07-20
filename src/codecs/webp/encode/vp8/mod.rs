@@ -4,29 +4,21 @@
 //!
 //! * `dct` — 4×4 forward DCT + Walsh-Hadamard Transform
 //! * `quant` — Quantization tables, quality mapping, RGB→YUV conversion
-//! * `predict` — Intra prediction modes (DC, V, H, TM, B_PRED)
 //! * `tokenize` — DCT coefficient tokenization + probability tables
 //! * `bool_enc` — VP8 boolean entropy encoder (range coder)
-//! * `loopfilter` — Deblocking loop filter
-//! * `segmentation` — Macroblock segment feature data
-
-#![allow(dead_code)]
 
 mod analysis;
-pub mod bool_enc;
+mod bool_enc;
 mod chroma;
 mod cost;
-pub mod dct;
-pub mod encoder;
+mod dct;
+pub(super) mod encoder;
 mod frame;
 mod intra16;
 mod intra4;
-pub mod loopfilter;
 mod mode_probability;
 mod partition;
-pub mod predict;
 mod probability;
-pub mod quant;
+mod quant;
 mod residual;
-pub mod segmentation;
-pub mod tokenize;
+mod tokenize;
