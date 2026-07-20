@@ -387,6 +387,8 @@ formats:
       - indexed.png
       - palette_2color.png
       - palette_256color.png
+      - palette_2bit.png
+      - palette_4bit.png
     - id: color_indexed_alpha
       description: Indexed with tRNS transparency
       test_assets:
@@ -411,6 +413,9 @@ formats:
       description: 16-bit per channel
       test_assets:
       - 16bit.png
+      - rgb16.png
+      - la16.png
+      - rgba16.png
     - id: no_interlace
       description: No interlacing (Adam7 off)
       test_assets:

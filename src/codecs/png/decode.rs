@@ -288,11 +288,11 @@ fn build_image(
         (0, 16) => ColorType::L16,
         (0, _) | (3, _) => ColorType::L8,
         (2, 8) => ColorType::Rgb8,
-        (2, 16) => ColorType::Rgb16,
+        (2, 16) => ColorType::Rgb8,
         (4, 8) => ColorType::La8,
-        (4, 16) => ColorType::La16,
+        (4, 16) => ColorType::Rgba8,
         (6, 8) => ColorType::Rgba8,
-        (6, 16) => ColorType::Rgba16,
+        (6, 16) => ColorType::Rgba8,
         _ => return None,
     };
 
@@ -308,6 +308,19 @@ fn build_image(
             .iter()
             .map(|&sample| ((sample * 255) / maximum) as u8)
             .collect()
+    } else if png_color == 4 && depth == 16 {
+        let mut bytes = Vec::with_capacity(samples.len().checked_mul(2)?);
+        for pair in samples.chunks_exact(2) {
+            let luminance = u8::try_from(pair[0] >> 8).ok()?;
+            let alpha = u8::try_from(pair[1] >> 8).ok()?;
+            bytes.extend_from_slice(&[luminance, luminance, luminance, alpha]);
+        }
+        bytes
+    } else if depth == 16 && matches!(png_color, 2 | 6) {
+        samples
+            .iter()
+            .map(|&sample| u8::try_from(sample >> 8).ok())
+            .collect::<Option<Vec<_>>>()?
     } else if png_color == 3 || depth == 8 {
         samples
             .iter()

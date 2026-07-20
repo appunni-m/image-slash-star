@@ -130,6 +130,32 @@
       ]
     },
     {
+      "id": "color_indexed_palette_2bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_2bit_png.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "color_indexed_palette_4bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_4bit_png.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "color_indexed_alpha",
       "status": "ok",
       "error_type": null,
@@ -161,11 +187,11 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_2bit_png.bin",
-      "ref_bytes": 16384,
-      "ref_mode": "P",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
       "ref_size": [
-        128,
-        128
+        17,
+        13
       ]
     },
     {
@@ -174,11 +200,11 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_4bit_png.bin",
-      "ref_bytes": 16384,
-      "ref_mode": "P",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
       "ref_size": [
-        128,
-        128
+        17,
+        13
       ]
     },
     {
@@ -205,6 +231,45 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "depth_16_rgb16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgb16_png.bin",
+      "ref_bytes": 189,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        9,
+        7
+      ]
+    },
+    {
+      "id": "depth_16_la16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_la16_png.bin",
+      "ref_bytes": 252,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        9,
+        7
+      ]
+    },
+    {
+      "id": "depth_16_rgba16",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgba16_png.bin",
+      "ref_bytes": 252,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        9,
+        7
       ]
     },
     {

@@ -149,6 +149,20 @@ def write_rgb_png(path, image, row_filter=0, interlace=False, compress_level=6):
     )
 
 
+def write_png_scanlines(path, width, height, depth, color_type, rows):
+    """Write a deterministic non-interlaced PNG from already packed rows."""
+    if len(rows) != height:
+        raise ValueError("PNG row count does not match height")
+    header = struct.pack(">IIBBBBB", width, height, depth, color_type, 0, 0, 0)
+    scanlines = b"".join(b"\0" + row for row in rows)
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", zlib.compress(scanlines, 6))
+        + png_chunk(b"IEND", b"")
+    )
+
+
 def save_png_variants(img, out_dir):
     img.save(out_dir / "compress_fast.png", compress_level=1)
     img.save(out_dir / "compress_mid.png", compress_level=6)
@@ -217,9 +231,49 @@ def gen_png():
     # Bit depths
     img.convert("1").save(d / "1bit.png")
     img.convert("L").save(d / "8bit.png")
-    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=4).save(d / "2bit.png", bits=2)
-    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16).save(d / "4bit.png", bits=4)
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=4).save(
+        d / "palette_2bit.png", bits=2
+    )
+    img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16).save(
+        d / "palette_4bit.png", bits=4
+    )
+    low_width, low_height = 17, 13
+    gray2_rows = []
+    gray4_rows = []
+    for y in range(low_height):
+        row2 = bytearray((low_width + 3) // 4)
+        row4 = bytearray((low_width + 1) // 2)
+        for x in range(low_width):
+            row2[x // 4] |= ((x + y) & 3) << (6 - 2 * (x % 4))
+            row4[x // 2] |= ((x * 3 + y * 5) & 15) << (4 if x % 2 == 0 else 0)
+        gray2_rows.append(bytes(row2))
+        gray4_rows.append(bytes(row4))
+    write_png_scanlines(d / "2bit.png", low_width, low_height, 2, 0, gray2_rows)
+    write_png_scanlines(d / "4bit.png", low_width, low_height, 4, 0, gray4_rows)
     img.convert("I;16").save(d / "16bit.png")
+    wide_width, wide_height = 9, 7
+    rgb16_rows = []
+    la16_rows = []
+    rgba16_rows = []
+    for y in range(wide_height):
+        rgb_row = bytearray()
+        la_row = bytearray()
+        rgba_row = bytearray()
+        for x in range(wide_width):
+            red = (x * 8191 + y * 257) & 0xFFFF
+            green = (x * 1021 + y * 4093) & 0xFFFF
+            blue = (x * 509 + y * 1237) & 0xFFFF
+            alpha = (x * 7001 + y * 3001) & 0xFFFF
+            luminance = (red + green + blue) // 3
+            rgb_row.extend(struct.pack(">HHH", red, green, blue))
+            la_row.extend(struct.pack(">HH", luminance, alpha))
+            rgba_row.extend(struct.pack(">HHHH", red, green, blue, alpha))
+        rgb16_rows.append(bytes(rgb_row))
+        la16_rows.append(bytes(la_row))
+        rgba16_rows.append(bytes(rgba_row))
+    write_png_scanlines(d / "rgb16.png", wide_width, wide_height, 16, 2, rgb16_rows)
+    write_png_scanlines(d / "la16.png", wide_width, wide_height, 16, 4, la16_rows)
+    write_png_scanlines(d / "rgba16.png", wide_width, wide_height, 16, 6, rgba16_rows)
     # Pillow decodes Adam7 but does not expose Adam7 encoding. Build the input
     # scan passes directly, then continue to use Pillow as the output oracle.
     write_rgb_png(d / "adam7.png", img, interlace=True)

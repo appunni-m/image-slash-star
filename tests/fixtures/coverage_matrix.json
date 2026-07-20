@@ -3453,6 +3453,42 @@
           "oracle_status": "ok"
         },
         {
+          "id": "color_indexed_palette_2bit",
+          "type": "decode",
+          "format": "png",
+          "category": "color",
+          "description": "Indexed/Palette (color type 3)",
+          "asset": "palette_2bit.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_2bit_png.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "color_indexed_palette_4bit",
+          "type": "decode",
+          "format": "png",
+          "category": "color",
+          "description": "Indexed/Palette (color type 3)",
+          "asset": "palette_4bit.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_4bit_png.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "indexed_alpha.png",
           "asset_path": "tests/fixtures/input/images/png/indexed_alpha.png",
           "category": "color",
@@ -3498,11 +3534,11 @@
           "expect_error": false,
           "format": "png",
           "id": "depth_2",
-          "ref_bytes": 16384,
-          "ref_mode": "P",
+          "ref_bytes": 221,
+          "ref_mode": "L8",
           "ref_size": [
-            128,
-            128
+            17,
+            13
           ],
           "status": "active",
           "type": "decode",
@@ -3517,11 +3553,11 @@
           "expect_error": false,
           "format": "png",
           "id": "depth_4",
-          "ref_bytes": 16384,
-          "ref_mode": "P",
+          "ref_bytes": 221,
+          "ref_mode": "L8",
           "ref_size": [
-            128,
-            128
+            17,
+            13
           ],
           "status": "active",
           "type": "decode",
@@ -3565,6 +3601,60 @@
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_16bit_png.bin",
           "oracle_status": "ok"
+        },
+        {
+          "id": "depth_16_rgb16",
+          "type": "decode",
+          "format": "png",
+          "category": "depth",
+          "description": "16-bit per channel",
+          "asset": "rgb16.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgb16_png.bin",
+          "ref_bytes": 189,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            9,
+            7
+          ]
+        },
+        {
+          "id": "depth_16_la16",
+          "type": "decode",
+          "format": "png",
+          "category": "depth",
+          "description": "16-bit per channel",
+          "asset": "la16.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_la16_png.bin",
+          "ref_bytes": 252,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            9,
+            7
+          ]
+        },
+        {
+          "id": "depth_16_rgba16",
+          "type": "decode",
+          "format": "png",
+          "category": "depth",
+          "description": "16-bit per channel",
+          "asset": "rgba16.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgba16_png.bin",
+          "ref_bytes": 252,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            9,
+            7
+          ]
         },
         {
           "asset": "no_interlace.png",
@@ -7474,12 +7564,12 @@
     }
   },
   "summary": {
-    "total_rows": 405,
-    "decode_rows": 243,
+    "total_rows": 410,
+    "decode_rows": 248,
     "encode_rows": 130,
     "formats": 8,
-    "assets_available": 236,
-    "decode_active": 237,
+    "assets_available": 241,
+    "decode_active": 242,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

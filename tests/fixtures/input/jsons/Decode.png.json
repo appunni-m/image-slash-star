@@ -130,6 +130,32 @@
       }
     },
     {
+      "id": "color_indexed_palette_2bit",
+      "asset": "palette_2bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_2bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "color_indexed_palette_4bit",
+      "asset": "palette_4bit.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_4bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "color_indexed_alpha",
       "asset": "indexed_alpha.png",
       "expect_error": false,
@@ -200,6 +226,45 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/16bit.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_16_rgb16",
+      "asset": "rgb16.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb16.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_16_la16",
+      "asset": "la16.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/la16.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_16_rgba16",
+      "asset": "rgba16.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgba16.png",
         "operations": [
           "PIL.Image.open",
           "load",
