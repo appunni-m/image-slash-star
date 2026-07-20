@@ -267,7 +267,7 @@ pub(super) fn encode_first_partition(
 ) -> Vec<u8> {
     let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
     let segment_probabilities = segment_probabilities(decisions);
-    let mut writer = BoolEncoder::new();
+    let mut writer = BoolEncoder::default();
     writer.encode_bool(128, false); // colorspace
     writer.encode_bool(128, false); // clamp type
     write_segment_header(&mut writer, &params, segment_probabilities);

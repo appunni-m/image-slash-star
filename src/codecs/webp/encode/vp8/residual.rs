@@ -133,7 +133,7 @@ pub(super) fn encode_coefficients(
     macroblock_width: usize,
     probabilities: &AdaptedProbabilities,
 ) -> Vec<u8> {
-    let mut writer = BoolEncoder::new();
+    let mut writer = BoolEncoder::default();
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
     let mut top_y2 = vec![0u8; macroblock_width];
