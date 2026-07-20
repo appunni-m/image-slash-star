@@ -11328,6 +11328,24 @@
           ]
         },
         {
+          "id": "lossless_transform_variants_vp8l_single_cache_peek",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "vp8l_single_cache_peek.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_single_cache_peek_webp.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            6,
+            1
+          ]
+        },
+        {
           "asset": "extended.webp",
           "asset_path": "tests/fixtures/input/images/webp/extended.webp",
           "category": "extended",
@@ -12877,6 +12895,32 @@
           "oracle_error_message": "failed to read next frame"
         },
         {
+          "id": "error_malformed_container_vp8l_empty_code_length_tree",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_empty_code_length_tree.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_incomplete_huffman_tree.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
           "id": "error_malformed_container_vp8l_invalid_max_symbol",
           "type": "decode",
           "format": "webp",
@@ -14207,12 +14251,12 @@
     }
   },
   "summary": {
-    "total_rows": 771,
-    "decode_rows": 492,
+    "total_rows": 774,
+    "decode_rows": 495,
     "encode_rows": 247,
     "formats": 8,
-    "assets_available": 485,
-    "decode_active": 486,
+    "assets_available": 488,
+    "decode_active": 489,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

@@ -611,6 +611,19 @@
       }
     },
     {
+      "id": "lossless_transform_variants_vp8l_single_cache_peek",
+      "asset": "vp8l_single_cache_peek.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_single_cache_peek.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "extended",
       "asset": "extended.webp",
       "expect_error": false,
@@ -1474,6 +1487,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_invalid_zero_symbol.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_empty_code_length_tree",
+      "asset": "vp8l_empty_code_length_tree.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_empty_code_length_tree.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
+      "asset": "vp8l_incomplete_huffman_tree.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_incomplete_huffman_tree.webp",
         "operations": [
           "PIL.Image.open",
           "load",

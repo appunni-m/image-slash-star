@@ -1895,6 +1895,23 @@ def gen_webp():
         simple_tree(bits, distance_symbols)
         write_vp8l_bits(name, bits)
 
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 0, 4)
+    for _ in range(4):
+        append_lsb(bits, 0, 3)
+    write_vp8l_bits("vp8l_empty_code_length_tree.webp", bits)
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 1, 4)
+    for length in (0, 0, 0, 0, 1):
+        append_lsb(bits, length, 3)
+    bits.append(1)
+    append_lsb(bits, 0, 3)
+    append_lsb(bits, 0, 2)
+    for _ in range(4):
+        simple_tree(bits, (0,))
+    write_vp8l_bits("vp8l_incomplete_huffman_tree.webp", bits)
+
     def code_length_tree_prefix():
         bits = [0, 0, 0, 0]
         append_lsb(bits, 0, 4)
@@ -1980,6 +1997,36 @@ def gen_webp():
     simple_tree(bits, (255,))
     simple_tree(bits, (0,))
     write_vp8l_bits("vp8l_meta_cache_fast_fill.webp", bits, width=5)
+
+    bits = [0]
+    bits.append(1)
+    append_lsb(bits, 1, 4)
+    bits.append(1)
+    append_lsb(bits, 0, 3)
+    bits.append(0)
+    simple_tree(bits, (0, 1))
+    for _ in range(4):
+        simple_tree(bits, (0,))
+    bits.extend((0, 1))
+    simple_tree(bits, (7,))
+    simple_tree(bits, (1,))
+    simple_tree(bits, (2,))
+    simple_tree(bits, (255,))
+    simple_tree(bits, (0,))
+    bits.append(0)
+    append_lsb(bits, 0, 4)
+    for length in (2, 2, 2, 2):
+        append_lsb(bits, length, 3)
+    bits.append(0)
+    for repeat_extra in (127, 127):
+        bits.extend((1, 1))
+        append_lsb(bits, repeat_extra, 7)
+    for _ in range(5):
+        bits.extend((0, 0))
+    bits.extend((0, 1))
+    for _ in range(4):
+        simple_tree(bits, (0,))
+    write_vp8l_bits("vp8l_single_cache_peek.webp", bits, width=6)
 
     def write_vp8_partition_size(name, size, source="lossy.webp"):
         malformed = bytearray((d / source).read_bytes())

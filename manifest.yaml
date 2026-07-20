@@ -1397,6 +1397,7 @@ formats:
       - lossless_predictor_sparse.webp
       - vp8l_plane_distance_clamp.webp
       - vp8l_meta_cache_fast_fill.webp
+      - vp8l_single_cache_peek.webp
     - id: extended
       description: Extended WebP (VP8X container)
       test_assets:
@@ -1509,6 +1510,8 @@ formats:
       - vp8l_duplicate_transform.webp
       - vp8l_invalid_color_cache.webp
       - vp8l_invalid_zero_symbol.webp
+      - vp8l_empty_code_length_tree.webp
+      - vp8l_incomplete_huffman_tree.webp
       - vp8l_invalid_max_symbol.webp
       - vp8l_repeat_overflow.webp
       - vp8l_single_backref.webp

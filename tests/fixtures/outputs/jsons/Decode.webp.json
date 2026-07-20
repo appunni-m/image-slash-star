@@ -611,6 +611,19 @@
       ]
     },
     {
+      "id": "lossless_transform_variants_vp8l_single_cache_peek",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_single_cache_peek_webp.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        6,
+        1
+      ]
+    },
+    {
       "id": "extended",
       "status": "ok",
       "error_type": null,
@@ -1866,6 +1879,26 @@
     },
     {
       "id": "error_malformed_container_vp8l_invalid_zero_symbol",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_empty_code_length_tree",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "failed to read next frame",
