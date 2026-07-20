@@ -1399,6 +1399,24 @@ fn test_encode_matrix() {
                     continue;
                 }
             };
+            if decoded.frames.len() == 1 {
+                match img::encode(decoded.first().unwrap(), format, &opts) {
+                    Some(still) if still == encoded => {}
+                    Some(_) => {
+                        eprintln!(
+                            "  FAIL [{}]: still and one-frame sequence encoders differ",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                    None => {
+                        eprintln!("  FAIL [{}]: still-image encoder returned None", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                }
+            }
 
             if let Err(message) = assert_encoded_contract(fmt_name, &row.params, &encoded) {
                 eprintln!("  FAIL [{}]: {message}", row.id);
