@@ -514,6 +514,19 @@ def gen_webp():
     img.save(d / "xmp.webp", lossless=True, xmp=b"<x:xmpmeta>pillow-rs</x:xmpmeta>")
     img.save(d / "exif.webp", lossless=True, exif=b"Exif\x00\x00pillow-rs")
     img.save(d / "animated.webp", save_all=True, append_images=[pattern_img("RGB").transpose(Image.Transpose.FLIP_LEFT_RIGHT)], duration=100, loop=0)
+    animated_base = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(animated_base).rectangle([8, 8, 23, 23], fill=(255, 0, 0, 128))
+    animated_next = animated_base.copy()
+    ImageDraw.Draw(animated_next).rectangle([32, 32, 47, 47], fill=(0, 0, 255, 128))
+    animated_base.save(
+        d / "animated_alpha.webp",
+        save_all=True,
+        append_images=[animated_next],
+        duration=100,
+        loop=0,
+        lossless=True,
+        minimize_size=True,
+    )
     d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
     print(f"  WebP: {len(list(d.glob('*.webp')))} files")
 

@@ -273,6 +273,19 @@
       }
     },
     {
+      "id": "animated_animated_alpha",
+      "asset": "animated_alpha.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_alpha.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "size_small",
       "asset": "16x16.webp",
       "expect_error": false,

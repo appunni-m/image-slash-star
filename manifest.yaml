@@ -1016,6 +1016,7 @@ formats:
       description: Animated WebP (decode first frame)
       test_assets:
       - animated.webp
+      - animated_alpha.webp
     - id: size_small
       description: Small image (16x16)
       test_assets:
