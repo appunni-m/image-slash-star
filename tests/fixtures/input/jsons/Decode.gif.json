@@ -117,6 +117,19 @@
       }
     },
     {
+      "id": "extension_gce_gce_previous",
+      "asset": "gce_previous.gif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_previous.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "size_1x1",
       "asset": "1x1.gif",
       "expect_error": false,
@@ -135,6 +148,84 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/empty.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed",
+      "asset": "invalid_signature.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/invalid_signature.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_unknown_block",
+      "asset": "unknown_block.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/unknown_block.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_zero_frame_width",
+      "asset": "zero_frame_width.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/zero_frame_width.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_min_code_one",
+      "asset": "min_code_one.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/min_code_one.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_min_code_nine",
+      "asset": "min_code_nine.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/min_code_nine.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bad_gce_terminator",
+      "asset": "bad_gce_terminator.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/bad_gce_terminator.gif",
         "operations": [
           "PIL.Image.open",
           "load",

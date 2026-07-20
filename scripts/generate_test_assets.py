@@ -338,6 +338,14 @@ def gen_gif():
     img2 = Image.new("P", SIZE, 200)
     img.save(d / "animated.gif", save_all=True, append_images=[img2], duration=100, loop=0)
     img.save(d / "gce.gif", save_all=True, append_images=[img2], duration=75, disposal=2, loop=1)
+    img.save(
+        d / "gce_previous.gif",
+        save_all=True,
+        append_images=[img2],
+        duration=75,
+        disposal=3,
+        loop=1,
+    )
     img.save(d / "animated_3frame.gif", save_all=True, append_images=[img2, img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)], duration=[20, 80, 160], loop=0)
     # Transparency
     img.info['transparency'] = 0
@@ -346,6 +354,31 @@ def gen_gif():
     img.save(d / "interlaced.gif", interlace=True)
     Image.new("P", (1,1), 0).save(d / "1x1.gif")
     d.joinpath("empty.gif").write_bytes(b"")
+
+    static = bytearray((d / "static.gif").read_bytes())
+    table_end = 13 + 3 * (1 << ((static[10] & 7) + 1))
+    image_offset = static.index(0x2C, table_end)
+    invalid_signature = bytearray(static)
+    invalid_signature[:6] = b"NOTGIF"
+    (d / "invalid_signature.gif").write_bytes(invalid_signature)
+    unknown_block = bytearray(static)
+    unknown_block[image_offset] = 0
+    (d / "unknown_block.gif").write_bytes(unknown_block)
+    zero_frame_width = bytearray(static)
+    zero_frame_width[image_offset + 5 : image_offset + 7] = b"\0\0"
+    (d / "zero_frame_width.gif").write_bytes(zero_frame_width)
+    min_code_one = bytearray(static)
+    min_code_one[image_offset + 10] = 1
+    (d / "min_code_one.gif").write_bytes(min_code_one)
+    min_code_nine = bytearray(static)
+    min_code_nine[image_offset + 10] = 9
+    (d / "min_code_nine.gif").write_bytes(min_code_nine)
+
+    gce = bytearray((d / "gce.gif").read_bytes())
+    gce_offset = gce.index(b"\x21\xf9")
+    bad_gce_terminator = bytearray(gce)
+    bad_gce_terminator[gce_offset + 7] = 1
+    (d / "bad_gce_terminator.gif").write_bytes(bad_gce_terminator)
     print(f"  GIF: {len(list(d.glob('*.gif')))} files")
 
 

@@ -725,6 +725,7 @@ formats:
       description: Graphic Control Extension (delay, disposal)
       test_assets:
       - gce.gif
+      - gce_previous.gif
     - id: size_1x1
       description: Single pixel GIF
       test_assets:
@@ -733,6 +734,16 @@ formats:
       description: Empty file
       test_assets:
       - empty.gif
+      expect_error: true
+    - id: error_malformed
+      description: Invalid headers, descriptors, controls, and LZW roots
+      test_assets:
+      - invalid_signature.gif
+      - unknown_block.gif
+      - zero_frame_width.gif
+      - min_code_one.gif
+      - min_code_nine.gif
+      - bad_gce_terminator.gif
       expect_error: true
     encode_edge_cases:
     - id: enc_static
