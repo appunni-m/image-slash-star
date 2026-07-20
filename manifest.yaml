@@ -584,14 +584,16 @@ formats:
       description: 
       source_asset: indexed.png
       params: {'color_type': 'P'}
+    - id: enc_indexed_alpha
+      description: Indexed palette with a trimmed transparency table
+      source_asset: indexed_alpha.png
+      params: {'color_type': 'P'}
     - id: enc_1bit
       description: 
       source_asset: 1bit.png
       params: {'color_type': '1'}
     - id: enc_adam7
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 cannot encode Adam7 PNG output.
+      description: Pillow accepts but ignores the PNG interlace option
       params: {'interlace': True}
     - id: enc_no_interlace
       description: 
@@ -605,34 +607,22 @@ formats:
       source_asset: 16bit.png
       params: {'bit_depth': 16}
     - id: enc_filter_none
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose PNG row-filter selection.
+      description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'none'}
     - id: enc_filter_sub
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose PNG row-filter selection.
+      description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'sub'}
     - id: enc_filter_up
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose PNG row-filter selection.
+      description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'up'}
     - id: enc_filter_avg
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose PNG row-filter selection.
+      description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'average'}
     - id: enc_filter_paeth
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose PNG row-filter selection.
+      description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'paeth'}
     - id: enc_filter_adaptive
-      description: 
-      status: planned
-      oracle_gap: Pillow 12.2.0 does not expose PNG row-filter selection.
+      description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'adaptive'}
     - id: enc_chunk_text
       description: 
@@ -671,9 +661,7 @@ formats:
       params:
         compression: none
     - id: enc_interlaced
-      description: Adam7 interlaced
-      status: planned
-      oracle_gap: Pillow 12.2.0 cannot encode Adam7 PNG output.
+      description: Pillow's alternate interlaced option spelling is also ignored
       params:
         interlaced: true
     - id: enc_rgb

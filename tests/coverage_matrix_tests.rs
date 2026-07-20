@@ -243,11 +243,9 @@ fn assert_png_contract(
         .get("interlace")
         .or_else(|| params.get("interlaced"))
         .and_then(serde_json::Value::as_bool);
-    if let Some(expected) = requested_interlace
-        && interlace != u8::from(expected)
-    {
+    if requested_interlace.is_some() && interlace != 0 {
         return Err(format!(
-            "PNG interlace mismatch: encoded {interlace}, requested {expected}"
+            "PNG interlace mismatch: Pillow ignores this option but encoded {interlace}"
         ));
     }
 

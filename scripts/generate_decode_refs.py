@@ -208,6 +208,9 @@ def encode_params(fmt, params):
         optimize = take("optimize")
         if optimize is not None:
             kwargs["optimize"] = optimize
+        row_filter = take("filter")
+        if row_filter is not None:
+            kwargs["filter"] = row_filter
 
         chunk_requests = {
             "text_chunks": (b"tEXt", b"Comment\x00pillow-rs"),
@@ -230,8 +233,8 @@ def encode_params(fmt, params):
             kwargs["dpi"] = (72, 72)
         for name in ("interlace", "interlaced"):
             interlace = take(name)
-            if interlace is True:
-                raise RuntimeError("Pillow PNG cannot encode Adam7 interlacing")
+            if interlace is not None:
+                kwargs["interlace"] = interlace
     elif fmt == "gif":
         interlace = take("interlace")
         if interlace is not None:

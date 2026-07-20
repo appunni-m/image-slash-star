@@ -5,20 +5,11 @@ use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage, ImageMode};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
-const ADAM7: [(usize, usize, usize, usize); 7] = [
-    (0, 0, 8, 8),
-    (4, 0, 8, 8),
-    (0, 4, 4, 8),
-    (2, 0, 4, 4),
-    (0, 2, 2, 4),
-    (1, 0, 2, 2),
-    (0, 1, 1, 2),
-];
-
 /// Encode an 8-bit grayscale, grayscale-alpha, RGB, or RGBA image as PNG.
 ///
-/// `interlace = true` emits Adam7 passes. Compression levels select the
-/// corresponding strategy in the internal zlib/DEFLATE implementation.
+/// Pillow ignores PNG interlace save options, so this encoder also always
+/// emits non-interlaced rows. Compression levels select the corresponding
+/// strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     if img.width == 0 || img.height == 0 || opts.compression.is_some_and(|level| level > 9) {
         return None;
@@ -26,19 +17,19 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     let width = usize::try_from(img.width).ok()?;
     let height = usize::try_from(img.height).ok()?;
-    let (png_color, depth, channels, row_bytes, filter_bytes, pixels) = match img.mode {
+    let (png_color, depth, row_bytes, filter_bytes, pixels) = match img.mode {
         ImageMode::L1 => {
             let row_bytes = width.div_ceil(8);
-            (0, 1, 1, row_bytes, 1, img.pixels.clone())
+            (0, 1, row_bytes, 1, img.pixels.clone())
         }
-        ImageMode::P8 => (3, 8, 1, width, 1, img.pixels.clone()),
+        ImageMode::P8 => (3, 8, width, 1, img.pixels.clone()),
         ImageMode::L16 => {
             let mut big_endian = Vec::with_capacity(img.pixels.len());
             for sample in img.pixels.chunks_exact(2) {
                 big_endian
                     .extend_from_slice(&u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes());
             }
-            (0, 16, 1, width.checked_mul(2)?, 2, big_endian)
+            (0, 16, width.checked_mul(2)?, 2, big_endian)
         }
         _ => {
             let (png_color, channels) = match img.color {
@@ -51,7 +42,6 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             (
                 png_color,
                 8,
-                channels,
                 width.checked_mul(channels)?,
                 channels,
                 img.pixels.clone(),
@@ -62,26 +52,14 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         return None;
     }
 
-    let interlaced = opts.interlace.unwrap_or(false);
-    if interlaced
-        && !matches!(
-            img.mode,
-            ImageMode::L8 | ImageMode::La8 | ImageMode::Rgb8 | ImageMode::Rgba8
-        )
-    {
-        return None;
-    }
     let filter = if img.mode == ImageMode::P8 {
         Filter::None
     } else {
-        Filter::parse(opts.extra.get("filter").map(String::as_str))?
+        Filter::Adaptive
     };
     let optimize = opts.optimize.unwrap_or(false);
-    let (filtered, input_chunks) = if interlaced {
-        adam7_rows(&pixels, width, height, channels, filter, optimize)?
-    } else {
-        plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize)?
-    };
+    let (filtered, input_chunks) =
+        plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize)?;
     let compression_level = if optimize {
         9
     } else {
@@ -103,7 +81,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let mut header = Vec::with_capacity(13);
     header.extend_from_slice(&img.width.to_be_bytes());
     header.extend_from_slice(&img.height.to_be_bytes());
-    header.extend_from_slice(&[depth, png_color, 0, 0, u8::from(interlaced)]);
+    header.extend_from_slice(&[depth, png_color, 0, 0, 0]);
 
     let mut output = PNG_SIGNATURE.to_vec();
     write_chunk(&mut output, *b"IHDR", &header)?;
@@ -145,43 +123,6 @@ fn plain_rows(
     Some((output, input_chunks))
 }
 
-fn adam7_rows(
-    pixels: &[u8],
-    width: usize,
-    height: usize,
-    channels: usize,
-    filter: Filter,
-    optimize: bool,
-) -> Option<(Vec<u8>, Vec<usize>)> {
-    let mut output = Vec::new();
-    let mut input_chunks = Vec::new();
-    for (x_start, y_start, x_step, y_step) in ADAM7 {
-        if width <= x_start || height <= y_start {
-            continue;
-        }
-        let mut previous = None::<Vec<u8>>;
-        for y in (y_start..height).step_by(y_step) {
-            let pass_width = (width - x_start).div_ceil(x_step);
-            let mut row = Vec::with_capacity(pass_width.checked_mul(channels)?);
-            for x in (x_start..width).step_by(x_step) {
-                let start = (y.checked_mul(width)?.checked_add(x)?).checked_mul(channels)?;
-                row.extend_from_slice(pixels.get(start..start + channels)?);
-            }
-            input_chunks.push(row.len().checked_add(1)?);
-            append_filtered_row(
-                &mut output,
-                &row,
-                previous.as_deref(),
-                channels,
-                filter,
-                optimize,
-            );
-            previous = Some(row);
-        }
-    }
-    Some((output, input_chunks))
-}
-
 #[derive(Clone, Copy)]
 enum Filter {
     None,
@@ -190,20 +131,6 @@ enum Filter {
     Average,
     Paeth,
     Adaptive,
-}
-
-impl Filter {
-    fn parse(value: Option<&str>) -> Option<Self> {
-        match value {
-            None | Some("adaptive") => Some(Self::Adaptive),
-            Some("none" | "0") => Some(Self::None),
-            Some("sub" | "1") => Some(Self::Sub),
-            Some("up" | "2") => Some(Self::Up),
-            Some("average" | "avg" | "3") => Some(Self::Average),
-            Some("paeth" | "4") => Some(Self::Paeth),
-            Some(_) => None,
-        }
-    }
 }
 
 fn append_filtered_row(

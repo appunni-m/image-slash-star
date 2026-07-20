@@ -318,6 +318,25 @@
       }
     },
     {
+      "id": "enc_indexed_alpha",
+      "source_asset": "indexed_alpha.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1bit",
       "source_asset": "1bit.png",
       "source_format": "png",
@@ -337,6 +356,27 @@
       }
     },
     {
+      "id": "enc_adam7",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "interlace": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "interlace": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_no_interlace",
       "source_asset": "rgb.png",
       "source_format": "png",
@@ -347,7 +387,9 @@
         "open": "tests/fixtures/input/images/png/rgb.png",
         "method": "PIL.Image.Image.save",
         "format": "PNG",
-        "kwargs": {},
+        "kwargs": {
+          "interlace": false
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -386,6 +428,132 @@
         "method": "PIL.Image.Image.save",
         "format": "PNG",
         "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_filter_none",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "filter": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "filter": "none"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_filter_sub",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "filter": "sub"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "filter": "sub"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_filter_up",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "filter": "up"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "filter": "up"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_filter_avg",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "filter": "average"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "filter": "average"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_filter_paeth",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "filter": "paeth"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "filter": "paeth"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_filter_adaptive",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "filter": "adaptive"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "filter": "adaptive"
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",
@@ -636,6 +804,27 @@
         "format": "PNG",
         "kwargs": {
           "compress_level": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_interlaced",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "interlaced": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "interlace": true
         },
         "roundtrip": [
           "PIL.Image.open",
