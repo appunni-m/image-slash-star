@@ -1,5 +1,7 @@
 //! Altered Rust ports of byte-compatible zlib-ng 2.3.3 compressor subsets.
 //!
+//! Modified Rust port copyright (c) 2026 Appunni M.
+//!
 //! The original zlib license notice is retained in
 //! `third_party/zlib-ng/LICENSE.md`.
 
@@ -57,6 +59,7 @@ pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     Some(output)
 }
 
+#[cfg(feature = "tiff")]
 pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_level6(data, input_chunks)?;
     let mut output = vec![0x78, 0x9c];

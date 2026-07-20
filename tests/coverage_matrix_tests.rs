@@ -1738,7 +1738,7 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
     let invalid_palette = img::DecodedImage {
         mode: img::ImageMode::Rgb8,
         palette: Some(img::ImagePalette::default()),
-        ..invalid_mode.clone()
+        ..invalid_mode
     };
     assert!(img::DynamicImage::from_decoded(&invalid_palette).is_none());
     for color in [img::ColorType::Cmyk8, img::ColorType::L32F] {
@@ -1906,7 +1906,7 @@ fn exercise_type_metadata() {
         },
         img::DecodedImage::with_mode(1, 1, vec![1], img::ImageMode::P8)
             .with_palette(palette.clone()),
-        img::DecodedImage::new(1, 1, vec![0], img::ColorType::L8).with_palette(palette.clone()),
+        img::DecodedImage::new(1, 1, vec![0], img::ColorType::L8).with_palette(palette),
     ];
     for image in invalid_images {
         assert!(image.validate().is_err());

@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── IJG-faithful Bit Reader (libjpeg-turbo 3.1.4.1 jdhuff.c) ────────────
 //
 // Port of the jpeg_fill_bit_buffer + CHECK_BIT_BUFFER/GET_BITS/PEEK_BITS/DROP_BITS

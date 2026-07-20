@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+*.bin binary
+*.bmp binary
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.tif binary
+*.tiff binary
+*.webp binary
+
+tests/fixtures/outputs/** linguist-generated=true

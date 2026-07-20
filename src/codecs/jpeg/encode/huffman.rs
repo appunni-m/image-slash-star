@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── JPEG Huffman encoding (libjpeg-turbo 3.1.4.1 jchuff.c / jcphuff.c) ────
 //
 // Bit writer + standard Huffman tables for baseline and progressive encoding.

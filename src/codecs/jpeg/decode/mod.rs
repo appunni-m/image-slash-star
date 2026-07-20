@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 //! JPEG decoder — IJG DCT_ISLOW IDCT for pixel-perfect libjpeg parity.
 //!
 //! Implements libjpeg's exact "slow-but-accurate" integer IDCT from `jidctint.c`.

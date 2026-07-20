@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── JPEG Encoder ─────────────────────────────────────────────────────────
 // libjpeg-turbo 3.1.4.1 port (jfdctint.c, jcparam.c, jchuff.c, jcphuff.c,
 // jcmaster.c, jcmarker.c, jccolor.c, jcsample.c).

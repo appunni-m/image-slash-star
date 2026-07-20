@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── Forward DCT, IJG ISLOW (libjpeg-turbo 3.1.4.1 jfdctint.c) ─────────────
 //
 // 8×8 forward DCT in scaled fixed-point (CONST_BITS=13, PASS1_BITS=2).

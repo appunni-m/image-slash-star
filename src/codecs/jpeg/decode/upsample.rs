@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── Chroma Upsampling (libjpeg-exact triangle filter) ─────────────────────
 
 /// 2x1 fancy upsampling — exact match of IJG libjpeg h2v1_fancy_upsample.

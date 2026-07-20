@@ -1,6 +1,6 @@
-// AS PER DESIGN — DO NOT REMOVE:
-//   Workspace lints are DENY for these. This crate defers them explicitly.
-//   Tracked at CODEBASE_AUDIT.md Fixes 2, 12. Remove each when addressed.
+// These exceptions are explicit technical debt. Remove them as public API
+// documentation and legacy algorithm ports are brought under the workspace
+// lint policy.
 #![allow(missing_docs)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]

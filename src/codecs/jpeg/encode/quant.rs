@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── JPEG Quantization Tables (libjpeg-turbo 3.1.4.1 jcparam.c) ───────────
 //
 // Default luma/chroma tables and quality scaling.  At quality 75 libjpeg

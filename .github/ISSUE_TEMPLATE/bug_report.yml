@@ -1,0 +1,43 @@
+name: Bug report
+description: Report incorrect output, a crash, or a compatibility problem
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a problem.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.1.0 or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Image format
+      options: [JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, AVIF, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include expected Pillow behavior and actual Rust behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide code and a minimal non-sensitive fixture if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, architecture, Rust version, and enabled Cargo features.
+    validations:
+      required: true

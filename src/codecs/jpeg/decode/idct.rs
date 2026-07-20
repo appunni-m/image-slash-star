@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── IDCT Constants (matching IJG jidctint.c) ──────────────────────────────
 
 pub(crate) const CONST_BITS: i32 = 13;

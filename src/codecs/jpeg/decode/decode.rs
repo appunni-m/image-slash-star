@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 use crate::types::{ColorType, DecodedImage};
 
 use super::bit_reader::BitReader;

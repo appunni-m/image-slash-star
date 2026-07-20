@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── IJG-faithful Derived Huffman Table (libjpeg-turbo 3.1.4.1 jdhuff.c) ──
 //
 // Port of jpeg_make_d_derived_tbl + HUFF_DECODE macro + jpeg_huff_decode.

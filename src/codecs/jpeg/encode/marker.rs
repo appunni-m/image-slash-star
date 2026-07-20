@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── JPEG marker writing (libjpeg-turbo 3.1.4.1 jcmarker.c) ───────────────
 
 /// Helper: write a big-endian u16.

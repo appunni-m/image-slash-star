@@ -1,3 +1,6 @@
+// Modified Rust port copyright (c) 2026 Appunni M.
+// Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
+
 // ── Progressive JPEG Reconstruction ──────────────────────────────────────
 // Port of libjpeg-turbo 3.1.4.1 jdphuff.c progressive Huffman decoding.
 //
