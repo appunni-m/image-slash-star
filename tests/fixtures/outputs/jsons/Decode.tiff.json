@@ -156,6 +156,32 @@
       ]
     },
     {
+      "id": "compression_lzw_lzw_dictionary_saturation",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_dictionary_saturation_tiff.bin",
+      "ref_bytes": 4100,
+      "ref_mode": "L8",
+      "ref_size": [
+        4100,
+        1
+      ]
+    },
+    {
+      "id": "compression_lzw_lzw_post_ifd_empty_count",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_post_ifd_empty_count_tiff.bin",
+      "ref_bytes": 1,
+      "ref_mode": "L8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
       "id": "compression_deflate",
       "status": "ok",
       "error_type": null,
@@ -218,6 +244,19 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "compression_deflate_be_float32_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_be_float32_predictor_tiff.bin",
+      "ref_bytes": 32,
+      "ref_mode": "F",
+      "ref_size": [
+        4,
+        2
       ]
     },
     {
@@ -650,6 +689,19 @@
       ]
     },
     {
+      "id": "tiled_predictor_tiled_adobe_deflate_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_adobe_deflate_predictor_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "tiled_lzw_predictor",
       "status": "ok",
       "error_type": null,
@@ -926,6 +978,16 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_be_16bit_unsupported_photometric",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

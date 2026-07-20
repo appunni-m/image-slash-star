@@ -156,6 +156,32 @@
       }
     },
     {
+      "id": "compression_lzw_lzw_dictionary_saturation",
+      "asset": "lzw_dictionary_saturation.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_dictionary_saturation.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw_lzw_post_ifd_empty_count",
+      "asset": "lzw_post_ifd_empty_count.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_post_ifd_empty_count.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "compression_deflate",
       "asset": "deflate.tiff",
       "expect_error": false,
@@ -213,6 +239,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/float32_deflate_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_deflate_be_float32_predictor",
+      "asset": "be_float32_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/be_float32_predictor.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -650,6 +689,19 @@
       }
     },
     {
+      "id": "tiled_predictor_tiled_adobe_deflate_predictor",
+      "asset": "tiled_adobe_deflate_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/tiled_adobe_deflate_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "tiled_lzw_predictor",
       "asset": "tiled_lzw_predictor.tiff",
       "expect_error": false,
@@ -993,6 +1045,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/compressed_bad_strip_counts.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_be_16bit_unsupported_photometric",
+      "asset": "be_16bit_unsupported_photometric.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/be_16bit_unsupported_photometric.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

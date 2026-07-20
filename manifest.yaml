@@ -1400,6 +1400,8 @@ formats:
       - lzw_no_eoi.tiff
       - lzw_trailing_code.tiff
       - lzw_kwkwk_clipped.tiff
+      - lzw_dictionary_saturation.tiff
+      - lzw_post_ifd_empty_count.tiff
     - id: compression_deflate
       description: Deflate/ZIP compression
       test_assets:
@@ -1408,6 +1410,7 @@ formats:
       - rgb_deflate_predictor.tiff
       - gray16_deflate_predictor.tiff
       - float32_deflate_predictor.tiff
+      - be_float32_predictor.tiff
     - id: compression_packbits
       description: PackBits compression
       test_assets:
@@ -1507,6 +1510,7 @@ formats:
       description: Deflate-compressed tiles with horizontal prediction
       test_assets:
       - tiled_deflate_predictor.tiff
+      - tiled_adobe_deflate_predictor.tiff
     - id: tiled_lzw_predictor
       description: LZW-compressed tiles with horizontal prediction
       test_assets:
@@ -1549,6 +1553,7 @@ formats:
       - ascii_width.tiff
       - uncompressed_extra_strips.tiff
       - compressed_bad_strip_counts.tiff
+      - be_16bit_unsupported_photometric.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

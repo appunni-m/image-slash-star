@@ -1651,6 +1651,77 @@ def write_lzw_tiff(path, codes, width=1):
     write_compressed_grayscale_tiff(path, pack_lzw_codes(codes), 5, width)
 
 
+def write_lzw_dictionary_saturation_tiff(path, pixel_count=4100):
+    """Write literal LZW codes through the full 12-bit dictionary range."""
+    code_width = 9
+    next_code = 258
+    fields = [(256, code_width), (0, code_width)]
+    for _ in range(1, pixel_count):
+        fields.append((0, code_width))
+        if next_code < 4096:
+            next_code += 1
+            if code_width < 12 and next_code == (1 << code_width) - 1:
+                code_width += 1
+    fields.append((257, code_width))
+    bits = "".join(f"{code:0{width}b}" for code, width in fields)
+    bits += "0" * (-len(bits) % 8)
+    payload = int(bits, 2).to_bytes(len(bits) // 8, "big")
+    write_compressed_grayscale_tiff(path, payload, 5, pixel_count)
+
+
+def write_grayscale_predictor_tiff(path, bits, byte_order, photometric=1):
+    """Write Deflate-compressed grayscale samples with horizontal prediction."""
+    width, height = 4, 2
+    marker = b"II" if byte_order == "<" else b"MM"
+    if bits == 16:
+        rows = ([1000, 2000, 4000, 8000], [123, 456, 789, 1024])
+        format_code = "H"
+        mask = 0xFFFF
+    else:
+        rows = (
+            [struct.unpack("<I", struct.pack("<f", value))[0] for value in (1.0, 2.0, 4.0, 8.0)],
+            [struct.unpack("<I", struct.pack("<f", value))[0] for value in (0.5, 1.5, 3.5, 7.5)],
+        )
+        format_code = "I"
+        mask = 0xFFFF_FFFF
+    predicted = bytearray()
+    for row in rows:
+        previous = 0
+        for value in row:
+            predicted.extend(struct.pack(byte_order + format_code, (value - previous) & mask))
+            previous = value
+    payload = zlib.compress(predicted)
+    entries = [
+        (256, 4, 1, width),
+        (257, 4, 1, height),
+        (258, 3, 1, bits),
+        (259, 3, 1, 8),
+        (262, 3, 1, photometric),
+        (273, 4, 1, "pixels"),
+        (277, 3, 1, 1),
+        (278, 4, 1, height),
+        (279, 4, 1, len(payload)),
+        (317, 3, 1, 2),
+    ]
+    if bits == 32:
+        entries.append((339, 3, 1, 3))
+    entries.sort()
+    pixel_offset = 8 + 2 + len(entries) * 12 + 4
+    output = bytearray(marker + struct.pack(byte_order + "H", 42) + struct.pack(byte_order + "I", 8))
+    output.extend(struct.pack(byte_order + "H", len(entries)))
+    for tag, field_type, count, value in entries:
+        output.extend(struct.pack(byte_order + "HHI", tag, field_type, count))
+        if value == "pixels":
+            output.extend(struct.pack(byte_order + "I", pixel_offset))
+        elif field_type == 3:
+            output.extend(struct.pack(byte_order + "H", value) + b"\0\0")
+        else:
+            output.extend(struct.pack(byte_order + "I", value))
+    output.extend(struct.pack(byte_order + "I", 0))
+    output.extend(payload)
+    path.write_bytes(output)
+
+
 def write_ycbcr_tiff(path, image):
     """Write Pillow's baseline four-byte RGBX storage for YCbCr TIFF."""
     width, height = image.size
@@ -1801,6 +1872,7 @@ def gen_tiff():
     write_lzw_tiff(d / "lzw_invalid_future_code.tiff", [256, 0, 300], width=2)
     write_lzw_tiff(d / "lzw_clear_only.tiff", [256])
     write_lzw_tiff(d / "lzw_end_only.tiff", [256, 257])
+    write_lzw_dictionary_saturation_tiff(d / "lzw_dictionary_saturation.tiff")
     img.convert("L").save(d / "gray_lzw.tiff", compression="tiff_lzw")
     img.convert("L").save(d / "gray_deflate.tiff", compression="tiff_adobe_deflate")
     img.convert("F").save(
@@ -1826,6 +1898,17 @@ def gen_tiff():
         tile_size=32,
         compression=5,
         predictor=2,
+    )
+    write_rgb_tiff(
+        d / "tiled_adobe_deflate_predictor.tiff",
+        img,
+        tile_size=32,
+        compression=32946,
+        predictor=2,
+    )
+    write_grayscale_predictor_tiff(d / "be_float32_predictor.tiff", 32, ">")
+    write_grayscale_predictor_tiff(
+        d / "be_16bit_unsupported_photometric.tiff", 16, ">", photometric=4
     )
     img.save(
         d / "rgb_lzw_predictor.tiff",
@@ -1866,6 +1949,7 @@ def gen_tiff():
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_width.tiff", 256, 2)
     mutate_tiff_tag_count(d / "deflate.tiff", d / "compressed_empty_strip_counts.tiff", 279, 0)
     mutate_tiff_tag_count(d / "deflate.tiff", d / "compressed_bad_strip_counts.tiff", 279, 2)
+    mutate_tiff_tag_count(d / "lzw_no_eoi.tiff", d / "lzw_post_ifd_empty_count.tiff", 279, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_bad_byte_count.tiff", 279, 1)
     mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_missing_strips.tiff", 278, 1)
     mutate_tiff_tag(

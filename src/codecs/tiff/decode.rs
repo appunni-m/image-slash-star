@@ -303,8 +303,10 @@ fn convert_pixels(
             let mut output = Vec::with_capacity(pixels.len());
             for bytes in pixels.chunks_exact(4) {
                 let bits = endian.u32(bytes)?;
-                let value = f32::from_bits(bits);
-                output.extend_from_slice(&value.to_ne_bytes());
+                match endian {
+                    Endian::Little => output.extend_from_slice(&bits.to_le_bytes()),
+                    Endian::Big => output.extend_from_slice(&bits.to_be_bytes()),
+                }
             }
             Some(DecodedImage::new(width, height, output, ColorType::L32F))
         }
