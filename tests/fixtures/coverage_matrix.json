@@ -11292,6 +11292,42 @@
           ]
         },
         {
+          "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "vp8l_plane_distance_clamp.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_plane_distance_clamp_webp.bin",
+          "ref_bytes": 6,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L predictor, palette, color, and subtract-green transform corpus",
+          "asset": "vp8l_meta_cache_fast_fill.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_meta_cache_fast_fill_webp.bin",
+          "ref_bytes": 15,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            5,
+            1
+          ]
+        },
+        {
           "asset": "extended.webp",
           "asset_path": "tests/fixtures/input/images/webp/extended.webp",
           "category": "extended",
@@ -12841,6 +12877,58 @@
           "oracle_error_message": "failed to read next frame"
         },
         {
+          "id": "error_malformed_container_vp8l_invalid_max_symbol",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_invalid_max_symbol.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_repeat_overflow",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_repeat_overflow.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_single_backref",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_single_backref.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_backref_before_output",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_backref_before_output.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame"
+        },
+        {
           "id": "error_malformed_container_vp8_partition_0",
           "type": "decode",
           "format": "webp",
@@ -14119,12 +14207,12 @@
     }
   },
   "summary": {
-    "total_rows": 765,
-    "decode_rows": 486,
+    "total_rows": 771,
+    "decode_rows": 492,
     "encode_rows": 247,
     "formats": 8,
-    "assets_available": 479,
-    "decode_active": 480,
+    "assets_available": 485,
+    "decode_active": 486,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

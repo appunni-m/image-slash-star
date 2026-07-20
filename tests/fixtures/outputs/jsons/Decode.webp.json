@@ -585,6 +585,32 @@
       ]
     },
     {
+      "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_plane_distance_clamp_webp.bin",
+      "ref_bytes": 6,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_meta_cache_fast_fill_webp.bin",
+      "ref_bytes": 15,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        5,
+        1
+      ]
+    },
+    {
       "id": "extended",
       "status": "ok",
       "error_type": null,
@@ -1840,6 +1866,46 @@
     },
     {
       "id": "error_malformed_container_vp8l_invalid_zero_symbol",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_invalid_max_symbol",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_repeat_overflow",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_single_backref",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_backref_before_output",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "failed to read next frame",

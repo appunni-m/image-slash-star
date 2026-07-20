@@ -1860,11 +1860,12 @@ def gen_webp():
     for name, keep in {"vp8l_header_only.webp": 5}.items():
         write_truncated_vp8l(name, keep)
 
-    def write_vp8l_bits(name, bits):
+    def write_vp8l_bits(name, bits, width=1, height=1):
         encoded = bytearray((len(bits) + 7) // 8)
         for index, bit in enumerate(bits):
             encoded[index // 8] |= bit << (index % 8)
-        payload = b"\x2f\0\0\0\0" + encoded
+        dimensions = (width - 1) | ((height - 1) << 14)
+        payload = b"\x2f" + struct.pack("<I", dimensions) + encoded
         chunk = b"VP8L" + struct.pack("<I", len(payload)) + payload
         if len(payload) & 1:
             chunk += b"\0"
@@ -1893,6 +1894,92 @@ def gen_webp():
             simple_tree(bits, (0,))
         simple_tree(bits, distance_symbols)
         write_vp8l_bits(name, bits)
+
+    def code_length_tree_prefix():
+        bits = [0, 0, 0, 0]
+        append_lsb(bits, 0, 4)
+        for length in (1, 1, 0, 0):
+            append_lsb(bits, length, 3)
+        return bits
+
+    bits = code_length_tree_prefix()
+    bits.append(1)
+    append_lsb(bits, 7, 3)
+    append_lsb(bits, 300, 16)
+    write_vp8l_bits("vp8l_invalid_max_symbol.webp", bits)
+
+    bits = code_length_tree_prefix()
+    bits.append(0)
+    for repeat_extra in (127, 127, 0):
+        bits.append(1)
+        append_lsb(bits, repeat_extra, 7)
+    write_vp8l_bits("vp8l_repeat_overflow.webp", bits)
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 0, 4)
+    for length in (0, 1, 0, 1):
+        append_lsb(bits, length, 3)
+    bits.append(0)
+    for repeat_extra in (127, 107):
+        bits.append(1)
+        append_lsb(bits, repeat_extra, 7)
+    bits.append(0)
+    bits.append(1)
+    append_lsb(bits, 12, 7)
+    for _ in range(4):
+        simple_tree(bits, (0,))
+    write_vp8l_bits("vp8l_single_backref.webp", bits)
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 0, 4)
+    for length in (0, 2, 1, 2):
+        append_lsb(bits, length, 3)
+    bits.append(1)
+    append_lsb(bits, 0, 3)
+    append_lsb(bits, 2, 2)
+    bits.extend((1, 0))
+    for repeat_extra in (127, 106):
+        bits.extend((1, 1))
+        append_lsb(bits, repeat_extra, 7)
+    bits.extend((1, 0))
+    for _ in range(4):
+        simple_tree(bits, (0,))
+    bits.append(1)
+    write_vp8l_bits("vp8l_backref_before_output.webp", bits)
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 0, 4)
+    for length in (0, 2, 1, 2):
+        append_lsb(bits, length, 3)
+    bits.append(1)
+    append_lsb(bits, 0, 3)
+    append_lsb(bits, 2, 2)
+    bits.extend((1, 0))
+    for repeat_extra in (127, 106):
+        bits.extend((1, 1))
+        append_lsb(bits, repeat_extra, 7)
+    bits.extend((1, 0))
+    for _ in range(3):
+        simple_tree(bits, (0,))
+    simple_tree(bits, (6,))
+    bits.extend((0, 1))
+    append_lsb(bits, 1, 2)
+    write_vp8l_bits("vp8l_plane_distance_clamp.webp", bits, width=2)
+
+    bits = [0]
+    bits.append(1)
+    append_lsb(bits, 1, 4)
+    bits.append(1)
+    append_lsb(bits, 0, 3)
+    bits.append(0)
+    for _ in range(5):
+        simple_tree(bits, (0,))
+    simple_tree(bits, (7,))
+    simple_tree(bits, (1,))
+    simple_tree(bits, (2,))
+    simple_tree(bits, (255,))
+    simple_tree(bits, (0,))
+    write_vp8l_bits("vp8l_meta_cache_fast_fill.webp", bits, width=5)
 
     def write_vp8_partition_size(name, size, source="lossy.webp"):
         malformed = bytearray((d / source).read_bytes())

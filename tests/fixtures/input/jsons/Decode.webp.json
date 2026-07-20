@@ -585,6 +585,32 @@
       }
     },
     {
+      "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
+      "asset": "vp8l_plane_distance_clamp.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_plane_distance_clamp.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
+      "asset": "vp8l_meta_cache_fast_fill.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_meta_cache_fast_fill.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "extended",
       "asset": "extended.webp",
       "expect_error": false,
@@ -1448,6 +1474,58 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_invalid_zero_symbol.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_invalid_max_symbol",
+      "asset": "vp8l_invalid_max_symbol.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_invalid_max_symbol.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_repeat_overflow",
+      "asset": "vp8l_repeat_overflow.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_repeat_overflow.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_single_backref",
+      "asset": "vp8l_single_backref.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_single_backref.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_backref_before_output",
+      "asset": "vp8l_backref_before_output.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_backref_before_output.webp",
         "operations": [
           "PIL.Image.open",
           "load",
