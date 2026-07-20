@@ -1024,6 +1024,74 @@ def write_rgb_multistrip_tiff(path, image, rows_per_strip):
     path.write_bytes(output)
 
 
+def write_low_depth_tiff(path, image, bits, photometric):
+    """Write a packed grayscale or palette classic TIFF."""
+    width, height = image.size
+    maximum = (1 << bits) - 1
+    rows = []
+    for y in range(height):
+        packed = bytearray((width * bits + 7) // 8)
+        for x in range(width):
+            if photometric == 3:
+                sample = (x * 3 + y * 5) & maximum
+            else:
+                luminance = image.getpixel((x, y))
+                sample = (luminance * maximum + 127) // 255
+                if photometric == 0:
+                    sample = maximum - sample
+            bit = x * bits
+            packed[bit // 8] |= sample << (8 - bits - bit % 8)
+        rows.append(bytes(packed))
+    pixels = b"".join(rows)
+
+    entries = [
+        (256, 4, 1, width),
+        (257, 4, 1, height),
+        (258, 3, 1, bits),
+        (259, 3, 1, 1),
+        (262, 3, 1, photometric),
+        (273, 4, 1, "pixels"),
+        (277, 3, 1, 1),
+        (278, 4, 1, height),
+        (279, 4, 1, len(pixels)),
+    ]
+    color_map = []
+    if photometric == 3:
+        for channel in range(3):
+            for index in range(maximum + 1):
+                if channel == 0:
+                    value = index * 255 // maximum
+                elif channel == 1:
+                    value = (maximum - index) * 255 // maximum
+                else:
+                    value = (index * 97) & 255
+                color_map.append(value * 257)
+        entries.append((320, 3, len(color_map), "color_map"))
+    entries.sort()
+
+    cursor = 8 + 2 + len(entries) * 12 + 4
+    color_map_offset = cursor
+    cursor += len(color_map) * 2
+    pixel_offset = cursor
+    output = bytearray(b"II*\0\x08\0\0\0")
+    output.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, value in entries:
+        output.extend(struct.pack("<HHI", tag, field_type, count))
+        if value == "pixels":
+            output.extend(struct.pack("<I", pixel_offset))
+        elif value == "color_map":
+            output.extend(struct.pack("<I", color_map_offset))
+        elif field_type == 3:
+            output.extend(struct.pack("<H", value) + b"\0\0")
+        else:
+            output.extend(struct.pack("<I", value))
+    output.extend(struct.pack("<I", 0))
+    if color_map:
+        output.extend(struct.pack(f"<{len(color_map)}H", *color_map))
+    output.extend(pixels)
+    path.write_bytes(output)
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -1039,6 +1107,13 @@ def gen_tiff():
     img.convert("CMYK").save(d / "cmyk.tiff")
     img.convert("YCbCr").save(d / "ycbcr.tiff")
     img.convert("1").save(d / "bilevel.tiff")
+    low_depth = img.convert("L").resize((17, 13))
+    write_low_depth_tiff(d / "miniswhite_1bit.tiff", low_depth, 1, 0)
+    write_low_depth_tiff(d / "miniswhite_8bit.tiff", low_depth, 8, 0)
+    write_low_depth_tiff(d / "gray2.tiff", low_depth, 2, 1)
+    write_low_depth_tiff(d / "gray4.tiff", low_depth, 4, 1)
+    write_low_depth_tiff(d / "palette2.tiff", low_depth, 2, 3)
+    write_low_depth_tiff(d / "palette4.tiff", low_depth, 4, 3)
     img.save(d / "uncompressed.tiff", compression=None)
     img.save(d / "lzw.tiff", compression="tiff_lzw")
     img.save(d / "deflate.tiff", compression="tiff_adobe_deflate")

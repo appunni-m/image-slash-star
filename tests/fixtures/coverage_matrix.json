@@ -5101,6 +5101,42 @@
           "oracle_status": "ok"
         },
         {
+          "id": "photometric_miniswhite",
+          "type": "decode",
+          "format": "tiff",
+          "category": "photometric",
+          "description": "White-is-zero grayscale at packed and byte depths",
+          "asset": "miniswhite_1bit.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_1bit_tiff.bin",
+          "ref_bytes": 39,
+          "ref_mode": "1",
+          "ref_size": [
+            17,
+            13
+          ]
+        },
+        {
+          "id": "photometric_miniswhite_miniswhite_8bit",
+          "type": "decode",
+          "format": "tiff",
+          "category": "photometric",
+          "description": "White-is-zero grayscale at packed and byte depths",
+          "asset": "miniswhite_8bit.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_8bit_tiff.bin",
+          "ref_bytes": 221,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            13
+          ]
+        },
+        {
           "asset": "gray.tiff",
           "asset_path": "tests/fixtures/input/images/tiff/gray.tiff",
           "category": "grayscale",
@@ -5135,6 +5171,42 @@
           "ref_size": [
             128,
             128
+          ]
+        },
+        {
+          "id": "palette_low_depth",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "Packed 2-bit and 4-bit palette indices",
+          "asset": "palette2.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette2_tiff.bin",
+          "ref_bytes": 221,
+          "ref_mode": "P",
+          "ref_size": [
+            17,
+            13
+          ]
+        },
+        {
+          "id": "palette_low_depth_palette4",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "Packed 2-bit and 4-bit palette indices",
+          "asset": "palette4.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette4_tiff.bin",
+          "ref_bytes": 221,
+          "ref_mode": "P",
+          "ref_size": [
+            17,
+            13
           ]
         },
         {
@@ -5210,6 +5282,42 @@
             128
           ],
           "oracle_status": "ok"
+        },
+        {
+          "id": "depth_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "depth",
+          "description": "2-bit grayscale",
+          "asset": "gray2.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray2_tiff.bin",
+          "ref_bytes": 221,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            13
+          ]
+        },
+        {
+          "id": "depth_4",
+          "type": "decode",
+          "format": "tiff",
+          "category": "depth",
+          "description": "4-bit grayscale",
+          "asset": "gray4.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray4_tiff.bin",
+          "ref_bytes": 221,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            13
+          ]
         },
         {
           "asset": "8bit.tiff",
@@ -7564,12 +7672,12 @@
     }
   },
   "summary": {
-    "total_rows": 410,
-    "decode_rows": 248,
+    "total_rows": 416,
+    "decode_rows": 254,
     "encode_rows": 130,
     "formats": 8,
-    "assets_available": 241,
-    "decode_active": 242,
+    "assets_available": 247,
+    "decode_active": 248,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

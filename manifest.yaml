@@ -1247,6 +1247,11 @@ formats:
       description: Black and white (PHOTOMETRIC_MINISWHITE/BLACK)
       test_assets:
       - bilevel.tiff
+    - id: photometric_miniswhite
+      description: White-is-zero grayscale at packed and byte depths
+      test_assets:
+      - miniswhite_1bit.tiff
+      - miniswhite_8bit.tiff
     - id: grayscale
       description: Grayscale
       test_assets:
@@ -1255,6 +1260,11 @@ formats:
       description: Palette/indexed color
       test_assets:
       - palette.tiff
+    - id: palette_low_depth
+      description: Packed 2-bit and 4-bit palette indices
+      test_assets:
+      - palette2.tiff
+      - palette4.tiff
     - id: rgb
       description: RGB
       test_assets:
@@ -1277,6 +1287,14 @@ formats:
       description: 1-bit
       test_assets:
       - 1bit.tiff
+    - id: depth_2
+      description: 2-bit grayscale
+      test_assets:
+      - gray2.tiff
+    - id: depth_4
+      description: 4-bit grayscale
+      test_assets:
+      - gray4.tiff
     - id: depth_8
       description: 8-bit per channel
       test_assets:

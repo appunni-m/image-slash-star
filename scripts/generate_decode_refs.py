@@ -539,6 +539,22 @@ def validate_tiff_claim(case_id, asset_name, data):
             actual not in expected if isinstance(expected, set) else actual != expected
         ):
             raise RuntimeError(f"TIFF compression is {actual}, expected {expected}")
+        depth_claim = case_id.removeprefix("depth_")
+        if case_id.startswith("depth_") and depth_claim.isdigit():
+            expected_depth = int(depth_claim)
+            actual_depth = image.tag_v2.get(258, (1,))
+            actual_depth = actual_depth[0] if isinstance(actual_depth, tuple) else actual_depth
+            if actual_depth != expected_depth:
+                raise RuntimeError(
+                    f"TIFF depth is {actual_depth}, expected {expected_depth}"
+                )
+        if case_id == "photometric_miniswhite" and image.tag_v2.get(262) != 0:
+            raise RuntimeError("TIFF is not white-is-zero")
+        if case_id == "palette_low_depth":
+            depth = image.tag_v2.get(258, (8,))
+            depth = depth[0] if isinstance(depth, tuple) else depth
+            if image.tag_v2.get(262) != 3 or depth not in (2, 4):
+                raise RuntimeError("TIFF is not a packed low-depth palette image")
         if case_id == "tiled" and not all(
             image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
         ):

@@ -202,7 +202,14 @@ fn convert_pixels(
     match (photometric, samples, bits) {
         (0 | 1, 1, 1) => {
             if photometric == 0 {
-                pixels.iter_mut().for_each(|byte| *byte = !*byte);
+                let width = usize::try_from(width).ok()?;
+                let row_bytes = width.div_ceil(8);
+                for row in pixels.chunks_exact_mut(row_bytes) {
+                    row.iter_mut().for_each(|byte| *byte = !*byte);
+                    if width % 8 != 0 {
+                        *row.last_mut()? &= u8::MAX << (8 - width % 8);
+                    }
+                }
             }
             Some(DecodedImage::with_mode(
                 width,
@@ -216,6 +223,21 @@ fn convert_pixels(
                 pixels.iter_mut().for_each(|byte| *byte = !*byte);
             }
             Some(DecodedImage::new(width, height, pixels, ColorType::L8))
+        }
+        (0 | 1, 1, bits @ (2 | 4)) => {
+            let maximum = (1u16 << bits) - 1;
+            let output = unpack_indices(&pixels, width, height, bits)?
+                .into_iter()
+                .map(|sample| {
+                    let value = u16::from(sample) * 255 / maximum;
+                    if photometric == 0 {
+                        255 - value as u8
+                    } else {
+                        value as u8
+                    }
+                })
+                .collect();
+            Some(DecodedImage::new(width, height, output, ColorType::L8))
         }
         (0 | 1, 1, 16) => {
             let mut output = Vec::with_capacity(pixels.len());

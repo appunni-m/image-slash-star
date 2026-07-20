@@ -195,6 +195,32 @@
       }
     },
     {
+      "id": "photometric_miniswhite",
+      "asset": "miniswhite_1bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_1bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "photometric_miniswhite_miniswhite_8bit",
+      "asset": "miniswhite_8bit.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_8bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "grayscale",
       "asset": "gray.tiff",
       "expect_error": false,
@@ -213,6 +239,32 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/palette.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "palette_low_depth",
+      "asset": "palette2.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/palette2.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "palette_low_depth_palette4",
+      "asset": "palette4.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/palette4.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -265,6 +317,32 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/1bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_2",
+      "asset": "gray2.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray2.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_4",
+      "asset": "gray4.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray4.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -195,6 +195,32 @@
       ]
     },
     {
+      "id": "photometric_miniswhite",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_1bit_tiff.bin",
+      "ref_bytes": 39,
+      "ref_mode": "1",
+      "ref_size": [
+        17,
+        13
+      ]
+    },
+    {
+      "id": "photometric_miniswhite_miniswhite_8bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_8bit_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
+      "ref_size": [
+        17,
+        13
+      ]
+    },
+    {
       "id": "grayscale",
       "status": "ok",
       "error_type": null,
@@ -218,6 +244,32 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "palette_low_depth",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette2_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "P",
+      "ref_size": [
+        17,
+        13
+      ]
+    },
+    {
+      "id": "palette_low_depth_palette4",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette4_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "P",
+      "ref_size": [
+        17,
+        13
       ]
     },
     {
@@ -270,6 +322,32 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "depth_2",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray2_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
+      "ref_size": [
+        17,
+        13
+      ]
+    },
+    {
+      "id": "depth_4",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray4_tiff.bin",
+      "ref_bytes": 221,
+      "ref_mode": "L8",
+      "ref_size": [
+        17,
+        13
       ]
     },
     {
