@@ -650,6 +650,32 @@
       ]
     },
     {
+      "id": "tiled_lzw_predictor",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_lzw_predictor_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "compressed_strip_count_leniency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_compressed_empty_strip_counts_tiff.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "single_page",
       "status": "ok",
       "error_type": null,
@@ -890,6 +916,16 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_compressed_bad_strip_counts",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

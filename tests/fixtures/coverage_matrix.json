@@ -7138,6 +7138,42 @@
           ]
         },
         {
+          "id": "tiled_lzw_predictor",
+          "type": "decode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "LZW-compressed tiles with horizontal prediction",
+          "asset": "tiled_lzw_predictor.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_lzw_predictor_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "compressed_strip_count_leniency",
+          "type": "decode",
+          "format": "tiff",
+          "category": "compressed",
+          "description": "Pillow derives an omitted compressed strip byte count",
+          "asset": "compressed_empty_strip_counts.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_compressed_empty_strip_counts_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "single.tiff",
           "category": "single",
           "description": "Single IFD TIFF",
@@ -7460,6 +7496,19 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "image file is truncated (0 bytes not processed)"
+        },
+        {
+          "id": "error_bad_ifd_compressed_bad_strip_counts",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "compressed_bad_strip_counts.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "decoder error -2"
         }
       ],
       "encode": [
@@ -10923,12 +10972,12 @@
     }
   },
   "summary": {
-    "total_rows": 587,
-    "decode_rows": 362,
+    "total_rows": 590,
+    "decode_rows": 365,
     "encode_rows": 193,
     "formats": 8,
-    "assets_available": 355,
-    "decode_active": 356,
+    "assets_available": 358,
+    "decode_active": 359,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

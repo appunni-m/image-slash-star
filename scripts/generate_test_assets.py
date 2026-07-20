@@ -1419,6 +1419,12 @@ def write_rgb_tiff(
                             ) & 255
                 if compression in (8, 32946):
                     tile_payloads.append(zlib.compress(payload))
+                elif compression == 5:
+                    codes = []
+                    for value in payload:
+                        codes.extend((256, value))
+                    codes.append(257)
+                    tile_payloads.append(pack_lzw_codes(codes))
                 elif compression == 1:
                     tile_payloads.append(bytes(payload))
                 else:
@@ -1814,6 +1820,13 @@ def gen_tiff():
         compression=8,
         predictor=2,
     )
+    write_rgb_tiff(
+        d / "tiled_lzw_predictor.tiff",
+        img,
+        tile_size=32,
+        compression=5,
+        predictor=2,
+    )
     img.save(
         d / "rgb_lzw_predictor.tiff",
         compression="tiff_lzw",
@@ -1851,6 +1864,8 @@ def gen_tiff():
     mutate_tiff_tag_type(d / "rgb.tiff", d / "byte_strip_offset.tiff", 273, 1)
     mutate_tiff_tag_type(d / "rgb_dpi.tiff", d / "unknown_field_type.tiff", 282, 13)
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_width.tiff", 256, 2)
+    mutate_tiff_tag_count(d / "deflate.tiff", d / "compressed_empty_strip_counts.tiff", 279, 0)
+    mutate_tiff_tag_count(d / "deflate.tiff", d / "compressed_bad_strip_counts.tiff", 279, 2)
     mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_bad_byte_count.tiff", 279, 1)
     mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_missing_strips.tiff", 278, 1)
     mutate_tiff_tag(

@@ -158,20 +158,39 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     if offsets.len() > expected_strips {
         return None;
     }
-    let byte_counts = if compression == COMPRESSION_NONE {
-        (0..offsets.len())
-            .map(|strip_index| {
-                let first_row = strip_index * rows_per_strip;
-                let strip_rows = rows_per_strip.min(height_usize - first_row);
-                u64::try_from(row_bytes * strip_rows).ok()
-            })
-            .collect::<Option<Vec<_>>>()?
-    } else {
-        if offsets.len() != declared_byte_counts.len() {
-            return None;
-        }
-        declared_byte_counts
-    };
+    let byte_counts =
+        if compression == COMPRESSION_NONE {
+            (0..offsets.len())
+                .map(|strip_index| {
+                    let first_row = strip_index * rows_per_strip;
+                    let strip_rows = rows_per_strip.min(height_usize - first_row);
+                    u64::try_from(row_bytes * strip_rows).ok()
+                })
+                .collect::<Option<Vec<_>>>()?
+        } else {
+            if declared_byte_counts.is_empty() {
+                offsets
+                    .iter()
+                    .enumerate()
+                    .map(|(index, &offset)| {
+                        let directory_offset = u64::try_from(ifd_offset).ok()?;
+                        let file_end = u64::try_from(data.len()).ok()?;
+                        let end = offsets.get(index + 1).copied().unwrap_or(
+                            if directory_offset > offset {
+                                directory_offset
+                            } else {
+                                file_end
+                            },
+                        );
+                        end.checked_sub(offset)
+                    })
+                    .collect::<Option<Vec<_>>>()?
+            } else if offsets.len() != declared_byte_counts.len() {
+                return None;
+            } else {
+                declared_byte_counts
+            }
+        };
     let mut pixels = Vec::with_capacity(expected_total);
 
     for (strip_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {

@@ -1507,6 +1507,14 @@ formats:
       description: Deflate-compressed tiles with horizontal prediction
       test_assets:
       - tiled_deflate_predictor.tiff
+    - id: tiled_lzw_predictor
+      description: LZW-compressed tiles with horizontal prediction
+      test_assets:
+      - tiled_lzw_predictor.tiff
+    - id: compressed_strip_count_leniency
+      description: Pillow derives an omitted compressed strip byte count
+      test_assets:
+      - compressed_empty_strip_counts.tiff
     - id: single_page
       description: Single IFD TIFF
       test_assets:
@@ -1540,6 +1548,7 @@ formats:
       - lzw_end_only.tiff
       - ascii_width.tiff
       - uncompressed_extra_strips.tiff
+      - compressed_bad_strip_counts.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

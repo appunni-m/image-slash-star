@@ -595,6 +595,10 @@ def validate_tiff_claim(case_id, asset_name, data):
             image.tag_v2.get(259) not in (8, 32946) or image.tag_v2.get(317) != 2
         ):
             raise RuntimeError("TIFF is not Deflate-tiled with horizontal prediction")
+        if case_id == "tiled_lzw_predictor" and (
+            image.tag_v2.get(259) != 5 or image.tag_v2.get(317) != 2
+        ):
+            raise RuntimeError("TIFF is not LZW-tiled with horizontal prediction")
         if case_id == "stripped" and len(image.tag_v2.get(273, ())) < 2:
             raise RuntimeError("TIFF does not contain multiple strips")
         if "predictor" in asset_name and image.tag_v2.get(317) != 2:

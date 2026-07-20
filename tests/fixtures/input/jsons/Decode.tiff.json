@@ -650,6 +650,32 @@
       }
     },
     {
+      "id": "tiled_lzw_predictor",
+      "asset": "tiled_lzw_predictor.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/tiled_lzw_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compressed_strip_count_leniency",
+      "asset": "compressed_empty_strip_counts.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/compressed_empty_strip_counts.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "single_page",
       "asset": "single.tiff",
       "expect_error": false,
@@ -954,6 +980,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/uncompressed_extra_strips.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_compressed_bad_strip_counts",
+      "asset": "compressed_bad_strip_counts.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/compressed_bad_strip_counts.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
