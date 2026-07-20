@@ -130,6 +130,19 @@
       }
     },
     {
+      "id": "palette_absent_animated_no_palette",
+      "asset": "animated_no_palette.gif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/animated_no_palette.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "ignored_extension",
       "asset": "comment_extension.gif",
       "expect_error": false,

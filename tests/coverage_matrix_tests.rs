@@ -1337,7 +1337,27 @@ fn test_encode_matrix() {
                     }
                 }
             }
-            let decoded = decoded_cache.get(&asset_path).unwrap();
+            let cached_decoded = decoded_cache.get(&asset_path).unwrap();
+            let mut decoded_owned = row
+                .params
+                .contains_key("second_frame_mode")
+                .then(|| cached_decoded.clone());
+            if let Some(decoded) = decoded_owned.as_mut()
+                && row
+                    .params
+                    .get("second_frame_mode")
+                    .and_then(|value| value.as_str())
+                    == Some("CMYK")
+            {
+                let frame = decoded.frames.get_mut(1).unwrap();
+                let pixel_count = usize::try_from(frame.image.width).unwrap()
+                    * usize::try_from(frame.image.height).unwrap();
+                frame.image.pixels = vec![0; pixel_count * 4];
+                frame.image.color = img::ColorType::Cmyk8;
+                frame.image.mode = img::ImageMode::Cmyk8;
+                frame.image.palette = None;
+            }
+            let decoded = decoded_owned.as_ref().unwrap_or(cached_decoded);
 
             // Build encode options from row params
             let opts = img::encode_options::EncodeOptions {

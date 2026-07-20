@@ -130,6 +130,19 @@
       ]
     },
     {
+      "id": "palette_absent_animated_no_palette",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animated_no_palette_gif.bin",
+      "ref_bytes": 64,
+      "ref_mode": "L8",
+      "ref_size": [
+        8,
+        8
+      ]
+    },
+    {
       "id": "ignored_extension",
       "status": "ok",
       "error_type": null,

@@ -257,6 +257,8 @@ def encode_params(fmt, params):
         transparency = take("transparency")
         if transparency is True:
             kwargs["transparency"] = 0
+        elif transparency not in (None, False):
+            kwargs["transparency"] = transparency
         disposal = take("disposal")
         if disposal is not None:
             kwargs["disposal"] = {
@@ -273,6 +275,9 @@ def encode_params(fmt, params):
             kwargs["_manifest_animated"] = animated
         if frames is not None:
             kwargs["_manifest_frames"] = frames
+        second_frame_mode = take("second_frame_mode")
+        if second_frame_mode is not None:
+            kwargs["_manifest_second_frame_mode"] = second_frame_mode
         color_table = take("color_table")
         if color_table == "local":
             kwargs["include_color_table"] = True
@@ -398,6 +403,7 @@ def prepare_multiframe_call(image, kwargs):
     """Resolve manifest-only animation markers into Pillow save kwargs."""
     animated = kwargs.pop("_manifest_animated", None)
     frame_count = kwargs.pop("_manifest_frames", None)
+    second_frame_mode = kwargs.pop("_manifest_second_frame_mode", None)
     if animated is None:
         return image, kwargs
     if not animated:
@@ -409,6 +415,10 @@ def prepare_multiframe_call(image, kwargs):
     requested = frame_count or len(frames)
     if len(frames) < requested:
         raise RuntimeError(f"source has {len(frames)} frame(s), requested {requested}")
+    if second_frame_mode is not None:
+        if len(frames) < 2:
+            raise RuntimeError("second_frame_mode requires an animated source")
+        frames[1] = frames[1].convert(second_frame_mode)
     kwargs["save_all"] = True
     kwargs["append_images"] = frames[1:requested]
     return frames[0], kwargs

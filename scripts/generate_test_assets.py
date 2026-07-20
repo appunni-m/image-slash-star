@@ -619,6 +619,22 @@ def gen_gif():
     del no_palette[13:table_end]
     (d / "no_palette.gif").write_bytes(no_palette)
 
+    luminance_first = Image.new("L", (8, 8), 10)
+    luminance_second = Image.new("L", (8, 8), 200)
+    luminance_first.save(
+        d / "animated_no_palette.gif",
+        save_all=True,
+        append_images=[luminance_second],
+        duration=100,
+        loop=0,
+        optimize=False,
+    )
+    animated_no_palette = bytearray((d / "animated_no_palette.gif").read_bytes())
+    animated_table_end = 13 + 3 * (1 << ((animated_no_palette[10] & 7) + 1))
+    animated_no_palette[10] &= 0x7F
+    del animated_no_palette[13:animated_table_end]
+    (d / "animated_no_palette.gif").write_bytes(animated_no_palette)
+
     local_only = bytearray(static)
     palette = bytes(local_only[13:table_end])
     local_only[10] &= 0x7F
@@ -1328,6 +1344,21 @@ def gen_webp():
     )
     (d / "animated_rgb_palette_background.webp").write_bytes(
         animated_rgb_palette_background
+    )
+
+    animated_rgb_full_delta = Image.new("RGB", (64, 64), (255, 0, 0))
+    animated_rgb_full_delta_next = animated_rgb_full_delta.copy()
+    full_delta_draw = ImageDraw.Draw(animated_rgb_full_delta_next)
+    full_delta_draw.point((0, 0), fill=(0, 128, 0))
+    full_delta_draw.point((63, 63), fill=(0, 128, 0))
+    animated_rgb_full_delta.save(
+        d / "animated_rgb_full_delta.webp",
+        save_all=True,
+        append_images=[animated_rgb_full_delta_next],
+        duration=100,
+        loop=0,
+        lossless=True,
+        minimize_size=False,
     )
     animated_full.save(
         d / "animated_alpha_lossy.webp",

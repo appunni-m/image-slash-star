@@ -59,6 +59,33 @@
       }
     },
     {
+      "id": "enc_animated_luminance",
+      "source_asset": "animated_no_palette.gif",
+      "source_format": "gif",
+      "params": {
+        "animated": true,
+        "frames": 2
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/animated_no_palette.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_animated_loop",
       "source_asset": "animated_3frame.gif",
       "source_format": "gif",
@@ -306,6 +333,33 @@
       }
     },
     {
+      "id": "enc_animated_rgb_full_delta",
+      "source_asset": "animated_rgb_full_delta.webp",
+      "source_format": "webp",
+      "params": {
+        "animated": true,
+        "frames": 2
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_rgb_full_delta.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_animated_rgb_background_full_palette",
       "source_asset": "animated_rgb_opaque_background.webp",
       "source_format": "webp",
@@ -364,6 +418,58 @@
         "format": "GIF",
         "kwargs": {
           "disposal": "invalid"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_transparency",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "transparency": "invalid"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "transparency": "invalid"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_animated_cmyk",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "second_frame_mode": "CMYK"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "_manifest_second_frame_mode": "CMYK",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
         },
         "roundtrip": [
           "PIL.Image.open",

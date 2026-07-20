@@ -832,6 +832,19 @@
       }
     },
     {
+      "id": "animated_animated_rgb_full_delta",
+      "asset": "animated_rgb_full_delta.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_rgb_full_delta.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "animated_animated_alpha_lossy",
       "asset": "animated_alpha_lossy.webp",
       "expect_error": false,

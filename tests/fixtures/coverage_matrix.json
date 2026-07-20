@@ -1428,6 +1428,24 @@
           ]
         },
         {
+          "id": "palette_absent_animated_no_palette",
+          "type": "decode",
+          "format": "gif",
+          "category": "palette",
+          "description": "Pillow exposes palette-less GIF samples as luminance bytes",
+          "asset": "animated_no_palette.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animated_no_palette_gif.bin",
+          "ref_bytes": 64,
+          "ref_mode": "L8",
+          "ref_size": [
+            8,
+            8
+          ]
+        },
+        {
           "id": "ignored_extension",
           "type": "decode",
           "format": "gif",
@@ -1892,6 +1910,29 @@
           ]
         },
         {
+          "id": "enc_animated_luminance",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Re-encode palette-less luminance animation frames",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "animated_no_palette.gif",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_luminance.bin",
+          "encoded_ref_bytes": 129,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_luminance.bin",
+          "ref_bytes": 64,
+          "ref_mode": "P",
+          "ref_size": [
+            8,
+            8
+          ]
+        },
+        {
           "description": "",
           "format": "gif",
           "id": "enc_animated_loop",
@@ -2102,6 +2143,29 @@
           ]
         },
         {
+          "id": "enc_animated_rgb_full_delta",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Mask unchanged pixels when an RGB animation delta spans the whole canvas",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated_rgb_full_delta.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_full_delta.bin",
+          "encoded_ref_bytes": 310,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_full_delta.bin",
+          "ref_bytes": 4096,
+          "ref_mode": "P",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
           "id": "enc_animated_rgb_background_full_palette",
           "type": "encode",
           "format": "gif",
@@ -2155,6 +2219,42 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.ValueError",
           "oracle_error_message": "invalid literal for int() with base 10: 'invalid'"
+        },
+        {
+          "id": "enc_error_transparency",
+          "type": "encode",
+          "format": "gif",
+          "category": "error",
+          "description": "Pillow rejects a non-numeric GIF transparency index",
+          "params": {
+            "transparency": "invalid"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "static.gif",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.TypeError",
+          "oracle_error_message": "unsupported operand type(s) for &: 'str' and 'int'"
+        },
+        {
+          "id": "enc_error_animated_cmyk",
+          "type": "encode",
+          "format": "gif",
+          "category": "error",
+          "description": "Pillow rejects an unsupported CMYK append frame",
+          "params": {
+            "animated": true,
+            "frames": 2,
+            "second_frame_mode": "CMYK"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated.webp",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "image has wrong mode"
         },
         {
           "description": "",
@@ -10703,6 +10803,51 @@
           }
         },
         {
+          "id": "animated_animated_rgb_full_delta",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Animated WebP (all composited frames)",
+          "asset": "animated_rgb_full_delta.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_delta_webp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "sequence": {
+            "loop_count": 0,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_delta_webp_frame_0.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_delta_webp_frame_1.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 100
+              }
+            ]
+          }
+        },
+        {
           "id": "animated_animated_alpha_lossy",
           "type": "decode",
           "format": "webp",
@@ -12293,12 +12438,12 @@
     }
   },
   "summary": {
-    "total_rows": 654,
-    "decode_rows": 404,
-    "encode_rows": 218,
+    "total_rows": 660,
+    "decode_rows": 406,
+    "encode_rows": 222,
     "formats": 8,
-    "assets_available": 397,
-    "decode_active": 398,
+    "assets_available": 399,
+    "decode_active": 400,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

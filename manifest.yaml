@@ -780,6 +780,7 @@ formats:
       description: Pillow exposes palette-less GIF samples as luminance bytes
       test_assets:
       - no_palette.gif
+      - animated_no_palette.gif
     - id: ignored_extension
       description: Comment extension sub-blocks are skipped before image data
       test_assets:
@@ -843,6 +844,10 @@ formats:
       description: 
       source_asset: animated.gif
       params: {'animated': True, 'frames': 2}
+    - id: enc_animated_luminance
+      description: Re-encode palette-less luminance animation frames
+      source_asset: animated_no_palette.gif
+      params: {'animated': True, 'frames': 2}
     - id: enc_animated_loop
       description: 
       source_asset: animated_3frame.gif
@@ -885,6 +890,11 @@ formats:
       source_format: webp
       source_asset: animated_rgb_palette_background.webp
       params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgb_full_delta
+      description: Mask unchanged pixels when an RGB animation delta spans the whole canvas
+      source_format: webp
+      source_asset: animated_rgb_full_delta.webp
+      params: {'animated': True, 'frames': 2}
     - id: enc_animated_rgb_background_full_palette
       description: Ignore an unallocatable opaque WebP background when the GIF palette is full
       source_format: webp
@@ -898,6 +908,16 @@ formats:
     - id: enc_error_disposal
       description: Pillow rejects a non-numeric GIF disposal value
       params: {'disposal': 'invalid'}
+      expect_error: true
+    - id: enc_error_transparency
+      description: Pillow rejects a non-numeric GIF transparency index
+      params: {'transparency': 'invalid'}
+      expect_error: true
+    - id: enc_error_animated_cmyk
+      description: Pillow rejects an unsupported CMYK append frame
+      source_format: webp
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'second_frame_mode': 'CMYK'}
       expect_error: true
     - id: enc_opaque
       description: 
@@ -1285,6 +1305,7 @@ formats:
       - animated_alpha_holes_opaque_background.webp
       - animated_rgb_opaque_background.webp
       - animated_rgb_palette_background.webp
+      - animated_rgb_full_delta.webp
       - animated_alpha_lossy.webp
       - animated_alpha_overlap.webp
       - animated_alpha_holes.webp

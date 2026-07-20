@@ -30,7 +30,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 /// Encode a still image or animation without discarding source frames.
 pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Option<Vec<u8>> {
     sequence.validate().ok()?;
-    let animated = option_bool(opts, "animated").unwrap_or(sequence.frames.len() > 1);
+    let animated = option_bool(opts, "animated")?.unwrap_or(sequence.frames.len() > 1);
     let requested_frames = if animated { sequence.frames.len() } else { 1 };
 
     let disposal_override = opts.extra.get("disposal").map(String::as_str);
@@ -52,9 +52,10 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Opti
             .is_some_and(|value| value == "local"),
         disposal_override,
         loop_count,
+        transparency_override: option_bool(opts, "transparency")?,
     };
     let frames = coalesce_identical_frames(sequence, requested_frames)?;
-    write_gif(sequence, &frames, opts, settings)
+    write_gif(sequence, &frames, settings)
 }
 
 fn coalesce_identical_frames(
@@ -322,6 +323,7 @@ struct GifSettings {
     local_color_table: bool,
     disposal_override: Option<u8>,
     loop_count: Option<u16>,
+    transparency_override: Option<bool>,
 }
 
 #[derive(Clone)]
@@ -331,10 +333,13 @@ struct PreparedImage {
     transparent: Option<u8>,
 }
 
-fn option_bool(opts: &EncodeOptions, key: &str) -> Option<bool> {
-    match opts.extra.get(key)?.as_str() {
-        "true" | "1" | "yes" => Some(true),
-        "false" | "0" | "no" => Some(false),
+fn option_bool(opts: &EncodeOptions, key: &str) -> Option<Option<bool>> {
+    let Some(value) = opts.extra.get(key) else {
+        return Some(None);
+    };
+    match value.as_str() {
+        "true" | "1" | "yes" => Some(Some(true)),
+        "false" | "0" | "no" => Some(Some(false)),
         _ => None,
     }
 }
@@ -378,7 +383,6 @@ fn table_parameters(palette: &[u8]) -> (usize, u8, u8) {
 fn write_gif(
     sequence: &DecodedSequence,
     frames: &[crate::types::DecodedFrame],
-    opts: &EncodeOptions,
     settings: GifSettings,
 ) -> Option<Vec<u8>> {
     let width = u16::try_from(sequence.width).ok()?;
@@ -394,7 +398,7 @@ fn write_gif(
 
     let needs_89a = frames.len() > 1
         || settings.loop_count.is_some()
-        || option_bool(opts, "transparency") == Some(true)
+        || settings.transparency_override == Some(true)
         || frames.iter().any(|frame| {
             prepare_image(&frame.image).is_some_and(|image| image.transparent.is_some())
         });
@@ -441,33 +445,25 @@ fn write_gif(
         let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette)?;
         if let Some(previous) = previous_quantized_rgb.as_deref()
             && previous.len() == quantized_rgb.len()
+            && let Some(transparent) = prepared.transparent
         {
-            let transparent = if let Some(transparent) = prepared.transparent {
-                Some(transparent)
-            } else if prepared.palette.len() / 3 < 256 {
-                let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
-                prepared.palette.extend_from_slice(&[0, 0, 0]);
-                Some(transparent)
-            } else {
-                None
-            };
-            if let Some(transparent) = transparent {
-                for (index, (before, after)) in previous
-                    .chunks_exact(3)
-                    .zip(quantized_rgb.chunks_exact(3))
-                    .enumerate()
-                {
-                    if before == after {
-                        prepared.indices[index] = transparent;
-                    }
+            // Coalescing has already reserved a transparent entry whenever
+            // the palette has room. A full 256-color palette deliberately has
+            // none, matching Pillow's inability to mask unchanged pixels.
+            for (index, (before, after)) in previous
+                .chunks_exact(3)
+                .zip(quantized_rgb.chunks_exact(3))
+                .enumerate()
+            {
+                if before == after {
+                    prepared.indices[index] = transparent;
                 }
-                prepared.transparent = Some(transparent);
             }
         }
         previous_quantized_rgb = Some(quantized_rgb);
         let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette);
         let mut transparent = prepared.transparent;
-        if let Some(requested) = option_bool(opts, "transparency") {
+        if let Some(requested) = settings.transparency_override {
             transparent = requested.then_some(transparent.unwrap_or(0));
         }
         let disposal = settings.disposal_override.unwrap_or(0);
@@ -801,14 +797,12 @@ fn pillow_median_cut_leaves(
     counts: &[u32],
     target: usize,
 ) -> Option<Vec<Vec<usize>>> {
-    if colors.is_empty()
-        || colors.len() != counts.len()
-        || target == 0
-        || target > colors.len()
-        || target > 256
-    {
-        return None;
-    }
+    // All callers derive `counts` and `target` from the same non-empty pixel
+    // set. Keep those internal invariants visible without retaining an
+    // unreachable runtime failure path.
+    debug_assert!(!colors.is_empty());
+    debug_assert_eq!(colors.len(), counts.len());
+    debug_assert!((1..=colors.len().min(256)).contains(&target));
 
     let hash_order = pillow_hash_iteration_order(colors);
     let axes = std::array::from_fn(|axis| {
@@ -942,9 +936,9 @@ fn split_median_box(
             left_count = left_count.checked_sub(counts[sorted[split]])?;
         }
     }
-    if split == 0 || split == sorted.len() {
-        return None;
-    }
+    // The caller only splits boxes whose RGB volume exceeds one, so at least
+    // one value differs on the selected axis and both partitions are nonempty.
+    debug_assert!(split > 0 && split < sorted.len());
     let is_left = sorted[..split]
         .iter()
         .copied()
