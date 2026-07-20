@@ -11,7 +11,7 @@
 //! Encode: decode reference → encode with params → decode → compare pixel bytes.
 
 use serde::Deserialize;
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -1377,6 +1377,8 @@ fn test_operation_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = coverage_matrix().expect("coverage_matrix.json is required");
     let mut failed = Vec::new();
+    let mut exercised_variants = HashSet::new();
+    exercise_type_metadata();
 
     for row in &matrix.operations {
         let source_path = manifest_dir
@@ -1401,6 +1403,9 @@ fn test_operation_matrix() {
             None => dynamic,
         };
         exercise_dynamic_buffer(&mut dynamic);
+        if exercised_variants.insert(dynamic.color()) {
+            exercise_dynamic_api(&dynamic);
+        }
         let result = match row.action.as_str() {
             "convert" => dynamic,
             "fliph" => dynamic.fliph(),
@@ -1541,6 +1546,219 @@ fn exercise_dynamic_buffer(image: &mut img::DynamicImage) {
         img::DynamicImage::ImageRgba32F(buffer) => exercise_buffer(buffer),
         _ => panic!("unsupported dynamic image variant"),
     }
+}
+
+fn exercise_dynamic_api(image: &img::DynamicImage) {
+    use img::{GenericImage, GenericImageView};
+
+    let (width, height) = (image.width(), image.height());
+    let supported = [
+        img::ColorType::L8,
+        img::ColorType::La8,
+        img::ColorType::Rgb8,
+        img::ColorType::Rgba8,
+        img::ColorType::L16,
+        img::ColorType::La16,
+        img::ColorType::Rgb16,
+        img::ColorType::Rgba16,
+        img::ColorType::Rgb32F,
+        img::ColorType::Rgba32F,
+    ];
+    for color in supported {
+        let created = img::DynamicImage::new(1, 1, color);
+        assert_eq!(created.color(), color);
+    }
+
+    let mut same = image.clone();
+    same.clone_from(image);
+    let mut different = if image.color() == img::ColorType::L8 {
+        img::DynamicImage::new_rgba8(1, 1)
+    } else {
+        img::DynamicImage::new_luma8(1, 1)
+    };
+    different.clone_from(image);
+
+    let _ = image.to_rgb8();
+    let _ = image.to_rgba8();
+    let _ = image.to_luma8();
+    let _ = image.to_luma_alpha8();
+    let _ = image.to_rgb16();
+    let _ = image.to_rgba16();
+    let _ = image.to_luma16();
+    let _ = image.to_luma_alpha16();
+    let _ = image.to_rgb32f();
+    let _ = image.to_rgba32f();
+    let _ = image.clone().into_rgb8();
+    let _ = image.clone().into_rgba8();
+    let _ = image.clone().into_luma8();
+    let _ = image.clone().into_luma_alpha8();
+    let _ = image.clone().into_rgb16();
+    let _ = image.clone().into_rgba16();
+    let _ = image.clone().into_luma16();
+    let _ = image.clone().into_luma_alpha16();
+    let _ = image.clone().into_rgb32f();
+    let _ = image.clone().into_rgba32f();
+
+    let mut mutable = image.clone();
+    let _ = mutable.as_rgb8();
+    let _ = mutable.as_mut_rgb8();
+    let _ = mutable.as_rgba8();
+    let _ = mutable.as_mut_rgba8();
+    let _ = mutable.as_luma8();
+    let _ = mutable.as_mut_luma8();
+    let _ = mutable.as_luma_alpha8();
+    let _ = mutable.as_mut_luma_alpha8();
+    let _ = mutable.as_rgb16();
+    let _ = mutable.as_mut_rgb16();
+    let _ = mutable.as_rgba16();
+    let _ = mutable.as_mut_rgba16();
+    let _ = mutable.as_luma16();
+    let _ = mutable.as_mut_luma16();
+    let _ = mutable.as_luma_alpha16();
+    let _ = mutable.as_mut_luma_alpha16();
+    let _ = mutable.as_rgb32f();
+    let _ = mutable.as_mut_rgb32f();
+    let _ = mutable.as_rgba32f();
+    let _ = mutable.as_mut_rgba32f();
+    assert!(!image.as_bytes().is_empty());
+    assert_eq!(image.color().has_alpha(), image.has_alpha());
+
+    let decoded = image.clone().into_decoded();
+    let roundtrip = img::DynamicImage::from_decoded(&decoded).unwrap();
+    assert_eq!(roundtrip.as_bytes(), image.as_bytes());
+    assert_eq!(GenericImageView::dimensions(image), (width, height));
+    let pixel = GenericImageView::get_pixel(image, 0, 0);
+    let mut writable = image.clone();
+    GenericImage::put_pixel(&mut writable, 0, 0, pixel);
+    #[allow(deprecated)]
+    GenericImage::blend_pixel(&mut writable, 0, 0, pixel);
+}
+
+fn exercise_primitive<T>(value: T)
+where
+    T: img::Primitive,
+{
+    let _ = value.to_f32();
+    let _ = value.to_u64();
+    let _ = T::from_f32(0.5);
+    let _ = T::from_u64(1);
+}
+
+fn exercise_enlargeable<T>(value: T)
+where
+    T: img::Enlargeable,
+{
+    let larger = value.to_larger();
+    let _ = T::clamp_from(larger);
+}
+
+fn exercise_type_metadata() {
+    use img::{EncodableLayout, ExtendedColorType as E};
+
+    let colors = [
+        img::ColorType::L8,
+        img::ColorType::La8,
+        img::ColorType::Rgb8,
+        img::ColorType::Rgba8,
+        img::ColorType::Cmyk8,
+        img::ColorType::L16,
+        img::ColorType::La16,
+        img::ColorType::Rgb16,
+        img::ColorType::Rgba16,
+        img::ColorType::Rgb32F,
+        img::ColorType::Rgba32F,
+        img::ColorType::L32F,
+    ];
+    for color in colors {
+        assert_eq!(
+            color.bits_per_pixel(),
+            u16::from(color.bytes_per_pixel()) * 8
+        );
+        let _ = color.has_alpha();
+        let _ = color.has_color();
+        let _ = color.channel_count();
+        let _: E = color.into();
+    }
+    let extended = [
+        E::A8,
+        E::L1,
+        E::La1,
+        E::Rgb1,
+        E::Rgba1,
+        E::L2,
+        E::La2,
+        E::Rgb2,
+        E::Rgba2,
+        E::L4,
+        E::La4,
+        E::Rgb4,
+        E::Rgba4,
+        E::Rgb5x1,
+        E::L8,
+        E::La8,
+        E::Rgb8,
+        E::Rgba8,
+        E::L16,
+        E::La16,
+        E::Rgb16,
+        E::Rgba16,
+        E::Bgr8,
+        E::Bgra8,
+        E::Rgb32F,
+        E::Rgba32F,
+        E::L32F,
+        E::Cmyk8,
+        E::Cmyk16,
+        E::Unknown(7),
+    ];
+    for color in extended {
+        assert!(color.channel_count() > 0);
+        assert!(color.bits_per_pixel() > 0);
+        let _ = color.color_type();
+    }
+
+    exercise_primitive(1u8);
+    exercise_primitive(1u16);
+    exercise_primitive(1u32);
+    exercise_primitive(1u64);
+    exercise_primitive(1u128);
+    exercise_primitive(1usize);
+    exercise_primitive(0.5f32);
+    exercise_primitive(0.5f64);
+    exercise_enlargeable(1u8);
+    exercise_enlargeable(1u16);
+    exercise_enlargeable(1u32);
+    exercise_enlargeable(1u64);
+    exercise_enlargeable(1usize);
+    exercise_enlargeable(0.5f32);
+    let _ = <u8 as img::FromPrimitive<f32>>::from_primitive(0.5);
+    let _ = <u16 as img::FromPrimitive<f32>>::from_primitive(0.5);
+    let _ = <u8 as img::FromPrimitive<u16>>::from_primitive(257);
+    let _ = <f32 as img::FromPrimitive<u16>>::from_primitive(1);
+    let _ = <f32 as img::FromPrimitive<u8>>::from_primitive(1);
+    let _ = <u16 as img::FromPrimitive<u8>>::from_primitive(1);
+    assert_eq!([1u8, 2].as_slice().as_bytes(), &[1, 2]);
+    let _ = [1u16, 2].as_slice().as_bytes();
+    let _ = [0.25f32, 0.5].as_slice().as_bytes();
+
+    let paths = [
+        "a.jpg", "a.png", "a.gif", "a.bmp", "a.webp", "a.tif", "a.ico", "a.avif",
+    ];
+    for path in paths {
+        assert!(img::ImageFormat::from_path(path).is_ok());
+    }
+    assert!(img::ImageFormat::from_path("a.unknown").is_err());
+    let errors = [
+        img::ImageError::Dimensions,
+        img::ImageError::Unsupported("x".to_owned()),
+        img::ImageError::Parameter("x".to_owned()),
+        img::ImageError::IoError("x".to_owned()),
+    ];
+    for error in errors {
+        assert!(!error.to_string().is_empty());
+    }
+    let _ = img::Rect::new(0, 0, 1, 1);
+    let _ = img::encode_options::EncodeOptions::none();
 }
 
 // ── Manifest Coverage ────────────────────────────────────────────────────
