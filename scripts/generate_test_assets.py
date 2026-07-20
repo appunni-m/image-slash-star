@@ -1679,6 +1679,22 @@ def mutate_tiff_tag(source, destination, tag, value, value_index=0):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
+def mutate_tiff_tag_count(source, destination, tag, count):
+    """Patch one classic-TIFF entry count without rewriting its payload."""
+    data = bytearray(source.read_bytes())
+    byte_order = "<" if data[:2] == b"II" else ">"
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        actual_tag = struct.unpack_from(byte_order + "H", data, start)[0]
+        if actual_tag == tag:
+            struct.pack_into(byte_order + "I", data, start + 4, count)
+            destination.write_bytes(data)
+            return
+    raise ValueError(f"TIFF tag {tag} not found")
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -1744,11 +1760,15 @@ def gen_tiff():
     invalid_magic = bytearray((d / "rgb.tiff").read_bytes())
     invalid_magic[2:4] = b"+\0"
     (d / "invalid_magic.tiff").write_bytes(invalid_magic)
+    invalid_endian = bytearray((d / "rgb.tiff").read_bytes())
+    invalid_endian[:2] = b"ZZ"
+    (d / "invalid_endian.tiff").write_bytes(invalid_endian)
     mutate_tiff_tag(d / "rgb.tiff", d / "zero_width.tiff", 256, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "zero_height.tiff", 257, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "mixed_bits.tiff", 258, 16, 1)
     mutate_tiff_tag(d / "rgb.tiff", d / "rows_zero.tiff", 278, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "unknown_compression.tiff", 259, 999)
+    mutate_tiff_tag(d / "rgb.tiff", d / "unsupported_photometric.tiff", 262, 4)
     mutate_tiff_tag(
         d / "rgb_deflate_predictor.tiff",
         d / "invalid_predictor.tiff",
@@ -1756,6 +1776,8 @@ def gen_tiff():
         3,
     )
     mutate_tiff_tag(d / "rgb.tiff", d / "oob_strip.tiff", 273, 0xFFFF_FFF0)
+    mutate_tiff_tag_count(d / "rgb.tiff", d / "empty_strip_offsets.tiff", 273, 0)
+    mutate_tiff_tag(d / "tiled.tiff", d / "zero_tile_width.tiff", 322, 0)
     print(f"  TIFF: {len(list(d.glob('*.tiff')))} files")
 
 

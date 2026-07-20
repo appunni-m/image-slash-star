@@ -481,6 +481,19 @@
       }
     },
     {
+      "id": "error_bad_ifd_invalid_endian",
+      "asset": "invalid_endian.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/invalid_endian.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_bad_ifd_invalid_magic",
       "asset": "invalid_magic.tiff",
       "expect_error": true,
@@ -559,6 +572,19 @@
       }
     },
     {
+      "id": "error_bad_ifd_unsupported_photometric",
+      "asset": "unsupported_photometric.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/unsupported_photometric.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_bad_ifd_invalid_predictor",
       "asset": "invalid_predictor.tiff",
       "expect_error": true,
@@ -577,6 +603,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/oob_strip.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_empty_strip_offsets",
+      "asset": "empty_strip_offsets.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/empty_strip_offsets.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_zero_tile_width",
+      "asset": "zero_tile_width.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/zero_tile_width.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

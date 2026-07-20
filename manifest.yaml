@@ -1494,14 +1494,18 @@ formats:
       description: Corrupt headers, dimensions, tags, and strip bounds
       test_assets:
       - bad_ifd.tiff
+      - invalid_endian.tiff
       - invalid_magic.tiff
       - zero_width.tiff
       - zero_height.tiff
       - mixed_bits.tiff
       - rows_zero.tiff
       - unknown_compression.tiff
+      - unsupported_photometric.tiff
       - invalid_predictor.tiff
       - oob_strip.tiff
+      - empty_strip_offsets.tiff
+      - zero_tile_width.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

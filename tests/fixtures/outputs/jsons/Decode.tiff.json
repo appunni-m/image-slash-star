@@ -478,6 +478,16 @@
       "ref_size": null
     },
     {
+      "id": "error_bad_ifd_invalid_endian",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_bad_ifd_invalid_magic",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
@@ -538,6 +548,16 @@
       "ref_size": null
     },
     {
+      "id": "error_bad_ifd_unsupported_photometric",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_bad_ifd_invalid_predictor",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -552,6 +572,26 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_empty_strip_offsets",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_zero_tile_width",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "tile cannot extend outside image",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

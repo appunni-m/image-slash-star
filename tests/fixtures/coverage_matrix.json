@@ -6901,6 +6901,19 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "error_bad_ifd_invalid_endian",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "invalid_endian.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
           "id": "error_bad_ifd_invalid_magic",
           "type": "decode",
           "format": "tiff",
@@ -6979,6 +6992,19 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "error_bad_ifd_unsupported_photometric",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "unsupported_photometric.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
           "id": "error_bad_ifd_invalid_predictor",
           "type": "decode",
           "format": "tiff",
@@ -7003,6 +7029,32 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "image file is truncated (0 bytes not processed)"
+        },
+        {
+          "id": "error_bad_ifd_empty_strip_offsets",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "empty_strip_offsets.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_bad_ifd_zero_tile_width",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "zero_tile_width.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "tile cannot extend outside image"
         }
       ],
       "encode": [
@@ -10466,12 +10518,12 @@
     }
   },
   "summary": {
-    "total_rows": 558,
-    "decode_rows": 333,
+    "total_rows": 562,
+    "decode_rows": 337,
     "encode_rows": 193,
     "formats": 8,
-    "assets_available": 326,
-    "decode_active": 327,
+    "assets_available": 330,
+    "decode_active": 331,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
