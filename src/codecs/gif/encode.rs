@@ -230,7 +230,7 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
                 let (palette, indices) = quantize_rgb(&rgb)?;
                 (palette, indices, None)
             } else {
-                let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels);
+                let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels)?;
                 (palette, indices, transparent_idx)
             }
         }
@@ -941,58 +941,382 @@ impl PillowBoxHeap {
 /// Quantize RGBA8 pixels to a palette with optional transparency.
 ///
 /// Returns `(palette, indices, optional_transparent_index)`.
-fn quantize_rgba(pixels: &[u8]) -> (Vec<u8>, Vec<u8>, Option<u8>) {
-    let mut palette: Vec<[u8; 3]> = Vec::new();
-    let has_transparency = pixels.chunks_exact(4).any(|pixel| pixel[3] < 128);
-    let transparent_idx = has_transparency.then_some(0);
-    let pixel_count = pixels.len() / 4;
-    let mut indices = Vec::with_capacity(pixel_count);
-    let mut transparent_color = None;
-    for chunk in pixels.chunks_exact(4) {
-        let alpha = chunk[3];
-        let rgb = [chunk[0], chunk[1], chunk[2]];
-        if alpha < 128 {
-            transparent_color.get_or_insert(rgb);
-            indices.push(0);
+fn quantize_rgba(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>, Option<u8>)> {
+    if !pixels.len().is_multiple_of(4) || pixels.is_empty() {
+        return None;
+    }
+    let mut colors = pixels
+        .chunks_exact(4)
+        .map(|pixel| [pixel[0], pixel[1], pixel[2], pixel[3]])
+        .collect::<Vec<_>>();
+    // Quant.c normalizes every fully transparent pixel to the first one's RGB
+    // before FASTOCTREE, so transparent garbage channels cannot consume colors.
+    if let Some(first) = colors.iter().find(|color| color[3] == 0).copied() {
+        for color in &mut colors {
+            if color[3] == 0 {
+                color[..3].copy_from_slice(&first[..3]);
+            }
+        }
+    }
+    let (mut rgba_palette, mut indices) = pillow_fast_octree(&colors, 256)?;
+    let mut transparent = rgba_palette
+        .iter()
+        .position(|color| color[3] == 0)
+        .and_then(|index| u8::try_from(index).ok());
+
+    // GifImagePlugin._get_optimize compacts holes, and also shrinks a palette
+    // by one power-of-two step when at most half of its entries are used.
+    let mut used = vec![false; rgba_palette.len()];
+    for &index in &indices {
+        used[usize::from(index)] = true;
+    }
+    let used_indices = used
+        .iter()
+        .enumerate()
+        .filter_map(|(index, &is_used)| is_used.then_some(index))
+        .collect::<Vec<_>>();
+    let has_holes = used_indices
+        .last()
+        .is_some_and(|&maximum| maximum >= used_indices.len());
+    if has_holes || used_indices.len() <= rgba_palette.len() / 2 {
+        let mut remap = vec![0u8; rgba_palette.len()];
+        let mut compact = Vec::with_capacity(used_indices.len());
+        for (new_index, &old_index) in used_indices.iter().enumerate() {
+            remap[old_index] = u8::try_from(new_index).ok()?;
+            compact.push(rgba_palette[old_index]);
+        }
+        for index in &mut indices {
+            *index = remap[usize::from(*index)];
+        }
+        transparent = transparent.map(|index| remap[usize::from(index)]);
+        rgba_palette = compact;
+    }
+    let palette = rgba_palette
+        .into_iter()
+        .flat_map(|color| color[..3].to_vec())
+        .collect();
+    Some((palette, indices, transparent))
+}
+
+// Behavioral port of Pillow 12.2.0 src/libImaging/QuantOctree.c (MIT,
+// Oliver Tonnhofer / Omniscale). The bucket sorter below ports the ordering of
+// Apple Libc stdlib/FreeBSD/qsort.c (BSD-3-Clause, UC Regents), because tied
+// bucket order is observable in Pillow's encoded GIF bytes.
+
+#[derive(Clone, Default)]
+struct OctreeBucket {
+    count: u32,
+    sums: [u64; 4],
+}
+
+impl OctreeBucket {
+    fn add_color(&mut self, color: [u8; 4]) {
+        self.count = self.count.saturating_add(1);
+        for (sum, channel) in self.sums.iter_mut().zip(color) {
+            *sum = sum.saturating_add(u64::from(channel));
+        }
+    }
+
+    fn add_bucket(&mut self, other: &Self) {
+        self.count = self.count.saturating_add(other.count);
+        for (sum, other_sum) in self.sums.iter_mut().zip(other.sums) {
+            *sum = sum.saturating_add(other_sum);
+        }
+    }
+
+    fn average(&self) -> [u8; 4] {
+        if self.count == 0 {
+            return [0; 4];
+        }
+        std::array::from_fn(|channel| {
+            ((self.sums[channel] as f32) / (self.count as f32)).clamp(0.0, 255.0) as u8
+        })
+    }
+}
+
+struct OctreeCube {
+    bits: [u32; 4],
+    widths: [usize; 4],
+    offsets: [u32; 4],
+    buckets: Vec<OctreeBucket>,
+}
+
+impl OctreeCube {
+    fn new(bits: [u32; 4]) -> Option<Self> {
+        let widths = bits.map(|value| 1usize.checked_shl(value));
+        let widths = [widths[0]?, widths[1]?, widths[2]?, widths[3]?];
+        let offsets = [bits[1] + bits[2] + bits[3], bits[2] + bits[3], bits[3], 0];
+        let size = widths.into_iter().try_fold(1usize, usize::checked_mul)?;
+        Some(Self {
+            bits,
+            widths,
+            offsets,
+            buckets: vec![OctreeBucket::default(); size],
+        })
+    }
+
+    fn offset_position(&self, values: [usize; 4]) -> usize {
+        values
+            .into_iter()
+            .zip(self.offsets)
+            .fold(0usize, |offset, (value, shift)| offset | (value << shift))
+    }
+
+    fn offset(&self, color: [u8; 4]) -> usize {
+        let values = std::array::from_fn(|channel| {
+            (usize::from(color[channel]) >> (8 - self.bits[channel])) & (self.widths[channel] - 1)
+        });
+        self.offset_position(values)
+    }
+
+    fn add_color(&mut self, color: [u8; 4]) {
+        let offset = self.offset(color);
+        self.buckets[offset].add_color(color);
+    }
+
+    fn used(&self) -> usize {
+        self.buckets
+            .iter()
+            .filter(|bucket| bucket.count > 0)
+            .count()
+    }
+}
+
+fn copy_octree_cube(cube: &OctreeCube, bits: [u32; 4]) -> Option<OctreeCube> {
+    let mut result = OctreeCube::new(bits)?;
+    let mut source_reduce = [0u32; 4];
+    let mut destination_reduce = [0u32; 4];
+    let widths: [usize; 4] = std::array::from_fn(|channel| {
+        if cube.bits[channel] > bits[channel] {
+            destination_reduce[channel] = cube.bits[channel] - bits[channel];
+            cube.widths[channel]
         } else {
-            let palette_offset = usize::from(has_transparency);
-            match find_color(&palette, &rgb) {
-                Some(idx) => indices.push((idx + palette_offset) as u8),
-                None => {
-                    if palette.len() < 256 - palette_offset {
-                        let idx = palette.len() + palette_offset;
-                        palette.push(rgb);
-                        indices.push(idx as u8);
-                    } else {
-                        let nearest = find_nearest(&palette, &rgb) + palette_offset;
-                        indices.push(nearest as u8);
-                    }
+            source_reduce[channel] = bits[channel] - cube.bits[channel];
+            result.widths[channel]
+        }
+    });
+    for r in 0..widths[0] {
+        for g in 0..widths[1] {
+            for b in 0..widths[2] {
+                for a in 0..widths[3] {
+                    let values = [r, g, b, a];
+                    let source = cube.offset_position(std::array::from_fn(|channel| {
+                        values[channel] >> source_reduce[channel]
+                    }));
+                    let destination = result.offset_position(std::array::from_fn(|channel| {
+                        values[channel] >> destination_reduce[channel]
+                    }));
+                    result.buckets[destination].add_bucket(&cube.buckets[source]);
                 }
             }
         }
     }
-    // Build flat palette. If we have transparent pixels, index 0 is the
-    // transparent entry (use the first transparent color found).
-    let mut flat = Vec::with_capacity(palette.len() * 3);
-    if has_transparency {
-        flat.extend_from_slice(&transparent_color.unwrap_or([0, 0, 0]));
+    Some(result)
+}
+
+fn bucket_order(left: &OctreeBucket, right: &OctreeBucket) -> std::cmp::Ordering {
+    right.count.cmp(&left.count)
+}
+
+fn median_of_three(values: &[OctreeBucket], a: usize, b: usize, c: usize) -> usize {
+    if bucket_order(&values[a], &values[b]).is_lt() {
+        if bucket_order(&values[b], &values[c]).is_lt() {
+            b
+        } else if bucket_order(&values[a], &values[c]).is_lt() {
+            c
+        } else {
+            a
+        }
+    } else if bucket_order(&values[b], &values[c]).is_gt() {
+        b
+    } else if bucket_order(&values[a], &values[c]).is_lt() {
+        a
+    } else {
+        c
     }
-    for c in &palette {
-        flat.push(c[0]);
-        flat.push(c[1]);
-        flat.push(c[2]);
+}
+
+fn insertion_sort_buckets(values: &mut [OctreeBucket], swap_limit: Option<usize>) -> bool {
+    let mut swaps = 0usize;
+    for right in 1..values.len() {
+        let mut cursor = right;
+        while cursor > 0 && bucket_order(&values[cursor - 1], &values[cursor]).is_gt() {
+            values.swap(cursor, cursor - 1);
+            swaps += 1;
+            if swap_limit.is_some_and(|limit| swaps > limit) {
+                return false;
+            }
+            cursor -= 1;
+        }
     }
-    (flat, indices, transparent_idx)
+    true
+}
+
+fn swap_bucket_ranges(values: &mut [OctreeBucket], left: usize, right: usize, length: usize) {
+    for offset in 0..length {
+        values.swap(left + offset, right + offset);
+    }
+}
+
+fn apple_qsort_buckets(values: &mut [OctreeBucket], mut depth: usize) {
+    let mut start = 0usize;
+    let mut length = values.len();
+    loop {
+        if depth == 0 {
+            values[start..start + length].sort_by(bucket_order);
+            return;
+        }
+        depth -= 1;
+        if length <= 7 {
+            insertion_sort_buckets(&mut values[start..start + length], None);
+            return;
+        }
+        let mut low = start;
+        let mut middle = start + length / 2;
+        let mut high = start + length - 1;
+        if length > 40 {
+            let distance = length / 8;
+            low = median_of_three(values, low, low + distance, low + 2 * distance);
+            middle = median_of_three(values, middle - distance, middle, middle + distance);
+            high = median_of_three(values, high - 2 * distance, high - distance, high);
+        }
+        middle = median_of_three(values, low, middle, high);
+        values.swap(start, middle);
+        let mut equal_left = start + 1;
+        let mut scan_left = start + 1;
+        let mut scan_right = start + length - 1;
+        let mut equal_right = scan_right;
+        let mut swapped = false;
+        loop {
+            while scan_left <= scan_right {
+                let ordering = bucket_order(&values[scan_left], &values[start]);
+                if ordering.is_gt() {
+                    break;
+                }
+                if ordering.is_eq() {
+                    values.swap(equal_left, scan_left);
+                    equal_left += 1;
+                    swapped = true;
+                }
+                scan_left += 1;
+            }
+            while scan_left <= scan_right {
+                let ordering = bucket_order(&values[scan_right], &values[start]);
+                if ordering.is_lt() {
+                    break;
+                }
+                if ordering.is_eq() {
+                    values.swap(scan_right, equal_right);
+                    equal_right = equal_right.saturating_sub(1);
+                    swapped = true;
+                }
+                scan_right = scan_right.saturating_sub(1);
+            }
+            if scan_left > scan_right {
+                break;
+            }
+            values.swap(scan_left, scan_right);
+            swapped = true;
+            scan_left += 1;
+            scan_right = scan_right.saturating_sub(1);
+        }
+        let end = start + length;
+        let left_equal = (equal_left - start).min(scan_left - equal_left);
+        swap_bucket_ranges(values, start, scan_left - left_equal, left_equal);
+        let right_equal = (equal_right - scan_right).min(end - equal_right - 1);
+        swap_bucket_ranges(values, scan_left, end - right_equal, right_equal);
+        if !swapped {
+            let limit = 1 + length / 4;
+            if insertion_sort_buckets(&mut values[start..end], Some(limit)) {
+                return;
+            }
+        }
+        let left_length = scan_left - equal_left;
+        let right_length = equal_right - scan_right;
+        if left_length <= right_length {
+            if left_length > 1 {
+                apple_qsort_buckets(&mut values[start..start + left_length], depth);
+            }
+            if right_length <= 1 {
+                return;
+            }
+            start = end - right_length;
+            length = right_length;
+        } else {
+            if right_length > 1 {
+                apple_qsort_buckets(&mut values[end - right_length..end], depth);
+            }
+            if left_length <= 1 {
+                return;
+            }
+            length = left_length;
+        }
+    }
+}
+
+fn sorted_octree_buckets(cube: &OctreeCube) -> Vec<OctreeBucket> {
+    let mut buckets = cube.buckets.clone();
+    let depth = 2 * (usize::BITS as usize - buckets.len().leading_zeros() as usize - 1);
+    apple_qsort_buckets(&mut buckets, depth);
+    buckets
+}
+
+fn subtract_octree_buckets(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
+    for bucket in buckets.iter().filter(|bucket| bucket.count > 0) {
+        let offset = cube.offset(bucket.average());
+        let destination = &mut cube.buckets[offset];
+        destination.count -= bucket.count;
+        for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
+            *sum -= value;
+        }
+    }
+}
+
+fn add_octree_lookup(cube: &mut OctreeCube, palette: &[OctreeBucket], offset: usize) {
+    for index in (offset..palette.len()).rev() {
+        let bucket = &palette[index];
+        let position = cube.offset(bucket.average());
+        cube.buckets[position].count = index as u32;
+    }
+}
+
+fn pillow_fast_octree(colors: &[[u8; 4]], target: usize) -> Option<(Vec<[u8; 4]>, Vec<u8>)> {
+    let fine_bits = [3, 4, 3, 3];
+    let coarse_bits = [2, 2, 2, 2];
+    let mut fine = OctreeCube::new(fine_bits)?;
+    for &color in colors {
+        fine.add_color(color);
+    }
+    let mut coarse = copy_octree_cube(&fine, coarse_bits)?;
+    let mut coarse_count = coarse.used().min(target);
+    let mut fine_count = target.checked_sub(coarse_count)?;
+    let fine_palette = sorted_octree_buckets(&fine);
+    subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count]);
+    while coarse_count > coarse.used() {
+        let already_subtracted = fine_count;
+        coarse_count = coarse.used();
+        fine_count = target.checked_sub(coarse_count)?;
+        subtract_octree_buckets(&mut coarse, &fine_palette[already_subtracted..fine_count]);
+    }
+    let coarse_palette = sorted_octree_buckets(&coarse);
+    let mut buckets = coarse_palette[..coarse_count].to_vec();
+    buckets.extend_from_slice(&fine_palette[..fine_count]);
+    let mut coarse_lookup = OctreeCube::new(coarse_bits)?;
+    add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0);
+    let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits)?;
+    add_octree_lookup(&mut lookup, &buckets, coarse_count);
+    let indices = colors
+        .iter()
+        .map(|&color| u8::try_from(lookup.buckets[lookup.offset(color)].count).ok())
+        .collect::<Option<Vec<_>>>()?;
+    let palette = buckets.iter().map(OctreeBucket::average).collect();
+    Some((palette, indices))
 }
 /// Find a color in the palette. Returns its index if found.
 fn find_color(palette: &[[u8; 3]], color: &[u8; 3]) -> Option<usize> {
     palette.iter().position(|c| c == color)
 }
 /// Find the nearest color in the palette by Euclidean distance.
-fn find_nearest(palette: &[[u8; 3]], color: &[u8; 3]) -> usize {
-    find_nearest_from(palette, color, 0)
-}
-
 fn find_nearest_from(palette: &[[u8; 3]], color: &[u8; 3], initial: usize) -> usize {
     let mut best = initial;
     let mut best_dist = color_distance(palette[initial], *color);

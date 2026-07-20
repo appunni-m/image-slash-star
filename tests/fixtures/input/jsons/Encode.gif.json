@@ -419,6 +419,40 @@
       }
     },
     {
+      "id": "enc_rgba_mixed",
+      "source_asset": "gif_rgba_mixed.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_mixed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba_high_color",
+      "source_asset": "gif_rgba_high_color.png",
+      "source_format": "png",
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_high_color.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_rgba_opaque",
       "source_asset": "gif_rgba_opaque.png",
       "source_format": "png",

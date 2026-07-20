@@ -906,6 +906,16 @@ formats:
       source_format: png
       source_asset: gif_rgba.png
       params: {}
+    - id: enc_rgba_mixed
+      description: Mixed transparent and opaque RGBA colors exercise Pillow's transparent palette offset
+      source_format: png
+      source_asset: gif_rgba_mixed.png
+      params: {}
+    - id: enc_rgba_high_color
+      description: Transparent RGBA source with more than 255 opaque colors exercises Pillow's nearest palette mapping
+      source_format: png
+      source_asset: gif_rgba_high_color.png
+      params: {}
     - id: enc_rgba_opaque
       description: Opaque RGBA source quantized through Pillow's RGB path
       source_format: png

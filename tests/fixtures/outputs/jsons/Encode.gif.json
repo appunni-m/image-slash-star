@@ -241,6 +241,30 @@
       "encoded_ref_bytes": 51
     },
     {
+      "id": "enc_rgba_mixed",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_mixed.bin",
+      "ref_bytes": 8,
+      "ref_mode": "P",
+      "ref_size": [
+        4,
+        2
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_mixed.bin",
+      "encoded_ref_bytes": 71
+    },
+    {
+      "id": "enc_rgba_high_color",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_high_color.bin",
+      "ref_bytes": 289,
+      "ref_mode": "P",
+      "ref_size": [
+        17,
+        17
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_high_color.bin",
+      "encoded_ref_bytes": 1136
+    },
+    {
       "id": "enc_rgba_opaque",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_opaque.bin",
       "ref_bytes": 1,

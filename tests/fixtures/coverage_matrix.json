@@ -2267,6 +2267,46 @@
           ]
         },
         {
+          "id": "enc_rgba_mixed",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "Mixed transparent and opaque RGBA colors exercise Pillow's transparent palette offset",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_mixed.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_mixed.bin",
+          "encoded_ref_bytes": 71,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_mixed.bin",
+          "ref_bytes": 8,
+          "ref_mode": "P",
+          "ref_size": [
+            4,
+            2
+          ]
+        },
+        {
+          "id": "enc_rgba_high_color",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "Transparent RGBA source with more than 255 opaque colors exercises Pillow's nearest palette mapping",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_high_color.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_high_color.bin",
+          "encoded_ref_bytes": 1136,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_high_color.bin",
+          "ref_bytes": 289,
+          "ref_mode": "P",
+          "ref_size": [
+            17,
+            17
+          ]
+        },
+        {
           "id": "enc_rgba_opaque",
           "type": "encode",
           "format": "gif",
@@ -11840,9 +11880,9 @@
     }
   },
   "summary": {
-    "total_rows": 637,
+    "total_rows": 639,
     "decode_rows": 400,
-    "encode_rows": 205,
+    "encode_rows": 207,
     "formats": 8,
     "assets_available": 393,
     "decode_active": 394,

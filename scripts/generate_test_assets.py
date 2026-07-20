@@ -270,6 +270,23 @@ def gen_png():
         lzw_boundary.save(d / f"tiff_lzw_{name}.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 255)).save(d / "gif_rgba_opaque.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 0)).save(d / "gif_rgba.png")
+    gif_rgba_mixed = Image.new("RGBA", (4, 2))
+    gif_rgba_mixed.putdata(
+        [
+            (9, 8, 7, 0),
+            (255, 0, 0, 255),
+            (0, 255, 0, 255),
+            (255, 0, 0, 255),
+            (1, 2, 3, 127),
+            (0, 0, 255, 128),
+            (0, 255, 0, 255),
+            (255, 255, 255, 255),
+        ]
+    )
+    gif_rgba_mixed.save(d / "gif_rgba_mixed.png")
+    gif_rgba_high_color = high_color.convert("RGBA")
+    gif_rgba_high_color.putpixel((0, 0), (17, 19, 23, 0))
+    gif_rgba_high_color.save(d / "gif_rgba_high_color.png")
     img.convert("L").save(d / "gray.png")
     img.convert("LA").save(d / "gray_alpha.png")
     img.convert("P").save(d / "indexed.png")
