@@ -586,6 +586,16 @@ formats:
       description: Optimized PNG selecting the Average row filter
       source_asset: average_filter_source.png
       params: {'optimize': True}
+    - id: enc_error_compression_level
+      description: Compression level outside Pillow's accepted range
+      params: {'compression': 10}
+      expect_error: true
+    - id: enc_error_cmyk
+      description: Pillow cannot write CMYK pixels as PNG
+      source_format: jpeg
+      source_asset: baseline_cmyk.jpg
+      params: {}
+      expect_error: true
     - id: enc_l8
       description: 
       params: {'color_type': 'L'}

@@ -115,6 +115,8 @@ struct EncodeRow {
     description: Option<String>,
     status: String,
     #[serde(default)]
+    expect_error: bool,
+    #[serde(default)]
     source_format: Option<String>,
     #[serde(default)]
     source_asset: Option<String>,
@@ -1328,7 +1330,18 @@ fn test_encode_matrix() {
                 }
             };
 
-            let encoded = match img::encode_sequence(decoded, format, &opts) {
+            let encoded = img::encode_sequence(decoded, format, &opts);
+            if row.expect_error {
+                if encoded.is_none() {
+                    eprintln!("  OK   [{}] rejected as Pillow does", row.id);
+                    passed += 1;
+                } else {
+                    eprintln!("  FAIL [{}]: invalid input encoded successfully", row.id);
+                    failed += 1;
+                }
+                continue;
+            }
+            let encoded = match encoded {
                 Some(e) => e,
                 None => {
                     eprintln!("  FAIL [{}]: encode returned None", row.id);

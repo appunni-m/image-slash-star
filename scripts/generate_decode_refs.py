@@ -845,6 +845,7 @@ def sync_encode_rows(manifest, matrix):
                     "category": case_id.removeprefix("enc_").split("_", 1)[0],
                     "description": specification.get("description") or "",
                     "params": specification.get("params", {}),
+                    "expect_error": bool(specification.get("expect_error", False)),
                 }
             )
             row["status"] = specification.get("status", "active")
@@ -996,6 +997,10 @@ def validate_generated_outputs(matrix):
                     failures.append(f"{case_name}: planned encode row has no gap reason")
                 if row.get("ref_path") or row.get("encoded_ref_path"):
                     failures.append(f"{case_name}: planned encode row retains oracle evidence")
+                continue
+            if row.get("expect_error"):
+                if row.get("oracle_status") != "error" or not row.get("oracle_error_type"):
+                    failures.append(f"{case_name}: error row lacks Pillow exception evidence")
                 continue
             for path_field, size_field, label in (
                 ("ref_path", "ref_bytes", "roundtrip pixels"),
@@ -1164,6 +1169,9 @@ def generate_encode(manifest, matrix, target_format=None):
             # green result in the authoritative matrix.
             clear_pixel_ref(row)
             clear_encoded_ref(row)
+            row.pop("oracle_status", None)
+            row.pop("oracle_error_type", None)
+            row.pop("oracle_error_message", None)
             src_fmt = row.get("source_format") or fmt_name
             src_asset = row.get("source_asset")
             if not src_asset:
@@ -1181,6 +1189,9 @@ def generate_encode(manifest, matrix, target_format=None):
                 buf = io.BytesIO()
                 image_to_save.save(buf, format=fmt_pil(fmt_name), **kwargs)
                 encoded = buf.getvalue()
+                if row.get("expect_error"):
+                    row["oracle_status"] = "ok"
+                    continue
                 encoded_name = f"Encode.{fmt_name}_{row['id']}.bin"
                 OUTPUT_ENCODED.mkdir(parents=True, exist_ok=True)
                 (OUTPUT_ENCODED / encoded_name).write_bytes(encoded)
@@ -1197,6 +1208,11 @@ def generate_encode(manifest, matrix, target_format=None):
                 else:
                     clear_pixel_ref(row)
             except Exception as e:
+                if row.get("expect_error"):
+                    row["oracle_status"] = "error"
+                    row["oracle_error_type"] = f"{type(e).__module__}.{type(e).__name__}"
+                    row["oracle_error_message"] = stable_error_message(e)
+                    continue
                 # Lossy formats or unsupported params — skip ref, just verify dimensions
                 print(f"  SKIP encode {row.get('id')}: {e}", file=sys.stderr)
 
@@ -1210,6 +1226,7 @@ def generate_encode(manifest, matrix, target_format=None):
                     "source_asset": r["source_asset"],
                     "source_format": r.get("source_format", fmt_name),
                     "params": r.get("params", {}),
+                    "expect_error": bool(r.get("expect_error", False)),
                     "pillow_call": describe_encode_call(fmt_name, r),
                 }
                 for r in enc_cases
@@ -1231,6 +1248,9 @@ def generate_encode(manifest, matrix, target_format=None):
                     "ref_size": r.get("ref_size"),
                     "encoded_ref_path": r.get("encoded_ref_path"),
                     "encoded_ref_bytes": r.get("encoded_ref_bytes"),
+                    "oracle_status": r.get("oracle_status"),
+                    "error_type": r.get("oracle_error_type"),
+                    "error_message": r.get("oracle_error_message"),
                 }
                 for r in enc_cases
             ]
