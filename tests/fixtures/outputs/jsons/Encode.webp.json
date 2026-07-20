@@ -265,6 +265,30 @@
       "encoded_ref_bytes": 3674
     },
     {
+      "id": "enc_lossy_cmyk",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_cmyk.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_cmyk.bin",
+      "encoded_ref_bytes": 3746
+    },
+    {
+      "id": "enc_lossless_cmyk",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cmyk.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cmyk.bin",
+      "encoded_ref_bytes": 16780
+    },
+    {
       "id": "enc_1x1",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_1x1.bin",
       "ref_bytes": 3,

@@ -3,6 +3,7 @@ use std::io::{self, Write};
 
 mod backward_refs;
 pub(super) mod cross_color;
+mod histogram;
 pub(super) mod predictor;
 
 /// Color type of the image.
@@ -504,97 +505,118 @@ fn write_image_stream_configured<W: Write>(
         write_meta_huffman_bit,
         &tokens,
         cache_bits,
+        quality,
     )
+}
+
+struct GroupCodes {
+    lengths: [Vec<u8>; 5],
+    codes: [Vec<u16>; 5],
+}
+
+fn write_group<W: Write>(
+    w: &mut BitWriter<W>,
+    populations: &[Vec<u32>; 5],
+) -> io::Result<GroupCodes> {
+    let mut lengths = populations
+        .each_ref()
+        .map(|frequency| vec![0; frequency.len()]);
+    let mut codes = populations
+        .each_ref()
+        .map(|frequency| vec![0; frequency.len()]);
+    for channel in 0..5 {
+        write_huffman_tree(
+            w,
+            &populations[channel],
+            &mut lengths[channel],
+            &mut codes[channel],
+        )?;
+    }
+    Ok(GroupCodes { lengths, codes })
 }
 
 fn write_token_stream<W: Write>(
     w: &mut BitWriter<W>,
-    _pixels: &[u32],
+    pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
     tokens: &[backward_refs::Token],
     cache_bits: u8,
+    quality: u32,
 ) -> io::Result<()> {
     w.write_bits(u64::from(cache_bits != 0), 1)?;
     if cache_bits != 0 {
         w.write_bits(u64::from(cache_bits), 4)?;
     }
+    let height = pixels.len() / width;
+    let histogram_bits = 3_u8;
+    let (symbols, histograms) = if write_meta_huffman_bit {
+        histogram::cluster(tokens, width, height, cache_bits, quality, histogram_bits)
+    } else {
+        histogram::cluster(tokens, width, height, cache_bits, quality, 31)
+    };
+    let multiple_groups = write_meta_huffman_bit && histograms.len() > 1;
     if write_meta_huffman_bit {
-        w.write_bits(0, 1)?; // one global Huffman group
-    }
-
-    let mut frequencies0 = [0_u32; 256];
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut frequencies1 = vec![0_u32; 280 + cache_size];
-    let mut frequencies2 = [0_u32; 256];
-    let mut frequencies3 = [0_u32; 256];
-    let mut frequencies4 = [0_u32; 40];
-    for &token in tokens {
-        match token {
-            backward_refs::Token::Literal(pixel) => {
-                let [red, green, blue, alpha] = channels(pixel);
-                frequencies0[red] += 1;
-                frequencies1[green] += 1;
-                frequencies2[blue] += 1;
-                frequencies3[alpha] += 1;
-            }
-            backward_refs::Token::Copy { distance, length } => {
-                let (symbol, _) = length_to_symbol(length);
-                frequencies1[256 + symbol] += 1;
-                let distance = backward_refs::plane_code(width, distance);
-                let (symbol, _) = length_to_symbol(distance);
-                frequencies4[symbol] += 1;
-            }
-            backward_refs::Token::Cache(index) => frequencies1[280 + index] += 1,
+        w.write_bits(u64::from(multiple_groups), 1)?;
+        if multiple_groups {
+            w.write_bits(u64::from(histogram_bits - 2), 3)?;
+            let meta_pixels = symbols
+                .iter()
+                .map(|&symbol| u32::from(symbol) << 8)
+                .collect::<Vec<_>>();
+            let meta_width = (width + (1 << histogram_bits) - 1) >> histogram_bits;
+            write_image_stream_configured(w, &meta_pixels, meta_width, false, quality, 0)?;
         }
     }
+    let mut groups = Vec::with_capacity(histograms.len());
+    for histogram in &histograms {
+        groups.push(write_group(w, &histogram.populations)?);
+    }
 
-    let mut lengths0 = [0_u8; 256];
-    let mut lengths1 = vec![0_u8; frequencies1.len()];
-    let mut lengths2 = [0_u8; 256];
-    let mut lengths3 = [0_u8; 256];
-    let mut lengths4 = [0_u8; 40];
-    let mut codes0 = [0_u16; 256];
-    let mut codes1 = vec![0_u16; frequencies1.len()];
-    let mut codes2 = [0_u16; 256];
-    let mut codes3 = [0_u16; 256];
-    let mut codes4 = [0_u16; 40];
-    write_huffman_tree(w, &frequencies1, &mut lengths1, &mut codes1)?;
-    write_huffman_tree(w, &frequencies0, &mut lengths0, &mut codes0)?;
-    write_huffman_tree(w, &frequencies2, &mut lengths2, &mut codes2)?;
-    write_huffman_tree(w, &frequencies3, &mut lengths3, &mut codes3)?;
-    write_huffman_tree(w, &frequencies4, &mut lengths4, &mut codes4)?;
-
+    let tile_width = (width + (1 << histogram_bits) - 1) >> histogram_bits;
+    let mut position = 0;
     for &token in tokens {
+        let group_index = if multiple_groups {
+            let x = position % width;
+            let y = position / width;
+            usize::from(symbols[(y >> histogram_bits) * tile_width + (x >> histogram_bits)])
+        } else {
+            0
+        };
+        let lengths = &groups[group_index].lengths;
+        let codes = &groups[group_index].codes;
         match token {
             backward_refs::Token::Literal(pixel) => {
                 let [red, green, blue, alpha] = channels(pixel);
-                let green_length = lengths1[green];
-                let red_length = lengths0[red];
-                let blue_length = lengths2[blue];
-                let alpha_length = lengths3[alpha];
-                let code = u64::from(codes1[green])
-                    | (u64::from(codes0[red]) << green_length)
-                    | (u64::from(codes2[blue]) << (green_length + red_length))
-                    | (u64::from(codes3[alpha]) << (green_length + red_length + blue_length));
+                let green_length = lengths[0][green];
+                let red_length = lengths[1][red];
+                let blue_length = lengths[2][blue];
+                let alpha_length = lengths[3][alpha];
+                let code = u64::from(codes[0][green])
+                    | (u64::from(codes[1][red]) << green_length)
+                    | (u64::from(codes[2][blue]) << (green_length + red_length))
+                    | (u64::from(codes[3][alpha]) << (green_length + red_length + blue_length));
                 w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
+                position += 1;
             }
             backward_refs::Token::Copy { distance, length } => {
                 let (symbol, extra_bits) = length_to_symbol(length);
                 let symbol = 256 + symbol;
-                w.write_bits(u64::from(codes1[symbol]), lengths1[symbol])?;
+                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
                 w.write_bits(((length - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
                 let distance = backward_refs::plane_code(width, distance);
                 let (symbol, extra_bits) = length_to_symbol(distance);
-                w.write_bits(u64::from(codes4[symbol]), lengths4[symbol])?;
+                w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
                 w.write_bits(
                     ((distance - 1) & ((1 << extra_bits) - 1)) as u64,
                     extra_bits,
                 )?;
+                position += length;
             }
             backward_refs::Token::Cache(index) => {
                 let symbol = 280 + index;
-                w.write_bits(u64::from(codes1[symbol]), lengths1[symbol])?;
+                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
+                position += 1;
             }
         }
     }

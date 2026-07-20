@@ -482,6 +482,48 @@
       }
     },
     {
+      "id": "enc_lossy_cmyk",
+      "source_asset": "baseline_cmyk.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "lossless": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_cmyk",
+      "source_asset": "baseline_cmyk.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1x1",
       "source_asset": "1x1.png",
       "source_format": "png",

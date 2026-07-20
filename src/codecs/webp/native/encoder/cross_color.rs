@@ -4,8 +4,6 @@
 //! `VP8LColorSpaceTransform` pipeline (`src/enc/predictor_enc.c:844-1111`)
 //! and its scalar color kernels (`src/dsp/lossless_enc.c:471-541`).
 
-const LOG_SCALE: f64 = (1_u64 << 23) as f64;
-
 #[derive(Clone, Copy, Default)]
 struct Multipliers {
     green_to_red: u8,
@@ -40,11 +38,7 @@ fn transformed_blue(green_multiplier: i32, red_multiplier: i32, argb: u32) -> u8
 
 #[inline]
 pub(super) fn slog2(value: u32) -> u64 {
-    if value == 0 {
-        0
-    } else {
-        (f64::from(value) * f64::from(value).log2() * LOG_SCALE).round() as u64
-    }
+    super::backward_refs::fast_slog(value)
 }
 
 pub(super) fn combined_shannon_entropy(counts: &[u32; 256], accumulated: &[u32; 256]) -> u64 {

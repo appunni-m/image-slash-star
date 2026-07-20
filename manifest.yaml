@@ -1457,6 +1457,16 @@ formats:
     - id: enc_icc
       description: 
       params: {'icc_hex': '70696c6c6f772d72732d696363'}
+    - id: enc_lossy_cmyk
+      description: Convert CMYK input to RGB before lossy WebP encoding as Pillow does
+      source_format: jpeg
+      source_asset: baseline_cmyk.jpg
+      params: {'lossless': False}
+    - id: enc_lossless_cmyk
+      description: Convert CMYK input to RGB before lossless WebP encoding as Pillow does
+      source_format: jpeg
+      source_asset: baseline_cmyk.jpg
+      params: {'lossless': True}
     - id: enc_1x1
       description: 
       source_format: png

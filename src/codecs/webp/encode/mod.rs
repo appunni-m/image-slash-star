@@ -19,15 +19,19 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     attach_metadata(encoded, img.width, img.height, opts)
 }
 
-fn decode_hex(value: Option<&String>) -> Option<Vec<u8>> {
-    let value = value?;
-    if value.len() % 2 != 0 {
-        return None;
-    }
-    (0..value.len())
+fn decode_hex(value: Option<&String>) -> Option<Option<Vec<u8>>> {
+    let Some(value) = value else {
+        return Some(None);
+    };
+    let decoded = (0..value.len())
         .step_by(2)
-        .map(|index| u8::from_str_radix(&value[index..index + 2], 16).ok())
-        .collect()
+        .map(|index| {
+            value
+                .get(index..index + 2)
+                .and_then(|byte| u8::from_str_radix(byte, 16).ok())
+        })
+        .collect::<Option<Vec<_>>>()?;
+    value.len().is_multiple_of(2).then_some(Some(decoded))
 }
 
 fn write_chunk(output: &mut Vec<u8>, name: &[u8; 4], payload: &[u8]) {
@@ -45,9 +49,9 @@ fn attach_metadata(
     height: u32,
     opts: &EncodeOptions,
 ) -> Option<Vec<u8>> {
-    let icc = decode_hex(opts.extra.get("icc_hex"));
-    let exif = decode_hex(opts.extra.get("exif_hex"));
-    let xmp = decode_hex(opts.extra.get("xmp_hex"));
+    let icc = decode_hex(opts.extra.get("icc_hex"))?;
+    let exif = decode_hex(opts.extra.get("exif_hex"))?;
+    let xmp = decode_hex(opts.extra.get("xmp_hex"))?;
     if icc.is_none() && exif.is_none() && xmp.is_none() {
         return Some(encoded);
     }
@@ -58,13 +62,11 @@ fn attach_metadata(
         let name: [u8; 4] = encoded[offset..offset + 4].try_into().ok()?;
         let length = u32::from_le_bytes(encoded[offset + 4..offset + 8].try_into().ok()?) as usize;
         let end = offset.checked_add(8)?.checked_add(length)?;
-        if end > encoded.len() {
-            return None;
-        }
+        let payload = encoded.get(offset + 8..end)?;
         if &name == b"VP8X" {
             flags |= *encoded.get(offset + 8)?;
         } else {
-            chunks.push((name, encoded[offset + 8..end].to_vec()));
+            chunks.push((name, payload.to_vec()));
         }
         offset = end + (length & 1);
     }
@@ -106,15 +108,19 @@ fn attach_metadata(
 /// Lossless VP8L encoding via the internal `WebPEncoder`.
 fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>> {
     let (width, height) = (img.width, img.height);
-    let expanded_luma = (img.color == ColorType::L8).then(|| {
-        img.pixels
-            .iter()
-            .flat_map(|&value| [value; 3])
-            .collect::<Vec<_>>()
-    });
-    let pixels = expanded_luma.as_deref().unwrap_or(&img.pixels);
+    let converted = match img.color {
+        ColorType::L8 => Some(
+            img.pixels
+                .iter()
+                .flat_map(|&value| [value; 3])
+                .collect::<Vec<_>>(),
+        ),
+        ColorType::Cmyk8 => Some(cmyk_to_rgb(&img.pixels)),
+        _ => None,
+    };
+    let pixels = converted.as_deref().unwrap_or(&img.pixels);
     let color = match img.color {
-        ColorType::L8 | ColorType::Rgb8 => super::native::ColorType::Rgb8,
+        ColorType::L8 | ColorType::Rgb8 | ColorType::Cmyk8 => super::native::ColorType::Rgb8,
         ColorType::Rgba8 => super::native::ColorType::Rgba8,
         _ => return None,
     };
@@ -171,7 +177,24 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
             }
         }
+        ColorType::Cmyk8 => {
+            let rgb = cmyk_to_rgb(&img.pixels);
+            vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
+        }
         _ => return None,
     };
     Some(encoded)
+}
+
+fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
+    pixels
+        .chunks_exact(4)
+        .flat_map(|pixel| {
+            let black = u16::from(255 - pixel[3]);
+            std::array::from_fn::<_, 3, _>(|channel| {
+                let ink = u16::from(255 - pixel[channel]);
+                ((ink * black + 127) / 255) as u8
+            })
+        })
+        .collect()
 }

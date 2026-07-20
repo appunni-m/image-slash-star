@@ -278,7 +278,7 @@ struct CostModel {
     distance: [u32; 40],
 }
 
-fn fast_slog(value: u32) -> u64 {
+pub(super) fn fast_slog(value: u32) -> u64 {
     if value < 256 {
         (f64::from(value) * f64::from(value).log2() * f64::from(1_u32 << 23)).round_ties_even()
             as u64
