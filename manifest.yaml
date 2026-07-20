@@ -387,6 +387,7 @@ formats:
       description: Indexed with tRNS transparency
       test_assets:
       - indexed_alpha.png
+      - palette_trns_opaque.png
     - id: depth_1
       description: 1-bit grayscale
       test_assets:
@@ -534,6 +535,7 @@ formats:
       - invalid_scanline_filter.png
       - short_inflated_scanline.png
       - adam7_invalid_scanline_filter.png
+      - adam7_giant_dimensions.png
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
@@ -602,6 +604,10 @@ formats:
       source_asset: baseline_cmyk.jpg
       params: {}
       expect_error: true
+    - id: enc_error_truncated_pixels
+      description: Pixel buffer shorter than the declared dimensions
+      params: {'truncate_pixels': true}
+      expect_error: true
     - id: enc_l8
       description: 
       params: {'color_type': 'L'}
@@ -625,6 +631,10 @@ formats:
     - id: enc_indexed_alpha
       description: Indexed palette with a trimmed transparency table
       source_asset: indexed_alpha.png
+      params: {'color_type': 'P'}
+    - id: enc_indexed_opaque_trns
+      description: Indexed palette preserving an explicitly opaque tRNS table
+      source_asset: palette_trns_opaque.png
       params: {'color_type': 'P'}
     - id: enc_1bit
       description: 

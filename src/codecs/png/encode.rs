@@ -87,14 +87,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         let palette = img.palette.as_ref()?;
         write_chunk(&mut output, *b"PLTE", &palette.rgb)?;
         if !palette.alpha.is_empty() {
-            let retained = palette
-                .alpha
-                .iter()
-                .rposition(|&alpha| alpha != 255)
-                .map_or(0, |index| index + 1);
-            if retained != 0 {
-                write_chunk(&mut output, *b"tRNS", &palette.alpha[..retained])?;
-            }
+            write_chunk(&mut output, *b"tRNS", &palette.alpha)?;
         }
     }
     write_requested_ancillary_chunks(&mut output, opts)?;

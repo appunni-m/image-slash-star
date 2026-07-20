@@ -169,6 +169,19 @@
       ]
     },
     {
+      "id": "color_indexed_alpha_palette_trns_opaque",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_opaque_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
       "id": "depth_1",
       "status": "ok",
       "error_type": null,
@@ -784,6 +797,16 @@
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "unrecognized data stream contents when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_adam7_giant_dimensions",
+      "status": "error",
+      "error_type": "PIL.Image.DecompressionBombError",
+      "error_message": "Image size (18446744065119617025 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

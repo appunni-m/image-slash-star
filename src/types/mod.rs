@@ -195,10 +195,7 @@ impl ImagePalette {
     /// Construct a palette when its table lengths are structurally valid.
     pub fn new(rgb: Vec<u8>, alpha: Vec<u8>) -> ImageResult<Self> {
         let entries = rgb.len() / 3;
-        if rgb.is_empty()
-            || !rgb.len().is_multiple_of(3)
-            || entries > 256
-            || (!alpha.is_empty() && alpha.len() != entries)
+        if rgb.is_empty() || !rgb.len().is_multiple_of(3) || entries > 256 || alpha.len() > entries
         {
             return Err(ImageError::Parameter("invalid indexed palette".to_owned()));
         }

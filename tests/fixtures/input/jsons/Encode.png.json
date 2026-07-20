@@ -327,6 +327,27 @@
       }
     },
     {
+      "id": "enc_error_truncated_pixels",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "truncate_pixels": true
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": "PIL.Image.frombytes(mode, size, tobytes()[:-1])"
+      }
+    },
+    {
       "id": "enc_l8",
       "source_asset": "gray.png",
       "source_format": "png",
@@ -430,6 +451,25 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/indexed_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_indexed_opaque_trns",
+      "source_asset": "palette_trns_opaque.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_trns_opaque.png",
         "method": "PIL.Image.Image.save",
         "format": "PNG",
         "kwargs": {},

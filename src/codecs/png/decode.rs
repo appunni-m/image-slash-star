@@ -29,14 +29,10 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let _compression = header.data[10];
     let filter = header.data[11];
     let interlace = header.data[12];
-    if width == 0
-        || height == 0
-        || filter != 0
-        || interlace > 1
-        || !valid_color_depth(png_color, depth)
-    {
+    if width == 0 || height == 0 || filter != 0 || interlace > 1 {
         return None;
     }
+    let (channels, color) = png_layout(png_color, depth)?;
 
     let mut compressed = Vec::new();
     let mut palette_rgb = None;
@@ -58,7 +54,6 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
 
-    let channels = channel_count(png_color)?;
     let expected_inflated = inflated_len(width, height, channels, depth, interlace)?;
     let inflated = decompress_zlib(&compressed, expected_inflated)?;
     if inflated.len() != expected_inflated {
@@ -71,27 +66,20 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         height,
         png_color,
         depth,
+        color,
         &samples,
         palette_rgb,
         palette_alpha,
     )
 }
 
-fn valid_color_depth(color: u8, depth: u8) -> bool {
-    match color {
-        0 => matches!(depth, 1 | 2 | 4 | 8 | 16),
-        2 | 4 | 6 => matches!(depth, 8 | 16),
-        3 => matches!(depth, 1 | 2 | 4 | 8),
-        _ => false,
-    }
-}
-
-fn channel_count(color: u8) -> Option<usize> {
-    match color {
-        0 | 3 => Some(1),
-        2 => Some(3),
-        4 => Some(2),
-        6 => Some(4),
+fn png_layout(color: u8, depth: u8) -> Option<(usize, ColorType)> {
+    match (color, depth) {
+        (0, 1 | 2 | 4 | 8) | (3, 1 | 2 | 4 | 8) => Some((1, ColorType::L8)),
+        (0, 16) => Some((1, ColorType::L16)),
+        (2, 8 | 16) => Some((3, ColorType::Rgb8)),
+        (4, 8) => Some((2, ColorType::La8)),
+        (4, 16) | (6, 8 | 16) => Some((if color == 4 { 2 } else { 4 }, ColorType::Rgba8)),
         _ => None,
     }
 }
@@ -152,7 +140,7 @@ fn decode_scanlines(
                 let index = (y * width + x) * channels + channel;
                 samples[index] = value;
             },
-        )?;
+        );
     } else {
         for (x_start, y_start, x_step, y_step) in ADAM7 {
             let pass_width = pass_size(width, x_start, x_step);
@@ -180,7 +168,7 @@ fn decode_scanlines(
                     let index = (y * width + x) * channels + channel;
                     samples[index] = value;
                 },
-            )?;
+            );
         }
     }
     (position == data.len()).then_some(samples)
@@ -242,36 +230,32 @@ fn unpack_into<F>(
     channels: usize,
     depth: u8,
     mut store: F,
-) -> Option<()>
-where
+) where
     F: FnMut(usize, usize, usize, u16),
 {
-    let stride = row_bytes(width, channels, depth)?;
+    let stride = rows.len() / height;
     for y in 0..height {
-        let row = rows.get(y * stride..(y + 1) * stride)?;
+        let row = &rows[y * stride..(y + 1) * stride];
         for x in 0..width {
             for channel in 0..channels {
-                let sample_index = x.checked_mul(channels)?.checked_add(channel)?;
+                let sample_index = x * channels + channel;
                 let value = match depth {
                     1 | 2 | 4 => {
-                        let bit = sample_index.checked_mul(usize::from(depth))?;
-                        let shift = 8usize
-                            .checked_sub(usize::from(depth))?
-                            .checked_sub(bit % 8)?;
+                        let bit = sample_index * usize::from(depth);
+                        let shift = 8 - usize::from(depth) - bit % 8;
                         u16::from((row[bit / 8] >> shift) & ((1u8 << depth) - 1))
                     }
                     8 => u16::from(row[sample_index]),
-                    16 => {
-                        let offset = sample_index.checked_mul(2)?;
-                        u16::from_be_bytes(row.get(offset..offset + 2)?.try_into().ok()?)
+                    _ => {
+                        debug_assert_eq!(depth, 16);
+                        let offset = sample_index * 2;
+                        u16::from_be_bytes([row[offset], row[offset + 1]])
                     }
-                    _ => return None,
                 };
                 store(x, y, channel, value);
             }
         }
     }
-    Some(())
 }
 
 fn build_image(
@@ -279,28 +263,17 @@ fn build_image(
     height: u32,
     png_color: u8,
     depth: u8,
+    color: ColorType,
     samples: &[u16],
     palette_rgb: Option<Vec<u8>>,
     mut palette_alpha: Vec<u8>,
 ) -> Option<DecodedImage> {
-    let color = match (png_color, depth) {
-        (0, 16) => ColorType::L16,
-        (0, _) | (3, _) => ColorType::L8,
-        (2, 8) => ColorType::Rgb8,
-        (2, 16) => ColorType::Rgb8,
-        (4, 8) => ColorType::La8,
-        (4, 16) => ColorType::Rgba8,
-        (6, 8) => ColorType::Rgba8,
-        (6, 16) => ColorType::Rgba8,
-        _ => return None,
-    };
-
     let pixels = if png_color == 0 && depth == 1 {
         pack_one_bit(
             samples,
             usize::try_from(width).ok()?,
             usize::try_from(height).ok()?,
-        )?
+        )
     } else if png_color == 0 && depth < 8 {
         let maximum = (1u16 << depth) - 1;
         samples
@@ -343,24 +316,23 @@ fn build_image(
         let entries = rgb.len() / 3;
         if !palette_alpha.is_empty() {
             palette_alpha.truncate(entries);
-            palette_alpha.resize(entries, 255);
         }
         image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
     }
     Some(image)
 }
 
-fn pack_one_bit(samples: &[u16], width: usize, height: usize) -> Option<Vec<u8>> {
+fn pack_one_bit(samples: &[u16], width: usize, height: usize) -> Vec<u8> {
     let stride = width.div_ceil(8);
-    let mut output = vec![0u8; stride.checked_mul(height)?];
+    let mut output = vec![0u8; stride * height];
     for y in 0..height {
         for x in 0..width {
-            if *samples.get(y * width + x)? != 0 {
+            if samples[y * width + x] != 0 {
                 output[y * stride + x / 8] |= 1 << (7 - x % 8);
             }
         }
     }
-    Some(output)
+    output
 }
 
 fn row_bytes(width: usize, channels: usize, depth: u8) -> Option<usize> {

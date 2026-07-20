@@ -422,6 +422,13 @@ def gen_png():
         + png_chunk(b"IDAT", zlib.compress(b"\x05\x80\x00\x00"))
         + png_chunk(b"IEND", b"")
     )
+    giant_adam7_header = struct.pack(">IIBBBBB", 0xFFFF_FFFF, 0xFFFF_FFFF, 8, 2, 0, 0, 1)
+    (d / "adam7_giant_dimensions.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", giant_adam7_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00"))
+        + png_chunk(b"IEND", b"")
+    )
     palette_header = struct.pack(">IIBBBBB", 1, 1, 1, 3, 0, 0, 0)
     (d / "palette_trns_too_long.png").write_bytes(
         b"\x89PNG\r\n\x1a\n"
@@ -429,6 +436,16 @@ def gen_png():
         + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
         + png_chunk(b"tRNS", b"\0\x80\xff")
         + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    opaque_palette = bytes(value for index in range(256) for value in (index, index, index))
+    opaque_trns_header = struct.pack(">IIBBBBB", 1, 1, 8, 3, 0, 0, 0)
+    (d / "palette_trns_opaque.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", opaque_trns_header)
+        + png_chunk(b"PLTE", opaque_palette)
+        + png_chunk(b"tRNS", b"\xff" * 256)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x00"))
         + png_chunk(b"IEND", b"")
     )
     print(f"  PNG: {len(list(d.glob('*.png')))} files")

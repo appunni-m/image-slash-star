@@ -171,7 +171,15 @@ def encode_params(fmt, params):
         return default
 
     # These are properties of the explicit source asset, not Image.save kwargs.
-    for source_property in ("size", "color", "color_type", "bit_depth", "grayscale", "alpha"):
+    for source_property in (
+        "size",
+        "color",
+        "color_type",
+        "bit_depth",
+        "grayscale",
+        "alpha",
+        "truncate_pixels",
+    ):
         take(source_property)
 
     if fmt == "jpeg":
@@ -797,13 +805,16 @@ def describe_encode_call(fmt_name, row):
             "start": 1,
             "count": (frame_count or 1) - 1,
         }
-    return {
+    call = {
         "open": f"tests/fixtures/input/images/{row['source_format']}/{row['source_asset']}",
         "method": "PIL.Image.Image.save",
         "format": fmt_pil(fmt_name),
         "kwargs": json_pillow_value(kwargs),
         "roundtrip": ["PIL.Image.open", "load", "tobytes"],
     }
+    if row.get("params", {}).get("truncate_pixels"):
+        call["source_transform"] = "PIL.Image.frombytes(mode, size, tobytes()[:-1])"
+    return call
 
 
 def sync_encode_rows(manifest, matrix):
@@ -1188,6 +1199,8 @@ def generate_encode(manifest, matrix, target_format=None):
                 params = row.get("params", {})
                 validate_source_params(img, params, fmt_name)
                 kwargs = encode_params(fmt_name, dict(params))
+                if params.get("truncate_pixels"):
+                    img = Image.frombytes(img.mode, img.size, img.tobytes()[:-1])
                 image_to_save, kwargs = prepare_multiframe_call(img, kwargs)
                 buf = io.BytesIO()
                 image_to_save.save(buf, format=fmt_pil(fmt_name), **kwargs)

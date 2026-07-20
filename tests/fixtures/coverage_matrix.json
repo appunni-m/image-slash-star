@@ -4023,6 +4023,24 @@
           "oracle_status": "ok"
         },
         {
+          "id": "color_indexed_alpha_palette_trns_opaque",
+          "type": "decode",
+          "format": "png",
+          "category": "color",
+          "description": "Indexed with tRNS transparency",
+          "asset": "palette_trns_opaque.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_opaque_png.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
           "asset": "1bit.png",
           "asset_path": "tests/fixtures/input/images/png/1bit.png",
           "category": "depth",
@@ -4896,6 +4914,19 @@
           "oracle_error_message": "unrecognized data stream contents when reading image file"
         },
         {
+          "id": "error_malformed_structure_adam7_giant_dimensions",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "adam7_giant_dimensions.png",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.Image.DecompressionBombError",
+          "oracle_error_message": "Image size (18446744065119617025 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
+        },
+        {
           "id": "pillow_tolerated_malformed",
           "type": "decode",
           "format": "png",
@@ -5301,6 +5332,23 @@
           "oracle_error_message": "cannot write mode CMYK as PNG"
         },
         {
+          "id": "enc_error_truncated_pixels",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "Pixel buffer shorter than the declared dimensions",
+          "params": {
+            "truncate_pixels": true
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "not enough image data"
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_l8",
@@ -5430,6 +5478,28 @@
           "ref_size": [
             128,
             128
+          ]
+        },
+        {
+          "id": "enc_indexed_opaque_trns",
+          "type": "encode",
+          "format": "png",
+          "category": "indexed",
+          "description": "Indexed palette preserving an explicitly opaque tRNS table",
+          "params": {
+            "color_type": "P"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "palette_trns_opaque.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_indexed_opaque_trns.bin",
+          "encoded_ref_bytes": 1115,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_indexed_opaque_trns.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
           ]
         },
         {
@@ -10199,12 +10269,12 @@
     }
   },
   "summary": {
-    "total_rows": 542,
-    "decode_rows": 324,
-    "encode_rows": 186,
+    "total_rows": 546,
+    "decode_rows": 326,
+    "encode_rows": 188,
     "formats": 8,
-    "assets_available": 317,
-    "decode_active": 318,
+    "assets_available": 319,
+    "decode_active": 320,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

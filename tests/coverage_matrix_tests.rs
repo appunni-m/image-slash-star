@@ -1330,7 +1330,21 @@ fn test_encode_matrix() {
                 }
             };
 
-            let encoded = img::encode_sequence(decoded, format, &opts);
+            let encoded = if row
+                .params
+                .get("truncate_pixels")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+            {
+                let mut malformed = decoded.first().unwrap().clone();
+                malformed.pixels.pop();
+                match format {
+                    img::ImageFormat::Png => img::codecs::png::encode::encode(&malformed, &opts),
+                    _ => None,
+                }
+            } else {
+                img::encode_sequence(decoded, format, &opts)
+            };
             if row.expect_error {
                 if encoded.is_none() {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);

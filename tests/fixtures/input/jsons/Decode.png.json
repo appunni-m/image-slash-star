@@ -169,6 +169,19 @@
       }
     },
     {
+      "id": "color_indexed_alpha_palette_trns_opaque",
+      "asset": "palette_trns_opaque.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_trns_opaque.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "depth_1",
       "asset": "1bit.png",
       "expect_error": false,
@@ -824,6 +837,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/adam7_invalid_scanline_filter.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_adam7_giant_dimensions",
+      "asset": "adam7_giant_dimensions.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/adam7_giant_dimensions.png",
         "operations": [
           "PIL.Image.open",
           "load",
