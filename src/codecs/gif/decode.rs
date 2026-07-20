@@ -4,7 +4,8 @@
 //! and loop metadata required for deterministic re-encoding.
 
 use crate::types::{
-    DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageMode, ImagePalette,
+    AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
+    ImagePalette,
 };
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -33,7 +34,8 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     let logical_width = input.read_u16()?;
     let logical_height = input.read_u16()?;
     let packed = input.read_u8()?;
-    input.skip(2)?; // Background color index and pixel aspect ratio.
+    let background_index = input.read_u8()?;
+    input.skip(1)?; // Pixel aspect ratio.
 
     let global_palette = if packed & 0x80 != 0 {
         Some(input.read_bytes(color_table_len(packed)?)?.to_vec())
@@ -105,6 +107,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         },
         frames,
         loop_count,
+        background: Some(AnimationBackground::PaletteIndex(background_index)),
     };
     sequence.validate().ok()?;
     Some(sequence)

@@ -1987,6 +1987,29 @@
           ]
         },
         {
+          "id": "enc_animated_rgba_opaque",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Re-encode RGBA animation with no fully transparent source samples",
+          "params": {
+            "animated": true,
+            "frames": 2
+          },
+          "status": "active",
+          "source_format": "webp",
+          "source_asset": "animated_alpha_holes.webp",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_opaque.bin",
+          "encoded_ref_bytes": 351,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_opaque.bin",
+          "ref_bytes": 4096,
+          "ref_mode": "P",
+          "ref_size": [
+            64,
+            64
+          ]
+        },
+        {
           "id": "enc_animated_rgb",
           "type": "encode",
           "format": "gif",
@@ -11961,9 +11984,9 @@
     }
   },
   "summary": {
-    "total_rows": 643,
+    "total_rows": 644,
     "decode_rows": 400,
-    "encode_rows": 211,
+    "encode_rows": 212,
     "formats": 8,
     "assets_available": 393,
     "decode_active": 394,

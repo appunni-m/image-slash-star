@@ -6,7 +6,8 @@
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
 use crate::encode_options::EncodeOptions;
 use crate::types::{
-    ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode, ImagePalette,
+    AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
+    ImagePalette,
 };
 use std::collections::HashMap;
 
@@ -119,11 +120,9 @@ fn coalesce_identical_frames(
                     );
                     let mut prepared = prepare_image(&full_image)?;
                     if prepared.transparent.is_none() && prepared.palette.len() / 3 < 256 {
-                        prepared.palette.splice(0..0, [0, 0, 0]);
-                        for index in &mut prepared.indices {
-                            *index = index.checked_add(1)?;
-                        }
-                        prepared.transparent = Some(0);
+                        let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
+                        prepared.palette.extend_from_slice(&[0, 0, 0]);
+                        prepared.transparent = Some(transparent);
                     }
                     let mut cropped = Vec::with_capacity(frame_width.checked_mul(frame_height)?);
                     for y in top..bottom {
@@ -321,18 +320,8 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             (palette, indices, None)
         }
         (ImageMode::Rgba8, ColorType::Rgba8) => {
-            if img.pixels.chunks_exact(4).all(|pixel| pixel[3] >= 128) {
-                let rgb = img
-                    .pixels
-                    .chunks_exact(4)
-                    .flat_map(|pixel| pixel[..3].iter().copied())
-                    .collect::<Vec<_>>();
-                let (palette, indices) = quantize_rgb(&rgb)?;
-                (palette, indices, None)
-            } else {
-                let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels)?;
-                (palette, indices, transparent_idx)
-            }
+            let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels)?;
+            (palette, indices, transparent_idx)
         }
         _ => return None,
     };
@@ -357,6 +346,7 @@ struct GifSettings {
     loop_count: Option<u16>,
 }
 
+#[derive(Clone)]
 struct PreparedImage {
     palette: Vec<u8>,
     indices: Vec<u8>,
@@ -419,7 +409,9 @@ fn write_gif(
 ) -> Option<Vec<u8>> {
     let width = u16::try_from(sequence.width).ok()?;
     let height = u16::try_from(sequence.height).ok()?;
-    let first = prepare_image(&frames.first()?.image)?;
+    let first_frame = frames.first()?;
+    let mut first = prepare_image(&first_frame.image)?;
+    let background = prepare_background(&mut first, first_frame.image.mode, sequence.background)?;
     let (global_count, global_size, _) = table_parameters(&first.palette)?;
     // Pillow always writes the global palette for a single frame. Its
     // include_color_table option adds a duplicate local palette rather than
@@ -437,7 +429,7 @@ fn write_gif(
     output.extend_from_slice(&width.to_le_bytes());
     output.extend_from_slice(&height.to_le_bytes());
     output.push(u8::from(global_table) << 7 | global_size);
-    output.extend_from_slice(&[0, 0]); // Background index and pixel aspect ratio.
+    output.extend_from_slice(&[background, 0]); // Background index and pixel aspect ratio.
     if global_table {
         write_color_table(&mut output, &first.palette, global_count)?;
     }
@@ -466,25 +458,37 @@ fn write_gif(
     }
 
     let mut previous_quantized_rgb = None::<Vec<u8>>;
-    for frame in frames {
-        let mut prepared = prepare_image(&frame.image)?;
+    for (frame_index, frame) in frames.iter().enumerate() {
+        let mut prepared = if frame_index == 0 {
+            first.clone()
+        } else {
+            prepare_image(&frame.image)?
+        };
         let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette)?;
         if let Some(previous) = previous_quantized_rgb.as_deref()
-            && prepared.transparent.is_none()
-            && prepared.palette.len() / 3 < 256
             && previous.len() == quantized_rgb.len()
         {
-            let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
-            for (index, (before, after)) in previous
-                .chunks_exact(3)
-                .zip(quantized_rgb.chunks_exact(3))
-                .enumerate()
-            {
-                if before == after {
-                    prepared.indices[index] = transparent;
+            let transparent = if let Some(transparent) = prepared.transparent {
+                Some(transparent)
+            } else if prepared.palette.len() / 3 < 256 {
+                let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
+                prepared.palette.extend_from_slice(&[0, 0, 0]);
+                Some(transparent)
+            } else {
+                None
+            };
+            if let Some(transparent) = transparent {
+                for (index, (before, after)) in previous
+                    .chunks_exact(3)
+                    .zip(quantized_rgb.chunks_exact(3))
+                    .enumerate()
+                {
+                    if before == after {
+                        prepared.indices[index] = transparent;
+                    }
                 }
+                prepared.transparent = Some(transparent);
             }
-            prepared.transparent = Some(transparent);
         }
         previous_quantized_rgb = Some(quantized_rgb);
         let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette)?;
@@ -541,6 +545,42 @@ fn write_gif(
     }
     output.push(GIF_TRAILER);
     Some(output)
+}
+
+fn prepare_background(
+    first: &mut PreparedImage,
+    source_mode: ImageMode,
+    background: Option<AnimationBackground>,
+) -> Option<u8> {
+    let Some(background) = background else {
+        return Some(0);
+    };
+    match background {
+        AnimationBackground::PaletteIndex(index) => Some(index),
+        AnimationBackground::Rgba([red, green, blue, alpha]) => {
+            if source_mode != ImageMode::Rgba8 && alpha != 255 {
+                return Some(0);
+            }
+            if alpha == 0
+                && let Some(transparent) = first.transparent
+            {
+                return Some(transparent);
+            }
+            if source_mode != ImageMode::Rgba8 {
+                for (index, color) in first.palette.chunks_exact(3).enumerate() {
+                    if color == [red, green, blue] {
+                        return u8::try_from(index).ok();
+                    }
+                }
+            }
+            if first.palette.len() / 3 >= 256 {
+                return Some(0);
+            }
+            let index = u8::try_from(first.palette.len() / 3).ok()?;
+            first.palette.extend_from_slice(&[red, green, blue]);
+            Some(index)
+        }
+    }
 }
 
 fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) -> Option<()> {
@@ -1038,9 +1078,11 @@ fn quantize_rgba(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>, Option<u8>)> {
         }
     }
     let (mut rgba_palette, mut indices) = pillow_fast_octree(&colors, 256)?;
-    let mut transparent = rgba_palette
+    let mut transparent = colors
         .iter()
-        .position(|color| color[3] == 0)
+        .any(|color| color[3] == 0)
+        .then(|| rgba_palette.iter().position(|color| color[3] == 0))
+        .flatten()
         .and_then(|index| u8::try_from(index).ok());
 
     // GifImagePlugin._get_optimize compacts holes, and also shrinks a palette

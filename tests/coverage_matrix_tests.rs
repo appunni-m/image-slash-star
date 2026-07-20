@@ -2090,6 +2090,7 @@ fn exercise_type_metadata() {
         height: 1,
         frames: vec![],
         loop_count: None,
+        background: None,
     };
     assert!(empty.validate().is_err());
     let outside = img::DecodedSequence {
@@ -2104,6 +2105,7 @@ fn exercise_type_metadata() {
             interlaced: false,
         }],
         loop_count: None,
+        background: None,
     };
     assert!(outside.validate().is_err());
     assert_eq!(

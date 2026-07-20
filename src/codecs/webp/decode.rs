@@ -3,7 +3,9 @@
 //! The internal codec handles: lossy VP8, lossless VP8L, alpha (ALPH + VP8X),
 //! animated frames, metadata (ICC/EXIF/XMP), and tiling.
 
-use crate::types::{ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal};
+use crate::types::{
+    AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal,
+};
 use std::io::Cursor;
 
 use super::native::LoopCount;
@@ -65,11 +67,13 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         LoopCount::Forever => 0,
         LoopCount::Times(count) => u32::from(count.get()),
     });
+    let background = decoder.background_color().map(AnimationBackground::Rgba);
     let sequence = DecodedSequence {
         width,
         height,
         frames,
         loop_count,
+        background,
     };
     sequence.validate().ok()?;
     Some(sequence)

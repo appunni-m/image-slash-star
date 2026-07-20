@@ -370,6 +370,18 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
         self.loop_count
     }
 
+    /// Returns the animation canvas background in RGBA order.
+    pub fn background_color(&self) -> Option<[u8; 4]> {
+        self.extended
+            .as_ref()
+            .filter(|extended| extended.animation)
+            .map(|extended| {
+                extended
+                    .background_color
+                    .unwrap_or(extended.background_color_hint)
+            })
+    }
+
     /// Returns the number of bytes required to store the image or a single frame, or None if that
     /// would take more than `usize::MAX` bytes.
     pub fn output_buffer_size(&self) -> Option<usize> {

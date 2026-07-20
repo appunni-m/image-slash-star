@@ -860,6 +860,11 @@ formats:
       source_format: webp
       source_asset: animated_alpha.webp
       params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgba_opaque
+      description: Re-encode RGBA animation with no fully transparent source samples
+      source_format: webp
+      source_asset: animated_alpha_holes.webp
+      params: {'animated': True, 'frames': 2}
     - id: enc_animated_rgb
       description: Re-encode composited RGB animation frames through Pillow's adaptive GIF palettes
       source_format: webp

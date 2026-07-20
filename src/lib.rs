@@ -16,7 +16,7 @@
 //!
 //! Architecture:
 //!   &[u8] → decode() → DecodedImage { dimensions, pixels, mode, palette }
-//!   &[u8] → decode_sequence() → DecodedSequence { frames, timing, disposal }
+//!   &[u8] → decode_sequence() → DecodedSequence { frames, timing, disposal, background }
 //!   pillow-rs wraps DecodedImage into DynamicImage/Image::Loaded.
 
 // Integration-test-only dependencies are still visible while Cargo builds the

@@ -343,6 +343,15 @@ pub struct DecodedFrame {
     pub interlaced: bool,
 }
 
+/// Background metadata retained from an animated image container.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AnimationBackground {
+    /// A GIF global color-table index.
+    PaletteIndex(u8),
+    /// A WebP animation canvas color in red, green, blue, alpha order.
+    Rgba([u8; 4]),
+}
+
 /// A still image or animation with all frames retained for re-encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodedSequence {
@@ -354,6 +363,8 @@ pub struct DecodedSequence {
     pub frames: Vec<DecodedFrame>,
     /// Format loop count; zero means infinite when present.
     pub loop_count: Option<u32>,
+    /// Container background metadata, when the source format defines it.
+    pub background: Option<AnimationBackground>,
 }
 
 impl DecodedSequence {
@@ -374,6 +385,7 @@ impl DecodedSequence {
                 interlaced: false,
             }],
             loop_count: None,
+            background: None,
         }
     }
 
