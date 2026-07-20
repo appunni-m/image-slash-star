@@ -117,6 +117,45 @@
       }
     },
     {
+      "id": "compression_lzw_lzw_no_eoi",
+      "asset": "lzw_no_eoi.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_no_eoi.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw_lzw_trailing_code",
+      "asset": "lzw_trailing_code.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_trailing_code.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_lzw_lzw_kwkwk_clipped",
+      "asset": "lzw_kwkwk_clipped.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_kwkwk_clipped.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "compression_deflate",
       "asset": "deflate.tiff",
       "expect_error": false,
@@ -759,6 +798,45 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/miniswhite_gray_alpha.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_lzw_invalid_first",
+      "asset": "lzw_invalid_first.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_invalid_first.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_lzw_invalid_future_code",
+      "asset": "lzw_invalid_future_code.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_invalid_future_code.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_lzw_clear_only",
+      "asset": "lzw_clear_only.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lzw_clear_only.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -416,6 +416,9 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
                 return None;
             }
             output.push(code as u8);
+            if output.len() == expected {
+                return Some(output);
+            }
             previous = Some(code);
             continue;
         };
@@ -439,13 +442,17 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
                 expected,
             )?;
             if output.len() >= expected {
-                return None;
+                return Some(output);
             }
             output.push(first);
             first
         } else {
             return None;
         };
+
+        if output.len() == expected {
+            return Some(output);
+        }
 
         if usize::from(next_code) < LIMIT {
             prefixes[usize::from(next_code)] = old_code;
@@ -457,7 +464,7 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
         }
         previous = Some(code);
     }
-    None
+    (output.len() == expected).then_some(output)
 }
 
 fn append_lzw(
@@ -470,9 +477,6 @@ fn append_lzw(
 ) -> Option<u8> {
     let mut count = 0usize;
     while code >= 256 {
-        if usize::from(code) >= 4096 || count >= stack.len() {
-            return None;
-        }
         stack[count] = suffixes[usize::from(code)];
         count += 1;
         code = prefixes[usize::from(code)];
@@ -480,10 +484,8 @@ fn append_lzw(
     let first = code as u8;
     stack[count] = first;
     count += 1;
-    if output.len().checked_add(count)? > expected {
-        return None;
-    }
-    output.extend(stack[..count].iter().rev());
+    let remaining = expected.checked_sub(output.len())?;
+    output.extend(stack[..count].iter().rev().take(remaining));
     Some(first)
 }
 

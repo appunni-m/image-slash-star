@@ -1397,6 +1397,9 @@ formats:
       - rgba_lzw.tiff
       - rgb_lzw_predictor.tiff
       - gray16_lzw_predictor.tiff
+      - lzw_no_eoi.tiff
+      - lzw_trailing_code.tiff
+      - lzw_kwkwk_clipped.tiff
     - id: compression_deflate
       description: Deflate/ZIP compression
       test_assets:
@@ -1522,6 +1525,9 @@ formats:
       - empty_tile_offsets.tiff
       - compressed_empty_tile_byte_counts.tiff
       - miniswhite_gray_alpha.tiff
+      - lzw_invalid_first.tiff
+      - lzw_invalid_future_code.tiff
+      - lzw_clear_only.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

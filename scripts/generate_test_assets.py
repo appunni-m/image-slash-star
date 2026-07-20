@@ -1601,13 +1601,13 @@ def write_low_depth_tiff(path, image, bits, photometric):
     path.write_bytes(output)
 
 
-def write_packbits_tiff(path, payload):
-    """Write a one-pixel grayscale TIFF around an explicit PackBits stream."""
+def write_compressed_grayscale_tiff(path, payload, compression, width=1):
+    """Write a one-row grayscale TIFF around an explicit compressed stream."""
     entries = [
-        (256, 4, 1, 1),
+        (256, 4, 1, width),
         (257, 4, 1, 1),
         (258, 3, 1, 8),
-        (259, 3, 1, 32773),
+        (259, 3, 1, compression),
         (262, 3, 1, 1),
         (273, 4, 1, "pixels"),
         (277, 3, 1, 1),
@@ -1628,6 +1628,21 @@ def write_packbits_tiff(path, payload):
     output.extend(struct.pack("<I", 0))
     output.extend(payload)
     path.write_bytes(output)
+
+
+def write_packbits_tiff(path, payload):
+    write_compressed_grayscale_tiff(path, payload, 32773)
+
+
+def pack_lzw_codes(codes):
+    """Pack the small nine-bit code streams used by LZW boundary fixtures."""
+    bits = "".join(f"{code:09b}" for code in codes)
+    bits += "0" * (-len(bits) % 8)
+    return int(bits, 2).to_bytes(len(bits) // 8, "big")
+
+
+def write_lzw_tiff(path, codes, width=1):
+    write_compressed_grayscale_tiff(path, pack_lzw_codes(codes), 5, width)
 
 
 def write_ycbcr_tiff(path, image):
@@ -1756,6 +1771,12 @@ def gen_tiff():
     write_packbits_tiff(d / "packbits_noop.tiff", b"\x80\x00\x7f")
     write_packbits_tiff(d / "packbits_literal_overrun.tiff", b"\x01\x00\x01")
     write_packbits_tiff(d / "packbits_run_overrun.tiff", b"\xff\x00")
+    write_lzw_tiff(d / "lzw_no_eoi.tiff", [256, 7])
+    write_lzw_tiff(d / "lzw_trailing_code.tiff", [256, 0, 300])
+    write_lzw_tiff(d / "lzw_kwkwk_clipped.tiff", [256, 0, 258, 257], width=2)
+    write_lzw_tiff(d / "lzw_invalid_first.tiff", [258])
+    write_lzw_tiff(d / "lzw_invalid_future_code.tiff", [256, 0, 300], width=2)
+    write_lzw_tiff(d / "lzw_clear_only.tiff", [256])
     img.convert("L").save(d / "gray_lzw.tiff", compression="tiff_lzw")
     img.convert("L").save(d / "gray_deflate.tiff", compression="tiff_adobe_deflate")
     img.convert("RGBA").save(d / "rgba_lzw.tiff", compression="tiff_lzw")

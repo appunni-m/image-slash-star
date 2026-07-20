@@ -117,6 +117,45 @@
       ]
     },
     {
+      "id": "compression_lzw_lzw_no_eoi",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_no_eoi_tiff.bin",
+      "ref_bytes": 1,
+      "ref_mode": "L8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "compression_lzw_lzw_trailing_code",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_trailing_code_tiff.bin",
+      "ref_bytes": 1,
+      "ref_mode": "L8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "compression_lzw_lzw_kwkwk_clipped",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_kwkwk_clipped_tiff.bin",
+      "ref_bytes": 2,
+      "ref_mode": "L8",
+      "ref_size": [
+        2,
+        1
+      ]
+    },
+    {
       "id": "compression_deflate",
       "status": "ok",
       "error_type": null,
@@ -713,6 +752,36 @@
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
       "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_lzw_invalid_first",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_lzw_invalid_future_code",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_lzw_clear_only",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
