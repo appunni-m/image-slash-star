@@ -96,6 +96,8 @@ pub(super) fn select_frame(
     height: usize,
     quality: f64,
     method: u8,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    trellis: bool,
 ) -> Vec<MacroblockDecision> {
     assert_eq!(width % 16, 0);
     assert_eq!(height % 16, 0);
@@ -208,6 +210,8 @@ pub(super) fn select_frame(
                 matrix.texture_lambda as u32,
                 None,
                 method <= 1,
+                coefficient_probabilities,
+                trellis,
             );
             let intra16_mode_score = rd_score(
                 intra16.rate_cost,
@@ -230,6 +234,8 @@ pub(super) fn select_frame(
                 matrix.lambda_mode as u32,
                 matrix.texture_lambda as u32,
                 method <= 1,
+                coefficient_probabilities,
+                trellis,
             );
             let luma = if method <= 1 {
                 if analysis.macroblocks[block_index].use_intra4 {
@@ -288,6 +294,7 @@ pub(super) fn select_frame(
                     3 => chroma::ChromaMode::Horizontal,
                     _ => unreachable!("invalid analyzed chroma mode"),
                 }),
+                coefficient_probabilities,
             );
             let nonzero = luma_nz | chroma.nonzero;
             decisions.push(MacroblockDecision {

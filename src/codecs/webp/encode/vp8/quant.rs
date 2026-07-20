@@ -6,7 +6,11 @@
 //! - The four base quantization tables used by VP8 (Y/UV, DC/AC)
 //! - RGB to YCbCr (BT.601) conversion (`rgb_to_yuv`)
 
-use super::dct::{vp8_fdct_4x4, vp8_idct_add_4x4};
+use super::{
+    cost::{bit_cost, level_cost},
+    dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
+    tokenize::COEFF_BANDS,
+};
 
 // ── VP8 quantization step tables ──
 //
@@ -63,6 +67,8 @@ pub(super) struct SegmentMatrices {
     pub(super) lambda_uv: i32,
     pub(super) lambda_mode: i32,
     pub(super) texture_lambda: i32,
+    pub(super) lambda_trellis_i4: i32,
+    pub(super) lambda_trellis_i16: i32,
 }
 
 fn expand_matrix(dc: u16, ac: u16, kind: usize) -> (QuantMatrix, i32) {
@@ -118,7 +124,155 @@ pub(super) fn libwebp_segment_matrices(
         lambda_uv: ((3 * q_uv * q_uv) >> 6).max(1),
         lambda_mode: ((q_i4 * q_i4) >> 7).max(1),
         texture_lambda: ((50 * q_i4) >> 5).max(1),
+        lambda_trellis_i4: ((7 * q_i4 * q_i4) >> 3).max(1),
+        lambda_trellis_i16: ((q_i16 * q_i16) >> 2).max(1),
     }
+}
+
+const ZIGZAG: [usize; 16] = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15];
+
+#[derive(Clone, Copy)]
+struct TrellisNode {
+    previous: u8,
+    negative: bool,
+    level: i16,
+}
+
+/// Trellis quantization used by libwebp's method 6 luma search.
+pub(super) fn trellis_quantize_block(
+    coefficients: &mut [i16; 16],
+    levels: &mut [i16; 16],
+    initial_context: usize,
+    coefficient_type: usize,
+    matrix: &QuantMatrix,
+    lambda: i32,
+    probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+) -> bool {
+    const WEIGHTS: [i64; 16] = [30, 27, 19, 11, 27, 24, 17, 10, 19, 17, 12, 8, 11, 10, 8, 6];
+    const MAX_LEVEL: u32 = 2_047;
+    const MAX_SCORE: i64 = i64::MAX / 4;
+    let first = usize::from(coefficient_type == 0);
+    let threshold = i32::from(matrix.q[1]).pow(2) / 4;
+    let mut last = first.wrapping_sub(1);
+    for position in (first..16).rev() {
+        let coefficient = i32::from(coefficients[ZIGZAG[position]]);
+        if coefficient * coefficient > threshold {
+            last = position;
+            break;
+        }
+    }
+    if last == usize::MAX {
+        last = first;
+    } else if last < 15 {
+        last += 1;
+    }
+
+    let initial =
+        &probabilities[coefficient_type][usize::from(COEFF_BANDS[first])][initial_context];
+    let mut best_score = i64::from(lambda) * i64::from(bit_cost(false, initial[0]));
+    let mut best_path: Option<(usize, usize, usize)> = None;
+    let mut nodes = [[TrellisNode {
+        previous: 0,
+        negative: false,
+        level: 0,
+    }; 2]; 16];
+    let entry_score = if initial_context == 0 {
+        i64::from(lambda) * i64::from(bit_cost(true, initial[0]))
+    } else {
+        0
+    };
+    let mut previous_scores = [entry_score; 2];
+    let mut previous_contexts = [initial_context; 2];
+
+    for position in first..=last {
+        let coefficient_index = ZIGZAG[position];
+        let signed = i32::from(coefficients[coefficient_index]);
+        let negative = signed < 0;
+        let coefficient = signed.unsigned_abs() + u32::from(matrix.sharpen[coefficient_index]);
+        let reciprocal = u32::from(matrix.reciprocal[coefficient_index]);
+        let level0 = ((coefficient * reciprocal) >> 17).min(MAX_LEVEL);
+        let threshold_level = ((coefficient * reciprocal + (0x80 << 9)) >> 17).min(MAX_LEVEL);
+        let mut current_scores = [MAX_SCORE; 2];
+        let mut current_contexts = [0; 2];
+        for delta in 0..2 {
+            let level = level0 + delta as u32;
+            if level > threshold_level {
+                continue;
+            }
+            let quantized_error =
+                i64::from(coefficient) - i64::from(level) * i64::from(matrix.q[coefficient_index]);
+            let original_error = i64::from(coefficient);
+            let distortion_delta = WEIGHTS[coefficient_index]
+                * (quantized_error * quantized_error - original_error * original_error);
+            let mut selected_score = MAX_SCORE;
+            let mut selected_previous = 0;
+            for previous in 0..2 {
+                let probs = &probabilities[coefficient_type][usize::from(COEFF_BANDS[position])]
+                    [previous_contexts[previous]];
+                let score = previous_scores[previous]
+                    + i64::from(lambda)
+                        * i64::from(level_cost(
+                            level as usize,
+                            probs,
+                            previous_contexts[previous],
+                        ));
+                if score < selected_score {
+                    selected_score = score;
+                    selected_previous = previous;
+                }
+            }
+            selected_score += 256 * distortion_delta;
+            nodes[position][delta] = TrellisNode {
+                previous: selected_previous as u8,
+                negative,
+                level: level as i16,
+            };
+            current_scores[delta] = selected_score;
+            current_contexts[delta] = (level > 2).then_some(2).unwrap_or(level as usize);
+            if level != 0 && selected_score < best_score {
+                let terminal = if position < 15 {
+                    let probs = &probabilities[coefficient_type]
+                        [usize::from(COEFF_BANDS[position + 1])][current_contexts[delta]];
+                    i64::from(lambda) * i64::from(bit_cost(false, probs[0]))
+                } else {
+                    0
+                };
+                let score = selected_score + terminal;
+                if score < best_score {
+                    best_score = score;
+                    best_path = Some((position, delta, selected_previous));
+                }
+            }
+        }
+        previous_scores = current_scores;
+        previous_contexts = current_contexts;
+    }
+
+    let clear_from = first;
+    for position in clear_from..16 {
+        coefficients[ZIGZAG[position]] = 0;
+        levels[position] = 0;
+    }
+    let Some((mut position, mut node, terminal_previous)) = best_path else {
+        return false;
+    };
+    nodes[position][node].previous = terminal_previous as u8;
+    loop {
+        let selected = nodes[position][node];
+        let signed_level = if selected.negative {
+            -selected.level
+        } else {
+            selected.level
+        };
+        levels[position] = signed_level;
+        coefficients[ZIGZAG[position]] = signed_level * matrix.q[ZIGZAG[position]] as i16;
+        node = usize::from(selected.previous);
+        if position == first {
+            break;
+        }
+        position -= 1;
+    }
+    true
 }
 
 /// Quantizes one transform block using libwebp's lossy VP8 scalar quantizer.
@@ -130,7 +284,6 @@ pub(super) fn quantize_block(
     levels: &mut [i16; 16],
     matrix: &QuantMatrix,
 ) -> bool {
-    const ZIGZAG: [usize; 16] = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15];
     const MAX_LEVEL: u32 = 2_047;
 
     let mut nonzero = false;

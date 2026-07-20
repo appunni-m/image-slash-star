@@ -3,7 +3,7 @@
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_16x16, squared_error_16x16},
     dct::{vp8_fdct_4x4, vp8_fwht_4x4, vp8_idct_add_4x4, vp8_iwht_4x4},
-    quant::{SegmentMatrices, quantize_block},
+    quant::{SegmentMatrices, quantize_block, trellis_quantize_block},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,6 +99,8 @@ fn evaluate(
     matrices: &SegmentMatrices,
     lambda_i16: u32,
     texture_lambda: u32,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    trellis: bool,
 ) -> Intra16Candidate {
     let prediction = predict(mode, top, left, top_left, has_top, has_left);
     let mut coefficients = [[0i16; 16]; 16];
@@ -124,15 +126,35 @@ fn evaluate(
 
     let mut y1_levels = [[0; 16]; 16];
     let mut nonzero = u32::from(y2_nonzero) << 24;
+    let mut trellis_top = top_nonzero;
+    let mut trellis_left = left_nonzero;
     for block in 0..16 {
         coefficients[block][0] = 0;
-        if quantize_block(
-            &mut coefficients[block],
-            &mut y1_levels[block],
-            &matrices.y1,
-        ) {
+        let block_x = block % 4;
+        let block_y = block / 4;
+        let context = usize::from(trellis_top[block_x] + trellis_left[block_y]);
+        let block_nonzero = if trellis {
+            trellis_quantize_block(
+                &mut coefficients[block],
+                &mut y1_levels[block],
+                context,
+                0,
+                &matrices.y1,
+                matrices.lambda_trellis_i16,
+                coefficient_probabilities,
+            )
+        } else {
+            quantize_block(
+                &mut coefficients[block],
+                &mut y1_levels[block],
+                &matrices.y1,
+            )
+        };
+        if block_nonzero {
             nonzero |= 1 << block;
         }
+        trellis_top[block_x] = u8::from(block_nonzero);
+        trellis_left[block_y] = u8::from(block_nonzero);
     }
     let restored_dc = vp8_iwht_4x4(&transformed_dc);
     for block in 0..16 {
@@ -157,14 +179,14 @@ fn evaluate(
         }
     }
 
-    let mut rate = residual_cost(&y2_levels, 0, 1, y2_context);
+    let mut rate = residual_cost(&y2_levels, 0, 1, y2_context, coefficient_probabilities);
     let mut top_context = top_nonzero;
     let mut left_context = left_nonzero;
     for block_y in 0..4 {
         for block_x in 0..4 {
             let block = block_y * 4 + block_x;
             let context = usize::from(top_context[block_x] + left_context[block_y]);
-            rate += residual_cost(&y1_levels[block], 1, 0, context);
+            rate += residual_cost(&y1_levels[block], 1, 0, context, coefficient_probabilities);
             let block_nonzero = u8::from(y1_levels[block][1..].iter().any(|&level| level != 0));
             top_context[block_x] = block_nonzero;
             left_context[block_y] = block_nonzero;
@@ -205,6 +227,8 @@ pub(super) fn select(
     texture_lambda: u32,
     fixed_mode: Option<Intra16Mode>,
     distortion_only: bool,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    trellis: bool,
 ) -> Intra16Candidate {
     let selected_mode = distortion_only.then(|| {
         Intra16Mode::ALL
@@ -237,6 +261,8 @@ pub(super) fn select(
                 matrices,
                 lambda_i16,
                 texture_lambda,
+                coefficient_probabilities,
+                trellis,
             )
         })
         .min_by_key(|candidate| candidate.score)

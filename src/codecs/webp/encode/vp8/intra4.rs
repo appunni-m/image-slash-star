@@ -2,7 +2,8 @@
 
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
-    quant::{SegmentMatrices, quantize_reconstruct_block},
+    dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
+    quant::{SegmentMatrices, quantize_reconstruct_block, trellis_quantize_block},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -191,6 +192,8 @@ pub(super) fn select_macroblock(
     lambda_mode: u32,
     texture_lambda: u32,
     distortion_only: bool,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    trellis: bool,
 ) -> Intra4Result {
     let mut result = Intra4Result {
         modes: [Intra4Mode::Dc; 16],
@@ -267,8 +270,26 @@ pub(super) fn select_macroblock(
                 .filter(|&mode| selected_mode.is_none_or(|selected| selected == mode))
             {
                 let prediction = predict(mode, &top, &left, block_top_left);
-                let (nonzero, levels, reconstructed) =
-                    quantize_reconstruct_block(&block_source, &prediction, &matrices.y1);
+                let (nonzero, levels, reconstructed) = if trellis {
+                    let residual = std::array::from_fn(|index| {
+                        i16::from(block_source[index]) - i16::from(prediction[index])
+                    });
+                    let mut coefficients = vp8_fdct_4x4(&residual);
+                    let mut levels = [0; 16];
+                    let nonzero = trellis_quantize_block(
+                        &mut coefficients,
+                        &mut levels,
+                        context,
+                        3,
+                        &matrices.y1,
+                        matrices.lambda_trellis_i4,
+                        coefficient_probabilities,
+                    );
+                    let reconstructed = vp8_idct_add_4x4(&prediction, &coefficients);
+                    (nonzero, levels, reconstructed)
+                } else {
+                    quantize_reconstruct_block(&block_source, &prediction, &matrices.y1)
+                };
                 let distortion = squared_error_4x4(&block_source, &reconstructed);
                 let texture = spectral_distortion_4x4(&block_source, &reconstructed);
                 let spectral = (texture_lambda * texture + 128) >> 8;
@@ -289,7 +310,8 @@ pub(super) fn select_macroblock(
                 {
                     continue;
                 }
-                let rate = flat_penalty + residual_cost(&levels, 0, 3, context);
+                let rate =
+                    flat_penalty + residual_cost(&levels, 0, 3, context, coefficient_probabilities);
                 let score = rd_score(rate, header, distortion + spectral, lambda_i4);
                 if distortion_only || best.as_ref().is_none_or(|best| score < best.0) {
                     best = Some((

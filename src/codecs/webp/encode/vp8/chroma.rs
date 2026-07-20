@@ -145,6 +145,7 @@ fn evaluate(
     error_diffusion: bool,
     matrices: &SegmentMatrices,
     lambda_uv: u32,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> ChromaCandidate {
     let predictions = [
         predict(mode, top_u, left_u, top_left_u, has_top, has_left),
@@ -217,7 +218,13 @@ fn evaluate(
                 let context_index = plane * 2 + block_x;
                 let context =
                     usize::from(top_context[context_index] + left_context[plane * 2 + block_y]);
-                rate += residual_cost(&levels[level_index], 0, 2, context);
+                rate += residual_cost(
+                    &levels[level_index],
+                    0,
+                    2,
+                    context,
+                    coefficient_probabilities,
+                );
                 let block_nonzero = u8::from(levels[level_index].iter().any(|&level| level != 0));
                 top_context[context_index] = block_nonzero;
                 left_context[plane * 2 + block_y] = block_nonzero;
@@ -284,6 +291,7 @@ pub(super) fn select(
     matrices: &SegmentMatrices,
     lambda_uv: u32,
     fixed_mode: Option<ChromaMode>,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> ChromaCandidate {
     ChromaMode::ALL
         .into_iter()
@@ -308,6 +316,7 @@ pub(super) fn select(
                 error_diffusion,
                 matrices,
                 lambda_uv,
+                coefficient_probabilities,
             )
         })
         .min_by_key(|candidate| candidate.score)

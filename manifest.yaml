@@ -1039,7 +1039,6 @@ formats:
       params: {'method': 0}
     - id: enc_method_6
       description: 
-      status: planned
       params: {'method': 6}
     - id: enc_exif
       description: 

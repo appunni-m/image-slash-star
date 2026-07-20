@@ -1,6 +1,6 @@
 //! Exact VP8 rate costs used by libwebp's mode decisions.
 
-use super::tokenize::{COEFF_BANDS, COEFF_PROBS};
+use super::tokenize::COEFF_BANDS;
 
 const ENTROPY_COST: [u16; 256] = [
     1792, 1792, 1792, 1536, 1536, 1408, 1366, 1280, 1280, 1216, 1178, 1152, 1110, 1076, 1061, 1024,
@@ -154,6 +154,52 @@ pub(super) fn bit_cost(bit: bool, probability: u8) -> u32 {
     u32::from(ENTROPY_COST[usize::from(index)])
 }
 
+/// Cost of coding one coefficient level from libwebp's remapped cost table.
+/// This deliberately excludes the initial EOB bit when `context == 0`, just
+/// like `VP8LevelCost`; callers entering a block add that bit separately.
+pub(super) fn level_cost(level: usize, probabilities: &[u8; 11], context: usize) -> u32 {
+    let mut cost = if context > 0 {
+        bit_cost(true, probabilities[0])
+    } else {
+        0
+    };
+    if level == 0 {
+        return cost + bit_cost(false, probabilities[1]);
+    }
+    cost += bit_cost(true, probabilities[1]) + u32::from(LEVEL_FIXED_COSTS[level]);
+    if level == 1 {
+        return cost + bit_cost(false, probabilities[2]);
+    }
+    cost += bit_cost(true, probabilities[2]);
+    if level <= 4 {
+        cost += bit_cost(false, probabilities[3]);
+        cost += bit_cost(level != 2, probabilities[4]);
+        if level != 2 {
+            cost += bit_cost(level == 4, probabilities[5]);
+        }
+    } else {
+        cost += bit_cost(true, probabilities[3]);
+        if level <= 10 {
+            cost += bit_cost(false, probabilities[6]);
+            cost += bit_cost(level > 6, probabilities[7]);
+        } else {
+            cost += bit_cost(true, probabilities[6]);
+            let (node8, node9_or_10) = if level < 19 {
+                (false, false)
+            } else if level < 35 {
+                (false, true)
+            } else if level < 67 {
+                (true, false)
+            } else {
+                (true, true)
+            };
+            cost += bit_cost(node8, probabilities[8]);
+            cost += bit_cost(node9_or_10, probabilities[if node8 { 10 } else { 9 }]);
+        }
+    }
+    cost
+}
+
 pub(super) fn squared_error_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 {
     left.iter()
         .zip(right)
@@ -233,11 +279,12 @@ pub(super) fn residual_cost(
     first: usize,
     coefficient_type: usize,
     initial_context: usize,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> u32 {
     let last = (first..16).rev().find(|&index| levels[index] != 0);
     let mut position = first;
-    let mut probabilities =
-        &COEFF_PROBS[coefficient_type][usize::from(COEFF_BANDS[position])][initial_context];
+    let mut probabilities = &coefficient_probabilities[coefficient_type]
+        [usize::from(COEFF_BANDS[position])][initial_context];
     let Some(last) = last else {
         return bit_cost(false, probabilities[0]);
     };
@@ -248,7 +295,8 @@ pub(super) fn residual_cost(
         position += 1;
         if coefficient == 0 {
             cost += bit_cost(false, probabilities[1]);
-            probabilities = &COEFF_PROBS[coefficient_type][usize::from(COEFF_BANDS[position])][0];
+            probabilities =
+                &coefficient_probabilities[coefficient_type][usize::from(COEFF_BANDS[position])][0];
             continue;
         }
 
@@ -291,8 +339,8 @@ pub(super) fn residual_cost(
         if position == 16 {
             return cost;
         }
-        probabilities =
-            &COEFF_PROBS[coefficient_type][usize::from(COEFF_BANDS[position])][next_context];
+        probabilities = &coefficient_probabilities[coefficient_type]
+            [usize::from(COEFF_BANDS[position])][next_context];
         let has_more = position <= last;
         cost += bit_cost(has_more, probabilities[0]);
         if !has_more {

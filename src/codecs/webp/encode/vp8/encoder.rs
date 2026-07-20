@@ -18,6 +18,7 @@ use super::{
     partition::encode_first_partition,
     probability::adapt_coefficients,
     residual::encode_coefficients,
+    tokenize::COEFF_PROBS,
 };
 
 /// Encode an RGB image to a lossy VP8 WebP bitstream.
@@ -96,6 +97,8 @@ fn encode_vp8_planes(
         padded_height as usize,
         f64::from(quality),
         method,
+        &COEFF_PROBS,
+        false,
     );
     let segment_map = simplify_segments(&mut params);
     for decision in &mut decisions {
@@ -107,11 +110,28 @@ fn encode_vp8_planes(
     } else {
         decisions.len()
     };
-    let probabilities = adapt_coefficients(
+    let mut probabilities = adapt_coefficients(
         &decisions[..statistics_count],
         macroblock_width,
         method >= 3,
     );
+    if method >= 6 {
+        decisions = select_frame(
+            &y_plane,
+            &u_plane,
+            &v_plane,
+            padded_width as usize,
+            padded_height as usize,
+            f64::from(quality),
+            method,
+            &COEFF_PROBS,
+            true,
+        );
+        for decision in &mut decisions {
+            decision.segment = segment_map[usize::from(decision.segment)];
+        }
+        probabilities = adapt_coefficients(&decisions, macroblock_width, true);
+    }
     let header_data = encode_first_partition(
         &decisions,
         macroblock_width,
