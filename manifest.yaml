@@ -1035,6 +1035,7 @@ formats:
       - lossy_strong_sharp7.webp
       - lossy_filter_off.webp
       - lossy_segment_one.webp
+      - lossy_partitions_eight.webp
     - id: lossless_vp8l
       description: Lossless WebP (VP8L codec)
       test_assets:

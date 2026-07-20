@@ -736,6 +736,28 @@ def gen_webp():
                 "set CWEBP to the pinned libwebp 1.6.0 cwebp executable to generate: "
                 + ", ".join(missing)
             )
+    partition_encoder = os.environ.get("WEBP_PARTITION_ENCODER")
+    partition_fixture = d / "lossy_partitions_eight.webp"
+    if partition_encoder:
+        with tempfile.TemporaryDirectory(prefix="image-star-webp-") as temporary:
+            raw = Path(temporary) / "source.rgb"
+            raw.write_bytes(img.tobytes())
+            subprocess.run(
+                [
+                    partition_encoder,
+                    str(raw),
+                    str(img.width),
+                    str(img.height),
+                    "3",
+                    str(partition_fixture),
+                ],
+                check=True,
+            )
+    elif not partition_fixture.exists():
+        raise RuntimeError(
+            "set WEBP_PARTITION_ENCODER to scripts/libwebp_fixture_encoder.c "
+            "compiled against pinned libwebp 1.6.0"
+        )
     img.save(d / "lossless.webp", lossless=True)
     Image.new("RGB", (64, 64), (17, 89, 203)).save(d / "lossless_solid.webp", lossless=True)
     for name, pixel in {

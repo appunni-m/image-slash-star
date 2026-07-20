@@ -130,6 +130,19 @@
       ]
     },
     {
+      "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_partitions_eight_webp.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "lossless_vp8l",
       "status": "ok",
       "error_type": null,

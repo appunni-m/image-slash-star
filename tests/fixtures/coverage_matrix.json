@@ -7323,6 +7323,24 @@
           ]
         },
         {
+          "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters",
+          "asset": "lossy_partitions_eight.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_partitions_eight_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "lossless.webp",
           "asset_path": "tests/fixtures/input/images/webp/lossless.webp",
           "category": "lossless",
@@ -9016,12 +9034,12 @@
     }
   },
   "summary": {
-    "total_rows": 484,
-    "decode_rows": 275,
+    "total_rows": 485,
+    "decode_rows": 276,
     "encode_rows": 177,
     "formats": 8,
-    "assets_available": 268,
-    "decode_active": 269,
+    "assets_available": 269,
+    "decode_active": 270,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

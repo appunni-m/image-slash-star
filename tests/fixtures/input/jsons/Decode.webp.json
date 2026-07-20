@@ -130,6 +130,19 @@
       }
     },
     {
+      "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
+      "asset": "lossy_partitions_eight.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_partitions_eight.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "lossless_vp8l",
       "asset": "lossless.webp",
       "expect_error": false,
