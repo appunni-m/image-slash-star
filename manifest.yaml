@@ -2340,6 +2340,11 @@ formats:
       - zero_entry.ico
       - truncated_entry.ico
       - short_dib.ico
+      - bmp_32bit_truncated_pixels.ico
+      - bmp_24bit_truncated_pixels.ico
+      - bmp_8bit_truncated_pixels.ico
+      - bmp_4bit_truncated_pixels.ico
+      - bmp_1bit_truncated_pixels.ico
       - zero_width.ico
       - unsupported_bpp.ico
       - cursor_short_header.cur

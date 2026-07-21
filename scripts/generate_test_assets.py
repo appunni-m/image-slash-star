@@ -3529,6 +3529,19 @@ def gen_ico():
     struct.pack_into("<I", odd_1bit, 22 + 4, 15)
     (d / "bmp_1bit_odd.ico").write_bytes(odd_1bit)
 
+    def write_truncated_payload(name, source_name, payload_len):
+        truncated = bytearray((d / source_name).read_bytes())
+        data_offset = struct.unpack_from("<I", truncated, 18)[0]
+        struct.pack_into("<I", truncated, 14, payload_len)
+        del truncated[data_offset + payload_len :]
+        (d / name).write_bytes(truncated)
+
+    write_truncated_payload("bmp_32bit_truncated_pixels.ico", "bmp_32bit.ico", 40)
+    write_truncated_payload("bmp_24bit_truncated_pixels.ico", "bmp_entry.ico", 40)
+    write_truncated_payload("bmp_8bit_truncated_pixels.ico", "bmp_8bit.ico", 40)
+    write_truncated_payload("bmp_4bit_truncated_pixels.ico", "bmp_4bit.ico", 40)
+    write_truncated_payload("bmp_1bit_truncated_pixels.ico", "bmp_1bit.ico", 40)
+
     short_dib = bytearray(ico[: 22 + 20])
     struct.pack_into("<I", short_dib, 14, 20)
     (d / "short_dib.ico").write_bytes(short_dib)

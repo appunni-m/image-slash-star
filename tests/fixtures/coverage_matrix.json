@@ -4223,6 +4223,71 @@
           "oracle_error_message": "Truncated File Read"
         },
         {
+          "id": "error_malformed_bmp_32bit_truncated_pixels",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "bmp_32bit_truncated_pixels.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "buffer is not large enough"
+        },
+        {
+          "id": "error_malformed_bmp_24bit_truncated_pixels",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "bmp_24bit_truncated_pixels.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "negative seek value -2"
+        },
+        {
+          "id": "error_malformed_bmp_8bit_truncated_pixels",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "bmp_8bit_truncated_pixels.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "negative seek value -2"
+        },
+        {
+          "id": "error_malformed_bmp_4bit_truncated_pixels",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "bmp_4bit_truncated_pixels.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "negative seek value -2"
+        },
+        {
+          "id": "error_malformed_bmp_1bit_truncated_pixels",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "bmp_1bit_truncated_pixels.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "negative seek value -2"
+        },
+        {
           "id": "error_malformed_zero_width",
           "type": "decode",
           "format": "ico",
@@ -16715,12 +16780,12 @@
     }
   },
   "summary": {
-    "total_rows": 942,
-    "decode_rows": 645,
+    "total_rows": 947,
+    "decode_rows": 650,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 638,
-    "decode_active": 639,
+    "assets_available": 643,
+    "decode_active": 644,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

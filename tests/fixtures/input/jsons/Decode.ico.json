@@ -312,6 +312,71 @@
       }
     },
     {
+      "id": "error_malformed_bmp_32bit_truncated_pixels",
+      "asset": "bmp_32bit_truncated_pixels.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_32bit_truncated_pixels.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bmp_24bit_truncated_pixels",
+      "asset": "bmp_24bit_truncated_pixels.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_24bit_truncated_pixels.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bmp_8bit_truncated_pixels",
+      "asset": "bmp_8bit_truncated_pixels.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_8bit_truncated_pixels.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bmp_4bit_truncated_pixels",
+      "asset": "bmp_4bit_truncated_pixels.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_4bit_truncated_pixels.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bmp_1bit_truncated_pixels",
+      "asset": "bmp_1bit_truncated_pixels.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_1bit_truncated_pixels.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_zero_width",
       "asset": "zero_width.ico",
       "expect_error": true,

@@ -12,14 +12,14 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `6b8f3ab5-d12f-40b4-86ed-d0e88eb8447c`
-- Current measured commit metadata: `cb818c6f159a32bf6acab509ad9f37d3fef3f9ed`
-- Current source state: pushed `main` after Attempt 50.
+- Current snapshot: `c137ec69-34a3-4dbd-bec4-192f7ae798b1`
+- Current measured commit metadata: `451a8574145e03d6a1fa20f22d913f17b8ea9a2b`
+- Current source state: pushed `main` after Attempt 51.
 - Lines: 24625 / 24629
 - Branches: 3438 / 3444
 - Functions: 1582 / 1582
-- Regions: 40201 / 40910
-- Remaining target: 4 lines, 6 branches, and 709 regions.
+- Regions: 40206 / 40910
+- Remaining target: 4 lines, 6 branches, and 704 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -200,6 +200,57 @@ Measurement:
   `651 / 684` regions to `689 / 714` regions; missing regions fell from
   `33` to `25`.
 - Net: aggregate missing regions fell from `717` to `709`. Branch debt is
+  unchanged.
+
+## Attempt 51 plan: ICO embedded DIB truncated-pixel fixtures
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 50.
+- Coverage MCP snapshot: `6b8f3ab5-d12f-40b4-86ed-d0e88eb8447c`.
+- Overall: `24625 / 24629` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40201 / 40910` regions.
+- Target file: `src/codecs/ico/decode.rs`, currently `388 / 388` lines,
+  `62 / 62` branches, `13 / 13` functions, and `985 / 1030` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `decode_entry()` | Line 82 directory-entry short read. | Already covered by `truncated_directory.ico` at the public `decode()` boundary; the remaining region is an indexed direct-helper guard and is not selected. |
+| `decode_cur_bmp()` | Lines 138, 142-145, 148, 152, 157-159, 162, 164, and 166. | Most are conversions after exact-length reads, `u32 -> usize`, or file-size overflow. Keep documented as defensive/instrumentation debt unless a cursor fixture naturally moves it. |
+| `decode_ico_bmp_32bpp()` / `24bpp()` | Lines 219 and 254, `data.get(pixel_start..pixel_end)?`. | Public-input candidate: ICO/CUR entries whose directory size is internally consistent but whose embedded DIB contains only the 40-byte header and no XOR pixels. Add malformed fixtures for 32bpp and 24bpp entries. |
+| `decode_ico_bmp_8bpp()` / `4bpp()` / `1bpp()` | Lines 306, 358, and 422, `data.get(pixel_start..pixel_end)?`. | Same public-input candidate for indexed DIB entries. Add malformed fixtures for 8bpp, 4bpp, and 1bpp entries. |
+| Indexed palette/mask arithmetic | Lines 296-320, 347-372, 411-436, and `ico_and_mask()` lines 464-466. | `u32 -> usize`, `colors_used * 4`, and mask calculations fit on 64-bit for ICO dimensions. After a valid XOR plane exists, the AND mask slice is intentionally allowed to overlap the XOR tail, so these are not fixture targets in this attempt. |
+
+Implementation plan:
+
+1. Add a generator helper that truncates an existing one-entry ICO payload to a
+   fixed DIB length while also rewriting the directory entry size, so
+   `decode_entry()` reaches the bit-depth-specific DIB decoder instead of
+   failing at the container slice.
+2. Generate five malformed assets:
+   `bmp_32bit_truncated_pixels.ico`, `bmp_24bit_truncated_pixels.ico`,
+   `bmp_8bit_truncated_pixels.ico`, `bmp_4bit_truncated_pixels.ico`, and
+   `bmp_1bit_truncated_pixels.ico`.
+3. Add those assets to the ICO malformed `expect_error: true` manifest bucket
+   and regenerate only ICO assets/oracle refs.
+4. Do not add private hooks unless the fixtures fail to reach the mapped
+   public-input spans.
+5. Validate with formatting/checks and the approved Coverage MCP line+branch
+   command. Keep the assets only if aggregate region coverage improves.
+
+Measurement:
+
+- Coverage MCP run: `29504d48-4cc3-41c0-81bc-47eb82aae08c`.
+- Coverage MCP snapshot: `c137ec69-34a3-4dbd-bec4-192f7ae798b1`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24625 / 24629` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40206 / 40910` regions.
+- Target file movement: `src/codecs/ico/decode.rs` moved from
+  `985 / 1030` regions to `990 / 1030` regions; missing regions fell from
+  `45` to `40`.
+- Net: aggregate missing regions fell from `709` to `704`. Branch debt is
   unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
