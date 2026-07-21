@@ -12,8 +12,8 @@ after the latest pushed-head verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `5283e9d4-219c-4ab5-9a32-85f0048f3b7f`
-- Current measured commit metadata: `953d2212c91934c7bc8f3b93b5b06f4732ad7bcc`
+- Current snapshot: `4ddc5168-3d14-413e-92c6-6faed2fb1097`
+- Current measured commit metadata: `3d606c99303bde3b66b7cdee0474a46b3a366ecd`
 - Lines: 22418 / 22419
 - Branches: 3366 / 3456
 - Functions: 1543 / 1543
@@ -1297,6 +1297,91 @@ Reverse-mapped cleanup evidence:
   baseline to 62 / 62 branches. No ICO decoder branch gaps remain.
 
 ## Execution order
+
+## Planned WebP histogram reverse-mapped cleanup
+
+Coverage MCP pushed-head snapshot `4ddc5168-3d14-413e-92c6-6faed2fb1097`
+reports `src/codecs/webp/native/encoder/histogram.rs` at 530 / 530 lines,
+110 / 112 branches, and 31 / 31 functions. This is the smallest clean
+remaining branch target: exactly two single-branch gaps.
+
+Reverse-mapping targets before the next Coverage MCP run:
+
+- line 435: inside `stochastic_combine()`, after a chosen pair is merged,
+  queued pairs that touched either merged histogram are remapped to the new
+  cluster. The uncovered side is expected to be the drop path where
+  `update_pair(histograms, &mut pair, 0)` returns `false`. A valid input must
+  create a stochastic queue entry that is useful before the merge but no longer
+  gives negative savings after remapping. Search by code over deterministic
+  small histogram populations, not random image files, then add the minimal
+  private coverage probe only if it matches the real queue/update state.
+- line 524: `cluster()` invokes `greedy_combine()` only when
+  `stochastic_combine(&mut clusters, threshold)` returns `true`. Existing
+  probes already cover the cleanup path. The missing side is expected to be a
+  token stream where stochastic clustering does not reach the quality-derived
+  threshold. Search by code over generated one-pixel literal token streams with
+  varied quality and `histogram_bits`, then add the smallest deterministic
+  token stream that keeps `stochastic_combine()` above threshold.
+
+Validation rule for this batch: first run a local reverse-mapping script or
+temporary instrumentation that computes the exact predicate state. Then update
+the coverage-only private hook with those concrete inputs. Do not add public
+fixture rows for this batch because these branches are internal VP8L histogram
+clustering heuristics after tokenization; Pillow byte/pixel rows are too broad
+to act as the narrow oracle.
+
+Attempt 1:
+
+- A broad Python reverse search for the line-435 post-merge pair-drop state was
+  stopped after it was too slow. Do not place that search loop inside the
+  coverage hook.
+- For line 524, the direct reverse mapping is simple from the source:
+  `threshold = 1 + div_round(quality^3 * 99, 1_000_000)`, so `quality = 0`
+  gives threshold `1`. A stream of `4 * BIN_SIZE` distinct one-pixel literal
+  tokens creates many used clusters. The intended predicate state is
+  `stochastic_combine(&mut clusters, 1) == false`, covering the side where
+  `greedy_combine()` is skipped.
+- Coverage MCP run `5cdf776a-885a-4b6d-b2ae-d47abd6f7823`, snapshot
+  `6c90fff5-4e8e-4a0f-b651-fbe334cc605c`, passed but did not improve:
+  overall remained 3366 / 3456 branches and `histogram.rs` remained
+  110 / 112 branches with gaps at lines 435 and 524. The quality-0
+  `many_distinct` probe was reverted as a no-op. Inference: either the
+  generated clusters still reached the threshold, or the missing side on line
+  524 is not exposed by this one-line source mapping without branch-direction
+  detail from LLVM.
+
+Debug result:
+
+- A local reverse-mapping probe with the Rust `fast_slog()` math reproduced the
+  failing assumption: both `small_tokens` and the `many_distinct` quality-0
+  stream reduce to one cluster, so `stochastic_combine(..., 1)` returns `true`.
+- The same probe found a deterministic internal state that exercises both
+  remaining predicates: 24 histograms with 64 generated literals each, using
+  pixel seed `i * 1000 + j * 37` and channels
+  `r = seed * 73`, `g = seed * 151`, `b = seed * 199` modulo 256. That state
+  leaves two clusters when `minimum = 1`, so line 524 should cover the
+  false/no-greedy side. During the same run, after stochastic merge 7, remapped
+  queued pairs fail `update_pair(..., 0)`, so line 435 should cover the
+  queue-drop side.
+- Coverage MCP run `108cb305-862c-4611-80b2-387812a92755`, snapshot
+  `693015b1-5183-4a26-9e95-b10091dca632`, passed and improved
+  `histogram.rs` from 110 / 112 to 111 / 112 branches. This confirms the
+  direct stochastic probe hit line 435. It did not close line 524 because it
+  bypassed `cluster()`, and rustfmt's split `if` introduced an uncovered
+  closing-brace line. The formatting-only split was reverted.
+- Next correction: feed the same 24 × 64 generated literals through
+  `cluster()` with `histogram_bits = 6`, `width = token_count`, and
+  `quality = 0`. This reconstructs the same 24 high-entropy histograms inside
+  `cluster()` before line 524, so the branch at line 524 itself should observe
+  `stochastic_combine(..., 1) == false`.
+- Coverage MCP run `7d87df83-a7eb-4af3-a102-ced572d39151`, snapshot
+  `e80f2f58-f6ba-4550-9428-8c97d96d7616`, passed with 5 passed and 0 failed;
+  coverage artifact was ingested. Overall coverage improved from
+  3366 / 3456 branches at pushed-head snapshot
+  `4ddc5168-3d14-413e-92c6-6faed2fb1097` to 3368 / 3456 branches, leaving
+  88 missing branches. `src/codecs/webp/native/encoder/histogram.rs` improved
+  from 110 / 112 branches to 112 / 112 branches, 548 / 548 lines, and
+  31 / 31 functions. No histogram branch gaps remain.
 
 1. Small cleanup pass
    - Inspect single-branch lines first: PNG encode, BMP encode, TIFF encode,

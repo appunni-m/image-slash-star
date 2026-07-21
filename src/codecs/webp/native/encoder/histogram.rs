@@ -617,6 +617,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
     let _ = stochastic_combine(&mut distinct, 1);
 
+    let mut high_entropy = Vec::new();
+    let mut high_entropy_tokens = Vec::new();
+    for histogram_index in 0_u32..24 {
+        let mut histogram = Histogram::new(0);
+        for token_index in 0_u32..64 {
+            let seed = histogram_index * 1000 + token_index * 37;
+            let pixel = 0xff00_0000
+                | (((seed * 73) & 0xff) << 16)
+                | (((seed * 151) & 0xff) << 8)
+                | ((seed * 199) & 0xff);
+            let token = Token::Literal(pixel);
+            histogram.add_token(token, 1);
+            high_entropy_tokens.push(token);
+        }
+        histogram.analyze();
+        high_entropy.push(histogram);
+    }
+    assert!(!stochastic_combine(&mut high_entropy, 1));
+    let _ = cluster(&high_entropy_tokens, high_entropy_tokens.len(), 1, 0, 0, 6);
+
     let small_tokens = [
         Token::Literal(0xff00_0000),
         Token::Literal(0xff00_0001),
