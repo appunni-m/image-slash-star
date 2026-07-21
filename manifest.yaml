@@ -1311,6 +1311,32 @@ formats:
       - invalid_depth.bmp
       - 2bit.bmp
       - 2bit_gray.bmp
+      - truncated_magic.bmp
+      - truncated_file_size.bmp
+      - truncated_data_offset.bmp
+      - truncated_dib_header_size.bmp
+      - core_header_truncated_width.bmp
+      - core_header_truncated_height.bmp
+      - core_header_truncated_planes.bmp
+      - core_header_truncated_depth.bmp
+      - info_header_truncated_height.bmp
+      - info_header_truncated_planes.bmp
+      - info_header_truncated_depth.bmp
+      - info_header_truncated_compression.bmp
+      - info_header_truncated_image_size.bmp
+      - info_header_truncated_x_pels.bmp
+      - info_header_truncated_y_pels.bmp
+      - info_header_truncated_colors_used.bmp
+      - info_header_truncated_colors_important.bmp
+      - bitfields_truncated_masks.bmp
+      - bitfields_truncated_green_mask.bmp
+      - bitfields_truncated_blue_mask.bmp
+      - v4_bitfields_truncated_masks.bmp
+      - v4_bitfields_truncated_green_mask.bmp
+      - v4_bitfields_truncated_blue_mask.bmp
+      - rle8_empty_stream.bmp
+      - rle8_short_pair.bmp
+      - rle8_delta_missing_payload.bmp
       - truncated_header.bmp
       - truncated_pixels.bmp
       - truncated_palette.bmp

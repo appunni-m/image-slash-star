@@ -9,7 +9,7 @@
 //! - Palette (color table)
 
 use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read};
 
 // ---------------------------------------------------------------------------
 // Little‑endian helpers
@@ -83,7 +83,6 @@ impl BmpBitDepth {
 
 /// Read a Windows RGBQUAD or OS/2 RGBTRIPLE palette.
 fn read_palette(r: &mut Cursor<&[u8]>, count: u32, entry_bytes: usize) -> Option<Vec<[u8; 4]>> {
-    debug_assert!(matches!(entry_bytes, 3 | 4));
     let mut pal = Vec::with_capacity(count as usize);
     for _ in 0..count {
         let mut entry = [0u8; 4];
@@ -125,15 +124,15 @@ fn decode_rle(
     // particular, its RLE4 absolute mode reads floor(pixel_count / 2) bytes,
     // so an unpaired final nibble is deliberately omitted and later row
     // padding supplies a zero. Preserve that observable behavior exactly.
-    let destination_length = width.checked_mul(height)?;
+    let destination_length = width * height;
     let mut output = Vec::with_capacity(destination_length);
     let mut x = 0usize;
     let mut position = 0usize;
 
     while output.len() < destination_length {
         let count = usize::from(*data.get(position)?);
-        let value = *data.get(position.checked_add(1)?)?;
-        position = position.checked_add(2)?;
+        let value = *data.get(position + 1)?;
+        position += 2;
 
         if count != 0 {
             let pixel_count = count.min(width.saturating_sub(x));
@@ -148,9 +147,9 @@ fn decode_rle(
                     }
                 }));
             } else {
-                output.resize(output.len().checked_add(pixel_count)?, value);
+                output.resize(output.len() + pixel_count, value);
             }
-            x = x.checked_add(pixel_count)?;
+            x += pixel_count;
             continue;
         }
 
@@ -158,7 +157,7 @@ fn decode_rle(
             0 => {
                 let remainder = output.len() % width;
                 if remainder != 0 {
-                    output.resize(output.len().checked_add(width - remainder)?, 0);
+                    output.resize(output.len() + width - remainder, 0);
                 }
                 x = 0;
             }
@@ -168,10 +167,10 @@ fn decode_rle(
             1 => return None,
             2 => {
                 let right = usize::from(*data.get(position)?);
-                let up = usize::from(*data.get(position.checked_add(1)?)?);
-                position = position.checked_add(2)?;
-                let skipped = up.checked_mul(width)?.checked_add(right)?;
-                output.resize(output.len().checked_add(skipped)?, 0);
+                let up = usize::from(*data.get(position + 1)?);
+                position += 2;
+                let skipped = up * width + right;
+                output.resize(output.len() + skipped, 0);
                 x = output.len() % width;
             }
             absolute_pixels => {
@@ -180,7 +179,7 @@ fn decode_rle(
                 } else {
                     usize::from(absolute_pixels)
                 };
-                let end = position.checked_add(byte_count)?;
+                let end = position + byte_count;
                 let literal = data.get(position..end)?;
                 if rle4 {
                     for &byte in literal {
@@ -190,10 +189,10 @@ fn decode_rle(
                     output.extend_from_slice(literal);
                 }
                 position = end;
-                x = x.checked_add(usize::from(absolute_pixels))?;
+                x += usize::from(absolute_pixels);
 
-                if stream_offset.checked_add(position)? % 2 != 0 {
-                    position = position.checked_add(1)?;
+                if (stream_offset + position) % 2 != 0 {
+                    position += 1;
                 }
             }
         }
@@ -218,7 +217,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
     let _file_size = read_u32_le(&mut r)?; // bytes 2-5
-    r.seek(SeekFrom::Current(4)).ok()?; // bytes 6-9 (reserved)
+    r.set_position(r.position() + 4); // bytes 6-9 (reserved)
     let data_offset = read_u32_le(&mut r)? as u64; // bytes 10-13
 
     // --- DIB header ---
@@ -257,7 +256,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     if width <= 0 {
         return None;
     }
-    let w = u32::try_from(width).ok()?;
+    let w = width as u32;
     if h == 0 || w > 16_384 || h > 16_384 {
         return None;
     }
@@ -274,7 +273,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 // Pillow does not promote an optional fourth DWORD in this
                 // legacy layout to an alpha channel; alpha is authoritative
                 // only in V4/V5 headers.
-                r.seek(SeekFrom::Start(pos_after_standard)).ok()?;
+                r.set_position(pos_after_standard);
                 let r0 = read_u32_le(&mut r)?;
                 let g0 = read_u32_le(&mut r)?;
                 let b0 = read_u32_le(&mut r)?;
@@ -283,7 +282,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             _ => {
                 // For V4/V5 headers the masks are embedded at known offsets.
                 // V4 offsets (from DIB start): red=40, green=44, blue=48, alpha=52
-                r.seek(SeekFrom::Start(14 + 40)).ok()?;
+                r.set_position(14 + 40);
                 let r0 = read_u32_le(&mut r)?;
                 let g0 = read_u32_le(&mut r)?;
                 let b0 = read_u32_le(&mut r)?;
@@ -310,7 +309,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     // --- Skip any remaining DIB header bytes to reach palette area ---
     let dib_end = 14u64 + header_size as u64;
     if r.position() < dib_end {
-        r.seek(SeekFrom::Start(dib_end)).ok()?;
+        r.set_position(dib_end);
     }
 
     // --- Palette (color table) ---
@@ -339,7 +338,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     // --- Seek to pixel data ---
     if r.position() != data_offset {
-        r.seek(SeekFrom::Start(data_offset)).ok()?;
+        r.set_position(data_offset);
     }
 
     // ------------------------------------------------------------------
@@ -350,30 +349,30 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     let pixels: Vec<u8> = if compression == 1 {
         // BI_RLE8 — return raw palette indices
-        let mut remaining = Vec::new();
-        r.read_to_end(&mut remaining).ok()?;
+        let start = (r.position() as usize).min(data.len());
+        let remaining = data[start..].to_vec();
         orient_index_rows(
             decode_rle(
                 &remaining,
                 width_usize,
                 height_usize,
                 false,
-                usize::try_from(data_offset).ok()?,
+                data_offset as usize,
             )?,
             width_usize,
             top_down,
         )
     } else if compression == 2 {
         // BI_RLE4 — return raw palette indices
-        let mut remaining = Vec::new();
-        r.read_to_end(&mut remaining).ok()?;
+        let start = (r.position() as usize).min(data.len());
+        let remaining = data[start..].to_vec();
         orient_index_rows(
             decode_rle(
                 &remaining,
                 width_usize,
                 height_usize,
                 true,
-                usize::try_from(data_offset).ok()?,
+                data_offset as usize,
             )?,
             width_usize,
             top_down,
@@ -511,8 +510,12 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     for col in 0..width_usize {
                         let start = offset + col * 4;
                         if compression == 3 {
-                            let pixel =
-                                u32::from_le_bytes(raw.get(start..start + 4)?.try_into().ok()?);
+                            let pixel = u32::from_le_bytes([
+                                raw[start],
+                                raw[start + 1],
+                                raw[start + 2],
+                                raw[start + 3],
+                            ]);
                             out.extend_from_slice(&[
                                 extract_channel(pixel, rm),
                                 extract_channel(pixel, gm),
@@ -559,11 +562,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     };
     let mut image = DecodedImage::with_mode(w, h, pixels, mode);
     if mode == ImageMode::P8 {
-        let mut rgb = Vec::with_capacity(palette.len().checked_mul(3)?);
+        let mut rgb = Vec::with_capacity(palette.len() * 3);
         for entry in palette {
             rgb.extend_from_slice(&[entry[2], entry[1], entry[0]]);
         }
-        image = image.with_palette(ImagePalette::new(rgb, Vec::new()).ok()?);
+        image = image.with_palette(
+            ImagePalette::new(rgb, Vec::new()).expect("BMP palette is built from RGB triples"),
+        );
     }
     Some(image)
 }

@@ -1281,6 +1281,14 @@ def bmp_info_header(width, height, depth, compression, image_size, colors=0):
     )
 
 
+def bmp_file_header(file_size=14, pixel_offset=54):
+    return b"BM" + struct.pack("<IHHI", file_size, 0, 0, pixel_offset)
+
+
+def write_bmp_prefix(path, dib_prefix, pixel_offset=54):
+    path.write_bytes(bmp_file_header(14 + len(dib_prefix), pixel_offset) + dib_prefix)
+
+
 def write_bmp_24(path, image, top_down=False, core_header=False):
     image = image.convert("RGB")
     width, height = image.size
@@ -1662,6 +1670,89 @@ def gen_bmp():
         row = bytes((1, 0, 0, 0))
         dib = bmp_info_header(2, 1, 8, 0, len(row), 256)
         write_bmp(d / f"palette_{channel_name}_mismatch.bmp", dib, row, bytes(palette))
+    (d / "truncated_magic.bmp").write_bytes(b"B")
+    (d / "truncated_file_size.bmp").write_bytes(b"BM\0")
+    (d / "truncated_data_offset.bmp").write_bytes(
+        b"BM" + struct.pack("<IHH", 0, 0, 0) + b"\0"
+    )
+    (d / "truncated_dib_header_size.bmp").write_bytes(bmp_file_header())
+
+    core_prefix = struct.pack("<I", 12)
+    write_bmp_prefix(d / "core_header_truncated_width.bmp", core_prefix, 26)
+    write_bmp_prefix(
+        d / "core_header_truncated_height.bmp",
+        core_prefix + struct.pack("<H", 1),
+        26,
+    )
+    write_bmp_prefix(
+        d / "core_header_truncated_planes.bmp",
+        core_prefix + struct.pack("<HH", 1, 1),
+        26,
+    )
+    write_bmp_prefix(
+        d / "core_header_truncated_depth.bmp",
+        core_prefix + struct.pack("<HHH", 1, 1, 1),
+        26,
+    )
+
+    info_prefix = struct.pack("<I", 40)
+    info_fields = [
+        ("height", struct.pack("<i", 1)),
+        ("planes", struct.pack("<H", 1)),
+        ("depth", struct.pack("<H", 24)),
+        ("compression", struct.pack("<I", 0)),
+        ("image_size", struct.pack("<I", 0)),
+        ("x_pels", struct.pack("<i", 3_780)),
+        ("y_pels", struct.pack("<i", 3_780)),
+        ("colors_used", struct.pack("<I", 0)),
+        ("colors_important", struct.pack("<I", 0)),
+    ]
+    payload = info_prefix + struct.pack("<i", 1)
+    for field_name, encoded in info_fields:
+        write_bmp_prefix(d / f"info_header_truncated_{field_name}.bmp", payload)
+        payload += encoded
+
+    write_bmp(d / "bitfields_truncated_masks.bmp", bmp_info_header(1, 1, 16, 3, 0), b"")
+    write_bmp(
+        d / "bitfields_truncated_green_mask.bmp",
+        bmp_info_header(1, 1, 16, 3, 0),
+        b"",
+        masks=struct.pack("<I", 0x7C00),
+    )
+    write_bmp(
+        d / "bitfields_truncated_blue_mask.bmp",
+        bmp_info_header(1, 1, 16, 3, 0),
+        b"",
+        masks=struct.pack("<II", 0x7C00, 0x03E0),
+    )
+    v4_truncated = bytearray(bmp_info_header(1, 1, 32, 3, 0))
+    struct.pack_into("<I", v4_truncated, 0, 108)
+    write_bmp(d / "v4_bitfields_truncated_masks.bmp", bytes(v4_truncated), b"")
+    write_bmp(
+        d / "v4_bitfields_truncated_green_mask.bmp",
+        bytes(v4_truncated),
+        b"",
+        masks=struct.pack("<I", 0x00FF_0000),
+    )
+    write_bmp(
+        d / "v4_bitfields_truncated_blue_mask.bmp",
+        bytes(v4_truncated),
+        b"",
+        masks=struct.pack("<II", 0x00FF_0000, 0x0000_FF00),
+    )
+    write_bmp(d / "rle8_empty_stream.bmp", bmp_info_header(4, 2, 8, 1, 0, 256), b"", bmp_palette(256))
+    write_bmp(
+        d / "rle8_short_pair.bmp",
+        bmp_info_header(4, 2, 8, 1, 1, 256),
+        bytes((4,)),
+        bmp_palette(256),
+    )
+    write_bmp(
+        d / "rle8_delta_missing_payload.bmp",
+        bmp_info_header(4, 2, 8, 1, 2, 256),
+        bytes((0, 2)),
+        bmp_palette(256),
+    )
     (d / "truncated_header.bmp").write_bytes(baseline[:20])
     (d / "truncated_pixels.bmp").write_bytes(baseline[:-10])
     paletted = (d / "8bit.bmp").read_bytes()

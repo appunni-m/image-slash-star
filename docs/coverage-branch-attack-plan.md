@@ -12,13 +12,13 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ba5a5ef7-9f4a-4463-9d40-148ca7ce5c65`
-- Current measured commit metadata: `e23eadda0c7d6f28b9642ff9c2d3c78ddd6def1d`
-- Lines: 24066 / 24072
+- Current snapshot: `41e480a1-67fd-4289-9c4a-5f02d7968531`
+- Current measured commit metadata: `7f1e33a55ecbe00c439f62ddc3040d18b559f309`
+- Lines: 24072 / 24078
 - Branches: 3424 / 3438
 - Functions: 1576 / 1576
-- Regions: 39647 / 40775
-- Remaining target: 6 lines, 14 branches, and 1128 regions.
+- Regions: 39635 / 40705
+- Remaining target: 6 lines, 14 branches, and 1070 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -31,6 +31,8 @@ from Coverage MCP before each implementation sweep.
 - Files now at 100% branch coverage from this sweep:
   - `src/codecs/tiff/decode.rs`: 120 / 120 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 112 / 112 branches.
+  - `src/codecs/bmp/decode.rs`: 112 / 112 branches and now
+    759 / 759 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -3241,6 +3243,130 @@ Remaining in this file:
   One aggregate region-only gap remains, but MCP exposes no source-line gap for
   it. Treat it as a region/source-map artifact until a later LLVM report gives
   an actionable source start.
+
+### Attempt 18 plan: BMP decode public truncation fixtures and private invariants
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `ba5a5ef7-9f4a-4463-9d40-148ca7ce5c65`
+- Commit metadata: `e23eadda0c7d6f28b9642ff9c2d3c78ddd6def1d`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `24066 / 24072`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39647 / 40775`
+- Missing regions: `1128`
+
+Selected target: `src/codecs/bmp/decode.rs`, currently `771 / 829` regions
+with zero line/branch/function gaps.
+
+Source-mapped zero-count starts split into two groups:
+
+| Group | Source starts | Reverse mapping | Action |
+| --- | ---: | --- | --- |
+| Public short reads | BMP file header, OS/2 core header, BITMAPINFOHEADER fields, and BI_BITFIELDS mask reads. | These are real malformed BMP byte prefixes. The decoder should reject them the same way Pillow does. | Add deterministic malformed BMP assets in `scripts/generate_test_assets.py`, list them in `manifest.yaml`, and regenerate the BMP oracle matrix with Pillow. |
+| Private RLE arithmetic | RLE output length, cursor position, repeat/delta/absolute counters, and absolute-mode pad accounting. | Public `decode()` validates BMP dimensions to at most `16_384 x 16_384`; RLE count/delta bytes are `u8`; byte-count increments are bounded by the input stream. The remaining checked overflows are not constructible from public BMP inputs. | Replace checked arithmetic with direct arithmetic/slicing while preserving `data.get(...)` EOF rejection. |
+| Cursor operations | `Cursor::seek` / `read_to_end` on in-memory BMP bytes. | `Cursor` seeks used here are deterministic position changes. Seeking beyond the byte slice is allowed and later reads return EOF, matching the current behavior. `read_to_end` on `Cursor<&[u8]>` does not fail. | Use `set_position()` and direct remaining-slice extraction. |
+| Validated conversions | `u32::try_from(width)` after `width > 0`, `usize::try_from(data_offset)` for a `u32`, 32-bit bitfield pixel slices inside an allocated scanline buffer, and palette construction from RGB triples. | These are already proven by prior validation/allocation. The real malformed cases remain at file parsing and pixel read boundaries. | Use direct casts/indexing and invariant `expect(...)` for the palette constructor. |
+
+Fixture assets to add:
+
+- `truncated_magic.bmp`
+- `truncated_file_size.bmp`
+- `truncated_data_offset.bmp`
+- `truncated_dib_header_size.bmp`
+- `core_header_truncated_width.bmp`
+- `core_header_truncated_height.bmp`
+- `core_header_truncated_planes.bmp`
+- `core_header_truncated_depth.bmp`
+- `info_header_truncated_height.bmp`
+- `info_header_truncated_planes.bmp`
+- `info_header_truncated_depth.bmp`
+- `info_header_truncated_compression.bmp`
+- `info_header_truncated_image_size.bmp`
+- `info_header_truncated_x_pels.bmp`
+- `info_header_truncated_y_pels.bmp`
+- `info_header_truncated_colors_used.bmp`
+- `info_header_truncated_colors_important.bmp`
+- `bitfields_truncated_masks.bmp`
+- `v4_bitfields_truncated_masks.bmp`
+
+Validation after this batch:
+
+1. Regenerate BMP fixtures and Pillow oracle rows.
+2. Run `cargo fmt`.
+3. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Record the new summary and BMP movement here.
+
+Refinement after the first Attempt 18 measurement:
+
+- Coverage MCP run `56e5ce9c-af58-4062-9931-bee541e94c4d`, snapshot
+  `99da374e-31a0-4b14-9b08-446367261426`, passed and ingested.
+- Overall missing regions improved from `1128` to `1078`.
+- `src/codecs/bmp/decode.rs` moved from `771 / 829` to `751 / 759`, so BMP
+  missing regions dropped from `58` to `8`.
+
+Remaining BMP source starts:
+
+- RLE stream reads at count, value, and delta-right fields.
+- BITMAPINFO `bit_depth` short read.
+- BI_BITFIELDS green/blue mask short reads for V3 and V4+ headers.
+
+Refinement action before recording final Attempt 18 result:
+
+- Fix the BMP fixture generator's BITMAPINFO truncation sequence so
+  `info_header_truncated_depth.bmp` actually truncates before the 16-bit
+  bit-depth field rather than carrying two extra bytes from an incorrectly
+  encoded planes field.
+- Add public malformed BMP fixtures for empty RLE stream, one-byte RLE pair,
+  delta opcode without payload, and one-/two-mask BI_BITFIELDS headers in both
+  V3 and V4+ layouts.
+- Regenerate BMP assets and Pillow oracle rows, then rerun the same Coverage
+  MCP command.
+
+### Attempt 18 result
+
+Final Coverage MCP run `98666230-106e-4fe4-8967-491b8b6af1f7`, snapshot
+`41e480a1-67fd-4289-9c4a-5f02d7968531`, passed and ingested.
+
+- Commit metadata: `7f1e33a55ecbe00c439f62ddc3040d18b559f309`
+- Lines: `24072 / 24078`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39635 / 40705`
+- Missing regions: `1070`
+
+Net from attempt 17:
+
+- Missing regions improved from `1128` to `1070` (`58` fewer).
+- Region rate improved from `97.234%` to `97.371%`.
+- Branches and functions were unchanged.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/bmp/decode.rs` | `771 / 829` | `759 / 759` | `58 -> 0` |
+
+What moved:
+
+- Added 26 public malformed BMP assets under the existing manifest-driven
+  `error_malformed` case. These cover short BMP file-header reads, OS/2 core
+  header truncations, BITMAPINFO field truncations, RLE stream short reads, and
+  truncated BI_BITFIELDS masks.
+- Regenerated the authoritative BMP Pillow oracle matrix. The matrix now has
+  `873` total rows; BMP decode has `88` rows and `49` expected-error rows.
+- Simplified BMP decoder private invariants where public validation already
+  bounds dimensions, RLE counters, `Cursor` positioning, 32-bit bitfield pixel
+  slices, and palette construction.
+
+Remaining from this batch:
+
+- `src/codecs/bmp/decode.rs` is complete for lines, branches, functions, and
+  regions. No BMP decode region debt remains.
 
 ### Attempt 9 plan: GIF encode validated-invariant region sweep
 
