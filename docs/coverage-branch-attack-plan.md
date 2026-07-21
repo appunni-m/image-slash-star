@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `478df8dc-4aef-496f-b61c-55acd93a86e2`
-- Current measured commit metadata: `13f89081ee0f70b0c9eb3db64867523d298c35c6`
-- Current coverage source state: working tree over pushed `main` commit
-  `13f8908`.
+- Current snapshot: `c12ecded-0c0a-41be-990b-51942cd99639`
+- Current measured commit metadata: `fa739471ff78d0ca033010e2b18b8473f02b9e43`
+- Current coverage source state: pushed `main` commit `fa73947`.
 - Lines: 25849 / 25853
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
@@ -86,6 +85,9 @@ Measurement:
 - Coverage MCP run: `f81ebf21-00d0-4dec-96e3-06acd7d145e0`.
 - Coverage MCP snapshot: `478df8dc-4aef-496f-b61c-55acd93a86e2`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `5c195c07-ce57-436b-a4e1-356daa2bb1a6`,
+  snapshot `c12ecded-0c0a-41be-990b-51942cd99639`, commit
+  `fa739471ff78d0ca033010e2b18b8473f02b9e43`; result unchanged.
 - Overall after zlib-ng fixed hash read cleanup:
   `25849 / 25853` lines, `3448 / 3454` branches,
   `1593 / 1593` functions, and `41704 / 42223` regions.
