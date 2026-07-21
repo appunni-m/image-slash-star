@@ -52,6 +52,58 @@
       ]
     },
     {
+      "id": "depth_8_gray",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_gray_bmp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "depth_8_palette_blue_mismatch",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_palette_blue_mismatch_bmp.bin",
+      "ref_bytes": 2,
+      "ref_mode": "P",
+      "ref_size": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "depth_8_palette_green_mismatch",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_palette_green_mismatch_bmp.bin",
+      "ref_bytes": 2,
+      "ref_mode": "P",
+      "ref_size": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "depth_8_palette_red_mismatch",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_palette_red_mismatch_bmp.bin",
+      "ref_bytes": 2,
+      "ref_mode": "P",
+      "ref_size": [
+        2,
+        1
+      ]
+    },
+    {
       "id": "depth_16",
       "status": "ok",
       "error_type": null,
@@ -179,6 +231,19 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "compression_bitfields_bitfields_v2_32_no_alpha",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_bitfields_v2_32_no_alpha_bmp.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
       ]
     },
     {
@@ -469,7 +534,47 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_oversized_width",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (49152 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_oversized_height",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_invalid_depth",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP pixel depth (3)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_2bit",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP pixel depth (2)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_2bit_gray",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "Unsupported BMP pixel depth (2)",
@@ -509,6 +614,26 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_rle8_invalid_depth",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "unknown raw mode for given image mode",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle4_invalid_depth",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "unknown raw mode for given image mode",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_rle8_early_eob",
       "status": "error",
       "error_type": "builtins.ValueError",
@@ -530,6 +655,26 @@
     },
     {
       "id": "error_malformed_bitfields_zero_mask",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP bitfields layout",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_bitfields_zero_red_mask",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP bitfields layout",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_bitfields_zero_blue_mask",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "Unsupported BMP bitfields layout",

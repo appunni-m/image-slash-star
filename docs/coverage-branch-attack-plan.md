@@ -12,25 +12,150 @@ after the latest local coverage verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `9e996753-3e60-4a9a-b4c8-b8ffb75c34de`
-- Current measured commit metadata: `adf51eeb2d6cb299e3fdc4dd465881ce283d6183`
-- Lines: 22694 / 22715
-- Branches: 3380 / 3446
-- Functions: 1546 / 1546
-- Remaining target: 21 lines and 66 branches.
+- Current snapshot: `36699d47-211b-42e8-8621-012e46f2f979`
+- Current measured commit metadata: `e5cd10c234a7519b3c84eec10ef95b23e8ecd8e6`
+- Lines: 22722 / 22743
+- Branches: 3383 / 3436
+- Functions: 1549 / 1549
+- Remaining target: 21 lines and 53 branches.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
   - `src/codecs/webp/native/encoder.rs`: 193 / 198 branches, 5 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 162 branches, 8 missing.
   - `src/codecs/webp/native/decoder.rs`: 74 / 84 branches, 10 missing.
-  - `src/codecs/bmp/decode.rs`: 109 / 122 branches, 13 missing.
   - `src/codecs/jpeg/decode/progressive.rs`: 104 / 118 branches, 14 missing.
   - `src/codecs/tiff/decode.rs`: 100 / 114 branches, 14 missing.
+- Remaining line-only gaps from this snapshot:
+  - `src/codecs/webp/native/huffman.rs`: 221 / 223 lines, 0 branch missing.
+  - `src/types/dynamic.rs`: 813 / 814 lines, 0 branch missing.
+  - `src/codecs/compression/zlib_ng.rs`: 1538 / 1539 lines, 0 branch missing.
 - Note: commit `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a` is the local
   GIF decoder coverage commit; `origin/main` was still at
   `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
   The preceding rustfmt pass did not change branch coverage, but split some
   one-line branch bodies into separately counted lines.
+
+## Planned BMP decoder malformed-fixture batch
+
+Coverage MCP snapshot `a83eedac-447c-4931-b9fe-2b6e5e6993dd`, measured at
+commit `e5cd10c234a7519b3c84eec10ef95b23e8ecd8e6`, reports
+`src/codecs/bmp/decode.rs` at 346 / 346 lines, 109 / 122 branches, and
+11 / 11 functions. This is the selected target after deferring the smaller
+WebP files: `lossless.rs` reports 2 aggregate missing branches across 50
+normalized partial-branch lines, `encoder.rs` has prior no-op retries on the
+same hidden/tree-shape gaps, and `vp8.rs` reports 8 aggregate missing branches
+across 25 normalized gap lines. BMP has six concrete public decoder lines and
+no uncovered-line noise.
+
+Target branch lines and reverse-mapping plan:
+
+- line 222: `w == 0 || h == 0 || w > 16_384 || h > 16_384`.
+  Existing `invalid_height.bmp` covers `h == 0`, and `invalid_width.bmp`
+  returns earlier at `width <= 0`. Reverse mapping proves `w == 0` is
+  unreachable after the preceding `width <= 0` guard and successful
+  `u32::try_from(width)`. Add oversized-width and oversized-height malformed
+  fixtures for the remaining public reject sides, and simplify the unreachable
+  `w == 0` predicate. Fix type: malformed manifest fixtures plus
+  unreachable-branch simplification.
+- line 247: `bit_depth == 32 && header_size >= 56` when reading V4/V5
+  BI_BITFIELDS masks. Existing 32-bit V4/V5 fixtures cover the alpha-mask side,
+  and `v4header16.bmp` covers the non-32-bit side. Reverse-map the remaining
+  side with a valid 32-bit BITMAPV2-style `header_size == 52` fixture that has
+  red/green/blue masks but no alpha mask. Fix type: Pillow-oracle manifest
+  fixture if Pillow accepts it; malformed error fixture only if Pillow rejects.
+- line 263: `compression == 3 && (rm == 0 || gm == 0 || bm == 0)`.
+  Existing `bitfields_zero_mask.bmp` zeros the green mask at file offset 58.
+  Add separate zero-red-mask and zero-blue-mask fixtures so short-circuiting
+  reaches the remaining mask predicates. Fix type: malformed manifest fixtures.
+- line 294: palette grayscale detection reaches the final channel comparison.
+  Existing noncanonical palettes fail before the third comparison. Add a small
+  paletted BMP whose palette entry has blue and green equal to the grayscale
+  expectation but red different, so only `entry[2] == expected` is false. Fix
+  type: Pillow-oracle manifest fixture.
+- line 493: output color selection includes `compression == 1 ||
+  compression == 2` after `bit_depth <= 8`. Valid BMP RLE8 and RLE4 already
+  have bit depths 8 and 4, so the compression predicates short-circuit behind
+  `bit_depth <= 8`. Reverse-map with invalid RLE/depth combinations and the
+  Pillow oracle. Probe evidence shows Pillow accepts RLE4/RLE8 when the
+  bit-depth field is 1, 4, or 8, and rejects 2/3 and truecolor depths.
+  Therefore add decoder validation for unsupported/RLE-truecolor depths and
+  simplify the color predicate to `bit_depth <= 8`; do not require RLE4 to be
+  exactly 4 or RLE8 exactly 8. Fix type: malformed fixture plus
+  unreachable-branch simplification.
+- line 503: mode selection already lists 2-bit BMPs (`1 | 2 | 4 | 8`) but
+  pixel decoding lacks a 2bpp branch. Preflight proved Pillow rejects 2-bit
+  BMPs with `Unsupported BMP pixel depth (2)`, so the correct parity behavior
+  is not to implement 2bpp. Treat generated 2-bit fixtures as malformed
+  Pillow-error rows and remove 2 from the successful mode-selection match. Fix
+  type: malformed manifest fixtures plus unreachable-branch simplification.
+
+Second-pass evidence from Coverage MCP run `b5f34f3a-023d-4e27-b10d-dac3e26a13bb`
+and snapshot `408e297f-297c-40ea-87d3-71ce6c0a325c`:
+
+- The run passed with 5 passed / 0 failed and ingested the coverage artifact.
+  Overall coverage moved to 22699 / 22721 lines and 3386 / 3442 branches.
+- `src/codecs/bmp/decode.rs` moved to 351 / 352 lines and 115 / 118
+  branches. Remaining gaps are line 300, line 494, and line 509.
+- line 300 still misses one palette comparison side. Add explicit blue- and
+  green-channel mismatch palettes in addition to the current red-channel
+  mismatch, so the chained grayscale predicate is proven from each short-circuit
+  position.
+- line 494 is the `_ => return None` arm of the pixel-depth match. It became
+  unreachable after explicit Pillow-compatible depth validation. Replace the raw
+  `u16` depth with a small internal enum after validation so later matches are
+  exhaustive without a defensive catch-all line.
+- line 509 still needs a successful grayscale indexed fixture. `gray.bmp` is
+  already generated and Pillow reports mode `L`, but it was not active in the
+  manifest. Add it to the 8-bit depth rows.
+
+Third-pass evidence from Coverage MCP run `f8f5f8f9-57d8-47e2-8649-be7a9fec3fd9`
+and snapshot `3073d0a7-b717-4c89-8693-25396f78885f`:
+
+- The run passed with 5 passed / 0 failed and ingested the coverage artifact.
+  Overall coverage moved to 22720 / 22741 lines and 3385 / 3440 branches.
+- `src/codecs/bmp/decode.rs` moved to 372 / 372 lines and 114 / 116
+  branches. The only remaining target gap is line 545, the guarded
+  multi-pattern `1 | 4 | 8 if !palette_is_grayscale` match arm.
+- A probe-generated 4-bit grayscale BMP is accepted by Pillow as mode `L`, but
+  Pillow expands the values rather than returning raw palette indices. Do not
+  add that fixture casually in this batch. Instead, simplify mode selection into
+  per-depth branches: 1-bit chooses `L1` vs `P8`, 4/8-bit choose `L8` vs `P8`,
+  and truecolor uses `color.into()`. Existing active fixtures cover each
+  resulting public side.
+
+Completed evidence:
+
+- Coverage MCP run: `a6a6d0d7-75b5-492a-a059-8c277af8d547`
+- Coverage MCP snapshot: `36699d47-211b-42e8-8621-012e46f2f979`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22722 / 22743 lines, 3383 / 3436 branches, and
+  1549 / 1549 functions.
+- Target file: `src/codecs/bmp/decode.rs` improved from 346 / 346 lines,
+  109 / 122 branches, and 11 / 11 functions to 374 / 374 lines,
+  112 / 112 branches, and 14 / 14 functions. No line or branch gaps remain in
+  this file.
+- Reverse-mapped inputs and simplifications used:
+  - `oversized_width.bmp` and `oversized_height.bmp` cover the maximum
+    dimension rejects after proving `w == 0` unreachable behind `width <= 0`.
+  - `bitfields_v2_32_no_alpha.bmp` covers a valid 32-bit V2-style BITFIELDS
+    header with RGB masks and no alpha mask.
+  - `bitfields_zero_red_mask.bmp`, `bitfields_zero_mask.bmp`, and
+    `bitfields_zero_blue_mask.bmp` cover all three zero-mask reject positions.
+  - `palette_blue_mismatch.bmp`, `palette_green_mismatch.bmp`, and
+    `palette_red_mismatch.bmp` cover each palette-grayscale short-circuit
+    position.
+  - `rle8_invalid_depth.bmp` and `rle4_invalid_depth.bmp` cover Pillow-rejected
+    RLE truecolor-depth inputs; RLE indexed depths remain accepted to match
+    Pillow's behavior.
+  - `2bit.bmp` and `2bit_gray.bmp` are explicit Pillow-error rows because
+    Pillow 12.2.0 rejects BMP pixel depth 2.
+  - `gray.bmp` activates a generated 8-bit grayscale BMP whose Pillow output is
+    mode `L`.
+  - The decoder now validates BMP bit depth once into an internal enum, removing
+    a defensive match catch-all that became unreachable after Pillow-compatible
+    validation.
+  - Mode selection is split by depth (`1`, `4/8`, and truecolor) to preserve
+    observable behavior while avoiding a guarded multi-pattern branch artifact.
 
 ## Planned JPEG parser malformed-fixture batch
 

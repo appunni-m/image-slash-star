@@ -1280,6 +1280,25 @@ def write_bmp_4(path, width=16, height=16):
     write_bmp(path, dib, bytes(rows), bmp_palette(16))
 
 
+def write_bmp_2(path, grayscale_palette=False, width=9, height=5):
+    stride = ((width * 2 + 31) // 32) * 4
+    row_bytes = (width + 3) // 4
+    rows = bytearray()
+    for y in range(height - 1, -1, -1):
+        row = bytearray(row_bytes)
+        for x in range(width):
+            row[x // 4] |= ((x + y) & 0x03) << (6 - 2 * (x % 4))
+        rows.extend(row)
+        rows.extend(b"\0" * (stride - row_bytes))
+
+    if grayscale_palette:
+        palette = bytes(value for index in range(4) for value in (index, index, index, 0))
+    else:
+        palette = bmp_palette(4)
+    dib = bmp_info_header(width, height, 2, 0, len(rows), 4)
+    write_bmp(path, dib, bytes(rows), palette)
+
+
 def write_bmp_16(path, image):
     image = image.convert("RGB")
     width, height = image.size
@@ -1441,6 +1460,16 @@ def write_bmp_bitfields(path, image, header_size=40):
     write_bmp(path, dib, bytes(rows), masks=masks)
 
 
+def write_bmp_bitfields_v2_32(path):
+    dib = bytearray(52)
+    pixels = bytes((0x30, 0x20, 0x10, 0xff))
+    struct.pack_into(
+        "<IiiHHIIiiII", dib, 0, 52, 1, 1, 1, 32, 3, len(pixels), 3_780, 3_780, 0, 0
+    )
+    struct.pack_into("<III", dib, 40, 0x00FF0000, 0x0000FF00, 0x000000FF)
+    write_bmp(path, bytes(dib), pixels)
+
+
 def write_bmp_v4_16(path):
     """Write a V4 RGB555 bitmap whose optional alpha mask is ignored by Pillow."""
     dib = bytearray(108)
@@ -1459,6 +1488,8 @@ def gen_bmp():
     img.save(d / "24bit.bmp")
     img.convert("RGBA").save(d / "32bit.bmp")
     img.convert("1").save(d / "1bit.bmp")
+    write_bmp_2(d / "2bit.bmp")
+    write_bmp_2(d / "2bit_gray.bmp", grayscale_palette=True)
     write_bmp_4(d / "4bit.bmp")
     img.convert("P").save(d / "8bit.bmp")
     write_bmp_16(d / "16bit.bmp", img)
@@ -1479,6 +1510,13 @@ def gen_bmp():
     zero_mask = bytearray((d / "bitfields.bmp").read_bytes())
     struct.pack_into("<I", zero_mask, 58, 0)
     (d / "bitfields_zero_mask.bmp").write_bytes(zero_mask)
+    zero_red_mask = bytearray((d / "bitfields.bmp").read_bytes())
+    struct.pack_into("<I", zero_red_mask, 54, 0)
+    (d / "bitfields_zero_red_mask.bmp").write_bytes(zero_red_mask)
+    zero_blue_mask = bytearray((d / "bitfields.bmp").read_bytes())
+    struct.pack_into("<I", zero_blue_mask, 62, 0)
+    (d / "bitfields_zero_blue_mask.bmp").write_bytes(zero_blue_mask)
+    write_bmp_bitfields_v2_32(d / "bitfields_v2_32_no_alpha.bmp")
     write_bmp_bitfields(d / "v4header.bmp", pattern_img("RGBA"), header_size=108)
     write_bmp_bitfields(d / "v5header.bmp", pattern_img("RGBA"), header_size=124)
     write_bmp_v4_16(d / "v4header16.bmp")
@@ -1490,6 +1528,12 @@ def gen_bmp():
     top_down_rle = bytearray((d / "rle8.bmp").read_bytes())
     struct.pack_into("<i", top_down_rle, 22, -16)
     (d / "rle8_top_down.bmp").write_bytes(top_down_rle)
+    invalid_rle8_depth = bytearray((d / "rle8.bmp").read_bytes())
+    struct.pack_into("<H", invalid_rle8_depth, 28, 24)
+    (d / "rle8_invalid_depth.bmp").write_bytes(invalid_rle8_depth)
+    invalid_rle4_depth = bytearray((d / "rle4.bmp").read_bytes())
+    struct.pack_into("<H", invalid_rle4_depth, 28, 24)
+    (d / "rle4_invalid_depth.bmp").write_bytes(invalid_rle4_depth)
     early_eob = bytes((4, 7, 0, 1))
     early_eob_dib = bmp_info_header(4, 2, 8, 1, len(early_eob), 256)
     write_bmp(d / "rle8_early_eob.bmp", early_eob_dib, early_eob, bmp_palette(256))
@@ -1516,8 +1560,24 @@ def gen_bmp():
     struct.pack_into("<i", malformed, 22, 0)
     (d / "invalid_height.bmp").write_bytes(malformed)
     malformed = bytearray(baseline)
-    struct.pack_into("<H", malformed, 28, 2)
+    struct.pack_into("<i", malformed, 18, 16_385)
+    (d / "oversized_width.bmp").write_bytes(malformed)
+    malformed = bytearray(baseline)
+    struct.pack_into("<i", malformed, 22, 16_385)
+    (d / "oversized_height.bmp").write_bytes(malformed)
+    malformed = bytearray(baseline)
+    struct.pack_into("<H", malformed, 28, 3)
     (d / "invalid_depth.bmp").write_bytes(malformed)
+    for channel_name, channel in (("blue", 0), ("green", 1), ("red", 2)):
+        palette = bytearray()
+        for index in range(256):
+            entry = [index, index, index, 0]
+            if index == 1:
+                entry[channel] = 2
+            palette.extend(entry)
+        row = bytes((1, 0, 0, 0))
+        dib = bmp_info_header(2, 1, 8, 0, len(row), 256)
+        write_bmp(d / f"palette_{channel_name}_mismatch.bmp", dib, row, bytes(palette))
     (d / "truncated_header.bmp").write_bytes(baseline[:20])
     (d / "truncated_pixels.bmp").write_bytes(baseline[:-10])
     paletted = (d / "8bit.bmp").read_bytes()

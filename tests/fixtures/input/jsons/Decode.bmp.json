@@ -52,6 +52,58 @@
       }
     },
     {
+      "id": "depth_8_gray",
+      "asset": "gray.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/gray.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_8_palette_blue_mismatch",
+      "asset": "palette_blue_mismatch.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/palette_blue_mismatch.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_8_palette_green_mismatch",
+      "asset": "palette_green_mismatch.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/palette_green_mismatch.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "depth_8_palette_red_mismatch",
+      "asset": "palette_red_mismatch.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/palette_red_mismatch.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "depth_16",
       "asset": "16bit.bmp",
       "expect_error": false,
@@ -174,6 +226,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_bitfields_bitfields_v2_32_no_alpha",
+      "asset": "bitfields_v2_32_no_alpha.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bitfields_v2_32_no_alpha.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -481,11 +546,63 @@
       }
     },
     {
+      "id": "error_malformed_oversized_width",
+      "asset": "oversized_width.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/oversized_width.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_oversized_height",
+      "asset": "oversized_height.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/oversized_height.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_invalid_depth",
       "asset": "invalid_depth.bmp",
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_depth.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_2bit",
+      "asset": "2bit.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/2bit.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_2bit_gray",
+      "asset": "2bit_gray.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/2bit_gray.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -533,6 +650,32 @@
       }
     },
     {
+      "id": "error_malformed_rle8_invalid_depth",
+      "asset": "rle8_invalid_depth.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_invalid_depth.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle4_invalid_depth",
+      "asset": "rle4_invalid_depth.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4_invalid_depth.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_rle8_early_eob",
       "asset": "rle8_early_eob.bmp",
       "expect_error": true,
@@ -564,6 +707,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_zero_mask.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bitfields_zero_red_mask",
+      "asset": "bitfields_zero_red_mask.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bitfields_zero_red_mask.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_bitfields_zero_blue_mask",
+      "asset": "bitfields_zero_blue_mask.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/bitfields_zero_blue_mask.bmp",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -1202,6 +1202,10 @@ formats:
       description: 8-bit indexed BMP
       test_assets:
       - 8bit.bmp
+      - gray.bmp
+      - palette_blue_mismatch.bmp
+      - palette_green_mismatch.bmp
+      - palette_red_mismatch.bmp
     - id: depth_16
       description: 16-bit (RGB555)
       test_assets:
@@ -1233,6 +1237,7 @@ formats:
       description: BI_BITFIELDS (16/32 bit with masks)
       test_assets:
       - bitfields.bmp
+      - bitfields_v2_32_no_alpha.bmp
       - v4header16.bmp
     - id: top_down
       description: Top-down scanline order (negative height)
@@ -1287,13 +1292,21 @@ formats:
       - invalid_header_size.bmp
       - invalid_width.bmp
       - invalid_height.bmp
+      - oversized_width.bmp
+      - oversized_height.bmp
       - invalid_depth.bmp
+      - 2bit.bmp
+      - 2bit_gray.bmp
       - truncated_header.bmp
       - truncated_pixels.bmp
       - truncated_palette.bmp
+      - rle8_invalid_depth.bmp
+      - rle4_invalid_depth.bmp
       - rle8_early_eob.bmp
       - rle4_early_eob.bmp
       - bitfields_zero_mask.bmp
+      - bitfields_zero_red_mask.bmp
+      - bitfields_zero_blue_mask.bmp
       expect_error: true
     encode_edge_cases:
     - id: enc_1bit

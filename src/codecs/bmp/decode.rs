@@ -38,6 +38,45 @@ fn row_size(bits_per_pixel: u16, width: u32) -> usize {
     (((bits_per_pixel as u64) * (width as u64)).div_ceil(32) * 4) as usize
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum BmpBitDepth {
+    One,
+    Four,
+    Eight,
+    Sixteen,
+    TwentyFour,
+    ThirtyTwo,
+}
+
+impl BmpBitDepth {
+    fn from_raw(value: u16) -> Option<Self> {
+        Some(match value {
+            1 => Self::One,
+            4 => Self::Four,
+            8 => Self::Eight,
+            16 => Self::Sixteen,
+            24 => Self::TwentyFour,
+            32 => Self::ThirtyTwo,
+            _ => return None,
+        })
+    }
+
+    fn bits_per_pixel(self) -> u16 {
+        match self {
+            Self::One => 1,
+            Self::Four => 4,
+            Self::Eight => 8,
+            Self::Sixteen => 16,
+            Self::TwentyFour => 24,
+            Self::ThirtyTwo => 32,
+        }
+    }
+
+    fn is_indexed(self) -> bool {
+        matches!(self, Self::One | Self::Four | Self::Eight)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Palette reading
 // ---------------------------------------------------------------------------
@@ -184,7 +223,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     // --- DIB header ---
     let header_size = read_u32_le(&mut r)?;
-    let (width, height, bit_depth, compression, colors_used, palette_entry_bytes) =
+    let (width, height, bit_depth_raw, compression, colors_used, palette_entry_bytes) =
         if header_size == 12 {
             // OS/2 1.x BITMAPCOREHEADER uses unsigned 16-bit dimensions and
             // RGBTRIPLE palette entries.
@@ -219,7 +258,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
     let w = u32::try_from(width).ok()?;
-    if w == 0 || h == 0 || w > 16_384 || h > 16_384 {
+    if h == 0 || w > 16_384 || h > 16_384 {
+        return None;
+    }
+    let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)?;
+    if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
         return None;
     }
 
@@ -244,7 +287,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 let r0 = read_u32_le(&mut r)?;
                 let g0 = read_u32_le(&mut r)?;
                 let b0 = read_u32_le(&mut r)?;
-                let a0 = if bit_depth == 32 && header_size >= 56 {
+                let a0 = if bit_depth == BmpBitDepth::ThirtyTwo && header_size >= 56 {
                     read_u32_le(&mut r).unwrap_or(0)
                 } else {
                     0
@@ -254,7 +297,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         }
     } else {
         // Default RGB555 masks for 16-bit BI_RGB.
-        if bit_depth == 16 {
+        if bit_depth == BmpBitDepth::Sixteen {
             (0x7C00, 0x03E0, 0x001F, 0)
         } else {
             (0, 0, 0, 0)
@@ -273,8 +316,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     // --- Palette (color table) ---
     let pal_count = if colors_used > 0 {
         colors_used
-    } else if bit_depth <= 8 {
-        1u32 << bit_depth
+    } else if bit_depth.is_indexed() {
+        1u32 << bit_depth.bits_per_pixel()
     } else {
         0
     };
@@ -337,12 +380,12 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         )
     } else {
         // BI_RGB or BI_BITFIELDS — uncompressed scanlines
-        let stride = row_size(bit_depth, w);
+        let stride = row_size(bit_depth.bits_per_pixel(), w);
         let mut raw = vec![0u8; stride * height_usize];
         r.read_exact(&mut raw).ok()?;
 
         match bit_depth {
-            1 => {
+            BmpBitDepth::One => {
                 if palette_is_grayscale {
                     // Pillow retains packed bytes only for its canonical
                     // black/white palette and exposes mode `1`.
@@ -376,7 +419,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     out
                 }
             }
-            4 => {
+            BmpBitDepth::Four => {
                 // 4 bpp — expand nibbles to full-byte indices
                 let mut out = Vec::with_capacity(width_usize * height_usize);
                 for row in 0..height_usize {
@@ -398,7 +441,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 }
                 out
             }
-            8 => {
+            BmpBitDepth::Eight => {
                 // 8 bpp — raw palette indices, skip stride padding (PIL mode 'P' parity)
                 let mut out = Vec::with_capacity(width_usize * height_usize);
                 for row in 0..height_usize {
@@ -412,7 +455,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 }
                 out
             }
-            16 => {
+            BmpBitDepth::Sixteen => {
                 // 16 bpp — RGB555 or BI_BITFIELDS
                 let mut out = Vec::with_capacity(width_usize * height_usize * 3);
                 for row in 0..height_usize {
@@ -434,7 +477,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 }
                 out
             }
-            24 => {
+            BmpBitDepth::TwentyFour => {
                 // 24 bpp — BGR order
                 let mut out = Vec::with_capacity(width_usize * height_usize * 3);
                 for row in 0..height_usize {
@@ -453,7 +496,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 }
                 out
             }
-            32 => {
+            BmpBitDepth::ThirtyTwo => {
                 // BI_RGB treats byte four as padding. V4/V5 BI_BITFIELDS files
                 // with an alpha mask expose that channel as Pillow RGBA.
                 let channels = if compression == 3 && am != 0 { 4 } else { 3 };
@@ -485,24 +528,34 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 }
                 out
             }
-            _ => return None,
         }
     };
 
     // Determine output color type
-    let color = if bit_depth <= 8 || compression == 1 || compression == 2 {
+    let color = if bit_depth.is_indexed() {
         ColorType::L8
-    } else if matches!(bit_depth, 16 | 32) && am != 0 {
+    } else if matches!(bit_depth, BmpBitDepth::Sixteen | BmpBitDepth::ThirtyTwo) && am != 0 {
         ColorType::Rgba8
     } else {
         ColorType::Rgb8
     };
 
     let mode = match bit_depth {
-        1 if palette_is_grayscale => ImageMode::L1,
-        1 | 2 | 4 | 8 if !palette_is_grayscale => ImageMode::P8,
-        2 | 4 | 8 => ImageMode::L8,
-        _ => color.into(),
+        BmpBitDepth::One => {
+            if palette_is_grayscale {
+                ImageMode::L1
+            } else {
+                ImageMode::P8
+            }
+        }
+        BmpBitDepth::Four | BmpBitDepth::Eight => {
+            if palette_is_grayscale {
+                ImageMode::L8
+            } else {
+                ImageMode::P8
+            }
+        }
+        BmpBitDepth::Sixteen | BmpBitDepth::TwentyFour | BmpBitDepth::ThirtyTwo => color.into(),
     };
     let mut image = DecodedImage::with_mode(w, h, pixels, mode);
     if mode == ImageMode::P8 {
