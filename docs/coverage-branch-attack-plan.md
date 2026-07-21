@@ -12,8 +12,8 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `d9e11fd8-f21f-4015-8cf5-fee073f5ae3d`
-- Current measured commit metadata: `af50f3ab116000703a734e243c7f87cbd84c6184`
+- Current snapshot: `1a0052ae-3f48-45e2-bfe2-1566218dd68d`
+- Current measured commit metadata: `d8363ac3e86426044cd99478891a9c0419e79c86`
 - Lines: 22066 / 22067
 - Branches: 3337 / 3466
 - Functions: 1528 / 1528
@@ -256,6 +256,13 @@ Completed evidence:
   lines are concentrated in VP8 header parsing, token probability updates,
   coefficient decoding, B-luma loop-filter adjustment, and skipped-coefficients
   complexity reset.
+- Pushed-head verification run:
+  `3ca96469-d35e-45a9-972f-bf73a43e6ce9`, snapshot
+  `1a0052ae-3f48-45e2-bfe2-1566218dd68d`, commit
+  `d8363ac3e86426044cd99478891a9c0419e79c86`; passed with 5 passed, 0 failed.
+  Pushed-head overall coverage is 22066 / 22067 lines, 3337 / 3466 branches,
+  and 1528 / 1528 functions. VP8 remains 1307 / 1307 lines,
+  154 / 162 branches, and 57 / 57 functions.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 
