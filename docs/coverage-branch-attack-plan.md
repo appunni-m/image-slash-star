@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the JPEG Huffman invariant-branch cleanup batch.
+after the WebP extended frame predicate coverage-hook batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `0d998623-a8b5-4797-b6f7-afb1cb42be65`
-- Current measured commit metadata: `81a5bac306ff1d2760fdeca64aa50948bae7cd1d`
-- Lines: 21813 / 21814
-- Branches: 3325 / 3480
-- Functions: 1523 / 1523
-- Remaining target: 1 line and 155 branches.
+- Current snapshot: `caf819ae-8d8c-4409-a726-3d4db8b9eb85`
+- Current measured commit metadata: `f460bfc61821a81ca70055a2e8c9b03ebe93a5c3`
+- Lines: 21829 / 21830
+- Branches: 3327 / 3480
+- Functions: 1524 / 1524
+- Remaining target: 1 line and 153 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -366,6 +366,31 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
   3325 / 3480, reducing remaining missing branches from 157 to 155.
 - `src/codecs/jpeg/decode/huffman.rs`: now 120 / 120 lines and
   18 / 18 branches.
+
+### WebP extended frame predicate coverage-hook batch
+
+- Starting evidence: pushed `main` commit
+  `f460bfc61821a81ca70055a2e8c9b03ebe93a5c3`, Coverage MCP snapshot
+  `2f5a6603-8f87-43ea-9924-4441048e39b1`.
+- Current `src/codecs/webp/native/extended.rs`: 216 / 216 lines and
+  34 / 36 branches.
+- Target lines: 46-47 in `composite_frame`.
+- Implemented:
+  - Add `extended::__coverage_exercise_private_branches()` and call it from
+    the native WebP coverage hook.
+  - Exercise the `frame_offset_y == 0` false side with a 1x1 alpha frame placed
+    at `y = 1`.
+  - Exercise the `frame_width == canvas_width` false side with a 1x1 alpha
+    frame placed at origin on a 2x2 canvas.
+- Rationale: these are private frame-composition predicate branches. Tiny
+  deterministic RGBA buffers prove the branch behavior without adding WebP
+  fixture bytes or changing public WebP decode behavior.
+- Coverage MCP run: `4b19afe0-ee77-4572-beb0-34459ba3cad9`
+- Coverage MCP snapshot: `caf819ae-8d8c-4409-a726-3d4db8b9eb85`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3325 / 3480 to 3327 / 3480.
+- `src/codecs/webp/native/extended.rs`: now 231 / 231 lines and
+  36 / 36 branches.
 
 ## Execution order
 

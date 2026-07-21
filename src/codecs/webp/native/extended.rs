@@ -145,6 +145,51 @@ pub(crate) fn composite_frame(
     }
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let frame = [1, 2, 3, 4];
+
+    let mut canvas = [0u8; 2 * 2 * 4];
+    composite_frame(
+        &mut canvas,
+        2,
+        2,
+        None,
+        &frame,
+        0,
+        1,
+        1,
+        1,
+        true,
+        false,
+        1,
+        1,
+        0,
+        0,
+    );
+    assert_eq!(&canvas[8..12], &frame);
+
+    let mut canvas = [0u8; 2 * 2 * 4];
+    composite_frame(
+        &mut canvas,
+        2,
+        2,
+        None,
+        &frame,
+        0,
+        0,
+        1,
+        1,
+        true,
+        false,
+        1,
+        1,
+        0,
+        0,
+    );
+    assert_eq!(&canvas[..4], &frame);
+}
+
 pub(crate) fn get_alpha_predictor(
     x: usize,
     y: usize,
