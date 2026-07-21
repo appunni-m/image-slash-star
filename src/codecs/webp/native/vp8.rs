@@ -2101,8 +2101,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.update_token_probabilities();
 
+    struct CoverageReadError;
+
+    impl std::io::Read for CoverageReadError {
+        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+            Err(std::io::Error::other("coverage vp8 read failure"))
+        }
+    }
+
+    let _ = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new())).init_partitions(2);
+    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![1, 0, 0])).init_partitions(2);
+    let _ = Vp8Decoder::new(CoverageReadError).init_partitions(1);
     let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
         .init_partitions(2);
+
+    let _ = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new())).read_frame_header();
+    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0])).read_frame_header();
+    let _ =
+        Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0x9d, 0x01, 0x2a])).read_frame_header();
+    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0]))
+        .read_frame_header();
 
     let mut keyframe = vec![0x80, 0x00, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
     keyframe.extend_from_slice(&[0; 4]);

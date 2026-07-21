@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `b5d299a0-ddc7-4827-9af3-c019a12e9623`
-- Current measured commit metadata: `40b8421ca80350f5e58355d1e473efe278d01b30`
-- Current source state: VP8 arithmetic decoder initialization invariant sweep,
+- Current snapshot: `cef7a3fe-bfa5-4480-bfbd-867e21e178a3`
+- Current measured commit metadata: `dec0bb25a200b4db2d3a5a439dc2a8beb4b8968d`
+- Current source state: VP8 raw partition/header short-read boundary sweep,
   measured before committing the sweep.
-- Lines: 24436 / 24442
+- Lines: 24447 / 24453
 - Branches: 3430 / 3444
-- Functions: 1579 / 1579
-- Regions: 39835 / 40575
-- Remaining target: 6 lines, 14 branches, and 740 regions.
+- Functions: 1580 / 1580
+- Regions: 39853 / 40591
+- Remaining target: 6 lines, 14 branches, and 738 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -676,6 +676,78 @@ Result:
     call sites.
   - Removed coverage-hook `.unwrap()` calls that were only present due to the
     old fallible type.
+
+## Attempt 26 plan: VP8 raw partition/header short-read boundaries
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `dec0bb2` after the VP8 arithmetic-decoder
+  initialization sweep.
+- Coverage MCP snapshot: `b5d299a0-ddc7-4827-9af3-c019a12e9623`.
+- Overall: `24436 / 24442` lines, `3430 / 3444` branches,
+  `1579 / 1579` functions, and `39835 / 40575` regions.
+- Target file: `src/codecs/webp/native/vp8.rs` at `1413 / 1417`
+  lines, `154 / 160` branches, `57 / 57` functions, and
+  `2624 / 2649` regions.
+
+MCP/source reverse map:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 983 | `init_partitions()` size-table read | `n > 1` with no bytes available for the three-byte partition-size table. |
+| 993 | `init_partitions()` partition-payload read | Size table declares a non-zero partition, but the payload is truncated. |
+| 999 | `init_partitions()` final-partition read | Reader returns a real `io::Error` while draining the final partition. |
+| 1117 | `read_frame_header()` frame-tag read | Raw VP8 stream shorter than the three-byte frame tag. |
+| 1127 | `read_frame_header()` keyframe start-code read | Keyframe tag is present, but the three-byte VP8 start code is truncated. |
+| 1133 | `read_frame_header()` width read | Keyframe tag and start code are present, but width is truncated. |
+| 1134 | `read_frame_header()` height read | Keyframe tag, start code, and width are present, but height is truncated. |
+
+Selected action:
+
+- Add explicit calls to the existing `#[cfg(coverage)]` VP8 private hook for
+  these raw reader boundaries.
+- Use a tiny custom `Read` implementation for the final-partition `io::Error`
+  path so the error branch is exercised without allocating data or fabricating
+  a public image fixture.
+- Keep this out of the manifest: these are raw VP8 private reader boundaries,
+  not new byte/pixel oracle cases. Public malformed WebP/Pillow rejection is
+  already represented by manifest fixtures; this hook only proves exact
+  propagation at internal partition/header cut points.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Result:
+
+- Coverage MCP run: `bf2846e6-e20f-4ea2-999f-b79b3120e5d6`.
+- Coverage MCP snapshot: `cef7a3fe-bfa5-4480-bfbd-867e21e178a3`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24447 / 24453` lines, `3430 / 3444` branches,
+  `1580 / 1580` functions, and `39853 / 40591` regions.
+- Net missing regions: `740` down to `738`.
+- Target file movement: `src/codecs/webp/native/vp8.rs` moved from
+  `1413 / 1417` lines, `154 / 160` branches, `57 / 57` functions,
+  and `2624 / 2649` regions to `1424 / 1428` lines,
+  `154 / 160` branches, `58 / 58` functions, and `2642 / 2665`
+  regions.
+- Implemented:
+  - Added coverage-hook raw VP8 inputs for truncated partition size tables,
+    truncated partition payloads, final-partition reader errors, truncated
+    frame tags, truncated keyframe start codes, truncated widths, and
+    truncated heights.
+  - No production codec behavior changed.
+- Follow-up finding:
+  - Branch debt is unchanged. The remaining VP8 branch/line work is still
+    concentrated around arithmetic-coded frame flags, invalid macroblock mode
+    tree outputs, residual error propagation, and the skipped-coefficient
+    macroblock path at source lines `1193` and `1866`.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 
