@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `477d545c-d92f-47cd-9a32-decb5cb9a555`
-- Current measured commit metadata: `9e5899beecc056f5f6c8b192fbe0f8cc02026c18`
-- Current source state: Attempt 61 retained working tree measured from pushed
-  parent `9e5899b`.
-- Lines: 25505 / 25509
-- Branches: 3438 / 3444
-- Functions: 1585 / 1585
-- Regions: 41279 / 41865
-- Remaining target: 4 lines, 6 branches, and 586 regions.
+- Current snapshot: `f4916efd-dddd-4676-8933-9878afcf8997`
+- Current measured commit metadata: `700fa272a2f3d1140f43671044337935838f4350`
+- Current source state: Attempt 62 retained working tree measured from pushed
+  parent `700fa27`.
+- Lines: 25816 / 25820
+- Branches: 3448 / 3454
+- Functions: 1592 / 1592
+- Regions: 41679 / 42262
+- Remaining target: 4 lines, 6 branches, and 583 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -29,7 +29,7 @@ from Coverage MCP before each implementation sweep.
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
-  - `src/codecs/tiff/decode.rs`: 120 / 120 branches.
+  - `src/codecs/tiff/decode.rs`: 130 / 130 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 114 / 114 branches and now
     1353 / 1353 regions.
   - `src/codecs/bmp/decode.rs`: 112 / 112 branches and now
@@ -47,6 +47,53 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 62 plan: TIFF decode parser and layout region sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 61 commit `700fa27`.
+- Coverage MCP snapshot: `477d545c-d92f-47cd-9a32-decb5cb9a555`.
+- Overall: `25505 / 25509` lines, `3438 / 3444` branches,
+  `1585 / 1585` functions, and `41279 / 41865` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently `881 / 881` lines,
+  `120 / 120` branches, `37 / 37` functions, and `1572 / 1662` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| Header and IFD selection | Lines 19, 22, 25-38. | Add malformed byte-level TIFF headers for wrong magic, truncated offset, missing default tags, and oversized `BitsPerSample`. Some conversions are target-width impossible and are not worth production refactors. |
+| Tile path | Lines 77-135. | Existing probes cover missing tile tags and invalid tile sizes only for a 1x1 image. Add tile fixtures for required tile-count mismatch, compressed tile predictor success, bad tile offset/count slices, and edge-tile copy/crop behavior. |
+| Strip path | Lines 151-208. | Add fixtures for empty strip offsets, too many strips, compressed strips with omitted byte counts, inferred multi-strip byte counts, declared-count mismatch, truncated encoded data, and LZW predictor success. |
+| Pixel conversion and helpers | Lines 249-358, 419-426, 557-562. | Fill reachable direct helper cases for grayscale 2/4-bit conversion, odd 16-bit samples, 8-bit palette tables, PackBits no-op/truncation, and bit-reader reads. Keep arithmetic overflow guards documented as structurally unreachable on this target. |
+| `Directory` parsing and value extraction | Lines 644-717. | Use same-module synthetic `Directory` values for missing/default lookups, inline and external SHORT/LONG arrays, unsupported field types, and malformed external offsets. Offset and multiplication overflow regions remain impossible without allocating address-space-sized data. |
+
+Implementation plan:
+
+1. Extend the existing TIFF coverage hook with compact little-endian fixture
+   builders for malformed strip/tile layouts and direct helper probes.
+2. Keep the probes private to `#[cfg(coverage)]`; public Pillow-oracle fixtures
+   cannot naturally represent many of these parser guard states.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP retained run: `36ee9745-7a02-45e1-a6e0-bb9dc713092e`.
+- Coverage MCP retained snapshot: `f4916efd-dddd-4676-8933-9878afcf8997`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adding TIFF parser/layout probes:
+  `25816 / 25820` lines, `3448 / 3454` branches, `1592 / 1592`
+  functions, and `41679 / 42262` regions.
+- Target file movement: `src/codecs/tiff/decode.rs` moved from
+  `1572 / 1662` regions to `1972 / 2059` regions; missing regions fell from
+  `90` to `87`, and branch coverage remained complete at `130 / 130`.
+- Net: aggregate missing regions fell from `586` to `583`. Branch debt is
+  unchanged. An earlier measurement of this batch introduced helper-only branch
+  gaps; those branches were removed or covered before retaining the result.
 
 ## Attempt 61 plan: zlib level-three matcher and fizzle guard regions
 
