@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `6788770f-94ee-4a35-b566-ad3b95fdb753`
-- Current measured commit metadata: `28fc11b255e5f07c94f8d77ef975726dc60ca34f`
-- Current source state: Attempt 56 source measured on pushed `main` base
-  `28fc11b`; source retained in the next commit.
-- Lines: 24929 / 24933
+- Current snapshot: `4330f9d2-cd5a-4e7e-829a-00ab1d3433b7`
+- Current measured commit metadata: `386775a9b88834d2eaeecf610b157df3f394607a`
+- Current source state: Attempt 57 working tree based on pushed `main` at
+  `386775a`; this batch should be committed and pushed before the next sweep.
+- Lines: 25006 / 25010
 - Branches: 3438 / 3444
 - Functions: 1584 / 1584
-- Regions: 40605 / 41280
-- Remaining target: 4 lines, 6 branches, and 675 regions.
+- Regions: 40733 / 41383
+- Remaining target: 4 lines, 6 branches, and 650 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -488,6 +488,55 @@ Measurement:
   `1564 / 1656` regions to `1572 / 1662` regions; missing regions fell from
   `92` to `90`.
 - Net: aggregate missing regions fell from `677` to `675`. Branch debt is
+  unchanged.
+
+## Attempt 57 plan: zlib-ng matcher guard sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 56 commit `386775a`.
+- Coverage MCP snapshot: `6788770f-94ee-4a35-b566-ad3b95fdb753`.
+- Snapshot commit metadata: `28fc11b255e5f07c94f8d77ef975726dc60ca34f`
+  because the managed run measured the Attempt 56 working tree before it was
+  committed; the measured source is the same code now pushed as `386775a`.
+- Overall: `24929 / 24933` lines, `3438 / 3444` branches,
+  `1584 / 1584` functions, and `40605 / 41280` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `1571 / 1571` lines, `368 / 368` branches, `82 / 82` functions, and
+  `2744 / 3032` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `SlowMatcher` guards | Lines 436-582 include `available.checked_sub(position)`, short `quick_insert()`, deferred-match flush, previous-match distance arithmetic, and chain countdown exits. | These are internal matcher precondition guards. Public PNG/TIFF compression fixtures feed validated chunk boundaries and cannot create invalid matcher state. Exercise directly through the existing `#[cfg(coverage)]` hook. |
+| `Level6Matcher` guards | Lines 690-860 include slide-window arithmetic, lookahead underflow, future-match arithmetic, short hashes, insert-match bounds, and chain exits. | Add direct synthetic matcher states. Keep them small and deterministic; no production behavior change. |
+| `Level9Matcher` guards | Lines 930-1095 include the same slow-style previous-match states plus rolling-hash short reads and lazy-chain arithmetic. | Exercise direct helper states that cannot be represented as valid Pillow compression input. |
+| `Level3Matcher` guards | Lines 1230-1374 include underflow, short hash, insert-match bounds, and candidate endpoint comparisons. | Extend the existing level-three probes with invalid internal states. |
+
+Implementation plan:
+
+1. Extend `zlib_ng::__coverage_exercise_private_branches()` with direct matcher
+   guard probes for Slow, Level6, Level9, and Level3 helper methods.
+2. Do not add manifest fixtures in this attempt. These are defensive
+   compressor-internal states after public callers have already validated input
+   chunk totals and generated real image scanlines.
+3. Validate with `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, and the approved
+   Coverage MCP command `all-features-llvm-cov-json-nightly-branch`.
+4. Keep the batch only if aggregate region debt falls.
+
+Measurement:
+
+- Coverage MCP run: `003a9d5f-7705-4e1c-85fd-60c6ca7e468c`.
+- Coverage MCP snapshot: `4330f9d2-cd5a-4e7e-829a-00ab1d3433b7`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `25006 / 25010` lines, `3438 / 3444` branches,
+  `1584 / 1584` functions, and `40733 / 41383` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `2744 / 3032` regions to `2872 / 3135` regions; missing regions fell from
+  `288` to `263`.
+- Net: aggregate missing regions fell from `675` to `650`. Branch debt is
   unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants

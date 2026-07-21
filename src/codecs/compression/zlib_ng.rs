@@ -215,6 +215,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
     slow.process(8, true)
         .expect("slow matcher self-candidate path should process");
     assert!(slow.position > 4);
+    let mut slow_underflow = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
+    slow_underflow.position = usize::MAX;
+    let _ = slow_underflow.process(0, true);
+    let mut slow_flush = SlowMatcher::new(b"", 16, 8, 128, 128);
+    slow_flush.match_available = true;
+    let _ = slow_flush.process(0, true);
+    let mut slow_previous = SlowMatcher::new(b"aaaa", 16, 8, 128, 128);
+    slow_previous.previous_length = 3;
+    let _ = slow_previous.process(4, true);
+    let mut slow_short = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
+    slow_short.data.truncate(3);
+    let _ = slow_short.quick_insert(0);
+    let mut slow_empty_chain = SlowMatcher::new(b"abcxyz", 16, 8, 128, 0);
+    slow_empty_chain.position = 3;
+    let _ = slow_empty_chain.longest_match(0, 3);
 
     let mut level6 = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
     level6.position = 4;
@@ -224,6 +239,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .find_match(4, 4)
         .expect("level6 self-candidate path should process");
     assert_eq!(found.length, 1);
+    let mut level6_underflow = Level6Matcher::new(b"abcd", 128, 128, 16);
+    level6_underflow.window_base = 2;
+    level6_underflow.position = 1;
+    let _ = level6_underflow.slide_window_if_needed();
+    let mut level6_process_underflow = Level6Matcher::new(b"abcd", 128, 128, 16);
+    level6_process_underflow.position = usize::MAX;
+    let _ = level6_process_underflow.process(0, true);
+    let level6_hash_overflow = Level6Matcher::new(b"abcd", 128, 128, 16);
+    let _ = level6_hash_overflow.hash(usize::MAX);
+    let mut level6_insert_overflow = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
+    let _ = level6_insert_overflow.insert_match(
+        MediumMatch {
+            match_start: 0,
+            length: usize::MAX,
+            start: 0,
+            original_start: 0,
+        },
+        usize::MAX,
+    );
+    let _ = level6_insert_overflow.insert_match(
+        MediumMatch {
+            match_start: 0,
+            length: 4,
+            start: usize::MAX,
+            original_start: 0,
+        },
+        16,
+    );
+    let _ = level6_insert_overflow.find_match(usize::MAX, 4);
+    let _ = level6_insert_overflow.longest_match(0, usize::MAX, 4);
 
     let mut level9 = Level9Matcher::new(b"abcdefghijkl");
     level9
@@ -258,6 +303,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = level9
         .longest_match(level9.position, 8)
         .expect("level9 upper-bound loop exit should process");
+    let mut level9_underflow = Level9Matcher::new(b"abcd");
+    level9_underflow.position = usize::MAX;
+    let _ = level9_underflow.process(0, true);
+    let mut level9_flush = Level9Matcher::new(b"");
+    level9_flush.match_available = true;
+    let _ = level9_flush.process(0, true);
+    let mut level9_previous = Level9Matcher::new(b"aaaa");
+    level9_previous.previous_length = 3;
+    let _ = level9_previous.process(4, true);
+    let mut level9_short_insert = Level9Matcher::new(b"abcd");
+    level9_short_insert.data.truncate(2);
+    level9_short_insert.position = 1;
+    let _ = level9_short_insert.quick_insert(1);
+    let mut level9_overflow_match = Level9Matcher::new(b"abcdefghijkl");
+    level9_overflow_match.position = usize::MAX - 1;
+    level9_overflow_match.previous_length = 3;
+    let _ = level9_overflow_match.longest_match(0, 8);
 
     let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 4, 6, false);
     level3.position = 4;
@@ -269,6 +331,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = level3
         .longest_match(0, 4)
         .expect("level3 lookahead break should process");
+    let mut level3_underflow = Level3Matcher::new(b"abcd", 6, 4, 6, false);
+    level3_underflow.position = usize::MAX;
+    let _ = level3_underflow.process(0, true);
+    let level3_hash_overflow = Level3Matcher::new(b"abcd", 6, 4, 6, false);
+    let _ = level3_hash_overflow.hash(usize::MAX);
+    let mut level3_fast_insert = Level3Matcher::new(b"abcdefgh", 6, 4, 6, true);
+    let _ = level3_fast_insert.insert_match(5, 4);
+    let mut level3_slow_insert = Level3Matcher::new(b"abcdefgh", 6, 4, 6, false);
+    let _ = level3_slow_insert.insert_match(usize::MAX, usize::MAX);
+    level3_slow_insert.position = usize::MAX;
+    let _ = level3_slow_insert.insert_match(4, 16);
+    let mut level3_empty_chain = Level3Matcher::new(b"abcxyz", 0, 128, 6, false);
+    level3_empty_chain.position = 3;
+    let _ = level3_empty_chain.longest_match(0, 3);
 
     let _ = quick_insert_level1(data, data.len(), &mut head);
     let mut overflowing_position = usize::MAX;
@@ -305,6 +381,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = short_level3.quick_insert(0);
     short_level3.position = usize::MAX;
     let _ = short_level3.candidate_can_improve(0, 3);
+    let _ = short_level3.candidate_can_improve(usize::MAX, 3);
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {
