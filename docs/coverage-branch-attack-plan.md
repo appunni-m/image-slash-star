@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `8b92fee7-76de-446f-a6b0-e6300d02c8a1`
-- Current measured commit metadata: `fcdee54d793541e2e534e005e22d2d15fc35f216`
-- Current coverage source state: Attempt 65 retained working tree measured from
-  pushed parent `fcdee54`.
-- Lines: 25857 / 25861
+- Current snapshot: `4848143a-a491-4534-bb4f-68babd43348a`
+- Current measured commit metadata: `53a93abcf9146fcf7b2abfe5df66667c888d3c6e`
+- Current coverage source state: Attempt 67 retained working tree measured from
+  pushed parent `53a93ab`.
+- Lines: 25856 / 25860
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
-- Regions: 41778 / 42360
-- Remaining target: 4 lines, 6 branches, and 582 regions.
+- Regions: 41771 / 42350
+- Remaining target: 4 lines, 6 branches, and 579 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -47,6 +47,51 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 67 plan: TIFF classic offset-size guard consolidation
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `53a93ab`.
+- Coverage MCP snapshot: `2a648d17-f25d-4d4e-ba33-3a4332a70b7a`.
+- Overall: `25857 / 25861` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41778 / 42360` regions.
+- Target file: `src/codecs/tiff/encode.rs`, currently `763 / 768`
+  regions and `90 / 90` branches.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `compression == COMPRESSION_DEFLATE` | Line 60. `compress_zlib_tiff()` can only return `None` through zlib-ng internals; keep this tied to a future zlib reverse map rather than inventing a TIFF-only fixture. |
+| Classic TIFF offset and byte-count writes | Lines 108, 142, 153, and 169. Each writes `ifd_offset`, `bits_offset`, `pixel_offset`, or `encoded.len()` as a 32-bit classic TIFF value. Every one of these values is bounded by `output_len`: compressed layout has `8 + encoded.len() <= ifd_offset <= bits_offset <= output_len`; uncompressed layout has `pixel_offset + encoded.len() == output_len`. | Add one pre-allocation `u32::try_from(output_len).ok()?` guard, then cast the bounded values directly. This preserves classic TIFF's 32-bit limit, avoids possible huge allocation before the existing late checks, and removes repeated unreachable failure arms. |
+
+Implementation plan:
+
+1. Insert a single output-size guard immediately after `output_len` is computed
+   and before `Vec::with_capacity(output_len)`.
+2. Replace the bounded per-field `u32::try_from(...).ok()?` calls with direct
+   casts.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall and TIFF behavior is
+   unchanged for representable classic TIFF outputs.
+
+Measurement:
+
+- Coverage MCP run: `633bb8e6-597f-4b78-9af0-f0c72b7cffdc`.
+- Coverage MCP snapshot: `4848143a-a491-4534-bb4f-68babd43348a`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after consolidating classic TIFF offset-size guards:
+  `25856 / 25860` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41771 / 42350` regions.
+- Target file movement: `src/codecs/tiff/encode.rs` moved from
+  `763 / 768` regions to `756 / 758` regions; missing regions fell from
+  `5` to `2`, and branch coverage remained complete at `90 / 90`.
+- Net: aggregate missing regions fell from `582` to `579`. The remaining TIFF
+  encode region gaps are the zlib compressor `None` propagation and the single
+  consolidated classic-output-size failure arm.
 
 ## Attempt 66 plan: smallest visible region sweep
 

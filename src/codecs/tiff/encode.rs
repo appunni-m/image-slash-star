@@ -100,12 +100,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     } else {
         pixel_offset + encoded.len()
     };
+    // Classic TIFF stores offsets and byte counts as `u32`; bounding the full
+    // output length bounds every offset/count written below.
+    u32::try_from(output_len).ok()?;
     let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(match endian {
         Endian::Little => b"II",
     });
     endian.push_u16(&mut output, 42);
-    endian.push_u32(&mut output, u32::try_from(ifd_offset).ok()?);
+    endian.push_u32(&mut output, ifd_offset as u32);
     if compressed_layout {
         output.extend_from_slice(&encoded);
         output.resize(ifd_offset, 0);
@@ -139,19 +142,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             258,
             3,
             u32::from(channels),
-            u32::try_from(bits_offset).ok()?,
+            bits_offset as u32,
         );
     }
     write_short_entry(&mut output, endian, 259, compression);
     write_short_entry(&mut output, endian, 262, photometric);
-    write_entry(
-        &mut output,
-        endian,
-        273,
-        4,
-        1,
-        u32::try_from(pixel_offset).ok()?,
-    );
+    write_entry(&mut output, endian, 273, 4, 1, pixel_offset as u32);
     if channels > 1 {
         write_short_entry(&mut output, endian, 277, channels);
     }
@@ -160,14 +156,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     } else {
         write_entry(&mut output, endian, 278, 4, 1, img.height);
     }
-    write_entry(
-        &mut output,
-        endian,
-        279,
-        4,
-        1,
-        u32::try_from(encoded.len()).ok()?,
-    );
+    write_entry(&mut output, endian, 279, 4, 1, encoded.len() as u32);
     write_short_entry(&mut output, endian, 284, 1);
     if predictor == 2 {
         write_short_entry(&mut output, endian, 317, predictor);
