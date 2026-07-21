@@ -12,12 +12,12 @@ after the latest local coverage verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `36699d47-211b-42e8-8621-012e46f2f979`
-- Current measured commit metadata: `e5cd10c234a7519b3c84eec10ef95b23e8ecd8e6`
-- Lines: 22722 / 22743
-- Branches: 3383 / 3436
+- Current snapshot: `e8165588-496a-422f-a242-a97b9763403e`
+- Current measured commit metadata: `471d47a0035a15793fe5ca203fac744c5c1224f3`
+- Lines: 22721 / 22740
+- Branches: 3385 / 3438
 - Functions: 1549 / 1549
-- Remaining target: 21 lines and 53 branches.
+- Remaining target: 19 lines and 53 branches.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
   - `src/codecs/webp/native/encoder.rs`: 193 / 198 branches, 5 missing.
@@ -26,7 +26,6 @@ after the latest local coverage verification.
   - `src/codecs/jpeg/decode/progressive.rs`: 104 / 118 branches, 14 missing.
   - `src/codecs/tiff/decode.rs`: 100 / 114 branches, 14 missing.
 - Remaining line-only gaps from this snapshot:
-  - `src/codecs/webp/native/huffman.rs`: 221 / 223 lines, 0 branch missing.
   - `src/types/dynamic.rs`: 813 / 814 lines, 0 branch missing.
   - `src/codecs/compression/zlib_ng.rs`: 1538 / 1539 lines, 0 branch missing.
 - Note: commit `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a` is the local
@@ -34,6 +33,54 @@ after the latest local coverage verification.
   `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
   The preceding rustfmt pass did not change branch coverage, but split some
   one-line branch bodies into separately counted lines.
+
+## Planned WebP native Huffman invariant cleanup
+
+Coverage MCP snapshot `96124852-5e77-4ae1-9978-a9fe5106c6c7`, measured at
+commit `471d47a0035a15793fe5ca203fac744c5c1224f3`, reports
+`src/codecs/webp/native/huffman.rs` at 221 / 223 lines, 24 / 24 branches, and
+9 / 9 functions. This is the selected next target because it has the smallest
+clean line deficit: the smaller aggregate branch file, `lossless.rs`, still
+reports 2 missing branches across 50 normalized partial-branch lines and no
+exact actionable branch from the MCP line map.
+
+Target lines and reverse-mapping plan:
+
+- line 143: `HuffmanTreeNode::Leaf(_)` while descending the overflow tree in
+  `HuffmanTree::build_implicit()`.
+- line 154: non-empty final tree slot after descending to the target leaf
+  position in `HuffmanTree::build_implicit()`.
+
+Reverse mapping with a local search over 140,805 canonical code-length
+candidate layouts found no input that reaches either branch after the preceding
+`curr_code == 2 << max_code_length` validation. This matches canonical Huffman
+construction: a complete prefix-code length histogram cannot descend through an
+already assigned leaf or assign into a non-empty final slot. Fix type:
+invariant simplification inside the private builder, not a fabricated WebP
+fixture. The public malformed WebP rows continue to cover invalid Huffman
+tables at the decoder boundary; this cleanup removes defensive-unreachable
+lines from the internal construction algorithm.
+
+Completed evidence:
+
+- Reverse-mapping probe: 140,805 canonical code-length layouts tried; none
+  reached the two defensive construction conflicts after the canonical
+  `curr_code` validation.
+- Coverage MCP run: `9518e986-c94c-471f-8e35-b65cc89988a8`
+- Coverage MCP snapshot: `e8165588-496a-422f-a242-a97b9763403e`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22721 / 22740 lines, 3385 / 3438 branches, and
+  1549 / 1549 functions.
+- Target file: `src/codecs/webp/native/huffman.rs` improved from
+  221 / 223 lines, 24 / 24 branches, and 9 / 9 functions to
+  220 / 220 lines, 26 / 26 branches, and 9 / 9 functions. Aggregate line and
+  branch coverage are now 100% for the file. MCP still lists two normalized
+  partial-region lines, but the LLVM summary for the file reports no missing
+  lines or branches.
+- Code change: `build_implicit()` now treats the leaf-descent and non-empty
+  final-slot cases as canonical-construction invariants. It keeps debug
+  assertions at the invariant points and removes the unreachable error-return
+  lines from the hot builder.
 
 ## Planned BMP decoder malformed-fixture batch
 

@@ -130,30 +130,27 @@ impl HuffmanTree {
                 for depth in (0..length - table_bits).rev() {
                     let node = tree[node_index];
 
-                    let offset = match node {
-                        HuffmanTreeNode::Empty => {
-                            // Turns a node from empty into a branch and assigns its children
-                            let offset = tree.len() - node_index;
-                            tree[node_index] = HuffmanTreeNode::Branch(offset);
-                            tree.push(HuffmanTreeNode::Empty);
-                            tree.push(HuffmanTreeNode::Empty);
-                            offset
-                        }
-                        HuffmanTreeNode::Branch(offset) => offset,
-                        HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError),
+                    let offset = if let HuffmanTreeNode::Branch(offset) = node {
+                        offset
+                    } else {
+                        // The complete canonical-code validation above prevents
+                        // descending through an already assigned leaf; every
+                        // non-branch node reached here is a new empty branch.
+                        debug_assert_eq!(node, HuffmanTreeNode::Empty);
+                        let offset = tree.len() - node_index;
+                        tree[node_index] = HuffmanTreeNode::Branch(offset);
+                        tree.push(HuffmanTreeNode::Empty);
+                        tree.push(HuffmanTreeNode::Empty);
+                        offset
                     };
 
                     node_index += offset + ((code >> depth) & 1);
                 }
 
-                match tree[node_index] {
-                    HuffmanTreeNode::Empty => {
-                        tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16);
-                    }
-                    HuffmanTreeNode::Branch(_) | HuffmanTreeNode::Leaf(_) => {
-                        return Err(DecodingError::HuffmanError);
-                    }
-                }
+                // The same canonical-code invariant guarantees that the final
+                // slot is unassigned before this symbol is inserted.
+                debug_assert_eq!(tree[node_index], HuffmanTreeNode::Empty);
+                tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16);
             }
         }
 
