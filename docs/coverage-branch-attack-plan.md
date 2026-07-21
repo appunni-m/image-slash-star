@@ -12,20 +12,20 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `af8c63e5-3ba5-4027-9fad-b0c7d3697a52`
-- Current measured commit metadata: `14180efb47a75cfe8c03157dc9ab8b5caf096874`
-- Current source state: VP8L header short-read and byte-aligned invariant sweep,
-  measured before committing the sweep.
-- Lines: 24457 / 24463
-- Branches: 3430 / 3444
-- Functions: 1580 / 1580
-- Regions: 39869 / 40605
-- Remaining target: 6 lines, 14 branches, and 736 regions.
+- Current snapshot: `8897286d-213f-4f01-aacd-bd34a0f3e584`
+- Current measured commit metadata: `cf9b818b9ed9c07b7b9aeb77f777eff1c234b0d0`
+- Current source state: WebP decoder public-reader coverage hook measured
+  before committing Attempt 36.
+- Lines: 24580 / 24585
+- Branches: 3434 / 3444
+- Functions: 1582 / 1582
+- Regions: 40094 / 40825
+- Remaining target: 5 lines, 10 branches, and 731 regions.
 - Remaining branch map from this snapshot:
-  - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
-  - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
+  - `src/codecs/webp/native/decoder.rs`: 89 / 92 branches, 3 missing.
+  - `src/codecs/webp/native/vp8.rs`: 155 / 160 branches, 5 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
-- Remaining line gaps: aggregate line gap is 6, but the current raw per-file
+- Remaining line gaps: aggregate line gap is 5, but the current raw per-file
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
@@ -1303,6 +1303,95 @@ Measurement and decision:
   with Attempt 33, direct macroblock-header calls perturb VP8 branch accounting
   and should be avoided. The remaining line 1229/1863 debt likely requires a
   real frame bitstream or manifest fixture, not an isolated parser call.
+
+## Attempt 36 plan: WebP animation public-reader branch gaps
+
+Baseline before editing:
+
+- Git state: clean `main` aligned with `origin/main` at `cf9b818`.
+- Coverage MCP run: `bfba5032-e02f-4814-8560-4af1097a666b`.
+- Coverage MCP snapshot: `8916fe90-0755-4cad-9dd7-7fc841dc2aad`.
+- Overall: `24537 / 24542` lines, `3433 / 3444` branches,
+  `1581 / 1581` functions, and `40042 / 40775` regions.
+- Target file: `src/codecs/webp/native/decoder.rs` at `706 / 706` lines,
+  `88 / 92` branches, `33 / 33` functions, and `1315 / 1366` regions.
+
+Reverse map:
+
+MCP localizes the four aggregate missing decoder branches to lines 551, 561,
+577, and 613. The raw LLVM branch entries from the current MCP artifact show
+which monomorphization and condition side are missing:
+
+| Source line | Missing branch | Reverse-mapped cause | Action |
+| --- | --- | --- | --- |
+| 551 | `frame_width <= 16384` false side for the public `Cursor<&[u8]>` reader | Existing private hooks hit oversized VP8L frame width through `Cursor<Vec<u8>>`, but public manifest rows do not include an animated VP8L frame whose declared frame width is too large. | Add a reproducible malformed WebP fixture and manifest row for animated VP8L frame width overflow. |
+| 561 | `frame_width <= 16384` false side for the public `Cursor<&[u8]>` reader | Same reader-instantiation gap for an ALPH + VP8 frame. Existing private hooks hit only the private `Cursor<Vec<u8>>` instantiation. | Add a reproducible malformed WebP fixture and manifest row for animated ALPH frame width overflow. |
+| 577 | `chunk_size + next_chunk_size + 32 > anmf_size` true side for the private `Cursor<Vec<u8>>` hook | The hook writes the nested VP8 header at ANMF payload offset `34`; after a 2-byte alpha payload the next nested chunk starts at payload offset `26`, so the hook reads zero bytes instead of the intended oversized VP8 header. | Fix the hook payload offset to `26` for this specific ALPH size-2 case. |
+| 613 | `frame_y + frame_height > self.height` true side for the public `Cursor<&[u8]>` reader | Existing manifest fixture `animated_frame_outside.webp` mutates the x offset only, covering the first predicate. No public fixture mutates the y offset outside the canvas. | Add a reproducible malformed WebP fixture and manifest row for animated frame y-offset outside the canvas. |
+
+Selected implementation:
+
+1. Extend `scripts/generate_test_assets.py` to generate:
+   - `animated_vp8l_frame_width_too_large.webp`
+   - `animated_alpha_frame_width_too_large.webp`
+   - `animated_frame_y_outside.webp`
+2. Add these as `expect_error: true` rows in `Decode.webp.json`. They are
+   public malformed-input behavior and should be asserted through the manifest
+   decode matrix.
+3. Fix the existing private decoder coverage hook's ALPH nested VP8 offset from
+   payload offset `34` to `26` in the size-2 ALPH case.
+
+Expected validation:
+
+1. Regenerate WebP assets and decode matrix refs with `.oracle-venv/bin/python`
+   as needed.
+2. `cargo fmt --all`
+3. `cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+5. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+6. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+7. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+8. Record measured branch/region movement here, then commit and push only if
+   the retained code improves or the documented probe is useful.
+
+Preflight revision:
+
+- `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`
+  rejected the planned width-overflow manifest rows because Pillow accepts both
+  `animated_vp8l_frame_width_too_large.webp` and
+  `animated_alpha_frame_width_too_large.webp`.
+- Therefore those rows cannot be `expect_error: true` oracle fixtures. Keeping
+  them as active pixel-parity rows would currently create known failing parity
+  debt and would not be suitable for the coverage pass unless the decoder is
+  changed to match Pillow's tolerance for ANMF/bitstream dimension mismatch.
+- Revised implementation for this attempt:
+  1. Do not retain the new malformed fixture rows or generated assets.
+  2. Keep the hook offset fix for line 577.
+  3. Add same-module coverage-hook calls using `Cursor<&[u8]>`, matching the
+     public decode reader instantiation, for the width-false and y-outside
+     guards. These are defensive decoder branches that cannot currently be
+     represented as passing Pillow-oracle rows.
+
+Measurement:
+
+- Coverage MCP run: `8b13aaaa-ddbe-4c55-a76e-d3369dfcc12f`.
+- Coverage MCP snapshot: `8897286d-213f-4f01-aacd-bd34a0f3e584`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after the revised hook: `24580 / 24585` lines,
+  `3434 / 3444` branches, `1582 / 1582` functions, and
+  `40094 / 40825` regions.
+- Net movement versus baseline `8916fe90-0755-4cad-9dd7-7fc841dc2aad`:
+  - Branches improved from `3433 / 3444` to `3434 / 3444`; missing branches
+    dropped from `11` to `10`.
+  - Missing regions dropped from `733` to `731`.
+  - Line gap stayed at `5`.
+- Target file movement: `src/codecs/webp/native/decoder.rs` moved from
+  `88 / 92` branches and `1315 / 1366` regions to `89 / 92` branches and
+  `1367 / 1416` regions. The targeted source lines 551, 561, 577, and 613 are
+  now branch-complete in the MCP line view.
+- Remaining decoder branch debt has shifted to earlier parser/setup predicates
+  in the normalized MCP line map. Do not add more ANMF-frame hooks for lines
+  551, 561, 577, or 613.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 
