@@ -12,12 +12,12 @@ after the latest pushed-head verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `cadf1be3-57a2-4afa-b3fc-1bb7b09bf8de`
-- Current measured commit metadata: `863040deb907c5c8c7334b801aadfdbdc6f91ad1`
-- Lines: 22213 / 22214
-- Branches: 3358 / 3466
-- Functions: 1534 / 1534
-- Remaining target: 1 line and 108 branches.
+- Current snapshot: `51ef9e74-5223-409e-884a-cf3e42209291`
+- Current measured commit metadata: `32dc417cd6cfd1b67542882cde4711460f083578`
+- Lines: 22301 / 22302
+- Branches: 3365 / 3466
+- Functions: 1538 / 1538
+- Remaining target: 1 line and 101 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -338,6 +338,36 @@ First-pass evidence before short-palette retry:
 - Short-palette retry `a47a7e00-695c-483a-b8bf-6bd5932ebe9b`, snapshot
   `df58d5f5-02a5-4f9a-b8ae-9244def3f610`, passed but did not improve overall
   or target-file branch coverage, so the no-op probe was removed.
+
+Current retry plan from pushed-head snapshot
+`5b789fe0-a42e-4905-9cd2-33893a50684a`: `encoder.rs` remains 1080 / 1080
+lines, 193 / 198 branches, and 63 / 63 functions. Try three narrow
+coverage-only probes:
+
+- line 247: add `compressed_huffman_tokens(&[0; 276])` so zero-run repetition
+  subtracts exactly two 138-symbol chunks and the inner `while repetitions != 0`
+  evaluates its false side.
+- line 1027: call `encode_alpha()` with 17 unique alpha values, leading zero,
+  and mixed positive/negative deltas so `signs == 3`, `palette_values[0] == 0`,
+  and `sortable_len > 17` is false.
+- line 1121: add a coverage-only writer that fails on the padding byte, so the
+  odd-padding `write_all(&[0])?` error branch is reached. If needed, add an
+  even-length failing writer to isolate the remaining hidden `?` branch.
+
+Do not keep any probe that does not improve MCP line+branch coverage.
+
+Retry evidence:
+
+- Coverage MCP run `8da58832-0511-4632-af0f-ffffc1e53b23`, snapshot
+  `9b904344-a1da-47c0-8488-59debe449317`, passed but introduced uncovered
+  helper-writer lines and did not close the existing encoder gap lines.
+- Coverage MCP run `4f62c69e-14b1-4adc-a626-844250839c19`, snapshot
+  `07a01e76-742d-4f05-9585-b6e60949385a`, passed after covering the helper
+  writer flush path, but still did not reduce the remaining branch deficit:
+  overall moved from 3358 / 3466 to 3360 / 3468 and `encoder.rs` from
+  193 / 198 to 195 / 200, leaving the same six gap lines. The code probes were
+  removed as no-op coverage noise. Remaining `encoder.rs` gaps are still
+  lines 247, 379, 392, 395, 1027, and 1121.
 
 ## Planned WebP VP8 filter-parameter private-branch batch
 
@@ -1006,6 +1036,97 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 - Coverage movement: branches improved from 3325 / 3480 to 3327 / 3480.
 - `src/codecs/webp/native/extended.rs`: now 231 / 231 lines and
   36 / 36 branches.
+
+### JPEG encoder progressive/private-branch batch
+
+- Clean pushed baseline snapshot for source decisions:
+  `5b789fe0-a42e-4905-9cd2-33893a50684a`.
+- Current pushed commit: `32dc417cd6cfd1b67542882cde4711460f083578`.
+- Baseline overall coverage: 22213 / 22214 lines, 3358 / 3466 branches,
+  1534 / 1534 functions.
+- Current `src/codecs/jpeg/encode/mod.rs`: 808 / 808 lines and
+  137 / 144 branches.
+- Remaining JPEG encoder gap lines:
+  - line 48: `debug_assert!(w > 0 && h > 0)` lacks zero-width and/or
+    zero-height assertion-failure sides. These are private invariant checks,
+    not valid Pillow encode cases.
+  - line 373: `downsample()` full-size fast path lacks the complementary
+    sampling-ratio side in direct helper coverage.
+  - line 397: `debug_assert!(vr == 1 || vr == 2)` lacks the invalid vertical
+    ratio assertion-failure side. This is a private invariant check.
+  - line 875: progressive interleaved DC event generation has an unexercised
+    padded-MCU guard side. Add a public manifest-driven progressive odd-size
+    RGB JPEG encode row first, because Pillow can express that image shape.
+  - line 1033: progressive AC refinement EOB flush threshold lacks one
+    threshold side. If public fixtures still cannot force the threshold, use a
+    private direct `append_ac_refine_events()` probe because this is internal
+    scan-script state after coefficients are already generated.
+
+Planned actions:
+
+1. Try `enc_progressive_odd` in `manifest.yaml` using `17x17.jpg` with
+   `progressive: true`; regenerate JPEG oracle references through the existing
+   pinned Pillow script. Reject the row unless it matches exact encoded bytes,
+   not just decoded pixel bytes.
+2. Extend the existing `#[cfg(coverage)]` JPEG encode hook with deterministic
+   private probes:
+   - `catch_unwind()` zero-width and zero-height `encode()` calls for line 48;
+   - direct `downsample()` calls for 1x1 and 2x1/2x2 ratio sides, plus a
+     caught invalid `vr = 3` call for line 397;
+   - direct progressive AC-refine state if the manifest row does not close
+     line 1033.
+3. Run the approved Coverage MCP line+branch command once, query the JPEG file,
+   and keep only probes/fixture rows that reduce the real remaining deficit.
+
+Rejected public fixture evidence:
+
+- Added `enc_progressive_odd` with `17x17.jpg` and `progressive: true`, then
+  regenerated JPEG oracle refs with the pinned Pillow script.
+- Coverage MCP run `d6652d51-e279-454a-93d8-caeb867fd1d0` failed
+  `test_encode_matrix`: `enc_progressive_odd` encoded byte length was 745
+  actual vs 748 expected. The row was removed because encode parity rows must
+  match exact bytes.
+- Regenerated JPEG refs after removal; only the doc and private JPEG encode
+  hook remain dirty for the retry.
+
+First private-hook retry evidence:
+
+- Coverage MCP run: `6630fd9f-797f-47cc-b4e4-c28803405aa6`.
+- Coverage MCP snapshot: `df001545-a993-4573-bce6-d7509ad41fb3`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall coverage improved from 3358 / 3466 branches to 3362 / 3466
+  branches.
+- `src/codecs/jpeg/encode/mod.rs` improved from 137 / 144 branches to
+  141 / 144 branches.
+- Remaining JPEG encoder gaps:
+  - shifted line 415: `if hr == 1 && vr == 1` still lacks the
+    `hr == 1` / `vr != 1` side.
+  - shifted line 917: progressive interleaved padded-MCU guard still lacks
+    two false sides. The rejected public fixture showed this is not currently
+    byte-perfect as a manifest row.
+
+Next private-hook retry:
+
+- Add a caught `downsample(..., hr = 1, vr = 2)` call for line 415.
+- Add a direct `dc_progressive_events()` call with a Y component sized 3x3
+  blocks at 2x2 sampling and chroma components sized 1x1 blocks at 1x1
+  sampling. This hand-built state forces valid in-bounds Y blocks plus
+  out-of-bounds chroma row/column guards in the progressive interleaved DC
+  loop without adding a non-byte-perfect public fixture.
+
+Second private-hook retry evidence:
+
+- Coverage MCP run: `d240941a-3a80-4ad0-92af-6085268b5b9f`.
+- Coverage MCP snapshot: `51ef9e74-5223-409e-884a-cf3e42209291`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall coverage improved from 3362 / 3466 branches to 3365 / 3466
+  branches.
+- `src/codecs/jpeg/encode/mod.rs` improved from 141 / 144 branches to
+  144 / 144 branches. No branch gaps remain in the JPEG encoder.
+- Total progress from the clean pushed baseline for this batch:
+  `src/codecs/jpeg/encode/mod.rs` moved from 137 / 144 branches to 144 / 144
+  branches, and overall coverage moved from 3358 / 3466 branches to
+  3365 / 3466 branches.
 
 ## Execution order
 

@@ -320,6 +320,97 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     huffman::__coverage_exercise_private_branches();
+
+    let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::L8);
+    let zero_height = DecodedImage::new(1, 0, Vec::new(), crate::types::ColorType::L8);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = encode(&zero_width, &EncodeOptions::default());
+    }));
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = encode(&zero_height, &EncodeOptions::default());
+    }));
+
+    let plane = [10u8, 20, 30, 40];
+    let _ = downsample(&plane, 2, 2, 2, 2, 1, 1);
+    let _ = downsample(&plane, 2, 2, 1, 2, 2, 1);
+    let _ = downsample(&plane, 2, 2, 1, 1, 2, 2);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = downsample(&plane, 2, 2, 2, 1, 1, 2);
+    }));
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = downsample(&plane, 2, 2, 1, 1, 2, 3);
+    }));
+
+    let progressive_dc_scan = ProgScan {
+        comps: vec![0, 1, 2],
+        ss: 0,
+        se: 0,
+        ah: 0,
+        al: 1,
+        is_dc: true,
+    };
+    let y_component = CompData {
+        blocks: vec![[0i16; 64]; 9],
+        blocks_per_row: 3,
+        block_rows: 3,
+        h_samp: 2,
+        v_samp: 2,
+        quant_slot: 0,
+        id: 1,
+        dc_tbl: 0,
+        ac_tbl: 0,
+    };
+    let cb_component = CompData {
+        blocks: vec![[0i16; 64]],
+        blocks_per_row: 1,
+        block_rows: 1,
+        h_samp: 1,
+        v_samp: 1,
+        quant_slot: 1,
+        id: 2,
+        dc_tbl: 1,
+        ac_tbl: 1,
+    };
+    let cr_component = CompData {
+        blocks: vec![[0i16; 64]],
+        blocks_per_row: 1,
+        block_rows: 1,
+        h_samp: 1,
+        v_samp: 1,
+        quant_slot: 1,
+        id: 3,
+        dc_tbl: 1,
+        ac_tbl: 1,
+    };
+    let _ = dc_progressive_events(
+        &progressive_dc_scan,
+        &[y_component, cb_component, cr_component],
+    );
+
+    let scan = ProgScan {
+        comps: vec![0],
+        ss: 1,
+        se: 1,
+        ah: 1,
+        al: 0,
+        is_dc: false,
+    };
+    let table = 0;
+    let mut events = Vec::new();
+    let mut eob_run = 0;
+    let mut correction_bits = Vec::new();
+    let mut block = [0i16; 64];
+    block[ZIGZAG[1]] = 2;
+    for _ in 0..938 {
+        let _ = append_ac_refine_events(
+            &mut events,
+            &block,
+            &scan,
+            table,
+            &mut eob_run,
+            &mut correction_bits,
+        );
+    }
 }
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {
@@ -872,7 +963,17 @@ fn dc_progressive_events(
                             let block_column = mcu_column
                                 .checked_mul(usize::from(component.h_samp))?
                                 .checked_add(horizontal)?;
-                            if block_row < component.block_rows && block_column < component.blocks_per_row { append(scan_index, component_index, &component.blocks[block_row * component.blocks_per_row + block_column]).expect("progressive DC event inputs are encoder-controlled"); }
+                            if block_row < component.block_rows
+                                && block_column < component.blocks_per_row
+                            {
+                                append(
+                                    scan_index,
+                                    component_index,
+                                    &component.blocks
+                                        [block_row * component.blocks_per_row + block_column],
+                                )
+                                .expect("progressive DC event inputs are encoder-controlled");
+                            }
                         }
                     }
                 }
