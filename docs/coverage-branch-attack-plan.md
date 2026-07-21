@@ -12,8 +12,8 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `b1aae7b6-1cf6-4e47-af58-ef0cc33d5d55`
-- Current measured commit metadata: `43bbe96defe4b77d9056f025ddb20799b6760574`
+- Current snapshot: `2110fc56-3565-476c-8eca-0ce50c1db4e8`
+- Current measured commit metadata: `2a940d27c5dea8e084f9a4df9f3954a1cb867c9e`
 - Lines: 22044 / 22045
 - Branches: 3335 / 3466
 - Functions: 1528 / 1528
@@ -203,6 +203,13 @@ Completed evidence:
 - Target file: `src/codecs/webp/native/encoder/histogram.rs` is
   503 / 503 lines, 107 / 112 branches, and 30 / 30 functions. Remaining target
   gaps in this file are line 367, line 410, line 435, line 517, and line 524.
+- Pushed-head verification run:
+  `cb76751a-eebd-4423-9f56-9cd558a16f64`, snapshot
+  `2110fc56-3565-476c-8eca-0ce50c1db4e8`, commit
+  `2a940d27c5dea8e084f9a4df9f3954a1cb867c9e`; passed with 5 passed, 0 failed.
+  Pushed-head overall coverage is 22044 / 22045 lines, 3335 / 3466 branches,
+  and 1528 / 1528 functions. Histogram remains 503 / 503 lines,
+  107 / 112 branches, and 30 / 30 functions.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 
