@@ -101,12 +101,10 @@ fn inflated_len(
     depth: u8,
     interlace: u8,
 ) -> Option<usize> {
-    let width = usize::try_from(width).ok()?;
-    let height = usize::try_from(height).ok()?;
+    let width = width as usize;
+    let height = height as usize;
     if interlace == 0 {
-        return row_bytes(width, channels, depth)?
-            .checked_add(1)?
-            .checked_mul(height);
+        return (row_bytes(width, channels, depth)? + 1).checked_mul(height);
     }
 
     let mut total = 0usize;
@@ -115,9 +113,7 @@ fn inflated_len(
         let pass_height = pass_size(height, y_start, y_step);
         if pass_width != 0 && pass_height != 0 {
             total = total.checked_add(
-                row_bytes(pass_width, channels, depth)?
-                    .checked_add(1)?
-                    .checked_mul(pass_height)?,
+                (row_bytes(pass_width, channels, depth)? + 1).checked_mul(pass_height)?,
             )?;
         }
     }
@@ -132,8 +128,8 @@ fn decode_scanlines(
     depth: u8,
     interlace: u8,
 ) -> Option<Vec<u16>> {
-    let width = usize::try_from(width).ok()?;
-    let height = usize::try_from(height).ok()?;
+    let width = width as usize;
+    let height = height as usize;
     let sample_count = width.checked_mul(height)?.checked_mul(channels)?;
     let mut samples = vec![0u16; sample_count];
     let mut position = 0usize;
@@ -279,11 +275,7 @@ fn build_image(
     mut palette_alpha: Vec<u8>,
 ) -> Option<DecodedImage> {
     let pixels = if png_color == 0 && depth == 1 {
-        pack_one_bit(
-            samples,
-            usize::try_from(width).ok()?,
-            usize::try_from(height).ok()?,
-        )
+        pack_one_bit(samples, width as usize, height as usize)
     } else if png_color == 0 && depth < 8 {
         let maximum = (1u16 << depth) - 1;
         samples
@@ -416,13 +408,12 @@ impl<'a> Iterator for Chunks<'a> {
             return None;
         }
         let result = (|| {
-            let length = usize::try_from(u32::from_be_bytes(
+            let length = u32::from_be_bytes(
                 self.data
                     .get(self.position..self.position + 4)?
                     .try_into()
                     .ok()?,
-            ))
-            .ok()?;
+            ) as usize;
             let kind: [u8; 4] = self
                 .data
                 .get(self.position + 4..self.position + 8)?

@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4848143a-a491-4534-bb4f-68babd43348a`
-- Current measured commit metadata: `53a93abcf9146fcf7b2abfe5df66667c888d3c6e`
-- Current coverage source state: Attempt 67 retained working tree measured from
-  pushed parent `53a93ab`.
-- Lines: 25856 / 25860
+- Current snapshot: `876baf43-9a64-4b48-bcd4-c291c7a831df`
+- Current measured commit metadata: `cf1cb1d31d989418f2891b75ad0284317f28b2fb`
+- Current coverage source state: Attempt 68 retained working tree measured from
+  pushed parent `cf1cb1d`.
+- Lines: 25848 / 25852
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
-- Regions: 41771 / 42350
-- Remaining target: 4 lines, 6 branches, and 579 regions.
+- Regions: 41755 / 42325
+- Remaining target: 4 lines, 6 branches, and 570 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -47,6 +47,51 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 68 plan: PNG dimension and row-byte guard consolidation
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `cf1cb1d`.
+- Coverage MCP snapshot: `a8b091c7-b67f-4c3c-941b-f21fba0315ea`.
+- Overall: `25856 / 25860` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41771 / 42350` regions.
+- Target file: `src/codecs/png/decode.rs`, currently `703 / 726`
+  regions and `90 / 90` branches.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| PNG dimensions converted for layout/decode | Lines 104-105, 135-136, and 284-285. PNG dimensions are `u32`; supported Rust targets for this crate are 32/64-bit, so every `u32` dimension fits `usize`. Existing checked multiplications still guard byte/sample-count overflow after conversion. | Replace repeated fallible `usize::try_from(u32).ok()?` with direct casts. |
+| Inflated scanline row marker accounting | Lines 108 and 119. `row_bytes()` already computes `(bits + 7) / 8` after a successful `checked_add(7)`, so its return is far below `usize::MAX`; adding PNG's one filter byte cannot overflow. | Replace `checked_add(1)?` with direct `+ 1`, leaving the following `checked_mul()` in place. |
+| PNG chunk length conversion | Line 425. PNG chunk length is a 32-bit field and fits `usize` on supported targets. | Replace `usize::try_from(u32).ok()?` with direct cast while leaving range checks and CRC validation unchanged. |
+| Remaining PNG raw spans | Lines 201-205, 294, 306, 423, 430-434, and 438. These are source-slice truncation, checked row/source arithmetic, private `build_image()` capacity guards, and chunk cursor range guards. | Defer until a second reverse map confirms which are true public fixtures versus impossible/private guard states. |
+
+Implementation plan:
+
+1. Apply only the infallible conversion/addition cleanup above.
+2. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `438ee469-aca6-4d01-8778-afc6a6a490d5`.
+- Coverage MCP snapshot: `876baf43-9a64-4b48-bcd4-c291c7a831df`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after PNG dimension and row-byte guard consolidation:
+  `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41755 / 42325` regions.
+- Target file movement: `src/codecs/png/decode.rs` moved from
+  `703 / 726` regions to `687 / 701` regions; missing regions fell from
+  `23` to `14`, and branch coverage remained complete at `90 / 90`.
+- Net: aggregate missing regions fell from `579` to `570`. The remaining PNG
+  decode raw spans are concentrated in source-slice truncation, per-row
+  checked arithmetic, private `build_image()` allocation guards, and chunk
+  cursor range checks.
 
 ## Attempt 67 plan: TIFF classic offset-size guard consolidation
 
