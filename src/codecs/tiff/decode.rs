@@ -16,10 +16,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         b"MM" => Endian::Big,
         _ => return None,
     };
-    if endian.u16(data.get(2..4)?)? != 42 {
+    let magic = data.get(2..4)?;
+    if endian.u16_exact([magic[0], magic[1]]) != 42 {
         return None;
     }
-    let ifd_offset = endian.u32(data.get(4..8)?)? as usize;
+    let ifd_offset = data.get(4..8)?;
+    let ifd_offset =
+        endian.u32_exact([ifd_offset[0], ifd_offset[1], ifd_offset[2], ifd_offset[3]]) as usize;
     let directory = Directory::parse(data, ifd_offset, endian)?;
 
     let width = u32::try_from(directory.one(256)?).ok()?;
@@ -599,14 +602,6 @@ impl Endian {
         }
     }
 
-    fn u32(self, bytes: &[u8]) -> Option<u32> {
-        let bytes: [u8; 4] = bytes.try_into().ok()?;
-        Some(match self {
-            Endian::Little => u32::from_le_bytes(bytes),
-            Endian::Big => u32::from_be_bytes(bytes),
-        })
-    }
-
     fn write_u16(self, value: u16, destination: &mut [u8]) {
         let bytes = match self {
             Endian::Little => value.to_le_bytes(),
@@ -641,7 +636,8 @@ struct Entry {
 
 impl<'a> Directory<'a> {
     fn parse(data: &'a [u8], offset: usize, endian: Endian) -> Option<Self> {
-        let count = usize::from(endian.u16(data.get(offset..offset.checked_add(2)?)?)?);
+        let count_bytes = data.get(offset..offset.checked_add(2)?)?;
+        let count = usize::from(endian.u16_exact([count_bytes[0], count_bytes[1]]));
         if count > 4096 {
             return None;
         }
@@ -649,9 +645,9 @@ impl<'a> Directory<'a> {
         for index in 0..count {
             let start = offset.checked_add(2)?.checked_add(index.checked_mul(12)?)?;
             let bytes = data.get(start..start.checked_add(12)?)?;
-            let tag = endian.u16(&bytes[0..2])?;
-            let field_type = endian.u16(&bytes[2..4])?;
-            let value_count = endian.u32(&bytes[4..8])? as usize;
+            let tag = endian.u16_exact([bytes[0], bytes[1]]);
+            let field_type = endian.u16_exact([bytes[2], bytes[3]]);
+            let value_count = endian.u32_exact([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
             let type_size = match field_type {
                 1 | 2 | 6 | 7 => 1,
                 3 | 8 => 2,
@@ -663,7 +659,7 @@ impl<'a> Directory<'a> {
             let value_position = if byte_len <= 4 {
                 start.checked_add(8)?
             } else {
-                endian.u32(&bytes[8..12])? as usize
+                endian.u32_exact([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize
             };
             data.get(value_position..value_position.checked_add(byte_len)?)?;
             entries.push(Entry {
@@ -709,12 +705,15 @@ impl<'a> Directory<'a> {
             1 => values.extend(bytes.iter().map(|&value| u64::from(value))),
             3 => {
                 for chunk in bytes.chunks_exact(2) {
-                    values.push(u64::from(self.endian.u16(chunk)?));
+                    values.push(u64::from(self.endian.u16_exact([chunk[0], chunk[1]])));
                 }
             }
             4 => {
                 for chunk in bytes.chunks_exact(4) {
-                    values.push(u64::from(self.endian.u32(chunk)?));
+                    values.push(u64::from(
+                        self.endian
+                            .u32_exact([chunk[0], chunk[1], chunk[2], chunk[3]]),
+                    ));
                 }
             }
             _ => return None,
@@ -1332,8 +1331,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = data_bit(&[0], 8);
     let _ = Endian::Little.u16(&[0]);
     let _ = Endian::Big.u16(&[0]);
-    let _ = Endian::Little.u32(&[0, 0, 0]);
-    let _ = Endian::Big.u32(&[0, 0, 0]);
     let mut endian_bytes = [0; 4];
     Endian::Little.write_u16(1, &mut endian_bytes[..2]);
     Endian::Big.write_u32(1, &mut endian_bytes);

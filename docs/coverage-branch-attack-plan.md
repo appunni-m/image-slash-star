@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `9f7c10b3-0172-4ec5-a28c-6a6c0bd00553`
-- Current measured commit metadata: `c6477cb421e52ff3f530306e0475d0f4b3a2e873`
-- Current coverage source state: pushed `main` commit `c6477cb`.
-- Lines: 25860 / 25864
+- Current snapshot: `ff15cff9-7b12-49f0-b66c-87d5af3aa019`
+- Current measured commit metadata: `54b04d00c4d1e3458c8244863fdff34da5e02dcb`
+- Current coverage source state: working tree over pushed `main` commit
+  `54b04d0`.
+- Lines: 25861 / 25865
 - Branches: 3448 / 3454
-- Functions: 1594 / 1594
-- Regions: 41711 / 42245
-- Remaining target: 4 lines, 6 branches, and 534 regions.
+- Functions: 1593 / 1593
+- Regions: 41708 / 42233
+- Remaining target: 4 lines, 6 branches, and 525 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,55 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 76 plan: TIFF decode exact-endian fixed-slice cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `54b04d0`; latest code-changing
+  coverage re-anchor is pushed commit `c6477cb`.
+- Coverage MCP snapshot: `9f7c10b3-0172-4ec5-a28c-6a6c0bd00553`.
+- Overall: `25860 / 25864` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41711 / 42245` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently `1956 / 2035` regions and
+  `130 / 130` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| TIFF header magic and first IFD offset | Use `Endian::u16_exact` / `u32_exact` after `data.get(2..4)` and `data.get(4..8)` have already proved fixed slice length. |
+| IFD entry count and 12-byte entries | Keep offset arithmetic and `data.get` bounds checks. Once the count bytes or 12-byte entry slice are present, fixed-width endian reads cannot fail. |
+| Inline/external IFD value offset fields | Keep `byte_len` and `value_position` bounds checks. Replace only fixed 4-byte offset decoding from the already-present 12-byte entry. |
+| Directory short/long value iteration | `chunks_exact(2)` and `chunks_exact(4)` yield fixed-size chunks, so use exact endian helpers instead of fallible `TryInto` conversions. |
+| Strip/tile offsets, byte counts, decoded block sizes, and predictor math | Keep all checked arithmetic and fallible conversions. Those are attacker-controlled image payload and layout gates. |
+
+Implementation plan:
+
+1. Update only `src/codecs/tiff/decode.rs`.
+2. Use existing exact-endian helpers for proven fixed-size slices.
+3. Leave malformed-offset/count, decoded-size, and predictor guards unchanged.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `1f493d27-335a-400d-8507-f87c21d53892`.
+- Coverage MCP snapshot: `ff15cff9-7b12-49f0-b66c-87d5af3aa019`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after TIFF exact-endian cleanup:
+  `25861 / 25865` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41708 / 42233` regions.
+- Target file movement: `src/codecs/tiff/decode.rs` moved from
+  `1956 / 2035` regions to `1953 / 2023` regions; missing regions fell from
+  `79` to `70`, and branch coverage remained complete at `130 / 130`.
+- Net: aggregate missing regions fell from `534` to `525`. Removing the now-dead
+  fallible `Endian::u32` helper also reduced the function total by one without
+  changing covered production behavior.
 
 ## Attempt 75 plan: ICO decode fixed-header and bounded-mask cleanup
 
