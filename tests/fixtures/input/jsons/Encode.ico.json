@@ -361,6 +361,38 @@
       }
     },
     {
+      "id": "enc_error_zero_width_size",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            0,
+            16
+          ]
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              0,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_bmp_entry",
       "source_asset": "16x16.ico",
       "source_format": "ico",
@@ -653,6 +685,26 @@
       }
     },
     {
+      "id": "enc_bmp_empty_sizes",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "entry_type": "bmp",
+        "sizes": [],
+        "encoded_only": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [],
+          "bitmap_format": "bmp"
+        },
+        "roundtrip": null
+      }
+    },
+    {
       "id": "enc_error_cmyk_resize",
       "source_asset": "cmyk.tiff",
       "source_format": "tiff",
@@ -739,6 +791,40 @@
             [
               128,
               128
+            ]
+          ],
+          "bitmap_format": "bmp"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_cmyk_bmp_resize",
+      "source_asset": "cmyk.tiff",
+      "source_format": "tiff",
+      "params": {
+        "entry_type": "bmp",
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
             ]
           ],
           "bitmap_format": "bmp"

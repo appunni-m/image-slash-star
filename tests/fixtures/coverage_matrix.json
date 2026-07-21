@@ -4233,6 +4233,28 @@
           "encoded_ref_bytes": 6
         },
         {
+          "id": "enc_error_zero_width_size",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "Pillow rejects zero-width requested ICO sizes",
+          "params": {
+            "sizes": [
+              [
+                0,
+                16
+              ]
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "ico",
+          "source_asset": "256x256.ico",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "height and width must be > 0"
+        },
+        {
           "description": "",
           "format": "ico",
           "id": "enc_bmp_entry",
@@ -4519,6 +4541,23 @@
           ]
         },
         {
+          "id": "enc_bmp_empty_sizes",
+          "type": "encode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "Pillow emits a zero-entry BMP-backed ICO when the requested size list is empty",
+          "params": {
+            "entry_type": "bmp",
+            "sizes": [],
+            "encoded_only": true
+          },
+          "status": "active",
+          "source_format": "ico",
+          "source_asset": "256x256.ico",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_empty_sizes.bin",
+          "encoded_ref_bytes": 6
+        },
+        {
           "id": "enc_error_cmyk_resize",
           "type": "encode",
           "format": "ico",
@@ -4574,6 +4613,29 @@
               [
                 128,
                 128
+              ]
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "cmyk.tiff",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.KeyError",
+          "oracle_error_message": "'CMYK'"
+        },
+        {
+          "id": "enc_error_cmyk_bmp_resize",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "Pillow cannot resize CMYK into its BMP-backed ICO path",
+          "params": {
+            "entry_type": "bmp",
+            "sizes": [
+              [
+                16,
+                16
               ]
             ]
           },
@@ -15763,9 +15825,9 @@
     }
   },
   "summary": {
-    "total_rows": 874,
+    "total_rows": 877,
     "decode_rows": 580,
-    "encode_rows": 262,
+    "encode_rows": 265,
     "formats": 8,
     "assets_available": 573,
     "decode_active": 574,

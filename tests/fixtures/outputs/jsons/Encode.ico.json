@@ -130,6 +130,18 @@
       "encoded_ref_bytes": 6
     },
     {
+      "id": "enc_error_zero_width_size",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "height and width must be > 0"
+    },
+    {
       "id": "enc_bmp_entry",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_entry.bin",
       "ref_bytes": 1024,
@@ -274,6 +286,15 @@
       "encoded_ref_bytes": 204862
     },
     {
+      "id": "enc_bmp_empty_sizes",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_empty_sizes.bin",
+      "encoded_ref_bytes": 6
+    },
+    {
       "id": "enc_error_cmyk_resize",
       "ref_path": null,
       "ref_bytes": null,
@@ -299,6 +320,18 @@
     },
     {
       "id": "enc_error_cmyk_bmp",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.KeyError",
+      "error_message": "'CMYK'"
+    },
+    {
+      "id": "enc_error_cmyk_bmp_resize",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
