@@ -75,7 +75,7 @@ impl ArithmeticDecoder {
         }
     }
 
-    pub(crate) fn init(&mut self, mut buf: Vec<[u8; 4]>, len: usize) -> Result<(), DecodingError> {
+    pub(crate) fn init(&mut self, mut buf: Vec<[u8; 4]>, len: usize) {
         let mut final_bytes = [0; 3];
         let final_bytes_remaining = if len == 4 * buf.len() {
             0
@@ -107,7 +107,6 @@ impl ArithmeticDecoder {
             final_bytes,
             final_bytes_remaining,
         };
-        Ok(())
     }
 
     /// Start a span of reading operations from the buffer, without stopping

@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `15236981-08f2-4500-81c7-000e7c8c94f6`
-- Current measured commit metadata: `61341f01a5eee413bb967b165ae5c645d6fc2d54`
-- Current source state: Progressive JPEG entropy-read and table-state sweep,
+- Current snapshot: `b5d299a0-ddc7-4827-9af3-c019a12e9623`
+- Current measured commit metadata: `40b8421ca80350f5e58355d1e473efe278d01b30`
+- Current source state: VP8 arithmetic decoder initialization invariant sweep,
   measured before committing the sweep.
-- Lines: 24437 / 24443
+- Lines: 24436 / 24442
 - Branches: 3430 / 3444
 - Functions: 1579 / 1579
-- Regions: 39851 / 40594
-- Remaining target: 6 lines, 14 branches, and 743 regions.
+- Regions: 39835 / 40575
+- Remaining target: 6 lines, 14 branches, and 740 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -605,6 +605,77 @@ Result:
     table snapshots.
   - Final progressive quantization table access now matches the baseline
     decoder's validated-precondition style.
+
+## Attempt 25 plan: VP8 arithmetic decoder initialization invariant
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `40b8421` after the progressive JPEG
+  sweep.
+- Coverage MCP snapshot: `15236981-08f2-4500-81c7-000e7c8c94f6`.
+- Overall: `24437 / 24443` lines, `3430 / 3444` branches,
+  `1579 / 1579` functions, and `39851 / 40594` regions.
+- Target file: `src/codecs/webp/native/vp8.rs` at `1413 / 1417`
+  lines, `154 / 160` branches, `57 / 57` functions, and
+  `2639 / 2667` regions.
+
+Source-mapped missing region entries selected for this sub-batch:
+
+- line 994: failure side of partition arithmetic-decoder initialization.
+- line 1003: failure side of final partition arithmetic-decoder
+  initialization.
+- line 1170: failure side of first-partition arithmetic-decoder
+  initialization.
+
+Reverse-mapped finding:
+
+- `ArithmeticDecoder::init()` returns `Result<(), DecodingError>`, but its body
+  does not perform any fallible operation. It reshapes the already-read bytes
+  into full four-byte chunks plus up to three final bytes, resets decoder state,
+  and always returns `Ok(())`.
+- The real malformed-input failures around this code are the preceding
+  `read_exact()` / `read_to_end()` calls and later bitstream `check()` calls.
+  Keeping `?` at the `init()` call sites creates impossible regions that do not
+  correspond to WebP/Pillow oracle behavior.
+
+Selected action:
+
+- Change `ArithmeticDecoder::init()` to return `()`.
+- Remove the three VP8 `?` call sites and the coverage-hook `.unwrap()` calls
+  that only existed because initialization was typed as fallible.
+- Do not add fixtures for this sub-batch; it is a private decoder-state
+  invariant, not a new public byte/pixel parity case.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Result:
+
+- Coverage MCP run: `b57fb4c5-b6b8-4115-acea-7d66263cc560`.
+- Coverage MCP snapshot: `b5d299a0-ddc7-4827-9af3-c019a12e9623`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24436 / 24442` lines, `3430 / 3444` branches,
+  `1579 / 1579` functions, and `39835 / 40575` regions.
+- Net missing regions: `743` down to `740`.
+- Target file movement: `src/codecs/webp/native/vp8.rs` moved from
+  `1413 / 1417` lines, `154 / 160` branches, `57 / 57` functions,
+  and `2639 / 2667` regions to `1413 / 1417` lines,
+  `154 / 160` branches, `57 / 57` functions, and `2624 / 2649`
+  regions.
+- Implemented:
+  - `ArithmeticDecoder::init()` is now infallible because it only normalizes
+    already-read bytes and resets arithmetic-decoder state.
+  - Removed impossible VP8 `?` regions at the arithmetic-decoder initialization
+    call sites.
+  - Removed coverage-hook `.unwrap()` calls that were only present due to the
+    old fallible type.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 

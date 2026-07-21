@@ -991,7 +991,7 @@ impl<R: Read> Vp8Decoder<R> {
                 let mut buf = vec![[0; 4]; size.div_ceil(4)];
                 let bytes: &mut [u8] = buf.as_mut_slice().as_flattened_mut();
                 self.r.read_exact(&mut bytes[..size])?;
-                self.partitions[i].init(buf, size)?;
+                self.partitions[i].init(buf, size);
             }
         }
 
@@ -1000,7 +1000,7 @@ impl<R: Read> Vp8Decoder<R> {
         let size = buf.len();
         let mut chunks = vec![[0; 4]; size.div_ceil(4)];
         chunks.as_mut_slice().as_flattened_mut()[..size].copy_from_slice(&buf);
-        self.partitions[n - 1].init(chunks, size)?;
+        self.partitions[n - 1].init(chunks, size);
 
         Ok(())
     }
@@ -1167,7 +1167,7 @@ impl<R: Read> Vp8Decoder<R> {
         self.r.read_exact(&mut bytes[..size])?;
 
         // initialise binary decoder
-        self.b.init(buf, size)?;
+        self.b.init(buf, size);
 
         let mut res = self.b.start_accumulated_result();
         if self.frame.keyframe {
@@ -2063,7 +2063,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         segment.delta_values = true;
         segment.quantizer_level = 120;
     }
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.read_quantization_indices();
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
@@ -2072,33 +2072,33 @@ pub(crate) fn __coverage_exercise_private_branches() {
         segment.delta_values = false;
         segment.quantizer_level = 120;
     }
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.read_quantization_indices();
 
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.read_loop_filter_adjustments();
 
-    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0; 4]; 8], 32);
     let _ = decoder.read_loop_filter_adjustments();
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.read_segment_updates();
-    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0; 4]; 8], 32);
     let _ = decoder.read_segment_updates();
 
     let bytes = [0xff; 32];
     let mut cursor = std::io::Cursor::new(&bytes[..]);
     let take = cursor.by_ref().take(32);
     let mut decoder = Vp8Decoder::new(take);
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.read_loop_filter_adjustments();
 
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.read_segment_updates();
 
-    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0; 4]; 8], 32);
     let _ = decoder.read_segment_updates();
 
-    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0xff; 4]; 8], 32);
     let _ = decoder.update_token_probabilities();
 
     let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
@@ -2116,7 +2116,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-        decoder.partitions[0].init(vec![[0; 4]], 4).unwrap();
+        decoder.partitions[0].init(vec![[0; 4]], 4);
         decoder.token_probs[0][1][0][0] = TreeNode {
             left: 0x80 | 12,
             right: 0x80 | 12,
@@ -2128,7 +2128,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }));
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.partitions[0].init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.partitions[0].init(vec![[0; 4]; 8], 32);
     decoder.token_probs[0][1][0][0] = TreeNode {
         left: 0x80 | DCT_0 as u8,
         right: 0x80 | DCT_0 as u8,
@@ -2139,7 +2139,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.partitions[0].init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.partitions[0].init(vec![[0; 4]; 8], 32);
     decoder.token_probs[0][1][0][0] = TreeNode {
         left: 0x80 | DCT_1 as u8,
         right: 0x80 | DCT_1 as u8,
@@ -2151,7 +2151,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 1, 1);
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.partitions[0].init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.partitions[0].init(vec![[0xff; 4]; 8], 32);
     decoder.token_probs[0][1][0][0] = TreeNode {
         left: 0x80 | DCT_CAT1 as u8,
         right: 0x80 | DCT_CAT1 as u8,
@@ -2162,7 +2162,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.b.init(vec![[0; 4]; 8], 32);
     let _ = decoder.read_quantization_indices();
 
     let mut interframe = vec![1, 4, 0];
