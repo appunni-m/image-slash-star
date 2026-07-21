@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4ea7fef9-6601-4319-b6f0-a74bf0bbaf7d`
-- Current measured commit metadata: `46404173f2f8ba9185ad9bd9e189d86feb379e6a`
-- Current coverage source state: working tree over pushed `main` commit
-  `4640417`.
+- Current snapshot: `9f7c10b3-0172-4ec5-a28c-6a6c0bd00553`
+- Current measured commit metadata: `c6477cb421e52ff3f530306e0475d0f4b3a2e873`
+- Current coverage source state: pushed `main` commit `c6477cb`.
 - Lines: 25860 / 25864
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
@@ -95,6 +94,9 @@ Measurement:
 - Adjusted Coverage MCP run: `b3b04d17-65cb-49b9-bb62-6a0c393c3a38`.
 - Adjusted Coverage MCP snapshot: `4ea7fef9-6601-4319-b6f0-a74bf0bbaf7d`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `fe640080-5a28-4d7b-a7d8-d093a6669062`,
+  snapshot `9f7c10b3-0172-4ec5-a28c-6a6c0bd00553`, commit
+  `c6477cb421e52ff3f530306e0475d0f4b3a2e873`; result unchanged.
 - Overall after adjusted ICO fixed-header and bounded-mask cleanup:
   `25860 / 25864` lines, `3448 / 3454` branches,
   `1594 / 1594` functions, and `41711 / 42245` regions.
