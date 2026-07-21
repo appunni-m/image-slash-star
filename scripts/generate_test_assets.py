@@ -1948,6 +1948,19 @@ def gen_webp():
         quality=90,
         method=0,
     )
+    checker = Image.new("RGB", (17, 19))
+    checker_pixels = checker.load()
+    for y in range(checker.height):
+        for x in range(checker.width):
+            checker_pixels[x, y] = (
+                (255, 255, 255) if ((x // 4) + (y // 4)) % 2 else (0, 0, 0)
+            )
+    checker.save(
+        d / "lossy_checker_17x19_q1_m0.webp",
+        lossless=False,
+        quality=1,
+        method=0,
+    )
     cwebp = os.environ.get("CWEBP")
     vp8_variants = {
         "lossy_simple_filter.webp": ["-q", "75", "-m", "4", "-nostrong", "-f", "60"],
