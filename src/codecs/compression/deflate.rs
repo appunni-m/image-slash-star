@@ -287,7 +287,7 @@ fn decompress_zlib_with_limit(
         return None;
     }
 
-    let payload_end = data.len().checked_sub(4)?;
+    let payload_end = data.len() - 4;
     let mut bits = BitReader::new(data.get(2..payload_end)?);
     let mut output = Vec::with_capacity(max_output.min(64 * 1024));
     loop {
@@ -327,7 +327,8 @@ fn decompress_zlib_with_limit(
         }
     }
 
-    let expected = u32::from_be_bytes(data.get(payload_end..)?.try_into().ok()?);
+    let trailer = &data[payload_end..];
+    let expected = u32::from_be_bytes([trailer[0], trailer[1], trailer[2], trailer[3]]);
     (adler32(&output) == expected).then_some(output)
 }
 

@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `c12ecded-0c0a-41be-990b-51942cd99639`
-- Current measured commit metadata: `fa739471ff78d0ca033010e2b18b8473f02b9e43`
-- Current coverage source state: pushed `main` commit `fa73947`.
-- Lines: 25849 / 25853
+- Current snapshot: `4f55b29e-1af5-40d8-983e-548abb9bec74`
+- Current measured commit metadata: `601f0fadc5c6bf933ac4a4c0f9a8852c2bc98d6b`
+- Current coverage source state: working tree over pushed `main` commit
+  `601f0fa`.
+- Lines: 25850 / 25854
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
-- Regions: 41704 / 42223
-- Remaining target: 4 lines, 6 branches, and 519 regions.
+- Regions: 41702 / 42218
+- Remaining target: 4 lines, 6 branches, and 516 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,53 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 78 plan: deflate zlib trailer fixed-slice cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `601f0fa`; latest code-changing
+  coverage re-anchor is pushed commit `fa73947`.
+- Coverage MCP snapshot: `c12ecded-0c0a-41be-990b-51942cd99639`.
+- Overall: `25849 / 25853` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41704 / 42223` regions.
+- Target file: `src/codecs/compression/deflate.rs`, currently
+  `813 / 855` regions and `48 / 48` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| `payload_end = data.len() - 4` | The decoder rejects streams shorter than six bytes before this point. Subtracting four is therefore infallible, and `payload_end >= 2` remains true for the deflate payload slice. |
+| Adler-32 trailer read | Once `payload_end` is `data.len() - 4`, the trailer slice is exactly four bytes. Replace the fallible `try_into().ok()?` conversion with fixed array construction. |
+| Stored-block length conversion and Huffman symbol conversion | Leave unchanged in this pass. Stored-block length is still a format limit, and Huffman construction should keep its defensive bounds unless a broader invariant is documented. |
+
+Implementation plan:
+
+1. Update only `src/codecs/compression/deflate.rs`.
+2. Collapse only the zlib trailer offset and fixed four-byte trailer conversion.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `db22a2f0-9fd2-4d5e-a88c-24cd9cd79301`.
+- Coverage MCP snapshot: `4f55b29e-1af5-40d8-983e-548abb9bec74`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after deflate trailer fixed-slice cleanup:
+  `25850 / 25854` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41702 / 42218` regions.
+- Target file movement: `src/codecs/compression/deflate.rs` moved from
+  `813 / 855` regions to `811 / 850` regions; missing regions fell from `42`
+  to `39`, and branch coverage remained complete at `48 / 48`.
+- Net: aggregate missing regions fell from `519` to `516`. Remaining deflate
+  gaps are mostly stored-block format limits, Huffman table bounds, and
+  bit-reader/window arithmetic that should stay guarded unless fixture coverage
+  proves specific branches are input-reachable.
 
 ## Attempt 77 plan: zlib-ng fixed hash read cleanup
 
