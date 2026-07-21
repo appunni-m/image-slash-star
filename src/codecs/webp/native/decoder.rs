@@ -896,6 +896,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ])));
     let _ = WebPDecoder::new(Cursor::new(riff(&[
         vp8x(0b0000_0010, 1, 1),
+        chunk(b"ANIM", &[0, 0, 0, 0]),
+        chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
+    ])));
+    let _ = WebPDecoder::new(Cursor::new(riff(&[
+        vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
         chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"JUNK")),
     ])));

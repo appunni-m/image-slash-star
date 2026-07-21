@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4984c065-fb13-4c8e-a71c-1eaa37fe5075`
-- Current measured commit metadata: `c59f81629e34886fe75f47150d8aab35bed58238`
-- Current source state: clean pushed `main` after Attempt 41.
-- Lines: 24580 / 24585
-- Branches: 3437 / 3444
+- Current snapshot: `f718439f-dbf5-4f78-87a3-70766342a243`
+- Current measured commit metadata: `c661201cf26893ccc4e4ec35dbd810743856fc61`
+- Current source state: pushed `main` after Attempt 49.
+- Lines: 24614 / 24618
+- Branches: 3438 / 3444
 - Functions: 1582 / 1582
-- Regions: 40096 / 40825
-- Remaining target: 5 lines, 7 branches, and 729 regions.
+- Regions: 40163 / 40880
+- Remaining target: 4 lines, 6 branches, and 717 regions.
 - Remaining branch map from this snapshot:
-  - `src/codecs/webp/native/decoder.rs`: 90 / 92 branches, 2 missing.
+  - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
 - Remaining line gaps: aggregate line gap is 5, but the current raw per-file
@@ -46,6 +46,109 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 48 plan: WebP VP8L bit-reader branch monomorphization
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `c661201`.
+- Coverage MCP run: `40a63d5a-d816-45b3-bce1-462fc7b0db55`.
+- Coverage MCP snapshot: `446d2e31-7a0c-43f5-82c4-b5243690f849`.
+- Overall: `24609 / 24613` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40153 / 40870` regions.
+
+Small-file reverse map checked before code:
+
+| File | Remaining gap | Reverse-mapped decision |
+| --- | ---: | --- |
+| `src/codecs/mod.rs` | 1 region | Raw zero span is `decode_format()` line 65, `image.validate().ok()?`, meaning a format decoder returned `Some(invalid_image)`. Current public decoders either reject or construct valid `DecodedImage`; this is dispatcher defense, not a fixture input. |
+| `src/codecs/webp/encode/mod.rs` | 1 region | Raw zero span is line 113, `u32::try_from(output.len() - 8).ok()?`, requiring a RIFF payload above `u32::MAX`. This is a >4 GiB output guard, not a practical oracle fixture. |
+| `src/codecs/webp/native/encoder.rs` | 2 regions | Remaining source reports as the generic `write_chunk()` padding/write path at line 1129, but even and odd payloads are already executed. The debt is writer-error/generic monomorphization noise and is not selected for this run. |
+| `src/codecs/tiff/encode.rs` | 5 regions | Raw zero spans are fallible compression/offset/length conversions at lines 60, 108, 142, 153, and 169 after valid image invariants. These require either impossible compression failure for valid chunks or `u32` offset/length overflow. |
+
+Selected target:
+
+- File: `src/codecs/webp/native/lossless.rs`.
+- Baseline file coverage: `571 / 572` lines, `108 / 110` branches,
+  `27 / 27` functions, and `886 / 934` regions.
+- Raw branch records and MCP source context identify `BitReader::read_bits()`
+  line 864 as one stable remaining branch source. The function is generic over
+  `LosslessBitValue`, so a branch can remain uncovered for one monomorphized
+  type even when other public VP8L streams execute the same source line.
+
+Implementation plan:
+
+1. Extend the existing `lossless::__coverage_exercise_private_branches()` hook
+   with direct `BitReader` probes for `u8`, `u16`, and `usize`.
+2. For each type, exercise both states at line 864:
+   - `nbits < num`, forcing `fill()`;
+   - `nbits >= num`, skipping `fill()`.
+3. Do not alter production VP8L parser behavior. This is a private generic
+   helper probe, not a Pillow-oracle image fixture.
+4. Validate with `cargo fmt --all`, coverage-cfg targeted tests/checks, then
+   run only the Coverage MCP `all-features-llvm-cov-json-nightly-branch`
+   command and record the measured movement here.
+
+Measurement:
+
+- Coverage MCP run: `d3c4d951-b1d7-4513-9d86-222ddd7bade7`.
+- Coverage MCP snapshot: `e0501130-7679-4c2e-8d54-f6b79d64c7ef`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adding direct `read_bits()` probes: `24619 / 24623` lines,
+  `3437 / 3444` branches, `1583 / 1583` functions, and
+  `40171 / 40888` regions.
+- Decision: no reduction in missing branches or regions. The added helper only
+  covered itself and shifted the normalized line numbers. Revert the code and
+  keep this documented as a no-op so the same monomorphization probe is not
+  repeated.
+
+## Attempt 49 plan: WebP decoder short ANIM guard route
+
+Baseline before editing:
+
+- Source state after Attempt 48 code revert: only this document is modified.
+- Effective coverage baseline remains snapshot
+  `446d2e31-7a0c-43f5-82c4-b5243690f849`: `24609 / 24613` lines,
+  `3437 / 3444` branches, `1582 / 1582` functions, and
+  `40153 / 40870` regions.
+
+Reverse map:
+
+- Target file: `src/codecs/webp/native/decoder.rs`.
+- Baseline file coverage: `749 / 749` lines, `90 / 92` branches,
+  `34 / 34` functions, and `1368 / 1416` regions.
+- LLVM raw branch grouping keeps pointing at the extended-container predicates,
+  including line 296:
+  `if range.end - range.start < 6 { return Err(InvalidChunkSize); }`.
+- Existing fixture `anim_chunk_too_small.webp` is generated by shrinking the
+  `ANIM` payload to 4 bytes and is present in the malformed-container manifest.
+  Since aggregate coverage still reports two decoder branch misses, add a
+  same-module hook probe that constructs only the exact semantic route:
+  `VP8X(animation)` + short `ANIM` + present `ANMF`.
+
+Implementation plan:
+
+1. Add one decoder hook input with a 4-byte `ANIM` chunk and a syntactically
+   present `ANMF` chunk.
+2. Do not alter production parser behavior.
+3. Run fmt, the focused coverage hook test, and the approved Coverage MCP
+   branch/region command.
+4. Keep the hook only if aggregate branch or region debt falls; otherwise
+   revert it and record the no-op.
+
+Measurement:
+
+- Coverage MCP run: `84278806-92b4-4037-8091-ee887569e8ef`.
+- Coverage MCP snapshot: `f718439f-dbf5-4f78-87a3-70766342a243`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24614 / 24618` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40163 / 40880` regions.
+- Target file movement: `src/codecs/webp/native/decoder.rs` moved from
+  `90 / 92` branches and `1368 / 1416` regions to `91 / 92` branches and
+  `1378 / 1426` regions.
+- Net: one aggregate branch removed. Missing regions stayed at `717`; this
+  probe covered its own new regions rather than reducing the outstanding region
+  count.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
 
