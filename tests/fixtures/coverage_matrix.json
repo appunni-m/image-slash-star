@@ -3109,6 +3109,26 @@
           "oracle_error_message": "image has wrong mode"
         },
         {
+          "id": "enc_error_zero_width",
+          "type": "encode",
+          "format": "gif",
+          "category": "error",
+          "description": "Pillow rejects GIF encode requests whose source dimensions are invalid",
+          "params": {
+            "source_dimensions": [
+              0,
+              1
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "static.gif",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "cannot write empty image"
+        },
+        {
           "description": "",
           "format": "gif",
           "id": "enc_opaque",
@@ -15743,9 +15763,9 @@
     }
   },
   "summary": {
-    "total_rows": 873,
+    "total_rows": 874,
     "decode_rows": 580,
-    "encode_rows": 261,
+    "encode_rows": 262,
     "formats": 8,
     "assets_available": 573,
     "decode_active": 574,

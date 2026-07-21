@@ -479,6 +479,37 @@
       }
     },
     {
+      "id": "enc_error_zero_width",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "params": {
+        "source_dimensions": [
+          0,
+          1
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
       "id": "enc_opaque",
       "source_asset": "static.gif",
       "source_format": "gif",

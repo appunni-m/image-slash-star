@@ -2863,6 +2863,104 @@ Validation after this batch:
    `all-features-llvm-cov-json-nightly-branch`.
 4. Record the new summary and zlib movement here.
 
+### Attempt 9 plan: GIF encoder validated-invariant region cleanup
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `f245ed96-51f4-4eec-b98a-400a0b94ab3d`
+- Measured commit metadata: `f7be7efd47d466f721a5cf12ef0b10da56ac8fc8`
+- Local HEAD after committing the WebP encoder region batch:
+  `f729ae54c65b5d2c09e26dcabcc117b344140ebd`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `24113 / 24119`
+- Branches: `3424 / 3438`
+- Functions: `1577 / 1577`
+- Regions: `39674 / 40676`
+- Missing regions: `1002`
+
+Region-first priority after WebP encoder cleanup:
+
+| File | Current regions | Missing regions | Branch gap |
+| --- | ---: | ---: | ---: |
+| `src/codecs/compression/zlib_ng.rs` | `2744 / 3032` | 288 | 0 |
+| `src/codecs/tiff/decode.rs` | `1446 / 1551` | 105 | 0 |
+| `src/codecs/gif/encode.rs` | `2389 / 2454` | 65 | 0 |
+| `src/codecs/jpeg/encode/mod.rs` | `1474 / 1539` | 65 | 0 |
+| `src/codecs/ico/encode.rs` | `748 / 808` | 60 | 0 |
+
+The zlib-ng remainder is still matcher/Huffman proof work. For this sweep,
+switch to `src/codecs/gif/encode.rs`, because the remaining regions are mostly
+validated image geometry, palette, and quantizer invariants. GIF encode already
+has 100% lines and branches, so the goal is to remove or cover region-only
+fallibility without changing public bytes.
+
+Reverse-mapped GIF source starts from the raw LLVM source map:
+
+| Cluster | Finding | Action |
+| --- | --- | --- |
+| Public `encode_sequence()` validation at line 304 | This is real public reject behavior. Existing manifest rows cover invalid GIF options and unsupported color modes, but not invalid dimensions routed through GIF's public sequence encoder. | Add a GIF encode manifest row for `source_dimensions: [0, 1]`, regenerate GIF oracle metadata with `scripts/generate_decode_refs.py --format gif`, and keep it as an `expect_error` fixture row. |
+| `coalesce_identical_frames()` lines 338, 340-342, 354, 361, 366, 385, 409 | `encode_sequence()` validates non-empty frame lists, frame bounds, dimensions, and pixel buffer sizes before coalescing. The full-canvas image built during coalescing is RGB/RGBA by construction, and its generated palette/alpha lengths are valid. | Replace private optional lookups with direct validated-state operations where the invariant is local: first frame access, frame-clear helper, previous output/render access, full-canvas `prepare_image()`, and generated `ImagePalette`. Keep duration overflow checked because it is public timing data. |
+| `prepare_image()` / compositing lines 480, 538-539, 575-576 | `DecodedImage::validate()` proves P8 palette presence/index range and exact byte counts for L/RGB/RGBA input modes. | Use direct pixel-count arithmetic and direct palette indexing for validated P8 compositing. Keep unsupported modes fallible. |
+| `write_gif()` lines 654-657, 706-708, 746-749, 812, 826 | Validated/coalesced GIF frames have palettes and indices produced by `prepare_image()`. Palette sizes are capped at 256 entries. | Make `indexed_rgb()` infallible for prepared images and replace palette-entry casts with direct casts after the existing `< 256` guard. Keep GIF field-width conversions and duration conversion fallible for public oversized/timing rejection unless separately covered by fixtures. |
+| RGB/RGBA quantizer lines 945, 962, 966, 975, 987, 995, 1003, 1006, 1039, 1051, 1078, 1089, 1094, 1182, 1191, 1196, 1199, 1228, 1295, 1303, 1334 | Source pixels arrive from validated images with dimensions bounded by GIF's 16-bit fields. Unique color counts and palette indices are at most 256 in these paths. Median-cut boxes are built from non-empty unique color sets; FASTOCTREE bit widths are fixed constants. | Remove checked conversions where the bound is structural (`usize -> u8` palette indices, color lookups derived from the same palette, fixed octree sizes). Keep count accumulation checked until a separate huge-image proof covers every `u32` counter. |
+| FASTOCTREE lines 1392, 1431, 1625, 1629, 1631, 1637, 1643, 1645, 1650 | Production calls only use `[3,4,3,3]`, `[2,2,2,2]`, and target `256`; these cannot overflow `usize` and indices remain `0..=255`. | Make the octree cube constructor/copy path infallible for fixed encoder constants and remove coverage-only invalid constructor probes. |
+
+Validation after this batch:
+
+1. Run `python3 scripts/generate_decode_refs.py --format gif` after the
+   manifest row is added.
+2. Run `cargo fmt --all --check`.
+3. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Record the new summary and GIF movement here.
+
+Attempt 9 result:
+
+- Coverage MCP run: `69ae9735-3fe1-4a78-87e2-08cf23a421e2`
+- Coverage MCP snapshot: `609bca31-8ad5-4ff2-b8b2-5282795470ae`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24122 / 24128` lines, `3424 / 3438` branches,
+  `1576 / 1576` functions, `39623 / 40578` regions.
+- Net missing regions: `1002` down to `955`.
+- `src/codecs/gif/encode.rs`: `2389 / 2454` regions moved to
+  `2338 / 2356`; missing regions moved from `65` to `18`.
+- Branches stayed unchanged; the remaining branch gaps are still WebP native
+  decoder/VP8/VP8L.
+
+Remaining GIF source starts after the first pass:
+
+| Source start | Finding | Action |
+| --- | --- | --- |
+| `coalesce_identical_frames()` canvas allocation | This is real safety behavior for a sequence with validated small frames but an oversized canvas. | Add a coverage hook sequence with `u32::MAX x u32::MAX` canvas and two small frames so checked allocation fails before allocating. |
+| `write_gif()` GIF field conversions and empty frame list | Width was already covered; remaining height/top/frame-width/frame-height/empty-frame states are private direct calls to `write_gif()`. Public `encode_sequence()` normally validates image buffers before this point. | Add bounded private hook calls for those field-width rejects and empty frames. |
+| `prepare_background()` | After the palette-index cast cleanup this helper no longer has a reachable failure state. | Make it return `u8` instead of `Option<u8>`. |
+| RGB/RGBA quantizer and median-cut helpers | Palette indices are at most 255, unique-color boxes are non-empty, and heap removals occur only while splitting a populated tree. | Make `quantize_rgb()`, `quantize_rgb_nearest()`, `quantize_rgba()`, `pillow_median_cut_order()`, `pillow_median_cut_leaves()`, `split_median_box()`, and `PillowBoxHeap::remove()` infallible where their inputs are generated internally. |
+| Final `write_gif()` duration conversion | After tightening the field-width hooks, the last GIF region source start is the `duration_ms / 10 -> u16` reject path. This is a real GIF field-width limit but not a Pillow pixel-parity image state. | Add one private hook call with an otherwise valid frame whose `duration_ms` is `u32::MAX`. |
+
+Validation stays the same: fmt/check, coverage-cfg check, then the approved
+Coverage MCP lines+branches command.
+
+Attempt 9 final result:
+
+- Coverage MCP run: `88720096-5973-4a61-bafd-44286b731c0f`
+- Coverage MCP snapshot: `f67dce1a-4c48-4ca9-ab0d-70d44fdf69b5`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24290 / 24296` lines, `3424 / 3438` branches,
+  `1576 / 1576` functions, `39729 / 40666` regions.
+- Net missing regions from the baseline at the start of Attempt 9:
+  `1002` down to `937`.
+- `src/codecs/gif/encode.rs`: `2389 / 2454` regions moved to
+  `2444 / 2444`, so GIF encode is now 100% lines, branches, functions, and
+  regions.
+- The added public oracle row is `gif/enc_error_zero_width`, generated through
+  `.oracle-venv/bin/python scripts/generate_decode_refs.py --format gif`; its
+  Pillow evidence is `ValueError: cannot write empty image`.
+- Remaining region priorities after this pass are still zlib-ng, TIFF decode,
+  JPEG encode, ICO encode, PNG decode/encode, and WebP container/decode files.
+  Branch work is unchanged and remains WebP native decoder/VP8/VP8L.
+
 ### Attempt 13 plan: small source-mapped region cleanup
 
 Current Coverage MCP baseline before editing:

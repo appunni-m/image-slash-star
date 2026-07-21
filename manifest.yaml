@@ -1108,6 +1108,10 @@ formats:
       source_asset: animated.webp
       params: {'animated': True, 'frames': 2, 'second_frame_mode': 'CMYK'}
       expect_error: true
+    - id: enc_error_zero_width
+      description: Pillow rejects GIF encode requests whose source dimensions are invalid
+      params: {'source_dimensions': [0, 1]}
+      expect_error: true
     - id: enc_opaque
       description: 
       params: {'transparency': False}
