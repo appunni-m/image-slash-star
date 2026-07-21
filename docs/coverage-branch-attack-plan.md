@@ -48,6 +48,50 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 66 plan: smallest visible region sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `4dedfa1`; the latest Coverage MCP
+  snapshot was measured from the equivalent pre-commit working tree over parent
+  `fcdee54`.
+- Coverage MCP snapshot: `8b92fee7-76de-446f-a6b0-e6300d02c8a1`.
+- Overall: `25857 / 25861` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41778 / 42360` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `src/codecs/webp/encode/mod.rs` metadata attachment | Line 113, final RIFF-size conversion. The existing coverage hook only feeds invalid odd-length hex metadata, so `attach_metadata()` exits before constructing the final extended WebP container. | Add one valid metadata probe with ICC, EXIF, and XMP payloads over a minimal RIFF/WEBP shell. This is reachable behavior and does not require an artificial helper. |
+| `src/codecs/mod.rs` decode dispatch validation | Line 65, `image.validate().ok()?` after a decoder returns `Some(image)`. | Defer. A real decoder returning structurally invalid `DecodedImage` would be a decoder bug; do not add a private helper only to hit this guard. |
+| `src/codecs/tiff/encode.rs` compressed-output size guards | Lines 60, 108, 142, 153, and 169. These are compressor failure or `u32::try_from(...)` guards for outputs too large to materialize safely in a fixture. | Defer unless a zlib-level reverse map produces a small `None` input. Current TIFF fixtures already cover successful compressed and uncompressed layouts. |
+| `src/types/buffer.rs` and `src/codecs/webp/native/encoder.rs` | File summaries show 2 missing regions each, but normalized LLVM segments do not expose stable old rows for the residual regions. | Defer to an exact raw/provenance query instead of speculative probes. |
+
+Implementation plan:
+
+1. Extend only the existing WebP encode coverage hook with a valid metadata
+   round-trip probe that reaches the final RIFF-size write.
+2. Do not add public fixture rows because this target is a private encoder
+   assembly branch; manifest encode parity already owns public output behavior.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall; otherwise revert the
+   code and record the discarded attempt.
+
+Measurement:
+
+- Coverage MCP run: `42cad129-bc30-409f-9c6d-bdd3adeafb28`.
+- Coverage MCP snapshot: `cd473f83-7fe5-42fc-9b64-d0995435f26c`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Outcome: discarded. Aggregate branches remained `3448 / 3454`, and
+  aggregate missing regions remained `582`. The target file
+  `src/codecs/webp/encode/mod.rs` moved from `343 / 344` regions to
+  `357 / 358` regions while the temporary hook was present, so the old missing
+  region was not covered. The code probe was reverted; the finding is retained
+  here so the valid-metadata path is not retried as a region fix.
+
 ## Attempt 65 plan: ICO CUR and indexed-mask region sweep
 
 Baseline before editing:
