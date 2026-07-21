@@ -25,6 +25,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut empty = Vec::new();
     apply_color_indexing_transform(&mut empty, 0, 0, 2, &[0, 0, 0, 0, 255, 255, 255, 255]);
+    apply_color_indexing_transform(&mut empty, 1, 0, 2, &[0, 0, 0, 0, 255, 255, 255, 255]);
 }
 
 pub(crate) fn apply_predictor_transform(
@@ -34,7 +35,8 @@ pub(crate) fn apply_predictor_transform(
     size_bits: u8,
     predictor_data: &[u8],
 ) {
-    let block_xsize = usize::from(((u32::from(width) + (1u32 << size_bits) - 1) >> size_bits) as u16);
+    let block_xsize =
+        usize::from(((u32::from(width) + (1u32 << size_bits) - 1) >> size_bits) as u16);
     let width = usize::from(width);
     let height = usize::from(height);
 
@@ -360,7 +362,8 @@ pub(crate) fn apply_color_transform(
     size_bits: u8,
     transform_data: &[u8],
 ) {
-    let block_xsize = usize::from(((u32::from(width) + (1u32 << size_bits) - 1) >> size_bits) as u16);
+    let block_xsize =
+        usize::from(((u32::from(width) + (1u32 << size_bits) - 1) >> size_bits) as u16);
     let width = usize::from(width);
 
     for (y, row) in image_data.chunks_exact_mut(width * 4).enumerate() {
@@ -567,7 +570,10 @@ fn apply_color_indexing_transform_small_table<const W_BITS: u8, const EXP_ENTRY_
             *output_chunk_array = *colors_data_array;
         }
 
-        if packed_image_width_in_blocks > 0 { let final_packed_index_byte = packed_indices_for_row[packed_image_width_in_blocks - 1]; let colors_data_full_array = &expanded_lookup_table_array[final_packed_index_byte as usize]; final_block_part.copy_from_slice(&colors_data_full_array[..final_block_expanded_size_bytes]); }
+        let final_packed_index_byte = packed_indices_for_row[packed_image_width_in_blocks - 1];
+        let colors_data_full_array = &expanded_lookup_table_array[final_packed_index_byte as usize];
+        final_block_part
+            .copy_from_slice(&colors_data_full_array[..final_block_expanded_size_bytes]);
     }
 }
 

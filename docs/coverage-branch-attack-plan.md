@@ -5,19 +5,50 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the WebP extended frame predicate coverage-hook batch.
+after the pushed WebP extended frame predicate coverage-hook batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `caf819ae-8d8c-4409-a726-3d4db8b9eb85`
-- Current measured commit metadata: `f460bfc61821a81ca70055a2e8c9b03ebe93a5c3`
-- Lines: 21829 / 21830
-- Branches: 3327 / 3480
+- Current snapshot: `cb3f057a-1633-4b00-9232-3962046beec2`
+- Current measured commit metadata: `6acf02fc6d4a3826713bfc10b4c9279a49c57b46`
+- Lines: 21835 / 21836
+- Branches: 3327 / 3478
 - Functions: 1524 / 1524
-- Remaining target: 1 line and 153 branches.
+- Remaining target: 1 line and 151 branches.
+
+## Planned WebP lossless-transform invariant cleanup batch
+
+Coverage MCP snapshot `e539f08a-7f14-4c0a-8adf-b5bb444f6f75` reports
+`src/codecs/webp/native/lossless_transform.rs` at 462 / 462 lines, 30 / 32
+branches, and 27 / 27 functions. The remaining branch lines are:
+
+- line 523: `if width == 0 || height == 0`, where the existing private coverage
+  hook only drives the `width == 0` early return. Add a deterministic hook call
+  with `width > 0` and `height == 0` so the short-circuit predicate's second
+  true side is exercised.
+- line 570: `if packed_image_width_in_blocks > 0`, inside the same helper after
+  the `width == 0 || height == 0` return. Once execution reaches that point,
+  `width > 0`, and `width.div_ceil(pixels_per_packed_byte_u8.into())` is
+  therefore strictly positive. This branch is an internal invariant, not a
+  public WebP byte-stream behavior. Remove the guard and execute the final-block
+  copy unconditionally.
+
+No Pillow manifest fixture is useful for this batch because both sites are
+inside the small-table color-indexing helper after decode has already built the
+transform inputs. The branch plan is therefore a minimal private hook plus
+invariant cleanup, then a single Coverage MCP run with line and branch coverage.
+
+Completed evidence:
+
+- Coverage MCP run: `abd3d27a-e929-49b2-a49c-1d57b1a84987`
+- Coverage MCP snapshot: `cb3f057a-1633-4b00-9232-3962046beec2`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 21835 / 21836 lines, 3327 / 3478 branches, 1524 / 1524 functions.
+- Target file: `src/codecs/webp/native/lossless_transform.rs` is 468 / 468
+  lines, 30 / 30 branches, and 27 / 27 functions.
 
 Coverage MCP reports this warning for LLVM JSON:
 
