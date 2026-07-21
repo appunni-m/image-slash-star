@@ -126,6 +126,90 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = compress_level1(data, &[data.len()]);
     let _ = compress_level1(data, &[data.len(), usize::MAX]);
     let _ = tokenize_level1(data, &[data.len(), usize::MAX]);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 4,
+        start: 10,
+        original_start: 10,
+    };
+    let mut next = MediumMatch {
+        match_start: 10,
+        length: 4,
+        start: 2,
+        original_start: 2,
+    };
+    fizzle_matches(b"aaaaaaaaaaaa", &mut current, &mut next);
+    assert_eq!(current.length, 4);
+    assert_eq!(next.start, 2);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 2,
+        start: 10,
+        original_start: 10,
+    };
+    let mut next = MediumMatch {
+        match_start: 1,
+        length: 4,
+        start: 2,
+        original_start: 2,
+    };
+    fizzle_matches(b"aaaaaaaaaaaa", &mut current, &mut next);
+    assert_eq!(current.length, 2);
+    assert_eq!(next.match_start, 1);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 2,
+        start: 10,
+        original_start: 10,
+    };
+    let mut next = MediumMatch {
+        match_start: 3,
+        length: 1,
+        start: 4,
+        original_start: 4,
+    };
+    fizzle_matches(b"ABCC", &mut current, &mut next);
+    assert_eq!(current.length, 2);
+    assert_eq!(next.length, 1);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 2,
+        start: 10,
+        original_start: 10,
+    };
+    let mut next = MediumMatch {
+        match_start: 3,
+        length: 4,
+        start: 4,
+        original_start: 4,
+    };
+    fizzle_matches(b"aaaaaaaaaaaa", &mut current, &mut next);
+    assert_eq!(current.length, 0);
+    assert_eq!(next.length, 6);
+
+    let mut slow = SlowMatcher::new(b"abcdefghijkl", 16, 8, 128, 128);
+    slow.quick_insert(4)
+        .expect("slow matcher pre-insert should succeed");
+    slow.position = 4;
+    slow.process(8, true)
+        .expect("slow matcher self-candidate path should process");
+    assert!(slow.position > 4);
+
+    let mut level9 = Level9Matcher::new(b"abcdefghijkl");
+    level9.position = 4;
+    level9
+        .refill_boundary()
+        .expect("level9 boundary hash should refresh");
+    let self_hash = rolling_hash(level9.hash, level9.data[6]);
+    level9.head[self_hash] = 4;
+    level9
+        .process(8, true)
+        .expect("level9 self-candidate path should process");
+    assert!(level9.position > 4);
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {

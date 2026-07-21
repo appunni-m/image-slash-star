@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the WebP VP8 complementary-branch hook batch.
+after the zlib-ng private-branch hook batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `897bfef9-b1b3-42f9-9f0b-448435e74ee3`
-- Current measured commit metadata: `287793718391493e0e7fd636d3b9899227f52c39`
-- Lines: 21720 / 21721
-- Branches: 3318 / 3484
+- Current snapshot: `7dad0fef-e1e7-4b40-a6ef-a2336dad942c`
+- Current measured commit metadata: `ac0645c25f989d35ac7ea86387e55e998339752a`
+- Lines: 21798 / 21799
+- Branches: 3323 / 3484
 - Functions: 1519 / 1519
-- Remaining target: 1 line and 166 branches.
+- Remaining target: 1 line and 161 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -258,6 +258,62 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
   bool-encoder carry path with no prior output byte and calls transparent-area
   cleanup with an exact full-width but partial-height image. Both are private
   `#[cfg(coverage)]` hooks; production WebP encoding behavior is unchanged.
+
+### Zlib-ng `fizzle_matches` private-branch batch
+
+- Starting evidence: pushed `main` commit
+  `ac0645c25f989d35ac7ea86387e55e998339752a`, Coverage MCP snapshot
+  `1c67e9a6-d1c2-41da-807d-af0420f7de29`.
+- Current `src/codecs/compression/zlib_ng.rs`: 1405 / 1406 lines and
+  366 / 380 branches.
+- Target lines: 952, 967, 969, and 978 inside private `fizzle_matches`.
+- Implemented:
+  - Exercise the early return where `current.length > next.start + 1`.
+  - Exercise the loop guard where `next.match_start > 1` is false.
+  - Exercise the one-step adjustment where `changed` is true but
+    `adjusted_next.length == 2`, so the final assignment is intentionally
+    skipped.
+  - Exercise the multi-step adjustment where the current match is fully
+    consumed, so the final assignment is taken.
+- Coverage MCP run: `8bfa16a5-be20-4947-9658-e9b7f1694b9f`
+- Coverage MCP snapshot: `388a08ab-3594-4c24-b84c-187f32cd1470`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3318 / 3484 to 3321 / 3484.
+- `src/codecs/compression/zlib_ng.rs`: improved from 366 / 380 to
+  369 / 380 branches.
+- Rationale: these are private zlib-ng lazy-match states. Direct construction
+  of `MediumMatch` values gives deterministic evidence for branch behavior
+  without changing public PNG/zlib byte output. If Coverage MCP does not reduce
+  the zlib branch gap, revert the hook additions and move to the next
+  manifest-driven decode batch.
+
+### Zlib-ng self-candidate matcher batch
+
+- Starting evidence after the `fizzle_matches` hook run:
+  Coverage MCP snapshot `388a08ab-3594-4c24-b84c-187f32cd1470`.
+- Current movement from the first zlib hook: branches improved from
+  3318 / 3484 to 3321 / 3484; `zlib_ng.rs` improved from 366 / 380 to
+  369 / 380 branches.
+- Target lines after hook insertion: 385 in `SlowMatcher::process` and 831 in
+  the level-nine matcher process loop.
+- Implemented:
+  - Pre-insert the current position into each matcher hash table.
+  - Run one process step with `lookahead >= MIN_MATCH`.
+  - This makes `quick_insert(position)` return `position`, covering
+    `candidate != 0` true with `candidate < position` false.
+- Failed hook attempt: Coverage MCP run
+  `5b7ad024-7667-450c-912c-1bb5ca285d12` failed because the hook asserted
+  `slow.match_available`, which is not stable after the matcher advances
+  through finalization. No coverage snapshot was ingested for that failed run.
+- Successful retry: Coverage MCP run
+  `14e86b8e-bf6e-46d3-a2b2-b449d4fbb828`, snapshot
+  `7dad0fef-e1e7-4b40-a6ef-a2336dad942c`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3321 / 3484 to 3323 / 3484.
+- `src/codecs/compression/zlib_ng.rs`: improved from 369 / 380 to
+  371 / 380 branches.
+- Rationale: this is a private hash-table collision/self-candidate state and is
+  independent of public compressed byte parity. Keep it behind `#[cfg(coverage)]`.
 
 ## Execution order
 
