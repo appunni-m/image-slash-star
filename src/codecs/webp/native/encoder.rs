@@ -1189,6 +1189,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]).unwrap();
     let mut even_chunk = Vec::new();
     write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]).unwrap();
+    let mut even_fixed_buffer = [0u8; 12];
+    write_chunk(
+        Cursor::new(&mut even_fixed_buffer[..]),
+        b"EVEN",
+        &[1, 2, 3, 4],
+    )
+    .unwrap();
     let mut name_error_buffer = [0u8; 0];
     write_chunk(Cursor::new(&mut name_error_buffer[..]), b"FAIL", &[1, 2, 3])
         .expect_err("empty fixed buffer must fail on RIFF chunk name");

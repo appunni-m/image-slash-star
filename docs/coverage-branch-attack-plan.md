@@ -673,6 +673,63 @@ Measurement and decision:
   reduce missing regions. Keep `src/codecs/webp/encode/mod.rs` as a deferred
   public-resource-limit guard unless we later introduce a maximum metadata size
   policy that rejects oversized options before allocation.
+
+## Attempt 44 plan: WebP native fixed-buffer chunk padding branch
+
+Current Coverage MCP baseline before editing:
+
+- Commit metadata: `21606356f54798a5942a82edd5df0677f17b7114`
+- Source-equivalent pushed doc commit: `2ac3a1e`
+- Snapshot: `5fc1879b-6e98-4f28-92a6-664f8492c09e`
+- Overall baseline: `24580 / 24585` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40096 / 40825` regions.
+- Target file: `src/codecs/webp/native/encoder.rs` at `1165 / 1165` lines,
+  `192 / 192` branches, `64 / 64` functions, and `1781 / 1785` regions.
+
+Reverse map:
+
+Coverage MCP reports a partial branch at line `1129` in
+`write_chunk<W: Write>()`. Raw LLVM function instantiations show the
+`Cursor<&mut [u8]>` monomorphization is called only with odd-length payloads
+and short fixed buffers. That covers name, size, data, and padding failures,
+but does not execute the even-length fixed-buffer success path where the
+padding branch is false and control reaches `Ok(())`.
+
+Selected action:
+
+- Add one call to the existing `webp::native::encoder` coverage hook:
+  `write_chunk(Cursor::new(&mut [0; 12]), b"EVEN", &[1, 2, 3, 4])`.
+- Do not change production code.
+- Keep this as a private-helper hook because the gap is generic
+  monomorphization coverage, not a new WebP byte-parity fixture.
+
+Validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Measurement and decision:
+
+- Coverage MCP run: `c5c59ca2-27d0-4a68-9143-cc3026f267fe`.
+- Snapshot: `7ffadcf2-afca-4881-a656-a898033556fd`.
+- Overall result: `24586 / 24591` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40106 / 40833` regions.
+- Target file result: `src/codecs/webp/native/encoder.rs` at
+  `1171 / 1171` lines, `192 / 192` branches, `64 / 64` functions, and
+  `1791 / 1793` regions.
+- Delta: file missing regions improved from `4` to `2`; overall missing
+  regions improved from `729` to `727`.
+- Remaining root cause: raw LLVM shows the fixed-buffer
+  `Cursor<&mut [u8]>` instantiation is now complete. The two remaining regions
+  are `?` error arms in infallible writer instantiations such as `Vec` /
+  `Cursor<Vec<u8>>`; fabricating a failure for those concrete writers is not
+  possible. Further reduction would require a production refactor of chunk
+  assembly/writing, not another input.
+- Decision: keep the hook. It exercises a real fixed-buffer writer path and
+  reduces aggregate region debt without changing production behavior.
 7. Record measured movement here, then commit and push.
 
 Result:
