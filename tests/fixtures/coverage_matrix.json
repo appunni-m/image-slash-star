@@ -14945,6 +14945,19 @@
           "oracle_error_message": "could not create decoder object"
         },
         {
+          "id": "error_malformed_container_vp8_zero_height",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8_zero_height.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
           "id": "error_malformed_container_bad_vp8l_signature",
           "type": "decode",
           "format": "webp",
@@ -14990,6 +15003,19 @@
           "category": "error",
           "description": "Malformed WebP container and codec headers",
           "asset": "extended_missing_image_chunk.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_extended_vp8_dimension_mismatch",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "extended_vp8_dimension_mismatch.webp",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -16640,12 +16666,12 @@
     }
   },
   "summary": {
-    "total_rows": 937,
-    "decode_rows": 640,
+    "total_rows": 939,
+    "decode_rows": 642,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 633,
-    "decode_active": 634,
+    "assets_available": 635,
+    "decode_active": 636,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

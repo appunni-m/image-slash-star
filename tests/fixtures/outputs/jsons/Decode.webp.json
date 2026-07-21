@@ -1648,6 +1648,16 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_container_vp8_zero_height",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_container_bad_vp8l_signature",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -1679,6 +1689,16 @@
     },
     {
       "id": "error_malformed_container_extended_missing_image_chunk",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_extended_vp8_dimension_mismatch",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "could not create decoder object",

@@ -2627,6 +2627,11 @@ def gen_webp():
         lambda data: data.__setitem__(slice(data.find(b"VP8 ") + 14, data.find(b"VP8 ") + 16), b"\0\0"),
     )
     write_mutated_webp(
+        "vp8_zero_height.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(slice(data.find(b"VP8 ") + 16, data.find(b"VP8 ") + 18), b"\0\0"),
+    )
+    write_mutated_webp(
         "bad_vp8l_signature.webp",
         "lossless.webp",
         lambda data: data.__setitem__(data.find(b"VP8L") + 8, 0),
@@ -2647,6 +2652,28 @@ def gen_webp():
         data[image_chunk : image_chunk + 4] = b"JUNK"
 
     write_mutated_webp("extended_missing_image_chunk.webp", "icc.webp", remove_extended_image_chunk)
+
+    def write_extended_vp8_dimension_mismatch():
+        source = (d / "lossy.webp").read_bytes()
+        vp8 = source.find(b"VP8 ")
+        if vp8 < 0:
+            raise RuntimeError("lossy WebP did not contain a VP8 chunk")
+        vp8_size = struct.unpack_from("<I", source, vp8 + 4)[0]
+        vp8_chunk_end = vp8 + 8 + vp8_size + (vp8_size & 1)
+        vp8_chunk = source[vp8:vp8_chunk_end]
+        vp8x_payload = bytearray((0, 0, 0, 0))
+        vp8x_payload.extend((63).to_bytes(3, "little"))
+        vp8x_payload.extend((63).to_bytes(3, "little"))
+        vp8x_chunk = bytearray(b"VP8X")
+        vp8x_chunk.extend(struct.pack("<I", len(vp8x_payload)))
+        vp8x_chunk.extend(vp8x_payload)
+        payload = b"WEBP" + bytes(vp8x_chunk) + vp8_chunk
+        webp = bytearray(b"RIFF")
+        webp.extend(struct.pack("<I", len(payload)))
+        webp.extend(payload)
+        (d / "extended_vp8_dimension_mismatch.webp").write_bytes(webp)
+
+    write_extended_vp8_dimension_mismatch()
 
     def overflow_extended_canvas(data):
         vp8x = data.find(b"VP8X")

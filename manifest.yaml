@@ -1671,10 +1671,12 @@ formats:
       - bad_webp_signature.webp
       - vp8_interframe.webp
       - vp8_zero_width.webp
+      - vp8_zero_height.webp
       - bad_vp8l_signature.webp
       - bad_vp8l_version.webp
       - bad_initial_chunk.webp
       - extended_missing_image_chunk.webp
+      - extended_vp8_dimension_mismatch.webp
       - extended_canvas_too_large.webp
       - bad_anmf_scan_size.webp
       - bad_anmf_decode_size.webp

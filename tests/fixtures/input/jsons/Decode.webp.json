@@ -1183,6 +1183,19 @@
       }
     },
     {
+      "id": "error_malformed_container_vp8_zero_height",
+      "asset": "vp8_zero_height.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_zero_height.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_bad_vp8l_signature",
       "asset": "bad_vp8l_signature.webp",
       "expect_error": true,
@@ -1227,6 +1240,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_image_chunk.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_extended_vp8_dimension_mismatch",
+      "asset": "extended_vp8_dimension_mismatch.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_vp8_dimension_mismatch.webp",
         "operations": [
           "PIL.Image.open",
           "load",

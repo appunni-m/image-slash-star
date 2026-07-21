@@ -12,17 +12,17 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `8897286d-213f-4f01-aacd-bd34a0f3e584`
-- Current measured commit metadata: `cf9b818b9ed9c07b7b9aeb77f777eff1c234b0d0`
-- Current source state: WebP decoder public-reader coverage hook measured
-  before committing Attempt 36.
+- Current snapshot: `b6c23cb8-4085-4630-88a2-9967f7723fa6`
+- Current measured commit metadata: `41f38c734460c57ba11013512fec732c4d148697`
+- Current source state: WebP decoder malformed still-image fixtures measured
+  before committing Attempt 38.
 - Lines: 24580 / 24585
-- Branches: 3434 / 3444
+- Branches: 3435 / 3444
 - Functions: 1582 / 1582
-- Regions: 40094 / 40825
-- Remaining target: 5 lines, 10 branches, and 731 regions.
+- Regions: 40095 / 40825
+- Remaining target: 5 lines, 9 branches, and 730 regions.
 - Remaining branch map from this snapshot:
-  - `src/codecs/webp/native/decoder.rs`: 89 / 92 branches, 3 missing.
+  - `src/codecs/webp/native/decoder.rs`: 90 / 92 branches, 2 missing.
   - `src/codecs/webp/native/vp8.rs`: 155 / 160 branches, 5 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
 - Remaining line gaps: aggregate line gap is 5, but the current raw per-file
@@ -1451,6 +1451,65 @@ Measurement and decision:
   hook monomorphizations and did not move the aggregate lossless branch gap.
   The remaining `lossless.rs` branches need a more exact branch-level map or a
   real VP8L bitstream state, not broader generic `BitReader` probes.
+
+## Attempt 38 plan: WebP decoder public malformed still-image fixtures
+
+Baseline before editing:
+
+- Git state: clean `main` aligned with `origin/main` at `41f38c7`.
+- Coverage source baseline: Attempt 36 retained code, snapshot
+  `8897286d-213f-4f01-aacd-bd34a0f3e584`.
+- Overall baseline: `24580 / 24585` lines, `3434 / 3444` branches,
+  `1582 / 1582` functions, and `40094 / 40825` regions.
+- Target file: `src/codecs/webp/native/decoder.rs` at `749 / 749` lines,
+  `89 / 92` branches, `34 / 34` functions, and `1367 / 1416` regions.
+
+Reverse map and Pillow preflight:
+
+| Source line | Boundary | Candidate input | Pillow result | Action |
+| --- | --- | --- | --- | --- |
+| 200 | VP8 header dimension guard, `self.width == 0 || self.height == 0` | Mutate `lossy.webp` VP8 keyframe height field to zero. Existing manifest has `vp8_zero_width.webp` but not zero height. | Rejected: `OSError: could not create decoder object`. | Add `vp8_zero_height.webp` under `error_malformed_container`. |
+| 445 | VP8X canvas dimensions must match decoded VP8 frame dimensions for still images | Build a VP8X still-image container declaring a 64x64 canvas while reusing the original 128x128 VP8 chunk from `lossy.webp`. | Rejected: `OSError: could not create decoder object`. | Add `extended_vp8_dimension_mismatch.webp` under `error_malformed_container`. |
+
+Selected implementation:
+
+1. Extend `scripts/generate_test_assets.py` to generate both malformed WebP
+   files reproducibly.
+2. Add both assets to `manifest.yaml` under the existing WebP
+   `error_malformed_container` case.
+3. Regenerate WebP refs/matrix with `.oracle-venv/bin/python
+   scripts/generate_decode_refs.py --format webp`.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+6. Record measurement here; commit and push if coverage improves.
+
+Measurement:
+
+- Coverage MCP run: `b1e7d4cb-5ea9-4a17-be1c-d6c9799920da`.
+- Coverage MCP snapshot: `b6c23cb8-4085-4630-88a2-9967f7723fa6`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after the fixtures: `24580 / 24585` lines,
+  `3435 / 3444` branches, `1582 / 1582` functions, and
+  `40095 / 40825` regions.
+- Net movement versus baseline `8897286d-213f-4f01-aacd-bd34a0f3e584`:
+  - Branches improved from `3434 / 3444` to `3435 / 3444`; missing branches
+    dropped from `10` to `9`.
+  - Missing regions dropped from `731` to `730`.
+  - Line gap stayed at `5`.
+- Target file movement: `src/codecs/webp/native/decoder.rs` moved from
+  `89 / 92` branches and `1367 / 1416` regions to `90 / 92` branches and
+  `1368 / 1416` regions.
+- Source effect:
+  - `extended_vp8_dimension_mismatch.webp` completes line 445 in the MCP line
+    view.
+  - `vp8_zero_height.webp` improves line 200 but normalized partials remain
+    there; do not assume the zero-height side alone completes that predicate.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 
