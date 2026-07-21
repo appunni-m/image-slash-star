@@ -12,12 +12,12 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `2110fc56-3565-476c-8eca-0ce50c1db4e8`
-- Current measured commit metadata: `2a940d27c5dea8e084f9a4df9f3954a1cb867c9e`
-- Lines: 22044 / 22045
-- Branches: 3335 / 3466
+- Current snapshot: `d9e11fd8-f21f-4015-8cf5-fee073f5ae3d`
+- Current measured commit metadata: `af50f3ab116000703a734e243c7f87cbd84c6184`
+- Lines: 22066 / 22067
+- Branches: 3337 / 3466
 - Functions: 1528 / 1528
-- Remaining target: 1 line and 131 branches.
+- Remaining target: 1 line and 129 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -210,6 +210,52 @@ Completed evidence:
   Pushed-head overall coverage is 22044 / 22045 lines, 3335 / 3466 branches,
   and 1528 / 1528 functions. Histogram remains 503 / 503 lines,
   107 / 112 branches, and 30 / 30 functions.
+
+## Planned WebP VP8 filter-parameter private-branch batch
+
+Coverage MCP pushed-head snapshot `2110fc56-3565-476c-8eca-0ce50c1db4e8`
+reports `src/codecs/webp/native/vp8.rs` at 1285 / 1285 lines, 152 / 162
+branches, and 57 / 57 functions. LLVM line normalization reports many partial
+header/decode lines, but the most contained branch cluster is
+`calculate_filter_parameters()`:
+
+- line 1732: segment-adjustment branch. Existing probes cover enabled
+  segments; add a disabled-segments case.
+- line 1742 and line 1744: loop-filter-adjustment and B-luma mode branches.
+  Existing probes cover adjustment-enabled B and non-B cases; add a
+  no-adjustment case and keep both B/non-B direct probes.
+- line 1753: sharpness shift amount branch. Existing probes cover
+  `sharpness_level > 4`; add `sharpness_level` in `1..=4`.
+- line 1755: sharpness cap branch. Add a case where the shifted interior limit
+  is already below `9 - sharpness_level`.
+- line 1760: interior-limit floor branch. Add a low filter level with
+  sharpness so shifting produces zero.
+- line 1770: high-edge-variance threshold branch. Add filter-level cases below
+  15, between 15 and 39, and at least 40 through direct `MacroBlock` inputs.
+- line 1795: skipped-coefficients complexity reset only applies to non-B luma
+  macroblocks. If direct frame decode setup is too broad, leave this for a
+  later VP8 bitstream fixture batch.
+
+No manifest fixture is the narrowest oracle for the filter-parameter sites:
+they are deterministic arithmetic over parsed VP8 frame/macroblock state.
+Use direct coverage-hook `Vp8Decoder` states, then the approved Coverage MCP
+line+branch run. Do not edit the public decoder unless a branch is proven to be
+an invariant.
+
+Completed evidence:
+
+- Coverage MCP run: `adba0487-bd71-4287-aa52-c60031a99208`
+- Coverage MCP snapshot: `d9e11fd8-f21f-4015-8cf5-fee073f5ae3d`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22066 / 22067 lines, 3337 / 3466 branches, 1528 / 1528 functions.
+- Target file: `src/codecs/webp/native/vp8.rs` improved from 152 / 162 to
+  154 / 162 branches, with 1307 / 1307 lines and 57 / 57 functions.
+- Closed normalized filter-parameter gaps include the disabled-segments,
+  disabled-loop-adjustment, low-sharpness shift, interior-limit floor, and
+  low/mid high-edge-variance threshold cases. Remaining normalized VP8 branch
+  lines are concentrated in VP8 header parsing, token probability updates,
+  coefficient decoding, B-luma loop-filter adjustment, and skipped-coefficients
+  complexity reset.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 

@@ -1934,6 +1934,33 @@ pub(crate) fn __coverage_exercise_private_branches() {
     decoder.frame.sharpness_level = 5;
     assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
 
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.frame.keyframe = true;
+    decoder.frame.filter_level = 10;
+    decoder.frame.sharpness_level = 0;
+    let mb = MacroBlock {
+        luma_mode: LumaMode::DC,
+        ..MacroBlock::default()
+    };
+    assert_eq!(decoder.calculate_filter_parameters(&mb), (10, 10, 0));
+
+    decoder.frame.filter_level = 20;
+    decoder.frame.sharpness_level = 0;
+    assert_eq!(decoder.calculate_filter_parameters(&mb), (20, 20, 1));
+
+    decoder.frame.filter_level = 4;
+    decoder.frame.sharpness_level = 1;
+    assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
+
+    decoder.frame.filter_level = 1;
+    decoder.frame.sharpness_level = 1;
+    assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
+
+    decoder.loop_filter_adjustments_enabled = true;
+    decoder.ref_delta[0] = 0;
+    decoder.mode_delta[0] = 0;
+    assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
+
     let bytes = [0u8; 1];
     let mut cursor = std::io::Cursor::new(&bytes[..]);
     let take = cursor.by_ref().take(1);
