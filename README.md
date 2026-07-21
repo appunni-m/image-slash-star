@@ -1,30 +1,45 @@
 # image/*
 
 [![CI](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml/badge.svg)](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml)
-[![License: MIT or Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licensing)
+[![License: MIT or Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-`pillow-rs-image` is a safe-Rust image codec library built for exact observable
-compatibility with a pinned Pillow distribution. It has no native runtime
-dependencies, works on WASM, keeps every image format behind a Cargo feature,
-and uses `bytemuck` as its only runtime utility dependency.
+Pure-Rust image codec implementation with byte-exact parity against a pinned
+Pillow oracle.
 
-The project is pre-release software. All 631 currently active manifest rows
-compare exact decoded pixels or exact encoded files successfully. Six AVIF
-decode rows remain explicitly planned; AVIF is not represented as complete.
+**Runtime is 100% Rust: zero Pillow imports, zero native codec FFI, and zero
+runtime codec libraries.** `bytemuck` is the only runtime utility dependency.
 
-## Why this project exists
+The crate publishes three API surfaces:
 
-Ordinary compatibility tests often stop at successful decoding, dimensions,
-or output length. This project treats Pillow 12.2.0 as a pinned behavioral
-oracle and checks the public result byte-for-byte:
+- A high-level byte API: format detection, still-image decode/encode, and
+  sequence decode/encode.
+- Feature-scoped codec modules under `codecs::<format>` for callers that
+  already know the image format.
+- Pillow-observable image types that retain pixels, modes, palettes, frame
+  timing, disposal, background metadata, and encoder options.
 
-- decode status, error behavior, mode, dimensions, frames, metadata, and pixels;
-- deterministic encoded file bytes, followed by decoded-pixel roundtrips;
-- image operations such as conversion, flipping, rotation, and cropping.
+Project goal: exact Pillow 12.2.0 parity across public image behavior — success
+or error, mode, dimensions, metadata, frame data, decoded pixels, and
+deterministic encoded file bytes. Pillow and its bundled C libraries are
+oracles for fixtures only; runtime code stays Rust.
 
-No runtime call is made into Pillow or a C codec. Native libraries bundled in
-the Pillow wheel define the reference behavior only; the crate implements that
-behavior in Rust.
+## Status
+
+The manifest-driven parity matrix is the source of truth.
+
+| Metric | Count |
+| --- | ---: |
+| Manifest rows | 877 |
+| Active manifest rows | 871 |
+| Active decode rows | 574 |
+| Active encode rows | 265 |
+| Operation rows | 32 |
+| Planned decode rows | 6 |
+| Formats tracked | 8 |
+
+All active rows compare exact decoded pixels or exact encoded files. The six
+planned decode rows are AVIF coverage gaps; AVIF is intentionally not marked
+complete.
 
 ## Format features
 
@@ -40,54 +55,74 @@ opt-in and incomplete.
 | `tiff` | yes | parity rows active | libtiff 4.7.1 |
 | `webp` | yes | parity rows active | libwebp 1.6.0 |
 | `ico` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `avif` | no | 6 decode rows planned | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 |
+| `avif` | no | planned | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 |
 
-Select only the formats an application needs:
+Select only the formats an application needs by disabling default features and
+enabling the relevant format features.
 
-```toml
-[dependencies]
-pillow-rs-image = {
-    version = "0.1.0",
-    default-features = false,
-    features = ["jpeg", "png"]
-}
+## From source
+
+```bash
+git clone git@github.com:appunni-m/image-slash-star.git
+cd image-slash-star
+cargo test --all-features --test coverage_matrix_tests
 ```
 
-## API
+The repository uses the Rust 2024 edition. The required Rust release and
+components are pinned in `rust-toolchain.toml`.
 
-The format is detected from the input bytes. Still-image and sequence APIs are
-separate so animation frames are never silently discarded.
+## API at a glance
 
-```rust,no_run
-use pillow_rs_image::{ImageFormat, decode, encode_default};
+The high-level API detects image format from input bytes, decodes still images
+without discarding animation-aware metadata, and keeps sequence APIs separate so
+frames are never silently dropped.
 
-let input = std::fs::read("input.png")?;
-let image = decode(&input).ok_or("unsupported or invalid image")?;
-let output = encode_default(&image, ImageFormat::Png)
-    .ok_or("image cannot be encoded as PNG")?;
-std::fs::write("output.png", output)?;
-# Ok::<(), Box<dyn std::error::Error>>(())
-```
+Primary entry points:
 
-Use `decode_sequence` and `encode_sequence` for animated images. Lower-level
-format modules are available under `codecs::<format>` when a caller already
-knows the format.
+| Function | Purpose |
+| --- | --- |
+| `detect_format(&[u8])` | Detect JPEG, PNG, GIF, BMP, WebP, TIFF, ICO, or AVIF from magic bytes. |
+| `decode(&[u8])` | Decode one still image from auto-detected bytes. |
+| `decode_sequence(&[u8])` | Decode retained frames and animation metadata. |
+| `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode with explicit format options. |
+| `encode_default(&DecodedImage, ImageFormat)` | Encode a still image with default options. |
+| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode still or animated sequences while retaining frame metadata. |
 
-## Reproducing parity
+## Parity harness
 
 The authoritative oracle is the Pillow 12.2.0 CPython 3.12 macOS arm64 wheel.
-Its wheel hash, extension hash, codec versions, and public API contract are
-pinned in `pillow-oracle.lock.yaml` and `manifest.yaml`.
+Its wheel hash, extension hash, bundled codec versions, and public comparison
+contract are pinned in `pillow-oracle.lock.yaml` and `manifest.yaml`.
 
-Create the oracle environment on macOS arm64:
+```
+manifest.yaml
+       ↓
+scripts/generate_test_assets.py
+       ↓
+tests/fixtures/input/
+       ↓
+scripts/generate_decode_refs.py
+       ↓
+tests/fixtures/outputs/
+       ↓
+tests/coverage_matrix_tests.rs
+```
+
+The generated fixture tree contains deterministic source images, normalized
+expected metadata, raw Pillow pixels, and exact Pillow encoder output. Hashes,
+file sizes, and approximate visual similarity are not accepted as parity
+substitutes.
+
+### Running the parity gate
+
+Create the pinned oracle environment on macOS arm64:
 
 ```bash
 python3.12 -m venv .oracle-venv
 .oracle-venv/bin/python -m pip install --require-hashes -r oracle-requirements.txt
 ```
 
-Generate deterministic assets and exact Pillow references, then run the one
-manifest-driven integration suite:
+Regenerate deterministic assets and references, then run the parity suite:
 
 ```bash
 .oracle-venv/bin/python scripts/generate_test_assets.py
@@ -95,23 +130,12 @@ manifest-driven integration suite:
 cargo test --all-features --test coverage_matrix_tests
 ```
 
-The generator refuses to rewrite references if the Python, platform, Pillow
-wheel, extension hash, or bundled codec versions differ from the lock. A
-different wheel is a different oracle.
-
-The fixture tree contains deterministic source images, normalized expected
-metadata, raw Pillow pixels, and exact Pillow encoder output. Failed byte
-comparisons report the first differing pixel coordinate, channel, and values;
-hashes and file sizes are not accepted as parity substitutes.
-
-The project goal is 100% line and 100% branch coverage, reached primarily by
-adding fixture-based manifest rows with exact Pillow input/output references.
-Coverage-only internal hooks are allowed only behind `cfg(coverage)` for private
-defensive paths that cannot be represented as public image fixtures.
+The generator refuses to rewrite references if the Python version, platform,
+Pillow wheel hash, extension hash, or bundled codec versions differ from the
+lock file. A different wheel is a different oracle.
 
 ## Development
 
-The required Rust release and components are pinned in `rust-toolchain.toml`.
 Before submitting a change, run:
 
 ```bash
@@ -121,15 +145,27 @@ cargo test --all-features --test coverage_matrix_tests
 cargo check --no-default-features
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the source-provenance and parity
-workflow. Security issues should follow [SECURITY.md](SECURITY.md).
+Coverage work should first add manifest-backed Pillow fixtures when a missing
+path is public image behavior. `cfg(coverage)` hooks are reserved for private
+state machines, generated helper states, or defensive limits that cannot be
+represented as a public Pillow fixture.
 
 ## Architecture
 
-Each format owns its implementation under `src/codecs/<format>/`, including
-format-specific encode and decode modules. Cargo features select these modules
-at compile time. Shared primitives are limited to image types and compression
-code that genuinely crosses format boundaries.
+Each format owns its implementation under `src/codecs/<format>/`, with
+format-local encode and decode modules. Cargo features select those modules at
+compile time. Shared code is limited to image types and compression primitives
+that genuinely cross format boundaries.
+
+```
+&[u8]
+  ├─ detect_format()
+  ├─ decode()          → DecodedImage { dimensions, mode, palette, pixels }
+  └─ decode_sequence() → DecodedSequence { frames, timing, disposal, background }
+
+DecodedImage / DecodedSequence
+  └─ encode*()         → exact Pillow-observable container bytes
+```
 
 The AVIF boundary is deliberately strict. Pillow uses libavif, dav1d, and
 libaom as its oracle stack, while this crate must implement the observable
@@ -137,12 +173,38 @@ ISOBMFF, AV1 decode, deterministic AV1 encode, color, alpha, grid, metadata,
 and sequence behavior in Rust. Substituting a different encoder cannot prove
 byte-identical libaom output.
 
-## Licensing
+## Fixtures
+
+Fixture inputs are generated from `manifest.yaml`. Generated references are
+stored under `tests/fixtures/outputs/` and are version-controlled because they
+define the byte contract.
+
+When adding or changing fixtures:
+
+- Add the public behavior to `manifest.yaml`.
+- Regenerate assets and oracle outputs with the pinned Python environment.
+- Keep the row only if Rust matches the exact Pillow status, metadata, pixels,
+  or encoded bytes required by the row.
+- Document non-fixture coverage work in `docs/coverage-branch-attack-plan.md`.
+
+## Contributing
+
+Start with `CONTRIBUTING.md`. The short version:
+
+- Keep runtime codec execution pure Rust.
+- Keep Pillow and C codec libraries as offline oracle tooling only.
+- Prefer manifest-driven fixtures over narrow implementation probes.
+- Do not weaken byte expectations, fixture metadata, or failure checks.
+- Run the parity gate before claiming correctness.
+
+Security issues should follow `SECURITY.md`.
+
+## License
 
 Original project code is available under your choice of
 [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT). The crate as a combined
 distribution is also subject to BSD-3-Clause, Zlib, IJG, and MIT-CMU terms for
-ported and derived portions. [NOTICE.md](NOTICE.md) maps repository paths to
-exact upstream versions and retained license files under `third_party/`.
+ported and derived portions. `NOTICE.md` maps repository paths to exact upstream
+versions and retained license files under `third_party/`.
 
 This software is based in part on the work of the Independent JPEG Group.
