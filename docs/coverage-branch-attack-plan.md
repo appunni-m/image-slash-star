@@ -951,6 +951,74 @@ Measurement and decision:
   coverage model can be made to move or a public manifest fixture naturally
   covers the path.
 
+## Attempt 30 plan: WebP decoder ANMF branch sweep
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `78110f0`.
+- Current-source aggregate baseline remains Coverage MCP snapshot
+  `af8c63e5-3ba5-4027-9fad-b0c7d3697a52`: `24457 / 24463` lines,
+  `3430 / 3444` branches, `1580 / 1580` functions, and
+  `39869 / 40605` regions.
+- Decoder mapping uses Coverage MCP snapshot
+  `ca8751bd-eab2-4a99-8206-be48aeb7fd33`. That snapshot contains a reverted
+  VP8L hook attempt, but `src/codecs/webp/native/decoder.rs` is
+  source-equivalent to current `main`.
+- Target file: `src/codecs/webp/native/decoder.rs` at `649 / 649` lines,
+  `86 / 92` branches, `32 / 32` functions, and `1172 / 1223` regions.
+
+Reverse map for selected branch arcs:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 564 | ALPH chunk-size guard | ANMF contains an ALPH subchunk whose rounded payload fits the first subchunk guard but cannot fit the required ALPH + following image subchunk layout. |
+| 577 | ALPH following-chunk guard | ANMF contains valid raw one-pixel alpha data and a following chunk header whose declared size either fits or overflows the enclosing ANMF size. |
+| 613 | Frame outside canvas | A valid decoded VP8L frame is larger than the animation canvas in width, and separately in height after the width side passes. |
+| 618 | Existing canvas branch | A real two-frame decoder stream reaches the second frame with `animation.canvas` already initialized. |
+| 655 | Output channel branch | Successful animation frame output is copied once as RGBA and once as RGB, matching the decoder-level `has_alpha` flag. |
+
+Selected action:
+
+- Keep this in the private decoder hook. These are `read_frame()` state-machine
+  branches below the public manifest layer; the manifest already contains
+  Pillow-oracle animated WebP fixtures for normal, alpha, dispose/blend, and
+  malformed animation streams.
+- Avoid branchy helper logic. Mutate explicit ANMF payload bytes so the hook
+  does not introduce new uncovered helper branches.
+- Reuse a small 64x64 VP8L payload extracted from the existing generated
+  `lossless_solid.webp` fixture to reach successful frame decode without adding
+  file I/O to the crate.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured branch/region movement here, then commit and push if the
+   aggregate coverage target improves.
+
+Measurement and decision:
+
+- Coverage MCP run: `7f55e137-04aa-4a21-85b4-3db3db1a126c`.
+- Coverage MCP snapshot: `dda3ae34-8288-425d-b8cd-b94756595953`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after the hook: `24514 / 24520` lines, `3432 / 3444` branches,
+  `1581 / 1581` functions, and `40012 / 40748` regions.
+- Net branch movement versus current-source baseline: `3430 / 3444` to
+  `3432 / 3444`, reducing missing branches from `14` to `12`.
+- Net region movement: missing regions remained `736`. The hook added covered
+  decoder regions and denominator regions together.
+- Target file movement: `src/codecs/webp/native/decoder.rs` moved from
+  `86 / 92` branches to `88 / 92` branches. Decoder missing branches are now
+  `4`.
+- Decision: keep the hook batch because it improves aggregate branch coverage
+  without changing public codec behavior. Continue next with the remaining
+  WebP branch files: `vp8.rs` (`154 / 160`), `decoder.rs` (`88 / 92`), and
+  `lossless.rs` (`108 / 110`).
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
