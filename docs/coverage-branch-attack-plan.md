@@ -1393,6 +1393,65 @@ Measurement:
   in the normalized MCP line map. Do not add more ANMF-frame hooks for lines
   551, 561, 577, or 613.
 
+## Attempt 37 plan: WebP lossless generic bit-reader branches
+
+Baseline before editing:
+
+- Git state: clean `main` aligned with `origin/main` at `d99f668`.
+- Coverage MCP snapshot: `8897286d-213f-4f01-aacd-bd34a0f3e584`.
+- Overall: `24580 / 24585` lines, `3434 / 3444` branches,
+  `1582 / 1582` functions, and `40094 / 40825` regions.
+- Target file: `src/codecs/webp/native/lossless.rs` at `571 / 572` lines,
+  `108 / 110` branches, `27 / 27` functions, and `886 / 934` regions.
+
+Reverse map:
+
+- MCP's normalized lossless line map lists many partial-branch lines, but the
+  aggregate file gap is only two branches.
+- The raw branch counters in the current MCP artifact concentrate the remaining
+  covered/uncovered one-sided counters on `BitReader::read_bits<T>()`, line
+  864: `if self.nbits < num { self.fill()?; }`.
+- `read_bits<T>()` is generic. Existing direct coverage-hook probes only call
+  it as `u8`; public decoding instantiates it as `u8`, `u16`, and `usize`.
+- This is a private bit-reader state, not a Pillow pixel-oracle behavior.
+
+Selected action:
+
+- Extend the existing lossless `#[cfg(coverage)]` hook with direct
+  `BitReader` probes for `read_bits::<u16>()` and `read_bits::<usize>()` in
+  both states:
+  - enough bits already buffered, so line 864 does not call `fill()`;
+  - no bits buffered, so line 864 calls `fill()`.
+- Use the reader shapes already present in the hook and public decode stack:
+  `Cursor<[u8; 8]>`, `Cursor<Vec<u8>>`, and `Cursor<&[u8]>`.
+- Revert if Coverage MCP does not improve aggregate branch or region coverage.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measurement here and commit/push only if retained coverage improves.
+
+Measurement and decision:
+
+- Coverage MCP run: `fea4f049-1296-4283-82ed-47f9950b96ce`.
+- Coverage MCP snapshot: `c6ad9eb9-2308-4e31-9192-a4d6b7b1bb1d`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall with the hook attempt: `24591 / 24596` lines,
+  `3434 / 3444` branches, `1583 / 1583` functions, and
+  `40119 / 40850` regions.
+- Net branch movement: unchanged at `3434 / 3444`.
+- Net region movement: unchanged at `731` missing regions.
+- Decision: revert the lossless hook extension before commit. The direct
+  `read_bits::<u16>()` and `read_bits::<usize>()` probes covered only the new
+  hook monomorphizations and did not move the aggregate lossless branch gap.
+  The remaining `lossless.rs` branches need a more exact branch-level map or a
+  real VP8L bitstream state, not broader generic `BitReader` probes.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
