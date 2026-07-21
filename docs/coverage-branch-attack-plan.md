@@ -12,14 +12,14 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `0d8766cf-09e2-4225-8a67-1ed6f3671466`
-- Current measured commit metadata: `f14ac45f96772ac70f632e2b5401d8bf7b41f924`
-- Current source state: pushed `main` after Attempt 52.
-- Lines: 24629 / 24633
+- Current snapshot: `a64225a5-64dd-45a3-aa27-304e399acfa0`
+- Current measured commit metadata: `f5ed6f6aa2d42f216bec8144355d5e8550682807`
+- Current source state: pushed `main` after Attempt 53.
+- Lines: 24660 / 24664
 - Branches: 3438 / 3444
 - Functions: 1582 / 1582
-- Regions: 40220 / 40922
-- Remaining target: 4 lines, 6 branches, and 702 regions.
+- Regions: 40312 / 41007
+- Remaining target: 4 lines, 6 branches, and 695 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -299,6 +299,58 @@ Measurement:
   `689 / 714` regions to `703 / 726` regions; missing regions fell from
   `25` to `23`.
 - Net: aggregate missing regions fell from `704` to `702`. Branch debt is
+  unchanged.
+
+## Attempt 53 plan: DEFLATE private helper guard coverage
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 52.
+- Coverage MCP snapshot: `0d8766cf-09e2-4225-8a67-1ed6f3671466`.
+- Overall: `24629 / 24633` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40220 / 40922` regions.
+- Target file: `src/codecs/compression/deflate.rs`, currently
+  `304 / 304` lines, `48 / 48` branches, `22 / 22` functions, and
+  `554 / 608` regions.
+
+Reverse map:
+
+- Public PNG malformed-zlib fixtures already cover the major stream-level
+  failure classes. The remaining zero-region starts are mostly internal helper
+  guards:
+  - chunk-size accumulation and stored-block length bounds;
+  - `decode_stored()` output-limit and short-byte paths;
+  - `extend_repeated()` overflow;
+  - `Huffman::from_lengths()` empty/all-zero/overflow/conversion failures;
+  - `Huffman::decode()` no-symbol path;
+  - `BitReader::read(0)` and short-read guards.
+- These are not useful as additional Pillow oracle fixtures because they would
+  duplicate already-present malformed zlib assets while still depending on
+  fragile bit-level encodings. The existing same-module coverage hook is the
+  right boundary for these private invariants.
+
+Implementation plan:
+
+1. Extend `deflate::__coverage_exercise_private_branches()` with direct helper
+   probes for the guard states above.
+2. Keep the probes small and deterministic; avoid large allocations except the
+   bounded 70k-element Huffman vector needed to exercise `u16` symbol
+   conversion failure.
+3. Validate with `cargo fmt --all`, `RUSTFLAGS='--cfg coverage' cargo check
+   --all-features`, and the approved Coverage MCP line+branch command.
+4. Keep the batch only if aggregate region coverage improves.
+
+Measurement:
+
+- Coverage MCP run: `815d2e04-58d2-4b7f-b5ad-545ea7214bc5`.
+- Coverage MCP snapshot: `a64225a5-64dd-45a3-aa27-304e399acfa0`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24660 / 24664` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40312 / 41007` regions.
+- Target file movement: `src/codecs/compression/deflate.rs` moved from
+  `554 / 608` regions to `646 / 693` regions; missing regions fell from
+  `54` to `47`.
+- Net: aggregate missing regions fell from `702` to `695`. Branch debt is
   unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants

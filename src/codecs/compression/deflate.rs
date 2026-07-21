@@ -44,6 +44,50 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &[0x78, 0x01, 0x73, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01],
         8,
     );
+
+    assert_eq!(compress_zlib_chunked(&[], 0, &[usize::MAX, 1]), None);
+
+    let oversized = vec![0; usize::from(u16::MAX) + 1];
+    assert_eq!(write_stored_block(&mut Vec::new(), &oversized, false), None);
+
+    let mut bits = BitReader::new(&[]);
+    assert_eq!(bits.read(0), Some(0));
+    assert_eq!(bits.read(1), None);
+
+    let mut bits = BitReader::new(&[0, 0, 0xff, 0xff]);
+    let mut output = vec![0];
+    assert!(decode_stored(&mut bits, &mut output, 0, false).is_none());
+
+    let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
+    let mut output = Vec::new();
+    assert!(matches!(
+        decode_stored(&mut bits, &mut output, 0, true),
+        Some(DecodeStatus::OutputFull)
+    ));
+
+    let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
+    let mut output = Vec::new();
+    assert!(decode_stored(&mut bits, &mut output, 1, false).is_none());
+
+    let mut repeated = vec![0];
+    assert_eq!(
+        extend_repeated(&mut repeated, 0, usize::MAX, usize::MAX),
+        None
+    );
+
+    assert!(Huffman::from_lengths(&[]).is_none());
+    assert!(Huffman::from_lengths(&[0]).is_none());
+    let too_many_codes = vec![1u8; usize::from(u16::MAX) + 1];
+    assert!(Huffman::from_lengths(&too_many_codes).is_none());
+    let mut too_large_symbol = vec![0u8; usize::from(u16::MAX) + 2];
+    *too_large_symbol
+        .last_mut()
+        .expect("coverage vector is non-empty") = 1;
+    assert!(Huffman::from_lengths(&too_large_symbol).is_none());
+
+    let single = Huffman::from_lengths(&[1]).expect("coverage huffman should build");
+    let mut bits = BitReader::new(&[1]);
+    assert_eq!(single.decode(&mut bits), None);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
