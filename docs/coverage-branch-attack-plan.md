@@ -1749,6 +1749,24 @@ Validation:
 5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
 6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
 
+Measurement and decision:
+
+- Commit tested: `9c9d479` source changes, run before commit creation, so Coverage
+  MCP metadata still records commit `55212b3`.
+- Coverage MCP snapshot:
+  `19ffcc95-4eb8-4c85-a81b-f9c553a1afcb`.
+- Overall result: `24593 / 24598` lines, `3437 / 3444` branches,
+  `1583 / 1583` functions, and `40116 / 40845` regions.
+- Target file result: `src/types/buffer.rs` at `548 / 548` lines,
+  `24 / 24` branches, `102 / 102` functions, and `684 / 686` regions.
+- Delta: the file still misses 2 regions; the hook only added covered
+  instrumentation for itself and did not reduce the original missing region
+  count.
+- Decision: revert the `types::buffer` hook extension and keep this attempt as
+  a documented no-op. The remaining `types::buffer` regions are likely LLVM
+  normalization artifacts or monomorphization-specific spans that need raw
+  segment inspection before any further code change.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and

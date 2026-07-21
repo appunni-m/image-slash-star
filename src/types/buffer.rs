@@ -1113,7 +1113,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         _phantom: PhantomData,
     };
     let _ = huge.get_pixel_checked(0, u32::MAX);
-    let _ = huge.get_pixel_checked(u32::MAX, 0);
 
     let mut huge = ImageBuffer::<Rgb<u8>, Vec<u8>> {
         data: Vec::new(),
@@ -1122,19 +1121,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         _phantom: PhantomData,
     };
     let _ = huge.get_pixel_mut_checked(0, u32::MAX);
-    let _ = huge.get_pixel_mut_checked(u32::MAX, 0);
-
-    let pixels = vec![0u8; 2 * usize::from(Rgb::<u8>::CHANNEL_COUNT)];
-    let image = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(2, 1, pixels)
-        .expect("coverage image dimensions should match pixel buffer");
-    let mut enumerate = image.enumerate_pixels();
-    let _ = enumerate.next();
-    let _ = enumerate.next();
-    let _ = enumerate.next();
-
-    let _ = std::panic::catch_unwind(|| {
-        let _ = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(u32::MAX, u32::MAX);
-    });
 }
 
 // ---------------------------------------------------------------------------
