@@ -139,13 +139,21 @@ impl HuffmanTree {
                             tree.push(HuffmanTreeNode::Empty);
                             offset
                         }
-                        HuffmanTreeNode::Branch(offset) => offset, HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError),
+                        HuffmanTreeNode::Branch(offset) => offset,
+                        HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError),
                     };
 
                     node_index += offset + ((code >> depth) & 1);
                 }
 
-                match tree[node_index] { HuffmanTreeNode::Empty => { tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16); } HuffmanTreeNode::Branch(_) | HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError), }
+                match tree[node_index] {
+                    HuffmanTreeNode::Empty => {
+                        tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16);
+                    }
+                    HuffmanTreeNode::Branch(_) | HuffmanTreeNode::Leaf(_) => {
+                        return Err(DecodingError::HuffmanError);
+                    }
+                }
             }
         }
 
@@ -258,14 +266,20 @@ impl HuffmanTree {
 pub(crate) fn __coverage_exercise_private_branches() {
     let default_tree = HuffmanTree::default();
     assert!(default_tree.is_single_node());
-    assert_eq!(HuffmanTree::build_single_node(7).peek_symbol(&BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()))), Some((0, 7)));
+    assert_eq!(
+        HuffmanTree::build_single_node(7).peek_symbol(&BitReader::__coverage_new(
+            std::io::Cursor::new(Vec::<u8>::new())
+        )),
+        Some((0, 7))
+    );
     let two = HuffmanTree::build_two_node(1, 2);
     assert!(!two.is_single_node());
     assert!(HuffmanTree::build_implicit(vec![1, 1]).is_ok());
     assert!(HuffmanTree::build_implicit(vec![1, 1, 1]).is_err());
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    assert!(HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Empty], 0, 0, &mut reader)
-        .is_err());
+    assert!(
+        HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Empty], 0, 0, &mut reader).is_err()
+    );
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
     reader.fill().expect("coverage reader should fill");
     let _ = HuffmanTree::read_symbol_slowpath(

@@ -343,7 +343,9 @@ pub(super) fn residual_cost(
             [usize::from(COEFF_BANDS[position])][next_context];
         let has_more = position <= last;
         cost += bit_cost(has_more, probabilities[0]);
-        if !has_more { return cost; }
+        if !has_more {
+            return cost;
+        }
     }
 }
 

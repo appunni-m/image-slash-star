@@ -9,8 +9,13 @@ pub(super) trait Blend {
 
 impl<T: Primitive> Blend for LumaA<T> {
     fn blend(&mut self, other: &LumaA<T>) {
-        if other.0[1].to_f32() >= T::DEFAULT_MAX_VALUE.to_f32() - 0.001 { *self = *other; return; }
-        if other.0[1].to_f32() <= 0.001 { return; }
+        if other.0[1].to_f32() >= T::DEFAULT_MAX_VALUE.to_f32() - 0.001 {
+            *self = *other;
+            return;
+        }
+        if other.0[1].to_f32() <= 0.001 {
+            return;
+        }
 
         let max_t = T::DEFAULT_MAX_VALUE;
         let max_f = max_t.to_f32();
@@ -28,7 +33,10 @@ impl<T: Primitive> Blend for LumaA<T> {
         let out_luma_a = fg_luma_a + bg_luma_a * (1.0 - fg_a_f);
         let out_luma = out_luma_a / alpha_final;
 
-        *self = LumaA([T::from_f32(max_f * out_luma), T::from_f32(max_f * alpha_final)]);
+        *self = LumaA([
+            T::from_f32(max_f * out_luma),
+            T::from_f32(max_f * alpha_final),
+        ]);
     }
 }
 
@@ -40,8 +48,13 @@ impl<T: Primitive> Blend for Luma<T> {
 
 impl<T: Primitive> Blend for Rgba<T> {
     fn blend(&mut self, other: &Rgba<T>) {
-        if other.0[3].to_f32() >= T::DEFAULT_MAX_VALUE.to_f32() - 0.001 { *self = *other; return; }
-        if other.0[3].to_f32() <= 0.001 { return; }
+        if other.0[3].to_f32() >= T::DEFAULT_MAX_VALUE.to_f32() - 0.001 {
+            *self = *other;
+            return;
+        }
+        if other.0[3].to_f32() <= 0.001 {
+            return;
+        }
 
         let max_t = T::DEFAULT_MAX_VALUE;
         let max_f = max_t.to_f32();

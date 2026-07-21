@@ -444,7 +444,17 @@ fn cleanup_transparent_area(
                 height - full_height,
             );
         }
-        if full_width < width { smoothen_transparent_luma(rgba, width, y_plane, full_width, full_height, width - full_width, height - full_height); }
+        if full_width < width {
+            smoothen_transparent_luma(
+                rgba,
+                width,
+                y_plane,
+                full_width,
+                full_height,
+                width - full_width,
+                height - full_height,
+            );
+        }
     }
 }
 

@@ -413,7 +413,10 @@ impl MsbWriter {
     }
 
     fn finish(mut self) -> Vec<u8> {
-        if self.used != 0 { self.current <<= 8 - self.used; self.bytes.push(self.current); }
+        if self.used != 0 {
+            self.current <<= 8 - self.used;
+            self.bytes.push(self.current);
+        }
         self.bytes
     }
 }

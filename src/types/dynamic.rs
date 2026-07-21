@@ -308,7 +308,18 @@ impl DynamicImage {
             + FromColor<color::Luma<u16>>
             + FromColor<color::LumaA<u16>>,
     {
-        match self { DynamicImage::ImageLuma8(img) => img.convert(), DynamicImage::ImageLumaA8(img) => img.convert(), DynamicImage::ImageRgb8(img) => img.convert(), DynamicImage::ImageRgba8(img) => img.convert(), DynamicImage::ImageLuma16(img) => img.convert(), DynamicImage::ImageLumaA16(img) => img.convert(), DynamicImage::ImageRgb16(img) => img.convert(), DynamicImage::ImageRgba16(img) => img.convert(), DynamicImage::ImageRgb32F(img) => img.convert(), DynamicImage::ImageRgba32F(img) => img.convert(), }
+        match self {
+            DynamicImage::ImageLuma8(img) => img.convert(),
+            DynamicImage::ImageLumaA8(img) => img.convert(),
+            DynamicImage::ImageRgb8(img) => img.convert(),
+            DynamicImage::ImageRgba8(img) => img.convert(),
+            DynamicImage::ImageLuma16(img) => img.convert(),
+            DynamicImage::ImageLumaA16(img) => img.convert(),
+            DynamicImage::ImageRgb16(img) => img.convert(),
+            DynamicImage::ImageRgba16(img) => img.convert(),
+            DynamicImage::ImageRgb32F(img) => img.convert(),
+            DynamicImage::ImageRgba32F(img) => img.convert(),
+        }
     }
 
     /// Consume the image and returns a RGB image.

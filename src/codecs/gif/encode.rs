@@ -58,11 +58,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ];
     let _ = quantize_rgba(&opaque_rgba);
 
-    let mut compact_palette = vec![
-        [255u8, 0, 0, 255],
-        [0, 255, 0, 255],
-        [0, 0, 255, 255],
-    ];
+    let mut compact_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
     let mut compact_indices = vec![0u8, 1, 2];
     let mut compact_transparent = None;
     let _ = compact_rgba_palette(
@@ -70,11 +66,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut compact_indices,
         &mut compact_transparent,
     );
-    let mut hole_palette = vec![
-        [255u8, 0, 0, 255],
-        [0, 255, 0, 255],
-        [0, 0, 255, 255],
-    ];
+    let mut hole_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
     let mut hole_indices = vec![0u8, 2];
     let mut hole_transparent = None;
     let _ = compact_rgba_palette(&mut hole_palette, &mut hole_indices, &mut hole_transparent);
@@ -110,8 +102,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let coalesced =
-        coalesce_identical_frames(&sequence, 2).expect("coverage RGB frames coalesce");
+    let coalesced = coalesce_identical_frames(&sequence, 2).expect("coverage RGB frames coalesce");
     let _ = write_gif(
         &sequence,
         &coalesced,
@@ -227,7 +218,9 @@ fn coalesce_identical_frames(
                 output_frame.left = u32::try_from(left).ok()?;
                 output_frame.top = u32::try_from(top).ok()?;
                 let mut alpha = vec![255; prepared.palette.len() / 3];
-                if let Some(transparent) = prepared.transparent { alpha[usize::from(transparent)] = 0; }
+                if let Some(transparent) = prepared.transparent {
+                    alpha[usize::from(transparent)] = 0;
+                }
                 output_frame.image = DecodedImage::with_mode(
                     u32::try_from(frame_width).ok()?,
                     u32::try_from(frame_height).ok()?,

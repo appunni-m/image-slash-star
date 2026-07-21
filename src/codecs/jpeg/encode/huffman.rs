@@ -138,7 +138,9 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
     for length in (17..=MAX_CODE_LENGTH).rev() {
         while length_counts[length] != 0 {
             let mut prefix = length.checked_sub(2)?;
-            while length_counts[prefix] == 0 { prefix = prefix.checked_sub(1)?; }
+            while length_counts[prefix] == 0 {
+                prefix = prefix.checked_sub(1)?;
+            }
             length_counts[length] = length_counts[length].checked_sub(2)?;
             length_counts[length - 1] = length_counts[length - 1].checked_add(1)?;
             length_counts[prefix + 1] = length_counts[prefix + 1].checked_add(2)?;

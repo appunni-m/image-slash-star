@@ -250,7 +250,9 @@ fn convert_pixels(
                 let row_bytes = width.div_ceil(8);
                 for row in pixels.chunks_exact_mut(row_bytes) {
                     row.iter_mut().for_each(|byte| *byte = !*byte);
-                    if width % 8 != 0 { row[row_bytes - 1] &= u8::MAX << (8 - width % 8); }
+                    if width % 8 != 0 {
+                        row[row_bytes - 1] &= u8::MAX << (8 - width % 8);
+                    }
                 }
             }
             Some(DecodedImage::with_mode(

@@ -71,12 +71,7 @@ fn div_round(value: i64, divisor: i64) -> i64 {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(div_round(-3, 2), -2);
-    let pixels = [
-        0xff00_0000,
-        0xff11_2233,
-        0xff22_4466,
-        0xff33_6699,
-    ];
+    let pixels = [0xff00_0000, 0xff11_2233, 0xff22_4466, 0xff33_6699];
     let accumulated = [0_u32; 256];
     let _ = best_blue_multipliers(
         &pixels,
@@ -396,7 +391,9 @@ pub(super) fn optimize_sampling(
                     .all(|&value| value == image[y * original_width + x])
             })
         });
-        if columns_equal { break; }
+        if columns_equal {
+            break;
+        }
         best_bits -= 1;
     }
     if best_bits == bits {

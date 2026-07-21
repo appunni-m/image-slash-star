@@ -364,7 +364,10 @@ fn entropy_bin_combine(histograms: &mut Vec<Histogram>) {
             continue;
         };
         let threshold = -(((histograms[index].bit_cost * 16 + 50) / 100) as i64);
-        let Some(combo) = add_eval(&histograms[first_index], &histograms[index], threshold) else { index += 1; continue; };
+        let Some(combo) = add_eval(&histograms[first_index], &histograms[index], threshold) else {
+            index += 1;
+            continue;
+        };
         let trivial_combo = combo.trivial[1..4]
             .iter()
             .all(|&symbol| symbol != NON_TRIVIAL);
@@ -407,10 +410,14 @@ fn stochastic_combine(histograms: &mut Vec<Histogram>, minimum: usize) -> bool {
             let cost = push_pair(&mut queue, 9, histograms, first, second, best);
             if cost < 0 {
                 best = cost;
-                if queue.len() == 9 { break; }
+                if queue.len() == 9 {
+                    break;
+                }
             }
         }
-        if queue.is_empty() { continue; }
+        if queue.is_empty() {
+            continue;
+        }
         let chosen = queue[0].clone();
         let first = chosen.first;
         let second = chosen.second;
@@ -432,7 +439,10 @@ fn stochastic_combine(histograms: &mut Vec<Histogram>, minimum: usize) -> bool {
             if touches_first || touches_second {
                 fix_pair(&mut queue[index], second, first);
                 let mut pair = queue[index].clone();
-                if !update_pair(histograms, &mut pair, 0) { queue.swap_remove(index); continue; }
+                if !update_pair(histograms, &mut pair, 0) {
+                    queue.swap_remove(index);
+                    continue;
+                }
                 queue[index] = pair;
             }
             update_head(&mut queue, index);
@@ -521,7 +531,9 @@ pub(super) fn cluster(
         u64::from(quality).pow(3) * (MAX_HISTO_GREEDY - 1),
         1_000_000,
     ) as usize;
-    if stochastic_combine(&mut clusters, threshold) { greedy_combine(&mut clusters); }
+    if stochastic_combine(&mut clusters, threshold) {
+        greedy_combine(&mut clusters);
+    }
 
     let mut symbols = vec![0_u16; originals.len()];
     for (index, original) in originals.iter().enumerate() {
@@ -653,10 +665,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = cluster(&many_tokens, many_tokens.len(), 1, 0, 100, 0);
     let many_distinct = (0..(4 * BIN_SIZE))
         .map(|index| {
-            Token::Literal(
-                0xff00_0000
-                    | (((index as u32).wrapping_mul(0x45d9_f3b)) & 0x00ff_ffff),
-            )
+            Token::Literal(0xff00_0000 | (((index as u32).wrapping_mul(0x45d9_f3b)) & 0x00ff_ffff))
         })
         .collect::<Vec<_>>();
     let _ = cluster(&many_distinct, many_distinct.len(), 1, 0, 100, 0);

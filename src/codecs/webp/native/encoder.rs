@@ -392,7 +392,9 @@ fn write_huffman_tree<W: Write>(
     let write_trimmed = trimmed_length > 1 && trailing_zero_bits > 12;
     w.write_bits(u64::from(write_trimmed), 1)?;
     let token_count = if write_trimmed {
-        if trimmed_length == 2 { w.write_bits(0, 5)?; } else {
+        if trimmed_length == 2 {
+            w.write_bits(0, 5)?;
+        } else {
             let nbits = (trimmed_length - 2).ilog2() as usize;
             let pairs = nbits / 2 + 1;
             w.write_bits((pairs - 1) as u64, 3)?;
@@ -404,7 +406,10 @@ fn write_huffman_tree<W: Write>(
     };
     for token in &tokens[..token_count] {
         let symbol = usize::from(token.code);
-        w.write_bits(u64::from(code_length_codes[symbol]), code_length_lengths[symbol])?;
+        w.write_bits(
+            u64::from(code_length_codes[symbol]),
+            code_length_lengths[symbol],
+        )?;
         let bits = match token.code {
             16 => 2,
             17 => 3,
@@ -503,7 +508,12 @@ fn write_group<W: Write>(
         .each_ref()
         .map(|frequency| vec![0; frequency.len()]);
     for channel in 0..5 {
-        write_huffman_tree(w, &populations[channel], &mut lengths[channel], &mut codes[channel])?;
+        write_huffman_tree(
+            w,
+            &populations[channel],
+            &mut lengths[channel],
+            &mut codes[channel],
+        )?;
     }
     Ok(GroupCodes { lengths, codes })
 }
@@ -580,7 +590,10 @@ fn write_token_stream<W: Write>(
                 let distance = backward_refs::plane_code(width, distance);
                 let (symbol, extra_bits) = length_to_symbol(distance);
                 w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
-                w.write_bits(((distance - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
+                w.write_bits(
+                    ((distance - 1) & ((1 << extra_bits) - 1)) as u64,
+                    extra_bits,
+                )?;
                 position += length;
             }
             backward_refs::Token::Cache(index) => {
@@ -777,7 +790,10 @@ fn analyze_entropy(
         .map(|(mode, _)| mode)
         .unwrap();
     let (red_histogram, blue_histogram) = match mode {
-        EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE), EntropyMode::Spatial => (RED_PREDICTED, BLUE_PREDICTED), EntropyMode::SubtractGreen => (RED_SUB_GREEN, BLUE_SUB_GREEN), EntropyMode::SpatialSubtractGreen => (RED_PREDICTED_SUB_GREEN, BLUE_PREDICTED_SUB_GREEN),
+        EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE),
+        EntropyMode::Spatial => (RED_PREDICTED, BLUE_PREDICTED),
+        EntropyMode::SubtractGreen => (RED_SUB_GREEN, BLUE_SUB_GREEN),
+        EntropyMode::SpatialSubtractGreen => (RED_PREDICTED_SUB_GREEN, BLUE_PREDICTED_SUB_GREEN),
     };
     let red_and_blue_zero = (1..256).all(|index| {
         histograms[red_histogram][index] == 0 && histograms[blue_histogram][index] == 0
@@ -1255,12 +1271,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .collect::<Vec<_>>();
     minimize_palette_deltas(&mut nonzero_first_palette);
-    let entropy_pixels = [
-        0xff10_2010,
-        0xff20_4020,
-        0xff30_6030,
-        0xff40_8040,
-    ];
+    let entropy_pixels = [0xff10_2010, 0xff20_4020, 0xff30_6030, 0xff40_8040];
     let _ = analyze_entropy(&entropy_pixels, 2, 2, None, 1);
     let mut palette_bytes = Vec::new();
     let mut palette_writer = BitWriter {

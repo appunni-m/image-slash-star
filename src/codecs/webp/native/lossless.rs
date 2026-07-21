@@ -98,7 +98,8 @@ impl<R: BufRead> LosslessDecoder<R> {
 
             let _alpha_used = self.bit_reader.read_bits::<u8>(1)?;
             let version_num = self.bit_reader.read_bits::<u8>(3)?;
-            debug_assert_eq!(version_num, 0); }
+            debug_assert_eq!(version_num, 0);
+        }
 
         let transformed_width = self.read_transforms()?;
         let transformed_size = usize::from(transformed_width) * usize::from(self.height) * 4;
@@ -200,8 +201,10 @@ impl<R: BufRead> LosslessDecoder<R> {
 
                     let size_bits = self.bit_reader.read_bits::<u8>(3)? + 2;
 
-                    let block_xsize = ((u32::from(xsize) + (1u32 << size_bits) - 1) >> size_bits) as u16;
-                    let block_ysize = ((u32::from(self.height) + (1u32 << size_bits) - 1) >> size_bits) as u16;
+                    let block_xsize =
+                        ((u32::from(xsize) + (1u32 << size_bits) - 1) >> size_bits) as u16;
+                    let block_ysize =
+                        ((u32::from(self.height) + (1u32 << size_bits) - 1) >> size_bits) as u16;
 
                     let mut predictor_data =
                         vec![0; usize::from(block_xsize) * usize::from(block_ysize) * 4];
@@ -217,8 +220,10 @@ impl<R: BufRead> LosslessDecoder<R> {
 
                     let size_bits = self.bit_reader.read_bits::<u8>(3)? + 2;
 
-                    let block_xsize = ((u32::from(xsize) + (1u32 << size_bits) - 1) >> size_bits) as u16;
-                    let block_ysize = ((u32::from(self.height) + (1u32 << size_bits) - 1) >> size_bits) as u16;
+                    let block_xsize =
+                        ((u32::from(xsize) + (1u32 << size_bits) - 1) >> size_bits) as u16;
+                    let block_ysize =
+                        ((u32::from(self.height) + (1u32 << size_bits) - 1) >> size_bits) as u16;
 
                     let mut transform_data =
                         vec![0; usize::from(block_xsize) * usize::from(block_ysize) * 4];
@@ -292,8 +297,10 @@ impl<R: BufRead> LosslessDecoder<R> {
         if read_meta && self.bit_reader.read_bits::<u8>(1)? == 1 {
             //meta huffman codes
             huffman_bits = self.bit_reader.read_bits::<u8>(3)? + 2;
-            huffman_xsize = ((u32::from(xsize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
-            huffman_ysize = ((u32::from(ysize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
+            huffman_xsize =
+                ((u32::from(xsize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
+            huffman_ysize =
+                ((u32::from(ysize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
 
             let mut data = vec![0; usize::from(huffman_xsize) * usize::from(huffman_ysize) * 4];
             self.decode_image_stream(huffman_xsize, huffman_ysize, false, &mut data)?;

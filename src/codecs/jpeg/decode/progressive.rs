@@ -152,7 +152,9 @@ fn ac_refine_block(
 
             // do-while: traverse, refine non-zeros, count zeros
             loop {
-                if k > se || k >= 64 { break; }
+                if k > se || k >= 64 {
+                    break;
+                }
                 if coeffs[k] != 0 {
                     let bit = br.read_bits(1)?;
                     if bit != 0 && (coeffs[k] & p1) == 0 {
@@ -168,7 +170,9 @@ fn ac_refine_block(
             }
 
             if let Some(val) = new_val {
-                if k <= se && k < 64 { coeffs[k] = val; }
+                if k <= se && k < 64 {
+                    coeffs[k] = val;
+                }
             }
             k += 1;
         }
@@ -266,8 +270,7 @@ fn smooth_dc_only_block(
 
     workspace[1] = smooth_pred(
         q00 * d(
-            -dc01 - dc02 + dc04 + dc05 - 3 * dc06 + 13 * dc07 - 13 * dc09 + 3 * dc10
-                - 3 * dc11
+            -dc01 - dc02 + dc04 + dc05 - 3 * dc06 + 13 * dc07 - 13 * dc09 + 3 * dc10 - 3 * dc11
                 + 38 * dc12
                 - 38 * dc14
                 + 3 * dc15
@@ -284,23 +287,21 @@ fn smooth_dc_only_block(
         -1,
     );
     workspace[8] = smooth_pred(
-        q00 * d(
-            -dc01 - 3 * dc02 - 3 * dc03 - 3 * dc04 - dc05 - dc06
-                + 13 * dc07
-                + 38 * dc08
-                + 13 * dc09
-                - dc10
-                + dc16
-                - 13 * dc17
-                - 38 * dc18
-                - 13 * dc19
-                + dc20
-                + dc21
-                + 3 * dc22
-                + 3 * dc23
-                + 3 * dc24
-                + dc25,
-        ),
+        q00 * d(-dc01 - 3 * dc02 - 3 * dc03 - 3 * dc04 - dc05 - dc06
+            + 13 * dc07
+            + 38 * dc08
+            + 13 * dc09
+            - dc10
+            + dc16
+            - 13 * dc17
+            - 38 * dc18
+            - 13 * dc19
+            + dc20
+            + dc21
+            + 3 * dc22
+            + 3 * dc23
+            + 3 * dc24
+            + dc25),
         q10,
         -1,
     );
@@ -316,20 +317,17 @@ fn smooth_dc_only_block(
         -1,
     );
     workspace[9] = smooth_pred(
-        q00 * d(
-            -dc01 + dc05 + 9 * dc07 - 9 * dc09 - 9 * dc17 + 9 * dc19 + dc21 - dc25,
-        ),
+        q00 * d(-dc01 + dc05 + 9 * dc07 - 9 * dc09 - 9 * dc17 + 9 * dc19 + dc21 - dc25),
         q11,
         -1,
     );
     workspace[2] = smooth_pred(
-        q00 * d(
-            2 * dc07 - 5 * dc08 + 2 * dc09 + dc11 + 7 * dc12 - 14 * dc13 + 7 * dc14
-                + dc15
-                + 2 * dc17
-                - 5 * dc18
-                + 2 * dc19,
-        ),
+        q00 * d(2 * dc07 - 5 * dc08 + 2 * dc09 + dc11 + 7 * dc12 - 14 * dc13
+            + 7 * dc14
+            + dc15
+            + 2 * dc17
+            - 5 * dc18
+            + 2 * dc19),
         q02,
         -1,
     );
@@ -503,7 +501,12 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                     if is_dc_first {
                         let dc_table = scan.dc_huff_tables[scan_comp.dc_tbl as usize].as_ref()?;
                         for &block_idx in &block_list {
-                            coeff_storage[comp_idx][block_idx][0] = dc_first_block(&mut br, dc_table, &mut state.dc_predictors[comp_idx], scan.al)?;
+                            coeff_storage[comp_idx][block_idx][0] = dc_first_block(
+                                &mut br,
+                                dc_table,
+                                &mut state.dc_predictors[comp_idx],
+                                scan.al,
+                            )?;
                         }
                     } else if is_dc_refine {
                         let p1 = 1i32 << scan.al;
@@ -517,9 +520,30 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                     } else if is_ac_first {
                         let ac_table = scan.ac_huff_tables[scan_comp.ac_tbl as usize].as_ref()?;
                         for &block_idx in &block_list {
-                            ac_first_block(&mut br, ac_table, scan.ss, scan.se, scan.al, &mut coeff_storage[comp_idx][block_idx], &mut state.eobrun)?;
+                            ac_first_block(
+                                &mut br,
+                                ac_table,
+                                scan.ss,
+                                scan.se,
+                                scan.al,
+                                &mut coeff_storage[comp_idx][block_idx],
+                                &mut state.eobrun,
+                            )?;
                         }
-                    } else if is_ac_refine { let ac_table = scan.ac_huff_tables[scan_comp.ac_tbl as usize].as_ref()?; for &block_idx in &block_list { ac_refine_block(&mut br, ac_table, scan.ss, scan.se, scan.al, &mut coeff_storage[comp_idx][block_idx], &mut state.eobrun)?; } }
+                    } else if is_ac_refine {
+                        let ac_table = scan.ac_huff_tables[scan_comp.ac_tbl as usize].as_ref()?;
+                        for &block_idx in &block_list {
+                            ac_refine_block(
+                                &mut br,
+                                ac_table,
+                                scan.ss,
+                                scan.se,
+                                scan.al,
+                                &mut coeff_storage[comp_idx][block_idx],
+                                &mut state.eobrun,
+                            )?;
+                        }
+                    }
                 }
 
                 if br.insufficient_data() {
@@ -530,10 +554,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
     }
 
     // ── Final IDCT + assembly ────────────────────────────────────────────
-    let smooth_dc_only = info
-        .scans
-        .iter()
-        .all(|scan| scan.ss == 0 && scan.se == 0);
+    let smooth_dc_only = info.scans.iter().all(|scan| scan.ss == 0 && scan.se == 0);
     let mut block_natural = [0i32; 64];
     let mut workspace = [0i32; 64];
     for comp_idx in 0..info.num_components as usize {
@@ -571,7 +592,9 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                 for col in 0..8 {
                     let px = block_natural[row * 8 + col].clamp(0, 255) as u8;
                     let bi = (block_y + row) * buf_w + (block_x + col);
-                    if bi < comp_buffers[comp_idx].len() { comp_buffers[comp_idx][bi] = px; }
+                    if bi < comp_buffers[comp_idx].len() {
+                        comp_buffers[comp_idx][bi] = px;
+                    }
                 }
             }
         }
@@ -692,10 +715,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(smooth_pred(1_000_000, 1, 2), 3);
 
     let entropy = [0x00; 16];
-    let zero = super::huffman::HuffTable::build(
-        &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0],
-    );
+    let zero =
+        super::huffman::HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
     let overflow = super::huffman::HuffTable::build(
         &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0xF1],

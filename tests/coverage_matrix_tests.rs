@@ -1511,7 +1511,11 @@ fn test_encode_matrix() {
                 .and_then(serde_json::Value::as_bool)
                 == Some(true)
             {
-                eprintln!("  OK   [{}] {}B, encoded-byte parity", row.id, encoded.len());
+                eprintln!(
+                    "  OK   [{}] {}B, encoded-byte parity",
+                    row.id,
+                    encoded.len()
+                );
                 passed += 1;
                 continue;
             }

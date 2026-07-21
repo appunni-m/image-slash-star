@@ -127,14 +127,73 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = target.copy_from(&source, 3, 0);
     let _ = target.copy_from(&source, 0, 3);
 
-    let rect = Rect { x: 0, y: 0, width: 1, height: 1 };
+    let rect = Rect {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+    };
     let _ = target.copy_within(rect, 1, 1);
-    let _ = target.copy_within(Rect { x: 4, y: 0, width: 1, height: 1 }, 0, 0);
-    let _ = target.copy_within(Rect { x: 0, y: 0, width: 1, height: 1 }, 4, 0);
-    let _ = target.copy_within(Rect { x: 0, y: 4, width: 1, height: 1 }, 0, 0);
-    let _ = target.copy_within(Rect { x: 0, y: 0, width: 1, height: 1 }, 0, 4);
-    let _ = target.copy_within(Rect { x: 0, y: 0, width: 5, height: 1 }, 0, 0);
-    let _ = target.copy_within(Rect { x: 0, y: 0, width: 1, height: 5 }, 0, 0);
+    let _ = target.copy_within(
+        Rect {
+            x: 4,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        0,
+        0,
+    );
+    let _ = target.copy_within(
+        Rect {
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        4,
+        0,
+    );
+    let _ = target.copy_within(
+        Rect {
+            x: 0,
+            y: 4,
+            width: 1,
+            height: 1,
+        },
+        0,
+        0,
+    );
+    let _ = target.copy_within(
+        Rect {
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        0,
+        4,
+    );
+    let _ = target.copy_within(
+        Rect {
+            x: 0,
+            y: 0,
+            width: 5,
+            height: 1,
+        },
+        0,
+        0,
+    );
+    let _ = target.copy_within(
+        Rect {
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 5,
+        },
+        0,
+        0,
+    );
 }
 
 // ---------------------------------------------------------------------------

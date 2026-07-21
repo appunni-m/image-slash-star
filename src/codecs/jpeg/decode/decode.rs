@@ -56,7 +56,10 @@ pub(super) fn decode_block(
             if k >= 64 {
                 break;
             }
-            let bits = match br.read_bits(size as u32) { Some(b) => b, None => return false };
+            let bits = match br.read_bits(size as u32) {
+                Some(b) => b,
+                None => return false,
+            };
             block_zigzag[k] = extend(bits, size);
             k += 1;
         } else {
@@ -158,7 +161,9 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                             for col in 0..8 {
                                 let px = block_natural[row * 8 + col].clamp(0, 255) as u8;
                                 let bi = (block_y + row) * buf_w + (block_x + col);
-                                if bi < comp_buffers[scan_comp.comp_index].len() { comp_buffers[scan_comp.comp_index][bi] = px; }
+                                if bi < comp_buffers[scan_comp.comp_index].len() {
+                                    comp_buffers[scan_comp.comp_index][bi] = px;
+                                }
                             }
                         }
                     }
@@ -446,8 +451,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut block,
     ));
 
-    let ac_literal =
-        HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0x01]);
+    let ac_literal = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0x01]);
     let mut br = BitReader::new(&[0; 2], 0, 2);
     assert!(decode_block(
         &mut br,
