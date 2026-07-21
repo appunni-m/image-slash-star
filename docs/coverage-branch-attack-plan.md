@@ -5,19 +5,78 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the pushed WebP predictor private-branch batch.
+after the pushed DEFLATE malformed-zlib private-probe batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `c8f1e2da-fbcd-4a83-ab56-1cd337d430ae`
-- Current measured commit metadata: `85790aa26e1c456f5f7924d2a426ce96dbd72b22`
-- Lines: 21858 / 21859
-- Branches: 3332 / 3476
-- Functions: 1525 / 1525
-- Remaining target: 1 line and 144 branches.
+- Current snapshot: `ca87cbef-cf1b-47b8-87c8-1e35510c00fe`
+- Current measured commit metadata: `f9fd5a9a088bce7fa2ebb44c996d204912ae26fc`
+- Lines: 21960 / 21961
+- Branches: 3337 / 3478
+- Functions: 1527 / 1527
+- Remaining target: 1 line and 141 branches.
+
+## Planned WebP backward-reference private-branch batch
+
+Coverage MCP snapshot `20ba7c26-5b40-40cc-b4d2-de7742cc8e34` reports
+`src/codecs/webp/native/encoder/backward_refs.rs` at 755 / 755 lines,
+205 / 210 branches, and 43 / 43 functions. The remaining branch lines are:
+
+- line 115: the hash-chain candidate-search loop condition. Add deterministic
+  candidate pixel sequences through the existing private hook to exercise the
+  remaining loop predicate side.
+- line 141: the MAX_LENGTH/best-distance propagation guard in the hash-chain
+  backwards fill loop. Use a long repeated-row style input so the max-length
+  propagation condition is evaluated on the complementary side. Retry evidence
+  showed the alternating and long constant width-2 inputs did not close this
+  line, so do not keep the no-op width-2 probe.
+- line 583: `CostManager::insert_min_interval()` finding an existing interval
+  that already covers a candidate window. Add a candidate whose cost is not
+  better than an existing interval so the `is_none_or` false side is covered.
+  First retry evidence showed this still left a branch on the `.find()`
+  predicate. Add a candidate spanning two separated existing intervals so the
+  closure sees covered and uncovered sub-windows.
+- line 631: interval merge after insertion. Add adjacent intervals with the same
+  cost and source position so the merge predicate succeeds. First retry
+  evidence showed this still left a branch on the chained merge predicate. Add
+  adjacent intervals with different costs and with the same cost but different
+  source positions to drive the complementary sides. Second retry evidence
+  closed line 583 but still left line 631, so add a non-adjacent interval to
+  drive the `last.end == interval.start` false side.
+- line 732: `trace_backwards()` split handling for repeated offsets. Add a
+  manually constructed chain with repeated copy offsets and a later changed
+  offset to drive the `next_offset != distance` side.
+
+No Pillow manifest fixture is appropriate for this batch. These are internal
+lossless WebP encoder data-structure predicates after ARGB pixels have already
+been converted into hash-chain, token, and cost-model state. The narrowest
+oracle is a deterministic private probe plus a Coverage MCP line+branch run.
+
+Completed evidence:
+
+- First Coverage MCP run: `63bef4c7-806c-4e23-8000-e9697c3e575a`, snapshot
+  `126f6b8a-d2f7-4630-964e-8a1aebebc897`; passed and improved
+  `backward_refs.rs` from 205 / 210 to 208 / 212 branches, closing the
+  `trace_backwards()` split gap but leaving line 583, 631, 115, and 141.
+- Second Coverage MCP run: `0f8217a4-45b9-4e99-9195-6eba4161357c`, snapshot
+  `7a5ea347-3831-4e25-a48f-72042f80baa7`; passed and improved
+  `backward_refs.rs` to 209 / 212 branches, closing line 583.
+- Third Coverage MCP run: `a723086b-19a1-4e4a-b40c-e5aace859e70`, snapshot
+  `8dab4023-26c6-4815-9d02-9469b881896e`; passed and improved
+  `backward_refs.rs` to 210 / 212 branches, closing line 631.
+- Width-2 max-length retry: `95a3d48f-6d1a-4f2e-90eb-009e24ba1b11`, snapshot
+  `d9f624c8-e8b2-4550-a381-172b4e10a6b4`; passed but did not improve overall
+  or target-file coverage, so the no-op probe was removed.
+- Final Coverage MCP run: `cdfd0f6e-7162-44ab-b81b-89e621424907`
+- Final Coverage MCP snapshot: `ca87cbef-cf1b-47b8-87c8-1e35510c00fe`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 21960 / 21961 lines, 3337 / 3478 branches, 1527 / 1527 functions.
+- Target file: `src/codecs/webp/native/encoder/backward_refs.rs` is
+  857 / 857 lines, 210 / 212 branches, and 45 / 45 functions. Remaining target
+  gaps in this file are line 115 and line 141.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 

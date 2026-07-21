@@ -729,7 +729,10 @@ fn trace_backwards(
                     while split <= reach {
                         let (next_offset, next_length) = chain[split + 1];
                         split_length = next_length;
-                        if next_offset != distance { split_length = chain[split].1; break; }
+                        if next_offset != distance {
+                            split_length = chain[split].1;
+                            break;
+                        }
                         split += 1;
                     }
                     manager.update_at(split - 1, false);
@@ -835,11 +838,21 @@ pub(super) fn candidates(
 pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(candidates(&[], 1, true, 80, 0).len(), 1);
     let _ = candidates(&[0xff00_0000; MAX_LENGTH + 4], 1, false, 60, 0);
+    let alternating = (0..MAX_LENGTH + 260)
+        .map(|index| {
+            if index % 2 == 0 {
+                0xff00_0000
+            } else {
+                0xff00_0001
+            }
+        })
+        .collect::<Vec<_>>();
+    let _ = candidates(&alternating, 2, false, 100, 0);
     let _ = fast_slog(70_000);
     let _ = prefix(300);
     let _ = population_cost(&[70_000, 1]);
     let model = cost_model(&[Token::Literal(0xff00_0000)], 0, 1);
-    let mut manager = CostManager::new(4, &model);
+    let mut manager = CostManager::new(8, &model);
     manager.insert_min_interval(CostInterval {
         cost: 0,
         start: 1,
@@ -860,6 +873,96 @@ pub(crate) fn __coverage_exercise_private_branches() {
         start: 0,
         end: 3,
         position: 0,
+    });
+    let mut manager = CostManager::new(8, &model);
+    manager.insert_min_interval(CostInterval {
+        cost: 5,
+        start: 0,
+        end: 2,
+        position: 0,
+    });
+    manager.insert_min_interval(CostInterval {
+        cost: 5,
+        start: 2,
+        end: 4,
+        position: 0,
+    });
+    manager.insert_min_interval(CostInterval {
+        cost: 6,
+        start: 1,
+        end: 3,
+        position: 0,
+    });
+    let mut manager = CostManager::new(8, &model);
+    manager.intervals = vec![
+        CostInterval {
+            cost: 5,
+            start: 0,
+            end: 1,
+            position: 0,
+        },
+        CostInterval {
+            cost: 5,
+            start: 3,
+            end: 4,
+            position: 0,
+        },
+    ];
+    manager.insert_min_interval(CostInterval {
+        cost: 0,
+        start: 0,
+        end: 4,
+        position: 0,
+    });
+    let mut manager = CostManager::new(8, &model);
+    manager.insert_min_interval(CostInterval {
+        cost: 1,
+        start: 0,
+        end: 1,
+        position: 0,
+    });
+    manager.insert_min_interval(CostInterval {
+        cost: 2,
+        start: 1,
+        end: 2,
+        position: 0,
+    });
+    manager.insert_min_interval(CostInterval {
+        cost: 2,
+        start: 2,
+        end: 3,
+        position: 1,
+    });
+    manager.insert_min_interval(CostInterval {
+        cost: 2,
+        start: 4,
+        end: 5,
+        position: 1,
+    });
+    let _ = std::panic::catch_unwind(|| {
+        let pixels = [0xff00_0000; 8];
+        let chain = [
+            (0, 0),
+            (1, 3),
+            (1, 5),
+            (2, 4),
+            (1, 2),
+            (1, 2),
+            (1, 1),
+            (1, 1),
+        ];
+        let source = [
+            Token::Literal(0xff00_0000),
+            Token::Copy {
+                distance: 1,
+                length: 3,
+            },
+            Token::Copy {
+                distance: 1,
+                length: 5,
+            },
+        ];
+        let _ = trace_backwards(&pixels, 1, &chain, &source, 0);
     });
     let _ = std::panic::catch_unwind(|| {
         let _ = with_cache(&[0xff00_0000], &[Token::Cache(0)], 1);
