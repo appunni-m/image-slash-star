@@ -276,7 +276,7 @@ Validation after implementation:
 6. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`.
 7. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
 
-Result:
+Historical result from the prior VP8 arithmetic-decoder attempt:
 
 - Coverage MCP run: `c8ece1cd-209f-4cea-83a8-9f9e9fb409d0`.
 - Coverage MCP snapshot: `53d44b93-8149-41db-9a05-3981da60e12b`.
@@ -713,21 +713,6 @@ Validation:
 
 Measurement and decision:
 
-- Coverage MCP run: `508e4b27-cfbf-4aca-81bc-f564884fbc60`.
-- Snapshot: `baa6cc79-be96-49b9-82c4-b80ef87b6fa3`.
-- Overall result: `24599 / 24603` lines, `3437 / 3444` branches,
-  `1582 / 1582` functions, and `40123 / 40847` regions.
-- Target file result: `src/types/dynamic.rs` at `839 / 839` lines,
-  `4 / 4` branches, `114 / 114` functions, and `1455 / 1455` regions.
-- Delta from Attempt 44 snapshot: `dynamic.rs` missing regions improved from
-  `3` to `0`, and the file's one missing line is now covered. Overall missing
-  regions improved from `727` to `724`.
-- Decision: keep the hook extension. The added calls exercise real private
-  conversion arms that public convenience methods intentionally bypass for
-  already-matching variants.
-
-Measurement and decision:
-
 - Coverage MCP run: `c5c59ca2-27d0-4a68-9143-cc3026f267fe`.
 - Snapshot: `7ffadcf2-afca-4881-a656-a898033556fd`.
 - Overall result: `24586 / 24591` lines, `3437 / 3444` branches,
@@ -745,6 +730,126 @@ Measurement and decision:
   assembly/writing, not another input.
 - Decision: keep the hook. It exercises a real fixed-buffer writer path and
   reduces aggregate region debt without changing production behavior.
+
+## Attempt 47 plan: WebP extended generic monomorphization consolidation
+
+Placement note: this follow-up should be read after Attempt 46 below; it is
+numbered by execution order, but the continuation section was inserted above
+the earlier plan in this long-running document.
+
+Follow-up finding during Attempt 46:
+
+- The valid VP8X header and valid lossless-alpha inputs were logically correct,
+  but Coverage MCP still reported `7` missing regions in
+  `src/codecs/webp/native/extended.rs`.
+- Raw LLVM records show the hook creates separate generic instantiations for
+  `Cursor<[u8; 1]>`, `Cursor<[u8; 2]>`, `Cursor<[u8; 4]>`,
+  `Cursor<[u8; 7]>`, `Cursor<[u8; 10]>`, and `Cursor<Vec<u8>>`.
+- Each instantiation carries its own early-return and branch regions, so adding
+  one valid array input only added covered regions without reducing aggregate
+  missing regions.
+
+Selected action:
+
+- Convert the existing `read_extended_header()`, `read_3_bytes()`, and
+  `read_alpha_chunk()` hook inputs to `Cursor<Vec<u8>>` so short, valid,
+  overflow, invalid, raw-alpha, and lossless-alpha states share one generic
+  instantiation.
+- Add explicit invalid alpha preprocessing and invalid alpha compression inputs
+  in the same `Cursor<Vec<u8>>` instantiation.
+- If the first consolidated run still leaves `read_alpha_chunk()` regions, add
+  the reverse-mapped states in the same instantiation before deciding:
+  empty alpha chunk read and valid preprocessing value `1`.
+- Keep the production parser unchanged.
+- Revert the extended hook changes if the file's missing region count does not
+  improve.
+
+Validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Measurement and decision:
+
+- First consolidated Coverage MCP run:
+  `c01136a5-4fb8-437f-a119-95d08d7644a8`, snapshot
+  `4b59d561-7395-4a99-afcf-fb2a55261f40`.
+- First consolidated result: `24607 / 24611` lines, `3437 / 3444`
+  branches, `1582 / 1582` functions, and `40147 / 40866` regions.
+  `src/codecs/webp/native/extended.rs` moved to `379 / 381` regions,
+  leaving only the empty alpha read and valid preprocessing value `1`.
+- Final Coverage MCP run:
+  `40a63d5a-d816-45b3-bce1-462fc7b0db55`, snapshot
+  `446d2e31-7a0c-43f5-82c4-b5243690f849`.
+- Final result: `24609 / 24613` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40153 / 40870` regions.
+- Target file final result: `src/codecs/webp/native/extended.rs` at
+  `252 / 252` lines, `36 / 36` aggregate branches, `6 / 6` functions, and
+  `385 / 385` regions. Coverage MCP still reports normalized partial branch
+  lines at `297` and `368`, but aggregate branch and region coverage for the
+  file are complete.
+- Delta from Attempt 45 baseline: `extended.rs` missing regions improved from
+  `7` to `0`; overall missing regions improved from `724` to `717`.
+- Decision: keep the consolidated hook. The winning change is not just the new
+  logical inputs; it is using one `Cursor<Vec<u8>>` monomorphization for the
+  parser state sweep.
+
+## Attempt 46 plan: WebP extended valid header and lossless alpha hook inputs
+
+Current Coverage MCP baseline before editing:
+
+- Source-equivalent snapshot: `baa6cc79-be96-49b9-82c4-b80ef87b6fa3`.
+- Source-equivalent pushed commit: `b940806`.
+- Overall baseline after Attempt 45: `24599 / 24603` lines,
+  `3437 / 3444` branches, `1582 / 1582` functions, and
+  `40123 / 40847` regions.
+- Target file: `src/codecs/webp/native/extended.rs` at `242 / 242` lines,
+  `36 / 36` branches, `6 / 6` functions, and `355 / 362` regions.
+
+Reverse map:
+
+Coverage MCP reports partial branches at:
+
+| Line | Function | Current coverage gap | Input needed |
+| --- | --- | --- | --- |
+| `287` | `read_extended_header()` | Hook covers short headers and an overflowing 24-bit max canvas, but not a valid full VP8X header for the non-overflow path. | Add `[0; 10]`, which means no flags, zero reserved bytes, width minus one `0`, height minus one `0`. |
+| `358` | `read_alpha_chunk()` | Hook covers raw alpha success and lossless-alpha entry with invalid payload, but not a successful lossless-alpha decode. | Use `super::encoder::encode_alpha(&[7], 1, 1)` to generate a valid minimal lossless alpha payload and assert decoded alpha bytes. |
+
+Selected action:
+
+- Extend only the existing `webp::native::extended` coverage hook.
+- Do not change production decode logic.
+- Keep as hook inputs rather than manifest fixtures because these are private
+  chunk parser states; public WebP fixture coverage is already driven through
+  the manifest.
+
+Validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Measurement and decision:
+
+- Coverage MCP run: `2914162d-458b-4ca7-9c76-aae562d40016`.
+- Snapshot: `2d445729-8f27-4220-9937-313326dd0a25`.
+- Overall result: `24605 / 24609` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40138 / 40862` regions.
+- Target file result: `src/codecs/webp/native/extended.rs` at
+  `248 / 248` lines, `36 / 36` branches, `6 / 6` functions, and
+  `370 / 377` regions.
+- Delta: no missing-region reduction; the file remained at 7 missing regions.
+- Root cause: the new valid inputs used separate `Cursor<[u8; N]>`
+  monomorphizations. They were logically correct, but they added covered
+  instantiations instead of covering the missing regions in the existing parser
+  instantiation set.
+- Decision: keep the logical finding, but do not keep this standalone form.
+  Supersede it with Attempt 47's `Cursor<Vec<u8>>` consolidation.
 
 ## Attempt 45 plan: DynamicImage private same-variant conversion arms
 
@@ -786,6 +891,21 @@ Validation:
 4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
 5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
 7. Record measured movement here, then commit and push.
+
+Measurement and decision:
+
+- Coverage MCP run: `508e4b27-cfbf-4aca-81bc-f564884fbc60`.
+- Snapshot: `baa6cc79-be96-49b9-82c4-b80ef87b6fa3`.
+- Overall result: `24599 / 24603` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40123 / 40847` regions.
+- Target file result: `src/types/dynamic.rs` at `839 / 839` lines,
+  `4 / 4` branches, `114 / 114` functions, and `1455 / 1455` regions.
+- Delta from Attempt 44 snapshot: `dynamic.rs` missing regions improved from
+  `3` to `0`, and the file's one missing line is now covered. Overall missing
+  regions improved from `727` to `724`.
+- Decision: keep the hook extension. The added calls exercise real private
+  conversion arms that public convenience methods intentionally bypass for
+  already-matching variants.
 
 Result:
 

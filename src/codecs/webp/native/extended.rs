@@ -192,17 +192,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(&canvas[..4], &frame);
 
     let _ = read_extended_header(&mut Cursor::new(Vec::<u8>::new()));
-    let _ = read_extended_header(&mut Cursor::new([0u8; 1]));
-    let _ = read_extended_header(&mut Cursor::new([0u8; 4]));
-    let _ = read_extended_header(&mut Cursor::new([0u8; 7]));
-    let _ = read_extended_header(&mut Cursor::new([
+    let _ = read_extended_header(&mut Cursor::new(vec![0u8; 1]));
+    let _ = read_extended_header(&mut Cursor::new(vec![0u8; 4]));
+    let _ = read_extended_header(&mut Cursor::new(vec![0u8; 7]));
+    let _ = read_extended_header(&mut Cursor::new(vec![
         0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     ]));
-    let _ = read_3_bytes(&mut Cursor::new([1u8, 2]));
+    let info = read_extended_header(&mut Cursor::new(vec![0u8; 10])).unwrap();
+    assert_eq!(info.canvas_width, 1);
+    assert_eq!(info.canvas_height, 1);
+    let _ = read_3_bytes(&mut Cursor::new(vec![1u8, 2]));
 
-    let _ = read_alpha_chunk(&mut Cursor::new([0b0000_0001u8]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new([0u8]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new([0u8, 7]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(Vec::<u8>::new()), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0000_0001u8]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0001_0000u8, 7]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0010_0000u8]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0000_0010u8]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8, 7]), 1, 1);
+    let alpha = super::encoder::encode_alpha(&[7], 1, 1);
+    let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 1, 1).unwrap();
+    assert_eq!(chunk.data, vec![7]);
 }
 
 pub(crate) fn get_alpha_predictor(
