@@ -12,8 +12,8 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `48599839-c1aa-4c44-b18a-243dcb0e8aa3`
-- Current measured commit metadata: `a8287aac05d5e76ab7657b126159a04024336d68`
+- Current snapshot: `e515e082-a166-4458-8e1f-3667e834342a`
+- Current measured commit metadata: `97f275ea807a5432d2f1ed8bfdb096320a6093f8`
 - Lines: 22066 / 22067
 - Branches: 3336 / 3464
 - Functions: 1528 / 1528
@@ -311,6 +311,13 @@ Completed evidence:
   208 / 218 branches, and 104 / 104 functions. The constant global-table
   branch is closed. Remaining GIF encoder gaps need fixture-driven animation,
   transparent masking, median-cut, and RGBA palette-optimization work.
+- Pushed-head verification run:
+  `7139eab7-e226-4122-b41c-dfcb656b20ca`, snapshot
+  `e515e082-a166-4458-8e1f-3667e834342a`, commit
+  `97f275ea807a5432d2f1ed8bfdb096320a6093f8`; passed with 5 passed, 0 failed.
+  Pushed-head overall coverage is 22066 / 22067 lines, 3336 / 3464 branches,
+  and 1528 / 1528 functions. GIF encode remains 1147 / 1147 lines,
+  208 / 218 branches, and 104 / 104 functions.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 
