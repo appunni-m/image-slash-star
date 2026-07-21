@@ -1113,6 +1113,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _: ImageBuffer<Rgba<u8>, Vec<u8>> = img.to();
     let _: ImageBuffer<Luma<u8>, Vec<u8>> = img.to();
     let _ = img.to_rgba32f();
+    let luma8 = DynamicImage::new_luma8(1, 1);
+    let _: ImageBuffer<Luma<u8>, Vec<u8>> = luma8.to();
+    let _ = luma8.to_generic::<Luma<u8>, Vec<u8>>();
+    let _ = DynamicImage::new_luma_a8(1, 1).to_generic::<LumaA<u8>, Vec<u8>>();
+    let _ = DynamicImage::new_rgb8(1, 1).to_generic::<Rgb<u8>, Vec<u8>>();
+    let _ = DynamicImage::new_rgba8(1, 1).to_generic::<Rgba<u8>, Vec<u8>>();
+    let _ = DynamicImage::new_luma16(1, 1).to_generic::<Luma<u16>, Vec<u16>>();
+    let _ = DynamicImage::new_luma_a16(1, 1).to_generic::<LumaA<u16>, Vec<u16>>();
+    let _ = DynamicImage::new_rgb16(1, 1).to_generic::<Rgb<u16>, Vec<u16>>();
+    let _ = DynamicImage::new_rgba16(1, 1).to_generic::<Rgba<u16>, Vec<u16>>();
+    let _ = DynamicImage::new_rgb32f(1, 1).to_generic::<Rgb<f32>, Vec<f32>>();
+    let _ = DynamicImage::new_rgba32f(1, 1).to_generic::<Rgba<f32>, Vec<f32>>();
     let images = [
         DynamicImage::new_luma8(1, 1),
         DynamicImage::new_luma_a8(1, 1),

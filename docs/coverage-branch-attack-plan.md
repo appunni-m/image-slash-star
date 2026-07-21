@@ -713,6 +713,21 @@ Validation:
 
 Measurement and decision:
 
+- Coverage MCP run: `508e4b27-cfbf-4aca-81bc-f564884fbc60`.
+- Snapshot: `baa6cc79-be96-49b9-82c4-b80ef87b6fa3`.
+- Overall result: `24599 / 24603` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40123 / 40847` regions.
+- Target file result: `src/types/dynamic.rs` at `839 / 839` lines,
+  `4 / 4` branches, `114 / 114` functions, and `1455 / 1455` regions.
+- Delta from Attempt 44 snapshot: `dynamic.rs` missing regions improved from
+  `3` to `0`, and the file's one missing line is now covered. Overall missing
+  regions improved from `727` to `724`.
+- Decision: keep the hook extension. The added calls exercise real private
+  conversion arms that public convenience methods intentionally bypass for
+  already-matching variants.
+
+Measurement and decision:
+
 - Coverage MCP run: `c5c59ca2-27d0-4a68-9143-cc3026f267fe`.
 - Snapshot: `7ffadcf2-afca-4881-a656-a898033556fd`.
 - Overall result: `24586 / 24591` lines, `3437 / 3444` branches,
@@ -730,6 +745,46 @@ Measurement and decision:
   assembly/writing, not another input.
 - Decision: keep the hook. It exercises a real fixed-buffer writer path and
   reduces aggregate region debt without changing production behavior.
+
+## Attempt 45 plan: DynamicImage private same-variant conversion arms
+
+Current Coverage MCP baseline before editing:
+
+- Source-equivalent snapshot: `7ffadcf2-afca-4881-a656-a898033556fd`.
+- Source-equivalent pushed commit: `c5cced2`.
+- Overall baseline after Attempt 44: `24586 / 24591` lines,
+  `3437 / 3444` branches, `1582 / 1582` functions, and
+  `40106 / 40833` regions.
+- Target file: `src/types/dynamic.rs` at `826 / 827` lines,
+  `4 / 4` branches, `114 / 114` functions, and `1438 / 1441` regions.
+
+Reverse map:
+
+Raw LLVM function records show zero-count regions in `DynamicImage::to_generic`
+at lines `312..321`, plus one `DynamicImage::to::<Luma<u8>>()` macro
+instantiation at line `204`. The public `to_rgb8()`, `to_luma8()`, etc. helpers
+clone the already-matching variant and call `to_generic()` only for
+non-matching variants. That leaves the private same-variant conversion arms
+unexecuted even though cross-variant conversions are covered.
+
+Selected action:
+
+- Extend the existing `types::dynamic` coverage hook with direct private
+  `to_generic::<same pixel>()` calls for every `DynamicImage` storage variant.
+- Add direct public `to::<Luma<u8>>()` calls for the storage variants if the
+  raw macro instantiation still needs coverage.
+- Do not add manifest fixtures; this is API conversion-generic coverage, not
+  codec byte parity.
+- Revert if Coverage MCP does not reduce `src/types/dynamic.rs` missing
+  regions.
+
+Validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
 7. Record measured movement here, then commit and push.
 
 Result:
