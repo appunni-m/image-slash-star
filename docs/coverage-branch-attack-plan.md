@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `90323bc9-7966-4a31-b97b-a48974b412c7`
-- Current measured commit metadata: `4d1edfdbdfc83aee4d432720459363f6a8171756`
-- Current source state: Attempt 41 WebP segment-no-map fixture measured before
-  commit.
+- Current snapshot: `4984c065-fb13-4c8e-a71c-1eaa37fe5075`
+- Current measured commit metadata: `c59f81629e34886fe75f47150d8aab35bed58238`
+- Current source state: clean pushed `main` after Attempt 41.
 - Lines: 24580 / 24585
 - Branches: 3437 / 3444
 - Functions: 1582 / 1582
