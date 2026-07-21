@@ -97,7 +97,7 @@ impl HuffTable {
                 let fill_count = 1usize << (HUFF_LOOKAHEAD - l);
                 for ctr in 0..fill_count {
                     let idx = lookbits + ctr;
-                    if idx < 256 { lookup[idx] = entry; }
+                    lookup[idx] = entry;
                 }
                 p += 1;
             }
@@ -178,7 +178,7 @@ impl HuffTable {
         // IJG: while (code > htbl->maxcode[l]) {
         //        code <<= 1; CHECK_BIT_BUFFER(1); code |= GET_BITS(1); l++; }
         while code > self.maxcode[l] {
-            if !br.ensure(1) { return None; }
+            br.ensure(1);
             code = (code << 1) | (br.get_bits(1) as i32);
             l += 1;
         }

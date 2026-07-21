@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the JPEG bit-reader debug-assert branch batch.
+after the JPEG Huffman invariant-branch cleanup batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `baa84e21-a8cc-4a6b-9f4e-2bd05f291b1f`
-- Current measured commit metadata: `9ff6f3ff85c39a4cff33226601b1c362a9873605`
-- Lines: 21811 / 21812
-- Branches: 3327 / 3484
+- Current snapshot: `0d998623-a8b5-4797-b6f7-afb1cb42be65`
+- Current measured commit metadata: `81a5bac306ff1d2760fdeca64aa50948bae7cd1d`
+- Lines: 21813 / 21814
+- Branches: 3325 / 3480
 - Functions: 1523 / 1523
-- Remaining target: 1 line and 157 branches.
+- Remaining target: 1 line and 155 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -338,6 +338,34 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 - Rationale: these are debug-only contract assertions, not production JPEG
   decode behavior. Catching the expected debug assertion panic keeps the branch
   evidence coverage-only and does not alter public byte/pixel parity.
+
+### JPEG Huffman invariant-branch cleanup batch
+
+- Starting evidence: pushed `main` commit
+  `81a5bac306ff1d2760fdeca64aa50948bae7cd1d`, Coverage MCP snapshot
+  `0edf31c2-a638-459d-a5df-e4f703ab17ec`.
+- Current `src/codecs/jpeg/decode/huffman.rs`: 118 / 118 lines and
+  20 / 22 branches.
+- Target lines: 100 and 181.
+- Implemented:
+  - Remove the defensive `idx < 256` guard in the lookahead fill loop. For
+    validated canonical JPEG Huffman codes with `l <= HUFF_LOOKAHEAD`,
+    `lookbits + ctr` is always in `0..256`; overfull code tables return
+    `HuffTable::empty()` before the lookahead fill.
+  - Replace the slow-loop `if !br.ensure(1) { return None; }` with an
+    unconditional `br.ensure(1);`. After the initial `ensure(min)` succeeds,
+    the bit reader either has a bit available or pads with IJG-compatible zero
+    bits for `ensure(1)`, so the false side is unreachable inside the loop.
+- Rationale: these are invariant/defensive branches, not observable Pillow
+  behavior. Simplifying them removes unreachable branch obligations while
+  preserving JPEG decode semantics.
+- Coverage MCP run: `84414075-ff10-443e-8ccc-79ae5907bc07`
+- Coverage MCP snapshot: `0d998623-a8b5-4797-b6f7-afb1cb42be65`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branch obligations changed from 3327 / 3484 to
+  3325 / 3480, reducing remaining missing branches from 157 to 155.
+- `src/codecs/jpeg/decode/huffman.rs`: now 120 / 120 lines and
+  18 / 18 branches.
 
 ## Execution order
 
