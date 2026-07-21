@@ -12,9 +12,9 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ebb6e723-d062-49f1-ba4f-b87fbb1651a6`
-- Current measured commit metadata: `b4c8e27f297dd9dff32c643014c52f0b5e5ee2d6`
-- Lines: 22013 / 22014
+- Current snapshot: `edcb6ce0-6419-4caa-9960-8eefe8054c07`
+- Current measured commit metadata: `06624697151612ff8f0028eb18b7fc4066af89dd`
+- Lines: 22015 / 22016
 - Branches: 3334 / 3466
 - Functions: 1527 / 1527
 - Remaining target: 1 line and 132 branches.
@@ -90,6 +90,13 @@ Completed evidence:
 - Target file: `src/codecs/compression/zlib_ng.rs` is 1536 / 1537 lines,
   368 / 368 branches, and 82 / 82 functions. No branch gaps remain in this
   file.
+- Pushed-head verification run:
+  `2739934c-34a8-43aa-b563-b7a2eb5022a9`, snapshot
+  `edcb6ce0-6419-4caa-9960-8eefe8054c07`, commit
+  `06624697151612ff8f0028eb18b7fc4066af89dd`; passed with 5 passed, 0 failed.
+  Pushed-head overall coverage is 22015 / 22016 lines, 3334 / 3466 branches,
+  and 1527 / 1527 functions. `zlib_ng.rs` remains 1538 / 1539 lines,
+  368 / 368 branches, and 82 / 82 functions.
 
 ## Planned WebP backward-reference private-branch batch
 
