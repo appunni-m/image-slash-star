@@ -50,7 +50,12 @@ fn dc_first_block(
 ) -> Option<i32> {
     let dc_cat = dc_table.decode(br)?;
     if dc_cat > 0 {
-        let bits = br.read_bits(dc_cat as u32)?;
+        if dc_cat > 15 {
+            return None;
+        }
+        let bits = br
+            .read_bits(dc_cat as u32)
+            .expect("progressive DC coefficient bits are zero-padded");
         *dc_pred += extend(bits, dc_cat);
     }
     Some(*dc_pred << al)
@@ -93,7 +98,9 @@ fn ac_first_block(
             // EOB: EOBRUN = (1<<run) + extra_bits
             *eobrun = 1u32 << run;
             if run > 0 {
-                *eobrun += br.read_bits(run as u32)?;
+                *eobrun += br
+                    .read_bits(run as u32)
+                    .expect("progressive AC EOBRUN bits are zero-padded");
             }
             *eobrun -= 1; // this block consumes one from the run
             break;
@@ -103,7 +110,9 @@ fn ac_first_block(
         if k > se || k >= 64 {
             break;
         }
-        let bits = br.read_bits(size as u32)?;
+        let bits = br
+            .read_bits(size as u32)
+            .expect("progressive AC coefficient bits are zero-padded");
         coeffs[k] = extend(bits, size) << al;
         ncoeffs += 1;
         k += 1;
@@ -137,13 +146,17 @@ fn ac_refine_block(
 
             // New coefficient value
             let new_val = if size != 0 {
-                let bit = br.read_bits(1)?;
+                let bit = br
+                    .read_bits(1)
+                    .expect("progressive AC refinement sign bits are zero-padded");
                 Some(if bit != 0 { p1 } else { m1 })
             } else {
                 if r != 15 {
                     *eobrun = 1u32 << r;
                     if r > 0 {
-                        *eobrun += br.read_bits(r as u32)?;
+                        *eobrun += br
+                            .read_bits(r as u32)
+                            .expect("progressive AC refinement EOBRUN bits are zero-padded");
                     }
                     break; // → Phase 2
                 }
@@ -156,7 +169,9 @@ fn ac_refine_block(
                     break;
                 }
                 if coeffs[k] != 0 {
-                    let bit = br.read_bits(1)?;
+                    let bit = br
+                        .read_bits(1)
+                        .expect("progressive AC refinement bits are zero-padded");
                     if bit != 0 {
                         if (coeffs[k] & p1) == 0 {
                             coeffs[k] += if coeffs[k] >= 0 { p1 } else { m1 };
@@ -184,7 +199,9 @@ fn ac_refine_block(
     if *eobrun > 0 {
         while k <= se && k < 64 {
             if coeffs[k] != 0 {
-                let bit = br.read_bits(1)?;
+                let bit = br
+                    .read_bits(1)
+                    .expect("progressive AC refinement bits are zero-padded");
                 if bit != 0 {
                     if (coeffs[k] & p1) == 0 {
                         coeffs[k] += if coeffs[k] >= 0 { p1 } else { m1 };
@@ -502,7 +519,10 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                     };
 
                     if is_dc_first {
-                        let dc_table = scan.dc_huff_tables[scan_comp.dc_tbl as usize].as_ref()?;
+                        let dc_table = scan
+                            .dc_huff_tables
+                            .get(scan_comp.dc_tbl as usize)
+                            .and_then(Option::as_ref)?;
                         for &block_idx in &block_list {
                             coeff_storage[comp_idx][block_idx][0] = dc_first_block(
                                 &mut br,
@@ -515,13 +535,18 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                         let p1 = 1i32 << scan.al;
                         for &block_idx in &block_list {
                             // DC refine: read 1 bit, OR into coefficient
-                            let bit = br.read_bits(1)?;
+                            let bit = br
+                                .read_bits(1)
+                                .expect("progressive DC refinement bits are zero-padded");
                             if bit != 0 {
                                 dc_refine_block(&mut coeff_storage[comp_idx][block_idx][0], p1);
                             }
                         }
                     } else if is_ac_first {
-                        let ac_table = scan.ac_huff_tables[scan_comp.ac_tbl as usize].as_ref()?;
+                        let ac_table = scan
+                            .ac_huff_tables
+                            .get(scan_comp.ac_tbl as usize)
+                            .and_then(Option::as_ref)?;
                         for &block_idx in &block_list {
                             ac_first_block(
                                 &mut br,
@@ -534,7 +559,10 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                             )?;
                         }
                     } else {
-                        let ac_table = scan.ac_huff_tables[scan_comp.ac_tbl as usize].as_ref()?;
+                        let ac_table = scan
+                            .ac_huff_tables
+                            .get(scan_comp.ac_tbl as usize)
+                            .and_then(Option::as_ref)?;
                         for &block_idx in &block_list {
                             ac_refine_block(
                                 &mut br,
@@ -565,7 +593,9 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
         let buf_w = comp_buf_width[comp_idx];
         let blocks_x = buf_w / 8;
         let blocks_y = comp_buf_height[comp_idx] / 8;
-        let quant_table = info.quant_tables[comp.quant_tbl as usize].as_ref()?;
+        let quant_table = info.quant_tables[comp.quant_tbl as usize]
+            .as_ref()
+            .expect("component quantization table validated before progressive reconstruction");
         let mut quant_natural = [0u16; 64];
         for i in 0..64 {
             quant_natural[JPEG_NATURAL_ORDER[i]] = quant_table[i];
@@ -720,6 +750,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let entropy = [0x00; 16];
     let zero =
         super::huffman::HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
+    let invalid_dc_category =
+        super::huffman::HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[64]);
     let overflow = super::huffman::HuffTable::build(
         &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0xF1],
@@ -736,6 +768,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let one_new_coeff = super::huffman::HuffTable::build(
         &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0x00, 0x01],
+    );
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    let mut dc_pred = 0;
+    assert_eq!(
+        dc_first_block(&mut br, &invalid_dc_category, &mut dc_pred, 0),
+        None
     );
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut coeffs = [0i32; 64];
@@ -1013,6 +1051,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = progressive_reconstruct(&failing_info(vec![failing_scan(0, 0, 0, 0)]), &[0]);
     let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 0, 0)]), &[0]);
     let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 1, 0)]), &[0]);
+    let missing_dc_scan = ScanInfo {
+        components: vec![scan_component],
+        entropy_start: 0,
+        entropy_end: 1,
+        ss: 0,
+        se: 0,
+        ah: 0,
+        al: 0,
+        restart_interval: 1,
+        dc_huff_tables: vec![None],
+        ac_huff_tables: vec![Some(zero.clone())],
+    };
+    let missing_ac_first_scan = ScanInfo {
+        components: vec![scan_component],
+        entropy_start: 0,
+        entropy_end: 1,
+        ss: 1,
+        se: 1,
+        ah: 0,
+        al: 0,
+        restart_interval: 1,
+        dc_huff_tables: vec![Some(zero.clone())],
+        ac_huff_tables: vec![None],
+    };
+    let missing_ac_refine_scan = ScanInfo {
+        ah: 1,
+        ..missing_ac_first_scan.clone()
+    };
+    let _ = progressive_reconstruct(&failing_info(vec![missing_dc_scan]), &[0]);
+    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_first_scan]), &[0]);
+    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_refine_scan]), &[0]);
 
     let cmyk_components = (0..4)
         .map(|id| FrameComponent {

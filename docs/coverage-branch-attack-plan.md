@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `60fb92f1-3a2c-48d9-8adb-da2bb169296c`
-- Current measured commit metadata: `e0a23c9acab4f6e4c39e2e2863a3d0de39ce0ecd`
-- Current source state: JPEG optimal Huffman invariant sweep,
+- Current snapshot: `15236981-08f2-4500-81c7-000e7c8c94f6`
+- Current measured commit metadata: `61341f01a5eee413bb967b165ae5c645d6fc2d54`
+- Current source state: Progressive JPEG entropy-read and table-state sweep,
   measured before committing the sweep.
-- Lines: 24370 / 24376
-- Branches: 3428 / 3442
+- Lines: 24437 / 24443
+- Branches: 3430 / 3444
 - Functions: 1579 / 1579
-- Regions: 39786 / 40541
-- Remaining target: 6 lines, 14 branches, and 755 regions.
+- Regions: 39851 / 40594
+- Remaining target: 6 lines, 14 branches, and 743 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -30,7 +30,8 @@ from Coverage MCP before each implementation sweep.
   carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
   - `src/codecs/tiff/decode.rs`: 120 / 120 branches.
-  - `src/codecs/jpeg/decode/progressive.rs`: 112 / 112 branches.
+  - `src/codecs/jpeg/decode/progressive.rs`: 114 / 114 branches and now
+    1353 / 1353 regions.
   - `src/codecs/bmp/decode.rs`: 112 / 112 branches and now
     759 / 759 regions.
   - `src/codecs/jpeg/decode/parser.rs`: 96 / 96 branches and now
@@ -520,6 +521,90 @@ Result:
     algorithm invariants already prove the state.
   - Kept public encode byte/pixel parity intact; the manifest-driven encode
     matrix passed before the MCP coverage run.
+
+## Attempt 24 plan: Progressive JPEG entropy-read and table-state regions
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `61341f0` after the JPEG Huffman sweep.
+- Coverage MCP snapshot: `60fb92f1-3a2c-48d9-8adb-da2bb169296c`.
+- Overall: `24370 / 24376` lines, `3428 / 3442` branches,
+  `1579 / 1579` functions, and `39786 / 40541` regions.
+- Target file: `src/codecs/jpeg/decode/progressive.rs` at `858 / 858`
+  lines, `112 / 112` branches, `22 / 22` functions, and
+  `1288 / 1300` regions.
+
+Source-mapped missing region entries:
+
+- line 53: failure side of DC-first additional-bit read after a decoded DC
+  category.
+- lines 96, 106, 140, 146, 159, 187, and 518: failure sides of progressive
+  AC/DC refinement bit reads whose widths are bounded to 1..=15 by JPEG
+  Huffman symbols or hardcoded refinement bits.
+- lines 505, 524, and 537: missing progressive DC/AC table states stored in
+  per-scan table snapshots.
+- line 568: missing quantization table state at final IDCT.
+
+Reverse-mapped finding:
+
+- The progressive scan routines use the same IJG-style bit reader as baseline
+  JPEG. For bounded AC/refinement bit reads (`1` bit, low-nibble coefficient
+  size, or high-nibble EOBRUN length), exhausted entropy is zero-padded to the
+  minimum bit-buffer width before the read. Those `read_bits(..)?` failure
+  exits are not reachable for valid JPEG symbol widths.
+- DC-first uses an untrusted Huffman symbol value as the category. Valid 8-bit
+  JPEG categories are bounded; a malformed DHT can synthesize an invalid large
+  category. That should reject the image before calling `extend()` or asking
+  the bit reader for a too-wide field.
+- Progressive Huffman tables are snapshotted at each SOS. Missing per-scan
+  table states should return `None` rather than relying on direct indexing or
+  a half-proven invariant.
+- The final quantization-table lookup is a private reconstruction invariant
+  after the public dispatcher's validation, matching the baseline decoder's
+  `expect()`-documented precondition.
+
+Selected action:
+
+1. Add an explicit invalid-DC-category guard to `dc_first_block()` and replace
+   the bounded DC/AC refinement `read_bits(..)?` calls with documented
+   zero-padding `expect()` calls.
+2. Replace direct progressive scan-table indexing with checked lookup so
+   malformed progressive table states fail cleanly.
+3. Replace the final quantization-table `?` with an invariant `expect()`.
+4. Extend the existing `#[cfg(coverage)]` progressive hook only for synthetic
+   states needed to hit the exact private regions: invalid DC category and
+   missing per-scan DC/AC table snapshots.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+6. Record measured movement here, then commit and push.
+
+Result:
+
+- Coverage MCP run: `e9d7fe53-09c0-46f7-bbb8-96c5b6261893`.
+- Coverage MCP snapshot: `15236981-08f2-4500-81c7-000e7c8c94f6`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24437 / 24443` lines, `3430 / 3444` branches,
+  `1579 / 1579` functions, and `39851 / 40594` regions.
+- Net missing regions: `755` down to `743`.
+- Target file movement: `src/codecs/jpeg/decode/progressive.rs` moved from
+  `858 / 858` lines, `112 / 112` branches, `22 / 22` functions,
+  and `1288 / 1300` regions to `925 / 925` lines, `114 / 114` branches,
+  `22 / 22` functions, and `1353 / 1353` regions.
+- Implemented:
+  - Invalid progressive DC categories now reject before too-wide bit reads or
+    `extend()` calls.
+  - Bounded progressive entropy bit reads now document the IJG zero-padding
+    invariant with `expect()` instead of carrying impossible `?` exits.
+  - Progressive per-scan Huffman table lookup now fails cleanly on missing
+    table snapshots.
+  - Final progressive quantization table access now matches the baseline
+    decoder's validated-precondition style.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 
