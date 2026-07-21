@@ -616,6 +616,7 @@ formats:
       description: Truncated PNG file
       test_assets:
       - truncated.png
+      - short_signature.png
       expect_error: true
     - id: error_corrupt_crc
       description: Corrupt chunk CRC
@@ -632,6 +633,7 @@ formats:
       test_assets:
       - wrong_ihdr_kind.png
       - short_ihdr.png
+      - short_chunk_kind.png
       - zero_width.png
       - zero_height.png
       - invalid_filter_method.png
@@ -665,6 +667,11 @@ formats:
       - invalid_compression.png
       - missing_iend.png
       - palette_trns_too_long.png
+      - palette_missing_plte.png
+      - palette_empty_plte.png
+      - palette_short_plte.png
+      - palette_partial_plte.png
+      - palette_trns_without_plte.png
       - duplicate_plte.png
       - duplicate_trns.png
       - zlib_oversized_scanline.png

@@ -843,6 +843,8 @@ def gen_png():
     img.save(d / "apng_animated.png", save_all=True, append_images=[img2], duration=100, loop=0)
     # Error
     d.joinpath("truncated.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00")
+    d.joinpath("short_signature.png").write_bytes(b"\x89PNG")
+    d.joinpath("short_chunk_kind.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\x01tE")
     d.joinpath("not_a_png.png").write_bytes(b"NOTAPNG!")
     corrupt_png_crc(d / "rgb.png", d / "bad_crc.png")
 
@@ -991,6 +993,40 @@ def gen_png():
         + png_chunk(b"IHDR", palette_header)
         + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
         + png_chunk(b"tRNS", b"\0\x80\xff")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "palette_missing_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "palette_empty_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", b"")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "palette_short_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", b"\0")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "palette_partial_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", b"\0\0\0\xff")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "palette_trns_without_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"tRNS", b"\xff")
         + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
         + png_chunk(b"IEND", b"")
     )

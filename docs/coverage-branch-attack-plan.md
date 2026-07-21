@@ -12,24 +12,24 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `41e480a1-67fd-4289-9c4a-5f02d7968531`
-- Current measured commit metadata: `7f1e33a55ecbe00c439f62ddc3040d18b559f309`
-- Current local HEAD after committing the BMP batch:
-  `f7be7efd47d466f721a5cf12ef0b10da56ac8fc8`
-- Lines: 24072 / 24078
-- Branches: 3424 / 3438
-- Functions: 1576 / 1576
-- Regions: 39635 / 40705
-- Remaining target: 6 lines, 14 branches, and 1070 regions.
+- Current snapshot: `4ccc75f2-5565-46e7-b6a0-ee05dfe4dd21`
+- Current measured commit metadata:
+  `d6cd96ad86c52d32cc6c93d658fc44faac080d72`
+- Current source state: post-PNG malformed/tolerated fixture batch; coverage
+  was measured before committing that batch, so the artifact still records the
+  previous commit metadata above.
+- Lines: 24346 / 24352
+- Branches: 3432 / 3446
+- Functions: 1578 / 1578
+- Regions: 39775 / 40637
+- Remaining target: 6 lines, 14 branches, and 862 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
-- Remaining line gaps from this snapshot:
-  - `src/codecs/webp/native/vp8.rs`: 1413 / 1417 lines, 6 branch missing.
-  - `src/codecs/webp/native/lossless.rs`: 543 / 544 lines,
-    2 branch missing.
-  - `src/types/dynamic.rs`: 826 / 827 lines, 0 branch missing.
+- Remaining line gaps: aggregate line gap is 6, but the current raw per-file
+  summaries do not expose a stable source-file line map for those gaps. Do not
+  carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
   - `src/codecs/tiff/decode.rs`: 120 / 120 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 112 / 112 branches.
@@ -2982,6 +2982,145 @@ Next region-first attack order:
    PNG decode, GIF decode, JPEG parser, or TIFF decode.
 3. Branch work remains WebP native (`decoder.rs`, `vp8.rs`, `lossless.rs`) after
    the region sweep.
+
+### Attempt 14 plan: PNG decode public malformed/tolerated fixtures
+
+Git state before editing:
+
+- Branch: `main`
+- Pushed commit: `d6cd96a` (`Improve TIFF and WebP region coverage`)
+- Worktree: clean before this attempt.
+
+Coverage MCP baseline used for targeting:
+
+- Snapshot: `2538cb3f-a20f-4f8c-92ff-d4a8ec69aba7`
+- Run: `5bb34c1c-3108-45c3-b72d-c19542a15567`
+- Commit metadata: `3be30726eb8181340c5d079d1677be7a825924e2`
+- Note: the snapshot was measured before committing the coverage batch, but the
+  measured source state is now committed and pushed as `d6cd96a`.
+- Lines: `24337 / 24343`
+- Branches: `3428 / 3442`
+- Functions: `1578 / 1578`
+- Regions: `39779 / 40652`
+- Missing regions: `873`
+
+Target: `src/codecs/png/decode.rs`
+
+- Current MCP file metrics: `655 / 699` regions, `354 / 354` lines,
+  `86 / 86` branches, `22 / 22` functions.
+- Source-mapped missing regions include:
+  - short signature/chunk-header paths in `Chunks::new()` and `Chunks::next()`;
+  - defensive `IHDR` byte-slice conversions after the length check;
+  - overflow guards in `inflated_len()`, `row_bytes()`, and scanline allocation;
+  - palette construction failures in `build_image()`;
+  - defensive conversion/allocation paths for already-unpacked samples.
+
+Pillow probe evidence from the pinned `.oracle-venv`:
+
+| Probe asset shape | Pillow 12.2.0 result |
+| --- | --- |
+| PNG shorter than the 8-byte signature | error |
+| Signature plus a partial first chunk header | error |
+| Indexed PNG with no `PLTE` | ok, mode `P`, one byte |
+| Indexed PNG with empty `PLTE` | ok, mode `P`, one byte |
+| Indexed PNG with one-byte `PLTE` | ok, mode `P`, one byte |
+| Indexed PNG with `PLTE` length not divisible by 3 | ok, mode `P`, one byte |
+| Indexed PNG with `tRNS` but no `PLTE` | ok, mode `P`, one byte |
+
+Selected sub-batch:
+
+| Target | Reverse-mapped behavior | Action |
+| --- | --- | --- |
+| Short signature and short first chunk header | Public malformed PNG inputs with deterministic Pillow errors. | Add manifest-backed error assets `short_signature.png` and `short_chunk_kind.png`. |
+| Indexed PNG without usable palette | Pillow retains the raw P bytes even when the palette is missing, empty, shorter than one RGB triplet, has a trailing partial RGB triplet, or has `tRNS` without `PLTE`. Rust currently rejects these via `palette_rgb?` or `ImagePalette::new(...).ok()?`. | Add tolerated malformed assets and change `build_image()` to attach a palette only when at least one complete RGB triplet exists; truncate trailing partial RGB bytes; otherwise keep the P image without a palette. |
+| `IHDR` fixed-field `get(...)?` conversions | Already preceded by `header.data.len() == 13`; no public input reaches these fallible sides. | Replace with fixed-array copies/direct indexing after the length guard. |
+| `u8::try_from(sample >> 8)` and `u8::try_from(sample)` in PNG sample conversion | Samples are produced by `unpack_into()` with values bounded by the PNG bit depth. For depth 16, shifting by 8 bounds to `0..=255`; for depth 8/palette, sample bytes are already `0..=255`. | Replace fallible conversions with direct casts. |
+
+Explicitly deferred:
+
+- `usize::try_from(width/height)`, `checked_mul`, `checked_add`, and
+  row-allocation overflow regions remain as WASM/32-bit and huge-dimension
+  defensive guards.
+- Chunk iterator `try_into()` and `checked_add()` subregions that are
+  unreachable after exact slice-length checks stay deferred unless a
+  source-mapped public input can reach them.
+
+Validation after this batch:
+
+1. Regenerate deterministic PNG assets.
+2. Regenerate Pillow decode references.
+3. Run the manifest-driven parity test for PNG rows.
+4. Run `cargo fmt`.
+5. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+6. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+7. Record the new summary and PNG movement here.
+
+### Attempt 14 result
+
+Validation performed before committing this batch:
+
+1. `.oracle-venv/bin/python scripts/generate_test_assets.py`
+2. `.oracle-venv/bin/python scripts/generate_decode_refs.py`
+3. `cargo test --all-features --test coverage_matrix_tests test_decode_matrix -- --nocapture`
+4. `cargo fmt --all`
+5. `cargo check --all-features`
+6. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+7. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+8. Coverage MCP command `all-features-llvm-cov-json-nightly-branch`
+
+Coverage MCP run `73eb5cac-b8e9-48b2-9262-75048ec1a908`, snapshot
+`4ccc75f2-5565-46e7-b6a0-ee05dfe4dd21`, passed and ingested.
+
+- Commit metadata recorded by the artifact:
+  `d6cd96ad86c52d32cc6c93d658fc44faac080d72`
+- Lines: `24346 / 24352`
+- Branches: `3432 / 3446`
+- Functions: `1578 / 1578`
+- Regions: `39775 / 40637`
+- Missing regions: `862`
+
+Net from the Attempt 14 baseline:
+
+- Missing regions improved from `873` to `862` (`11` fewer).
+- Branches remained `14` missing overall. The denominator increased from
+  `3442` to `3446`, and all four new branch counters are covered.
+- The decode matrix now has `581` active decode rows and `6` planned rows;
+  the full coverage matrix has `884` rows.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/png/decode.rs` | `655 / 699` | `651 / 684` | `44 -> 33` |
+
+What moved:
+
+- Added manifest-driven PNG malformed fixtures for short signature and partial
+  first-chunk header errors.
+- Added Pillow-tolerated indexed PNG fixtures for missing, empty, short,
+  partial, and `tRNS`-without-`PLTE` palettes.
+- Fixed a real Pillow parity gap: indexed PNGs now preserve raw `P` bytes when
+  Pillow accepts the image without a usable palette.
+- Removed dead fallible IHDR and sample-conversion regions after local PNG
+  invariants already prove the values are in range.
+
+Remaining source-mapped PNG region starts after this batch:
+
+`104:44`, `105:46`, `107:49`, `108:28`, `118:55`, `119:36`, `120:46`,
+`135:44`, `136:46`, `137:49`, `137:72`, `195:51`, `196:67`, `197:56`,
+`200:42`, `201:44`, `202:54`, `203:53`, `205:48`, `284:40`, `285:41`,
+`294:72`, `306:72`, `326:86`, `348:31`, `349:41`, `423:26`, `425:18`,
+`430:22`, `431:53`, `432:48`, `434:91`, `438:47`.
+
+Next PNG-specific work:
+
+1. Reverse-map the remaining chunk iterator and overflow/inflation guards.
+2. Keep 32-bit/WASM dimension overflow checks unless a portable invariant
+   proves them dead.
+3. Move to the next higher-yield region file if the remaining PNG starts are
+   mostly defensive arithmetic rather than public Pillow states.
 
 ### Attempt 10 plan: ICO encode public empty-BMP parity and region cleanup
 

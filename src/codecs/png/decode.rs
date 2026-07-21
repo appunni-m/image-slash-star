@@ -22,8 +22,18 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
 
-    let width = u32::from_be_bytes(header.data.get(0..4)?.try_into().ok()?);
-    let height = u32::from_be_bytes(header.data.get(4..8)?.try_into().ok()?);
+    let width = u32::from_be_bytes([
+        header.data[0],
+        header.data[1],
+        header.data[2],
+        header.data[3],
+    ]);
+    let height = u32::from_be_bytes([
+        header.data[4],
+        header.data[5],
+        header.data[6],
+        header.data[7],
+    ]);
     let depth = header.data[8];
     let png_color = header.data[9];
     let _compression = header.data[10];
@@ -283,21 +293,15 @@ fn build_image(
     } else if png_color == 4 && depth == 16 {
         let mut bytes = Vec::with_capacity(samples.len().checked_mul(2)?);
         for pair in samples.chunks_exact(2) {
-            let luminance = u8::try_from(pair[0] >> 8).ok()?;
-            let alpha = u8::try_from(pair[1] >> 8).ok()?;
+            let luminance = (pair[0] >> 8) as u8;
+            let alpha = (pair[1] >> 8) as u8;
             bytes.extend_from_slice(&[luminance, luminance, luminance, alpha]);
         }
         bytes
     } else if depth == 16 && matches!(png_color, 2 | 6) {
-        samples
-            .iter()
-            .map(|&sample| u8::try_from(sample >> 8).ok())
-            .collect::<Option<Vec<_>>>()?
+        samples.iter().map(|&sample| (sample >> 8) as u8).collect()
     } else if png_color == 3 || depth == 8 {
-        samples
-            .iter()
-            .map(|&sample| u8::try_from(sample).ok())
-            .collect::<Option<Vec<_>>>()?
+        samples.iter().map(|&sample| sample as u8).collect()
     } else {
         let mut bytes = Vec::with_capacity(samples.len().checked_mul(2)?);
         for &sample in samples {
@@ -312,12 +316,16 @@ fn build_image(
     };
     let mut image = DecodedImage::with_mode(width, height, pixels, mode);
     if png_color == 3 {
-        let rgb = palette_rgb?;
-        let entries = rgb.len() / 3;
-        if !palette_alpha.is_empty() {
-            palette_alpha.truncate(entries);
+        if let Some(mut rgb) = palette_rgb {
+            let entries = rgb.len() / 3;
+            if entries != 0 {
+                rgb.truncate(entries * 3);
+                if !palette_alpha.is_empty() {
+                    palette_alpha.truncate(entries);
+                }
+                image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
+            }
         }
-        image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
     }
     Some(image)
 }

@@ -673,6 +673,16 @@
       "ref_size": null
     },
     {
+      "id": "error_truncated_short_signature",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_corrupt_crc",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
@@ -707,6 +717,16 @@
       "status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "Truncated IHDR chunk",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_short_chunk_kind",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
@@ -1004,6 +1024,71 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_too_long_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_missing_plte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_missing_plte_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_empty_plte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_empty_plte_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_short_plte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_short_plte_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_partial_plte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_partial_plte_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_trns_without_plte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_without_plte_png.bin",
       "ref_bytes": 1,
       "ref_mode": "P",
       "ref_size": [

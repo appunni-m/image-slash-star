@@ -676,6 +676,19 @@
       }
     },
     {
+      "id": "error_truncated_short_signature",
+      "asset": "short_signature.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/short_signature.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_corrupt_crc",
       "asset": "bad_crc.png",
       "expect_error": true,
@@ -720,6 +733,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/short_ihdr.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_short_chunk_kind",
+      "asset": "short_chunk_kind.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/short_chunk_kind.png",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1097,6 +1123,71 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_trns_too_long.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_missing_plte",
+      "asset": "palette_missing_plte.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_missing_plte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_empty_plte",
+      "asset": "palette_empty_plte.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_empty_plte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_short_plte",
+      "asset": "palette_short_plte.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_short_plte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_partial_plte",
+      "asset": "palette_partial_plte.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_partial_plte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_palette_trns_without_plte",
+      "asset": "palette_trns_without_plte.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_trns_without_plte.png",
         "operations": [
           "PIL.Image.open",
           "load",
