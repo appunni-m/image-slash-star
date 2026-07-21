@@ -507,6 +507,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_entry(short_payload, 0, false).is_none());
     assert!(decode_cur_bmp(&[39, 0, 0, 0]).is_none());
     assert!(decode_cur_bmp(&[40, 0, 0, 0]).is_none());
+    let cur_dib = indexed_dib(1, 1, 8, 2, &[1]);
+    assert!(decode_cur_bmp(&cur_dib).is_some());
 
     for (width, stored_height) in [(0u32, 2u32), (1, 0), (16_385, 2), (1, 32_770)] {
         let mut dib = vec![0u8; 40];
@@ -517,8 +519,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         assert!(decode_ico_bmp(&dib, &[]).is_none());
     }
 
+    let dib24 = dib24(1, 1, &[0, 0, 255], &[0x80]);
+    assert!(decode_ico_bmp_24bpp(&dib24, 1, 1).is_some());
+
     let dib8 = indexed_dib(1, 1, 8, 3, &[0]);
     assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3).is_some());
+    let dib8_masked = indexed_dib_with_mask(2, 1, 8, 3, &[0, 1], &[0x40]);
+    assert!(decode_ico_bmp_8bpp(&dib8_masked, 2, 1, 3).is_some());
     let dib8_default_palette = indexed_dib(1, 1, 8, 256, &[0]);
     assert!(decode_ico_bmp_8bpp(&dib8_default_palette, 1, 1, 0).is_some());
 
@@ -526,17 +533,34 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3).is_some());
     let dib4_even = indexed_dib(4, 1, 4, 3, &[0x12, 0x10]);
     assert!(decode_ico_bmp_4bpp(&dib4_even, 4, 1, 3).is_some());
+    let dib4_masked = indexed_dib_with_mask(2, 1, 4, 3, &[0x12], &[0x40]);
+    assert!(decode_ico_bmp_4bpp(&dib4_masked, 2, 1, 3).is_some());
     let dib4_default_palette = indexed_dib(1, 1, 4, 16, &[0]);
     assert!(decode_ico_bmp_4bpp(&dib4_default_palette, 1, 1, 0).is_some());
 
     let dib1 = indexed_dib(1, 1, 1, 2, &[0x80]);
     assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2).is_some());
+    let dib1_masked = indexed_dib_with_mask(2, 1, 1, 2, &[0x80], &[0x40]);
+    assert!(decode_ico_bmp_1bpp(&dib1_masked, 2, 1, 2).is_some());
     let dib1_default_palette = indexed_dib(1, 1, 1, 2, &[0x80]);
     assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0).is_some());
+    assert!(ico_and_mask(&[], 256, 256).is_none());
 }
 
 #[cfg(coverage)]
 fn indexed_dib(width: u32, height: u32, bpp: u16, colors: u32, xor: &[u8]) -> Vec<u8> {
+    indexed_dib_with_mask(width, height, bpp, colors, xor, &[])
+}
+
+#[cfg(coverage)]
+fn indexed_dib_with_mask(
+    width: u32,
+    height: u32,
+    bpp: u16,
+    colors: u32,
+    xor: &[u8],
+    and_mask: &[u8],
+) -> Vec<u8> {
     let palette_entries = usize::try_from(colors).expect("coverage palette fits usize");
     let row_bytes = (width as usize * usize::from(bpp)).div_ceil(8);
     let padded_row = (row_bytes + 3) & !3;
@@ -555,6 +579,28 @@ fn indexed_dib(width: u32, height: u32, bpp: u16, colors: u32, xor: &[u8]) -> Ve
     let mut xor_plane = vec![0u8; padded_row * height as usize];
     xor_plane[..xor.len()].copy_from_slice(xor);
     dib.extend_from_slice(&xor_plane);
-    dib.extend(std::iter::repeat_n(0, mask_row * height as usize));
+    let mut mask_plane = vec![0u8; mask_row * height as usize];
+    mask_plane[..and_mask.len()].copy_from_slice(and_mask);
+    dib.extend_from_slice(&mask_plane);
+    dib
+}
+
+#[cfg(coverage)]
+fn dib24(width: u32, height: u32, xor: &[u8], and_mask: &[u8]) -> Vec<u8> {
+    let row_bytes = width as usize * 3;
+    let padded_row = (row_bytes + 3) & !3;
+    let mask_row = (width as usize).div_ceil(32) * 4;
+    let mut dib = vec![0u8; 40];
+    dib[0..4].copy_from_slice(&40u32.to_le_bytes());
+    dib[4..8].copy_from_slice(&width.to_le_bytes());
+    dib[8..12].copy_from_slice(&(height * 2).to_le_bytes());
+    dib[12..14].copy_from_slice(&1u16.to_le_bytes());
+    dib[14..16].copy_from_slice(&24u16.to_le_bytes());
+    let mut xor_plane = vec![0u8; padded_row * height as usize];
+    xor_plane[..xor.len()].copy_from_slice(xor);
+    dib.extend_from_slice(&xor_plane);
+    let mut mask_plane = vec![0u8; mask_row * height as usize];
+    mask_plane[..and_mask.len()].copy_from_slice(and_mask);
+    dib.extend_from_slice(&mask_plane);
     dib
 }

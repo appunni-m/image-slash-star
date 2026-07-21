@@ -12,17 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `f4916efd-dddd-4676-8933-9878afcf8997`
-- Current measured commit metadata: `700fa272a2f3d1140f43671044337935838f4350`
-- Current coverage source state: Attempt 62 retained code, pushed in commit
-  `3f663e5`. Coverage MCP commit metadata still reports the measured
-  pre-commit parent because Attempt 62 was committed after the coverage run;
-  later documentation-only commits do not change these counters.
-- Lines: 25816 / 25820
+- Current snapshot: `8b92fee7-76de-446f-a6b0-e6300d02c8a1`
+- Current measured commit metadata: `fcdee54d793541e2e534e005e22d2d15fc35f216`
+- Current coverage source state: Attempt 65 retained working tree measured from
+  pushed parent `fcdee54`.
+- Lines: 25857 / 25861
 - Branches: 3448 / 3454
-- Functions: 1592 / 1592
-- Regions: 41679 / 42262
-- Remaining target: 4 lines, 6 branches, and 583 regions.
+- Functions: 1594 / 1594
+- Regions: 41778 / 42360
+- Remaining target: 4 lines, 6 branches, and 582 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -49,6 +47,53 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 65 plan: ICO CUR and indexed-mask region sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after doc commit `fcdee54`.
+- Coverage MCP snapshot: `e0d9a48b-d2c6-4a32-8248-4a30deaf9d89`.
+- Overall: `25816 / 25820` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41679 / 42262` regions.
+- Target file: `src/codecs/ico/decode.rs`, currently `388 / 388` lines,
+  `62 / 62` branches, `13 / 13` functions, and `990 / 1030` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `decode_cur_bmp()` | Lines 138-166. | Existing hook only exercises truncated/invalid CUR DIBs. Add a valid indexed CUR DIB so the BMP wrapping path, actual-height rewrite, palette offset, and BMP delegation execute. |
+| `decode_ico_bmp_24bpp()` | Lines 259-264. | No direct 24-bit success fixture currently exercises the AND-mask derivation. Add a minimal 24-bit BGR DIB with explicit mask bytes and a transparent bit. |
+| Indexed BMP decode | Lines 296-320, 347-372, and 411-436. | Existing indexed fixtures use zero masks and mostly first-palette indices. Add 8/4/1-bit DIBs with nonzero indices and mask bits so palette lookup plus alpha-mask variants execute. |
+| `ico_and_mask()` | Lines 464-466. | Add one direct too-short mask request to cover the defensive bounds return. Arithmetic overflow remains structurally unreachable for `u32` dimensions on this target. |
+
+Implementation plan:
+
+1. Extend the existing ICO coverage hook with compact valid fixture inputs for
+   CUR, 24-bit, and indexed mask variants.
+2. Reuse/extend local coverage-only builders instead of creating public unit
+   tests because these states are private container-layout guards.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `41d34b14-ffba-438e-8cab-167a98630e50`.
+- Coverage MCP snapshot: `8b92fee7-76de-446f-a6b0-e6300d02c8a1`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adding ICO CUR/indexed-mask probes:
+  `25857 / 25861` lines, `3448 / 3454` branches, `1594 / 1594`
+  functions, and `41778 / 42360` regions.
+- Target file movement: `src/codecs/ico/decode.rs` moved from `990 / 1030`
+  regions to `1089 / 1128` regions; missing regions fell from `40` to `39`,
+  and branch coverage remained complete at `62 / 62`.
+- Net: aggregate missing regions fell from `583` to `582`. Branch debt is
+  unchanged. The remaining raw spans are still concentrated in CUR wrapper
+  arithmetic and indexed palette/mask expressions, so the next ICO pass should
+  use exact old-span hit confirmation before adding more fixture builders.
 
 ## Attempt 64 plan: JPEG progressive AC event state regions
 
