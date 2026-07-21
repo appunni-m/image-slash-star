@@ -383,6 +383,50 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = short_level3.candidate_can_improve(0, 3);
     let _ = short_level3.candidate_can_improve(usize::MAX, 3);
 
+    let _ = quick_insert_level1(data, usize::MAX, &mut head);
+    let mut empty_head = Vec::new();
+    let _ = quick_insert_level1(b"abcd", 0, &mut empty_head);
+
+    let mut slow_process_short = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
+    slow_process_short.data.truncate(3);
+    let _ = slow_process_short.process(4, true);
+    let mut slow_bad_distance = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
+    slow_bad_distance.position = 4;
+    slow_bad_distance.previous_length = 3;
+    slow_bad_distance.match_start = usize::MAX;
+    let _ = slow_bad_distance.process(5, true);
+    let mut slow_insert_failure = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
+    slow_insert_failure.position = 4;
+    slow_insert_failure.previous_length = 5;
+    slow_insert_failure.data.truncate(8);
+    let _ = slow_insert_failure.process(10, true);
+    let mut slow_literal_underflow = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
+    slow_literal_underflow.match_available = true;
+    slow_literal_underflow.previous_length = 0;
+    let _ = slow_literal_underflow.process(MIN_LOOKAHEAD, true);
+
+    let mut slow_hash_overflow = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
+    let _ = slow_hash_overflow.quick_insert(usize::MAX);
+    let mut slow_missing_head = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
+    slow_missing_head.head.clear();
+    let _ = slow_missing_head.quick_insert(0);
+    let quick_hash =
+        usize::try_from(u32::from_le_bytes(*b"abcd").wrapping_mul(2_654_435_761) >> 16)
+            .expect("coverage quick hash should fit usize");
+    let mut slow_missing_previous = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
+    slow_missing_previous.head[quick_hash] = 1;
+    slow_missing_previous.previous.clear();
+    let _ = slow_missing_previous.quick_insert(0);
+
+    let mut slow_match_short = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
+    slow_match_short.data.truncate(2);
+    slow_match_short.position = 4;
+    let _ = slow_match_short.longest_match(0, 4);
+    let mut slow_empty_previous_chain = SlowMatcher::new(b"abcdwxyz", 16, 8, 128, 128);
+    slow_empty_previous_chain.position = 4;
+    slow_empty_previous_chain.previous.clear();
+    let _ = slow_empty_previous_chain.longest_match(0, 4);
+
     let synthetic_tree = |lengths: &[u16]| {
         let mut nodes = vec![Node::default(); lengths.len()];
         for (node, &length) in nodes.iter_mut().zip(lengths) {
