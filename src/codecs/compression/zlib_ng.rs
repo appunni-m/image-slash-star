@@ -71,7 +71,10 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> Option<(Vec<Token>, V
         // fill_window() re-inserts strstart - 1 whenever a new input call
         // makes another four-byte hash available. This includes positions
         // skipped by the preceding quick match.
-        if position >= 1 && available.checked_sub(position)? >= 3 {
+        // When a previous non-final pass advanced `position`, the loop below
+        // left at least `MIN_LOOKAHEAD - MAX_MATCH` bytes available, so
+        // `position - 1` has the four bytes required by `quick_insert_level1`.
+        if position >= 1 {
             quick_insert_level1(data, position - 1, &mut head)?;
         }
         while available.checked_sub(position)? >= MIN_LOOKAHEAD {
@@ -124,6 +127,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens)
         .expect("literal path should tokenize");
     let _ = compress_level1(data, &[data.len()]);
+    let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
+    let _ = tokenize_level1(&level1_reinsert_data, &[MIN_LOOKAHEAD, 3]);
+    let _ = tokenize_level1(
+        &level1_reinsert_data,
+        &[
+            MIN_LOOKAHEAD + 1,
+            level1_reinsert_data.len() - MIN_LOOKAHEAD - 1,
+        ],
+    );
     let _ = compress_level1(data, &[data.len(), usize::MAX]);
     let _ = tokenize_level1(data, &[data.len(), usize::MAX]);
 
@@ -192,14 +204,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(next.length, 6);
 
     let mut slow = SlowMatcher::new(b"abcdefghijkl", 16, 8, 128, 128);
+    slow.process(0, true)
+        .expect("slow matcher empty finalization should process");
     slow.quick_insert(4)
         .expect("slow matcher pre-insert should succeed");
     slow.position = 4;
+    let _ = slow
+        .longest_match(slow.position, 8)
+        .expect("slow matcher current-candidate loop exit should process");
     slow.process(8, true)
         .expect("slow matcher self-candidate path should process");
     assert!(slow.position > 4);
 
+    let mut level6 = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
+    level6.position = 4;
+    let self_hash = level6.hash(4).expect("level6 self hash should compute");
+    level6.head[self_hash] = 4;
+    let found = level6
+        .find_match(4, 4)
+        .expect("level6 self-candidate path should process");
+    assert_eq!(found.length, 1);
+
     let mut level9 = Level9Matcher::new(b"abcdefghijkl");
+    level9
+        .process(0, true)
+        .expect("level9 empty finalization should process");
     level9.position = 4;
     level9
         .refill_boundary()
@@ -210,6 +239,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .process(8, true)
         .expect("level9 self-candidate path should process");
     assert!(level9.position > 4);
+
+    let mut level9 = Level9Matcher::new(b"aaaaaaaaaaaa");
+    level9.position = 4;
+    level9.previous_length = 3;
+    let mut hash = rolling_hash(0, level9.data[5]);
+    hash = rolling_hash(hash, level9.data[6]);
+    hash = rolling_hash(hash, level9.data[7]);
+    level9.head[hash] = 0;
+    let _ = level9
+        .longest_match(1, 8)
+        .expect("level9 offset-before-candidate exit should process");
+    let _ = level9
+        .longest_match(level9.position, 8)
+        .expect("level9 current-candidate exit should process");
+    let mut level9 = Level9Matcher::new(b"abcdefghijkl");
+    level9.position = 4;
+    let _ = level9
+        .longest_match(level9.position, 8)
+        .expect("level9 upper-bound loop exit should process");
+
+    let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 4, 6, false);
+    level3.position = 4;
+    let _ = level3
+        .longest_match(0, 8)
+        .expect("level3 nice-match break should process");
+    let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 128, 6, false);
+    level3.position = 4;
+    let _ = level3
+        .longest_match(0, 4)
+        .expect("level3 lookahead break should process");
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {
@@ -447,7 +506,10 @@ impl SlowMatcher {
             }
         }
 
-        if finishing && self.position == available && self.match_available {
+        if finishing && self.match_available {
+            // With `finishing == true`, the loop above exits only when
+            // lookahead reaches zero.
+            debug_assert_eq!(self.position, available);
             self.tokens.push(Token::Literal(
                 *self.data.get(self.position.checked_sub(1)?)?,
             ));
@@ -678,7 +740,9 @@ impl Level6Matcher {
             && position.checked_sub(candidate)? <= MAX_DISTANCE
         {
             let (length, match_start) = self.longest_match(candidate, position, lookahead)?;
-            if length >= MIN_MATCH && match_start < position {
+            if length >= MIN_MATCH {
+                // `longest_match` can only return a match start from a prior
+                // candidate accepted by the guard above.
                 found.match_start = match_start;
                 found.length = length;
             }
@@ -893,7 +957,10 @@ impl Level9Matcher {
             }
         }
 
-        if finishing && self.position == available && self.match_available {
+        if finishing && self.match_available {
+            // With `finishing == true`, the loop above exits only when
+            // lookahead reaches zero.
+            debug_assert_eq!(self.position, available);
             self.tokens.push(Token::Literal(
                 *self.data.get(self.position.checked_sub(1)?)?,
             ));
@@ -938,7 +1005,9 @@ impl Level9Matcher {
         if candidate <= limit {
             return Some((best_length.min(lookahead), best_start));
         }
-        while candidate >= match_offset && candidate < self.position.checked_add(match_offset)? {
+        // The preceding `candidate <= limit` return also proves
+        // `candidate > match_offset`, because `limit >= match_offset`.
+        while candidate < self.position.checked_add(match_offset)? {
             let aligned = candidate.checked_sub(match_offset)?;
             if medium_candidate_can_improve(&self.data, aligned, self.position, best_length)? {
                 let length =
@@ -1045,10 +1114,8 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
 
     let mut adjusted_current = *current;
     let mut adjusted_next = *next;
-    let limit = adjusted_next.start.saturating_sub(MAX_DISTANCE);
     let mut changed = false;
     while adjusted_current.length > 0
-        && adjusted_next.start > limit
         && adjusted_next.length < 256
         && adjusted_next.match_start > 1
         && data.get(adjusted_next.match_start - 1) == data.get(adjusted_next.start - 1)

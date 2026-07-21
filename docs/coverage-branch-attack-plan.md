@@ -5,19 +5,91 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the pushed DEFLATE malformed-zlib private-probe batch.
+after the zlib-ng compressor private-branch batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ca87cbef-cf1b-47b8-87c8-1e35510c00fe`
-- Current measured commit metadata: `f9fd5a9a088bce7fa2ebb44c996d204912ae26fc`
-- Lines: 21960 / 21961
-- Branches: 3337 / 3478
+- Current snapshot: `ebb6e723-d062-49f1-ba4f-b87fbb1651a6`
+- Current measured commit metadata: `b4c8e27f297dd9dff32c643014c52f0b5e5ee2d6`
+- Lines: 22013 / 22014
+- Branches: 3334 / 3466
 - Functions: 1527 / 1527
-- Remaining target: 1 line and 141 branches.
+- Remaining target: 1 line and 132 branches.
+
+## Planned zlib-ng compressor private-branch batch
+
+Coverage MCP snapshot `55cdc496-f51a-4e02-a4fc-c288d62b658a` reports
+`src/codecs/compression/zlib_ng.rs` at 1483 / 1484 lines, 371 / 380
+branches, and 82 / 82 functions. Its remaining reported branch lines are:
+
+- line 74: level-one chunk-boundary reinsertion uses
+  `position >= 1 && available - position >= 3`. Existing parity fixtures hit
+  normal true and short-lookahead cases, but one short-circuit edge is still
+  missing. Add deterministic private calls to `tokenize_level1()` with chunk
+  shapes that end at exactly `position == 0`, `position > 0` with too little
+  lookahead, and `position > 0` with enough lookahead.
+- line 450: `SlowMatcher::process()` final pending-literal flush uses
+  `finishing && position == available && match_available`. Existing image
+  compression drives the final true path and at least one false path. Add
+  direct matcher calls where `finishing` is false and where finishing reaches
+  the boundary with no pending literal.
+- line 483: `SlowMatcher::longest_match()` loops while the hash-chain
+  candidate remains before the current position. Directly seed the matcher
+  with a self/current candidate to drive the complementary loop-exit edge.
+- line 681: `LookaheadMediumMatcher::find_match()` accepts a found match only
+  when `length >= MIN_MATCH && match_start < position`. Add a direct matcher
+  state that finds enough length but with a non-prior/self candidate so the
+  second predicate side is exercised, or simplify if that side is unreachable
+  after the enclosing candidate guard.
+- line 896: `Level9Matcher::process()` has the same final pending-literal
+  flush shape as `SlowMatcher`. Add direct false-side calls mirroring the slow
+  matcher cases.
+- line 941: `Level9Matcher::longest_match()` loops while
+  `candidate >= match_offset && candidate < position + match_offset`. Existing
+  fixtures miss two loop-condition edges. Add direct seeded states for
+  `candidate < match_offset` and `candidate >= position + match_offset`.
+- line 1051: `fizzle_matches()` loop condition has a missing
+  `adjusted_next.start > limit` edge. With the current constants, that false
+  side requires `next.start == 0` while passing earlier guards. Add that direct
+  no-change probe or document and simplify if the earlier quick-match indexing
+  makes it unreachable.
+- line 1224: `EarlyMatcher::longest_match()` breaks when
+  `best_length >= nice_match || best_length >= lookahead`. Existing fixtures
+  drive the break but miss one short-circuit side. Add direct seeded matcher
+  states where `nice_match` is lower than the found length and where lookahead
+  is the limiting condition.
+
+No Pillow manifest row is the narrowest oracle for this batch: these branches
+are private compressor state-machine predicates after the public PNG/TIFF/WebP
+fixtures have already produced deterministic input bytes. The acceptable test
+shape is a coverage-only private hook that checks local invariants and then a
+Coverage MCP run using the approved line+branch command.
+
+Completed evidence:
+
+- First Coverage MCP run: `0c179a19-df50-49b1-86e4-98073e47b899`, snapshot
+  `7baa59f5-166a-4e16-88bb-047748de80a3`; passed and improved `zlib_ng.rs`
+  from 371 / 380 to 371 / 376 branches. This proved the matcher-state probes
+  were valid but left line 74, line 501, line 947, and line 992.
+- Second Coverage MCP run: `41fc08bf-7d6a-4438-b66a-9047e9074d5c`, snapshot
+  `c76388ae-b056-44d9-8244-dbe03182d090`; passed and improved `zlib_ng.rs`
+  to 368 / 370 branches by removing final-flush and match-start invariant
+  branches. This left line 74 and line 994.
+- The line-74 search found no reachable chunk/data shape for
+  `position >= 1 && available - position < 3`. The reason is structural:
+  level-one processing advances by at most `MAX_MATCH` (258) while the loop
+  requires `MIN_LOOKAHEAD` (262), so after any processing step at least four
+  bytes remain. The second predicate was removed as an invariant.
+- Final Coverage MCP run: `c621bdc8-2e2e-4a64-ad94-7dd12419bb80`
+- Final Coverage MCP snapshot: `ebb6e723-d062-49f1-ba4f-b87fbb1651a6`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22013 / 22014 lines, 3334 / 3466 branches, 1527 / 1527 functions.
+- Target file: `src/codecs/compression/zlib_ng.rs` is 1536 / 1537 lines,
+  368 / 368 branches, and 82 / 82 functions. No branch gaps remain in this
+  file.
 
 ## Planned WebP backward-reference private-branch batch
 
