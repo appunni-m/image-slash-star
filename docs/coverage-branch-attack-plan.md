@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `cef7a3fe-bfa5-4480-bfbd-867e21e178a3`
-- Current measured commit metadata: `dec0bb25a200b4db2d3a5a439dc2a8beb4b8968d`
-- Current source state: VP8 raw partition/header short-read boundary sweep,
+- Current snapshot: `af8c63e5-3ba5-4027-9fad-b0c7d3697a52`
+- Current measured commit metadata: `14180efb47a75cfe8c03157dc9ab8b5caf096874`
+- Current source state: VP8L header short-read and byte-aligned invariant sweep,
   measured before committing the sweep.
-- Lines: 24447 / 24453
+- Lines: 24457 / 24463
 - Branches: 3430 / 3444
 - Functions: 1580 / 1580
-- Regions: 39853 / 40591
-- Remaining target: 6 lines, 14 branches, and 738 regions.
+- Regions: 39869 / 40605
+- Remaining target: 6 lines, 14 branches, and 736 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -748,6 +748,142 @@ Result:
     concentrated around arithmetic-coded frame flags, invalid macroblock mode
     tree outputs, residual error propagation, and the skipped-coefficient
     macroblock path at source lines `1193` and `1866`.
+
+## Attempt 27 plan: WebP Huffman fast-table success region
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `14180ef` after the VP8 raw short-read
+  sweep.
+- Coverage MCP snapshot: `cef7a3fe-bfa5-4480-bfbd-867e21e178a3`. This
+  snapshot was measured on the same source content before the `14180ef` commit.
+- Overall: `24447 / 24453` lines, `3430 / 3444` branches,
+  `1580 / 1580` functions, and `39853 / 40591` regions.
+- Target file: `src/codecs/webp/native/huffman.rs` at `229 / 229`
+  lines, `26 / 26` branches, `9 / 9` functions, and `330 / 331`
+  regions.
+
+MCP/source reverse map:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 225 | `read_symbol()` fast primary-table arm | Existing hook exercises slow paths and fast consume failure, but not a successful non-single-tree primary-table symbol read. |
+| 252 | `peek_symbol()` fast primary-table arm | Existing hook exercises single-node peek and slow-table `None`, but not a successful non-single-tree primary-table peek. |
+
+Selected action:
+
+- Reuse `HuffmanTree::build_two_node(1, 2)` in the existing
+  `#[cfg(coverage)]` hook.
+- Fill a `BitReader` with zero bytes, then assert a successful fast-table
+  `read_symbol()` returns symbol `1`.
+- Assert `peek_symbol()` on the same two-node shape returns `(1, 1)`.
+- Keep this as a private hook case. The Huffman table is a private VP8L helper;
+  public WebP malformed/valid behavior remains represented through the
+  manifest-driven codec tests.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Measurement and decision:
+
+- Coverage MCP run: `9b80c2c8-d371-4dd7-a34b-b45aa9272e13`.
+- Coverage MCP snapshot: `0cdcc4a1-4093-4eed-bdce-22332483fff6`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall with the hook attempt: `24452 / 24458` lines,
+  `3430 / 3444` branches, `1580 / 1580` functions, and
+  `39874 / 40612` regions.
+- Net missing regions: unchanged at `738`.
+- Target file movement: `src/codecs/webp/native/huffman.rs` moved from
+  `330 / 331` regions to `351 / 352` regions, so the added hook code covered
+  itself but did not remove the existing missing region.
+- Decision: revert the Huffman hook code before commit. The source-mapped line
+  ranges are still not enough to identify the one aggregate region gap; do not
+  add more Huffman hook calls until a raw-region map identifies the exact
+  expression.
+
+## Attempt 28 plan: VP8L header short-read and byte-aligned invariant
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `14180ef` for source code; the doc contains
+  the uncommitted Attempt 27 no-net note.
+- Coverage MCP snapshot: `cef7a3fe-bfa5-4480-bfbd-867e21e178a3`, measured on
+  the same source content as `14180ef`.
+- Overall: `24447 / 24453` lines, `3430 / 3444` branches,
+  `1580 / 1580` functions, and `39853 / 40591` regions.
+- Target file: `src/codecs/webp/native/lossless.rs` at `543 / 544`
+  lines, `108 / 110` branches, `27 / 27` functions, and
+  `853 / 903` regions.
+
+Small-target triage before selecting this batch:
+
+| File | Finding | Decision |
+| --- | --- | --- |
+| `src/codecs/webp/native/huffman.rs` | Two-node fast-table hook attempt covered only new hook code; aggregate gap stayed at one region. | Reverted. Wait for exact raw-expression mapping before more Huffman work. |
+| `src/codecs/webp/native/encoder.rs` | Aggregate says four regions, but raw LLVM file segments expose no zero-count region entries; normalized range points to already-covered RIFF odd-padding success/failure hook paths. | Defer as non-actionable from current MCP/raw data. |
+| `src/codecs/tiff/encode.rs` | Five raw entries are classic-TIFF size/zlib `?` boundaries requiring impractically huge validated pixel buffers to hit publicly. | Defer; do not fabricate multi-GB fixtures. |
+| `src/codecs/webp/native/extended.rs` | Aggregate says seven regions, but raw LLVM file segments expose no zero-count region entries; existing hook already covers oversized VP8X header and ALPH raw/lossless branches. | Defer as non-actionable from current MCP/raw data. |
+
+MCP/raw reverse map for the selected VP8L header cluster:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 94 | VP8L width read | Non-implicit VP8L frame with only the signature byte available. |
+| 95 | VP8L height read | Non-implicit VP8L frame with enough bits for width but not height. |
+| 99 | alpha-used bit read | Infallible after height succeeds: `BitReader::fill()` consumes byte-aligned input until EOF/near-full, so a successful 14-bit height read proves the remaining four alpha/version bits are buffered. |
+| 100 | version read | Same byte-aligned invariant as line 99. |
+
+Selected action:
+
+- Add private-hook non-implicit VP8L inputs for truncated width and truncated
+  height reads.
+- Replace the alpha-used and version `?` exits with `expect()` calls documenting
+  the byte-aligned VP8L header invariant. These are not public malformed-image
+  branches after the width/height reads succeed.
+- Keep this in the private hook because these are raw VP8L frame-header cut
+  points; public malformed WebP rejection remains manifest-driven.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Result:
+
+- Coverage MCP run: `3f35cc7c-1039-48d9-bdcd-949423c208d0`.
+- Coverage MCP snapshot: `af8c63e5-3ba5-4027-9fad-b0c7d3697a52`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24457 / 24463` lines, `3430 / 3444` branches,
+  `1580 / 1580` functions, and `39869 / 40605` regions.
+- Net missing regions: `738` down to `736`.
+- Target file movement: `src/codecs/webp/native/lossless.rs` moved from
+  `543 / 544` lines, `108 / 110` branches, `27 / 27` functions, and
+  `853 / 903` regions to `553 / 554` lines, `108 / 110` branches,
+  `27 / 27` functions, and `869 / 917` regions.
+- Raw zero-count region entries in `lossless.rs`: `48` down to `44`.
+- Implemented:
+  - Added VP8L raw header short-read hook inputs for width and height bit-read
+    failures.
+  - Replaced alpha-used and version read `?` exits with documented `expect()`
+    calls. Once the 14-bit height field has been read successfully, the
+    byte-aligned VP8L header guarantees the remaining four bits are already
+    buffered.
+- Follow-up finding:
+  - Branch debt is unchanged. Remaining lossless raw entries are now in
+    transform parsing, Huffman-code construction, image-data decoding, and
+    `BitReader` private paths.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 

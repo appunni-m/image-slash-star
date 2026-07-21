@@ -96,8 +96,14 @@ impl<R: BufRead> LosslessDecoder<R> {
             debug_assert_eq!(u32::from(self.width), width);
             debug_assert_eq!(u32::from(self.height), height);
 
-            let _alpha_used = self.bit_reader.read_bits::<u8>(1)?;
-            let version_num = self.bit_reader.read_bits::<u8>(3)?;
+            let _alpha_used = self
+                .bit_reader
+                .read_bits::<u8>(1)
+                .expect("VP8L height read success proves the alpha bit is buffered");
+            let version_num = self
+                .bit_reader
+                .read_bits::<u8>(3)
+                .expect("VP8L height read success proves the version bits are buffered");
             debug_assert_eq!(version_num, 0);
         }
 
@@ -668,6 +674,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     let mut buf = [0u8; 4];
     let _ = decoder.decode_frame(1, 1, true, &mut buf);
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f]));
+    let _ = decoder.decode_frame(1, 1, false, &mut buf);
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0]));
+    let _ = decoder.decode_frame(1, 1, false, &mut buf);
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0, 0, 0]));
     let _ = decoder.decode_frame(1, 1, false, &mut buf);
 
