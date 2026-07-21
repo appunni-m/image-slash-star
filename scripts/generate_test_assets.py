@@ -1146,8 +1146,27 @@ def gen_gif():
     image_offset = static.index(0x2C, table_end)
     (d / "truncated_signature.gif").write_bytes(b"GIF8")
     (d / "truncated_logical_screen.gif").write_bytes(b"GIF89a\x01")
+    (d / "truncated_after_width.gif").write_bytes(b"GIF89a\x01\x00")
+    (d / "truncated_after_height.gif").write_bytes(b"GIF89a\x01\x00\x01\x00")
+    (d / "truncated_after_packed.gif").write_bytes(b"GIF89a\x01\x00\x01\x00\x00")
+    (d / "truncated_after_background.gif").write_bytes(
+        b"GIF89a\x01\x00\x01\x00\x00\x00"
+    )
+    (d / "declared_global_palette_short.gif").write_bytes(
+        b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00"
+    )
+    (d / "no_frame_trailer.gif").write_bytes(b"GIF89a\x01\x00\x01\x00\x00\x00\x00\x3b")
+    (d / "no_frame_no_trailer.gif").write_bytes(b"GIF89a\x01\x00\x01\x00\x00\x00\x00")
     (d / "truncated_global_palette.gif").write_bytes(bytes(static[: table_end - 1]))
+    (d / "extension_no_label.gif").write_bytes(bytes(static[:image_offset]) + b"\x21")
+    (d / "application_no_length.gif").write_bytes(bytes(static[:image_offset]) + b"\x21\xff")
     (d / "truncated_image_descriptor.gif").write_bytes(bytes(static[: image_offset + 4]))
+    (d / "image_no_left.gif").write_bytes(bytes(static[: image_offset + 1]))
+    (d / "image_truncated_after_left.gif").write_bytes(bytes(static[: image_offset + 3]))
+    (d / "image_truncated_after_top.gif").write_bytes(bytes(static[: image_offset + 5]))
+    (d / "image_truncated_after_width.gif").write_bytes(bytes(static[: image_offset + 7]))
+    (d / "image_truncated_after_height.gif").write_bytes(bytes(static[: image_offset + 9]))
+    (d / "image_truncated_after_packed.gif").write_bytes(bytes(static[: image_offset + 10]))
     truncated_local_palette = bytearray(static)
     truncated_local_palette[image_offset + 9] = 0x80 | (static[10] & 7)
     (d / "truncated_local_palette.gif").write_bytes(
@@ -1240,6 +1259,7 @@ def gen_gif():
     (d / "truncated_comment_subblock.gif").write_bytes(
         bytes(static[:image_offset]) + b"\x21\xfe\x04ab"
     )
+    (d / "comment_no_subblock_length.gif").write_bytes(bytes(static[:image_offset]) + b"\x21\xfe")
 
     gce = bytearray((d / "gce.gif").read_bytes())
     gce_offset = gce.index(b"\x21\xf9")
@@ -1247,6 +1267,19 @@ def gen_gif():
     bad_gce_terminator[gce_offset + 7] = 1
     (d / "bad_gce_terminator.gif").write_bytes(bad_gce_terminator)
     (d / "truncated_gce.gif").write_bytes(bytes(gce[: gce_offset + 5]))
+    (d / "gce_no_size.gif").write_bytes(bytes(static[:image_offset]) + b"\x21\xf9")
+    (d / "gce_truncated_after_size.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xf9\x04"
+    )
+    (d / "gce_truncated_after_packed.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xf9\x04\x00"
+    )
+    (d / "gce_truncated_after_delay.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xf9\x04\x00\x00\x00"
+    )
+    (d / "gce_truncated_after_index.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xf9\x04\x00\x00\x00\x00"
+    )
     nonstandard_gce_size = bytearray(gce)
     nonstandard_gce_size[gce_offset + 2] = 3
     (d / "nonstandard_gce_size.gif").write_bytes(nonstandard_gce_size)

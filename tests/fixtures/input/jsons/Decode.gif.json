@@ -416,6 +416,97 @@
       }
     },
     {
+      "id": "error_malformed_truncated_after_width",
+      "asset": "truncated_after_width.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/truncated_after_width.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_after_height",
+      "asset": "truncated_after_height.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/truncated_after_height.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_after_packed",
+      "asset": "truncated_after_packed.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/truncated_after_packed.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_truncated_after_background",
+      "asset": "truncated_after_background.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/truncated_after_background.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_declared_global_palette_short",
+      "asset": "declared_global_palette_short.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/declared_global_palette_short.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_no_frame_trailer",
+      "asset": "no_frame_trailer.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/no_frame_trailer.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_no_frame_no_trailer",
+      "asset": "no_frame_no_trailer.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/no_frame_no_trailer.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_truncated_global_palette",
       "asset": "truncated_global_palette.gif",
       "expect_error": true,
@@ -434,6 +525,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/unknown_block.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_extension_no_label",
+      "asset": "extension_no_label.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/extension_no_label.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_application_no_length",
+      "asset": "application_no_length.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/application_no_length.gif",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -481,11 +598,102 @@
       }
     },
     {
+      "id": "error_malformed_comment_no_subblock_length",
+      "asset": "comment_no_subblock_length.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/comment_no_subblock_length.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_truncated_image_descriptor",
       "asset": "truncated_image_descriptor.gif",
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_image_descriptor.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_image_no_left",
+      "asset": "image_no_left.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/image_no_left.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_image_truncated_after_left",
+      "asset": "image_truncated_after_left.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/image_truncated_after_left.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_image_truncated_after_top",
+      "asset": "image_truncated_after_top.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/image_truncated_after_top.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_image_truncated_after_width",
+      "asset": "image_truncated_after_width.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/image_truncated_after_width.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_image_truncated_after_height",
+      "asset": "image_truncated_after_height.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/image_truncated_after_height.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_image_truncated_after_packed",
+      "asset": "image_truncated_after_packed.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/image_truncated_after_packed.gif",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -538,6 +746,71 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_gce.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_gce_no_size",
+      "asset": "gce_no_size.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_no_size.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_gce_truncated_after_size",
+      "asset": "gce_truncated_after_size.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_truncated_after_size.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_gce_truncated_after_packed",
+      "asset": "gce_truncated_after_packed.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_truncated_after_packed.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_gce_truncated_after_delay",
+      "asset": "gce_truncated_after_delay.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_truncated_after_delay.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_gce_truncated_after_index",
+      "asset": "gce_truncated_after_index.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_truncated_after_index.gif",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -38,7 +38,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     input.skip(1)?; // Pixel aspect ratio.
 
     let global_palette = if packed & 0x80 != 0 {
-        Some(input.read_bytes(color_table_len(packed)?)?.to_vec())
+        Some(input.read_bytes(color_table_len(packed))?.to_vec())
     } else {
         None
     };
@@ -170,7 +170,7 @@ fn decode_image(
     let packed = input.read_u8()?;
     let interlaced = packed & 0x40 != 0;
     let local_palette = if packed & 0x80 != 0 {
-        Some(input.read_bytes(color_table_len(packed)?)?)
+        Some(input.read_bytes(color_table_len(packed))?)
     } else {
         None
     };
@@ -178,11 +178,11 @@ fn decode_image(
 
     let minimum_code_size = input.read_u8()?;
     let compressed = input.read_sub_blocks()?;
-    let pixel_count = usize::from(width).checked_mul(usize::from(height))?;
+    let pixel_count = usize::from(width) * usize::from(height);
     let mut indices = decode_lzw(&compressed, minimum_code_size, pixel_count)?;
 
     if interlaced {
-        indices = deinterlace(&indices, usize::from(width), usize::from(height))?;
+        indices = deinterlace(&indices, usize::from(width), usize::from(height));
     }
 
     let image = if let Some(palette_rgb) = palette_rgb {
@@ -194,7 +194,10 @@ fn decode_image(
                 alpha[usize::from(index)] = 0;
             }
         }
-        let palette = ImagePalette::new(palette_rgb.to_vec(), alpha).ok()?;
+        let palette = ImagePalette {
+            rgb: palette_rgb.to_vec(),
+            alpha,
+        };
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
             .with_palette(palette)
     } else {
@@ -203,8 +206,8 @@ fn decode_image(
     Some((image, left, top, interlaced))
 }
 
-fn color_table_len(packed: u8) -> Option<usize> {
-    Some((1usize << ((packed & 0x07) + 1)) * 3)
+fn color_table_len(packed: u8) -> usize {
+    (1usize << ((packed & 0x07) + 1)) * 3
 }
 
 /// Decode GIF's variable-width, least-significant-bit-first LZW stream.
@@ -234,7 +237,7 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
 
     while let Some(code) = bits.read(code_size) {
         if code == clear_code {
-            code_size = minimum_code_size.checked_add(1)?;
+            code_size = minimum_code_size + 1;
             next_code = first_free_code;
             previous_code = None;
             continue;
@@ -335,8 +338,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_lzw(&[0], 2, 0).is_none());
 }
 
-fn deinterlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
-    debug_assert_eq!(indices.len(), width.checked_mul(height)?);
+fn deinterlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
+    debug_assert_eq!(indices.len(), width * height);
 
     let mut output = vec![0; indices.len()];
     let mut source_row = 0usize;
@@ -349,7 +352,8 @@ fn deinterlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
             source_row += 1;
         }
     }
-    (source_row == height).then_some(output)
+    debug_assert_eq!(source_row, height);
+    output
 }
 
 struct Input<'a> {
@@ -369,8 +373,8 @@ impl<'a> Input<'a> {
     }
 
     fn read_u16(&mut self) -> Option<u16> {
-        let bytes: [u8; 2] = self.read_bytes(2)?.try_into().ok()?;
-        Some(u16::from_le_bytes(bytes))
+        let bytes = self.read_bytes(2)?;
+        Some(u16::from_le_bytes([bytes[0], bytes[1]]))
     }
 
     fn read_bytes(&mut self, len: usize) -> Option<&'a [u8]> {
@@ -420,14 +424,14 @@ impl<'a> BitReader<'a> {
     }
 
     fn read(&mut self, width: u8) -> Option<u16> {
-        let end = self.bit_position.checked_add(usize::from(width))?;
-        if end > self.data.len().checked_mul(8)? {
+        let end = self.bit_position + usize::from(width);
+        if end > self.data.len() * 8 {
             return None;
         }
 
         let mut value = 0u16;
         for shift in 0..width {
-            let byte = *self.data.get(self.bit_position / 8)?;
+            let byte = self.data[self.bit_position / 8];
             let bit = (byte >> (self.bit_position % 8)) & 1;
             value |= u16::from(bit) << shift;
             self.bit_position += 1;

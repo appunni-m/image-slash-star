@@ -1012,16 +1012,37 @@ formats:
       - invalid_signature.gif
       - truncated_signature.gif
       - truncated_logical_screen.gif
+      - truncated_after_width.gif
+      - truncated_after_height.gif
+      - truncated_after_packed.gif
+      - truncated_after_background.gif
+      - declared_global_palette_short.gif
+      - no_frame_trailer.gif
+      - no_frame_no_trailer.gif
       - truncated_global_palette.gif
       - unknown_block.gif
+      - extension_no_label.gif
+      - application_no_length.gif
       - truncated_application_identifier.gif
       - truncated_application_subblock.gif
       - truncated_comment_subblock.gif
+      - comment_no_subblock_length.gif
       - truncated_image_descriptor.gif
+      - image_no_left.gif
+      - image_truncated_after_left.gif
+      - image_truncated_after_top.gif
+      - image_truncated_after_width.gif
+      - image_truncated_after_height.gif
+      - image_truncated_after_packed.gif
       - truncated_local_palette.gif
       - truncated_image_data.gif
       - truncated_sub_block.gif
       - truncated_gce.gif
+      - gce_no_size.gif
+      - gce_truncated_after_size.gif
+      - gce_truncated_after_packed.gif
+      - gce_truncated_after_delay.gif
+      - gce_truncated_after_index.gif
       - zero_frame_width.gif
       - zero_frame_height.gif
       - min_code_one.gif

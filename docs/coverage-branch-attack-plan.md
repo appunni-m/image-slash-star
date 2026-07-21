@@ -12,16 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `3c0303ef-12a2-4cbe-8746-2096f98e6384`
+- Current snapshot: `3f9b643a-91f4-451e-8a28-a2e1908e109d`
 - Current measured commit metadata:
-  `d0a8e05293ecc25e9b94f9f16a621a127e296a95`
-- Current source state: post-small ICO/WebP invariant sweep, before committing
-  that sweep.
-- Lines: 24353 / 24359
+- Current source state: post-GIF decode fixture/invariant sweep, before
+  committing that sweep.
+- Lines: 24358 / 24364
 - Branches: 3426 / 3440
 - Functions: 1579 / 1579
-- Regions: 39782 / 40620
-- Remaining target: 6 lines, 14 branches, and 838 regions.
+- Regions: 39781 / 40590
+- Remaining target: 6 lines, 14 branches, and 809 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -3344,6 +3343,151 @@ Decision:
 - Leave the remaining WebP wrapper regions until the native WebP generator can
   produce successful-but-invalid frame/sequence states, or until native decoder
   invariants prove these are unreachable. Do not add wrapper-only fake states.
+
+### Attempt 17 plan: GIF decode public truncation fixtures and local invariants
+
+Git state before editing:
+
+- Branch: `main`
+- Pushed commit: `ce2f019` (`Clean up small coverage invariants`)
+- Worktree: clean before this attempt.
+
+Coverage MCP baseline used for targeting:
+
+- Snapshot: `3c0303ef-12a2-4cbe-8746-2096f98e6384`
+- Run: `01ddff2a-8b63-4188-8da1-58868c24661f`
+- Lines: `24353 / 24359`
+- Branches: `3426 / 3440`
+- Functions: `1579 / 1579`
+- Regions: `39782 / 40620`
+- Missing regions: `838`
+
+Target: `src/codecs/gif/decode.rs`
+
+- Current MCP file metrics: `562 / 594` regions, `318 / 318` lines,
+  `74 / 74` branches, `21 / 21` functions.
+- Source-mapped missing region starts:
+  `35:42`, `36:33`, `37:43`, `38:18`, `41:54`, `50:30`, `52:44`,
+  `56:69`, `94:15`, `98:15`, `114:29`, `136:41`, `137:33`,
+  `139:32`, `140:23`, `162:32`, `164:33`, `165:34`, `170:33`,
+  `173:54`, `179:44`, `181:74`, `185:81`, `197:74`, `237:57`,
+  `339:62`, `372:65`, `377:49`, `400:49`, `423:68`, `424:48`,
+  `430:61`.
+
+Pillow probe evidence from `.oracle-venv`:
+
+| Probe shape | Pillow 12.2.0 result | Action |
+| --- | --- | --- |
+| Truncated logical-screen fields after width/height/packed/background | error | Add error fixtures. |
+| Declared global palette shorter than the advertised table | error | Add a focused error fixture; existing `truncated_global_palette.gif` is generated from Pillow output but did not cover this source region. |
+| Valid header with trailer but no frames, and valid header with no trailer | error | Add error fixtures for empty frame list and loop read EOF. |
+| Extension introducer with no label, and application extension with no length byte | error | Add error fixtures. |
+| GCE truncated after size, packed, delay, and transparency index | error | Add focused error fixtures. Existing `truncated_gce.gif` covers only one truncation point. |
+| Image descriptor truncated after left/top/width/height/packed/min-code boundaries | error | Add focused error fixtures. |
+| Non-zero logical canvas smaller than frame bounds | ok, Pillow expands output to cover the frame bounds | Defer. This requires changing `decode()` to return a composited logical canvas for offset frames, not just changing `DecodedSequence` dimensions. Do not add this fixture until that parity behavior is implemented. |
+
+Selected implementation cleanups:
+
+| Source | Reverse-mapped invariant | Action |
+| --- | --- | --- |
+| `color_table_len(packed)?` | GIF color table size is `3 * 2^(N+1)` for the low three bits; no failure state exists. | Return `usize` directly. |
+| `minimum_code_size.checked_add(1)?` | `minimum_code_size` was already validated as `2..=8`. | Use `minimum_code_size + 1`. |
+| `decode_image()` pixel count | Frame width/height are `u16`, so their product fits supported `usize` targets. | Use direct multiplication. |
+| `deinterlace(...)?` and its internal checked debug assertion | The decoded index buffer length is already exactly `width * height`, and the four GIF interlace passes visit exactly `height` rows. | Make `deinterlace()` infallible. |
+| `ImagePalette::new(...).ok()?` | GIF color tables read by `color_table_len()` are non-empty RGB triplets with at most 256 entries; alpha is either empty or exactly table length. | Construct `ImagePalette` directly. |
+| `Input::read_u16()` slice conversion | `read_bytes(2)` already proves the slice length. | Use direct byte indexing. |
+| `BitReader::read()` checked bit-position arithmetic and byte lookup | Code widths are bounded by GIF LZW (`<=12`), and the end-bound check proves every indexed byte exists. | Use direct arithmetic/indexing while keeping the end-of-stream check. |
+
+Validation after this batch:
+
+1. Regenerate deterministic GIF assets.
+2. Regenerate Pillow decode references.
+3. Run the manifest-driven GIF decode matrix.
+4. Run `cargo fmt --all`.
+5. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+6. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+7. Record the new summary and GIF movement here.
+
+### Attempt 17 result
+
+Validation performed before measuring:
+
+1. `.oracle-venv/bin/python scripts/generate_test_assets.py`
+2. `.oracle-venv/bin/python scripts/generate_decode_refs.py`
+3. `cargo test --all-features --test coverage_matrix_tests test_decode_matrix`
+4. `cargo fmt --all`
+5. `cargo check --all-features`
+6. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+7. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+8. Coverage MCP command `all-features-llvm-cov-json-nightly-branch`
+
+Coverage MCP run `b4cadb75-663f-4e84-a37a-5634505b9e77`, snapshot
+`3f9b643a-91f4-451e-8a28-a2e1908e109d`, passed and ingested.
+
+- Commit metadata recorded by the artifact:
+  `ce2f019c80a6e86cb4baa7259490a7c8e0987903`
+- Lines: `24358 / 24364`
+- Branches: `3426 / 3440`
+- Functions: `1579 / 1579`
+- Regions: `39781 / 40590`
+- Missing regions: `809`
+
+Net from the Attempt 17 baseline:
+
+- Missing regions improved from `838` to `809` (`29` fewer).
+- Branch gap stayed at `14` missing.
+- Line gap stayed at `6`.
+- Decode matrix now has `602` active rows and `6` planned rows; full manifest
+  matrix now has `905` rows.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/gif/decode.rs` | `562 / 594` | `561 / 564` | `32 -> 3` |
+
+What moved:
+
+- Added 21 manifest-driven GIF malformed assets for precise logical-screen,
+  extension, GCE, image-descriptor, and no-frame truncation points. Pillow
+  12.2.0 rejects all of these inputs, and the Rust decoder now exercises the
+  same error paths through the manifest matrix.
+- Removed dead GIF local invariants:
+  - `color_table_len()` is now infallible.
+  - LZW reset code size uses direct `minimum_code_size + 1` after validation.
+  - Frame pixel count uses direct `u16 * u16` arithmetic.
+  - Deinterlace is infallible after exact decoded pixel count validation.
+  - GIF palette construction no longer revalidates already-structured color
+    table triplets.
+  - `read_u16()` no longer uses a fallible slice conversion after reading two
+    bytes.
+  - `BitReader::read()` keeps the end-of-stream guard but removes dead checked
+    arithmetic and post-guard byte lookup fallibility.
+
+Remaining source-mapped GIF decode region starts:
+
+- `98:15`: `fallback_height` empty-frame `max()?`. Empty-frame streams already
+  return at `fallback_width`; once at least one frame exists, height max cannot
+  fail.
+- `114:29`: `sequence.validate().ok()?`. This catches frame extents outside a
+  non-zero logical canvas and palette-index validation. A Pillow probe showed
+  that at least one outside-canvas GIF is accepted by Pillow, but matching that
+  requires `decode()` to return a composited logical canvas for offset frames,
+  not a raw frame image.
+- `381:49`: `Input::read_bytes()` checked-add overflow. Current callers pass
+  fixed small lengths, `u8` sub-block lengths, or GIF color-table lengths, so
+  this is a private defensive helper boundary.
+
+Deferred GIF parity item:
+
+- Implement Pillow-style GIF canvas compositing for `decode()` when a frame has
+  non-zero offsets or exceeds the declared logical screen. Then add the
+  `frame_outside_logical` fixture as a tolerated malformed input. Do not add
+  that fixture before the compositing behavior exists because the current
+  decoder would return raw-frame bytes rather than Pillow's logical-canvas
+  bytes.
 
 ### Attempt 10 plan: ICO encode public empty-BMP parity and region cleanup
 
