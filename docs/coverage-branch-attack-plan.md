@@ -1248,6 +1248,62 @@ Measurement and decision:
 - Decision: keep the hook. It covers the real frame-header call site for
   loop-filter adjustments and improves aggregate lines, branches, and regions.
 
+## Attempt 35 plan: VP8 macroblock header with segment features but no segment map
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `46bc185`.
+- Coverage MCP snapshot: `b3c44fad-9285-4a8a-a383-f11df7a964f1`.
+- Overall: `24537 / 24542` lines, `3433 / 3444` branches,
+  `1581 / 1581` functions, and `40042 / 40775` regions.
+- Target file: `src/codecs/webp/native/vp8.rs` at `1429 / 1432` lines,
+  `155 / 160` branches, `58 / 58` functions, and `2654 / 2675` regions.
+
+Reverse map:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 1229 | Segment-map macroblock header branch | Segmentation feature data is enabled for the frame, but the segment map is not updated, so `segments_enabled == true` and `segments_update_map == false` at macroblock-header parsing. |
+
+Selected action:
+
+- Add a private VP8 hook case that initializes the exact macroblock-header
+  state above and calls `read_macroblock_header(0)`.
+- This differs from reverted Attempt 33, which used `segments_enabled == false`
+  and regressed coverage. The current attempt targets the raw missing span:
+  second operand false after first operand true.
+- Revert if the aggregate branch/region totals do not improve.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured branch/region movement here, then commit and push if the
+   aggregate coverage target improves.
+
+Measurement and decision:
+
+- Coverage MCP run: `b33ddcf4-30d8-48a4-8a24-951e70794633`.
+- Coverage MCP snapshot: `4beb0d1c-917e-405d-9bc2-1f590bab193b`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall with the hook attempt: `24542 / 24548` lines,
+  `3432 / 3444` branches, `1581 / 1581` functions, and
+  `40054 / 40788` regions.
+- Net branch movement: regressed from `3433 / 3444` to `3432 / 3444`.
+- Net region movement: regressed by one missing region. The baseline was
+  `40042 / 40775` (`733` missing); the hook measured `40054 / 40788`
+  (`734` missing).
+- Target observation: line 1229 hit counts changed, but `vp8.rs` regressed from
+  `155 / 160` to `154 / 160` branches and only reached `2666 / 2688` regions.
+- Decision: revert the direct macroblock-header hook code before commit. As
+  with Attempt 33, direct macroblock-header calls perturb VP8 branch accounting
+  and should be avoided. The remaining line 1229/1863 debt likely requires a
+  real frame bitstream or manifest fixture, not an isolated parser call.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
