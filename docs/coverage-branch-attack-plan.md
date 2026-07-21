@@ -2863,6 +2863,126 @@ Validation after this batch:
    `all-features-llvm-cov-json-nightly-branch`.
 4. Record the new summary and zlib movement here.
 
+### Attempt 13 plan: small-file region sweep after README push
+
+Git state before editing:
+
+- Branch: `main`
+- Pushed commit: `3be3072` (`Update project README`)
+- Worktree: clean before this attempt.
+
+Coverage MCP baseline used for code targeting:
+
+- Snapshot: `dd7e466b-b5f4-4ac6-a435-33adebf0d9fa`
+- Run: `92bb2dca-0803-4fe9-927c-dc15cbfc0d53`
+- Commit metadata: `37a56769860f703c9b03706c06a8edadddaa9514`
+- Note: the later pushed commit is README-only, so this snapshot is still valid
+  for source-code gap targeting.
+- Lines: `24324 / 24330`
+- Branches: `3426 / 3440`
+- Functions: `1577 / 1577`
+- Regions: `39761 / 40643`
+- Missing regions: `882`
+
+MCP file query and a local source-map pass over the MCP-produced LLVM JSON
+identified these small-file region candidates:
+
+| File | MCP regions | Zero-count source starts | Decision |
+| --- | ---: | --- | --- |
+| `src/codecs/mod.rs` | `119 / 120` | `65:26` | Keep deferred. This is the defensive `decode_format()` guard for an enabled decoder returning an invalid `DecodedImage`; no public fixture should make a decoder violate its own contract. |
+| `src/codecs/webp/decode.rs` | `105 / 111` | `23:48`, `39:67`, `50:51`, `51:65`, `55:63`, `78:29` | Add a wrapper hook for invalid `decode_sequence()` input. Defer output-buffer, frame-count, frame-read, and sequence-validation failures until a WebP bitstream generator can prove those native decoder states. |
+| `src/codecs/webp/encode/mod.rs` | `343 / 344` | `113:57` | Keep deferred. This is the RIFF-size `u32` file-format limit after metadata assembly; a real input would require a >4GiB output. |
+| `src/codecs/tiff/encode.rs` | `751 / 764` | `60:48`, `79:42`, `83:55`, `87:42`, `91:42`, `93:48`, `100:64`, `108:82`, `109:83`, `134:44`, `145:41`, `151:83`, `161:42` | Implement the local layout-invariant batch below. |
+| `src/types/dynamic.rs` | `1438 / 1441` | none | Skip until the analyzer exposes a source-mapped region. |
+| `src/types/buffer.rs` | `664 / 666` | none | Skip until the analyzer exposes a source-mapped region. |
+| `src/codecs/webp/native/huffman.rs` | `330 / 331` | none | Skip; already investigated previously with no source-mapped gap. |
+
+Selected sub-batch:
+
+| Target | Reverse-mapped invariant/input | Action |
+| --- | --- | --- |
+| TIFF layout checked arithmetic at lines 79, 83, 87, 91, and 93 | `encoded` is a safe Rust `Vec<u8>` derived from a validated `DecodedImage`. Rust safe allocation limits keep vector lengths below the addressable maximum, and the TIFF tag table/offset padding adds only small constants. The existing `u32` conversions still enforce classic-TIFF file-size limits. | Replace private `usize::checked_add` layout arithmetic with direct arithmetic and keep the `u32::try_from(...)` file-format guards. |
+| TIFF compressed `ImageWidth`/`ImageLength` short conversions at lines 108 and 109 | The compressed layout writes width and height as SHORT entries, so values over `u16::MAX` are real public parameter rejections for compressed TIFF. These can be reached with narrow/tall synthetic `DecodedImage` values without huge allocation. | Compute `(short_width, short_height)` once for compressed layout and add coverage-hook inputs for width > 65535 and height > 65535. |
+| TIFF repeated `RowsPerStrip` height conversion at line 151 | Once compressed height has already converted to `u16`, the later rows-per-strip conversion cannot fail independently. | Reuse `short_height` instead of repeating the conversion. |
+| TIFF zlib `?` at line 60 and `u32` conversions at lines 100, 134, 145, and 161 | These are compression/file-format defensive limits. The `u32` offset/byte-count failures require outputs beyond classic TIFF capacity, and the zlib `Option` path needs a separate compressor-level proof. | Keep deferred. |
+| WebP `decode_sequence()` invalid input at line 39 | This is a public wrapper state not currently exercised by `webp::__coverage_exercise_private_branches()`. | Add a coverage hook in `webp::decode` and call it from `webp::mod`. |
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and file movement here.
+
+### Attempt 13 result
+
+Validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- Coverage MCP command: `all-features-llvm-cov-json-nightly-branch`.
+- Coverage MCP run: `5bb34c1c-3108-45c3-b72d-c19542a15567`.
+- Snapshot: `2538cb3f-a20f-4f8c-92ff-d4a8ec69aba7`.
+- Status: passed, 5 tests passed, 0 failed; coverage artifact ingested.
+
+New counters:
+
+- Commit metadata: `3be30726eb8181340c5d079d1677be7a825924e2`
+- Lines: `24337 / 24343`
+- Branches: `3428 / 3442`
+- Functions: `1578 / 1578`
+- Regions: `39779 / 40652`
+- Missing regions: `873`
+
+Net from Attempt 13 baseline:
+
+- Missing regions improved from `882` to `873` (`9` fewer).
+- Lines remain `6` missing.
+- Branches remain `14` missing; the extra branch counters introduced by this
+  attempt are fully covered.
+- Functions remain fully covered.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/tiff/encode.rs` | `751 / 764` | `763 / 768` | `13 -> 5` |
+| `src/codecs/webp/decode.rs` | `105 / 111` | `110 / 115` | `6 -> 5` |
+
+What moved:
+
+- Removed private TIFF layout checked-add regions after proving they are bounded
+  by safe Rust vector allocation plus small TIFF table constants.
+- Kept classic TIFF `u32` offset/byte-count guards as real file-format limits.
+- Reused the already-validated compressed TIFF short height for `RowsPerStrip`
+  instead of repeating an unreachable conversion.
+- Added compressed TIFF width/height > `u16::MAX` coverage-hook inputs.
+- Added WebP wrapper coverage for invalid `decode_sequence()` input.
+
+Remaining source-mapped gaps in edited files:
+
+- `src/codecs/tiff/encode.rs`: `60:48`, `108:64`, `142:44`,
+  `153:41`, `169:42`.
+  These map to `compress_zlib_tiff(...) ?` and classic-TIFF `u32` file-format
+  offset/byte-count guards.
+- `src/codecs/webp/decode.rs`: `23:48`, `50:51`, `51:65`, `55:63`,
+  `78:29`.
+  These map to native decoder output-buffer, frame-count, frame-read, and
+  sequence-validation failures. They need generated WebP bitstreams or native
+  decoder reverse mapping, not wrapper-only hooks.
+
+Next region-first attack order:
+
+1. `src/codecs/webp/decode.rs` only if a native WebP bitstream can be crafted
+   for the remaining wrapper failure states.
+2. Otherwise move to the next region-heavy source-mapped public fixture target:
+   PNG decode, GIF decode, JPEG parser, or TIFF decode.
+3. Branch work remains WebP native (`decoder.rs`, `vp8.rs`, `lossless.rs`) after
+   the region sweep.
+
 ### Attempt 10 plan: ICO encode public empty-BMP parity and region cleanup
 
 Current Coverage MCP baseline before editing:

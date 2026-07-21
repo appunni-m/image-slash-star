@@ -75,22 +75,30 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         usize::from(channels) * 2
     };
     let compressed_layout = compression != COMPRESSION_NONE;
+    let (short_width, short_height) = if compressed_layout {
+        (
+            u16::try_from(img.width).ok()?,
+            u16::try_from(img.height).ok()?,
+        )
+    } else {
+        (0, 0)
+    };
     let ifd_offset = if compressed_layout {
-        8usize.checked_add(encoded.len())?.next_multiple_of(2)
+        (8usize + encoded.len()).next_multiple_of(2)
     } else {
         8
     };
-    let bits_offset = ifd_offset.checked_add(ifd_size)?;
+    let bits_offset = ifd_offset + ifd_size;
     let pixel_offset = if compressed_layout {
         8
     } else {
-        bits_offset.checked_add(bits_len)?.next_multiple_of(2)
+        (bits_offset + bits_len).next_multiple_of(2)
     };
 
     let output_len = if compressed_layout {
-        bits_offset.checked_add(bits_len)?
+        bits_offset + bits_len
     } else {
-        pixel_offset.checked_add(encoded.len())?
+        pixel_offset + encoded.len()
     };
     let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(match endian {
@@ -105,8 +113,8 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     endian.push_u16(&mut output, entry_count);
 
     if compressed_layout {
-        write_short_entry(&mut output, endian, 256, u16::try_from(img.width).ok()?);
-        write_short_entry(&mut output, endian, 257, u16::try_from(img.height).ok()?);
+        write_short_entry(&mut output, endian, 256, short_width);
+        write_short_entry(&mut output, endian, 257, short_height);
     } else {
         write_entry(&mut output, endian, 256, 4, 1, img.width);
         write_entry(&mut output, endian, 257, 4, 1, img.height);
@@ -148,7 +156,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         write_short_entry(&mut output, endian, 277, channels);
     }
     if compressed_layout {
-        write_short_entry(&mut output, endian, 278, u16::try_from(img.height).ok()?);
+        write_short_entry(&mut output, endian, 278, short_height);
     } else {
         write_entry(&mut output, endian, 278, 4, 1, img.height);
     }
@@ -216,6 +224,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let rgba = DecodedImage::new(1, 1, vec![1, 2, 3, 4], ColorType::Rgba8);
     let cmyk = DecodedImage::new(1, 1, vec![1, 2, 3, 4], ColorType::Cmyk8);
+    let wide_rgb = DecodedImage::new(70_000, 1, vec![0; 70_000 * 3], ColorType::Rgb8);
+    let tall_rgb = DecodedImage::new(1, 70_000, vec![0; 70_000 * 3], ColorType::Rgb8);
 
     for image in [&l1, &la, &l16, &f32, &i32, &rgb, &rgba, &cmyk] {
         let _ = encode(image, &EncodeOptions::default());
@@ -223,6 +233,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for compression in ["lzw", "deflate", "packbits", "raw"] {
         let _ = encode(&rgb, &opt("compression", compression));
     }
+    let _ = encode(&wide_rgb, &opt("compression", "packbits"));
+    let _ = encode(&tall_rgb, &opt("compression", "packbits"));
     let _ = encode(&rgb, &opt("compression", "unsupported"));
     let _ = encode(&rgb, &opt("predictor", "unsupported"));
     let _ = encode(&l1, &opt("predictor", "horizontal"));

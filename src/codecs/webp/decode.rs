@@ -78,3 +78,9 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     sequence.validate().ok()?;
     Some(sequence)
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = decode(b"not a webp stream");
+    let _ = decode_sequence(b"not a webp stream");
+}
