@@ -192,6 +192,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     params.segments[2].quantizer = params.segments[0].quantizer.saturating_add(1);
     let map = simplify_segments(&mut params);
     assert_eq!(map[2], 1);
+
+    let rgba = vec![0u8; 8 * 9 * 4];
+    let mut y_plane = vec![0u8; 8 * 9];
+    let mut u_plane = vec![0u8; 5 * 5];
+    let mut v_plane = vec![0u8; 5 * 5];
+    cleanup_transparent_area(&rgba, 8, 9, &mut y_plane, &mut u_plane, &mut v_plane);
 }
 
 fn pad_plane(

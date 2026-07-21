@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the committed JPEG Huffman prefix-gap hook batch.
+after the WebP VP8 complementary-branch hook batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `bbf441d1-abaf-4f7a-a677-72573cc2b5ff`
-- Current commit: `218a0f6a3d7bf07cc878e24eb548879cdc3f0009`
-- Lines: 21703 / 21704
-- Branches: 3316 / 3484
-- Functions: 1518 / 1518
-- Remaining target: 1 line and 168 branches.
+- Current snapshot: `897bfef9-b1b3-42f9-9f0b-448435e74ee3`
+- Current measured commit metadata: `287793718391493e0e7fd636d3b9899227f52c39`
+- Lines: 21720 / 21721
+- Branches: 3318 / 3484
+- Functions: 1519 / 1519
+- Remaining target: 1 line and 166 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -28,6 +28,40 @@ So the file summary counters are the source of truth for branch counts. The
 line-range view is used to identify where to inspect, not to sum branch counts.
 
 ## Exploration findings
+
+The latest measured pushed `main` state before the current WebP retry is:
+
+- Commit: `287793718391493e0e7fd636d3b9899227f52c39`
+- Coverage MCP run: `3ae04e9f-1faf-4fd0-9ab5-4ebf1b3d0f9b`
+- Coverage MCP snapshot: `523d37a9-9b05-4cd3-bb95-938f26dc2904`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: 21703 / 21704
+- Branches: 3316 / 3484
+- Functions: 1518 / 1518
+
+The current dirty WebP experiment was also measured:
+
+- Coverage MCP run: `efd4c97c-664b-4bb0-931f-fa3bdf7bae05`
+- Coverage MCP snapshot: `9c799eb1-e0c0-47e6-ac35-4416b3549044`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: 21720 / 21721
+- Branches: 3316 / 3484
+- Functions: 1519 / 1519
+
+That experiment did not reduce the remaining branch count. The first WebP hook
+attempt covered the bool-encoder carry path with an existing previous byte and
+the transparent-cleanup bottom-right corner path. The successful retry targeted
+the complementary sides:
+
+- `src/codecs/webp/encode/vp8/bool_enc.rs:98`: drive a carry with no previous
+  output byte, exercising the `if let Some(previous)` false side.
+- `src/codecs/webp/encode/vp8/encoder.rs:447`: call transparent cleanup with
+  `height > full_height` but `width == full_width`, exercising the false side
+  of the bottom-right partial-block check.
+
+Coverage MCP proved this retry improved branch coverage by two branches. If a
+future WebP hook does not improve branch coverage, revert it and move to the
+next manifest-driven malformed decode fixture batch.
 
 The repo already has the correct oracle workflow:
 
@@ -208,6 +242,22 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
   length-limiting pass through the empty-prefix-bucket backup branch at line
   141. This is exercised through the existing `#[cfg(coverage)]` private hook;
   production JPEG encoding behavior is unchanged.
+
+### WebP VP8 complementary-branch coverage-hook batch
+
+- Coverage MCP run: `5acc578d-90b2-413d-9b40-cd6bf291fe38`
+- Coverage MCP snapshot: `897bfef9-b1b3-42f9-9f0b-448435e74ee3`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3316 / 3484 to 3318 / 3484.
+- `src/codecs/webp/encode/vp8/bool_enc.rs`: now 73 / 73 lines and 16 / 16
+  branches.
+- `src/codecs/webp/encode/vp8/encoder.rs`: now 480 / 480 lines and 32 / 32
+  branches.
+- Exploration note: the first WebP hook attempt did not improve branch counts
+  because it exercised already-covered sides. The successful retry drives the
+  bool-encoder carry path with no prior output byte and calls transparent-area
+  cleanup with an exact full-width but partial-height image. Both are private
+  `#[cfg(coverage)]` hooks; production WebP encoding behavior is unchanged.
 
 ## Execution order
 

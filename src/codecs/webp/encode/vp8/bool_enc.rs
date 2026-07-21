@@ -146,3 +146,16 @@ impl Default for BoolEncoder {
         Self::new()
     }
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut encoder = BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 1,
+        nb_bits: 0,
+        output: Vec::new(),
+    };
+    encoder.flush();
+    assert_eq!(encoder.output, [0x00, 0x00]);
+}
