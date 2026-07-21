@@ -195,6 +195,32 @@
       ]
     },
     {
+      "id": "compression_rle8_rle8_delta",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle8_delta_bmp.bin",
+      "ref_bytes": 8,
+      "ref_mode": "P",
+      "ref_size": [
+        4,
+        2
+      ]
+    },
+    {
+      "id": "compression_rle8_rle8_absolute_odd",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle8_absolute_odd_bmp.bin",
+      "ref_bytes": 8,
+      "ref_mode": "P",
+      "ref_size": [
+        4,
+        2
+      ]
+    },
+    {
       "id": "compression_rle4",
       "status": "ok",
       "error_type": null,
@@ -645,6 +671,46 @@
     },
     {
       "id": "error_malformed_rle4_early_eob",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle8_delta_truncated",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle8_absolute_truncated",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle4_delta_truncated",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "not enough image data",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_rle4_absolute_truncated",
       "status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "not enough image data",

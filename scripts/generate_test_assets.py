@@ -1108,6 +1108,19 @@ def gen_gif():
     static = bytearray((d / "static.gif").read_bytes())
     table_end = 13 + 3 * (1 << ((static[10] & 7) + 1))
     image_offset = static.index(0x2C, table_end)
+    (d / "truncated_signature.gif").write_bytes(b"GIF8")
+    (d / "truncated_logical_screen.gif").write_bytes(b"GIF89a\x01")
+    (d / "truncated_global_palette.gif").write_bytes(bytes(static[: table_end - 1]))
+    (d / "truncated_image_descriptor.gif").write_bytes(bytes(static[: image_offset + 4]))
+    truncated_local_palette = bytearray(static)
+    truncated_local_palette[image_offset + 9] = 0x80 | (static[10] & 7)
+    (d / "truncated_local_palette.gif").write_bytes(
+        bytes(truncated_local_palette[: image_offset + 13])
+    )
+    (d / "truncated_image_data.gif").write_bytes(bytes(static[: image_offset + 11]))
+    truncated_sub_block = bytearray(static)
+    truncated_sub_block[image_offset + 11 : image_offset + 13] = b"\x04\x01"
+    (d / "truncated_sub_block.gif").write_bytes(bytes(truncated_sub_block[: image_offset + 13]))
     invalid_signature = bytearray(static)
     invalid_signature[:6] = b"NOTGIF"
     (d / "invalid_signature.gif").write_bytes(invalid_signature)
@@ -1179,12 +1192,25 @@ def gen_gif():
     animext_payload = animext_bad_payload.index(b"\x03\x01", netscape)
     animext_bad_payload[animext_payload + 1] = 0
     (d / "animext_bad_payload.gif").write_bytes(animext_bad_payload)
+    short_loop_payload = bytearray(static)
+    short_loop_payload[image_offset:image_offset] = b"\x21\xff\x0bNETSCAPE2.0\x01\x01\x00"
+    (d / "short_loop_payload.gif").write_bytes(short_loop_payload)
+    (d / "truncated_application_identifier.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xff\x0bNETS"
+    )
+    (d / "truncated_application_subblock.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xff\x0bUNKNOWNAPP1\x04\x01"
+    )
+    (d / "truncated_comment_subblock.gif").write_bytes(
+        bytes(static[:image_offset]) + b"\x21\xfe\x04ab"
+    )
 
     gce = bytearray((d / "gce.gif").read_bytes())
     gce_offset = gce.index(b"\x21\xf9")
     bad_gce_terminator = bytearray(gce)
     bad_gce_terminator[gce_offset + 7] = 1
     (d / "bad_gce_terminator.gif").write_bytes(bad_gce_terminator)
+    (d / "truncated_gce.gif").write_bytes(bytes(gce[: gce_offset + 5]))
     nonstandard_gce_size = bytearray(gce)
     nonstandard_gce_size[gce_offset + 2] = 3
     (d / "nonstandard_gce_size.gif").write_bytes(nonstandard_gce_size)
@@ -1551,6 +1577,53 @@ def gen_bmp():
     early_eob4 = bytes((4, 0x77, 0, 1))
     early_eob4_dib = bmp_info_header(4, 2, 4, 2, len(early_eob4), 16)
     write_bmp(d / "rle4_early_eob.bmp", early_eob4_dib, early_eob4, bmp_palette(16))
+    rle8_delta = bytes((0, 2, 1, 1, 4, 7, 4, 8))
+    rle8_delta_dib = bmp_info_header(4, 2, 8, 1, len(rle8_delta), 256)
+    write_bmp(d / "rle8_delta.bmp", rle8_delta_dib, rle8_delta, bmp_palette(256))
+    rle8_absolute_odd = bytes((0, 3, 1, 2, 3, 0, 0, 0, 4, 9))
+    rle8_absolute_odd_dib = bmp_info_header(4, 2, 8, 1, len(rle8_absolute_odd), 256)
+    write_bmp(
+        d / "rle8_absolute_odd.bmp",
+        rle8_absolute_odd_dib,
+        rle8_absolute_odd,
+        bmp_palette(256),
+    )
+    rle8_delta_truncated = bytes((0, 2, 1))
+    rle8_delta_truncated_dib = bmp_info_header(4, 2, 8, 1, len(rle8_delta_truncated), 256)
+    write_bmp(
+        d / "rle8_delta_truncated.bmp",
+        rle8_delta_truncated_dib,
+        rle8_delta_truncated,
+        bmp_palette(256),
+    )
+    rle8_absolute_truncated = bytes((0, 3, 1, 2))
+    rle8_absolute_truncated_dib = bmp_info_header(
+        4, 2, 8, 1, len(rle8_absolute_truncated), 256
+    )
+    write_bmp(
+        d / "rle8_absolute_truncated.bmp",
+        rle8_absolute_truncated_dib,
+        rle8_absolute_truncated,
+        bmp_palette(256),
+    )
+    rle4_delta_truncated = bytes((0, 2, 1))
+    rle4_delta_truncated_dib = bmp_info_header(4, 2, 4, 2, len(rle4_delta_truncated), 16)
+    write_bmp(
+        d / "rle4_delta_truncated.bmp",
+        rle4_delta_truncated_dib,
+        rle4_delta_truncated,
+        bmp_palette(16),
+    )
+    rle4_absolute_truncated = bytes((0, 5, 0x12))
+    rle4_absolute_truncated_dib = bmp_info_header(
+        4, 2, 4, 2, len(rle4_absolute_truncated), 16
+    )
+    write_bmp(
+        d / "rle4_absolute_truncated.bmp",
+        rle4_absolute_truncated_dib,
+        rle4_absolute_truncated,
+        bmp_palette(16),
+    )
     Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.bmp")
     Image.new("RGB", (17,17), (128,0,0)).save(d / "odd_width.bmp")
     pattern_img("RGB", (2, 5)).save(d / "width2.bmp")

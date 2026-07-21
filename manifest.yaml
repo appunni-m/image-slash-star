@@ -966,6 +966,7 @@ formats:
       test_assets:
       - animext_loop.gif
       - animext_bad_payload.gif
+      - short_loop_payload.gif
     - id: extension_gce
       description: Graphic Control Extension (delay, disposal)
       test_assets:
@@ -1002,7 +1003,18 @@ formats:
       description: Invalid headers, descriptors, controls, and LZW roots
       test_assets:
       - invalid_signature.gif
+      - truncated_signature.gif
+      - truncated_logical_screen.gif
+      - truncated_global_palette.gif
       - unknown_block.gif
+      - truncated_application_identifier.gif
+      - truncated_application_subblock.gif
+      - truncated_comment_subblock.gif
+      - truncated_image_descriptor.gif
+      - truncated_local_palette.gif
+      - truncated_image_data.gif
+      - truncated_sub_block.gif
+      - truncated_gce.gif
       - zero_frame_width.gif
       - zero_frame_height.gif
       - min_code_one.gif
@@ -1228,6 +1240,8 @@ formats:
       - rle8.bmp
       - rle8_mixed.bmp
       - rle8_top_down.bmp
+      - rle8_delta.bmp
+      - rle8_absolute_odd.bmp
     - id: compression_rle4
       description: BI_RLE4 (4-bit RLE)
       test_assets:
@@ -1304,6 +1318,10 @@ formats:
       - rle4_invalid_depth.bmp
       - rle8_early_eob.bmp
       - rle4_early_eob.bmp
+      - rle8_delta_truncated.bmp
+      - rle8_absolute_truncated.bmp
+      - rle4_delta_truncated.bmp
+      - rle4_absolute_truncated.bmp
       - bitfields_zero_mask.bmp
       - bitfields_zero_red_mask.bmp
       - bitfields_zero_blue_mask.bmp

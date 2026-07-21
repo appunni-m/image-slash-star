@@ -58,8 +58,10 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
                     let payload = input.read_sub_blocks()?;
                     let is_loop_extension = matches!(identifier, b"NETSCAPE2.0" | b"ANIMEXTS1.0");
                     if is_loop_extension && payload.first() == Some(&1) {
-                        let bytes: [u8; 2] = payload.get(1..3)?.try_into().ok()?;
-                        loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
+                        if payload.len() >= 3 {
+                            let bytes = [payload[1], payload[2]];
+                            loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
+                        }
                     }
                 } else {
                     input.skip_sub_blocks()?;
@@ -75,7 +77,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
                     image,
                     left: u32::from(left),
                     top: u32::from(top),
-                    duration_ms: u32::from(graphic_control.delay_cs).checked_mul(10)?,
+                    duration_ms: u32::from(graphic_control.delay_cs) * 10,
                     disposal: graphic_control.disposal,
                     interlaced,
                 });
@@ -88,11 +90,11 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
 
     let fallback_width = frames
         .iter()
-        .filter_map(|frame| frame.left.checked_add(frame.image.width))
+        .map(|frame| frame.left + frame.image.width)
         .max()?;
     let fallback_height = frames
         .iter()
-        .filter_map(|frame| frame.top.checked_add(frame.image.height))
+        .map(|frame| frame.top + frame.image.height)
         .max()?;
     let sequence = DecodedSequence {
         width: if logical_width == 0 {
@@ -202,8 +204,7 @@ fn decode_image(
 }
 
 fn color_table_len(packed: u8) -> Option<usize> {
-    let entries = 1usize.checked_shl(u32::from((packed & 0x07) + 1))?;
-    entries.checked_mul(3)
+    Some((1usize << ((packed & 0x07) + 1)) * 3)
 }
 
 /// Decode GIF's variable-width, least-significant-bit-first LZW stream.
@@ -215,10 +216,10 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
         return None;
     }
 
-    let clear_code = 1u16.checked_shl(u32::from(minimum_code_size))?;
-    let end_code = clear_code.checked_add(1)?;
-    let first_free_code = end_code.checked_add(1)?;
-    let mut code_size = minimum_code_size.checked_add(1)?;
+    let clear_code = 1u16 << minimum_code_size;
+    let end_code = clear_code + 1;
+    let first_free_code = end_code + 1;
+    let mut code_size = minimum_code_size + 1;
     let mut next_code = first_free_code;
     let mut previous_code = None;
     let mut prefixes = [0u16; MAX_LZW_CODE];
@@ -289,7 +290,7 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
         if usize::from(next_code) < MAX_LZW_CODE {
             prefixes[usize::from(next_code)] = previous;
             suffixes[usize::from(next_code)] = first;
-            next_code = next_code.checked_add(1)?;
+            next_code += 1;
 
             if code_size < 12 && next_code == (1u16 << code_size) {
                 code_size += 1;
@@ -341,11 +342,10 @@ fn deinterlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {
     let mut source_row = 0usize;
     for (start, step) in [(0usize, 8usize), (4, 8), (2, 4), (1, 2)] {
         for destination_row in (start..height).step_by(step) {
-            let source_start = source_row.checked_mul(width)?;
-            let destination_start = destination_row.checked_mul(width)?;
-            output
-                .get_mut(destination_start..destination_start + width)?
-                .copy_from_slice(indices.get(source_start..source_start + width)?);
+            let source_start = source_row * width;
+            let destination_start = destination_row * width;
+            output[destination_start..destination_start + width]
+                .copy_from_slice(&indices[source_start..source_start + width]);
             source_row += 1;
         }
     }
@@ -364,7 +364,7 @@ impl<'a> Input<'a> {
 
     fn read_u8(&mut self) -> Option<u8> {
         let value = *self.data.get(self.position)?;
-        self.position = self.position.checked_add(1)?;
+        self.position += 1;
         Some(value)
     }
 

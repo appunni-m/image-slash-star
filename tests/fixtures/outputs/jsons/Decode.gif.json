@@ -195,6 +195,19 @@
       ]
     },
     {
+      "id": "alternate_loop_extension_short_loop_payload",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_short_loop_payload_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "extension_gce",
       "status": "ok",
       "error_type": null,
@@ -371,7 +384,117 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_truncated_signature",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_logical_screen",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_global_palette",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_unknown_block",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_application_identifier",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_application_subblock",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_comment_subblock",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_image_descriptor",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_local_palette",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_image_data",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (0 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_sub_block",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated (2 bytes not processed)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_truncated_gce",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
       "error_message": "cannot identify image file <bytes>",

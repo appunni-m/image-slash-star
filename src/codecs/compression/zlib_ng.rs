@@ -1416,7 +1416,7 @@ struct TreeSpec<'a> {
 fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:122-345 (heap construction,
     // depth tie-breaking, length overflow repair, and canonical codes).
-    let heap_size = spec.elements.checked_mul(2)?.checked_add(1)?;
+    let heap_size = spec.elements * 2 + 1;
     let mut nodes = vec![Node::default(); heap_size];
     for (node, &frequency) in nodes.iter_mut().zip(frequencies) {
         node.frequency = frequency;
@@ -1585,7 +1585,7 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS +
     let mut next_code = [0u16; MAX_BITS + 1];
     let mut code = 0u16;
     for bits in 1..=MAX_BITS {
-        code = code.checked_add(counts[bits - 1])?.checked_shl(1)?;
+        code = (code + counts[bits - 1]) << 1;
         next_code[bits] = code;
     }
     for node in nodes.iter_mut().take(max_code + 1) {
@@ -1594,7 +1594,7 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS +
             continue;
         }
         node.code = reverse_bits(next_code[length], u8::try_from(length).ok()?);
-        next_code[length] = next_code[length].checked_add(1)?;
+        next_code[length] += 1;
     }
     Some(())
 }
@@ -1604,14 +1604,15 @@ fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) ->
     let uncompressed = expand_tokens(tokens)?;
     let mut uncompressed_start = 0usize;
     for (index, block) in tokens.chunks(block_tokens).enumerate() {
-        let stored_length = block.iter().try_fold(0usize, |length, token| {
-            length.checked_add(match token {
-                Token::Literal(_) => 1,
-                Token::Match { length, .. } => *length,
-            })
-        })?;
-        let uncompressed_end = uncompressed_start.checked_add(stored_length)?;
-        let uncompressed_block = uncompressed.get(uncompressed_start..uncompressed_end)?;
+        let stored_length = block.iter().fold(0usize, |length, token| {
+            length
+                + match token {
+                    Token::Literal(_) => 1,
+                    Token::Match { length, .. } => *length,
+                }
+        });
+        let uncompressed_end = uncompressed_start + stored_length;
+        let uncompressed_block = &uncompressed[uncompressed_start..uncompressed_end];
         write_block(block, uncompressed_block, index + 1 == block_count, writer)?;
         uncompressed_start = uncompressed_end;
     }
@@ -1691,7 +1692,7 @@ fn write_block(
     let static_bytes = usize::try_from((static_cost + 10) >> 3).ok()?;
 
     let stored_cost = if uncompressed.len() <= usize::from(u16::MAX) {
-        uncompressed.len().checked_add(4)?
+        uncompressed.len() + 4
     } else {
         usize::MAX
     };
@@ -1755,24 +1756,23 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Op
         next_length = if index == max_code {
             u16::MAX.into()
         } else {
-            usize::from(nodes.get(index + 1)?.length)
+            usize::from(nodes[index + 1].length)
         };
         count += 1;
         if count < max_count && current_length == next_length {
             continue;
         }
         if count < min_count {
-            frequencies[current_length] =
-                frequencies[current_length].checked_add(u32::try_from(count).ok()?)?;
+            frequencies[current_length] += u32::try_from(count).ok()?;
         } else if current_length != 0 {
             if current_length != previous_length {
-                frequencies[current_length] = frequencies[current_length].checked_add(1)?;
+                frequencies[current_length] += 1;
             }
-            frequencies[16] = frequencies[16].checked_add(1)?;
+            frequencies[16] += 1;
         } else if count <= 10 {
-            frequencies[17] = frequencies[17].checked_add(1)?;
+            frequencies[17] += 1;
         } else {
-            frequencies[18] = frequencies[18].checked_add(1)?;
+            frequencies[18] += 1;
         }
         count = 0;
         previous_length = current_length;
@@ -1796,17 +1796,11 @@ fn send_trees(
     writer: &mut BitWriter,
 ) -> Option<()> {
     let [literal, distance, bit_length] = trees;
-    writer.write_bits(
-        u32::try_from(literal.max_code.checked_add(1)?.checked_sub(257)?).ok()?,
-        5,
-    );
+    writer.write_bits(u32::try_from(literal.max_code + 1 - 257).ok()?, 5);
     writer.write_bits(u32::try_from(distance.max_code).ok()?, 5);
-    writer.write_bits(
-        u32::try_from(max_bit_length_index.checked_add(1)?.checked_sub(4)?).ok()?,
-        4,
-    );
-    for &code in CODE_LENGTH_ORDER.get(..=max_bit_length_index)? {
-        writer.write_bits(u32::from(bit_length.nodes.get(code)?.length), 3);
+    writer.write_bits(u32::try_from(max_bit_length_index + 1 - 4).ok()?, 4);
+    for &code in &CODE_LENGTH_ORDER[..=max_bit_length_index] {
+        writer.write_bits(u32::from(bit_length.nodes[code].length), 3);
     }
     send_tree(literal, literal.max_code, bit_length, writer)?;
     send_tree(distance, distance.max_code, bit_length, writer)
@@ -1829,7 +1823,7 @@ fn send_tree(
         next_length = if index == max_code {
             u16::MAX.into()
         } else {
-            usize::from(tree.nodes.get(index + 1)?.length)
+            usize::from(tree.nodes[index + 1].length)
         };
         count += 1;
         if count < max_count && current_length == next_length {
@@ -1845,13 +1839,13 @@ fn send_tree(
                 count -= 1;
             }
             send_code(writer, bit_length, 16)?;
-            writer.write_bits(u32::try_from(count.checked_sub(3)?).ok()?, 2);
+            writer.write_bits(u32::try_from(count - 3).ok()?, 2);
         } else if count <= 10 {
             send_code(writer, bit_length, 17)?;
-            writer.write_bits(u32::try_from(count.checked_sub(3)?).ok()?, 3);
+            writer.write_bits(u32::try_from(count - 3).ok()?, 3);
         } else {
             send_code(writer, bit_length, 18)?;
-            writer.write_bits(u32::try_from(count.checked_sub(11)?).ok()?, 7);
+            writer.write_bits(u32::try_from(count - 11).ok()?, 7);
         }
         count = 0;
         previous_length = current_length;
@@ -1882,13 +1876,13 @@ fn emit_tokens(
                 let length_index = length_index(*length)?;
                 send_code(writer, literal_tree, 257 + length_index)?;
                 writer.write_bits(
-                    u32::try_from(length.checked_sub(LENGTH_BASE[length_index])?).ok()?,
+                    u32::try_from(length - LENGTH_BASE[length_index]).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
                 let distance_index = distance_index(*distance)?;
                 send_code(writer, distance_tree, distance_index)?;
                 writer.write_bits(
-                    u32::try_from(distance.checked_sub(DISTANCE_BASE[distance_index])?).ok()?,
+                    u32::try_from(distance - DISTANCE_BASE[distance_index]).ok()?,
                     DISTANCE_EXTRA[distance_index],
                 );
             }
@@ -1906,7 +1900,7 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
                 let length_index = length_index(*length)?;
                 write_fixed_symbol(writer, u16::try_from(257 + length_index).ok()?);
                 writer.write_bits(
-                    u32::try_from(length.checked_sub(LENGTH_BASE[length_index])?).ok()?,
+                    u32::try_from(length - LENGTH_BASE[length_index]).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
                 let distance_index = distance_index(*distance)?;
@@ -1915,7 +1909,7 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
                     5,
                 );
                 writer.write_bits(
-                    u32::try_from(distance.checked_sub(DISTANCE_BASE[distance_index])?).ok()?,
+                    u32::try_from(distance - DISTANCE_BASE[distance_index]).ok()?,
                     DISTANCE_EXTRA[distance_index],
                 );
             }

@@ -2545,3 +2545,356 @@ Next attack order from this result:
 4. After region-only cleanup, return to the remaining branch gaps:
    `webp/native/decoder.rs` (6), `webp/native/vp8.rs` (6), and
    `webp/native/lossless.rs` (2).
+
+### Attempt 5 plan: public malformed decoder sweep
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `e27f1a74-6d96-43c1-baa4-88429f54852d`
+- Commit metadata: `33114d9b2994e8cdd2187f0ed0e6c3826aff1c3f`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23900 / 23907`
+- Branches: `3422 / 3436`
+- Functions: `1576 / 1576`
+- Regions: `39664 / 40944`
+- Missing regions: `1280`
+
+The next region-first pass should avoid more broad private hooks. The raw LLVM
+JSON was used only to locate zero-count region starts; MCP remains the source of
+truth for totals. The best fixture-backed targets are public decoder boundary
+states where Pillow can provide a deterministic oracle.
+
+Selected sweep:
+
+| Target | Reverse-mapped gap | Action |
+| --- | --- | --- |
+| `src/codecs/gif/decode.rs` | Missing regions cluster at header short reads, global/local color-table reads, extension payload reads, image descriptor reads, sub-block reads, GCE reads, and malformed LZW/image-data boundaries. | Add manifest-backed malformed GIF assets for truncated signature/logical screen/global palette/GCE/application/comment/image descriptor/local palette/image data/sub-block payloads. These are Pillow-error rows. |
+| `src/codecs/gif/decode.rs` | Pillow accepts a NETSCAPE loop extension whose payload contains only the loop sub-block introducer byte, while Rust currently rejects it by requiring two loop-count bytes whenever the first payload byte is `1`. | Add `short_loop_payload.gif` as a valid Pillow-oracle row and change loop parsing to ignore a short loop count instead of rejecting the whole GIF. This is a parity fix, not a coverage-only bypass. |
+| `src/codecs/bmp/decode.rs` | Remaining region starts include RLE delta/absolute-mode byte fetches, absolute-mode padding, and error exits below already-covered public lines. | Add manifest-backed RLE8/RLE4 malformed byte-stream assets for truncated delta and absolute modes, plus valid RLE8 delta and odd absolute-mode streams accepted by Pillow. |
+
+Validation after this batch:
+
+1. Regenerate deterministic fixture assets and the manifest-driven Pillow
+   matrix.
+2. Run `cargo fmt`.
+3. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Query MCP summary/files for lines, branches, functions, and regions, then
+   record the snapshot and per-file movement here before continuing.
+
+### Attempt 5 result
+
+Coverage MCP run `ca011390-80d4-427b-8f5c-ec674a04e270`, snapshot
+`c38aa6c9-97ff-438b-8bd3-4a7698deddd1`, passed and ingested.
+
+- Lines: `23902 / 23909`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39679 / 40941`
+- Missing regions: `1262`
+
+Net from attempt 4:
+
+- Missing regions improved from `1280` to `1262` (`18` fewer).
+- Region rate improved from `96.874%` to `96.918%`.
+- Branch gap stayed at `14` missing. The apparent branch movement
+  (`3422 / 3436` to `3424 / 3438`) is from the new GIF short-loop branch; both
+  sides are covered by existing normal-loop rows and `short_loop_payload.gif`.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/gif/decode.rs` | `573 / 633` | `586 / 630` | `60 -> 44` |
+| `src/codecs/bmp/decode.rs` | `769 / 829` | `771 / 829` | `60 -> 58` |
+
+Fixture rows and parity fix added in this sweep:
+
+- GIF valid row: `short_loop_payload.gif`. Pillow accepts a NETSCAPE loop
+  extension whose payload starts with `1` but lacks the optional two-byte loop
+  count. Rust now matches Pillow by ignoring the missing loop count instead of
+  rejecting the whole GIF.
+- GIF Pillow-error rows:
+  - `truncated_signature.gif`
+  - `truncated_logical_screen.gif`
+  - `truncated_global_palette.gif`
+  - `truncated_application_identifier.gif`
+  - `truncated_application_subblock.gif`
+  - `truncated_comment_subblock.gif`
+  - `truncated_image_descriptor.gif`
+  - `truncated_local_palette.gif`
+  - `truncated_image_data.gif`
+  - `truncated_sub_block.gif`
+  - `truncated_gce.gif`
+- BMP valid rows:
+  - `rle8_delta.bmp`
+  - `rle8_absolute_odd.bmp`
+- BMP Pillow-error rows:
+  - `rle8_delta_truncated.bmp`
+  - `rle8_absolute_truncated.bmp`
+  - `rle4_delta_truncated.bmp`
+  - `rle4_absolute_truncated.bmp`
+
+Post-run raw-region map:
+
+- `src/codecs/gif/decode.rs`: 44 zero regions remain. The public short-read
+  cluster responded well to fixtures; remaining starts are mostly validated
+  frame fallback arithmetic, LZW table setup/invariants, and deinterlace/input
+  helper checked arithmetic.
+- `src/codecs/bmp/decode.rs`: 58 zero regions remain. More RLE fixtures have
+  low yield; remaining starts are mostly read-helper, dimension/header parsing,
+  bitfield extraction, orientation, and palette construction regions that are
+  already line/branch covered.
+
+Next attack order from this result:
+
+1. For region-only progress, switch back to invariant simplification in
+   `src/codecs/compression/zlib_ng.rs` and `src/codecs/gif/encode.rs`. They own
+   the largest remaining region deficits and public fixtures have diminishing
+   returns there.
+2. For fixture-backed decoder work, continue GIF only if the target line maps to
+   a concrete public parsing boundary. The broad truncation batch already
+   covered the obvious boundary states.
+3. For branch progress, the remaining aggregate branch gaps are unchanged in
+   substance:
+   - `src/codecs/webp/native/decoder.rs`: `82 / 88`
+   - `src/codecs/webp/native/vp8.rs`: `154 / 160`
+   - `src/codecs/webp/native/lossless.rs`: `108 / 110`
+
+### Attempt 6 plan: GIF decoder invariant simplification
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `c38aa6c9-97ff-438b-8bd3-4a7698deddd1`
+- Commit metadata: `2c2704c19997517155eb27af231d54cb349bd25b`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23902 / 23909`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39679 / 40941`
+- Missing regions: `1262`
+
+Reverse-mapped target: `src/codecs/gif/decode.rs`, which now has 44 zero
+regions after the public malformed fixture batch. The remaining easy wins are
+not new fixtures; they are checked arithmetic regions that are impossible after
+GIF field-width parsing and LZW length checks.
+
+Planned simplifications:
+
+| Line cluster | Invariant | Action |
+| --- | --- | --- |
+| Frame duration | `delay_cs` is `u16`, so centiseconds times 10 is at most `655_350`, well below `u32::MAX`. | Replace `checked_mul(10)?` with direct multiplication. |
+| Logical fallback dimensions | Frame offsets and decoded GIF image dimensions originate from `u16` image-descriptor fields, so `left + width` and `top + height` fit in `u32`. | Replace `checked_add` fallback calculations with direct addition. |
+| Color-table length | GIF packed color-table exponent is `(packed & 7) + 1`, always `1..=8`, so shift and `* 3` cannot overflow. | Replace checked shift/multiply with direct arithmetic. |
+| LZW setup and dictionary increment | `minimum_code_size` is validated as `2..=8`, and `next_code` increments only while `< 4096`. | Replace setup `checked_*` and dictionary `checked_add(1)?` with direct arithmetic. |
+| Deinterlace row copies | `decode_lzw()` returns exactly `width * height` indices before deinterlace is called; the four GIF interlace passes enumerate exactly `height` destination rows. | Replace checked row-start calculations and optional slice gets with direct slices guarded by the existing debug assertion. |
+| Input byte increment | `read_u8()` only increments after `data.get(position)` succeeds, so `position + 1` cannot overflow for an in-memory slice. | Replace `checked_add(1)?` with `+= 1`. |
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and GIF decode movement here.
+
+### Attempt 6 result
+
+Coverage MCP run `ed98b88c-51f2-4c11-83fa-1dc351bf1660`, snapshot
+`7a7d1b54-9113-4f74-bc32-384a7453f78a`, passed and ingested.
+
+- Lines: `23902 / 23909`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39655 / 40905`
+- Missing regions: `1250`
+
+Net from attempt 5:
+
+- Missing regions improved from `1262` to `1250` (`12` fewer).
+- Region rate improved from `96.918%` to `96.944%`.
+- Lines, branches, and functions were unchanged.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/gif/decode.rs` | `586 / 630` | `562 / 594` | `44 -> 32` |
+
+The denominator reduction is expected: this pass removed checked-arithmetic and
+optional-slice regions that were proven unreachable after GIF field-width
+parsing and LZW output-length validation. No new fixtures were needed, and the
+MCP run confirmed the manifest-driven parity tests still pass.
+
+Next attack order from this result:
+
+1. Continue region-first work in `src/codecs/compression/zlib_ng.rs` and
+   `src/codecs/gif/encode.rs`; they remain the largest region deficits.
+2. Keep fixture-backed decoder work for concrete public parsing boundaries only.
+3. Return to branch progress with WebP native generators when region cleanup
+   stops yielding clean invariant removals.
+
+### Attempt 7 plan: zlib dynamic-block invariant simplification
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `7a7d1b54-9113-4f74-bc32-384a7453f78a`
+- Commit metadata: `2c2704c19997517155eb27af231d54cb349bd25b`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23902 / 23909`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39655 / 40905`
+- Missing regions: `1250`
+
+Reverse-mapped target: `src/codecs/compression/zlib_ng.rs`, the largest
+remaining region file at `2783 / 3100` regions. Its branch and function
+coverage are already 100%, so this pass must remove only provably impossible
+checked-arithmetic regions rather than adding hook volume.
+
+Selected sub-batch:
+
+| Line cluster | Invariant | Action |
+| --- | --- | --- |
+| `build_tree()` heap allocation | `TreeSpec::elements` is one of the fixed DEFLATE table sizes: 286 literals, 30 distances, or 19 bit-length codes. `elements * 2 + 1` cannot overflow. | Replace checked heap-size arithmetic with direct arithmetic. |
+| `generate_codes()` canonical counters | `bit_counts` is produced by the bounded Huffman builder with maximum code length 15; the canonical next-code sequence fits in `u16`, and shifting left by one is always a valid one-bit shift. | Replace `checked_add`/`checked_shl` on canonical counters with direct arithmetic. |
+| `send_trees()` header fields | Dynamic blocks are emitted only after `frequencies()` inserts EOB literal 256 and `max_bit_length_index` is selected from `3..BIT_LENGTH_CODES`. Therefore HLIT and HCLEN header deltas cannot underflow. | Replace checked header delta arithmetic with direct subtraction. |
+| `emit_tokens()` / `emit_fixed_block()` extra bits | `length_index(length)` and `distance_index(distance)` are selected by searching base tables from high to low, so `length >= LENGTH_BASE[index]` and `distance >= DISTANCE_BASE[index]` by construction. | Replace checked extra-bit deltas with direct subtraction. |
+| `scan_tree()` frequency counts | The tree scan iterates at most 286 symbols, and repeat-code frequency counters are `u32`; these increments cannot overflow. | Replace checked counter increments with direct additions. |
+
+Explicitly deferred:
+
+- Matchers (`process`, `longest_match`, `insert_match`) still have many
+  checked regions, but those are deeper algorithmic paths. Do not rewrite them
+  in this pass without a separate proof for each state machine.
+- `send_tree()` repeat-code count subtraction is not included here; the zlib
+  repeat-code state machine needs separate reverse mapping before removing
+  checked subtraction there.
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and zlib movement here.
+
+### Attempt 8 result
+
+Coverage MCP run `2be535da-cc20-47ab-a190-db9de4405713`, snapshot
+`8166d21c-ed6f-441f-b24c-95b315363185`, passed and ingested.
+
+- Lines: `23904 / 23910`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39616 / 40837`
+- Missing regions: `1221`
+
+Net from attempt 7:
+
+- Missing regions improved from `1232` to `1221` (`11` fewer).
+- Region rate improved from `96.985%` to `97.010%`.
+- Lines improved from `23902 / 23909` to `23904 / 23910`; zlib is now
+  line-complete.
+- Branches and functions were unchanged.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/compression/zlib_ng.rs` | `2758 / 3057` | `2744 / 3032` | `299 -> 288` |
+
+This pass removed only local block/tree scanner checks. The remaining zlib
+region debt is now mostly matcher state-machine and Huffman builder accounting,
+which needs more granular proofs before simplifying further.
+
+Next attack order from this result:
+
+1. Switch to `src/codecs/gif/encode.rs` for the next region sweep unless a
+   dedicated zlib matcher proof is written first.
+2. Keep branch work focused on WebP native decoder/VP8/VP8L generators.
+3. Preserve the new GIF/BMP fixture rows as the public-oracle portion of this
+   region sweep.
+
+### Attempt 7 result
+
+Coverage MCP run `6594b8d8-3734-455b-b645-24e654f75827`, snapshot
+`3346c3a8-7222-45d8-a6da-d8fccd32704e`, passed and ingested.
+
+- Lines: `23902 / 23909`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39630 / 40862`
+- Missing regions: `1232`
+
+Net from attempt 6:
+
+- Missing regions improved from `1250` to `1232` (`18` fewer).
+- Region rate improved from `96.944%` to `96.985%`.
+- Lines, branches, and functions were unchanged.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/compression/zlib_ng.rs` | `2783 / 3100` | `2758 / 3057` | `317 -> 299` |
+
+This pass removed only arithmetic regions bounded by DEFLATE constants or by
+the already-selected length/distance table indices. The matcher state machines
+were deliberately not touched.
+
+Next attack order from this result:
+
+1. Continue zlib only with similarly local invariants. Good candidates are
+   token block accounting and bounded Huffman frequency increments; avoid
+   `longest_match()` and `process()` without a dedicated proof.
+2. Alternatively switch to `src/codecs/gif/encode.rs`, where the remaining
+   region gaps are mostly validated geometry and quantizer invariants.
+3. Branch work remains WebP-native specific and unchanged.
+
+### Attempt 8 plan: zlib block/tree scanner local invariants
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `3346c3a8-7222-45d8-a6da-d8fccd32704e`
+- Commit metadata: `2c2704c19997517155eb27af231d54cb349bd25b`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23902 / 23909`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39630 / 40862`
+- Missing regions: `1232`
+
+Reverse-mapped target remains `src/codecs/compression/zlib_ng.rs`, now
+`2758 / 3057` regions after Attempt 7.
+
+Selected sub-batch:
+
+| Line cluster | Invariant | Action |
+| --- | --- | --- |
+| `emit_blocks()` stored-length accounting | Each block contains at most `block_tokens` compressor-generated tokens. Match lengths are bounded by DEFLATE's `MAX_MATCH` and literals add exactly one byte. The already-expanded token stream is built from the same token list in order, so each per-block byte span is inside the expanded buffer. | Replace checked per-block byte accumulation and optional block slicing with direct arithmetic/slicing. |
+| `write_block()` stored-cost branch | The branch only executes when `uncompressed.len() <= u16::MAX`, so adding the stored-block length/checksum overhead of `4` bytes cannot overflow. | Replace `checked_add(4)` with direct addition. |
+| `scan_tree()` next-node lookup | `max_code` is produced by `build_tree()` and is always within `nodes`; the loop uses `index + 1` only when `index < max_code`. | Replace optional `nodes.get(index + 1)` with direct indexing. |
+| `send_trees()` code-length order lookup | `max_bit_length_index` is chosen from `3..BIT_LENGTH_CODES`, and every entry in `CODE_LENGTH_ORDER` is a valid bit-length symbol. | Replace optional order/node lookups with direct indexing. |
+| `send_tree()` next-node lookup | Same `max_code` invariant as `scan_tree()`. | Replace optional `tree.nodes.get(index + 1)` with direct indexing. |
+| `send_tree()` repeat-code extra counts | Reverse mapping of zlib's run-length state: for a non-zero run whose length differs from the previous run, `min_count` is `4`, so after sending one explicit code, `count - 3` is valid. For a continuing same-length run, no explicit-code decrement happens and `count >= 3`. Zero runs select repeat code 17 only for `3..=10` and repeat code 18 only for `>=11`. | Replace checked repeat-count subtractions with direct subtraction. |
+
+Explicitly deferred:
+
+- Huffman frequency counters in `frequencies()` are still left checked because
+  they are proportional to input size and need an input-size proof before
+  replacing `u32` checked increments.
+- Matcher state machines remain deferred.
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and zlib movement here.

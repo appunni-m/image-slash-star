@@ -195,6 +195,32 @@
       }
     },
     {
+      "id": "compression_rle8_rle8_delta",
+      "asset": "rle8_delta.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_delta.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "compression_rle8_rle8_absolute_odd",
+      "asset": "rle8_absolute_odd.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_absolute_odd.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "compression_rle4",
       "asset": "rle4.bmp",
       "expect_error": false,
@@ -694,6 +720,58 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4_early_eob.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle8_delta_truncated",
+      "asset": "rle8_delta_truncated.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_delta_truncated.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle8_absolute_truncated",
+      "asset": "rle8_absolute_truncated.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle8_absolute_truncated.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle4_delta_truncated",
+      "asset": "rle4_delta_truncated.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4_delta_truncated.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_rle4_absolute_truncated",
+      "asset": "rle4_absolute_truncated.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4_absolute_truncated.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
