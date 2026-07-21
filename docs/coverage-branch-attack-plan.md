@@ -12,8 +12,8 @@ after the ICO decoder private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `d9fda7bd-820f-4723-bffa-1bcd9419a1d1`
-- Current measured commit metadata: `e5ffd0af6a5b3d6c9f6d44d7e27b4b8ef624342c`
+- Current snapshot: `2c9ade72-029d-49d1-8592-eaabd98705d5`
+- Current measured commit metadata: `8b482ca6fee835db5445def8341c2d6d2e702740`
 - Lines: 22155 / 22156
 - Branches: 3348 / 3464
 - Functions: 1531 / 1531
@@ -320,6 +320,13 @@ Completed evidence:
   high-nibble guard at line 383. It appears structurally unreachable because
   row iteration stops at the logical row byte count, so every visited byte
   starts with `col < width`.
+- Pushed-head verification run:
+  `5afecdd0-276f-4842-9fe5-259c05a906ef`, snapshot
+  `2c9ade72-029d-49d1-8592-eaabd98705d5`, commit
+  `8b482ca6fee835db5445def8341c2d6d2e702740`; passed with 5 passed,
+  0 failed. Pushed-head overall coverage is 22155 / 22156 lines,
+  3348 / 3464 branches, and 1531 / 1531 functions. `ico/decode.rs` remains
+  384 / 384 lines, 63 / 64 branches, and 13 / 13 functions.
 
 ## Planned GIF encoder private-branch batch
 
