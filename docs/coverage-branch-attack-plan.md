@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the committed TIFF LZW byte-alignment batch.
+after the committed ICO zero-entry size-filter batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `dc567aaf-3808-46f4-8d86-5296b6b74e7e`
-- Current commit: `f565a23813f9f90b482ea9500b1d4122eab17daa`
+- Current snapshot: `7df3a4f3-a4af-4ac5-9382-0c8a7a11039d`
+- Current commit: `61af0e202a12d69f9638a8b5a181a2bea85b0091`
 - Lines: 21708 / 21709
-- Branches: 3313 / 3484
+- Branches: 3315 / 3484
 - Functions: 1518 / 1518
-- Remaining target: 1 line and 171 branches.
+- Remaining target: 1 line and 169 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -142,11 +142,10 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 | 20 | `src/codecs/webp/native/lossless.rs` | 2 | summary says 2 branches; line view has many normalized partial sites | Treat as LLVM-normalized. Use VP8L fixtures for transforms, color cache, palette, meta-prefix, and Huffman edge cases, then re-query exact remaining ranges. |
 | 21 | `src/codecs/webp/native/lossless_transform.rs` | 2 | 523, 570 | Add VP8L fixtures for inverse transform edge rows/columns and predictor/color-transform boundaries. |
 | 22 | `src/codecs/webp/native/extended.rs` | 2 | 46-47 | Add WebP extended-header fixtures for feature flags and invalid/missing extended chunks. |
-| 23 | `src/codecs/ico/encode.rs` | 2 | 46-47 | Add ICO encode rows for size-list parsing: empty, duplicate, malformed tuple, and mixed valid/invalid requested sizes. |
-| 24 | `src/codecs/jpeg/decode/huffman.rs` | 2 | 100, 181 | Add JPEG Huffman fixtures with deep code lengths, invalid/unused symbols, and entropy streams that force table boundary decisions. |
-| 25 | `src/codecs/webp/encode/vp8/encoder.rs` | 1 | 441 | Add WebP lossy encode source that triggers the remaining VP8 encoder branch; inspect line 441 first to decide if fixture or cleanup. |
-| 26 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
-| 27 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
+| 23 | `src/codecs/jpeg/decode/huffman.rs` | 2 | 100, 181 | Add JPEG Huffman fixtures with deep code lengths, invalid/unused symbols, and entropy streams that force table boundary decisions. |
+| 24 | `src/codecs/webp/encode/vp8/encoder.rs` | 1 | 441 | Add WebP lossy encode source that triggers the remaining VP8 encoder branch; inspect line 441 first to decide if fixture or cleanup. |
+| 25 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
+| 26 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
 
 ## Completed while executing this plan
 
@@ -177,6 +176,25 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 - Exploration note: a deterministic 16-pixel grayscale PNG source drives the
   TIFF LZW writer to finish with zero pending bits, covering the `used == 0`
   side of `MsbWriter::finish`.
+
+### ICO zero-entry size-filter parity batch
+
+- Commit: `61af0e202a12d69f9638a8b5a181a2bea85b0091`
+- Coverage MCP run: `73489388-4f76-439c-a9fa-7bbdbfa1fd6a`
+- Coverage MCP snapshot: `7df3a4f3-a4af-4ac5-9382-0c8a7a11039d`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3313 / 3484 to 3315 / 3484.
+- `src/codecs/ico/encode.rs`: now 305 / 305 lines and 50 / 50 branches.
+- Added manifest-driven oracle rows:
+  - `ico.enc_empty_sizes`
+  - `ico.enc_width_filtered_sizes`
+  - `ico.enc_height_filtered_sizes`
+  - `ico.enc_width_cap_filtered_sizes`
+  - `ico.enc_height_cap_filtered_sizes`
+- Exploration note: Pillow emits a valid six-byte zero-entry ICO header when
+  requested sizes are empty or fully filtered. These rows are marked
+  `encoded_only` because Pillow cannot re-open that zero-entry ICO for pixel
+  roundtrip evidence, so parity is proven by exact encoded bytes.
 
 ## Execution order
 
