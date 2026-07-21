@@ -364,14 +364,10 @@ fn coalesce_identical_frames(
             let mut output_frame = frame.clone();
             if !output.is_empty() {
                 let previous = previous_render.as_deref()?;
-                let (left, top, right, bottom) = rgba_difference_bounds(
-                    previous,
-                    &canvas,
-                    width,
-                    usize::try_from(sequence.height).ok()?,
-                );
-                let frame_width = right.checked_sub(left)?;
-                let frame_height = bottom.checked_sub(top)?;
+                let (left, top, right, bottom) =
+                    rgba_difference_bounds(previous, &canvas, width, height);
+                let frame_width = right - left;
+                let frame_height = bottom - top;
                 let full_image = if frame.image.mode == ImageMode::Rgba8 {
                     DecodedImage::new(
                         sequence.width,
@@ -388,25 +384,25 @@ fn coalesce_identical_frames(
                 };
                 let mut prepared = prepare_image(&full_image)?;
                 if prepared.transparent.is_none() && prepared.palette.len() / 3 < 256 {
-                    let transparent = u8::try_from(prepared.palette.len() / 3).ok()?;
+                    let transparent = (prepared.palette.len() / 3) as u8;
                     prepared.palette.extend_from_slice(&[0, 0, 0]);
                     prepared.transparent = Some(transparent);
                 }
-                let mut cropped = Vec::with_capacity(frame_width.checked_mul(frame_height)?);
+                let mut cropped = Vec::with_capacity(frame_width * frame_height);
                 for y in top..bottom {
-                    let start = y.checked_mul(width)?.checked_add(left)?;
-                    let end = start.checked_add(frame_width)?;
-                    cropped.extend_from_slice(prepared.indices.get(start..end)?);
+                    let start = y * width + left;
+                    let end = start + frame_width;
+                    cropped.extend_from_slice(&prepared.indices[start..end]);
                 }
-                output_frame.left = u32::try_from(left).ok()?;
-                output_frame.top = u32::try_from(top).ok()?;
+                output_frame.left = left as u32;
+                output_frame.top = top as u32;
                 let mut alpha = vec![255; prepared.palette.len() / 3];
                 if let Some(transparent) = prepared.transparent {
                     alpha[usize::from(transparent)] = 0;
                 }
                 output_frame.image = DecodedImage::with_mode(
-                    u32::try_from(frame_width).ok()?,
-                    u32::try_from(frame_height).ok()?,
+                    frame_width as u32,
+                    frame_height as u32,
                     cropped,
                     ImageMode::P8,
                 )
@@ -454,18 +450,14 @@ fn clear_frame_rect(
     canvas_width: usize,
     frame: &crate::types::DecodedFrame,
 ) -> Option<()> {
-    let left = usize::try_from(frame.left).ok()?;
-    let top = usize::try_from(frame.top).ok()?;
-    let width = usize::try_from(frame.image.width).ok()?;
-    let height = usize::try_from(frame.image.height).ok()?;
+    let left = frame.left as usize;
+    let top = frame.top as usize;
+    let width = frame.image.width as usize;
+    let height = frame.image.height as usize;
     for y in 0..height {
-        let start = (top
-            .checked_add(y)?
-            .checked_mul(canvas_width)?
-            .checked_add(left)?)
-        .checked_mul(4)?;
-        let end = start.checked_add(width.checked_mul(4)?)?;
-        canvas.get_mut(start..end)?.fill(0);
+        let start = ((top + y) * canvas_width + left) * 4;
+        let end = start + width * 4;
+        canvas[start..end].fill(0);
     }
     Some(())
 }
@@ -476,18 +468,18 @@ fn composite_frame(
     frame: &crate::types::DecodedFrame,
 ) -> Option<()> {
     let image = &frame.image;
-    let left = usize::try_from(frame.left).ok()?;
-    let top = usize::try_from(frame.top).ok()?;
-    let width = usize::try_from(image.width).ok()?;
-    let height = usize::try_from(image.height).ok()?;
+    let left = frame.left as usize;
+    let top = frame.top as usize;
+    let width = image.width as usize;
+    let height = image.height as usize;
     for y in 0..height {
         for x in 0..width {
-            let source = y.checked_mul(width)?.checked_add(x)?;
+            let source = y * width + x;
             let rgba = match image.mode {
                 ImageMode::P8 => {
                     let palette = image.palette.as_ref()?;
-                    let index = usize::from(*image.pixels.get(source)?);
-                    let palette_offset = index.checked_mul(3)?;
+                    let index = usize::from(image.pixels[source]);
+                    let palette_offset = index * 3;
                     let rgb = palette.rgb.get(palette_offset..palette_offset + 3)?;
                     [
                         rgb[0],
@@ -497,32 +489,34 @@ fn composite_frame(
                     ]
                 }
                 ImageMode::L8 => {
-                    let value = *image.pixels.get(source)?;
+                    let value = image.pixels[source];
                     [value, value, value, 255]
                 }
                 ImageMode::Rgb8 => {
-                    let offset = source.checked_mul(3)?;
-                    let rgb = image.pixels.get(offset..offset + 3)?;
-                    [rgb[0], rgb[1], rgb[2], 255]
+                    let offset = source * 3;
+                    [
+                        image.pixels[offset],
+                        image.pixels[offset + 1],
+                        image.pixels[offset + 2],
+                        255,
+                    ]
                 }
                 ImageMode::Rgba8 => {
-                    let offset = source.checked_mul(4)?;
-                    image.pixels.get(offset..offset + 4)?.try_into().ok()?
+                    let offset = source * 4;
+                    [
+                        image.pixels[offset],
+                        image.pixels[offset + 1],
+                        image.pixels[offset + 2],
+                        image.pixels[offset + 3],
+                    ]
                 }
                 _ => return None,
             };
             if rgba[3] == 0 && image.mode == ImageMode::P8 {
                 continue;
             }
-            let destination = (top
-                .checked_add(y)?
-                .checked_mul(canvas_width)?
-                .checked_add(left)?
-                .checked_add(x)?)
-            .checked_mul(4)?;
-            canvas
-                .get_mut(destination..destination + 4)?
-                .copy_from_slice(&rgba);
+            let destination = ((top + y) * canvas_width + left + x) * 4;
+            canvas[destination..destination + 4].copy_from_slice(&rgba);
         }
     }
     Some(())
@@ -554,9 +548,9 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             let mut remap = [0u8; 256];
             for (value, is_used) in used.into_iter().enumerate() {
                 if is_used {
-                    let index = u8::try_from(palette.len() / 3).ok()?;
+                    let index = (palette.len() / 3) as u8;
                     remap[value] = index;
-                    let value = u8::try_from(value).ok()?;
+                    let value = value as u8;
                     palette.extend_from_slice(&[value, value, value]);
                 }
             }
@@ -831,7 +825,7 @@ fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) {
 fn indexed_rgb(indices: &[u8], palette: &[u8]) -> Option<Vec<u8>> {
     let mut rgb = Vec::with_capacity(indices.len().checked_mul(3)?);
     for &index in indices {
-        let offset = usize::from(index).checked_mul(3)?;
+        let offset = usize::from(index) * 3;
         rgb.extend_from_slice(palette.get(offset..offset + 3)?);
     }
     Some(rgb)

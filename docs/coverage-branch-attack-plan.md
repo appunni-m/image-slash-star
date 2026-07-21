@@ -2783,6 +2783,331 @@ Validation after this batch:
    `all-features-llvm-cov-json-nightly-branch`.
 4. Record the new summary and zlib movement here.
 
+### Attempt 9 plan: GIF encode validated-invariant region sweep
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `8166d21c-ed6f-441f-b24c-95b315363185`
+- Previous run: `2be535da-cc20-47ab-a190-db9de4405713`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23904 / 23910`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39616 / 40837`
+- Missing regions: `1221`
+
+Important baseline caveat:
+
+- This snapshot was produced from the dirty worktree that was later committed as
+  `09967bc`, but MCP retained the previous commit metadata
+  `2c2704c19997517155eb27af231d54cb349bd25b`.
+- The next MCP run must be treated as the fresh HEAD-aligned snapshot for this
+  batch.
+
+Reverse-mapped target: `src/codecs/gif/encode.rs`
+
+- Current file movement target from MCP: `2473 / 2585` regions.
+- Missing region entries cluster around already-executed fallible `Option`
+  checks in `coalesce_identical_frames()`, `clear_frame_rect()`,
+  `composite_frame()`, `prepare_image()`, quantizer accounting, and
+  FASTOCTREE setup.
+- Public GIF encode fixture coverage is already broad: static, animated,
+  looped animation, disposal modes, global/local color tables, interlace,
+  transparency override, RGB/RGBA/L sources, high-color quantization, and
+  Pillow error cases.
+- The remaining holes in this selected batch are not ordinary Pillow-oracle
+  input gaps; they are defensive continuation/failure regions after
+  `DecodedSequence::validate()` and `DecodedImage::validate()` have already
+  proven dimensions, frame bounds, pixel lengths, and palette shape.
+
+Selected sub-batch:
+
+| Line cluster | Reverse-mapped invariant | Action |
+| --- | --- | --- |
+| `coalesce_identical_frames()` crop geometry | `encode_sequence()` validates the sequence before coalescing. The current and previous renders are full-canvas buffers sized from the checked canvas allocation. `rgba_difference_bounds()` is only used when the render differs, so `right >= left`, `bottom >= top`, and the crop lies inside the prepared full-canvas index buffer. | Reuse the already-converted `height`, replace checked crop subtraction/arithmetic/slices/conversions with direct operations. Keep duration addition checked because two valid frames can still overflow `u32`. |
+| `clear_frame_rect()` | Frame rectangles are sequence-validated and bounded by the canvas before this private helper is called from production encode. | Replace checked coordinate conversion and row arithmetic with direct operations/slices. |
+| `composite_frame()` | Validated frames prove per-mode pixel lengths and canvas bounds. The private coverage hook deliberately exercises an invalid P8 palette index, so palette range lookup must stay fallible. | Replace checked source/destination arithmetic and per-mode byte offsets with direct arithmetic while preserving fallible palette/pixel slices needed by the hook. |
+| `prepare_image()` L8 palette remap | The loop enumerates a fixed `[bool; 256]`, and a compact grayscale palette can contain at most 256 entries. | Replace unreachable `u8::try_from` conversions for palette index and grayscale value with direct casts. |
+| `indexed_rgb()` palette offset | GIF indices are bytes; multiplying an index by 3 is bounded by `255 * 3`. The palette slice lookup remains fallible for the existing private invalid-palette hook. | Replace checked offset multiplication with direct multiplication. |
+| Public fixture gaps | Potential real oracle rows still exist for explicit `animated:false` on animated input and additional loop spelling variants. These are valid parity rows, but they do not map to the current region-only defensive gaps. | Defer to a later oracle-generation pass so this pass can verify the invariant cleanup with one MCP run. |
+
+Explicitly deferred:
+
+- GIF writer `u16::try_from` checks for canvas/frame dimensions and offsets stay
+  in place; GIF file fields are 16-bit and the existing coverage hook verifies
+  the oversized failure path.
+- Quantizer count accumulation and median-cut split accounting stay checked
+  until there is a separate input-size/count proof. These regions are
+  proportional to source pixel count, not just local geometry.
+- FASTOCTREE cube construction stays checked because the coverage hook
+  intentionally exercises invalid cube bit widths and oversized cube sizes.
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and GIF encode movement here.
+
+### Attempt 9 result
+
+Coverage MCP run `2a889cde-9b51-4c0c-aed6-53bfba73c81e`, snapshot
+`13b4a60c-878d-4e28-b565-44f02412a45d`, passed and ingested.
+
+- Commit metadata: `09967bc37baa6b6aa4afde4b1c96a452016b0d7d`
+- Lines: `23901 / 23907`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39532 / 40706`
+- Missing regions: `1174`
+
+Net from attempt 8:
+
+- Missing regions improved from `1221` to `1174` (`47` fewer).
+- Region rate improved from `97.010%` to `97.116%`.
+- Branches and functions were unchanged.
+- Line totals changed from `23904 / 23910` to `23901 / 23907` because the GIF
+  encode invariant cleanup removed counted defensive lines; the line rate stayed
+  effectively unchanged and the new snapshot is aligned to current HEAD.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/gif/encode.rs` | `2473 / 2585` | `2389 / 2454` | `112 -> 65` |
+
+What moved:
+
+- Removed region-only defensive checks from GIF crop geometry and validated
+  frame compositing.
+- Preserved real error boundaries: GIF 16-bit dimensions/offsets, invalid
+  palette lookup in the private hook, duration overflow, quantizer count
+  arithmetic, and FASTOCTREE construction.
+
+Next attack order from this result:
+
+1. Continue region work on files with high missing-region count:
+   `src/codecs/compression/zlib_ng.rs`, `src/codecs/webp/native/encoder.rs`,
+   `src/codecs/jpeg/encode/mod.rs`, `src/codecs/tiff/decode.rs`,
+   `src/codecs/bmp/decode.rs`, `src/codecs/ico/encode.rs`, and
+   `src/codecs/png/decode.rs`.
+2. If staying in GIF encode, the remaining `65` regions are mostly quantizer
+   count/median-cut/FASTOCTREE accounting and should not be simplified without
+   a separate pixel-count proof.
+3. Branch work remains unchanged and should start with WebP native:
+   `src/codecs/webp/native/decoder.rs`, `src/codecs/webp/native/vp8.rs`, and
+   `src/codecs/webp/native/lossless.rs`.
+
+### Attempt 10 plan: JPEG encode Huffman bounded-table cleanup
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `13b4a60c-878d-4e28-b565-44f02412a45d`
+- Previous run: `2a889cde-9b51-4c0c-aed6-53bfba73c81e`
+- Commit metadata: `09967bc37baa6b6aa4afde4b1c96a452016b0d7d`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23901 / 23907`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39532 / 40706`
+- Missing regions: `1174`
+
+Reverse-mapped target: `src/codecs/jpeg/encode/huffman.rs`
+
+- Current file movement target from MCP: `247 / 268` regions.
+- Branches and lines are already complete in this file.
+- Missing regions map to fallible arithmetic in `optimal_table()`, the
+  libjpeg-derived optimal Huffman table builder.
+
+Selected sub-batch:
+
+| Line cluster | Reverse-mapped invariant | Action |
+| --- | --- | --- |
+| `code_size[...] += 1` in tree merge | `code_size` contains one entry per non-zero source symbol plus the sentinel, so at most `257` entries. Each increment is bounded by the number of merges and cannot overflow `usize`. | Replace checked `usize` increments with direct additions. |
+| `positions` accumulation | `length_counts` counts at most the `257` working symbols; prefix positions are bounded by the number of emitted JPEG symbols. | Replace checked position addition with direct addition. |
+| `count - 1` output loop | The sentinel at source symbol `256` is always inserted with non-zero frequency, so `count >= 1`. The output loop intentionally excludes the sentinel. | Replace checked subtraction with direct `count - 1`. |
+| `values[target]` / symbol cast / position increment | `positions` are derived from the same `length_counts` used to allocate `values`; the loop excludes sentinel symbol `256`, so every emitted symbol is `0..=255`. | Replace optional vector write, `u8::try_from`, and checked position increment with direct operations. |
+
+Explicitly deferred:
+
+- `working[first].checked_add(working[second])` remains checked because public
+  optimized encoding frequency totals are proportional to image size.
+- `length_counts.get_mut(length)` and length-limiting arithmetic remain checked
+  until a separate proof confirms libjpeg's maximum pre-limiting code depth for
+  every possible 257-symbol frequency table.
+- `u8::try_from(value)` for final `BITS` counts remains checked because JPEG DHT
+  count bytes are an actual format boundary.
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and JPEG Huffman movement here.
+
+### Attempt 10 result
+
+Coverage MCP run `4ec2211a-9e64-4a29-a2b2-7beccf6dd62a`, snapshot
+`cc32bd8a-5142-4efd-b171-72f448b09c7f`, passed and ingested.
+
+- Commit metadata: `09967bc37baa6b6aa4afde4b1c96a452016b0d7d`
+- Lines: `23905 / 23911`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39515 / 40680`
+- Missing regions: `1165`
+
+Net from attempt 9:
+
+- Missing regions improved from `1174` to `1165` (`9` fewer).
+- Region rate improved from `97.116%` to `97.136%`.
+- Branches and functions were unchanged.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/jpeg/encode/huffman.rs` | `247 / 268` | `230 / 242` | `21 -> 12` |
+
+What moved:
+
+- Removed region-only checked arithmetic around bounded `code_size` increments,
+  prefix position accumulation, sentinel-excluding output loop, and output table
+  writes.
+- Preserved image-size-dependent frequency addition, length-count table bounds,
+  length-limiting arithmetic, and JPEG DHT byte-count conversion.
+
+Next attack order from this result:
+
+1. Continue region sweep with either:
+   - `src/codecs/webp/native/huffman.rs` (`330 / 331`) if the goal is to clear
+     the smallest one-region file first, or
+   - `src/codecs/webp/decode.rs`, `src/codecs/mod.rs`, and `src/types/mod.rs`
+     for small bounded wrapper gaps.
+2. For higher impact, target `src/codecs/webp/native/encoder.rs`,
+   `src/codecs/tiff/decode.rs`, `src/codecs/bmp/decode.rs`, or
+   `src/codecs/png/decode.rs`, but those need more reverse mapping.
+3. Branch work remains WebP native only after the region sweep checkpoint.
+
+### Attempt 11 skip: WebP native Huffman single-region artifact
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `cc32bd8a-5142-4efd-b171-72f448b09c7f`
+- Previous run: `4ec2211a-9e64-4a29-a2b2-7beccf6dd62a`
+- Lines: `23905 / 23911`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39515 / 40680`
+- Missing regions: `1165`
+
+Reverse-mapped target checked: `src/codecs/webp/native/huffman.rs`
+
+- MCP file metrics: `330 / 331` regions, `229 / 229` lines,
+  `26 / 26` branches, `9 / 9` functions.
+- Local parse of the MCP-produced LLVM JSON found:
+  - zero `has_count && count == 0` source segments,
+  - zero missing branch entries,
+  - zero macro/expansion records.
+
+Decision:
+
+- Skip this file for now. There is no source-mapped missing region to reverse
+  map to an input or a local invariant.
+- Do not add a coverage hook or fake fixture for this file until Coverage MCP or
+  llvm-cov exposes an actionable source line/region.
+
+Next action:
+
+- Move to a small file with source-mapped missing regions rather than trying to
+  force the analyzer artifact.
+
+### Attempt 12 plan: codec dispatcher sequence invariants
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `cc32bd8a-5142-4efd-b171-72f448b09c7f`
+- Previous run: `4ec2211a-9e64-4a29-a2b2-7beccf6dd62a`
+- Lines: `23905 / 23911`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39515 / 40680`
+- Missing regions: `1165`
+
+Reverse-mapped target: `src/codecs/mod.rs`
+
+- Current file movement target from MCP: `99 / 103` regions.
+- Missing source-mapped regions:
+  - `decode_format()` image validation failure,
+  - `encode_sequence_format()` sequence validation failure,
+  - `encode_sequence_format()` first-frame lookup after validation,
+  - `encode_sequence_format()` non-single-frame still-format rejection.
+
+Selected sub-batch:
+
+| Line cluster | Reverse-mapped invariant/input | Action |
+| --- | --- | --- |
+| `sequence.validate().ok()?` | A malformed `DecodedSequence` is a real public API input. | Exercise the failure in the coverage hook. |
+| `sequence.first()?` | Dead after `sequence.validate()` because validation rejects empty frame lists. | Replace with direct first-frame access after validation. |
+| `(sequence.frames.len() == 1).then(...)` | A valid multi-frame sequence encoded as a non-animation still format is real public dispatcher behavior and should return `None`. | Exercise the rejection in the coverage hook with a two-frame L8 sequence and PNG format. |
+
+Explicitly deferred:
+
+- `decode_format()` validation failure stays as a defensive decoder boundary.
+  There is no source-mapped public input that makes an enabled decoder return an
+  invalid `DecodedImage`; do not remove the guard or fabricate a decoder result.
+
+Validation after this batch:
+
+1. Run `cargo fmt`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Record the new summary and dispatcher movement here.
+
+### Attempt 12 result
+
+Coverage MCP run `f3ebc240-ad40-47ce-b5b2-b850e29d6c6a`, snapshot
+`6b3e36fc-3725-4ce7-b124-e00e115c097f`, passed and ingested.
+
+- Commit metadata: `09967bc37baa6b6aa4afde4b1c96a452016b0d7d`
+- Lines: `23943 / 23949`
+- Branches: `3424 / 3438`
+- Functions: `1576 / 1576`
+- Regions: `39535 / 40697`
+- Missing regions: `1162`
+
+Net from attempt 10:
+
+- Missing regions improved from `1165` to `1162` (`3` fewer).
+- Region rate improved from `97.136%` to `97.145%`.
+- Branches and functions were unchanged.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/mod.rs` | `99 / 103` | `119 / 120` | `4 -> 1` |
+
+What moved:
+
+- Added coverage-hook inputs for invalid sequence validation and valid
+  multi-frame sequence rejection for still-image formats.
+- Removed the dead `sequence.first()?` region after
+  `DecodedSequence::validate()`, which already proves the frame list is
+  non-empty.
+
+Remaining in this file:
+
+- `decode_format()` still has one defensive region for a decoder returning an
+  invalid `DecodedImage`. No public fixture can reach it without making a
+  decoder violate its own contract, so keep it as a defensive boundary.
+
 ### Attempt 8 result
 
 Coverage MCP run `2be535da-cc20-47ab-a190-db9de4405713`, snapshot

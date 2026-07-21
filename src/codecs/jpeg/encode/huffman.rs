@@ -111,16 +111,16 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
 
         working[first] = working[first].checked_add(working[second])?;
         working[second] = SENTINEL_FREQUENCY;
-        code_size[first] = code_size[first].checked_add(1)?;
+        code_size[first] += 1;
         while let Some(next) = others[first] {
             first = next;
-            code_size[first] = code_size[first].checked_add(1)?;
+            code_size[first] += 1;
         }
         others[first] = Some(second);
-        code_size[second] = code_size[second].checked_add(1)?;
+        code_size[second] += 1;
         while let Some(next) = others[second] {
             second = next;
-            code_size[second] = code_size[second].checked_add(1)?;
+            code_size[second] += 1;
         }
     }
 
@@ -132,7 +132,7 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
     let mut position = 0usize;
     for length in 1..=MAX_CODE_LENGTH {
         positions[length] = position;
-        position = position.checked_add(usize::from(length_counts[length]))?;
+        position += usize::from(length_counts[length]);
     }
 
     for length in (17..=MAX_CODE_LENGTH).rev() {
@@ -160,11 +160,11 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
     }
     let value_count: usize = bits.iter().map(|&value| usize::from(value)).sum();
     let mut values = vec![0u8; value_count];
-    for index in 0..count.checked_sub(1)? {
+    for index in 0..count - 1 {
         let length = code_size[index];
         let target = positions[length];
-        *values.get_mut(target)? = u8::try_from(nonzero_symbols[index]).ok()?;
-        positions[length] = target.checked_add(1)?;
+        values[target] = nonzero_symbols[index] as u8;
+        positions[length] = target + 1;
     }
     let derived = derive_table(&bits, &values);
     Some(OptimalTable {

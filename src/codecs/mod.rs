@@ -137,12 +137,52 @@ pub fn encode_sequence_format(
         return gif::encode::encode_sequence(sequence, options);
     }
 
-    let image = sequence.first()?;
+    let image = &sequence.frames[0].image;
     (sequence.frames.len() == 1).then(|| encode_format(image, format, options))?
 }
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let invalid_sequence = DecodedSequence {
+        width: 0,
+        height: 1,
+        frames: Vec::new(),
+        loop_count: None,
+        background: None,
+    };
+    let _ = encode_sequence_format(&invalid_sequence, ImageFormat::Png, &EncodeOptions::none());
+
+    let luma = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
+    let two_frame_sequence = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![
+            crate::types::DecodedFrame {
+                image: luma.clone(),
+                left: 0,
+                top: 0,
+                duration_ms: 0,
+                disposal: crate::types::FrameDisposal::Unspecified,
+                interlaced: false,
+            },
+            crate::types::DecodedFrame {
+                image: luma,
+                left: 0,
+                top: 0,
+                duration_ms: 0,
+                disposal: crate::types::FrameDisposal::Unspecified,
+                interlaced: false,
+            },
+        ],
+        loop_count: None,
+        background: None,
+    };
+    let _ = encode_sequence_format(
+        &two_frame_sequence,
+        ImageFormat::Png,
+        &EncodeOptions::none(),
+    );
+
     compression::__coverage_exercise_private_branches();
     #[cfg(feature = "gif")]
     gif::__coverage_exercise_private_branches();
