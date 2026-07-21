@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `876baf43-9a64-4b48-bcd4-c291c7a831df`
-- Current measured commit metadata: `cf1cb1d31d989418f2891b75ad0284317f28b2fb`
-- Current coverage source state: Attempt 68 retained working tree measured from
-  pushed parent `cf1cb1d`.
+- Current snapshot: `c8042e9e-1bff-4063-9d83-25a2a597e20f`
+- Current measured commit metadata: `b2d69f1ed7f6b75229c03fda9285c59c7699eb30`
+- Current coverage source state: Attempt 72 retained working tree measured from
+  pushed parent `b2d69f1`.
 - Lines: 25848 / 25852
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
-- Regions: 41755 / 42325
-- Remaining target: 4 lines, 6 branches, and 570 regions.
+- Regions: 41739 / 42301
+- Remaining target: 4 lines, 6 branches, and 562 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -47,6 +47,187 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 72 plan: TIFF decode classic u32-to-usize guard consolidation
+
+Baseline before editing:
+
+- Source state: code clean at pushed `main` commit `b2d69f1`; the working tree
+  contains retained documentation notes for discarded Attempts 69-71.
+- Coverage MCP snapshot: `dbd18462-6c91-4351-84d2-e45b23e224dd`.
+- Overall: `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41755 / 42325` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently
+  `1972 / 2059` regions and `130 / 130` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| Classic TIFF header/IFD offsets | The first IFD offset and external value offsets are stored as classic TIFF 32-bit fields. They fit `usize` on supported 32/64-bit Rust targets; subsequent `data.get()` and checked range arithmetic still validate file bounds. |
+| Directory value counts | Classic TIFF entry counts are 32-bit fields. Casting to `usize` is infallible on supported targets; `checked_mul(type_size)` still guards byte length overflow. |
+| Decoded image dimensions already validated as `u32` | `width` and `height` are explicitly converted to `u32` before layout work. Repeated `usize::try_from(u32)` guards are unreachable on supported targets. |
+| Arbitrary directory values such as strip/tile offsets and byte counts | Keep existing fallible conversions because `Directory::values()` exposes them as `u64` and malformed inputs may still exceed addressable memory or file bounds. |
+
+Implementation plan:
+
+1. Replace only the infallible `u32 -> usize` conversions listed above:
+   first IFD offset, width/height layout casts, bilevel inversion width,
+   indexed unpack width/height, directory entry value count, and classic
+   external value offset.
+2. Leave `u64` strip/tile offset and byte-count conversions unchanged.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `3e47b6a9-251d-4de2-a40c-8eea2957ccca`.
+- Coverage MCP snapshot: `c8042e9e-1bff-4063-9d83-25a2a597e20f`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after TIFF decode classic `u32 -> usize` guard consolidation:
+  `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41739 / 42301` regions.
+- Target file movement: `src/codecs/tiff/decode.rs` moved from
+  `1972 / 2059` regions to `1956 / 2035` regions; missing regions fell from
+  `87` to `79`, and branch coverage remained complete at `130 / 130`.
+- Net: aggregate missing regions fell from `570` to `562`. Remaining TIFF
+  decode gaps have no MCP line ranges and should be treated as raw-region
+  cleanup candidates only after a bounded reverse map identifies more
+  unreachable guards.
+
+## Attempt 71 plan: WebP decoder borrowed-slice RIFF header errors
+
+Baseline before editing:
+
+- Source state: code clean at pushed `main` commit `b2d69f1`; the working tree
+  contains only retained Attempt 69 and Attempt 70 documentation notes.
+- Coverage MCP snapshot: `dbd18462-6c91-4351-84d2-e45b23e224dd`.
+- Overall: `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41755 / 42325` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1378 / 1426` regions and `91 / 92` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `read_data()` initial RIFF header validation around line 169 | MCP compact file gaps show line 169 as a one-branch partial. Grouping the MCP-generated LLVM branch records shows one monomorphization with the non-RIFF side missing. The existing hook covers malformed RIFF and malformed WEBP signatures through `Cursor<Vec<u8>>`; public decode paths commonly instantiate the decoder over borrowed byte slices. | Add borrowed-slice `Cursor<&[u8]>` versions of the existing malformed RIFF and malformed WEBP header probes. |
+
+Implementation plan:
+
+1. Extend only the existing WebP native decoder coverage hook.
+2. Reuse the same minimal byte strings as the existing owned-buffer probes.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate branch or region missing count falls.
+
+Measurement:
+
+- Coverage MCP run: `531200b8-2e5a-4947-a6c3-db8799c653f0`.
+- Coverage MCP snapshot: `adaede15-6ed0-41ad-9e11-3906e71e03fc`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Outcome: discarded. Aggregate branches stayed `3448 / 3454`, and
+  aggregate missing regions stayed at `570`: overall moved to
+  `25852 / 25856` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41765 / 42335` regions only because the
+  temporary hook added covered code.
+- Target file movement while the temporary probe was present:
+  `src/codecs/webp/native/decoder.rs` moved from `1378 / 1426` regions to
+  `1388 / 1436` regions, with branches still `91 / 92`. The borrowed-slice
+  malformed RIFF/WEBP header probe does not hit the missing aggregate branch;
+  do not retry that approach.
+
+## Attempt 70 plan: VP8 range-reader filter-parameter monomorphization
+
+Baseline before editing:
+
+- Source state: code clean at pushed `main` commit `b2d69f1`; the working tree
+  only contains the retained Attempt 69 documentation note.
+- Coverage MCP snapshot: `dbd18462-6c91-4351-84d2-e45b23e224dd`.
+- Overall: `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41755 / 42325` regions.
+- Target file: `src/codecs/webp/native/vp8.rs`, currently
+  `2655 / 2675` regions and `157 / 160` branches.
+
+Reverse map:
+
+| Source cluster | MCP evidence | Decision |
+| --- | --- | --- |
+| `calculate_filter_parameters()` around lines 1794-1838 | Selected line records show repeated `6` branch slots with only `3` or `4` covered, while aggregate file coverage is short by only `3` branches. The private hook directly covers `Cursor<Vec<u8>>` and `Take<&[u8]>` shapes. Public WebP decode reaches VP8 through `range_reader(...)`, whose concrete reader shape is `Take<Cursor<Vec<u8>>>` for the in-memory fixtures. | Add one direct coverage hook helper that creates a `Vp8Decoder` from `super::decoder::range_reader(Cursor<Vec<u8>>, 0..0)` and exercises the same filter-parameter branch combinations for that monomorphization. |
+
+Implementation plan:
+
+1. Extend only the existing VP8 coverage hook.
+2. Keep the fixture deterministic and private: no entropy-coded VP8 stream
+   generation, no public parity fixture.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate branch or region missing count falls.
+
+Measurement:
+
+- Coverage MCP run: `8d547a35-846b-49c4-b19c-1c8ded9cd670`.
+- Coverage MCP snapshot: `ccf46eec-ecaa-443b-92c5-b36a8c7efbf6`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Outcome: discarded. Aggregate branches stayed `3448 / 3454`, and
+  aggregate missing regions stayed at `570`: overall moved to
+  `25872 / 25876` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41791 / 42361` regions only because the
+  temporary hook added covered code.
+- Target file movement while the temporary probe was present:
+  `src/codecs/webp/native/vp8.rs` moved from `2655 / 2675` regions to
+  `2691 / 2711` regions, with branches still `157 / 160`. The
+  range-reader filter-parameter probe also increased the synthetic partial
+  branch counts in the same source cluster, so do not retry that approach.
+
+## Attempt 69 plan: WebP native RIFF chunk padding monomorphization
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `b2d69f1`.
+- Coverage MCP snapshot: `dbd18462-6c91-4351-84d2-e45b23e224dd`.
+- Overall: `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41755 / 42325` regions.
+- Target file: `src/codecs/webp/native/encoder.rs`, currently
+  `1791 / 1793` regions and `192 / 192` branches.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `write_chunk()` odd-length RIFF padding | Coverage MCP reports a single partial branch around line 1129. The existing coverage hook exercises odd and even chunk writes for `Vec`, an even fixed-size `Cursor`, and error paths for `Cursor`, including padding failure. It does not exercise a successful odd-length padded write through `Cursor`, so one generic monomorphization can still miss the successful padding region. | Add one fixed-size `Cursor` fixture with a 13-byte buffer and a 3-byte payload so the same `Cursor` monomorphization covers successful odd-length padding. |
+
+Implementation plan:
+
+1. Extend only the existing coverage hook in
+   `src/codecs/webp/native/encoder.rs`.
+2. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `a8c60469-5013-4473-a95d-dc2159810c10`.
+- Coverage MCP snapshot: `ed4fe705-c7d1-4005-b709-12e7b2e35a67`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Outcome: discarded. The probe added covered regions but did not reduce
+  aggregate missing regions: overall moved to `25850 / 25854` lines,
+  `3448 / 3454` branches, `1594 / 1594` functions, and
+  `41763 / 42333` regions, so missing regions stayed at `570`.
+- Target file movement while the temporary probe was present:
+  `src/codecs/webp/native/encoder.rs` moved from `1791 / 1793` regions
+  to `1799 / 1801` regions, with the same partial branch remaining around
+  `write_chunk()` line 1129. Do not retry the successful odd-length
+  `Cursor` chunk probe.
 
 ## Attempt 68 plan: PNG dimension and row-byte guard consolidation
 

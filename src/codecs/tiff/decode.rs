@@ -19,7 +19,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     if endian.u16(data.get(2..4)?)? != 42 {
         return None;
     }
-    let ifd_offset = usize::try_from(endian.u32(data.get(4..8)?)?).ok()?;
+    let ifd_offset = endian.u32(data.get(4..8)?)? as usize;
     let directory = Directory::parse(data, ifd_offset, endian)?;
 
     let width = u32::try_from(directory.one(256)?).ok()?;
@@ -44,8 +44,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
 
-    let width_usize = usize::try_from(width).ok()?;
-    let height_usize = usize::try_from(height).ok()?;
+    let width_usize = width as usize;
+    let height_usize = height as usize;
     // Pillow's baseline YCbCr TIFF raw mode is RGBX: the IFD declares three
     // samples, but each stored pixel occupies four bytes.
     let stored_samples = if photometric == 6 && samples_per_pixel == 3 && bits_per_sample == 8 {
@@ -246,7 +246,7 @@ fn convert_pixels(
     match (photometric, samples, bits) {
         (0 | 1, 1, 1) => {
             if photometric == 0 {
-                let width = usize::try_from(width).ok()?;
+                let width = width as usize;
                 let row_bytes = width.div_ceil(8);
                 for row in pixels.chunks_exact_mut(row_bytes) {
                     row.iter_mut().for_each(|byte| *byte = !*byte);
@@ -346,8 +346,8 @@ fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Option<Vec<
     if bits == 8 {
         return Some(data.to_vec());
     }
-    let width = usize::try_from(width).ok()?;
-    let height = usize::try_from(height).ok()?;
+    let width = width as usize;
+    let height = height as usize;
     let stride = width.checked_mul(usize::from(bits))?.div_ceil(8);
     let mut output = Vec::with_capacity(width.checked_mul(height)?);
     for y in 0..height {
@@ -651,7 +651,7 @@ impl<'a> Directory<'a> {
             let bytes = data.get(start..start.checked_add(12)?)?;
             let tag = endian.u16(&bytes[0..2])?;
             let field_type = endian.u16(&bytes[2..4])?;
-            let value_count = usize::try_from(endian.u32(&bytes[4..8])?).ok()?;
+            let value_count = endian.u32(&bytes[4..8])? as usize;
             let type_size = match field_type {
                 1 | 2 | 6 | 7 => 1,
                 3 | 8 => 2,
@@ -663,7 +663,7 @@ impl<'a> Directory<'a> {
             let value_position = if byte_len <= 4 {
                 start.checked_add(8)?
             } else {
-                usize::try_from(endian.u32(&bytes[8..12])?).ok()?
+                endian.u32(&bytes[8..12])? as usize
             };
             data.get(value_position..value_position.checked_add(byte_len)?)?;
             entries.push(Entry {
