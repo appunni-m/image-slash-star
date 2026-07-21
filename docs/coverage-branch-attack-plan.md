@@ -1,20 +1,23 @@
 # 100% branch coverage attack plan
 
 This document is the required plan before changing more implementation or fixture
-code. It is based on Coverage MCP snapshot
+code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
-`all-features-lines-branches-nightly`.
+`all-features-lines-branches-nightly`. The current counters below were refreshed
+after the first committed cleanup batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
+- Current snapshot: `a3e804e1-a564-4ca3-9cfb-e9a14261a0a9`
+- Current commit: `e4a25aa00f4a0f6cad0834dd39c7be7bac0cc12a`
 - Lines: 21708 / 21709
-- Branches: 3310 / 3484
+- Branches: 3312 / 3484
 - Functions: 1518 / 1518
-- Remaining target: 1 line and 174 branches.
+- Remaining target: 1 line and 172 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -143,10 +146,24 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 | 24 | `src/codecs/jpeg/decode/huffman.rs` | 2 | 100, 181 | Add JPEG Huffman fixtures with deep code lengths, invalid/unused symbols, and entropy streams that force table boundary decisions. |
 | 25 | `src/codecs/webp/encode/vp8/encoder.rs` | 1 | 441 | Add WebP lossy encode source that triggers the remaining VP8 encoder branch; inspect line 441 first to decide if fixture or cleanup. |
 | 26 | `src/codecs/tiff/encode.rs` | 1 | 416 | Add TIFF encode row for the exact remaining option/predictor/compression branch; inspect line 416 before fixture selection. |
-| 27 | `src/codecs/png/encode.rs` | 1 | 14 | Likely option/default branch. Inspect line 14 and either add an encode row or remove redundant branch. |
-| 28 | `src/codecs/bmp/encode.rs` | 1 | 61 | Add BMP encode row around mode/header/bit-depth option branch, or remove if Pillow ignores that option and the branch is redundant. |
-| 29 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
-| 30 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
+| 27 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
+| 28 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
+
+## Completed while executing this plan
+
+### PNG/BMP encode error parity batch
+
+- Commit: `e4a25aa00f4a0f6cad0834dd39c7be7bac0cc12a`
+- Coverage MCP run: `eed24a4b-6fcc-4281-8181-35360cbccaa9`
+- Coverage MCP snapshot: `a3e804e1-a564-4ca3-9cfb-e9a14261a0a9`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3310 / 3484 to 3312 / 3484.
+- `src/codecs/png/encode.rs`: now 236 / 236 lines and 36 / 36 branches.
+- `src/codecs/bmp/encode.rs`: now 182 / 182 lines and 8 / 8 branches.
+- Added manifest-driven oracle rows:
+  - `png.enc_error_zero_height`
+  - `bmp.enc_error_oversized_height`
+  - `bmp.enc_error_file_size_overflow`
 
 ## Execution order
 
