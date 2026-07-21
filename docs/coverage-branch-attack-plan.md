@@ -4,20 +4,20 @@ This document is the required plan before changing more implementation or fixtur
 code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
-`all-features-lines-branches-nightly`. The current counters below were refreshed
-after the first committed cleanup batch.
+`all-features-lines-branches-nightly`. The current counters below are refreshed
+after the committed TIFF LZW byte-alignment batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `a3e804e1-a564-4ca3-9cfb-e9a14261a0a9`
-- Current commit: `e4a25aa00f4a0f6cad0834dd39c7be7bac0cc12a`
+- Current snapshot: `dc567aaf-3808-46f4-8d86-5296b6b74e7e`
+- Current commit: `f565a23813f9f90b482ea9500b1d4122eab17daa`
 - Lines: 21708 / 21709
-- Branches: 3312 / 3484
+- Branches: 3313 / 3484
 - Functions: 1518 / 1518
-- Remaining target: 1 line and 172 branches.
+- Remaining target: 1 line and 171 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -145,9 +145,8 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 | 23 | `src/codecs/ico/encode.rs` | 2 | 46-47 | Add ICO encode rows for size-list parsing: empty, duplicate, malformed tuple, and mixed valid/invalid requested sizes. |
 | 24 | `src/codecs/jpeg/decode/huffman.rs` | 2 | 100, 181 | Add JPEG Huffman fixtures with deep code lengths, invalid/unused symbols, and entropy streams that force table boundary decisions. |
 | 25 | `src/codecs/webp/encode/vp8/encoder.rs` | 1 | 441 | Add WebP lossy encode source that triggers the remaining VP8 encoder branch; inspect line 441 first to decide if fixture or cleanup. |
-| 26 | `src/codecs/tiff/encode.rs` | 1 | 416 | Add TIFF encode row for the exact remaining option/predictor/compression branch; inspect line 416 before fixture selection. |
-| 27 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
-| 28 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
+| 26 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
+| 27 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
 
 ## Completed while executing this plan
 
@@ -164,6 +163,20 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
   - `png.enc_error_zero_height`
   - `bmp.enc_error_oversized_height`
   - `bmp.enc_error_file_size_overflow`
+
+### TIFF LZW byte-aligned parity batch
+
+- Commit: `f565a23813f9f90b482ea9500b1d4122eab17daa`
+- Coverage MCP run: `4ff5ca4f-7666-470c-90e6-a8ae314e4d03`
+- Coverage MCP snapshot: `dc567aaf-3808-46f4-8d86-5296b6b74e7e`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3312 / 3484 to 3313 / 3484.
+- `src/codecs/tiff/encode.rs`: now 344 / 344 lines and 86 / 86 branches.
+- Added manifest-driven oracle row:
+  - `tiff.enc_lzw_byte_aligned`
+- Exploration note: a deterministic 16-pixel grayscale PNG source drives the
+  TIFF LZW writer to finish with zero pending bits, covering the `used == 0`
+  side of `MsbWriter::finish`.
 
 ## Execution order
 
