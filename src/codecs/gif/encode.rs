@@ -406,7 +406,7 @@ fn write_gif(
     output.extend_from_slice(&height.to_le_bytes());
     output.push(u8::from(global_table) << 7 | global_size);
     output.extend_from_slice(&[background, 0]); // Background index and pixel aspect ratio.
-    if global_table { write_color_table(&mut output, &first.palette, global_count); }
+    write_color_table(&mut output, &first.palette, global_count);
 
     if let Some(loop_count) = settings.loop_count {
         output.extend_from_slice(&[

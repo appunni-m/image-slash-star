@@ -12,12 +12,12 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `1a0052ae-3f48-45e2-bfe2-1566218dd68d`
-- Current measured commit metadata: `d8363ac3e86426044cd99478891a9c0419e79c86`
+- Current snapshot: `48599839-c1aa-4c44-b18a-243dcb0e8aa3`
+- Current measured commit metadata: `a8287aac05d5e76ab7657b126159a04024336d68`
 - Lines: 22066 / 22067
-- Branches: 3337 / 3466
+- Branches: 3336 / 3464
 - Functions: 1528 / 1528
-- Remaining target: 1 line and 129 branches.
+- Remaining target: 1 line and 128 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -263,6 +263,54 @@ Completed evidence:
   Pushed-head overall coverage is 22066 / 22067 lines, 3337 / 3466 branches,
   and 1528 / 1528 functions. VP8 remains 1307 / 1307 lines,
   154 / 162 branches, and 57 / 57 functions.
+
+## Planned GIF encoder private-branch batch
+
+Coverage MCP snapshot `1a0052ae-3f48-45e2-bfe2-1566218dd68d` reports
+`src/codecs/gif/encode.rs` at 1147 / 1147 lines, 209 / 220 branches, and
+104 / 104 functions. The remaining normalized branch lines are:
+
+- lines 118 and 132: animated-frame coalescing and transparent-palette alpha
+  update. Prefer manifest animated-GIF fixtures later; do not invent broad
+  sequence fixtures in this private-helper batch.
+- line 175: `rgba_difference_bounds()` has debug assertion branches. Do not
+  call impossible no-difference input because debug assertions are active in
+  coverage builds.
+- line 409: `global_table` is a local constant set to true; remove the runtime
+  branch and write the global color table directly.
+- line 444: transparent unchanged-pixel masking after coalescing. Defer to an
+  animated GIF fixture batch unless a minimal private `PreparedImage` state is
+  clearly safer.
+- lines 914, 930, and 937: median-cut split loop/debug assertion edges. Add
+  deterministic private `MedianBox` calls for split-boundary shapes; remove
+  only branches proven to be invariants.
+- line 1053: RGBA palette optimization compacts holes or shrinks half-used
+  palettes. Add deterministic `quantize_rgba()` inputs for both compact and
+  no-compact sides.
+
+The safe scope for this batch is internal helper coverage plus a constant
+branch cleanup. Public animation behavior should stay fixture-driven in a
+later manifest batch.
+
+Completed evidence:
+
+- First Coverage MCP run with a newly wired GIF private hook:
+  `cfd0e34d-fb33-4664-8b70-df250aa83d88`; failed in
+  `test_internal_coverage_hooks` due an incorrect hook assertion about the
+  opaque RGBA palette size, so no coverage snapshot was ingested.
+- Corrected hook run: `5b2ea3b5-92cd-43d6-a7f1-5bed9cf28996`, snapshot
+  `fa014085-fbb2-4838-8fce-35c4234c32c1`; passed, but the helper probes did
+  not close their intended GIF branches. They were removed rather than keeping
+  noisy coverage-only code.
+- Final Coverage MCP run with only the constant `global_table` branch cleanup:
+  `75c1f8ed-4156-4fc0-ae51-892f59ca069a`
+- Final Coverage MCP snapshot: `48599839-c1aa-4c44-b18a-243dcb0e8aa3`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22066 / 22067 lines, 3336 / 3464 branches, 1528 / 1528 functions.
+- Target file: `src/codecs/gif/encode.rs` is 1147 / 1147 lines,
+  208 / 218 branches, and 104 / 104 functions. The constant global-table
+  branch is closed. Remaining GIF encoder gaps need fixture-driven animation,
+  transparent masking, median-cut, and RGBA palette-optimization work.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 
