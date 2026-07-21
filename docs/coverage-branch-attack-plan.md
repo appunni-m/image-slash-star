@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `f02e7f6d-9f07-4be8-8585-b4b2a0eef92d`
-- Current measured commit metadata: `6c6a0cac50abf619fa5c2aef2d2310b4504e7d81`
-- Current coverage source state: Attempt 73 retained working tree measured from
-  pushed parent `6c6a0ca`.
+- Current snapshot: `e148aca1-a3a9-487b-baa3-f8a848674ea9`
+- Current measured commit metadata: `363e46a865e81d97ddc13c81c016b5f58ebdca91`
+- Current coverage source state: pushed `main` commit `363e46a`.
 - Lines: 25847 / 25851
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
@@ -84,6 +83,9 @@ Measurement:
 - Coverage MCP run: `80b12d59-10be-447f-8314-83a51fde9fd0`.
 - Coverage MCP snapshot: `f02e7f6d-9f07-4be8-8585-b4b2a0eef92d`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `818b808c-64b9-4a1b-8f31-c41f9fb1e6d3`,
+  snapshot `e148aca1-a3a9-487b-baa3-f8a848674ea9`, commit
+  `363e46a865e81d97ddc13c81c016b5f58ebdca91`; result unchanged.
 - Overall after ICO DIB `u32 -> usize` guard consolidation:
   `25847 / 25851` lines, `3448 / 3454` branches,
   `1594 / 1594` functions, and `41729 / 42286` regions.
