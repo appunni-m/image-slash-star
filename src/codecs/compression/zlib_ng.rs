@@ -203,6 +203,76 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(current.length, 0);
     assert_eq!(next.length, 6);
 
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 3,
+        start: 0,
+        original_start: 0,
+    };
+    let mut next = MediumMatch {
+        match_start: 1,
+        length: 4,
+        start: 4,
+        original_start: 4,
+    };
+    fizzle_matches(b"aaaaaaaa", &mut current, &mut next);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 3,
+        start: 0,
+        original_start: 0,
+    };
+    let mut next = MediumMatch {
+        match_start: 4,
+        length: 4,
+        start: 1,
+        original_start: 1,
+    };
+    fizzle_matches(b"aaaaaaaa", &mut current, &mut next);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 2,
+        start: 0,
+        original_start: 0,
+    };
+    let mut next = MediumMatch {
+        match_start: 1,
+        length: 1,
+        start: 1,
+        original_start: 1,
+    };
+    fizzle_matches(b"aaaa", &mut current, &mut next);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 2,
+        start: 0,
+        original_start: 0,
+    };
+    let mut next = MediumMatch {
+        match_start: 2,
+        length: 1,
+        start: 2,
+        original_start: 2,
+    };
+    fizzle_matches(b"aaaa", &mut current, &mut next);
+
+    let mut current = MediumMatch {
+        match_start: 0,
+        length: 2,
+        start: 0,
+        original_start: 0,
+    };
+    let mut next = MediumMatch {
+        match_start: 3,
+        length: 255,
+        start: 3,
+        original_start: 3,
+    };
+    fizzle_matches(&[b'a'; 260], &mut current, &mut next);
+
     let mut slow = SlowMatcher::new(b"abcdefghijkl", 16, 8, 128, 128);
     slow.process(0, true)
         .expect("slow matcher empty finalization should process");
@@ -459,6 +529,50 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut level3_empty_chain = Level3Matcher::new(b"abcxyz", 0, 128, 6, false);
     level3_empty_chain.position = 3;
     let _ = level3_empty_chain.longest_match(0, 3);
+    let mut level3_process_short = Level3Matcher::new(b"abc", 6, 128, 6, false);
+    let _ = level3_process_short.process(4, true);
+    let mut level3_distance_underflow = Level3Matcher::new(b"abcd", 6, 128, 6, false);
+    let level3_hash = level3_distance_underflow
+        .hash(0)
+        .expect("coverage level3 hash should compute");
+    level3_distance_underflow.head[level3_hash] = usize::MAX;
+    let _ = level3_distance_underflow.process(4, true);
+    let mut level3_literal_short = Level3Matcher::new(b"", 6, 128, 6, false);
+    let _ = level3_literal_short.process(1, true);
+    let mut level3_missing_hash = Level3Matcher::new(b"abc", 6, 128, 6, false);
+    let _ = level3_missing_hash.quick_insert(0);
+    let mut level3_missing_head = Level3Matcher::new(b"abcdefgh", 6, 128, 6, false);
+    level3_missing_head.head.clear();
+    let _ = level3_missing_head.quick_insert(0);
+    let mut level3_missing_previous = Level3Matcher::new(b"abcdefgh", 6, 128, 6, false);
+    let level3_hash = level3_missing_previous
+        .hash(0)
+        .expect("coverage level3 hash should compute");
+    level3_missing_previous.head[level3_hash] = 1;
+    level3_missing_previous.previous.clear();
+    let _ = level3_missing_previous.quick_insert(0);
+    let mut level3_fast_underflow = Level3Matcher::new(b"abcdefgh", 6, 128, 6, true);
+    let _ = level3_fast_underflow.insert_match(usize::MAX, 0);
+    let mut level3_insert_loop_fail = Level3Matcher::new(b"abcd", 6, 128, 6, false);
+    level3_insert_loop_fail.position = 1;
+    let _ = level3_insert_loop_fail.insert_match(4, 10);
+    let mut level3_insert_end_fail = Level3Matcher::new(b"abcd", 6, 128, 0, false);
+    let _ = level3_insert_end_fail.insert_match(5, 10);
+    let mut level3_empty_previous_chain = Level3Matcher::new(b"abcxyz", 2, 128, 6, false);
+    level3_empty_previous_chain.position = 3;
+    level3_empty_previous_chain.previous.clear();
+    let _ = level3_empty_previous_chain.longest_match(0, 3);
+    let mut level3_equal_match = Level3Matcher::new(b"abab", 6, 128, 6, false);
+    level3_equal_match.position = 2;
+    let _ = level3_equal_match.longest_match(0, 2);
+    let mut level3_candidate = Level3Matcher::new(b"abcdefghijkl", 6, 128, 6, false);
+    level3_candidate.position = 4;
+    let _ = level3_candidate.candidate_can_improve(0, 0);
+    let _ = level3_candidate.candidate_can_improve(0, 4);
+    let _ = level3_candidate.candidate_can_improve(0, 8);
+    let _ = level3_candidate.candidate_can_improve(usize::MAX, 2);
+    level3_candidate.position = usize::MAX;
+    let _ = level3_candidate.candidate_can_improve(0, 8);
 
     let _ = quick_insert_level1(data, data.len(), &mut head);
     let mut overflowing_position = usize::MAX;

@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `e66e89a1-c214-4354-88bc-10f2e16504e1`
-- Current measured commit metadata: `a6b29c9846c7014d60268bba5969d80c12420d5b`
-- Current source state: Attempt 60 retained working tree measured from pushed
-  parent `a6b29c9`.
-- Lines: 25396 / 25400
+- Current snapshot: `477d545c-d92f-47cd-9a32-decb5cb9a555`
+- Current measured commit metadata: `9e5899beecc056f5f6c8b192fbe0f8cc02026c18`
+- Current source state: Attempt 61 retained working tree measured from pushed
+  parent `9e5899b`.
+- Lines: 25505 / 25509
 - Branches: 3438 / 3444
 - Functions: 1585 / 1585
-- Regions: 41153 / 41750
-- Remaining target: 4 lines, 6 branches, and 597 regions.
+- Regions: 41279 / 41865
+- Remaining target: 4 lines, 6 branches, and 586 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -47,6 +47,52 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 61 plan: zlib level-three matcher and fizzle guard regions
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 60 commit `9e5899b`.
+- Coverage MCP snapshot: `e66e89a1-c214-4354-88bc-10f2e16504e1`.
+- Overall: `25396 / 25400` lines, `3438 / 3444` branches,
+  `1585 / 1585` functions, and `41153 / 41750` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `2038 / 2038` lines, `368 / 368` branches, `83 / 83` functions, and
+  `3292 / 3502` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `Level3Matcher::process()` | Lines 1709-1737. | Remaining spans are propagation from quick-insert failure, candidate-distance underflow, longest-match failure, invalid match distance, literal read failure, insert-match failure, and position advance overflow. These require invalid matcher state, not public image fixtures. |
+| `Level3Matcher::hash()` / `quick_insert()` / `insert_match()` | Lines 1746-1782. | Direct helper states remain for short input, short hash/previous tables, `lookahead - length` underflow, checked-add overflow, loop insertion failure, and end-position insertion failure. |
+| `Level3Matcher::longest_match()` / `candidate_can_improve()` | Lines 1796-1853. | Remaining spans are candidate pre-screen and chain-walk guard states: short comparisons, empty previous chain, checked arithmetic underflow/overflow, and endpoint comparison slices. |
+| `fizzle_matches()` | Lines 1618-1648. | Existing public compressor paths cover normal fizzling. Remaining spans are edge exits around overlap limits, one-byte fizzles, two-byte next matches, and mismatch stops; probe directly with synthetic `MediumMatch` values. |
+
+Implementation plan:
+
+1. Extend the existing zlib coverage hook with one Level3/fizzle guard probe
+   batch.
+2. Keep probes private and deterministic; no public codec behavior or fixture
+   manifests change.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `40d0dd05-392d-4e20-87c6-ee96f7aeae56`.
+- Coverage MCP snapshot: `477d545c-d92f-47cd-9a32-decb5cb9a555`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adding Level3/fizzle guard probes:
+  `25505 / 25509` lines, `3438 / 3444` branches, `1585 / 1585`
+  functions, and `41279 / 41865` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `3292 / 3502` regions to `3418 / 3617` regions; missing regions fell from
+  `210` to `199`.
+- Net: aggregate missing regions fell from `597` to `586`. Branch debt is
+  unchanged.
 
 ## Attempt 60 plan: zlib level-six and level-nine matcher guard regions
 
