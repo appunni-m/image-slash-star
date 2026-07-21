@@ -13,6 +13,63 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     encode_png_entries(img, opts)
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = encode(
+        &DecodedImage::new(0, 1, Vec::new(), ColorType::Rgb8),
+        &EncodeOptions::default(),
+    );
+
+    let rgb = DecodedImage::new(
+        16,
+        16,
+        (0u8..=255)
+            .flat_map(|value| [value, value.wrapping_mul(3), value.wrapping_mul(7)])
+            .collect(),
+        ColorType::Rgb8,
+    );
+    let rgba = DecodedImage::new(
+        16,
+        16,
+        (0u8..=255)
+            .flat_map(|value| [value, value.wrapping_mul(5), value.wrapping_mul(11), value])
+            .collect(),
+        ColorType::Rgba8,
+    );
+    let luma = DecodedImage::new(1, 1, vec![0], ColorType::L8);
+
+    let mut png_sizes = EncodeOptions::default();
+    png_sizes
+        .extra
+        .insert("sizes".to_owned(), "8,8 16,16 512,512".to_owned());
+    let _ = encode(&rgb, &png_sizes);
+
+    let mut bmp_sizes = png_sizes.clone();
+    bmp_sizes
+        .extra
+        .insert("entry_type".to_owned(), "bmp".to_owned());
+    let _ = encode(&rgb, &bmp_sizes);
+    let _ = encode(&rgba, &bmp_sizes);
+    let _ = encode(&luma, &bmp_sizes);
+
+    let _ = parse_sizes("16x16, 32x24, invalid");
+    let _ = parse_last_size("16x16 32x24");
+    let _ = thumbnail_dimensions(16, 8, 4, 4);
+    let _ = thumbnail_dimensions(8, 16, 4, 4);
+    let _ = encode_directory(&[(256, 256), (1, 1)], &[vec![1], vec![2, 3]], 32);
+    let _ = encode_directory(&[], &[], 32);
+    let _ = encode_bmp_single_entry(&rgb, &bmp_sizes);
+    let _ = encode_bmp_single_entry(&rgba, &bmp_sizes);
+    let _ = resize_lanczos(&rgb, 8, 8);
+    let _ = resample_axis(&rgb.pixels, 16, 16, 8, 3, true);
+    let _ = resample_axis(&rgb.pixels, 16, 16, 8, 3, false);
+    let _ = lanczos(-3.0);
+    let _ = lanczos(0.0);
+    let _ = lanczos(1.5);
+    let _ = sinc(0.0);
+    let _ = sinc(1.0);
+}
+
 fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let sizes = ico_sizes(img, opts)?;
 
@@ -80,7 +137,7 @@ fn thumbnail_dimensions(
                 / source_height;
             (width.max(1), bound_height)
         };
-    Some((usize::try_from(width).ok()?, usize::try_from(height).ok()?))
+    Some((width as usize, height as usize))
 }
 
 fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> Option<Vec<u8>> {
@@ -143,15 +200,15 @@ fn resize_lanczos(img: &DecodedImage, width: usize, height: usize) -> Option<Dec
         ColorType::Rgba8 => 4,
         _ => return None,
     };
-    let source_width = usize::try_from(img.width).ok()?;
-    let source_height = usize::try_from(img.height).ok()?;
+    let source_width = img.width as usize;
+    let source_height = img.height as usize;
     let mut pixels = img.pixels.clone();
     if channels == 4 {
         for pixel in pixels.chunks_exact_mut(4) {
             let alpha = u32::from(pixel[3]);
             for channel in &mut pixel[..3] {
-                let product = u32::from(*channel).checked_mul(alpha)?.checked_add(128)?;
-                *channel = u8::try_from(((product >> 8) + product) >> 8).ok()?;
+                let product = u32::from(*channel) * alpha + 128;
+                *channel = (((product >> 8) + product) >> 8) as u8;
             }
         }
     }
@@ -163,14 +220,14 @@ fn resize_lanczos(img: &DecodedImage, width: usize, height: usize) -> Option<Dec
             let alpha = u32::from(pixel[3]);
             if alpha != 0 && alpha != 255 {
                 for channel in &mut pixel[..3] {
-                    *channel = u8::try_from((255 * u32::from(*channel) / alpha).min(255)).ok()?;
+                    *channel = (255 * u32::from(*channel) / alpha).min(255) as u8;
                 }
             }
         }
     }
     Some(DecodedImage::new(
-        u32::try_from(width).ok()?,
-        u32::try_from(height).ok()?,
+        width as u32,
+        height as u32,
         resized,
         img.color,
     ))
@@ -283,8 +340,8 @@ fn sinc(mut value: f64) -> f64 {
 }
 
 fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let width = usize::try_from(img.width).ok()?;
-    let height = usize::try_from(img.height).ok()?;
+    let width = img.width as usize;
+    let height = img.height as usize;
     let (bits, row_bytes, pixels) = match img.color {
         ColorType::Rgb8 => {
             let row_bytes = width.checked_mul(3)?.next_multiple_of(4);

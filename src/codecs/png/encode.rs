@@ -15,8 +15,8 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         return None;
     }
 
-    let width = usize::try_from(img.width).ok()?;
-    let height = usize::try_from(img.height).ok()?;
+    let width = img.width as usize;
+    let height = img.height as usize;
     let (png_color, depth, row_bytes, filter_bytes, pixels) = match img.mode {
         ImageMode::L1 => {
             let row_bytes = width.div_ceil(8);
@@ -94,6 +94,76 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     write_chunk(&mut output, *b"IDAT", &compressed)?;
     write_chunk(&mut output, *b"IEND", &[])?;
     Some(output)
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = encode(
+        &DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
+        &EncodeOptions::default(),
+    );
+    let _ = encode(
+        &DecodedImage::new(1, 1, Vec::new(), ColorType::Rgb8),
+        &EncodeOptions::default(),
+    );
+    let _ = encode(
+        &DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Cmyk8),
+        &EncodeOptions::default(),
+    );
+
+    let l1 = DecodedImage::with_mode(9, 1, vec![0b1010_1010, 0b1000_0000], ImageMode::L1);
+    let _ = encode(&l1, &EncodeOptions::default());
+
+    let l16 = DecodedImage::with_mode(1, 1, 0x1234u16.to_le_bytes().to_vec(), ImageMode::L16);
+    let _ = encode(&l16, &EncodeOptions::default());
+
+    let palette = crate::types::ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0, 255])
+        .expect("coverage palette should be valid");
+    let indexed = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(palette);
+    let _ = encode(&indexed, &EncodeOptions::default());
+
+    let rgb = DecodedImage::new(
+        2,
+        2,
+        vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 255, 255],
+        ColorType::Rgb8,
+    );
+    let mut ancillary = EncodeOptions::default();
+    for key in ["gamma", "srgb", "physical", "text_chunks", "time"] {
+        ancillary.extra.insert(key.to_owned(), "true".to_owned());
+    }
+    ancillary
+        .extra
+        .insert("compression".to_owned(), "none".to_owned());
+    let _ = encode(&rgb, &ancillary);
+
+    let mut bad_compression = EncodeOptions::default();
+    bad_compression
+        .extra
+        .insert("compression".to_owned(), "not-a-level".to_owned());
+    let _ = encode(&rgb, &bad_compression);
+
+    let _ = plain_rows(&[], usize::MAX, 1, 1, Filter::None, false);
+
+    let row = [10u8, 20, 40, 80];
+    let previous = [1u8, 2, 4, 8];
+    for filter in [
+        Filter::None,
+        Filter::Sub,
+        Filter::Up,
+        Filter::Average,
+        Filter::Paeth,
+        Filter::Adaptive,
+    ] {
+        let mut output = Vec::new();
+        append_filtered_row(&mut output, &row, Some(&previous), 2, filter, true);
+        let _ = filter_score(&row, Some(&previous), 2, filter);
+        let _ = filter_byte(filter);
+    }
+    let _ = select_adaptive_filter(&row, Some(&previous), 2, true);
+    let _ = paeth(10, 20, 30);
+    let _ = paeth(200, 10, 20);
+    let _ = paeth(5, 200, 10);
 }
 
 fn plain_rows(

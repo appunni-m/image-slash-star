@@ -99,6 +99,7 @@ pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> Option<Vec<u8>
 #[cfg(coverage)]
 #[doc(hidden)]
 pub fn __coverage_exercise_private_branches() {
+    let _ = decode_sequence(b"not an image");
     codecs::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }

@@ -330,6 +330,41 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = encode(&zero_height, &EncodeOptions::default());
     }));
 
+    let gray = DecodedImage::new(2, 2, vec![0, 64, 128, 255], crate::types::ColorType::L8);
+    let rgb = DecodedImage::new(
+        3,
+        2,
+        vec![
+            0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 255, 255,
+        ],
+        crate::types::ColorType::Rgb8,
+    );
+    let _ = encode(&gray, &EncodeOptions::default());
+    let _ = encode(&rgb, &EncodeOptions::default());
+    let mut progressive = EncodeOptions {
+        progressive: Some(true),
+        ..EncodeOptions::default()
+    };
+    let _ = encode(&rgb, &progressive);
+    progressive.optimize = Some(true);
+    progressive.subsampling = Some("444".to_owned());
+    let _ = encode(&rgb, &progressive);
+    let mut restart = EncodeOptions {
+        optimize: Some(true),
+        subsampling: Some("422".to_owned()),
+        ..EncodeOptions::default()
+    };
+    restart
+        .extra
+        .insert("restart_interval".to_owned(), "1".to_owned());
+    let _ = encode(&rgb, &restart);
+    let _ = decode_hex("ff00");
+    let _ = decode_hex("f");
+    let mut marker_bytes = Vec::new();
+    let _ = marker::write_exif_app1(&mut marker_bytes, b"Exif\0\0");
+    let oversized_exif = vec![0u8; usize::from(u16::MAX)];
+    let _ = marker::write_exif_app1(&mut marker_bytes, &oversized_exif);
+
     let plane = [10u8, 20, 30, 40];
     let _ = downsample(&plane, 2, 2, 2, 2, 1, 1);
     let _ = downsample(&plane, 2, 2, 1, 2, 2, 1);

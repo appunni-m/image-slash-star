@@ -289,6 +289,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0,
         &mut reader,
     );
+    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
+    let _ = HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Leaf(9)], 0, 0, &mut reader);
     let tree = HuffmanTree(HuffmanTreeInner::Tree {
         tree: vec![
             HuffmanTreeNode::Branch(1),
@@ -303,6 +305,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = tree.read_symbol(&mut reader);
     let reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
     let _ = tree.peek_symbol(&reader);
+    let fast_consume_error = HuffmanTree(HuffmanTreeInner::Tree {
+        tree: Vec::new(),
+        table: vec![(1 << 16) | 4],
+        table_mask: 0,
+    });
+    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
+    let _ = fast_consume_error.read_symbol(&mut reader);
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(vec![0u8; 5]));
     reader.fill().expect("coverage reader should fill");
     let _ = tree.read_symbol(&mut reader);

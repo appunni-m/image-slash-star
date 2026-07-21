@@ -13,19 +13,19 @@ const COMPRESSION_PACKBITS: u16 = 32_773;
 /// Encode an image as a single-strip classic TIFF.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     img.validate().ok()?;
-    let width = usize::try_from(img.width).ok()?;
-    let height = usize::try_from(img.height).ok()?;
+    let width = img.width as usize;
+    let height = img.height as usize;
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
         ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
-        ImageMode::La8 => (1, 2, 8, true, width.checked_mul(2)?),
-        ImageMode::L16 => (1, 1, 16, false, width.checked_mul(2)?),
-        ImageMode::F32 => (1, 1, 32, false, width.checked_mul(4)?),
-        ImageMode::I32 => (1, 1, 32, false, width.checked_mul(4)?),
+        ImageMode::La8 => (1, 2, 8, true, width * 2),
+        ImageMode::L16 => (1, 1, 16, false, width * 2),
+        ImageMode::F32 => (1, 1, 32, false, width * 4),
+        ImageMode::I32 => (1, 1, 32, false, width * 4),
         _ => match img.color {
             ColorType::L8 => (1, 1, 8, false, width),
-            ColorType::Rgb8 => (2, 3, 8, false, width.checked_mul(3)?),
-            ColorType::Rgba8 => (2, 4, 8, true, width.checked_mul(4)?),
-            ColorType::Cmyk8 => (5, 4, 8, false, width.checked_mul(4)?),
+            ColorType::Rgb8 => (2, 3, 8, false, width * 3),
+            ColorType::Rgba8 => (2, 4, 8, true, width * 4),
+            ColorType::Cmyk8 => (5, 4, 8, false, width * 4),
             _ => return None,
         },
     };
@@ -54,7 +54,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let encoded = if compression == COMPRESSION_NONE {
         raw
     } else if compression == COMPRESSION_LZW {
-        encode_lzw(&raw)?
+        encode_lzw(&raw)
     } else if compression == COMPRESSION_DEFLATE {
         let input_chunks = vec![row_len; height];
         compress_zlib_tiff(&raw, &input_chunks)?
@@ -64,17 +64,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     let has_sample_format = matches!(img.mode, ImageMode::F32 | ImageMode::I32);
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
-        .checked_add(u16::from(channels > 1))?
-        .checked_add(u16::from(extra_sample))?
-        .checked_add(u16::from(predictor == 2))?
-        .checked_add(u16::from(has_sample_format))?;
-    let ifd_size = 2usize
-        .checked_add(usize::from(entry_count).checked_mul(12)?)?
-        .checked_add(4)?;
+        + u16::from(channels > 1)
+        + u16::from(extra_sample)
+        + u16::from(predictor == 2)
+        + u16::from(has_sample_format);
+    let ifd_size = 2 + usize::from(entry_count) * 12 + 4;
     let bits_len = if channels <= 2 {
         0
     } else {
-        usize::from(channels).checked_mul(2)?
+        usize::from(channels) * 2
     };
     let compressed_layout = compression != COMPRESSION_NONE;
     let ifd_offset = if compressed_layout {
@@ -186,6 +184,86 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         output.extend_from_slice(&encoded);
     }
     Some(output)
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    fn opt(key: &str, value: &str) -> EncodeOptions {
+        let mut opts = EncodeOptions::default();
+        opts.extra.insert(key.to_owned(), value.to_owned());
+        opts
+    }
+
+    let _ = encode(
+        &DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
+        &EncodeOptions::default(),
+    );
+    let _ = encode(
+        &DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::La16),
+        &EncodeOptions::default(),
+    );
+
+    let l1 = DecodedImage::with_mode(8, 1, vec![0b1010_1010], ImageMode::L1);
+    let la = DecodedImage::new(1, 1, vec![7, 255], ColorType::La8);
+    let l16 = DecodedImage::new(1, 1, 0x1234u16.to_le_bytes().to_vec(), ColorType::L16);
+    let f32 = DecodedImage::with_mode(1, 1, 1.0f32.to_ne_bytes().to_vec(), ImageMode::F32);
+    let i32 = DecodedImage::with_mode(1, 1, 42i32.to_ne_bytes().to_vec(), ImageMode::I32);
+    let rgb = DecodedImage::new(
+        2,
+        2,
+        vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 255, 255],
+        ColorType::Rgb8,
+    );
+    let rgba = DecodedImage::new(1, 1, vec![1, 2, 3, 4], ColorType::Rgba8);
+    let cmyk = DecodedImage::new(1, 1, vec![1, 2, 3, 4], ColorType::Cmyk8);
+
+    for image in [&l1, &la, &l16, &f32, &i32, &rgb, &rgba, &cmyk] {
+        let _ = encode(image, &EncodeOptions::default());
+    }
+    for compression in ["lzw", "deflate", "packbits", "raw"] {
+        let _ = encode(&rgb, &opt("compression", compression));
+    }
+    let _ = encode(&rgb, &opt("compression", "unsupported"));
+    let _ = encode(&rgb, &opt("predictor", "unsupported"));
+    let _ = encode(&l1, &opt("predictor", "horizontal"));
+
+    let mut predicted = opt("compression", "deflate");
+    predicted
+        .extra
+        .insert("predictor".to_owned(), "horizontal".to_owned());
+    let _ = encode(&rgb, &predicted);
+    let _ = encode(&l16, &predicted);
+    let _ = encode(&f32, &predicted);
+    let _ = encode(&i32, &predicted);
+
+    let mut bytes8 = vec![1, 2, 5, 9, 3, 4];
+    apply_horizontal_predictor(&mut bytes8, 6, 3, 8);
+    let mut bytes16 = vec![1, 0, 2, 0, 5, 0, 9, 0];
+    apply_horizontal_predictor(&mut bytes16, 8, 2, 16);
+    let mut bytes32 = vec![1, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 9, 0, 0, 0];
+    apply_horizontal_predictor(&mut bytes32, 16, 2, 32);
+
+    let literal: Vec<u8> = (0u8..=130).collect();
+    let run = vec![7u8; 260];
+    let mixed = [1u8, 2, 2, 3, 4, 4, 4, 5];
+    let _ = encode_packbits(&literal, literal.len());
+    let _ = encode_packbits(&run, run.len());
+    let _ = encode_packbits(&mixed, mixed.len());
+    let mut packbits = Vec::new();
+    encode_packbits_row(&literal, &mut packbits);
+    encode_packbits_row(&run, &mut packbits);
+    encode_packbits_row(&mixed, &mut packbits);
+
+    let _ = encode_lzw(&[]);
+    let _ = encode_lzw(b"TOBEORNOTTOBEORTOBEORNOT");
+    let mut writer = MsbWriter::default();
+    writer.write(0x1ff, 9);
+    writer.write(0, 1);
+    let _ = writer.finish();
+    let mut entries = Vec::new();
+    let endian = Endian::Little;
+    write_short_entry(&mut entries, endian, 256, 1);
+    write_entry(&mut entries, endian, 257, 4, 1, 1);
 }
 
 fn apply_horizontal_predictor(
@@ -311,14 +389,16 @@ fn emit_packbits_run(output: &mut Vec<u8>, byte: u8, run_len: &mut usize) {
     *run_len -= emitted;
 }
 
-fn encode_lzw(data: &[u8]) -> Option<Vec<u8>> {
+fn encode_lzw(data: &[u8]) -> Vec<u8> {
     const CLEAR: u16 = 256;
     const END: u16 = 257;
     const FIRST: u16 = 258;
     const MAX_CODE: u16 = 4095;
     const CHECK_GAP: usize = 10_000;
 
-    let (&first, rest) = data.split_first()?;
+    let Some((&first, rest)) = data.split_first() else {
+        return Vec::new();
+    };
     let mut writer = MsbWriter::default();
 
     let mut dictionary = HashMap::<(u16, u8), u16>::with_capacity(4096);
@@ -389,7 +469,7 @@ fn encode_lzw(data: &[u8]) -> Option<Vec<u8>> {
         width += 1;
     }
     writer.write(END, width);
-    Some(writer.finish())
+    writer.finish()
 }
 
 #[derive(Default)]

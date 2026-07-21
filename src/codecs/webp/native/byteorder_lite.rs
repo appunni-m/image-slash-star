@@ -51,3 +51,20 @@ pub(super) trait ReadBytesExt: Read {
 }
 
 impl<R: Read + ?Sized> ReadBytesExt for R {}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut bytes = std::io::Cursor::new([1u8, 2, 3, 4]);
+    let _ = bytes.read_u8();
+    let _ = bytes.read_u16::<LittleEndian>();
+    let mut bytes = std::io::Cursor::new([1u8, 2, 3, 4]);
+    let _ = bytes.read_u24::<LittleEndian>();
+    let mut bytes = std::io::Cursor::new([1u8, 2, 3, 4]);
+    let _ = bytes.read_u32::<LittleEndian>();
+
+    let mut empty = std::io::Cursor::new(Vec::<u8>::new());
+    let _ = empty.read_u8();
+    let _ = empty.read_u16::<LittleEndian>();
+    let _ = empty.read_u24::<LittleEndian>();
+    let _ = empty.read_u32::<LittleEndian>();
+}

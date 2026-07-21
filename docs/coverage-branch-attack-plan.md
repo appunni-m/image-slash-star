@@ -2257,3 +2257,197 @@ After implementing a complete batch from this plan:
    - coverage artifact is ingested;
    - no generated local-only files are staged;
    - new rows are fixture-based and exact-byte/pixel parity rows.
+
+## Region-first sweep — 2026-07-21
+
+Baseline from approved Coverage MCP command
+`all-features-llvm-cov-json-nightly-branch`:
+
+- Run: `ff36e0e5-b681-4edb-afb4-b14be7213644`
+- Snapshot: `c6ad8d41-3d69-469f-8468-6948188a584c`
+- Commit: `abebb1d43a5b8dcad8f0a7764a8aa202764284d3`
+- Lines: `23467 / 23474`
+- Branches: `3420 / 3434`
+- Functions: `1569 / 1569`
+- Regions: `39046 / 40408` (`1362` missing)
+
+Coverage MCP exposes authoritative per-file region totals. LLVM region entries
+were locally mapped back to source lines only to choose inputs; MCP remains the
+source of truth for totals and final validation.
+
+### Region gap table
+
+| File | Regions | Missing regions | Branches |
+| --- | ---: | ---: | ---: |
+| `src/codecs/compression/zlib_ng.rs` | `2701 / 3038` | `337` | `368 / 368` |
+| `src/codecs/gif/encode.rs` | `2326 / 2450` | `124` | `210 / 210` |
+| `src/codecs/tiff/decode.rs` | `1440 / 1551` | `111` | `120 / 120` |
+| `src/codecs/ico/encode.rs` | `694 / 768` | `74` | `50 / 50` |
+| `src/codecs/webp/native/encoder.rs` | `1739 / 1812` | `73` | `192 / 192` |
+| `src/codecs/jpeg/encode/mod.rs` | `1430 / 1496` | `66` | `144 / 144` |
+| `src/codecs/bmp/decode.rs` | `769 / 829` | `60` | `112 / 112` |
+| `src/codecs/gif/decode.rs` | `573 / 633` | `60` | `72 / 72` |
+| `src/codecs/compression/deflate.rs` | `554 / 608` | `54` | `48 / 48` |
+| `src/codecs/webp/native/decoder.rs` | `1174 / 1225` | `51` | `82 / 88` |
+| `src/codecs/webp/native/lossless.rs` | `853 / 903` | `50` | `108 / 110` |
+| `src/codecs/ico/decode.rs` | `985 / 1030` | `45` | `62 / 62` |
+| `src/codecs/png/decode.rs` | `655 / 699` | `44` | `86 / 86` |
+| `src/codecs/tiff/encode.rs` | `610 / 643` | `33` | `86 / 86` |
+| `src/codecs/jpeg/decode/parser.rs` | `526 / 558` | `32` | `96 / 96` |
+| `src/codecs/webp/native/vp8.rs` | `2639 / 2667` | `28` | `154 / 160` |
+| `src/codecs/png/encode.rs` | `442 / 466` | `24` | `36 / 36` |
+| `src/codecs/jpeg/encode/huffman.rs` | `247 / 268` | `21` | `24 / 24` |
+| `src/codecs/webp/encode/mod.rs` | `327 / 339` | `12` | `30 / 30` |
+| `src/codecs/jpeg/decode/progressive.rs` | `1288 / 1300` | `12` | `112 / 112` |
+| `src/types/dynamic.rs` | `1417 / 1428` | `11` | `4 / 4` |
+| `src/codecs/webp/native/extended.rs` | `336 / 344` | `8` | `36 / 36` |
+| `src/types/mod.rs` | `252 / 259` | `7` | `34 / 34` |
+| `src/codecs/webp/decode.rs` | `105 / 111` | `6` | `6 / 6` |
+| `src/codecs/mod.rs` | `99 / 103` | `4` | `6 / 6` |
+| `src/types/buffer.rs` | `638 / 642` | `4` | `24 / 24` |
+| `src/codecs/jpeg/decode/decode.rs` | `537 / 540` | `3` | `66 / 66` |
+| `src/codecs/webp/native/byteorder_lite.rs` | `47 / 50` | `3` | `0 / 0` |
+| `src/codecs/jpeg/encode/marker.rs` | `165 / 167` | `2` | `0 / 0` |
+| `src/codecs/webp/native/huffman.rs` | `314 / 316` | `2` | `26 / 26` |
+| `src/lib.rs` | `75 / 76` | `1` | `24 / 24` |
+
+### First sweep plan
+
+The first region pass targets encoder modules that already have public manifest
+coverage but are not wired into the coverage-only private hook path:
+
+| Target | Why this is first | Matching input strategy |
+| --- | --- | --- |
+| `ico::encode` | Missing regions are encode-side `?` failures, size parsing, resizing, BMP/PNG entry selection, and 256-dimension directory encodings. `ico::mod` currently only calls the decode hook. | Add a coverage-only hook with deterministic `DecodedImage` inputs: invalid zero-size image, L8 unsupported resize, RGB/RGBA BMP entries, explicit `sizes`, malformed `sizes`, and direct directory/helper probes for 256 and empty cases. |
+| `png::encode` | Missing regions are encode-side mode selection, ancillary chunk requests, invalid image dimensions, palette/tRNS, filter arms, and checked capacity failures. `png::mod` currently only calls the decode hook. | Add a coverage-only hook using public `DecodedImage` values and direct private helper calls for every filter arm and ancillary option; no fixture row because these are internal encoder expression regions already byte-tested through manifest rows. |
+| `tiff::encode` | Missing regions are encode-side mode/compression/predictor choices, PackBits state transitions, LZW empty input, and unsupported options. `tiff::mod` currently only calls the decode hook. | Add a coverage-only hook using small valid source images for L1/La8/L16/F32/I32/RGB/RGBA/CMYK, compression options, bad options, and direct PackBits/LZW helper probes. |
+| `jpeg::encode` | `jpeg::encode::mod` currently only calls `huffman` hook. Missing regions include grayscale/RGB, subsampling/progressive/optimized/restart, and marker/bit-writer expression regions. | Extend the coverage-only hook to call representative grayscale/RGB encodes with standard options; keep deeper entropy reverse mapping for a later pass if branch totals do not move. |
+
+Validation for this sweep:
+
+1. Make only coverage-only hook/wiring changes and doc updates.
+2. Run `cargo fmt`.
+3. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Query MCP summary/files for lines, branches, functions, and regions.
+5. Record the new snapshot and per-file region deltas here.
+
+### Attempt 1 result
+
+Coverage MCP run `51b35891-9da0-44b8-b182-5753f365e7fb`, snapshot
+`5be0aa8f-e24b-41d4-abdb-e00ee54eec10`, passed and ingested.
+
+- Lines: `23668 / 23675`
+- Branches: `3420 / 3434`
+- Functions: `1575 / 1575`
+- Regions: `39426 / 40782`
+- Missing regions changed from `1362` to `1356`.
+
+This closed only six pre-existing region gaps. The reason is now clear from
+the reverse mapping: the broad encoder hooks covered the hook bodies, but most
+remaining zero-region spans in `ico::encode`, `png::encode`, and
+`tiff::encode` are unreachable conversion or checked-arithmetic failure
+regions after `DecodedImage::validate()` or after ICO size filtering.
+
+Correction before the next run:
+
+- Stop adding broad hook code for these files.
+- Simplify provably bounded regions:
+  - `u32 -> usize` image dimensions are infallible on supported targets.
+  - TIFF row-byte and IFD entry-count arithmetic is bounded after
+    `DecodedImage::validate()`.
+  - TIFF LZW encode is reached with non-empty validated pixels; keep the empty
+    helper case as a direct defensive helper branch, not as an encoder `?`.
+  - ICO resize dimensions are produced by ICO size filtering, and premultiply /
+    unpremultiply byte-channel arithmetic is bounded by `u8` inputs.
+- Re-run the same approved Coverage MCP command and record the real delta.
+
+### Attempt 2 result
+
+Coverage MCP run `87fc3bb8-4a9e-4729-8651-af492039c940`, snapshot
+`427cd36b-90fa-47d5-ad7b-eeaffe0cb9cf`, passed and ingested.
+
+- Lines: `23670 / 23677`
+- Branches: `3422 / 3436`
+- Functions: `1575 / 1575`
+- Regions: `39375 / 40699`
+- Missing regions: `1324`
+
+Net from the region-first baseline: missing regions improved from `1362` to
+`1324` (`38` fewer). File-level impact:
+
+- `src/codecs/tiff/encode.rs`: missing regions improved from `33` to `13`.
+- `src/codecs/ico/encode.rs`: missing regions improved from `74` to `60`.
+- `src/codecs/png/encode.rs`: missing regions improved from `24` to `21`.
+
+### Small-region cleanup batch
+
+After the encoder invariant cleanup, the smallest remaining region files are
+cheap to reverse-map and do not need fixtures:
+
+| Target | Missing region cause | Fix type |
+| --- | --- | --- |
+| `src/lib.rs` | `decode_sequence()` format autodetect `None` side. | Add one coverage-only call with non-image bytes through the existing root hook. |
+| `src/codecs/webp/native/byteorder_lite.rs` | `ReadBytesExt` read-short error regions for `read_exact`. | Add a coverage-only byteorder hook and wire it through `webp::native`. |
+| `src/codecs/jpeg/encode/marker.rs` | `write_exif_app1()` oversized EXIF length failure. | Add exact oversized EXIF probe through the existing JPEG encoder hook. |
+| `src/codecs/webp/native/huffman.rs` | `BitReader::consume()` error from slow and fast Huffman lookup paths. | Add exact empty-reader probes inside the existing Huffman hook. |
+
+Run the same approved Coverage MCP command after this batch and record the
+delta. Do not add broad hooks if the file already has an exact hook path.
+
+### Attempt 3 result
+
+Coverage MCP run `6fd70126-1593-45a3-98f2-f9054cd5fe0c`, snapshot
+`26ae5d29-dab5-4ac5-9c9f-03a1dbe7cb51`, passed and ingested.
+
+- Lines: `23699 / 23706`
+- Branches: `3422 / 3436`
+- Functions: `1576 / 1576`
+- Regions: `39429 / 40747`
+- Missing regions: `1318`
+
+Net from the region-first baseline:
+
+- Missing regions improved from `1362` to `1318` (`44` fewer).
+- Region rate improved from `96.629%` to `96.765%`.
+- Branch rate stayed effectively stable: `3420 / 3434` to `3422 / 3436`.
+
+Small-file outcomes:
+
+- `src/lib.rs`: `75 / 76` to `77 / 77` regions.
+- `src/codecs/webp/native/byteorder_lite.rs`: `47 / 50` to `72 / 72`
+  regions after adding exact read-short probes.
+- `src/codecs/jpeg/encode/marker.rs`: `165 / 167` to `166 / 167`
+  regions; one oversized EXIF region remains unmapped or merged by LLVM.
+- `src/codecs/webp/native/huffman.rs`: `314 / 316` to `330 / 331`
+  regions after adding fast/slow consume-error probes.
+
+Remaining largest region gaps after attempt 3:
+
+| File | Regions | Missing regions | Branches |
+| --- | ---: | ---: | ---: |
+| `src/codecs/compression/zlib_ng.rs` | `2701 / 3038` | `337` | `368 / 368` |
+| `src/codecs/gif/encode.rs` | `2326 / 2450` | `124` | `210 / 210` |
+| `src/codecs/tiff/decode.rs` | `1440 / 1551` | `111` | `120 / 120` |
+| `src/codecs/webp/native/encoder.rs` | `1739 / 1812` | `73` | `192 / 192` |
+| `src/codecs/jpeg/encode/mod.rs` | `1474 / 1539` | `65` | `144 / 144` |
+| `src/codecs/ico/encode.rs` | `748 / 808` | `60` | `50 / 50` |
+| `src/codecs/bmp/decode.rs` | `769 / 829` | `60` | `112 / 112` |
+| `src/codecs/gif/decode.rs` | `573 / 633` | `60` | `72 / 72` |
+| `src/codecs/compression/deflate.rs` | `554 / 608` | `54` | `48 / 48` |
+| `src/codecs/webp/native/decoder.rs` | `1174 / 1225` | `51` | `82 / 88` |
+
+Next attack order:
+
+1. `zlib_ng.rs`: do not add random PNG rows. Reverse-map checked-failure
+   regions into compressor helper invariants. Simplify only when public
+   validated image bytes make the failure impossible; otherwise add exact
+   private helper states.
+2. `gif/encode.rs`: use animated manifest inputs only for visible frame
+   coalescing/palette behavior. Use private probes for quantizer and crop
+   arithmetic states.
+3. `tiff/decode.rs`: public malformed TIFF fixtures are appropriate for tag and
+   storage rejects; private probes are appropriate only for compression helper
+   internals.
+4. WebP native decoder/VP8/VP8L branch-bearing files remain branch-priority
+   after region-only cleanup because they still own the remaining branch gaps.
