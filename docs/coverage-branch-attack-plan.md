@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4cbd228c-4a94-4d86-ad4b-0a048f9a5714`
-- Current measured commit metadata: `c4f5e052acae11f2fa63a951078e07a7fba06946`
-- Current source state: WebP decode wrapper invariant and sequence-error sweep,
+- Current snapshot: `60fb92f1-3a2c-48d9-8adb-da2bb169296c`
+- Current measured commit metadata: `e0a23c9acab4f6e4c39e2e2863a3d0de39ce0ecd`
+- Current source state: JPEG optimal Huffman invariant sweep,
   measured before committing the sweep.
-- Lines: 24366 / 24372
+- Lines: 24370 / 24376
 - Branches: 3428 / 3442
 - Functions: 1579 / 1579
-- Regions: 39807 / 40574
-- Remaining target: 6 lines, 14 branches, and 767 regions.
+- Regions: 39786 / 40541
+- Remaining target: 6 lines, 14 branches, and 755 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -41,6 +41,8 @@ from Coverage MCP before each implementation sweep.
     548 / 548 regions.
   - `src/codecs/webp/decode.rs`: 6 / 6 branches and now
     103 / 103 regions.
+  - `src/codecs/jpeg/encode/huffman.rs`: 24 / 24 branches and now
+    209 / 209 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -429,6 +431,95 @@ Result:
     proven native invariants.
   - Manifest-driven decode matrix error rows now assert direct WebP
     `decode_sequence()` rejection as well as still-image decode rejection.
+
+## Attempt 23 plan: JPEG optimal Huffman invariant cleanup
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `e0a23c9` after the WebP decode sweep.
+- Coverage MCP snapshot: `4cbd228c-4a94-4d86-ad4b-0a048f9a5714`.
+- Overall: `24366 / 24372` lines, `3428 / 3442` branches,
+  `1579 / 1579` functions, and `39807 / 40574` regions.
+- Target file: `src/codecs/jpeg/encode/huffman.rs` at `135 / 135` lines,
+  `24 / 24` branches, `7 / 7` functions, and `230 / 242` regions.
+
+Small-target triage before selection:
+
+- `src/codecs/tiff/encode.rs` still has the same five documented gaps at
+  `60:48`, `108:64`, `142:44`, `153:41`, and `169:42`. Keep deferring them:
+  the zlib return is a compressor-invariant boundary, and the offset/byte-count
+  conversions are real classic-TIFF 32-bit format limits that need either a
+  portable large-image proof or a targeted layout abstraction.
+- `src/codecs/jpeg/encode/huffman.rs` is the next smallest actionable file.
+
+Source-mapped missing region entries:
+
+- line 112: overflow side of `working[first].checked_add(working[second])?`.
+- line 129: failure sides of `length_counts.get_mut(length)?` and
+  `length_counts[length].checked_add(1)?`.
+- lines 140, 142, 144, 145, 146, and 147: checked arithmetic inside IJG's
+  length-limiting rebalance loop.
+- lines 153 and 155: checked arithmetic while removing the pseudo-symbol from
+  the longest code length.
+- line 159: failure side of `u8::try_from(value).ok()?` for the JPEG BITS
+  byte array.
+
+Reverse-mapped finding:
+
+`optimal_table()` is private to the JPEG encoder. Its inputs are symbol
+frequencies gathered by the encoder, not untrusted external Huffman tables. The
+algorithm is the IJG/libjpeg optimal-table construction with a pseudo-symbol:
+
+- The selection loop only selects frequencies at or below the sentinel threshold
+  and immediately replaces consumed nodes with the sentinel, so the merge add
+  cannot overflow for representable encoder-gathered statistics.
+- The temporary code sizes are bounded by IJG's `MAX_CLEN = 32` staging table.
+  A local reverse-map probe with equal, Fibonacci-like, and random frequency
+  sets confirmed the code-size staging stays inside the allocated table.
+- The length-limiting rebalance loop only runs while a long-length count exists,
+  and IJG's package-merge invariant guarantees a shorter prefix count to borrow
+  from. The operations are count transfers, not fallible user-input parsing.
+- After the pseudo-symbol is removed, JPEG's BITS fields are byte counts. Local
+  reverse-map probes produced a maximum per-length count of 255 for the
+  all-equal 256-symbol case, matching the one-byte representation.
+
+Selected action:
+
+- Keep `optimal_table()` as `Option<OptimalTable>` for call-site compatibility,
+  but remove the defensive checked arithmetic inside the proven IJG invariants.
+- Retain no new fixtures: this is private Huffman-table construction state, not
+  Pillow byte-or-pixel parity behavior.
+- Keep the existing coverage hook's pathological-frequency call; it proves the
+  length-limiting path without adding unit tests.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_encode_matrix`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Result:
+
+- Coverage MCP run: `e8f72124-82ca-4478-ba1c-fbe7edd16fb5`.
+- Coverage MCP snapshot: `60fb92f1-3a2c-48d9-8adb-da2bb169296c`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24370 / 24376` lines, `3428 / 3442` branches,
+  `1579 / 1579` functions, and `39786 / 40541` regions.
+- Net missing regions: `767` down to `755`.
+- Target file movement: `src/codecs/jpeg/encode/huffman.rs` moved from
+  `135 / 135` lines, `24 / 24` branches, `7 / 7` functions,
+  and `230 / 242` regions to `139 / 139` lines, `24 / 24` branches,
+  `7 / 7` functions, and `209 / 209` regions.
+- Implemented:
+  - Replaced defensive checked arithmetic in the private IJG optimal Huffman
+    table construction with direct count-transfer arithmetic where the
+    algorithm invariants already prove the state.
+  - Kept public encode byte/pixel parity intact; the manifest-driven encode
+    matrix passed before the MCP coverage run.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 

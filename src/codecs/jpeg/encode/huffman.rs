@@ -109,7 +109,7 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
             break;
         };
 
-        working[first] = working[first].checked_add(working[second])?;
+        working[first] += working[second];
         working[second] = SENTINEL_FREQUENCY;
         code_size[first] += 1;
         while let Some(next) = others[first] {
@@ -126,7 +126,7 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
 
     let mut length_counts = [0u16; MAX_CODE_LENGTH + 2];
     for &length in &code_size {
-        *length_counts.get_mut(length)? = length_counts[length].checked_add(1)?;
+        length_counts[length] += 1;
     }
     let mut positions = [0usize; MAX_CODE_LENGTH + 1];
     let mut position = 0usize;
@@ -137,26 +137,26 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
 
     for length in (17..=MAX_CODE_LENGTH).rev() {
         while length_counts[length] != 0 {
-            let mut prefix = length.checked_sub(2)?;
+            let mut prefix = length - 2;
             while length_counts[prefix] == 0 {
-                prefix = prefix.checked_sub(1)?;
+                prefix -= 1;
             }
-            length_counts[length] = length_counts[length].checked_sub(2)?;
-            length_counts[length - 1] = length_counts[length - 1].checked_add(1)?;
-            length_counts[prefix + 1] = length_counts[prefix + 1].checked_add(2)?;
-            length_counts[prefix] = length_counts[prefix].checked_sub(1)?;
+            length_counts[length] -= 2;
+            length_counts[length - 1] += 1;
+            length_counts[prefix + 1] += 2;
+            length_counts[prefix] -= 1;
         }
     }
 
     let mut longest = 16usize;
     while length_counts[longest] == 0 {
-        longest = longest.checked_sub(1)?;
+        longest -= 1;
     }
-    length_counts[longest] = length_counts[longest].checked_sub(1)?;
+    length_counts[longest] -= 1;
 
     let mut bits = [0u8; 16];
     for (target, &value) in bits.iter_mut().zip(&length_counts[1..=16]) {
-        *target = u8::try_from(value).ok()?;
+        *target = value as u8;
     }
     let value_count: usize = bits.iter().map(|&value| usize::from(value)).sum();
     let mut values = vec![0u8; value_count];
