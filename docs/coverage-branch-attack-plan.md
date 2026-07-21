@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the zlib-ng compressor private-branch batch.
+after the ICO decoder private-branch batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `e515e082-a166-4458-8e1f-3667e834342a`
-- Current measured commit metadata: `97f275ea807a5432d2f1ed8bfdb096320a6093f8`
-- Lines: 22066 / 22067
-- Branches: 3336 / 3464
-- Functions: 1528 / 1528
-- Remaining target: 1 line and 128 branches.
+- Current snapshot: `d9fda7bd-820f-4723-bffa-1bcd9419a1d1`
+- Current measured commit metadata: `e5ffd0af6a5b3d6c9f6d44d7e27b4b8ef624342c`
+- Lines: 22155 / 22156
+- Branches: 3348 / 3464
+- Functions: 1531 / 1531
+- Remaining target: 1 line and 116 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -263,6 +263,63 @@ Completed evidence:
   Pushed-head overall coverage is 22066 / 22067 lines, 3337 / 3466 branches,
   and 1528 / 1528 functions. VP8 remains 1307 / 1307 lines,
   154 / 162 branches, and 57 / 57 functions.
+
+## Planned ICO decoder private-branch batch
+
+Coverage MCP pushed-head snapshot `e515e082-a166-4458-8e1f-3667e834342a`
+reports `src/codecs/ico/decode.rs` at 299 / 299 lines, 51 / 64 branches, and
+11 / 11 functions. The remaining branch lines are:
+
+- line 43: zero-count and too-many-entry header validation. Existing fixtures
+  cover zero entries; add a byte-level too-many count header.
+- line 69: best-entry selection. Add a directory with a later smaller/tied
+  entry so the `score > best_score` false side is reached.
+- line 100: zero size vs zero offset entry validation. Existing malformed
+  fixture covers both zero; add separate size-zero and offset-zero directory
+  entries.
+- line 109: PNG-entry detection. Existing fixtures cover valid PNG and DIB;
+  add a short non-PNG payload that is shorter than eight bytes.
+- line 136: CUR DIB header validation. Add separate header-size-less-than-40
+  and header-size-at-least-40-but-too-short byte-level CUR entries.
+- line 192: ICO DIB dimension validation. Add byte-level DIBs for zero width,
+  zero actual height, too-wide, and too-tall values.
+- lines 293, 344, and 398: default palette-size selection for 8-bit, 4-bit,
+  and 1-bit DIBs. Existing fixtures cover explicit palette paths; add direct
+  helper calls for both explicit `colors_used` values and zero/default
+  `colors_used` values.
+- lines 380 and 382: odd-width 4-bit high/low-nibble guards. Add a direct
+  odd-width 4-bit DIB helper input to drive the skipped low-nibble side and an
+  even-width input to keep the low-nibble body covered after formatting. The
+  high-nibble false side appears structurally unreachable because row iteration
+  stops at the logical 4bpp row byte count, not padded bytes.
+
+No Pillow manifest fixture is needed for these branches in this batch because
+the public malformed ICO matrix already exists and these are narrow container
+or DIB helper predicates. Use a `cfg(coverage)` decoder hook that feeds exact
+byte slices into the private helpers, then verify with the approved MCP
+line+branch command.
+
+Additional pre-run adjustment after snapshot
+`3567e72d-058c-4b53-86a1-f70fa46ecdc0`: the first ICO probe restored the
+overall one-line gap and improved `ico/decode.rs` from 51 / 64 to 59 / 64
+branches. The next probe adds direct coverage for the CUR short-data second
+side and zero/default palette branches for 8bpp, 4bpp, and 1bpp indexed DIBs.
+
+Completed evidence:
+
+- Final Coverage MCP run:
+  `596f46f2-5ff7-45b2-b5dc-257c574015c5`
+- Final Coverage MCP snapshot:
+  `d9fda7bd-820f-4723-bffa-1bcd9419a1d1`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22155 / 22156 lines, 3348 / 3464 branches, 1531 / 1531 functions.
+- Target file: `src/codecs/ico/decode.rs` improved from 299 / 299 lines,
+  51 / 64 branches, and 11 / 11 functions to 384 / 384 lines,
+  63 / 64 branches, and 13 / 13 functions.
+- The only remaining ICO decoder branch is the false side of the 4bpp
+  high-nibble guard at line 383. It appears structurally unreachable because
+  row iteration stops at the logical row byte count, so every visited byte
+  starts with `col < width`.
 
 ## Planned GIF encoder private-branch batch
 

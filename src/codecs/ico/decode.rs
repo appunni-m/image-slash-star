@@ -66,7 +66,10 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         let actual_h = if h == 0 { 256 } else { h };
 
         let score = actual_w.saturating_mul(actual_h);
-        if score > best_score { best_score = score; best_idx = i; }
+        if score > best_score {
+            best_score = score;
+            best_idx = i;
+        }
     }
 
     // Decode the best entry
@@ -379,7 +382,13 @@ fn decode_ico_bmp_4bpp(
             let lo = byte & 0x0F;
             if col < width as usize { let color = palette[hi as usize]; pixels.push(color[0]); pixels.push(color[1]); pixels.push(color[2]); pixels.push(mask_alpha(mask, mask_row_size, col, y)); }
             col += 1;
-            if col < width as usize { let color = palette[lo as usize]; pixels.push(color[0]); pixels.push(color[1]); pixels.push(color[2]); pixels.push(mask_alpha(mask, mask_row_size, col, y)); }
+            if col < width as usize {
+                let color = palette[lo as usize];
+                pixels.push(color[0]);
+                pixels.push(color[1]);
+                pixels.push(color[2]);
+                pixels.push(mask_alpha(mask, mask_row_size, col, y));
+            }
             col += 1;
         }
     }
@@ -456,4 +465,92 @@ fn ico_and_mask(data: &[u8], width: u32, height: u32) -> Option<(&[u8], usize)> 
 fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
     let transparent = mask[y * row_size + x / 8] & (0x80 >> (x % 8)) != 0;
     if transparent { 0 } else { 255 }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut too_many = Vec::new();
+    too_many.extend_from_slice(&0u16.to_le_bytes());
+    too_many.extend_from_slice(&1u16.to_le_bytes());
+    too_many.extend_from_slice(&256u16.to_le_bytes());
+    assert!(decode(&too_many).is_none());
+
+    let mut two_entries = Vec::new();
+    two_entries.extend_from_slice(&0u16.to_le_bytes());
+    two_entries.extend_from_slice(&1u16.to_le_bytes());
+    two_entries.extend_from_slice(&2u16.to_le_bytes());
+    two_entries.extend_from_slice(&[16, 16, 0, 0]);
+    two_entries.extend_from_slice(&1u16.to_le_bytes());
+    two_entries.extend_from_slice(&32u16.to_le_bytes());
+    two_entries.extend_from_slice(&1u32.to_le_bytes());
+    two_entries.extend_from_slice(&38u32.to_le_bytes());
+    two_entries.extend_from_slice(&[8, 8, 0, 0]);
+    two_entries.extend_from_slice(&1u16.to_le_bytes());
+    two_entries.extend_from_slice(&32u16.to_le_bytes());
+    two_entries.extend_from_slice(&1u32.to_le_bytes());
+    two_entries.extend_from_slice(&38u32.to_le_bytes());
+    two_entries.push(0);
+    assert!(decode(&two_entries).is_none());
+
+    let mut zero_size = two_entries.clone();
+    zero_size[14..18].copy_from_slice(&0u32.to_le_bytes());
+    assert!(decode_entry(&zero_size, 0, false).is_none());
+    let mut zero_offset = two_entries.clone();
+    zero_offset[18..22].copy_from_slice(&0u32.to_le_bytes());
+    assert!(decode_entry(&zero_offset, 0, false).is_none());
+
+    let short_payload = &two_entries[..39];
+    assert!(decode_entry(short_payload, 0, false).is_none());
+    assert!(decode_cur_bmp(&[39, 0, 0, 0]).is_none());
+    assert!(decode_cur_bmp(&[40, 0, 0, 0]).is_none());
+
+    for (width, stored_height) in [(0u32, 2u32), (1, 0), (16_385, 2), (1, 32_770)] {
+        let mut dib = vec![0u8; 40];
+        dib[0..4].copy_from_slice(&40u32.to_le_bytes());
+        dib[4..8].copy_from_slice(&width.to_le_bytes());
+        dib[8..12].copy_from_slice(&stored_height.to_le_bytes());
+        dib[14..16].copy_from_slice(&32u16.to_le_bytes());
+        assert!(decode_ico_bmp(&dib, &[]).is_none());
+    }
+
+    let dib8 = indexed_dib(1, 1, 8, 3, &[0]);
+    assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3).is_some());
+    let dib8_default_palette = indexed_dib(1, 1, 8, 256, &[0]);
+    assert!(decode_ico_bmp_8bpp(&dib8_default_palette, 1, 1, 0).is_some());
+
+    let dib4 = indexed_dib(3, 1, 4, 3, &[0x12, 0]);
+    assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3).is_some());
+    let dib4_even = indexed_dib(4, 1, 4, 3, &[0x12, 0x10]);
+    assert!(decode_ico_bmp_4bpp(&dib4_even, 4, 1, 3).is_some());
+    let dib4_default_palette = indexed_dib(1, 1, 4, 16, &[0]);
+    assert!(decode_ico_bmp_4bpp(&dib4_default_palette, 1, 1, 0).is_some());
+
+    let dib1 = indexed_dib(1, 1, 1, 2, &[0x80]);
+    assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2).is_some());
+    let dib1_default_palette = indexed_dib(1, 1, 1, 2, &[0x80]);
+    assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0).is_some());
+}
+
+#[cfg(coverage)]
+fn indexed_dib(width: u32, height: u32, bpp: u16, colors: u32, xor: &[u8]) -> Vec<u8> {
+    let palette_entries = usize::try_from(colors).expect("coverage palette fits usize");
+    let row_bytes = (width as usize * usize::from(bpp)).div_ceil(8);
+    let padded_row = (row_bytes + 3) & !3;
+    let mask_row = (width as usize).div_ceil(32) * 4;
+    let mut dib = vec![0u8; 40];
+    dib[0..4].copy_from_slice(&40u32.to_le_bytes());
+    dib[4..8].copy_from_slice(&width.to_le_bytes());
+    dib[8..12].copy_from_slice(&(height * 2).to_le_bytes());
+    dib[12..14].copy_from_slice(&1u16.to_le_bytes());
+    dib[14..16].copy_from_slice(&bpp.to_le_bytes());
+    dib[32..36].copy_from_slice(&colors.to_le_bytes());
+    for index in 0..palette_entries {
+        let value = u8::try_from(index).expect("coverage palette value fits u8");
+        dib.extend_from_slice(&[value, value, value, 0]);
+    }
+    let mut xor_plane = vec![0u8; padded_row * height as usize];
+    xor_plane[..xor.len()].copy_from_slice(xor);
+    dib.extend_from_slice(&xor_plane);
+    dib.extend(std::iter::repeat_n(0, mask_row * height as usize));
+    dib
 }
