@@ -848,6 +848,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .collect::<Vec<_>>();
     let _ = candidates(&alternating, 2, false, 100, 0);
+    let long_periodic = (0..(MAX_LENGTH * 3 + 8))
+        .map(|index| {
+            if index % 2 == 0 {
+                0xff00_0000
+            } else {
+                0xff00_0001
+            }
+        })
+        .collect::<Vec<_>>();
+    let _ = candidates(&long_periodic, 2, false, 100, 0);
     let _ = fast_slog(70_000);
     let _ = prefix(300);
     let _ = population_cost(&[70_000, 1]);

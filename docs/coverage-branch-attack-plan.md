@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the ICO decoder private-branch batch.
+after the latest pushed-head verification.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `2c9ade72-029d-49d1-8592-eaabd98705d5`
-- Current measured commit metadata: `8b482ca6fee835db5445def8341c2d6d2e702740`
-- Lines: 22155 / 22156
-- Branches: 3348 / 3464
-- Functions: 1531 / 1531
-- Remaining target: 1 line and 116 branches.
+- Current snapshot: `0efc7f89-18f1-4947-b192-ef685546347f`
+- Current measured commit metadata: `0b294548813c1db2b9c7f3e6722e8fb2b19ed73e`
+- Lines: 22164 / 22165
+- Branches: 3352 / 3466
+- Functions: 1532 / 1532
+- Remaining target: 1 line and 114 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -156,6 +156,28 @@ Completed evidence:
 - Target file: `src/codecs/webp/native/encoder/backward_refs.rs` is
   857 / 857 lines, 210 / 212 branches, and 45 / 45 functions. Remaining target
   gaps in this file are line 115 and line 141.
+
+Next retry plan from pushed-head snapshot
+`3823fd5b-233b-4439-8b84-96ace0497d55`: the earlier alternating retry used
+only `MAX_LENGTH + 260` pixels, which was too short to push the backward-fill
+distance past `MAX_LENGTH`. Add a deterministic period-2 input of at least
+`3 * MAX_LENGTH` pixels with `width = 2` and high quality. The intended state
+is a max-length distance-2 match: adjacent distance-1 matching stays low
+because the pixels alternate, while period-2 matching can reach `MAX_LENGTH`.
+Expected effect is to evaluate line 115 with `best_length < MAX_LENGTH` false
+while a candidate is otherwise valid, and line 141 after the propagation loop
+has moved more than `MAX_LENGTH` positions from `maximum_base`.
+
+Completed retry evidence:
+
+- Coverage MCP run: `85bd4a00-060c-4dc7-a817-a0accd6eca7c`
+- Coverage MCP snapshot: `0efc7f89-18f1-4947-b192-ef685546347f`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22164 / 22165 lines, 3352 / 3466 branches, 1532 / 1532 functions.
+- Target file: `src/codecs/webp/native/encoder/backward_refs.rs` improved from
+  857 / 857 lines, 210 / 212 branches, and 45 / 45 functions to
+  866 / 866 lines, 214 / 214 branches, and 46 / 46 functions. No branch gaps
+  remain in this file.
 
 ## Planned WebP histogram private-branch batch
 
