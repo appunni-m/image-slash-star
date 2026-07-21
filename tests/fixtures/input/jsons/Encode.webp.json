@@ -777,6 +777,32 @@
       }
     },
     {
+      "id": "enc_lossless_subtract_green",
+      "source_asset": "webp_subtract_green.png",
+      "source_format": "png",
+      "params": {
+        "lossless": true,
+        "color_type": "RGB",
+        "size": [
+          17,
+          17
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_subtract_green.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_1x1",
       "source_asset": "1x1.png",
       "source_format": "png",

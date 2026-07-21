@@ -16,6 +16,7 @@ Output: tests/fixtures/input/images/{format}/ — committed to repo
 import argparse
 import binascii
 import os
+import random
 import struct
 import subprocess
 import tempfile
@@ -409,6 +410,16 @@ def save_png_variants(img, out_dir):
     transparent.putalpha(alpha)
     transparent.save(out_dir / "alpha_partial.png")
     pattern_img("RGBA", (17, 19)).save(out_dir / "rgba_odd.png")
+    subtract_green_rng = random.Random(0)
+    subtract_green = Image.new("RGB", (17, 17))
+    subtract_green_pixels = []
+    for _ in range(17 * 17):
+        green = subtract_green_rng.randrange(256)
+        red = (green + subtract_green_rng.choice([3, 5])) & 255
+        blue = (green + subtract_green_rng.choice([7, 11])) & 255
+        subtract_green_pixels.append((red, green, blue))
+    subtract_green.putdata(subtract_green_pixels)
+    subtract_green.save(out_dir / "webp_subtract_green.png")
     img.convert("P", palette=Image.Palette.ADAPTIVE, colors=2).save(out_dir / "palette_2color.png", bits=1)
     img.convert("P", palette=Image.Palette.ADAPTIVE, colors=256).save(out_dir / "palette_256color.png")
 

@@ -12,15 +12,14 @@ after the latest local coverage verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `e8165588-496a-422f-a242-a97b9763403e`
-- Current measured commit metadata: `471d47a0035a15793fe5ca203fac744c5c1224f3`
-- Lines: 22721 / 22740
-- Branches: 3385 / 3438
+- Current snapshot: `974e7c51-55e2-4764-9ad2-3868d0cb68df`
+- Current measured commit metadata: `966673dc47636ad813d6d96240140143cfafec5f`
+- Lines: 22759 / 22773
+- Branches: 3384 / 3432
 - Functions: 1549 / 1549
-- Remaining target: 19 lines and 53 branches.
+- Remaining target: 14 lines and 48 branches.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
-  - `src/codecs/webp/native/encoder.rs`: 193 / 198 branches, 5 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 162 branches, 8 missing.
   - `src/codecs/webp/native/decoder.rs`: 74 / 84 branches, 10 missing.
   - `src/codecs/jpeg/decode/progressive.rs`: 104 / 118 branches, 14 missing.
@@ -28,11 +27,9 @@ after the latest local coverage verification.
 - Remaining line-only gaps from this snapshot:
   - `src/types/dynamic.rs`: 813 / 814 lines, 0 branch missing.
   - `src/codecs/compression/zlib_ng.rs`: 1538 / 1539 lines, 0 branch missing.
-- Note: commit `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a` is the local
-  GIF decoder coverage commit; `origin/main` was still at
-  `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
-  The preceding rustfmt pass did not change branch coverage, but split some
-  one-line branch bodies into separately counted lines.
+- Note: the local branch is ahead of `origin/main`; refresh this section from
+  Coverage MCP before each file batch so gap line numbers match the current
+  source layout.
 
 ## Planned WebP native Huffman invariant cleanup
 
@@ -687,79 +684,107 @@ First retry evidence:
   3358 / 3466 branches, and 1534 / 1534 functions. Histogram remains
   530 / 530 lines, 110 / 112 branches, and 31 / 31 functions.
 
-## Planned WebP native encoder private-branch batch
+## Planned WebP native encoder reverse-mapping batch
 
-Coverage MCP pushed-head snapshot `4103ae89-e85a-4909-b0fd-54be5b675a5c`
-reports `src/codecs/webp/native/encoder.rs` at 1058 / 1058 lines,
-190 / 198 branches, and 62 / 62 functions. The remaining concrete branch
-lines are:
+Coverage MCP snapshot `2a1434f6-1ae6-41bc-8c3d-f87c13b91ef3`, measured at
+commit `966673dc47636ad813d6d96240140143cfafec5f`, reports
+`src/codecs/webp/native/encoder.rs` at 1085 / 1090 lines,
+193 / 198 branches, and 63 / 63 functions.
 
-- line 247: zero-length Huffman code repeat loop. Add a direct
-  `compressed_huffman_tokens(&[0; 300])` probe so the `code 18, extra 0x7f`
-  chunk subtracts 138 and loops again.
-- lines 379, 392, and 395: Huffman tree trimming. Defer if the simple helper
-  probes do not reveal a clean frequency vector; these need tree-shape-specific
-  frequencies rather than public image fixtures.
-- line 877: lossless WebP dimension validation. Existing hook covers
-  zero-width; add zero-height, too-wide, and too-tall calls with matching data
-  lengths so the precondition assert remains valid.
-- line 1027: palette delta minimization swaps a leading zero only when more
-  than 17 palette values are sortable. Existing hook covers the leading-zero
-  shape; add a signs-both/nonzero-leading input to drive one complementary
-  side.
-- line 1121: RIFF chunk padding. Add direct `write_chunk()` probes with odd and
-  even payload lengths.
+Current exact gap lines:
 
-No Pillow manifest fixture is appropriate for these first-pass branches:
-dimension validation and RIFF padding are deterministic encoder boundary
-behavior, while Huffman/palette probes target private encoder normalization
-after candidate pixels have already been selected. Use coverage-only private
-hook assertions and verify with the approved Coverage MCP line+branch command.
+- line 247: zero-length Huffman-code repeat loop.
+- line 379: Huffman tree trailing-zero trim loop guard.
+- line 392: `trimmed_length > 1 && trailing_zero_bits > 12`.
+- lines 395 and 396: compact tree-length encoding for `trimmed_length == 2`.
+- lines 412, 516, and 596: separately counted continuation lines in
+  multi-line `write_bits()` / `write_huffman_tree()` calls.
+- line 795: `EntropyMode::SubtractGreen` histogram selection.
+- line 1043: `encode_alpha()` palette sorting guard
+  `sortable_len > 17 && palette_values[0] == 0`.
+- line 1137: RIFF chunk odd-padding write and generic `Write` error path.
 
-First-pass evidence before short-palette retry:
+Reverse-mapping evidence and attack plan:
 
-- Coverage MCP run `a8904821-666e-45e8-b725-1f8aa32e9007`, snapshot
-  `8c4bb4bf-2278-4d10-9124-5b0f7e7a0222`, passed and improved overall
-  coverage to 3356 / 3468 branches, but introduced a hook assertion branch.
-- Final accepted Coverage MCP run `3b7d8f94-4f67-45eb-9187-0d991c4b10c5`,
-  snapshot `fc4d8182-71fa-4256-906c-ed388d40f8a7`, passed with 5 passed,
-  0 failed and
-  improved overall coverage to 3355 / 3466 branches. `encoder.rs` improved
-  from 190 / 198 to 193 / 198 branches. Dimension validation is now fully
-  covered.
-- Short-palette retry `a47a7e00-695c-483a-b8bf-6bd5932ebe9b`, snapshot
-  `df58d5f5-02a5-4f9a-b8ae-9244def3f610`, passed but did not improve overall
-  or target-file branch coverage, so the no-op probe was removed.
+- line 247 is a structural artifact, not a real input state. A zero run always
+  starts with `repetitions >= 1`; after the only subtracting branch
+  (`repetitions >= 139`) the value remains at least 1, and all following
+  branches `break` before `repetitions` can become zero. A reverse probe over
+  run lengths 1..999 found no post-body false edge. Fix type: refactor this
+  private helper loop to `loop` so the unreachable guard branch disappears.
+- line 379's false side is also structural after the simple-tree fast path:
+  normal-tree token streams always contain at least one non-trimmable token
+  (`1..=15` or `16`) before any trailing zero tokens. A reverse search over
+  13,488 patterned/random frequency vectors found no `trimmed_length == 0` or
+  `trimmed_length <= 1` state. Fix type: keep a debug assertion for the
+  invariant and trim with a guard that assumes the token stream is non-empty.
+- line 392 is the same short-circuit shape: the normal path should have
+  `trimmed_length > 1`; the meaningful decision is `trailing_zero_bits > 12`.
+  Fix type: assert the invariant and remove the redundant runtime predicate.
+- lines 395 and 396 are real Huffman serialization behavior. Reverse mapping
+  found a concrete code-length shape `[2, 2, 2, 2, 0...]`, produced by four
+  equal symbols followed by a long zero tail. It compresses to tokens
+  `[2, 16, 18, 18]`, leaves `trimmed_length == 2`, computes
+  `trailing_zero_bits == 16`, and must write the special five zero bits.
+  Fix type: add a narrow private coverage probe using this frequency vector;
+  do not delete the branch.
+- lines 412, 516, and 596 are real writes, but the uncovered lines are only
+  rustfmt-created continuation/closing lines around already-hit calls. Fix
+  type: split the arguments into named locals and keep the fallible calls on
+  semantic lines. If coverage still reports an I/O error branch, use a standard
+  `Cursor<&mut [u8]>` short-buffer probe rather than a custom helper writer.
+- line 795 is real public encoder behavior. A 17x17 RGB input with random
+  green values and red/blue as small offsets from green produces these
+  approximate entropy costs: `Direct` 52,433,119,679; `Spatial`
+  52,788,514,929; `SubtractGreen` 22,205,802,114;
+  `SpatialSubtractGreen` 25,075,785,173; `Palette` 33,494,755,664.
+  `SubtractGreen` wins. Fix type: add a PNG source fixture and a WebP lossless
+  manifest encode row only if exact Pillow encoded-byte parity passes.
+- line 1043 is real public lossy-alpha behavior. A 17-value alpha palette
+  `[0, 1, 2, 3, 4, 5, 6, 7, 8, 248, 249, 250, 251, 252, 253, 254, 255]`
+  has `signs == 3`, `palette_values[0] == 0`, and `sortable_len > 17` false.
+  Fix type: add an RGBA PNG source and WebP lossy manifest encode row if
+  byte-exact Pillow parity passes; otherwise keep this as a focused
+  `encode_alpha()` coverage probe because the branch belongs to the alpha
+  chunk helper.
+- line 1137 is not image-algorithm behavior; it exists because any generic
+  `Write` implementation may fail while emitting RIFF padding. Fix type: use a
+  standard short `Cursor<&mut [u8]>` probe to cover padding-write failure
+  without adding a custom helper writer.
 
-Current retry plan from pushed-head snapshot
-`5b789fe0-a42e-4905-9cd2-33893a50684a`: `encoder.rs` remains 1080 / 1080
-lines, 193 / 198 branches, and 63 / 63 functions. Try three narrow
-coverage-only probes:
+Do not keep a fixture or private probe unless the approved Coverage MCP
+line+branch run proves it reduces the gap without introducing new uncovered
+code.
 
-- line 247: add `compressed_huffman_tokens(&[0; 276])` so zero-run repetition
-  subtracts exactly two 138-symbol chunks and the inner `while repetitions != 0`
-  evaluates its false side.
-- line 1027: call `encode_alpha()` with 17 unique alpha values, leading zero,
-  and mixed positive/negative deltas so `signs == 3`, `palette_values[0] == 0`,
-  and `sortable_len > 17` is false.
-- line 1121: add a coverage-only writer that fails on the padding byte, so the
-  odd-padding `write_all(&[0])?` error branch is reached. If needed, add an
-  even-length failing writer to isolate the remaining hidden `?` branch.
+Completed evidence:
 
-Do not keep any probe that does not improve MCP line+branch coverage.
-
-Retry evidence:
-
-- Coverage MCP run `8da58832-0511-4632-af0f-ffffc1e53b23`, snapshot
-  `9b904344-a1da-47c0-8488-59debe449317`, passed but introduced uncovered
-  helper-writer lines and did not close the existing encoder gap lines.
-- Coverage MCP run `4f62c69e-14b1-4adc-a626-844250839c19`, snapshot
-  `07a01e76-742d-4f05-9585-b6e60949385a`, passed after covering the helper
-  writer flush path, but still did not reduce the remaining branch deficit:
-  overall moved from 3358 / 3466 to 3360 / 3468 and `encoder.rs` from
-  193 / 198 to 195 / 200, leaving the same six gap lines. The code probes were
-  removed as no-op coverage noise. Remaining `encoder.rs` gaps are still
-  lines 247, 379, 392, 395, 1027, and 1121.
+- First adjusted Coverage MCP run:
+  `448973ed-4885-4624-8e27-13cfe8eb3a0a`, failed with one manifest parity
+  mismatch. The rejected public alpha row
+  `enc_lossy_alpha_17_values` produced 154 bytes from the Rust encoder while
+  Pillow's encoded-byte oracle produced 138 bytes, so that row and its
+  generated assets were removed.
+- Second Coverage MCP run:
+  `e9deab7e-2ecb-4ff3-a618-84d104cef994`, snapshot
+  `d127e0c6-8c89-4a0c-b405-96e438a70c4e`, passed with 5 passed and 0 failed.
+  It improved `encoder.rs` to 1110 / 1110 lines and 191 / 192 branches,
+  leaving only normalized partial lines 1043 and 1137.
+- Final Coverage MCP run:
+  `cc6a42c4-073e-4258-a46b-0be9119a90a5`, snapshot
+  `974e7c51-55e2-4764-9ad2-3868d0cb68df`, passed with 5 passed and 0 failed.
+  Overall coverage is now 22759 / 22773 lines, 3384 / 3432 branches, and
+  1549 / 1549 functions. `src/codecs/webp/native/encoder.rs` is now
+  1123 / 1123 lines, 192 / 192 branches, and 63 / 63 functions. MCP still
+  lists line 1137 as a normalized partial line, but the file aggregate reports
+  no missing lines or branches.
+- Accepted public fixture: `enc_lossless_subtract_green` with PNG source
+  `webp_subtract_green.png`; it uses Pillow encoded-byte and roundtrip-byte
+  references generated through the manifest.
+- Accepted private probes: the four-symbol Huffman tree trim case, 17-value and
+  nonzero-leading alpha helper cases, and standard short-buffer `Cursor` RIFF
+  writer-error cases. These are kept because reverse mapping showed they
+  represent real encoder states or generic `Write` behavior and the final MCP
+  run closed the target file's aggregate branch gap.
 
 ## Planned WebP VP8 filter-parameter private-branch batch
 

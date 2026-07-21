@@ -14955,6 +14955,33 @@
           ]
         },
         {
+          "id": "enc_lossless_subtract_green",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless RGB WebP where subtract-green entropy wins",
+          "params": {
+            "lossless": true,
+            "color_type": "RGB",
+            "size": [
+              17,
+              17
+            ]
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_subtract_green.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_subtract_green.bin",
+          "encoded_ref_bytes": 416,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_subtract_green.bin",
+          "ref_bytes": 867,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            17
+          ]
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_1x1",
@@ -15051,9 +15078,9 @@
     }
   },
   "summary": {
-    "total_rows": 822,
+    "total_rows": 823,
     "decode_rows": 530,
-    "encode_rows": 260,
+    "encode_rows": 261,
     "formats": 8,
     "assets_available": 523,
     "decode_active": 524,

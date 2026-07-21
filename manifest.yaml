@@ -1762,6 +1762,11 @@ formats:
       source_format: webp
       source_asset: lossless_predictor_quadrants.webp
       params: {'lossless': True}
+    - id: enc_lossless_subtract_green
+      description: Lossless RGB WebP where subtract-green entropy wins
+      source_format: png
+      source_asset: webp_subtract_green.png
+      params: {'lossless': True, 'color_type': 'RGB', 'size': [17, 17]}
     - id: enc_1x1
       description: 
       source_format: png

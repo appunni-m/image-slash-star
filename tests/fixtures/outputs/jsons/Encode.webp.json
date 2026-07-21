@@ -433,6 +433,18 @@
       "encoded_ref_bytes": 82
     },
     {
+      "id": "enc_lossless_subtract_green",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_subtract_green.bin",
+      "ref_bytes": 867,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        17
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_subtract_green.bin",
+      "encoded_ref_bytes": 416
+    },
+    {
       "id": "enc_1x1",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_1x1.bin",
       "ref_bytes": 3,

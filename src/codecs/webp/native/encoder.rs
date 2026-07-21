@@ -244,7 +244,10 @@ fn compressed_huffman_tokens(lengths: &[u8]) -> Vec<HuffmanToken> {
         }
         let mut repetitions = end - i;
         if value == 0 {
-            while repetitions != 0 {
+            // A run always contains at least one value. The long-run case
+            // subtracts 138 only when that leaves a non-zero remainder, and
+            // every shorter case exits immediately.
+            loop {
                 if repetitions < 3 {
                     tokens.extend((0..repetitions).map(|_| HuffmanToken { code: 0, extra: 0 }));
                     break;
@@ -376,7 +379,9 @@ fn write_huffman_tree<W: Write>(
     }
     let mut trimmed_length = tokens.len();
     let mut trailing_zero_bits = 0;
-    while trimmed_length > 0 {
+    // The normal-tree path always emits at least one non-zero code-length
+    // token before trailing zero-repeat tokens.
+    loop {
         let token = tokens[trimmed_length - 1];
         if !matches!(token.code, 0 | 17 | 18) {
             break;
@@ -389,7 +394,7 @@ fn write_huffman_tree<W: Write>(
             _ => 0,
         };
     }
-    let write_trimmed = trimmed_length > 1 && trailing_zero_bits > 12;
+    let write_trimmed = trailing_zero_bits > 12;
     w.write_bits(u64::from(write_trimmed), 1)?;
     let token_count = if write_trimmed {
         if trimmed_length == 2 {
@@ -406,10 +411,9 @@ fn write_huffman_tree<W: Write>(
     };
     for token in &tokens[..token_count] {
         let symbol = usize::from(token.code);
-        w.write_bits(
-            u64::from(code_length_codes[symbol]),
-            code_length_lengths[symbol],
-        )?;
+        let code = u64::from(code_length_codes[symbol]);
+        let code_length = code_length_lengths[symbol];
+        w.write_bits(code, code_length)?;
         let bits = match token.code {
             16 => 2,
             17 => 3,
@@ -508,12 +512,10 @@ fn write_group<W: Write>(
         .each_ref()
         .map(|frequency| vec![0; frequency.len()]);
     for channel in 0..5 {
-        write_huffman_tree(
-            w,
-            &populations[channel],
-            &mut lengths[channel],
-            &mut codes[channel],
-        )?;
+        let population = &populations[channel];
+        let channel_lengths = &mut lengths[channel];
+        let channel_codes = &mut codes[channel];
+        write_huffman_tree(w, population, channel_lengths, channel_codes)?;
     }
     Ok(GroupCodes { lengths, codes })
 }
@@ -590,10 +592,8 @@ fn write_token_stream<W: Write>(
                 let distance = backward_refs::plane_code(width, distance);
                 let (symbol, extra_bits) = length_to_symbol(distance);
                 w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
-                w.write_bits(
-                    ((distance - 1) & ((1 << extra_bits) - 1)) as u64,
-                    extra_bits,
-                )?;
+                let distance_extra_bits = ((distance - 1) & ((1 << extra_bits) - 1)) as u64;
+                w.write_bits(distance_extra_bits, extra_bits)?;
                 position += length;
             }
             backward_refs::Token::Cache(index) => {
@@ -1180,7 +1180,7 @@ impl<W: Write> WebPEncoder<W> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use std::io::ErrorKind;
+    use std::io::{Cursor, ErrorKind};
 
     backward_refs::__coverage_exercise_private_branches();
     cross_color::__coverage_exercise_private_branches();
@@ -1198,6 +1198,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]).unwrap();
     let mut even_chunk = Vec::new();
     write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]).unwrap();
+    let mut name_error_buffer = [0u8; 0];
+    write_chunk(Cursor::new(&mut name_error_buffer[..]), b"FAIL", &[1, 2, 3])
+        .expect_err("empty fixed buffer must fail on RIFF chunk name");
+    let mut size_error_buffer = [0u8; 4];
+    write_chunk(Cursor::new(&mut size_error_buffer[..]), b"FAIL", &[1, 2, 3])
+        .expect_err("short fixed buffer must fail on RIFF chunk size");
+    let mut data_error_buffer = [0u8; 8];
+    write_chunk(Cursor::new(&mut data_error_buffer[..]), b"FAIL", &[1, 2, 3])
+        .expect_err("short fixed buffer must fail on RIFF chunk data");
+    let mut padding_error_buffer = [0u8; 11];
+    write_chunk(
+        Cursor::new(&mut padding_error_buffer[..]),
+        b"PAD!",
+        &[1, 2, 3],
+    )
+    .expect_err("short fixed buffer must fail on RIFF padding byte");
 
     let mut tree_bytes = Vec::new();
     let mut tree_writer = BitWriter {
@@ -1209,6 +1225,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut codes = vec![0; 4];
     write_huffman_tree(&mut tree_writer, &[1, 0, 0, 0], &mut lengths, &mut codes).unwrap();
     tree_writer.flush().unwrap();
+
+    let mut trimmed_tree_bytes = Vec::new();
+    let mut trimmed_tree_writer = BitWriter {
+        writer: &mut trimmed_tree_bytes,
+        buffer: 0,
+        nbits: 0,
+    };
+    let mut trimmed_lengths = vec![0; 256];
+    let mut trimmed_codes = vec![0; 256];
+    let mut trimmed_frequencies = vec![0; 256];
+    trimmed_frequencies[..4].fill(1);
+    write_huffman_tree(
+        &mut trimmed_tree_writer,
+        &trimmed_frequencies,
+        &mut trimmed_lengths,
+        &mut trimmed_codes,
+    )
+    .unwrap();
+    trimmed_tree_writer.flush().unwrap();
 
     let populations = [
         vec![1; 281],
@@ -1306,6 +1341,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8, 247, 9, 246,
     ];
     let _ = encode_alpha(&alpha, alpha.len() as u32, 1).unwrap();
+    let short_alpha = [
+        0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8,
+    ];
+    let _ = encode_alpha(&short_alpha, short_alpha.len() as u32, 1).unwrap();
+    let nonzero_alpha = [
+        1, 255, 2, 254, 3, 253, 4, 252, 5, 251, 6, 250, 7, 249, 8, 248, 9, 247, 10, 246,
+    ];
+    let _ = encode_alpha(&nonzero_alpha, nonzero_alpha.len() as u32, 1).unwrap();
 
     let mut output = Vec::new();
     WebPEncoder::new(&mut output)
