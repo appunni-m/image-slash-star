@@ -959,6 +959,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = unpack_indices(&[], 1, 1, 1);
     let _ = unpack_indices(&[0], 9, 1, 1);
     let _ = unpack_indices(&[0], 1, 1, 9);
+    let _ = unpack_indices(&[0, 0], 3, 1, 3);
 
     let _ = decode_packbits(&[], 0);
     let _ = decode_packbits(&[0], 0);
@@ -1045,6 +1046,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }],
     };
     let _ = overflow_values.values(1);
+    let huge_values = Directory {
+        data: &[0],
+        endian: Endian::Little,
+        entries: vec![Entry {
+            tag: 1,
+            field_type: 1,
+            count: 1,
+            value_position: 0,
+            inline_position: 1,
+            byte_len: usize::MAX,
+        }],
+    };
+    let _ = huge_values.values(1);
     let unsupported_values = Directory {
         data: &[0, 0, 0, 0],
         endian: Endian::Little,

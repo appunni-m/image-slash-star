@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `3106db30-36b6-4fe0-9432-d77e2a70cf61`
-- Current measured commit metadata: `78820953644221983c6f9cd2f25c6c69ad8f9cfd`
-- Current source state: Attempt 55 working tree based on pushed `main` at
-  `7882095`; this batch should be committed and pushed before the next sweep.
-- Lines: 24915 / 24919
+- Current snapshot: `6788770f-94ee-4a35-b566-ad3b95fdb753`
+- Current measured commit metadata: `28fc11b255e5f07c94f8d77ef975726dc60ca34f`
+- Current source state: Attempt 56 source measured on pushed `main` base
+  `28fc11b`; source retained in the next commit.
+- Lines: 24929 / 24933
 - Branches: 3438 / 3444
 - Functions: 1584 / 1584
-- Regions: 40597 / 41274
-- Remaining target: 4 lines, 6 branches, and 677 regions.
+- Regions: 40605 / 41280
+- Remaining target: 4 lines, 6 branches, and 675 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -448,6 +448,46 @@ Measurement:
   `1446 / 1551` regions to `1564 / 1656` regions; missing regions fell from
   `105` to `92`.
 - Net: aggregate missing regions fell from `690` to `677`. Branch debt is
+  unchanged.
+
+## Attempt 56 plan: TIFF residual private helper states
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 55 commit `28fc11b`.
+- Coverage MCP snapshot: `3106db30-36b6-4fe0-9432-d77e2a70cf61`.
+- Overall: `24915 / 24919` lines, `3438 / 3444` branches,
+  `1584 / 1584` functions, and `40597 / 41274` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently `867 / 867` lines,
+  `120 / 120` branches, `37 / 37` functions, and `1564 / 1656` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `unpack_indices()` shift arithmetic | Line 358 remains after the first `bits > 8` direct probe. The remaining coordinate is the second `checked_sub()`, reachable only for a non-public packed bit width such as 3 bits. | Exercise directly in the coverage hook with a 3-bit row wide enough to make `bit % 8` exceed `8 - bits`. |
+| `Directory::values()` range arithmetic | Line 706 remains after a position-overflow probe. The remaining coordinate is best represented by impossible internal `Entry` metadata, not public TIFF bytes, because `Directory::parse()` validates entry ranges before `values()` is callable through `decode()`. | Add one direct `Directory` with `byte_len = usize::MAX` so `position.checked_add(byte_len)` fails without allocating or reading. |
+| Residual TIFF decode/IFD conversion spans | Lines 19, 22, 25, 26, 30, 35, 38, 47, 48, 57-61, 77-89, 102-135, 151-208, 320-322, 330, 349-352, 356, 359, 419, 424, 426, 557, 562, 644-668, 712, and 717. | Mostly target-impossible on this 64-bit build: `u32 -> usize`, bounded `u32 * 8` products, checked arithmetic after exact slice bounds, `ImagePalette` validity after fixed RGB construction, PackBits loop invariants, and endian reads after `chunks_exact()`. Do not weaken production checks or create duplicate oracle fixtures for these. |
+
+Implementation plan:
+
+1. Extend the TIFF coverage hook with only the two reachable residual helper
+   probes above.
+2. Run `cargo fmt --all`, both normal and `cfg(coverage)` checks, then the
+   approved Coverage MCP command.
+3. Keep this attempt only if aggregate region debt falls.
+
+Measurement:
+
+- Coverage MCP run: `4160a65a-0527-4e68-a68a-69e383c1bb82`.
+- Coverage MCP snapshot: `6788770f-94ee-4a35-b566-ad3b95fdb753`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24929 / 24933` lines, `3438 / 3444` branches,
+  `1584 / 1584` functions, and `40605 / 41280` regions.
+- Target file movement: `src/codecs/tiff/decode.rs` moved from
+  `1564 / 1656` regions to `1572 / 1662` regions; missing regions fell from
+  `92` to `90`.
+- Net: aggregate missing regions fell from `677` to `675`. Branch debt is
   unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
