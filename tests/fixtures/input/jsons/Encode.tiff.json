@@ -203,6 +203,27 @@
       }
     },
     {
+      "id": "enc_lzw_byte_aligned",
+      "source_asset": "tiff_lzw_byte_aligned.png",
+      "source_format": "png",
+      "params": {
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/tiff_lzw_byte_aligned.png",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_byte_le",
       "source_asset": "rgb.tiff",
       "source_format": "tiff",

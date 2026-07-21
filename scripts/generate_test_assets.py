@@ -592,6 +592,7 @@ def gen_png():
         lzw_boundary = Image.new("L", (length, 1))
         lzw_boundary.putdata(lzw_values[:length])
         lzw_boundary.save(d / f"tiff_lzw_{name}.png")
+    Image.new("L", (16, 1), 37).save(d / "tiff_lzw_byte_aligned.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 255)).save(d / "gif_rgba_opaque.png")
     Image.new("RGBA", (1, 1), (128, 0, 0, 0)).save(d / "gif_rgba.png")
     gif_rgba_mixed = Image.new("RGBA", (4, 2))

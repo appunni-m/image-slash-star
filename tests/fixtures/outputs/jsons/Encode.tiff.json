@@ -121,6 +121,18 @@
       "encoded_ref_bytes": 5530
     },
     {
+      "id": "enc_lzw_byte_aligned",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lzw_byte_aligned.bin",
+      "ref_bytes": 16,
+      "ref_mode": "L8",
+      "ref_size": [
+        16,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lzw_byte_aligned.bin",
+      "encoded_ref_bytes": 132
+    },
+    {
       "id": "enc_byte_le",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_byte_le.bin",
       "ref_bytes": 49152,

@@ -1997,6 +1997,11 @@ formats:
       source_format: png
       source_asset: tiff_lzw_clear_boundary.png
       params: {'compression': 'lzw'}
+    - id: enc_lzw_byte_aligned
+      description: TIFF LZW stream ending with no pending partial byte
+      source_format: png
+      source_asset: tiff_lzw_byte_aligned.png
+      params: {'compression': 'lzw'}
     - id: enc_byte_le
       description: 
       params: {'byte_order': 'le'}
