@@ -1288,6 +1288,9 @@ def gen_gif():
     zero_logical_size = bytearray(static)
     zero_logical_size[6:10] = b"\0\0\0\0"
     (d / "zero_logical_size.gif").write_bytes(zero_logical_size)
+    frame_outside_logical = bytearray(static)
+    frame_outside_logical[6:10] = b"\x01\x00\x01\x00"
+    (d / "frame_outside_logical.gif").write_bytes(frame_outside_logical)
 
     comment_extension = bytearray(static)
     comment_extension[image_offset:image_offset] = b"\x21\xfe\x03abc\x00"
@@ -1396,6 +1399,19 @@ def gen_gif():
     write_gif_lzw_fixture(d / "lzw_end_only.gif", 1, [clear, end])
     write_gif_lzw_fixture(d / "lzw_invalid_future.gif", 2, [clear, 0, 7])
     write_gif_lzw_fixture(d / "lzw_truncated_output.gif", 2, [clear, 0])
+    palette_payload = pack_gif_lzw_codes([clear, 2, end], 2)
+    palette_blocks = bytes([len(palette_payload)]) + palette_payload + b"\0"
+    palette_index_out_of_range = bytearray(b"GIF89a")
+    palette_index_out_of_range.extend(struct.pack("<HH", 1, 1))
+    palette_index_out_of_range.extend((0x80, 0, 0))
+    palette_index_out_of_range.extend(b"\x00\x00\x00\xff\xff\xff")
+    palette_index_out_of_range.extend(b"\x2c\0\0\0\0")
+    palette_index_out_of_range.extend(struct.pack("<HH", 1, 1))
+    palette_index_out_of_range.append(0)
+    palette_index_out_of_range.append(2)
+    palette_index_out_of_range.extend(palette_blocks)
+    palette_index_out_of_range.append(0x3B)
+    (d / "palette_index_out_of_range.gif").write_bytes(palette_index_out_of_range)
     literal_count = 4100
     write_gif_lzw_fixture(
         d / "lzw_dictionary_saturation.gif",

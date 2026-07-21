@@ -286,11 +286,37 @@
       }
     },
     {
+      "id": "logical_canvas_fallback_frame_outside_logical",
+      "asset": "frame_outside_logical.gif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/frame_outside_logical.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "transparency_index_leniency",
       "asset": "out_of_range_transparency.gif",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/out_of_range_transparency.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "palette_index_leniency",
+      "asset": "palette_index_out_of_range.gif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/palette_index_out_of_range.gif",
         "operations": [
           "PIL.Image.open",
           "load",

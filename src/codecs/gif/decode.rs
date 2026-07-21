@@ -88,30 +88,22 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         }
     }
 
-    let fallback_width = frames
-        .iter()
-        .map(|frame| frame.left + frame.image.width)
-        .max()?;
-    let fallback_height = frames
-        .iter()
-        .map(|frame| frame.top + frame.image.height)
-        .max()?;
+    let first_frame = frames.first()?;
+    let mut fallback_width = first_frame.left + first_frame.image.width;
+    let mut fallback_height = first_frame.top + first_frame.image.height;
+    for frame in &frames[1..] {
+        fallback_width = fallback_width.max(frame.left + frame.image.width);
+        fallback_height = fallback_height.max(frame.top + frame.image.height);
+    }
+    let logical_width = u32::from(logical_width);
+    let logical_height = u32::from(logical_height);
     let sequence = DecodedSequence {
-        width: if logical_width == 0 {
-            fallback_width
-        } else {
-            u32::from(logical_width)
-        },
-        height: if logical_height == 0 {
-            fallback_height
-        } else {
-            u32::from(logical_height)
-        },
+        width: logical_width.max(fallback_width),
+        height: logical_height.max(fallback_height),
         frames,
         loop_count,
         background: Some(AnimationBackground::PaletteIndex(background_index)),
     };
-    sequence.validate().ok()?;
     Some(sequence)
 }
 
@@ -187,17 +179,23 @@ fn decode_image(
 
     let image = if let Some(palette_rgb) = palette_rgb {
         let entries = palette_rgb.len() / 3;
+        let required_entries = indices
+            .iter()
+            .copied()
+            .map(usize::from)
+            .max()
+            .map_or(0, |index| index + 1);
+        let padded_entries = entries.max(required_entries);
+        let mut rgb = palette_rgb.to_vec();
+        rgb.resize(padded_entries * 3, 0);
         let mut alpha = Vec::new();
         if let Some(index) = transparent_index {
-            if usize::from(index) < entries {
-                alpha = vec![255; entries];
+            if usize::from(index) < padded_entries {
+                alpha = vec![255; padded_entries];
                 alpha[usize::from(index)] = 0;
             }
         }
-        let palette = ImagePalette {
-            rgb: palette_rgb.to_vec(),
-            alpha,
-        };
+        let palette = ImagePalette { rgb, alpha };
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
             .with_palette(palette)
     } else {
@@ -378,8 +376,11 @@ impl<'a> Input<'a> {
     }
 
     fn read_bytes(&mut self, len: usize) -> Option<&'a [u8]> {
-        let end = self.position.checked_add(len)?;
-        let bytes = self.data.get(self.position..end)?;
+        if len > self.data.len().saturating_sub(self.position) {
+            return None;
+        }
+        let end = self.position + len;
+        let bytes = &self.data[self.position..end];
         self.position = end;
         Some(bytes)
     }

@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ece26b30-a0ed-45dd-aaf6-1cd8a06aafbe`
-- Current measured commit metadata: `53d37c8e0961a62a052335d5420dbfa3d3225215`
-- Current source state: JPEG parser malformed-fixture and invariant sweep,
+- Current snapshot: `53d44b93-8149-41db-9a05-3981da60e12b`
+- Current measured commit metadata: `5656ea79e612be2b132db765f1795ba171e3a68e`
+- Current source state: GIF decode tolerated-malformed and invariant sweep,
   measured before committing the sweep.
-- Lines: 24360 / 24366
-- Branches: 3426 / 3440
-- Functions: 1579 / 1579
-- Regions: 39806 / 40583
-- Remaining target: 6 lines, 14 branches, and 777 regions.
+- Lines: 24365 / 24371
+- Branches: 3424 / 3438
+- Functions: 1578 / 1578
+- Regions: 39826 / 40600
+- Remaining target: 6 lines, 14 branches, and 774 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -35,6 +35,8 @@ from Coverage MCP before each implementation sweep.
     759 / 759 regions.
   - `src/codecs/jpeg/decode/parser.rs`: 96 / 96 branches and now
     551 / 551 regions.
+  - `src/codecs/gif/decode.rs`: 72 / 72 branches and now
+    581 / 581 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -159,6 +161,137 @@ Second measurement:
     with direct state proven by SOS/EOI parser control flow.
   - Replaced the APP14 checked-add overflow `?` with a safe remaining-slice
     bound check and direct addition after the bound is proven.
+
+## Attempt 19 plan: smallest one-region WebP encode size boundary
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `5656ea7` after the JPEG parser sweep.
+- Coverage MCP snapshot: `ece26b30-a0ed-45dd-aaf6-1cd8a06aafbe`.
+- Overall: `24360 / 24366` lines, `3426 / 3440` branches,
+  `1579 / 1579` functions, and `39806 / 40583` regions.
+
+Smallest-region triage:
+
+| File | Gap | Reverse-mapped source | Decision |
+| --- | ---: | --- | --- |
+| `src/codecs/mod.rs` | 1 region | line 65, `image.validate().ok()?` in `decode_format()` | Keep. This is a defensive boundary for a decoder implementation returning an invalid `DecodedImage`; no public input should make a valid decoder do that, and removing the guard weakens the dispatcher contract. |
+| `src/codecs/webp/native/huffman.rs` | 1 region | no zero-count LLVM region-entry source start in the latest raw map | Skip until the analyzer exposes an actionable source region. |
+| `src/codecs/webp/encode/mod.rs` | 1 region | line 113, `u32::try_from(output.len() - 8).ok()?` in `attach_metadata()` | Fix with a private size-boundary helper and coverage hook. A public Pillow fixture would require metadata large enough to make the RIFF payload exceed `u32::MAX`, which is impractical and unrelated to byte-parity image behavior. |
+
+Selected action:
+
+- Extract RIFF size calculation into a small helper that takes `output_len`.
+- Use the helper in `attach_metadata()`.
+- In the existing `#[cfg(coverage)]` hook, call the helper with a 64-bit-only
+  synthetic length greater than `u32::MAX + 8` to exercise the overflow path
+  without allocating a multi-gigabyte metadata payload.
+- This preserves the public RIFF size rejection while making the defensive
+  arithmetic boundary directly coverable.
+
+Validation after implementation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Measurement and decision:
+
+- Coverage MCP run: `988e0380-600b-4ca4-8f9c-945fe325bc0a`.
+- Coverage MCP snapshot: `dc214b5f-8efb-411d-8496-be7e4a015bc6`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall measured with the helper attempt: `24368 / 24374` lines,
+  `3426 / 3440` branches, `1580 / 1580` functions, and
+  `39815 / 40592` regions.
+- Net effect: no missing-region reduction. Missing regions stayed at `777`.
+- Target file moved from `343 / 344` regions to `352 / 353` regions; the
+  original overflow region moved from the raw conversion expression to the
+  helper call-site `?`.
+- Decision: do not keep the helper. It is an independent helper with no net
+  coverage improvement and does not make the public RIFF-size failure
+  representable without allocating a multi-gigabyte metadata payload. The code
+  was reverted; keep the original guard as defensive size-boundary debt.
+
+## Attempt 20 plan: GIF decode tolerated malformed extents and palette indices
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `5656ea7`, with only this document changed
+  for Attempt 19 exploration notes.
+- Coverage MCP snapshot for retained code: `ece26b30-a0ed-45dd-aaf6-1cd8a06aafbe`.
+- GIF file aggregate: `src/codecs/gif/decode.rs` is `323 / 323` lines,
+  `74 / 74` branches, `21 / 21` functions, and `561 / 564` regions.
+
+Source-mapped missing region entries:
+
+- line 98: second fallback extent `.max()?`. Once fallback width has found a
+  frame, fallback height cannot be empty because both iterate over the same
+  non-empty frame list.
+- line 114: `sequence.validate().ok()?`. Reverse mapping found real
+  Pillow-tolerated inputs currently rejected by this guard:
+  - nonzero logical canvas smaller than the image descriptor;
+  - palette index bytes beyond the declared color table length.
+- line 381: `Input::read_bytes()` checked-add overflow. GIF parser callers pass
+  fixed small lengths, u8 sub-block lengths, or color table lengths bounded by
+  the packed size field, so the public failure is “requested bytes exceed
+  remaining slice,” not arithmetic overflow.
+
+Pillow oracle probes:
+
+- Shrinking `static.gif` logical dimensions to `1x1` while keeping the
+  descriptor at `128x128` is accepted by Pillow as mode `P`, size `128x128`.
+- A one-pixel GIF with a two-entry color table and LZW output index `2` is
+  accepted by Pillow as mode `P`, size `1x1`, pixel byte `[2]`.
+
+Selected actions:
+
+1. Add `frame_outside_logical.gif` under the logical-canvas fallback row.
+2. Add `palette_index_out_of_range.gif` under a GIF leniency row.
+3. Compute GIF sequence extents from the first frame plus a loop over the
+   remaining frames, then use `max(logical, fallback)` for canvas dimensions.
+4. Pad retained GIF palettes with zero RGB entries up to the largest decoded
+   palette index so `DecodedImage::validate()` preserves Pillow's raw index
+   leniency instead of rejecting the image.
+5. Remove the fallible `sequence.validate().ok()?` from `decode_sequence()` once
+   the construction invariants above make the returned sequence valid.
+6. Replace `Input::read_bytes()` checked-add with a safe
+   `len > data.len().saturating_sub(position)` bound check and direct addition
+   after the bound is proven.
+
+Validation after implementation:
+
+1. Regenerate assets and oracle refs.
+2. `cargo test --all-features --test coverage_matrix_tests test_decode_matrix`.
+3. `cargo fmt --all`.
+4. `cargo check --all-features`.
+5. `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+6. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`.
+7. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Result:
+
+- Coverage MCP run: `c8ece1cd-209f-4cea-83a8-9f9e9fb409d0`.
+- Coverage MCP snapshot: `53d44b93-8149-41db-9a05-3981da60e12b`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24365 / 24371` lines, `3424 / 3438` branches,
+  `1578 / 1578` functions, and `39826 / 40600` regions.
+- Net missing regions: `777` down to `774`.
+- Target file movement: `src/codecs/gif/decode.rs` moved from
+  `323 / 323` lines, `74 / 74` branches, `21 / 21` functions,
+  and `561 / 564` regions to `328 / 328` lines, `72 / 72` branches,
+  `20 / 20` functions, and `581 / 581` regions.
+- Implemented:
+  - `frame_outside_logical.gif` proves Pillow uses image descriptor extents
+    when logical dimensions are undersized.
+  - `palette_index_out_of_range.gif` proves Pillow preserves raw palette
+    sample bytes even when the index exceeds the declared color table.
+  - GIF decode now computes canvas dimensions as the max of logical screen and
+    frame extents, pads retained palettes to cover decoded sample indices, and
+    removes the now-redundant fallible sequence validation.
+  - `Input::read_bytes()` now checks requested length against remaining bytes
+    and slices directly after the bound is proven.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 

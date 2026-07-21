@@ -1013,13 +1013,18 @@ formats:
       - disposal_reserved.gif
       - nonstandard_gce_size.gif
     - id: logical_canvas_fallback
-      description: Zero logical dimensions fall back to the image descriptor bounds
+      description: Zero or undersized logical dimensions fall back to the image descriptor bounds
       test_assets:
       - zero_logical_size.gif
+      - frame_outside_logical.gif
     - id: transparency_index_leniency
       description: Pillow tolerates a transparency index beyond the color table
       test_assets:
       - out_of_range_transparency.gif
+    - id: palette_index_leniency
+      description: Pillow preserves palette sample bytes beyond the declared color table
+      test_assets:
+      - palette_index_out_of_range.gif
     - id: lzw_boundary_leniency
       description: KwKwK expansion, output clipping, missing EOI, and full dictionary behavior
       test_assets:

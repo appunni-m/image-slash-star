@@ -286,6 +286,19 @@
       ]
     },
     {
+      "id": "logical_canvas_fallback_frame_outside_logical",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_frame_outside_logical_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "transparency_index_leniency",
       "status": "ok",
       "error_type": null,
@@ -296,6 +309,19 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "palette_index_leniency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_palette_index_out_of_range_gif.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
       ]
     },
     {

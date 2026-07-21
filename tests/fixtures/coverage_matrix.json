@@ -2291,12 +2291,30 @@
           "type": "decode",
           "format": "gif",
           "category": "logical",
-          "description": "Zero logical dimensions fall back to the image descriptor bounds",
+          "description": "Zero or undersized logical dimensions fall back to the image descriptor bounds",
           "asset": "zero_logical_size.gif",
           "expect_error": false,
           "status": "active",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_zero_logical_size_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "logical_canvas_fallback_frame_outside_logical",
+          "type": "decode",
+          "format": "gif",
+          "category": "logical",
+          "description": "Zero or undersized logical dimensions fall back to the image descriptor bounds",
+          "asset": "frame_outside_logical.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_frame_outside_logical_gif.bin",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -2320,6 +2338,24 @@
           "ref_size": [
             128,
             128
+          ]
+        },
+        {
+          "id": "palette_index_leniency",
+          "type": "decode",
+          "format": "gif",
+          "category": "palette",
+          "description": "Pillow preserves palette sample bytes beyond the declared color table",
+          "asset": "palette_index_out_of_range.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_palette_index_out_of_range_gif.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
           ]
         },
         {
@@ -16604,12 +16640,12 @@
     }
   },
   "summary": {
-    "total_rows": 935,
-    "decode_rows": 638,
+    "total_rows": 937,
+    "decode_rows": 640,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 631,
-    "decode_active": 632,
+    "assets_available": 633,
+    "decode_active": 634,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
