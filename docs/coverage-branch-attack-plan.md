@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `c8042e9e-1bff-4063-9d83-25a2a597e20f`
-- Current measured commit metadata: `b2d69f1ed7f6b75229c03fda9285c59c7699eb30`
-- Current coverage source state: Attempt 72 retained working tree measured from
-  pushed parent `b2d69f1`.
+- Current snapshot: `6b654c6f-1fb5-4cd8-ab97-c9d5199af101`
+- Current measured commit metadata: `302f813e86d402fa56422316db0993b9336dc777`
+- Current coverage source state: pushed `main` commit `302f813`.
 - Lines: 25848 / 25852
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
@@ -87,6 +86,9 @@ Measurement:
 - Coverage MCP run: `3e47b6a9-251d-4de2-a40c-8eea2957ccca`.
 - Coverage MCP snapshot: `c8042e9e-1bff-4063-9d83-25a2a597e20f`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `618eb1ec-30a2-48a2-8014-62eb7078fa75`,
+  snapshot `6b654c6f-1fb5-4cd8-ab97-c9d5199af101`, commit
+  `302f813e86d402fa56422316db0993b9336dc777`; result unchanged.
 - Overall after TIFF decode classic `u32 -> usize` guard consolidation:
   `25848 / 25852` lines, `3448 / 3454` branches,
   `1594 / 1594` functions, and `41739 / 42301` regions.
