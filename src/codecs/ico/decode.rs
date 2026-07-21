@@ -135,7 +135,7 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> Option<DecodedImage>
 /// Decode a CUR DIB using Pillow's BMP semantics: retain its indexed mode and
 /// read only the XOR plane represented by half of the stored DIB height.
 fn decode_cur_bmp(data: &[u8]) -> Option<DecodedImage> {
-    let header_size = usize::try_from(u32::from_le_bytes(data.get(..4)?.try_into().ok()?)).ok()?;
+    let header_size = u32::from_le_bytes(data.get(..4)?.try_into().ok()?) as usize;
     if header_size < 40 || data.len() < header_size {
         return None;
     }
@@ -144,12 +144,11 @@ fn decode_cur_bmp(data: &[u8]) -> Option<DecodedImage> {
     let bits = u16::from_le_bytes(data.get(14..16)?.try_into().ok()?);
     let colors_used = u32::from_le_bytes(data.get(32..36)?.try_into().ok()?);
     let palette_entries = if bits <= 8 {
-        usize::try_from(if colors_used == 0 {
+        (if colors_used == 0 {
             1u32.checked_shl(u32::from(bits))?
         } else {
             colors_used
-        })
-        .ok()?
+        }) as usize
     } else {
         0
     };
@@ -293,7 +292,7 @@ fn decode_ico_bmp_8bpp(
     colors_used: u32,
 ) -> Option<DecodedImage> {
     let header_size = 40;
-    let color_count = usize::try_from(if colors_used == 0 { 256 } else { colors_used }).ok()?;
+    let color_count = (if colors_used == 0 { 256 } else { colors_used }) as usize;
     let palette_size = color_count.checked_mul(4)?;
     let palette_end = header_size + palette_size;
 
@@ -344,7 +343,7 @@ fn decode_ico_bmp_4bpp(
     colors_used: u32,
 ) -> Option<DecodedImage> {
     let header_size = 40;
-    let color_count = usize::try_from(if colors_used == 0 { 16 } else { colors_used }).ok()?;
+    let color_count = (if colors_used == 0 { 16 } else { colors_used }) as usize;
     let palette_size = color_count.checked_mul(4)?;
     let palette_end = header_size + palette_size;
 
@@ -408,7 +407,7 @@ fn decode_ico_bmp_1bpp(
     colors_used: u32,
 ) -> Option<DecodedImage> {
     let header_size = 40;
-    let color_count = usize::try_from(if colors_used == 0 { 2 } else { colors_used }).ok()?;
+    let color_count = (if colors_used == 0 { 2 } else { colors_used }) as usize;
     let palette_size = color_count.checked_mul(4)?;
     let palette_end = header_size + palette_size;
 

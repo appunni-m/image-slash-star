@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `6b654c6f-1fb5-4cd8-ab97-c9d5199af101`
-- Current measured commit metadata: `302f813e86d402fa56422316db0993b9336dc777`
-- Current coverage source state: pushed `main` commit `302f813`.
-- Lines: 25848 / 25852
+- Current snapshot: `f02e7f6d-9f07-4be8-8585-b4b2a0eef92d`
+- Current measured commit metadata: `6c6a0cac50abf619fa5c2aef2d2310b4504e7d81`
+- Current coverage source state: Attempt 73 retained working tree measured from
+  pushed parent `6c6a0ca`.
+- Lines: 25847 / 25851
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
-- Regions: 41739 / 42301
-- Remaining target: 4 lines, 6 branches, and 562 regions.
+- Regions: 41729 / 42286
+- Remaining target: 4 lines, 6 branches, and 557 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,52 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 73 plan: ICO DIB u32-to-usize guard consolidation
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `6c6a0ca`.
+- Coverage MCP snapshot: `6b654c6f-1fb5-4cd8-ab97-c9d5199af101`.
+- Overall: `25848 / 25852` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41739 / 42301` regions.
+- Target file: `src/codecs/ico/decode.rs`, currently
+  `1089 / 1128` regions and `62 / 62` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| CUR DIB header size | `BITMAPINFOHEADER.biSize` is a 32-bit field. It fits `usize` on supported 32/64-bit Rust targets; the existing `header_size < 40` and `data.len() < header_size` checks still validate structure and bounds. |
+| Indexed DIB palette counts | `biClrUsed` is a 32-bit field and default palette sizes are small constants. Casting the selected count to `usize` is infallible on supported targets; `checked_mul(4)` and subsequent `data.get()` calls still validate allocation and file bounds. |
+| BMP file header `file_size` and `pixel_offset` writes | Keep fallible `u32::try_from` conversions. Those values must fit BMP’s serialized 32-bit header fields; direct casts would change malformed huge-input behavior by truncating. |
+
+Implementation plan:
+
+1. Replace only the infallible `u32 -> usize` conversions in
+   `decode_cur_bmp()`, `decode_ico_bmp_8bpp()`, `decode_ico_bmp_4bpp()`,
+   and `decode_ico_bmp_1bpp()`.
+2. Leave serialized BMP header-size writes and all range arithmetic unchanged.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `80b12d59-10be-447f-8314-83a51fde9fd0`.
+- Coverage MCP snapshot: `f02e7f6d-9f07-4be8-8585-b4b2a0eef92d`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after ICO DIB `u32 -> usize` guard consolidation:
+  `25847 / 25851` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41729 / 42286` regions.
+- Target file movement: `src/codecs/ico/decode.rs` moved from
+  `1089 / 1128` regions to `1079 / 1113` regions; missing regions fell from
+  `39` to `34`, and branch coverage remained complete at `62 / 62`.
+- Net: aggregate missing regions fell from `562` to `557`. Remaining ICO
+  decode gaps have no MCP line ranges; further work should use bounded raw
+  reverse mapping and avoid changing serialized BMP header overflow behavior.
 
 ## Attempt 72 plan: TIFF decode classic u32-to-usize guard consolidation
 
