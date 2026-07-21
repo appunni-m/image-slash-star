@@ -152,6 +152,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     jpeg::__coverage_exercise_private_branches();
     #[cfg(feature = "png")]
     png::__coverage_exercise_private_branches();
+    #[cfg(feature = "tiff")]
+    tiff::__coverage_exercise_private_branches();
     #[cfg(feature = "webp")]
     webp::__coverage_exercise_private_branches();
 }

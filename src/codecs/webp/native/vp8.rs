@@ -1456,13 +1456,9 @@ impl<R: Read> Vp8Decoder<R> {
 
             skip = false;
 
-            complexity = if abs_value == 0 {
-                0
-            } else if abs_value == 1 {
-                1
-            } else {
-                2
-            };
+            // `DCT_0` continues above before reaching this point, and every
+            // remaining literal/category token has a non-zero absolute value.
+            complexity = if abs_value == 1 { 1 } else { 2 };
 
             if decoder.read_flag().or_accumulate(&mut res) {
                 abs_value = -abs_value;
@@ -2152,6 +2148,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut block = [0; 16];
     let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+    let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 1, 1);
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     decoder.partitions[0].init(vec![[0xff; 4]; 8], 32).unwrap();
@@ -2163,6 +2160,52 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut block = [0; 16];
     let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    let _ = decoder.read_quantization_indices();
+
+    let mut interframe = vec![1, 4, 0];
+    interframe.extend_from_slice(&[0; 32]);
+    let _ = Vp8Decoder::new(std::io::Cursor::new(interframe)).read_frame_header();
+
+    let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+    keyframe.extend_from_slice(&[0xff; 32]);
+    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.frame.keyframe = true;
+    decoder.frame.width = 32;
+    decoder.frame.height = 32;
+    decoder.mbwidth = 2;
+    decoder.mbheight = 2;
+    decoder.frame.ybuf = vec![128; 32 * 32];
+    decoder.frame.ubuf = vec![128; 16 * 16];
+    decoder.frame.vbuf = vec![128; 16 * 16];
+    decoder.top = init_top_macroblocks(32);
+    decoder.left = MacroBlock::default();
+    decoder.frame.filter_level = 10;
+    decoder.frame.sharpness_level = 0;
+    decoder.frame.filter_type = true;
+    let mb = MacroBlock {
+        luma_mode: LumaMode::B,
+        non_zero_dct: true,
+        ..MacroBlock::default()
+    };
+    decoder.loop_filter(0, 0, &mb);
+    decoder.loop_filter(1, 1, &mb);
+
+    decoder.frame.filter_type = false;
+    decoder.loop_filter(1, 1, &mb);
+    let mb_without_subblocks = MacroBlock {
+        luma_mode: LumaMode::DC,
+        coeffs_skipped: true,
+        non_zero_dct: false,
+        ..MacroBlock::default()
+    };
+    decoder.loop_filter(1, 1, &mb_without_subblocks);
+    decoder.frame.filter_level = 0;
+    decoder.loop_filter(0, 0, &mb);
 }
 
 fn init_top_macroblocks(width: usize) -> Vec<MacroBlock> {

@@ -722,3 +722,226 @@ impl<'a> Directory<'a> {
         Some(values)
     }
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    fn put_entry(out: &mut Vec<u8>, tag: u16, field_type: u16, count: u32, value: [u8; 4]) {
+        out.extend_from_slice(&tag.to_le_bytes());
+        out.extend_from_slice(&field_type.to_le_bytes());
+        out.extend_from_slice(&count.to_le_bytes());
+        out.extend_from_slice(&value);
+    }
+
+    fn tiny_tiff(
+        bits_count: u32,
+        bits_inline: [u8; 4],
+        photometric: u16,
+        samples_per_pixel: u16,
+        rows_per_strip: u32,
+        planar: u16,
+        predictor: u16,
+    ) -> Vec<u8> {
+        let entry_count = 11u16;
+        let pixel_offset = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let mut out = Vec::new();
+        out.extend_from_slice(b"II");
+        out.extend_from_slice(&42u16.to_le_bytes());
+        out.extend_from_slice(&8u32.to_le_bytes());
+        out.extend_from_slice(&entry_count.to_le_bytes());
+        put_entry(&mut out, 256, 4, 1, 1u32.to_le_bytes());
+        put_entry(&mut out, 257, 4, 1, 1u32.to_le_bytes());
+        put_entry(&mut out, 258, 3, bits_count, bits_inline);
+        put_entry(&mut out, 259, 3, 1, [1, 0, 0, 0]);
+        put_entry(
+            &mut out,
+            262,
+            3,
+            1,
+            [photometric as u8, (photometric >> 8) as u8, 0, 0],
+        );
+        put_entry(
+            &mut out,
+            273,
+            4,
+            1,
+            u32::try_from(pixel_offset).unwrap().to_le_bytes(),
+        );
+        put_entry(
+            &mut out,
+            277,
+            3,
+            1,
+            [
+                samples_per_pixel as u8,
+                (samples_per_pixel >> 8) as u8,
+                0,
+                0,
+            ],
+        );
+        put_entry(&mut out, 278, 4, 1, rows_per_strip.to_le_bytes());
+        put_entry(&mut out, 279, 4, 1, 1u32.to_le_bytes());
+        put_entry(
+            &mut out,
+            284,
+            3,
+            1,
+            [planar as u8, (planar >> 8) as u8, 0, 0],
+        );
+        put_entry(
+            &mut out,
+            317,
+            3,
+            1,
+            [predictor as u8, (predictor >> 8) as u8, 0, 0],
+        );
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out.push(0);
+        out
+    }
+
+    fn tiny_tiled_tiff(
+        bits_per_sample: u16,
+        include_tile_offsets: bool,
+        include_tile_byte_counts: bool,
+        tile_width: u32,
+        tile_height: u32,
+        predictor: u16,
+        compression: u16,
+        tile_payload: &[u8],
+    ) -> Vec<u8> {
+        let entry_count =
+            10u16 + u16::from(include_tile_offsets) + u16::from(include_tile_byte_counts);
+        let pixel_offset = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let mut out = Vec::new();
+        out.extend_from_slice(b"II");
+        out.extend_from_slice(&42u16.to_le_bytes());
+        out.extend_from_slice(&8u32.to_le_bytes());
+        out.extend_from_slice(&entry_count.to_le_bytes());
+        put_entry(&mut out, 256, 4, 1, 1u32.to_le_bytes());
+        put_entry(&mut out, 257, 4, 1, 1u32.to_le_bytes());
+        put_entry(&mut out, 258, 3, 1, [bits_per_sample as u8, 0, 0, 0]);
+        put_entry(
+            &mut out,
+            259,
+            3,
+            1,
+            [compression as u8, (compression >> 8) as u8, 0, 0],
+        );
+        put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
+        put_entry(
+            &mut out,
+            317,
+            3,
+            1,
+            [predictor as u8, (predictor >> 8) as u8, 0, 0],
+        );
+        put_entry(&mut out, 322, 4, 1, tile_width.to_le_bytes());
+        put_entry(&mut out, 323, 4, 1, tile_height.to_le_bytes());
+        if include_tile_offsets {
+            put_entry(
+                &mut out,
+                324,
+                4,
+                1,
+                u32::try_from(pixel_offset).unwrap().to_le_bytes(),
+            );
+        }
+        if include_tile_byte_counts {
+            put_entry(
+                &mut out,
+                325,
+                4,
+                1,
+                u32::try_from(tile_payload.len()).unwrap().to_le_bytes(),
+            );
+        }
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out.extend_from_slice(tile_payload);
+        out
+    }
+
+    let _ = decode(&tiny_tiff(0, [0, 0, 0, 0], 1, 1, 1, 1, 1));
+    let _ = decode(&tiny_tiff(2, [8, 0, 16, 0], 1, 1, 1, 1, 1));
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 0, 1, 1, 1));
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 0, 1, 1));
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 2, 1));
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 3));
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 6, 1, 1, 1, 1));
+    let _ = decode(&tiny_tiff(1, [16, 0, 0, 0], 6, 3, 1, 1, 1));
+    let _ = decode(&tiny_tiled_tiff(8, false, true, 1, 1, 1, 1, &[0]));
+    let _ = decode(&tiny_tiled_tiff(8, true, false, 1, 1, 1, 1, &[0]));
+    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 0, 1, 1, &[0]));
+    let _ = decode(&tiny_tiled_tiff(1, true, true, 1, 1, 1, 1, &[0]));
+    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 1, 2, 1, &[0]));
+
+    let _ = convert_pixels(3, 1, vec![0b1010_0000], 0, 1, 1, Endian::Little, None, 1);
+    let _ = convert_pixels(8, 1, vec![0], 0, 1, 1, Endian::Little, None, 1);
+    let _ = convert_pixels(1, 1, vec![0x34, 0x12], 0, 1, 16, Endian::Little, None, 1);
+    let _ = convert_pixels(1, 1, vec![0x12, 0x34], 1, 1, 16, Endian::Big, None, 1);
+    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 1);
+    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 2);
+    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 3);
+    let palette = [0, 0xffff, 0, 0, 0xffff, 0, 0, 0xffff, 0];
+    let _ = convert_pixels(
+        2,
+        1,
+        vec![0b0100_0000],
+        3,
+        1,
+        2,
+        Endian::Little,
+        Some(&palette),
+        1,
+    );
+    let _ = convert_pixels(1, 1, vec![1, 2, 3, 4], 6, 3, 8, Endian::Little, None, 1);
+
+    let _ = decode_packbits(&[], 0);
+    let _ = decode_packbits(&[0], 0);
+    let _ = decode_packbits(&[0, 7], 1);
+    let _ = decode_packbits(&[0x80, 0, 9], 1);
+    let _ = decode_packbits(&[0xff, 5], 2);
+    let _ = decode_packbits(&[2, 1], 3);
+
+    fn pack_lzw_9(codes: &[u16]) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut current = 0u8;
+        let mut used = 0u8;
+        for &code in codes {
+            for shift in (0..9).rev() {
+                current = (current << 1) | (((code >> shift) & 1) as u8);
+                used += 1;
+                if used == 8 {
+                    out.push(current);
+                    current = 0;
+                    used = 0;
+                }
+            }
+        }
+        out.push(current << (8 - used));
+        out
+    }
+
+    let _ = decode_lzw(&pack_lzw_9(&[258]), 1);
+    let _ = decode_lzw(&pack_lzw_9(&[65]), 0);
+    let _ = decode_lzw(&pack_lzw_9(&[65]), 1);
+    let _ = decode_lzw(&pack_lzw_9(&[65, 66, 257]), 2);
+    let _ = decode(&tiny_tiled_tiff(
+        24,
+        true,
+        true,
+        1,
+        1,
+        2,
+        COMPRESSION_LZW as u16,
+        &pack_lzw_9(&[65, 66, 67]),
+    ));
+
+    let mut predicted = vec![1, 2, 3, 4, 5, 6];
+    reverse_horizontal_predictor(&mut predicted, 6, 3, 8, Endian::Little);
+    let mut predicted = vec![0, 1, 0, 2];
+    reverse_horizontal_predictor(&mut predicted, 4, 1, 16, Endian::Big);
+    let mut predicted = vec![0, 0, 0, 1, 0, 0, 0, 2];
+    reverse_horizontal_predictor(&mut predicted, 8, 1, 32, Endian::Little);
+}

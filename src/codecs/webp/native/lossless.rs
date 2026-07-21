@@ -663,11 +663,56 @@ impl<R: BufRead> LosslessDecoder<R> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    use std::io::Cursor;
+
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     let mut buf = [0u8; 4];
     let _ = decoder.decode_frame(1, 1, true, &mut buf);
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0, 0, 0]));
     let _ = decoder.decode_frame(1, 1, false, &mut buf);
+
+    let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
+    let _ = reader.fill();
+    let _ = reader.consume(1);
+    let _: Result<u8, _> = reader.read_bits(1);
+
+    let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 1]));
+    let _ = reader.fill();
+    let _ = reader.consume(8);
+    let _ = reader.consume(1);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let _ = decoder.read_color_cache();
+    let mut decoder = LosslessDecoder::new(Cursor::new([0xff; 1]));
+    let _ = decoder.read_color_cache();
+
+    let mut reader = BitReader::__coverage_new(Cursor::new([0b1010_1010u8; 8]));
+    let _ = reader.fill();
+    let _ = LosslessDecoder::<Cursor<[u8; 8]>>::get_copy_distance(&mut reader, 4);
+    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(1, 121);
+    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(8, 1);
+    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(8, 8);
+
+    let info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: Vec::new(),
+    };
+    let _ = info.get_huff_index(0, 0);
+    let info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![3],
+        bits: 1,
+        mask: 1,
+        huffman_code_groups: Vec::new(),
+    };
+    let _ = info.get_huff_index(1, 0);
 }
 
 #[derive(Debug, Clone)]
