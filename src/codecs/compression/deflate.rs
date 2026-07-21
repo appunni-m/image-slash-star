@@ -88,6 +88,179 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let single = Huffman::from_lengths(&[1]).expect("coverage huffman should build");
     let mut bits = BitReader::new(&[1]);
     assert_eq!(single.decode(&mut bits), None);
+
+    let _ = decompress_zlib(&[0x78, 0x01, 0, 0, 0, 0], 1);
+    assert_eq!(compress_zlib_stored_chunked(&[], &[32_768]), None);
+
+    let mut bits = BitReader {
+        data: &[0],
+        bit_position: 7,
+    };
+    assert_eq!(bits.read(2), None);
+    let mut bits = BitReader {
+        data: &[],
+        bit_position: usize::MAX,
+    };
+    assert_eq!(bits.read(1), None);
+
+    let mut bits = BitReader::new(&[]);
+    assert!(read_dynamic_tables(&mut bits).is_none());
+    let mut bits = BitReader::new(&[0]);
+    assert!(read_dynamic_tables(&mut bits).is_none());
+    let mut bits = BitReader {
+        data: &[0, 0],
+        bit_position: 2,
+    };
+    assert!(read_dynamic_tables(&mut bits).is_none());
+    let mut bits = BitReader::new(&[0, 0, 0, 0]);
+    assert!(read_dynamic_tables(&mut bits).is_none());
+
+    let literal_zero = huffman_with_symbol(0);
+    let literal_end = huffman_with_symbol(256);
+    let literal_match = huffman_with_symbol(257);
+    let literal_extra = huffman_with_symbol(265);
+    let distance_zero = huffman_with_symbol(0);
+    let distance_extra = huffman_with_symbol(4);
+    let distance_reserved = huffman_with_symbol(30);
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = Vec::new();
+    assert!(matches!(
+        decode_compressed(
+            &mut bits,
+            &literal_zero,
+            &distance_zero,
+            &mut output,
+            0,
+            true
+        ),
+        Some(DecodeStatus::OutputFull)
+    ));
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = Vec::new();
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_zero,
+            &distance_zero,
+            &mut output,
+            0,
+            false
+        )
+        .is_none()
+    );
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = Vec::new();
+    assert!(matches!(
+        decode_compressed(
+            &mut bits,
+            &literal_end,
+            &distance_zero,
+            &mut output,
+            1,
+            false
+        ),
+        Some(DecodeStatus::Complete)
+    ));
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = Vec::new();
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_match,
+            &distance_reserved,
+            &mut output,
+            8,
+            false,
+        )
+        .is_none()
+    );
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = Vec::new();
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_match,
+            &distance_zero,
+            &mut output,
+            8,
+            false,
+        )
+        .is_none()
+    );
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = vec![7];
+    assert!(matches!(
+        decode_compressed(
+            &mut bits,
+            &literal_match,
+            &distance_zero,
+            &mut output,
+            1,
+            true,
+        ),
+        Some(DecodeStatus::OutputFull)
+    ));
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = vec![7];
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_match,
+            &distance_zero,
+            &mut output,
+            1,
+            false,
+        )
+        .is_none()
+    );
+
+    let mut bits = BitReader {
+        data: &[0],
+        bit_position: 7,
+    };
+    let mut output = Vec::new();
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_extra,
+            &distance_zero,
+            &mut output,
+            8,
+            false
+        )
+        .is_none()
+    );
+
+    let mut bits = BitReader {
+        data: &[0],
+        bit_position: 6,
+    };
+    let mut output = vec![7, 8, 9, 10];
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_match,
+            &distance_extra,
+            &mut output,
+            16,
+            false,
+        )
+        .is_none()
+    );
+}
+
+#[cfg(coverage)]
+fn huffman_with_symbol(symbol: usize) -> Huffman {
+    let mut lengths = vec![0; symbol + 1];
+    lengths[symbol] = 1;
+    Huffman::from_lengths(&lengths).expect("coverage huffman should build")
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
