@@ -472,4 +472,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         unfilter_rows(&[], &mut position, usize::MAX / 8, 9, 1, 8),
         None
     );
+
+    let mut position = 0;
+    assert_eq!(unfilter_rows(&[], &mut position, 1, 1, 1, 8), None);
+
+    let mut position = 0;
+    assert_eq!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8), None);
 }

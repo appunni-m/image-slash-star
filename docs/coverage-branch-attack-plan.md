@@ -12,14 +12,14 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `c137ec69-34a3-4dbd-bec4-192f7ae798b1`
-- Current measured commit metadata: `451a8574145e03d6a1fa20f22d913f17b8ea9a2b`
-- Current source state: pushed `main` after Attempt 51.
-- Lines: 24625 / 24629
+- Current snapshot: `0d8766cf-09e2-4225-8a67-1ed6f3671466`
+- Current measured commit metadata: `f14ac45f96772ac70f632e2b5401d8bf7b41f924`
+- Current source state: pushed `main` after Attempt 52.
+- Lines: 24629 / 24633
 - Branches: 3438 / 3444
 - Functions: 1582 / 1582
-- Regions: 40206 / 40910
-- Remaining target: 4 lines, 6 branches, and 704 regions.
+- Regions: 40220 / 40922
+- Remaining target: 4 lines, 6 branches, and 702 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -251,6 +251,54 @@ Measurement:
   `985 / 1030` regions to `990 / 1030` regions; missing regions fell from
   `45` to `40`.
 - Net: aggregate missing regions fell from `709` to `704`. Branch debt is
+  unchanged.
+
+## Attempt 52 plan: PNG private unfilter short-read guards
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 51.
+- Coverage MCP snapshot: `c137ec69-34a3-4dbd-bec4-192f7ae798b1`.
+- Overall: `24625 / 24629` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40206 / 40910` regions.
+- Target file: `src/codecs/png/decode.rs`, currently `374 / 374` lines,
+  `90 / 90` branches, `22 / 22` functions, and `689 / 714` regions.
+
+Reverse map:
+
+- Remaining PNG zero-region starts after Attempt 50 include
+  `unfilter_rows()` lines 200 and 203:
+  `data.get(*position)?` and `data.get(*position..source_end)?`.
+- These are real helper failure states, but they are not public PNG fixture
+  states in the current decoder because `decode()` verifies
+  `inflated.len() == expected_inflated` before calling `decode_scanlines()`.
+  Existing short-inflated PNG fixtures fail at that public boundary by design.
+- The neighboring checked-arithmetic spans at lines 201, 202, and 205 are still
+  impossible after slice-position and allocation invariants and are not selected.
+
+Implementation plan:
+
+1. Extend the existing PNG same-module `#[cfg(coverage)]` hook with two direct
+   `unfilter_rows()` calls:
+   - empty data for the filter-byte short read;
+   - a single filter byte for the row-payload short read.
+2. Do not add manifest fixtures for these two states because any public fixture
+   would be rejected before `unfilter_rows()`.
+3. Validate with `cargo fmt --all`, `RUSTFLAGS='--cfg coverage' cargo check
+   --all-features`, and the approved Coverage MCP line+branch command.
+4. Keep the hook calls only if aggregate region coverage improves.
+
+Measurement:
+
+- Coverage MCP run: `e91a6fb4-3745-4001-afba-7cfda07baa65`.
+- Coverage MCP snapshot: `0d8766cf-09e2-4225-8a67-1ed6f3671466`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24629 / 24633` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40220 / 40922` regions.
+- Target file movement: `src/codecs/png/decode.rs` moved from
+  `689 / 714` regions to `703 / 726` regions; missing regions fell from
+  `25` to `23`.
+- Net: aggregate missing regions fell from `704` to `702`. Branch debt is
   unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
