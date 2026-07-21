@@ -571,6 +571,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
     }
     entropy_bin_combine(&mut equal_bins);
+    let mut rejected_same_bin = vec![Histogram::new(0), Histogram::new(0)];
+    for histogram in &mut rejected_same_bin {
+        histogram.costs = [0; 5];
+        histogram.trivial = [0; 5];
+        histogram.used = [false; 5];
+        histogram.bit_cost = 0;
+    }
+    entropy_bin_combine(&mut rejected_same_bin);
 
     let mut no_pairs = vec![
         Histogram::new(0),
@@ -591,6 +599,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         mergeable.push(histogram);
     }
     let _ = stochastic_combine(&mut mergeable, 1);
+    let mut large_mergeable = Vec::new();
+    for _ in 0..64 {
+        let mut histogram = Histogram::new(0);
+        histogram.add_token(Token::Literal(0xff00_0000), 1);
+        histogram.analyze();
+        large_mergeable.push(histogram);
+    }
+    let _ = stochastic_combine(&mut large_mergeable, 1);
 
     let mut distinct = Vec::new();
     for index in 0..8 {
@@ -614,4 +630,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .map(|index| Token::Literal(0xff00_0000 | index as u32))
         .collect::<Vec<_>>();
     let _ = cluster(&many_tokens, many_tokens.len(), 1, 0, 99, 0);
+    let _ = cluster(&many_tokens, many_tokens.len(), 1, 0, 100, 0);
+    let many_distinct = (0..(4 * BIN_SIZE))
+        .map(|index| {
+            Token::Literal(
+                0xff00_0000
+                    | (((index as u32).wrapping_mul(0x45d9_f3b)) & 0x00ff_ffff),
+            )
+        })
+        .collect::<Vec<_>>();
+    let _ = cluster(&many_distinct, many_distinct.len(), 1, 0, 100, 0);
 }

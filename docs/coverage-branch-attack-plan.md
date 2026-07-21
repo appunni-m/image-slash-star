@@ -12,12 +12,12 @@ after the latest pushed-head verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `fc4d8182-71fa-4256-906c-ed388d40f8a7`
-- Current measured commit metadata: `0b294548813c1db2b9c7f3e6722e8fb2b19ed73e`
-- Lines: 22186 / 22187
-- Branches: 3355 / 3466
-- Functions: 1533 / 1533
-- Remaining target: 1 line and 111 branches.
+- Current snapshot: `45d0cf57-072b-4d3a-a50e-8bd48be7ce5f`
+- Current measured commit metadata: `1a2cc62e96f69c3d0f4f78a087f1b018645857c4`
+- Lines: 22213 / 22214
+- Branches: 3358 / 3466
+- Functions: 1534 / 1534
+- Remaining target: 1 line and 108 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -232,6 +232,61 @@ Completed evidence:
   Pushed-head overall coverage is 22044 / 22045 lines, 3335 / 3466 branches,
   and 1528 / 1528 functions. Histogram remains 503 / 503 lines,
   107 / 112 branches, and 30 / 30 functions.
+
+Current retry plan from pushed-head snapshot
+`c43f858f-ada8-4b38-b342-9a0c275c8609`: histogram remains 503 / 503 lines,
+107 / 112 branches, and 30 / 30 functions. Current selected-line evidence
+shows:
+
+- line 367 has the `add_eval()` `Some` side covered; add a same-bin pair whose
+  combined cost exceeds the threshold so the `None`/continue side is reached.
+- line 410 has the queue-not-full side covered; add a larger mergeable
+  histogram population intended to fill the stochastic pair queue to nine and
+  break.
+- line 435 has the `update_pair()` true side covered after queue remapping;
+  add a remapped pair whose recomputed combined cost exceeds zero so the
+  swap-remove false-pair side is reached.
+- line 517 is missing one side of `quality < 100` after a large cluster count;
+  add a `> 2 * BIN_SIZE` cluster call with `quality == 100`.
+- line 524 needs both `cluster()` outcomes from `stochastic_combine()`; add a
+  larger high-quality/distinct-token cluster to try the non-greedy side.
+
+Keep these as coverage-only private probes. If a probe does not improve MCP
+coverage, remove it before committing.
+
+First retry evidence:
+
+- Coverage MCP run `8f526e7e-1db6-4bb4-be73-5d8cf2318035`, snapshot
+  `0b4f2f60-f09f-49b8-b464-5e9f4b52176b`, passed with 5 passed, 0 failed.
+  Overall improved to 22205 / 22206 lines, 3357 / 3466 branches,
+  1534 / 1534 functions. `histogram.rs` improved from 107 / 112 to
+  109 / 112 branches by closing line 410 queue-full break and line 517
+  large-cluster quality side. Remaining lines are 367, 435, and 524.
+- Next retry: add an artificial zero-cost same-bin pair in the private hook so
+  `entropy_bin_combine()` reaches line 367 with `add_eval()` returning `None`
+  via the `combined_costs()` non-positive limit guard.
+- Second retry evidence: Coverage MCP run
+  `306ea09d-4561-4bac-b31f-07893f3653c5`, snapshot
+  `c230d738-35bc-46cd-8285-851ecfa34452`, passed with 5 passed, 0 failed.
+  Overall improved to 22213 / 22214 lines, 3358 / 3466 branches,
+  1534 / 1534 functions. `histogram.rs` improved to 110 / 112 branches,
+  leaving line 435 and line 524.
+- Next retry: call `cluster()` with the larger distinct-token corpus at
+  `quality == 0`, which makes the stochastic threshold one cluster and should
+  be the hardest public path for `stochastic_combine()` to return true. This
+  may also force remapped queued pairs to fail `update_pair()` at line 435.
+- Third retry evidence: Coverage MCP run
+  `af98ad20-576a-4cdd-b808-e429523b43a1`, snapshot
+  `ad5406ab-9f65-430b-9fdf-233f3d7cfa4d`, passed but did not improve overall
+  or target-file branch coverage. The quality-0 distinct-token probe was
+  removed. Keep the accepted histogram batch at 110 / 112 branches.
+- Final accepted Coverage MCP run
+  `a093b41e-690f-4427-81e1-e136a59928cb`, snapshot
+  `45d0cf57-072b-4d3a-a50e-8bd48be7ce5f`, passed with 5 passed, 0 failed.
+  Overall improved to 22213 / 22214 lines, 3358 / 3466 branches,
+  1534 / 1534 functions. `histogram.rs` is now 530 / 530 lines,
+  110 / 112 branches, and 31 / 31 functions. Remaining histogram gaps are
+  line 435 and line 524.
 
 ## Planned WebP native encoder private-branch batch
 
