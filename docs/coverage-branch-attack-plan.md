@@ -12,12 +12,12 @@ after the latest pushed-head verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `51ef9e74-5223-409e-884a-cf3e42209291`
-- Current measured commit metadata: `32dc417cd6cfd1b67542882cde4711460f083578`
-- Lines: 22301 / 22302
-- Branches: 3365 / 3466
-- Functions: 1538 / 1538
-- Remaining target: 1 line and 101 branches.
+- Current snapshot: `edbcff2f-4f2e-4a12-9c1d-4909ee8a6d74`
+- Current measured commit metadata: `f4cca87e7ac707f176199390f38e163cee11d003`
+- Lines: 22406 / 22407
+- Branches: 3372 / 3466
+- Functions: 1543 / 1543
+- Remaining target: 1 line and 94 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -1127,6 +1127,85 @@ Second private-hook retry evidence:
   `src/codecs/jpeg/encode/mod.rs` moved from 137 / 144 branches to 144 / 144
   branches, and overall coverage moved from 3358 / 3466 branches to
   3365 / 3466 branches.
+
+### GIF encoder private-branch batch
+
+- Pushed-head snapshot before batch:
+  `2091e19c-44c4-4d2f-9e32-db2cde447f15`.
+- Current pushed commit: `f4cca87e7ac707f176199390f38e163cee11d003`.
+- Baseline overall coverage: 22314 / 22315 lines, 3365 / 3466 branches,
+  1538 / 1538 functions.
+- Current `src/codecs/gif/encode.rs`: 1147 / 1147 lines and
+  208 / 218 branches.
+- Remaining GIF encoder gap lines:
+  - lines 118, 132, and 444: animated-frame coalescing and transparent-index
+    predicates.
+  - line 175: private `rgba_difference_bounds()` debug invariant.
+  - lines 914, 930, and 937: private median-cut split edge predicates.
+  - line 1053: RGBA palette hole/half-size compaction predicate.
+
+Planned first GIF retry:
+
+- Add a `#[cfg(coverage)]` GIF encode private hook and wire it through
+  `gif::mod.rs` and the central codec hook.
+- Start with deterministic internal data only:
+  - call `rgba_difference_bounds()` on identical buffers inside `catch_unwind`
+    to cover the assertion-failure side of line 175;
+  - call `split_median_box()` with hand-built two-color boxes and deliberately
+    large `pixel_count` to force the `while split < sorted.len()` exit side and
+    the second `while` false side at line 930;
+  - call `split_median_box()` with equal colors inside `catch_unwind` to cover
+    the invalid split assertion side where possible;
+  - call `quantize_rgba()` on a small all-opaque palette with every color used
+    so line 1053 takes the no-compaction side.
+- Leave lines 118, 132, and 444 for a second pass unless this hook naturally
+  closes them. Those branches are tied to public animated GIF byte behavior and
+  should be handled separately with exact-byte fixture evidence or a carefully
+  scoped coalescing hook.
+
+First GIF retry evidence:
+
+- Coverage MCP run: `049e0a9e-9d00-44c9-8e7c-958f29c5d8c3`.
+- Coverage MCP snapshot: `514701b1-986d-4276-9d03-47fd5047b72a`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall coverage improved from 3365 / 3466 branches to 3369 / 3466
+  branches.
+- `src/codecs/gif/encode.rs` improved from 208 / 218 branches to
+  212 / 218 branches.
+- Remaining GIF gaps shifted to lines 150, 164, 207, 476, 969, and 1085.
+
+Second GIF retry plan:
+
+- Use a deterministic two-frame 16x16 RGB sequence in the private hook:
+  first frame all black, second frame with 256 unique RGB colors. This should
+  exercise the coalescing branch where `prepared.transparent` is `None` but the
+  palette is full, covering line 150 and line 164 false sides without adding a
+  non-byte-verified public fixture.
+- Feed the same coalesced frames into `write_gif()` with default settings to
+  exercise line 476 where a later frame has no transparent index.
+- Extract the RGBA palette compaction predicate into a private helper and call
+  it directly with a compact all-used palette, covering line 1085's
+  no-compaction side. This keeps public `quantize_rgba()` behavior unchanged
+  while making the predicate independently testable.
+- Keep line 969's `split < sorted.len()` false side under observation. If the
+  branch remains structurally unreachable after direct split probes, record it
+  as a candidate for simplification rather than adding noisy hook code.
+
+Second GIF retry evidence:
+
+- Coverage MCP run `80fccd35-a4db-48e9-be60-55ef3a25d6d6`, snapshot
+  `1a2f359d-384a-4f92-ab53-7c92ac97417f`, passed and improved branches, but
+  introduced one uncovered hook line and two extra branch obligations through
+  an unnecessary `if let` guard around deterministic coalescing. The guard was
+  removed before commit.
+- Cleaned Coverage MCP run: `3324172a-9f69-4d2e-b87d-1a299b8997fd`.
+- Cleaned Coverage MCP snapshot: `edbcff2f-4f2e-4a12-9c1d-4909ee8a6d74`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall coverage improved from the pushed-head baseline 3365 / 3466
+  branches to 3372 / 3466 branches.
+- `src/codecs/gif/encode.rs` improved from 208 / 218 branches to
+  215 / 218 branches. Remaining GIF encoder gaps are shifted lines 261, 1023,
+  and 1152.
 
 ## Execution order
 

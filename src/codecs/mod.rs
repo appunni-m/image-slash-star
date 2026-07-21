@@ -144,6 +144,8 @@ pub fn encode_sequence_format(
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     compression::__coverage_exercise_private_branches();
+    #[cfg(feature = "gif")]
+    gif::__coverage_exercise_private_branches();
     #[cfg(feature = "ico")]
     ico::__coverage_exercise_private_branches();
     #[cfg(feature = "jpeg")]

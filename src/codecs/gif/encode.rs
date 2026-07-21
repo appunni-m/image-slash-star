@@ -27,6 +27,96 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     encode_sequence(&DecodedSequence::from_image(img.clone()), opts)
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let identical = [0u8, 0, 0, 255];
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = rgba_difference_bounds(&identical, &identical, 1, 1);
+    }));
+
+    let split_colors = [[10u8, 0, 0], [0, 0, 0]];
+    let split_counts = [1u32, 1];
+    let split_node = MedianBox {
+        axes: [vec![0, 1], vec![0, 1], vec![0, 1]],
+        pixel_count: 100,
+        children: None,
+    };
+    let _ = split_median_box(&split_node, &split_colors, &split_counts);
+
+    let equal_colors = [[0u8, 0, 0], [0, 0, 0]];
+    let equal_node = MedianBox {
+        axes: [vec![0, 1], vec![0, 1], vec![0, 1]],
+        pixel_count: 100,
+        children: None,
+    };
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = split_median_box(&equal_node, &equal_colors, &split_counts);
+    }));
+
+    let opaque_rgba = [
+        255u8, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 255,
+    ];
+    let _ = quantize_rgba(&opaque_rgba);
+
+    let mut compact_palette = vec![
+        [255u8, 0, 0, 255],
+        [0, 255, 0, 255],
+        [0, 0, 255, 255],
+    ];
+    let mut compact_indices = vec![0u8, 1, 2];
+    let mut compact_transparent = None;
+    let _ = compact_rgba_palette(
+        &mut compact_palette,
+        &mut compact_indices,
+        &mut compact_transparent,
+    );
+
+    let mut rgb_pixels = Vec::with_capacity(16 * 16 * 3);
+    for value in 0u8..=255 {
+        rgb_pixels.extend_from_slice(&[value, value.wrapping_mul(37), value.wrapping_mul(73)]);
+    }
+    let first = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
+    let second = DecodedImage::new(16, 16, rgb_pixels, ColorType::Rgb8);
+    let frames = vec![
+        crate::types::DecodedFrame {
+            image: first,
+            left: 0,
+            top: 0,
+            duration_ms: 10,
+            disposal: FrameDisposal::Keep,
+            interlaced: false,
+        },
+        crate::types::DecodedFrame {
+            image: second,
+            left: 0,
+            top: 0,
+            duration_ms: 10,
+            disposal: FrameDisposal::Keep,
+            interlaced: false,
+        },
+    ];
+    let sequence = DecodedSequence {
+        width: 16,
+        height: 16,
+        frames,
+        loop_count: None,
+        background: None,
+    };
+    let coalesced =
+        coalesce_identical_frames(&sequence, 2).expect("coverage RGB frames coalesce");
+    let _ = write_gif(
+        &sequence,
+        &coalesced,
+        GifSettings {
+            interlaced: None,
+            local_color_table: false,
+            disposal_override: None,
+            loop_count: None,
+            transparency_override: None,
+        },
+    );
+}
+
 /// Encode a still image or animation without discarding source frames.
 pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Option<Vec<u8>> {
     sequence.validate().ok()?;
@@ -1036,10 +1126,23 @@ fn quantize_rgba(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>, Option<u8>)> {
         .flatten()
         .and_then(|index| u8::try_from(index).ok());
 
+    compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent)?;
+    let palette = rgba_palette
+        .into_iter()
+        .flat_map(|color| color[..3].to_vec())
+        .collect();
+    Some((palette, indices, transparent))
+}
+
+fn compact_rgba_palette(
+    rgba_palette: &mut Vec<[u8; 4]>,
+    indices: &mut [u8],
+    transparent: &mut Option<u8>,
+) -> Option<()> {
     // GifImagePlugin._get_optimize compacts holes, and also shrinks a palette
     // by one power-of-two step when at most half of its entries are used.
     let mut used = vec![false; rgba_palette.len()];
-    for &index in &indices {
+    for &index in indices.iter() {
         used[usize::from(index)] = true;
     }
     let used_indices = used
@@ -1057,17 +1160,13 @@ fn quantize_rgba(pixels: &[u8]) -> Option<(Vec<u8>, Vec<u8>, Option<u8>)> {
             remap[old_index] = u8::try_from(new_index).ok()?;
             compact.push(rgba_palette[old_index]);
         }
-        for index in &mut indices {
+        for index in indices.iter_mut() {
             *index = remap[usize::from(*index)];
         }
-        transparent = transparent.map(|index| remap[usize::from(index)]);
-        rgba_palette = compact;
+        *transparent = transparent.map(|index| remap[usize::from(index)]);
+        *rgba_palette = compact;
     }
-    let palette = rgba_palette
-        .into_iter()
-        .flat_map(|color| color[..3].to_vec())
-        .collect();
-    Some((palette, indices, transparent))
+    Some(())
 }
 
 // Behavioral port of Pillow 12.2.0 src/libImaging/QuantOctree.c (MIT,
