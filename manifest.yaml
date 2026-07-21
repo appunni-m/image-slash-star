@@ -721,6 +721,22 @@ formats:
       description: Incompressible scanlines selecting a stored DEFLATE block
       source_asset: zlib_stored_source.png
       params: {'compression': 6}
+    - id: enc_compress_1_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng quick matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 1}
+    - id: enc_compress_3_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng early matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 3}
+    - id: enc_compress_6_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng medium matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 6}
+    - id: enc_compress_9_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng filtered matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 9}
     - id: enc_optimize
       description: Optimized adaptive filters with forced maximum compression
       params: {'optimize': True}

@@ -23,7 +23,7 @@ pub trait Pixel: Copy + Clone {
     /// Retrieve the value of the alpha channel for this pixel.
     #[inline]
     fn alpha(&self) -> Self::Subpixel {
-        if Self::HAS_ALPHA { self.to_luma_alpha().0[1] } else { Self::Subpixel::DEFAULT_MAX_VALUE }
+        self.to_luma_alpha().0[1]
     }
 
     /// Returns the channels of this pixel as a 4 tuple. If the pixel

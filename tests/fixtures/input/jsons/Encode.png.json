@@ -349,6 +349,90 @@
       }
     },
     {
+      "id": "enc_compress_1_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_3_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 3
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_6_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 6
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_9_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 9
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 9
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_optimize",
       "source_asset": "rgb.png",
       "source_format": "png",

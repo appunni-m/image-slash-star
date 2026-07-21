@@ -102,12 +102,11 @@ fn tokenize_level1_position(
             && data.get(candidate..candidate + 2)? == data.get(*position..*position + 2)?
         {
             let length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
-            // With this multiplicative hash, equal hashes and equal low
-            // sixteen input bits imply equal four-byte words.
-            debug_assert!(length >= MIN_MATCH);
-            tokens.push(Token::Match { length, distance });
-            *position = position.checked_add(length)?;
-            return Some(());
+            if length >= MIN_MATCH {
+                tokens.push(Token::Match { length, distance });
+                *position = position.checked_add(length)?;
+                return Some(());
+            }
         }
     }
 

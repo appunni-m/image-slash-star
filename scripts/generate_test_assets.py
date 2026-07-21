@@ -549,6 +549,20 @@ def gen_png():
     zlib_stored_source = Image.new("RGB", (64, 64))
     zlib_stored_source.putdata(noise_pixels)
     zlib_stored_source.save(d / "zlib_stored_source.png")
+    boundary_pixels = []
+    seed = 0xA53C_91E7
+    phrase = [(17, 29, 43), (19, 31, 47), (23, 37, 53), (29, 41, 59)]
+    for y in range(96):
+        for x in range(96):
+            if y % 6 in (0, 1, 2):
+                r, g, b = phrase[(x + y) % len(phrase)]
+                boundary_pixels.append(((r + x) & 255, (g + y * 3) & 255, (b + x + y) & 255))
+            else:
+                seed = (1_103_515_245 * seed + 12_345 + x + y * 97) & 0x7FFF_FFFF
+                boundary_pixels.append(((seed >> 16) & 255, (seed >> 8) & 255, seed & 255))
+    zlib_boundary_source = Image.new("RGB", (96, 96))
+    zlib_boundary_source.putdata(boundary_pixels)
+    zlib_boundary_source.save(d / "zlib_boundary_source.png")
     pattern_img("RGB", (8, 8)).save(d / "gif_rgb.png")
     high_color = Image.new("RGB", (17, 17))
     high_color.putdata(
