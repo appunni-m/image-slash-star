@@ -14,6 +14,8 @@ from Coverage MCP before each implementation sweep.
 - Result: 5 passed, 0 failed
 - Current snapshot: `41e480a1-67fd-4289-9c4a-5f02d7968531`
 - Current measured commit metadata: `7f1e33a55ecbe00c439f62ddc3040d18b559f309`
+- Current local HEAD after committing the BMP batch:
+  `f7be7efd47d466f721a5cf12ef0b10da56ac8fc8`
 - Lines: 24072 / 24078
 - Branches: 3424 / 3438
 - Functions: 1576 / 1576
@@ -36,6 +38,79 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Region-first continuation plan from snapshot `41e480a1`
+
+User direction for this continuation: improve regions first, then branches, and
+record reverse mapping before implementation. Coverage execution remains through
+Coverage MCP command `all-features-llvm-cov-json-nightly-branch`.
+
+Region priority from MCP file aggregates:
+
+| File | Missing regions | Branch gap | Reverse-mapped finding | Action |
+| --- | ---: | ---: | --- | --- |
+| `src/codecs/compression/zlib_ng.rs` | 288 | 0 | Mostly private zlib-ng matcher/tree `Option` and checked-index bookkeeping. Real callers pass chunk lengths derived from encoder scanline data and sum to `data.len()`. Existing hooks already cover several malformed private states; removing defensive checks needs a larger invariant proof against the zlib-ng port. | Defer edits for this batch. Keep as high-priority invariant-proof work rather than blindly deleting checks. |
+| `src/codecs/tiff/decode.rs` | 105 | 0 | Public TIFF fixtures already reached 100% lines/branches. Remaining regions are mostly parser/helper expression arms and `?` exits in private helpers. | Defer until a TIFF-specific reverse map identifies real fixture states versus private invariants. |
+| `src/codecs/webp/native/encoder.rs` | 72 | 0 | The missing regions are concentrated in the private VP8L bit writer and every `?` propagated from it (`write_huffman_tree`, `write_group`, `write_token_stream`, `apply_palette`, `encode_frame`, `encode_alpha`). Reverse mapping shows this writer only serializes into in-memory `Vec<u8>` buffers before the public `WebPEncoder<W>` writes RIFF chunks to the user-provided writer. `Vec<u8>` writes do not produce recoverable `io::Error`; allocation failure is not represented as `io::Error`. | Refactor the private VP8L `BitWriter` to target `&mut Vec<u8>` and make the VP8L bitstream helper stack infallible. Preserve fallibility for public `WebPEncoder<W>` RIFF/chunk writes. |
+| `src/codecs/gif/encode.rs` | 65 | 0 | Encoder regions are real quantization/coalescing/loop alternatives already covered at line/branch level. | Defer until WebP encoder refactor is measured. Prefer manifest encode fixtures if new GIF inputs are needed. |
+| `src/codecs/jpeg/encode/mod.rs` | 65 | 0 | Encoder regions are public encode strategy variants and progressive event internals. | Defer until WebP encoder refactor is measured. Prefer manifest encode fixtures or existing private hook states based on exact source mapping. |
+
+Validation for this batch:
+
+1. `cargo fmt --all --check`
+2. `cargo check --all-features`
+3. `env RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`
+5. Record measured region/branch movement here before further edits.
+
+Result from Coverage MCP run `a2e3b490-ec6e-4c7c-809f-d4faca42ba0a`,
+snapshot `8a431368-5439-411c-b093-80fde8c4b518`:
+
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 24068 / 24074 lines, 3424 / 3438 branches,
+  1576 / 1576 functions, 39597 / 40604 regions.
+- Net missing regions: `1070` down to `1007`.
+- `src/codecs/webp/native/encoder.rs`: `1740 / 1812` regions down to
+  `1704 / 1713`, so missing regions moved from `72` to `9`.
+- Branches were unchanged: remaining branch gaps are still
+  `src/codecs/webp/native/decoder.rs` (6),
+  `src/codecs/webp/native/vp8.rs` (6), and
+  `src/codecs/webp/native/lossless.rs` (2).
+
+Follow-up refinement before the next run:
+
+| File | Remaining source starts | Reverse-mapped finding | Action |
+| --- | --- | --- | --- |
+| `src/codecs/webp/native/encoder.rs` | palette packing lines 833/834 | Existing direct palette probes covered 1-2 and 17+ palette entries. The 3-4 and 5-16 packing-width states are real encoder states and do not require new Pillow fixtures because this is the private palette packer. | Add coverage-hook calls to `apply_palette()` with palette lengths 4 and 16. |
+| `src/codecs/webp/native/encoder.rs` | `WebPEncoder::encode()` lines 1162, 1164, 1165, 1166 | These are real external `Write` error paths after the in-memory VP8L frame is built. They are not image-content parity states. | Add coverage-hook fixed-buffer writers that fail at RIFF name, RIFF size, WEBP signature, and VP8L chunk write. |
+
+Result from Coverage MCP run `9e2639f7-c437-4208-956d-26411deeb291`,
+snapshot `cba0eac7-9cc1-451e-851e-bdd8dd6a4811`:
+
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 24111 / 24117 lines, 3424 / 3438 branches,
+  1577 / 1577 functions, 39668 / 40671 regions.
+- Net missing regions: `1007` down to `1003`.
+- `src/codecs/webp/native/encoder.rs`: `1704 / 1713` regions moved to
+  `1775 / 1780`; missing regions moved from `9` to `5`.
+- Raw LLVM source mapping identifies the remaining WebP encoder source start
+  as current line 1085, the `encode_alpha()` 1-2 color alpha-palette packing
+  arm. Add a two-value alpha hook input before re-running.
+
+Result from Coverage MCP run `08893e31-5981-4cd8-adc0-061acbbc6f49`,
+snapshot `f245ed96-51f4-4eec-b98a-400a0b94ab3d`:
+
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 24113 / 24119 lines, 3424 / 3438 branches,
+  1577 / 1577 functions, 39674 / 40676 regions.
+- Net missing regions: `1003` down to `1002`.
+- `src/codecs/webp/native/encoder.rs`: `1775 / 1780` regions moved to
+  `1781 / 1785`; missing regions moved from `5` to `4`.
+- `src/codecs/webp/native/encoder.rs` is now 100% lines, branches, and
+  functions. The remaining 4 regions have no zero-count source-region starts
+  in the current raw LLVM file map, so they are treated as
+  instantiation/expression mapping debt rather than a reverse-mappable public
+  image input.
 
 ## Dedicated generator/probe pass from snapshot `415ab006`
 

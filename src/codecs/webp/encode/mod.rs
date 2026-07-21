@@ -168,8 +168,7 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                     .chunks_exact(4)
                     .map(|pixel| pixel[3])
                     .collect::<Vec<_>>();
-                let alpha_chunk = super::native::encode_alpha(&alpha, img.width, img.height)
-                    .expect("Vec-backed alpha encoding does not return io errors");
+                let alpha_chunk = super::native::encode_alpha(&alpha, img.width, img.height);
                 vp8::encoder::encode_vp8_lossy_rgba(
                     &img.pixels,
                     img.width,
