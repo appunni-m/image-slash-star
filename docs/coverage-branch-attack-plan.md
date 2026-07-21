@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `e148aca1-a3a9-487b-baa3-f8a848674ea9`
-- Current measured commit metadata: `363e46a865e81d97ddc13c81c016b5f58ebdca91`
-- Current coverage source state: pushed `main` commit `363e46a`.
-- Lines: 25847 / 25851
+- Current snapshot: `3db81c73-3708-4e36-a8eb-2d65f42790c8`
+- Current measured commit metadata: `da898b22de9d1a37896c7d606b78f0637a521121`
+- Current coverage source state: working tree over pushed `main` commit
+  `da898b2`.
+- Lines: 25853 / 25857
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
-- Regions: 41729 / 42286
-- Remaining target: 4 lines, 6 branches, and 557 regions.
+- Regions: 41727 / 42275
+- Remaining target: 4 lines, 6 branches, and 548 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,57 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 74 plan: PNG decode redundant internal guard consolidation
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `da898b2`; latest code-changing
+  coverage re-anchor remains pushed commit `363e46a`.
+- Coverage MCP snapshot: `e148aca1-a3a9-487b-baa3-f8a848674ea9`.
+- Overall: `25847 / 25851` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41729 / 42286` regions.
+- Target file: `src/codecs/png/decode.rs`, currently `687 / 701` regions and
+  `90 / 90` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| `inflated_len()` row-byte and pass-byte multiplication | Keep the checked arithmetic. These guards protect huge valid headers, especially on narrower targets, before any allocation proves the size representable. |
+| `decode_scanlines()` sample count | Keep the checked arithmetic. It is the allocation-size gate for dimensions and channels. |
+| `unfilter_rows()` position and row-start math | Collapse only math already guarded by a successful byte fetch or row-buffer allocation: after `data.get(*position)` succeeds, `*position += 1` cannot overflow; after `rows` is allocated as `stride * height`, `row * stride` for `row < height` is representable. |
+| `build_image()` 16-bit byte capacities | `samples` is an already materialized `&[u16]`; allocating `samples.len() * 2` bytes cannot overflow for a valid Rust allocation. |
+| `Chunks::next()` fixed-size `try_into().ok()?` conversions | A successful `get(start..start + 4)` gives exactly four bytes, so the `TryInto` failure branch is unreachable. Replace with fixed array construction. |
+| `Chunks::next()` cursor advance after CRC read | Once `data.get(end..end + 4)` has succeeded, `end + 4` is already representable and in-bounds, so a second `checked_add(4)` is redundant. |
+| `Chunks::next()` payload `end = start + length` | Keep the checked arithmetic. Chunk length is attacker-controlled and still needs a malformed-input overflow/bounds gate. |
+
+Implementation plan:
+
+1. Update only `src/codecs/png/decode.rs`.
+2. Do not add coverage-only hooks or synthetic fixtures for this pass.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall without introducing
+   branch or line regressions.
+
+Measurement:
+
+- Coverage MCP run: `eea80f60-de4c-42e3-a8c6-beeac94ab2ea`.
+- Coverage MCP snapshot: `3db81c73-3708-4e36-a8eb-2d65f42790c8`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after PNG decode redundant guard consolidation:
+  `25853 / 25857` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41727 / 42275` regions.
+- Target file movement: `src/codecs/png/decode.rs` moved from
+  `687 / 701` regions to `685 / 690` regions; missing regions fell from
+  `14` to `5`, and branch coverage remained complete at `90 / 90`.
+- Net: aggregate missing regions fell from `557` to `548`. Remaining PNG decode
+  gaps are the retained huge-dimension, truncated-source, and chunk payload-end
+  guards; those should not be collapsed without a stronger invariant or a
+  fixture that proves they are input-reachable.
 
 ## Attempt 73 plan: ICO DIB u32-to-usize guard consolidation
 

@@ -194,11 +194,11 @@ fn unfilter_rows(
 
     for row in 0..height {
         let filter = *data.get(*position)?;
-        *position = position.checked_add(1)?;
+        *position += 1;
         let source_end = position.checked_add(stride)?;
         let source = data.get(*position..source_end)?;
         *position = source_end;
-        let row_start = row.checked_mul(stride)?;
+        let row_start = row * stride;
 
         for column in 0..stride {
             let left = if column >= bytes_per_pixel {
@@ -283,7 +283,7 @@ fn build_image(
             .map(|&sample| ((sample * 255) / maximum) as u8)
             .collect()
     } else if png_color == 4 && depth == 16 {
-        let mut bytes = Vec::with_capacity(samples.len().checked_mul(2)?);
+        let mut bytes = Vec::with_capacity(samples.len() * 2);
         for pair in samples.chunks_exact(2) {
             let luminance = (pair[0] >> 8) as u8;
             let alpha = (pair[1] >> 8) as u8;
@@ -295,7 +295,7 @@ fn build_image(
     } else if png_color == 3 || depth == 8 {
         samples.iter().map(|&sample| sample as u8).collect()
     } else {
-        let mut bytes = Vec::with_capacity(samples.len().checked_mul(2)?);
+        let mut bytes = Vec::with_capacity(samples.len() * 2);
         for &sample in samples {
             bytes.extend_from_slice(&sample.to_le_bytes());
         }
@@ -408,25 +408,30 @@ impl<'a> Iterator for Chunks<'a> {
             return None;
         }
         let result = (|| {
-            let length = u32::from_be_bytes(
-                self.data
-                    .get(self.position..self.position + 4)?
-                    .try_into()
-                    .ok()?,
-            ) as usize;
-            let kind: [u8; 4] = self
-                .data
-                .get(self.position + 4..self.position + 8)?
-                .try_into()
-                .ok()?;
-            let start = self.position.checked_add(8)?;
+            let length_bytes = self.data.get(self.position..self.position + 4)?;
+            let length = u32::from_be_bytes([
+                length_bytes[0],
+                length_bytes[1],
+                length_bytes[2],
+                length_bytes[3],
+            ]) as usize;
+            let kind_bytes = self.data.get(self.position + 4..self.position + 8)?;
+            let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
+            let start = self.position + 8;
             let end = start.checked_add(length)?;
             let payload = self.data.get(start..end)?;
-            let expected = u32::from_be_bytes(self.data.get(end..end + 4)?.try_into().ok()?);
+            let crc_end = end + 4;
+            let expected_bytes = self.data.get(end..crc_end)?;
+            let expected = u32::from_be_bytes([
+                expected_bytes[0],
+                expected_bytes[1],
+                expected_bytes[2],
+                expected_bytes[3],
+            ]);
             if crc32(&kind, payload) != expected {
                 return None;
             }
-            self.position = end.checked_add(4)?;
+            self.position = crc_end;
             Some(Chunk {
                 kind,
                 data: payload,
