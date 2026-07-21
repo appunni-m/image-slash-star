@@ -56,10 +56,12 @@ pub(super) fn decode_block(
             if k >= 64 {
                 break;
             }
-            let bits = match br.read_bits(size as u32) {
-                Some(b) => b,
-                None => return false,
-            };
+            // JPEG AC symbols encode at most 15 coefficient bits. The bit
+            // reader matches libjpeg by zero-padding exhausted entropy data to
+            // MIN_GET_BITS, so this read cannot fail on the AC path.
+            let bits = br
+                .read_bits(size as u32)
+                .expect("AC coefficient bit reads are zero-padded");
             block_zigzag[k] = extend(bits, size);
             k += 1;
         } else {
@@ -161,9 +163,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                             for col in 0..8 {
                                 let px = block_natural[row * 8 + col].clamp(0, 255) as u8;
                                 let bi = (block_y + row) * buf_w + (block_x + col);
-                                if bi < comp_buffers[scan_comp.comp_index].len() {
-                                    comp_buffers[scan_comp.comp_index][bi] = px;
-                                }
+                                comp_buffers[scan_comp.comp_index][bi] = px;
                             }
                         }
                     }
@@ -277,9 +277,10 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
         ))
     } else {
         debug_assert_eq!(info.num_components, 4);
-        // Pillow exposes Adobe four-component JPEGs as CMYK and selects its
-        // inverted CMYK raw mode whenever APP14 identifies Adobe data.
-        let inverted = info.adobe_transform.is_some();
+        // Pillow exposes four-component JPEGs through its inverted CMYK byte
+        // convention even when the Adobe APP14 marker is absent. The
+        // no-APP14 CMYK fixture keeps this tied to the oracle instead of the
+        // marker alone.
         let mut pixels = Vec::with_capacity(w * h * 4);
         for y in 0..h {
             for x in 0..w {
@@ -292,7 +293,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                     let source_y = y / vertical_ratio;
                     let sample =
                         comp_buffers[component][source_y * comp_buf_width[component] + source_x];
-                    pixels.push(if inverted { 255 - sample } else { sample });
+                    pixels.push(255 - sample);
                 }
             }
         }

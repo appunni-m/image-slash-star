@@ -101,6 +101,57 @@ def mutate_jpeg_payload(data, marker, offset, value):
     return bytes(mutated)
 
 
+def jpeg_segments(data, marker):
+    """Return every ``(start, payload_start, end)`` for a pre-scan segment."""
+    segments = []
+    position = 2
+    while position + 3 < len(data):
+        if data[position] != 0xFF:
+            position += 1
+            continue
+        while position < len(data) and data[position] == 0xFF:
+            position += 1
+        if position >= len(data):
+            break
+        code = data[position]
+        start = position - 1
+        position += 1
+        if code in (0xD8, 0xD9) or 0xD0 <= code <= 0xD7:
+            continue
+        if position + 2 > len(data):
+            break
+        length = struct.unpack(">H", data[position : position + 2])[0]
+        end = position + length
+        if code == marker:
+            segments.append((start, position + 2, end))
+        if code == 0xDA:
+            break
+        position = end
+    return segments
+
+
+def remove_jpeg_segments(data, marker):
+    """Remove every pre-scan segment with ``marker``."""
+    output = bytearray()
+    position = 0
+    for start, _, end in jpeg_segments(data, marker):
+        output.extend(data[position:start])
+        position = end
+    output.extend(data[position:])
+    return bytes(output)
+
+
+def mutate_jpeg_huffman_table_id(data, table_class, table_id):
+    """Move the first DHT table of ``table_class`` to ``table_id``."""
+    mutated = bytearray(data)
+    for _, payload_start, _ in jpeg_segments(mutated, 0xC4):
+        info = mutated[payload_start]
+        if info >> 4 == table_class:
+            mutated[payload_start] = (info & 0xF0) | table_id
+            return bytes(mutated)
+    raise ValueError(f"JPEG DHT class {table_class} not found")
+
+
 def zero_sample_jpeg(base, width, height, y_sampling):
     """Build a one-MCU RGB JPEG with standard-table zero coefficient blocks."""
     data = bytearray(base)
@@ -378,6 +429,9 @@ def gen_jpeg():
     img.save(d / "baseline_411.jpg", quality=85, subsampling=2)
     img.convert("L").save(d / "baseline_gray.jpg", quality=85)
     img.convert("CMYK").save(d / "baseline_cmyk.jpg", quality=85)
+    (d / "cmyk_no_adobe_app14.jpg").write_bytes(
+        remove_jpeg_segments((d / "baseline_cmyk.jpg").read_bytes(), 0xEE)
+    )
     Image.new("L", (2048, 1024), 128).save(d / "progressive_eob_source.jpg", quality=85)
     img.save(d / "progressive.jpg", quality=85, progressive=True)
     img.save(d / "progressive_spectral.jpg", quality=70, progressive=True)
@@ -408,6 +462,7 @@ def gen_jpeg():
     d.joinpath("truncated.jpg").write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00")
     d.joinpath("corrupt.jpg").write_bytes(b"\xff\xd8\xde\xad\xbe\xef")
     baseline = (d / "baseline.jpg").read_bytes()
+    baseline_gray = (d / "baseline_gray.jpg").read_bytes()
     d.joinpath("sampling_3x1.jpg").write_bytes(
         zero_sample_jpeg(baseline, 24, 8, 0x31)
     )
@@ -453,6 +508,12 @@ def gen_jpeg():
     d.joinpath("sof_missing_quant_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xC0, 8, 2)
     )
+    sparse_quant = bytearray(baseline_gray)
+    _, dqt_payload, _ = jpeg_segment(sparse_quant, 0xDB)
+    sparse_quant[dqt_payload] = (sparse_quant[dqt_payload] & 0xF0) | 3
+    _, sof_payload, _ = jpeg_segment(sparse_quant, 0xC0)
+    sparse_quant[sof_payload + 8] = 2
+    d.joinpath("sof_sparse_quant_table.jpg").write_bytes(bytes(sparse_quant))
     d.joinpath("dqt_bad_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xDB, 0, 4)
     )
@@ -476,6 +537,14 @@ def gen_jpeg():
     d.joinpath("sos_missing_ac_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xDA, 2, 0x02)
     )
+    sparse_dc = bytearray(mutate_jpeg_huffman_table_id(baseline_gray, 0, 3))
+    _, sos_payload, _ = jpeg_segment(sparse_dc, 0xDA)
+    sparse_dc[sos_payload + 2] = (2 << 4) | (sparse_dc[sos_payload + 2] & 0x0F)
+    d.joinpath("sos_sparse_dc_table.jpg").write_bytes(bytes(sparse_dc))
+    sparse_ac = bytearray(mutate_jpeg_huffman_table_id(baseline_gray, 1, 3))
+    _, sos_payload, _ = jpeg_segment(sparse_ac, 0xDA)
+    sparse_ac[sos_payload + 2] = (sparse_ac[sos_payload + 2] & 0xF0) | 2
+    d.joinpath("sos_sparse_ac_table.jpg").write_bytes(bytes(sparse_ac))
     sof_start, _, sof_end = jpeg_segment(baseline, 0xC0)
     d.joinpath("duplicate_sof.jpg").write_bytes(
         baseline[:sof_end] + baseline[sof_start:sof_end] + baseline[sof_end:]

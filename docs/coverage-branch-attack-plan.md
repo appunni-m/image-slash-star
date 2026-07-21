@@ -12,15 +12,14 @@ after the latest local coverage verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `aff1b610-2b7a-4fbc-b744-25e15431709c`
-- Current measured commit metadata: `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a`
-- Lines: 22696 / 22718
-- Branches: 3374 / 3452
+- Current snapshot: `97751138-7d88-42fe-9efa-042212b82598`
+- Current measured commit metadata: `0267a0c2ca84c53b7db9e9c1ff788de5e068c1c0`
+- Lines: 22696 / 22717
+- Branches: 3375 / 3448
 - Functions: 1546 / 1546
-- Remaining target: 22 lines and 78 branches.
+- Remaining target: 21 lines and 73 branches.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
-  - `src/codecs/jpeg/decode/decode.rs`: 65 / 70 branches, 5 missing.
   - `src/codecs/webp/native/encoder.rs`: 193 / 198 branches, 5 missing.
   - `src/codecs/jpeg/decode/parser.rs`: 91 / 98 branches, 7 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 162 branches, 8 missing.
@@ -33,6 +32,77 @@ after the latest local coverage verification.
   `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
   The preceding rustfmt pass did not change branch coverage, but split some
   one-line branch bodies into separately counted lines.
+
+## Planned JPEG baseline decoder batch
+
+Coverage MCP snapshot `a0e8c283-b3b1-46a2-90ec-3efba03ea16f`, measured at
+commit `0267a0c2ca84c53b7db9e9c1ff788de5e068c1c0`, reports
+`src/codecs/jpeg/decode/decode.rs` at 383 / 384 lines, 65 / 70 branches, and
+8 / 8 functions. This is the selected target after PNG because it is the next
+small non-noisy branch deficit; `webp/native/lossless.rs` remains smaller but
+is deferred due the noisy LLVM-normalized map already called out in this plan.
+
+Target branch/line gaps and reverse-mapping plan:
+
+- line 61: `br.read_bits(size)` returns `None` while decoding an AC literal.
+  Reverse mapping shows JPEG AC coefficient size is the low four bits of the
+  Huffman symbol (`1..=15` on this path), and `BitReader::fill()` zero-pads to
+  `MIN_GET_BITS` on exhausted entropy data. Therefore this `None` side cannot
+  be reached by valid or malformed JPEG entropy using this decoder state. Fix
+  type: unreachable-branch simplification to explicit zero-fill/invariant
+  handling, not a fabricated private state.
+- lines 164 and 166: `bi < comp_buffers[scan_comp.comp_index].len()` around
+  baseline block writes. Reverse mapping proves `block_x`, `block_y`, row and
+  column are bounded by the same MCU dimensions used to allocate the component
+  buffer: `num_mcus_x * h_samp * 8` by `num_mcus_y * v_samp * 8`. The false
+  side cannot be reached from parsed JPEG dimensions. Fix type:
+  unreachable-branch simplification to direct indexed assignment.
+- line 295: CMYK output inversion uses `if inverted { 255 - sample } else {
+  sample }`. Existing `baseline_cmyk.jpg` covers the Adobe APP14 inverted side.
+  Reverse-map the missing side with a four-component CMYK JPEG whose APP14
+  Adobe marker is removed or made non-Adobe while Pillow still decodes it.
+  First retry evidence showed Pillow still returns the inverted CMYK byte
+  convention for this no-APP14 fixture: Rust's false side produced every byte as
+  `255 - expected`. Fix type: Pillow-oracle manifest fixture plus
+  unreachable-branch simplification to always emit Pillow's inverted CMYK
+  convention in the baseline four-component output path.
+- line 399: quant-table validation misses the `is_none()` side after the table
+  vector is long enough. Reverse-map with a malformed grayscale JPEG where the
+  DQT table id is moved to 3 while SOF references quant table 2, leaving
+  `quant_tables[2] == None`. Fix type: malformed manifest fixture.
+- line 410: DC Huffman validation misses the `is_none()` side after the table
+  vector is long enough. Reverse-map with a malformed grayscale JPEG where the
+  DC DHT table id is moved to 3 while SOS references DC table 2. Fix type:
+  malformed manifest fixture.
+- line 415: AC Huffman validation misses the `is_none()` side after the table
+  vector is long enough. Reverse-map with a malformed grayscale JPEG where the
+  AC DHT table id is moved to 3 while SOS references AC table 2. Fix type:
+  malformed manifest fixture.
+
+Completed evidence:
+
+- First Coverage MCP run: `8f03a051-eee6-421e-920b-f0a0661da27b`; failed
+  with 509 passed, 2 failed, and no ingested snapshot. The only decode matrix
+  failure was `color_cmyk_raw`: every byte was inverted relative to Pillow,
+  proving the no-APP14 CMYK false side is not Pillow-parity.
+- Corrected Coverage MCP run: `e48f44f0-2f00-46aa-8b43-78b5f9a3c052`
+- Corrected Coverage MCP snapshot: `97751138-7d88-42fe-9efa-042212b82598`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22696 / 22717 lines, 3375 / 3448 branches, and
+  1546 / 1546 functions.
+- Target file: `src/codecs/jpeg/decode/decode.rs` improved from
+  383 / 384 lines, 65 / 70 branches, and 8 / 8 functions to
+  383 / 383 lines, 66 / 66 branches, and 8 / 8 functions. No branch gaps
+  remain in this file.
+- Reverse-mapped inputs and simplifications used:
+  - `cmyk_no_adobe_app14.jpg` proves Pillow still exposes no-APP14
+    four-component JPEGs through the inverted CMYK byte convention.
+  - `sof_sparse_quant_table.jpg` covers the quant-table `is_none()` guard side.
+  - `sos_sparse_dc_table.jpg` covers the DC Huffman table `is_none()` guard side.
+  - `sos_sparse_ac_table.jpg` covers the AC Huffman table `is_none()` guard side.
+  - The AC bit-read `None` side and component-buffer bounds false side were
+    removed as invariants after reverse mapping the bit-reader zero-padding and
+    MCU buffer allocation math.
 
 ## Planned PNG decoder malformed-fixture batch
 

@@ -117,6 +117,19 @@
       }
     },
     {
+      "id": "color_cmyk_raw",
+      "asset": "cmyk_no_adobe_app14.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/cmyk_no_adobe_app14.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "huffman_default",
       "asset": "baseline_default.jpg",
       "expect_error": false,
@@ -572,6 +585,19 @@
       }
     },
     {
+      "id": "malformed_markers_sof_sparse_quant_table",
+      "asset": "sof_sparse_quant_table.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_sparse_quant_table.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "malformed_markers_dqt_bad_table",
       "asset": "dqt_bad_table.jpg",
       "expect_error": true,
@@ -655,6 +681,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_missing_ac_table.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sos_sparse_dc_table",
+      "asset": "sos_sparse_dc_table.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sos_sparse_dc_table.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sos_sparse_ac_table",
+      "asset": "sos_sparse_ac_table.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sos_sparse_ac_table.jpg",
         "operations": [
           "PIL.Image.open",
           "load",

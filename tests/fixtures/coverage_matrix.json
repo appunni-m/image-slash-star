@@ -3999,6 +3999,24 @@
           ]
         },
         {
+          "id": "color_cmyk_raw",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "color",
+          "description": "Four-component CMYK without Adobe APP14 inversion",
+          "asset": "cmyk_no_adobe_app14.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_cmyk_no_adobe_app14_jpg.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "baseline_default.jpg",
           "category": "huffman",
           "description": "Default Huffman tables",
@@ -4594,6 +4612,19 @@
           "oracle_error_message": "broken data stream when reading image file"
         },
         {
+          "id": "malformed_markers_sof_sparse_quant_table",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sof_sparse_quant_table.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
           "id": "malformed_markers_dqt_bad_table",
           "type": "decode",
           "format": "jpeg",
@@ -4678,6 +4709,32 @@
           "category": "malformed",
           "description": "Invalid JPEG marker, table, frame, and scan structures",
           "asset": "sos_missing_ac_table.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "malformed_markers_sos_sparse_dc_table",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sos_sparse_dc_table.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "malformed_markers_sos_sparse_ac_table",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sos_sparse_ac_table.jpg",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -14722,12 +14779,12 @@
     }
   },
   "summary": {
-    "total_rows": 799,
-    "decode_rows": 507,
+    "total_rows": 803,
+    "decode_rows": 511,
     "encode_rows": 260,
     "formats": 8,
-    "assets_available": 500,
-    "decode_active": 501,
+    "assets_available": 504,
+    "decode_active": 505,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32
