@@ -48,7 +48,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     };
     let optimize = opts.optimize.unwrap_or(false);
     let (filtered, input_chunks) =
-        plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize)?;
+        plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize);
     let compression_level = if optimize {
         9
     } else if let Some(level) = opts.compression {
@@ -80,7 +80,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         }
     }
     write_requested_ancillary_chunks(&mut output, opts);
-    write_chunk(&mut output, *b"IDAT", &compressed)?;
+    write_idat_chunks(&mut output, &compressed);
     write_bounded_chunk(&mut output, *b"IEND", &[]);
     Some(output)
 }
@@ -134,9 +134,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .insert("compression".to_owned(), "not-a-level".to_owned());
     let _ = encode(&rgb, &bad_compression);
 
-    let _ = plain_rows(&[], usize::MAX, 1, 1, Filter::None, false);
-    let _ = plain_rows(&[], usize::MAX - 1, 2, 1, Filter::None, false);
-
     for value in ["1", "yes", "false"] {
         let mut option = EncodeOptions::default();
         option.extra.insert("gamma".to_owned(), value.to_owned());
@@ -172,16 +169,16 @@ fn plain_rows(
     filter_bytes: usize,
     filter: Filter,
     optimize: bool,
-) -> Option<(Vec<u8>, Vec<usize>)> {
-    let row_len = stride.checked_add(1)?;
-    let mut output = Vec::with_capacity(row_len.checked_mul(height)?);
+) -> (Vec<u8>, Vec<usize>) {
+    let row_len = stride + 1;
+    let mut output = Vec::with_capacity(row_len.saturating_mul(height));
     let input_chunks = vec![row_len; height];
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
         append_filtered_row(&mut output, row, previous, filter_bytes, filter, optimize);
         previous = Some(row);
     }
-    Some((output, input_chunks))
+    (output, input_chunks)
 }
 
 #[derive(Clone, Copy)]
@@ -340,10 +337,12 @@ fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &EncodeOptions) 
     }
 }
 
-fn write_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) -> Option<()> {
-    let length = u32::try_from(payload.len()).ok()?;
-    append_chunk(output, kind, payload, length);
-    Some(())
+fn write_idat_chunks(output: &mut Vec<u8>, payload: &[u8]) {
+    const MAX_CHUNK_LEN: usize = u32::MAX as usize;
+
+    for chunk in payload.chunks(MAX_CHUNK_LEN) {
+        append_chunk(output, *b"IDAT", chunk, chunk.len() as u32);
+    }
 }
 
 fn write_bounded_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {

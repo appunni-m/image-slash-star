@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `53d44b93-8149-41db-9a05-3981da60e12b`
-- Current measured commit metadata: `5656ea79e612be2b132db765f1795ba171e3a68e`
-- Current source state: GIF decode tolerated-malformed and invariant sweep,
+- Current snapshot: `d1eb3793-aa57-4966-bdd1-1284bb3be0cf`
+- Current measured commit metadata: `d6c95c6ab1fb37e4e8a0330b78161ba6ead4f268`
+- Current source state: PNG encode validated-row and IDAT chunk invariant sweep,
   measured before committing the sweep.
-- Lines: 24365 / 24371
+- Lines: 24363 / 24369
 - Branches: 3424 / 3438
 - Functions: 1578 / 1578
-- Regions: 39826 / 40600
-- Remaining target: 6 lines, 14 branches, and 774 regions.
+- Regions: 39813 / 40584
+- Remaining target: 6 lines, 14 branches, and 771 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -37,6 +37,8 @@ from Coverage MCP before each implementation sweep.
     551 / 551 regions.
   - `src/codecs/gif/decode.rs`: 72 / 72 branches and now
     581 / 581 regions.
+  - `src/codecs/png/encode.rs`: 30 / 30 branches and now
+    548 / 548 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -292,6 +294,80 @@ Result:
     removes the now-redundant fallible sequence validation.
   - `Input::read_bytes()` now checks requested length against remaining bytes
     and slices directly after the bound is proven.
+
+## Attempt 21 plan: PNG encode validated-row and IDAT chunk invariants
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `d6c95c6` after the GIF decode sweep.
+- Coverage MCP snapshot: `53d44b93-8149-41db-9a05-3981da60e12b`.
+- Overall: `24365 / 24371` lines, `3424 / 3438` branches,
+  `1578 / 1578` functions, and `39826 / 40600` regions.
+- Target file: `src/codecs/png/encode.rs` at `301 / 301` lines,
+  `30 / 30` branches, `24 / 24` functions, and `561 / 564` regions.
+
+Source-mapped missing region entries:
+
+- line 51: failure side of `plain_rows(...)?` in `encode()`.
+- line 83: failure side of `write_chunk(...)?` for the `IDAT` chunk.
+- line 344: failure side of `u32::try_from(payload.len()).ok()?` inside
+  `write_chunk()`.
+
+Reverse-mapped finding:
+
+| Region | Finding | Action |
+| --- | --- | --- |
+| `plain_rows(...)?` | `encode()` now calls `img.validate().ok()?` before selecting PNG-supported modes. After validation, dimensions are nonzero, `pixels.len()` matches the selected mode, and per-row byte counts are derived from validated image state. The old `plain_rows()` failures only model impossible arithmetic states after validation. | Make `plain_rows()` infallible and remove coverage-hook calls that only exercise impossible checked-arithmetic failures. |
+| `IDAT write_chunk(...)?` | PNG chunk length is a format boundary, not an all-or-nothing encoder failure. PNG permits multiple `IDAT` chunks carrying one zlib stream. Rejecting a compressed stream larger than `u32::MAX` is stricter than needed. | Replace the fallible single `write_chunk()` with infallible `write_idat_chunks()` that splits the compressed zlib payload into bounded `IDAT` chunks. Preserve an empty-payload chunk for robustness even though normal compression is non-empty. |
+| `u32::try_from(payload.len())` | After bounded `IDAT` splitting, fixed and ancillary chunks already use bounded writers, and the generic fallible chunk helper is no longer needed. | Remove `write_chunk()` rather than adding a fake multi-gigabyte fixture or independent helper. |
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. Manifest-driven encode coverage/parity test for the PNG path, or the full
+   coverage matrix if the test names are not targetable.
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+6. Record measured movement here, then commit and push.
+
+First measurement:
+
+- Coverage MCP run: `7c7106dd-7b1b-4669-9222-097680de99db`.
+- Coverage MCP snapshot: `32d98169-4aa8-4a5a-af84-3fc79024e2f1`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24365 / 24373` lines, `3425 / 3440` branches,
+  `1578 / 1578` functions, and `39816 / 40592` regions.
+- Target file movement: `src/codecs/png/encode.rs` moved from
+  `301 / 301` lines, `30 / 30` branches, `24 / 24` functions,
+  and `561 / 564` regions to `301 / 303` lines, `31 / 32` branches,
+  `24 / 24` functions, and `551 / 556` regions.
+- Decision: do not keep the empty-payload `IDAT` fallback. It introduced an
+  uncovered branch and two uncovered lines, and reverse mapping shows normal
+  callers always pass the output of `compress_zlib_chunked()`, which is a
+  non-empty zlib stream for valid images. Remove the empty-payload guard rather
+  than adding a fake private test for an unreachable public state.
+
+Second measurement:
+
+- Coverage MCP run: `41934009-11cd-4057-97db-11ca6dd1fa12`.
+- Coverage MCP snapshot: `d1eb3793-aa57-4966-bdd1-1284bb3be0cf`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24363 / 24369` lines, `3424 / 3438` branches,
+  `1578 / 1578` functions, and `39813 / 40584` regions.
+- Net missing regions for the retained code: `774` down to `771`.
+- Target file movement: `src/codecs/png/encode.rs` moved from
+  `301 / 301` lines, `30 / 30` branches, `24 / 24` functions,
+  and `561 / 564` regions to `299 / 299` lines, `30 / 30` branches,
+  `24 / 24` functions, and `548 / 548` regions.
+- Implemented:
+  - `plain_rows()` is now infallible because `encode()` validates dimensions,
+    modes, and pixel layout before deriving row strides.
+  - PNG `IDAT` emission now writes the compressed zlib stream as one or more
+    bounded `IDAT` chunks instead of rejecting streams larger than one PNG
+    chunk.
+  - The generic fallible chunk writer and impossible coverage-only row-overflow
+    probes were removed.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 
