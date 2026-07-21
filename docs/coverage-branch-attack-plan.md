@@ -885,6 +885,72 @@ Result:
     transform parsing, Huffman-code construction, image-data decoding, and
     `BitReader` private paths.
 
+## Attempt 29 plan: VP8L transform parser short-read boundaries
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `ef68445` after the VP8L header sweep.
+- Coverage MCP snapshot: `af8c63e5-3ba5-4027-9fad-b0c7d3697a52`. This
+  snapshot was measured on source-equivalent content before committing
+  `ef68445`.
+- Overall: `24457 / 24463` lines, `3430 / 3444` branches,
+  `1580 / 1580` functions, and `39869 / 40605` regions.
+- Target file: `src/codecs/webp/native/lossless.rs` at `553 / 554`
+  lines, `108 / 110` branches, `27 / 27` functions, and
+  `869 / 917` regions.
+- Raw zero-count region entries in `lossless.rs`: `44`.
+
+MCP/raw reverse map for the selected transform parser cluster:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 195 | Transform type read | Transform-present flag is buffered, but the two-bit transform type is unavailable. |
+| 197 | Duplicate-transform guard | Decoder state already has the indicated transform populated and the stream asks for it again. |
+| 208 | Predictor size-bits read | Predictor transform type is buffered, but its three-bit size field is unavailable. |
+| 217 | Predictor nested stream | Predictor size field is buffered, but the nested predictor image stream is truncated. |
+| 227 | Color transform size-bits read | Color transform type is buffered, but its three-bit size field is unavailable. |
+| 236 | Color transform nested stream | Color transform size field is buffered, but the nested transform image stream is truncated. |
+| 250 | Color-indexing table-size read | Color-indexing transform type is buffered, but its eight-bit table-size field is unavailable. |
+| 253 | Color-indexing nested stream | Color-indexing table-size field is buffered, but the nested palette stream is truncated. |
+
+Selected action:
+
+- Add a tiny coverage-only helper that creates a `LosslessDecoder` with an
+  explicitly preloaded `BitReader` buffer and empty backing reader.
+- Exercise the exact buffered states above through `read_transforms()`.
+- Keep this in the private hook. These are internal VP8L transform-parser cut
+  points and duplicate-state invariants; public WebP behavior remains tested by
+  manifest/Pillow fixtures.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Measurement and decision:
+
+- Coverage MCP run: `9399f2c9-d359-4451-9b4c-876db22e7c8f`.
+- Coverage MCP snapshot: `ca8751bd-eab2-4a99-8206-be48aeb7fd33`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall with the hook attempt: `24478 / 24484` lines,
+  `3430 / 3444` branches, `1581 / 1581` functions, and
+  `39894 / 40630` regions.
+- Net missing regions: unchanged at `736`.
+- Target file movement: `src/codecs/webp/native/lossless.rs` moved from
+  `869 / 917` regions to `894 / 942` regions, so the hook code covered itself
+  but did not reduce aggregate missing regions.
+- Raw zero-count region entries in `lossless.rs`: `44` down to `36`, but the
+  aggregate region target did not move.
+- Decision: revert the transform-parser hook code before commit. Do not spend
+  more time adding VP8L transform parser hook states unless the aggregate
+  coverage model can be made to move or a public manifest fixture naturally
+  covers the path.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
