@@ -12,8 +12,8 @@ after the latest pushed-head verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `45d0cf57-072b-4d3a-a50e-8bd48be7ce5f`
-- Current measured commit metadata: `1a2cc62e96f69c3d0f4f78a087f1b018645857c4`
+- Current snapshot: `cadf1be3-57a2-4afa-b3fc-1bb7b09bf8de`
+- Current measured commit metadata: `863040deb907c5c8c7334b801aadfdbdc6f91ad1`
 - Lines: 22213 / 22214
 - Branches: 3358 / 3466
 - Functions: 1534 / 1534
@@ -287,6 +287,13 @@ First retry evidence:
   1534 / 1534 functions. `histogram.rs` is now 530 / 530 lines,
   110 / 112 branches, and 31 / 31 functions. Remaining histogram gaps are
   line 435 and line 524.
+- Pushed-head verification run
+  `a38eefde-529e-4368-8d72-1f070691d1e3`, snapshot
+  `cadf1be3-57a2-4afa-b3fc-1bb7b09bf8de`, commit
+  `863040deb907c5c8c7334b801aadfdbdc6f91ad1`; passed with 5 passed,
+  0 failed. Pushed-head overall coverage is 22213 / 22214 lines,
+  3358 / 3466 branches, and 1534 / 1534 functions. Histogram remains
+  530 / 530 lines, 110 / 112 branches, and 31 / 31 functions.
 
 ## Planned WebP native encoder private-branch batch
 
