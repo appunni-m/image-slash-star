@@ -582,4 +582,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
     }
     let _ = stochastic_combine(&mut no_pairs, 4);
+
+    let mut mergeable = Vec::new();
+    for _ in 0..24 {
+        let mut histogram = Histogram::new(0);
+        histogram.add_token(Token::Literal(0xff00_0000), 1);
+        histogram.analyze();
+        mergeable.push(histogram);
+    }
+    let _ = stochastic_combine(&mut mergeable, 1);
+
+    let mut distinct = Vec::new();
+    for index in 0..8 {
+        let mut histogram = Histogram::new(0);
+        histogram.add_token(Token::Literal(0xff00_0000 | index), 1);
+        histogram.analyze();
+        distinct.push(histogram);
+    }
+    let _ = stochastic_combine(&mut distinct, 1);
+
+    let small_tokens = [
+        Token::Literal(0xff00_0000),
+        Token::Literal(0xff00_0001),
+        Token::Literal(0xff00_0002),
+        Token::Literal(0xff00_0003),
+    ];
+    let _ = cluster(&small_tokens, 4, 1, 0, 100, 0);
+    let _ = cluster(&small_tokens, 4, 1, 0, 0, 0);
+
+    let many_tokens = (0..(2 * BIN_SIZE + 1))
+        .map(|index| Token::Literal(0xff00_0000 | index as u32))
+        .collect::<Vec<_>>();
+    let _ = cluster(&many_tokens, many_tokens.len(), 1, 0, 99, 0);
 }

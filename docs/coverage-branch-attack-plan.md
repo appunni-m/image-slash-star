@@ -12,12 +12,12 @@ after the zlib-ng compressor private-branch batch.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `edcb6ce0-6419-4caa-9960-8eefe8054c07`
-- Current measured commit metadata: `06624697151612ff8f0028eb18b7fc4066af89dd`
-- Lines: 22015 / 22016
-- Branches: 3334 / 3466
-- Functions: 1527 / 1527
-- Remaining target: 1 line and 132 branches.
+- Current snapshot: `b1aae7b6-1cf6-4e47-af58-ef0cc33d5d55`
+- Current measured commit metadata: `43bbe96defe4b77d9056f025ddb20799b6760574`
+- Lines: 22044 / 22045
+- Branches: 3335 / 3466
+- Functions: 1528 / 1528
+- Remaining target: 1 line and 131 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -156,6 +156,53 @@ Completed evidence:
 - Target file: `src/codecs/webp/native/encoder/backward_refs.rs` is
   857 / 857 lines, 210 / 212 branches, and 45 / 45 functions. Remaining target
   gaps in this file are line 115 and line 141.
+
+## Planned WebP histogram private-branch batch
+
+Coverage MCP pushed-head snapshot `edcb6ce0-6419-4caa-9960-8eefe8054c07`
+reports `src/codecs/webp/native/encoder/histogram.rs` at 474 / 474 lines,
+106 / 112 branches, and 29 / 29 functions. The remaining branch lines are:
+
+- line 367: `entropy_bin_combine()` skips a same-bin candidate when
+  `add_eval()` cannot combine below the computed threshold. Add a direct
+  same-bin histogram pair that makes `add_eval()` return `None` inside the
+  entropy-bin loop.
+- line 410: `stochastic_combine()` breaks early when its bounded random pair
+  queue reaches nine entries. Add enough mutually mergeable histograms to fill
+  the queue.
+- line 413: `stochastic_combine()` continues when no candidate pair survived
+  the update threshold. Add enough distinct/no-merge histograms to keep the
+  queue empty for an iteration.
+- line 435: after merging one stochastic pair, queued pairs touching the moved
+  cluster are recomputed and dropped if `update_pair()` fails. Add a crafted
+  queue/match set where this recomputation fails.
+- line 517: `cluster()` invokes entropy-bin pre-combine only when the used
+  cluster count is greater than `2 * BIN_SIZE` and quality is below 100. Add a
+  deterministic private cluster call with more than 128 used one-pixel
+  histograms and `quality < 100`.
+- line 524: `cluster()` runs greedy cleanup only if stochastic combine reaches
+  the quality threshold. Add complementary private cluster calls where
+  stochastic combine returns true and false.
+
+No manifest fixture is the right first move for this batch because these
+branches are private lossless-WebP histogram clustering heuristics after
+tokens have already been produced. The safe oracle is deterministic token and
+histogram state in the existing coverage-only hook, then the approved Coverage
+MCP line+branch run.
+
+Completed evidence:
+
+- First Coverage MCP run: `044e9aa9-74fa-43fc-9d09-2b663917c659`, snapshot
+  `275d6b6c-eeee-4ba5-840c-271098f8dde6`; passed and improved one branch but
+  introduced uncovered source lines because `rustfmt` split previously
+  one-line uncovered branch bodies. That shape was not acceptable.
+- Corrected Coverage MCP run: `937638c9-2f85-4771-8f54-458cf0ce04e9`
+- Corrected Coverage MCP snapshot: `b1aae7b6-1cf6-4e47-af58-ef0cc33d5d55`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22044 / 22045 lines, 3335 / 3466 branches, 1528 / 1528 functions.
+- Target file: `src/codecs/webp/native/encoder/histogram.rs` is
+  503 / 503 lines, 107 / 112 branches, and 30 / 30 functions. Remaining target
+  gaps in this file are line 367, line 410, line 435, line 517, and line 524.
 
 ## Planned DEFLATE malformed-zlib private-probe batch
 
