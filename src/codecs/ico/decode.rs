@@ -79,7 +79,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 /// Decode a single ICO directory entry by index.
 fn decode_entry(data: &[u8], index: usize, cursor: bool) -> Option<DecodedImage> {
     let entry_offset = ICO_HEADER_SIZE + index * ICO_DIR_ENTRY_SIZE;
-    let entry = data.get(entry_offset..entry_offset + ICO_DIR_ENTRY_SIZE)?;
+    let entry = &data[entry_offset..entry_offset + ICO_DIR_ENTRY_SIZE];
 
     // Directory entry fields:
     //   byte 0:    width (0 = 256)
@@ -135,17 +135,24 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> Option<DecodedImage>
 /// Decode a CUR DIB using Pillow's BMP semantics: retain its indexed mode and
 /// read only the XOR plane represented by half of the stored DIB height.
 fn decode_cur_bmp(data: &[u8]) -> Option<DecodedImage> {
-    let header_size = u32::from_le_bytes(data.get(..4)?.try_into().ok()?) as usize;
+    let header_size_bytes = data.get(..4)?;
+    let header_size = u32::from_le_bytes([
+        header_size_bytes[0],
+        header_size_bytes[1],
+        header_size_bytes[2],
+        header_size_bytes[3],
+    ]) as usize;
     if header_size < 40 || data.len() < header_size {
         return None;
     }
-    let stored_height = i32::from_le_bytes(data.get(8..12)?.try_into().ok()?);
-    let actual_height = stored_height.checked_div(2)?;
-    let bits = u16::from_le_bytes(data.get(14..16)?.try_into().ok()?);
-    let colors_used = u32::from_le_bytes(data.get(32..36)?.try_into().ok()?);
+    let header = &data[..40];
+    let stored_height = i32::from_le_bytes([header[8], header[9], header[10], header[11]]);
+    let actual_height = stored_height / 2;
+    let bits = u16::from_le_bytes([header[14], header[15]]);
+    let colors_used = u32::from_le_bytes([header[32], header[33], header[34], header[35]]);
     let palette_entries = if bits <= 8 {
         (if colors_used == 0 {
-            1u32.checked_shl(u32::from(bits))?
+            1u32 << bits
         } else {
             colors_used
         }) as usize
@@ -255,8 +262,8 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
     // Pillow IcoImagePlugin reads the padded AND mask from the end of the DIB
     // entry. Its BMP writer may emit fewer explicit mask bytes, in which case
     // this deliberately overlaps the tail of the XOR bitmap as Pillow does.
-    let mask_row_size = (width as usize).div_ceil(32).checked_mul(4)?;
-    let mask_size = mask_row_size.checked_mul(height as usize)?;
+    let mask_row_size = (width as usize).div_ceil(32) * 4;
+    let mask_size = mask_row_size * height as usize;
     // A valid 24-bit XOR plane is always larger than its mask, so the slice is
     // present once `pixels_raw` above succeeded. Pillow overlaps the XOR tail
     // when explicit mask bytes are omitted.
@@ -460,8 +467,8 @@ fn decode_ico_bmp_1bpp(
 }
 
 fn ico_and_mask(data: &[u8], width: u32, height: u32) -> Option<(&[u8], usize)> {
-    let row_size = (width as usize).div_ceil(32).checked_mul(4)?;
-    let size = row_size.checked_mul(height as usize)?;
+    let row_size = (width as usize).div_ceil(32) * 4;
+    let size = row_size * height as usize;
     Some((data.get(data.len().checked_sub(size)?..)?, row_size))
 }
 

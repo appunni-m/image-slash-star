@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ecb7cd67-c675-4d89-a4a0-7dc42cbf7918`
-- Current measured commit metadata: `38f8b843fe0503e45ad2f7effaf5ca0b5ae00423`
-- Current coverage source state: pushed `main` commit `38f8b84`.
-- Lines: 25853 / 25857
+- Current snapshot: `4ea7fef9-6601-4319-b6f0-a74bf0bbaf7d`
+- Current measured commit metadata: `46404173f2f8ba9185ad9bd9e189d86feb379e6a`
+- Current coverage source state: working tree over pushed `main` commit
+  `4640417`.
+- Lines: 25860 / 25864
 - Branches: 3448 / 3454
 - Functions: 1594 / 1594
-- Regions: 41727 / 42275
-- Remaining target: 4 lines, 6 branches, and 548 regions.
+- Regions: 41711 / 42245
+- Remaining target: 4 lines, 6 branches, and 534 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,64 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 75 plan: ICO decode fixed-header and bounded-mask cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `4640417`; latest code-changing
+  coverage re-anchor is pushed commit `38f8b84`.
+- Coverage MCP snapshot: `ecb7cd67-c675-4d89-a4a0-7dc42cbf7918`.
+- Overall: `25853 / 25857` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41727 / 42275` regions.
+- Target file: `src/codecs/ico/decode.rs`, currently `1079 / 1113` regions and
+  `62 / 62` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| Directory entry by selected index | `decode()` validates the full directory table before selecting `best_idx`; the private `decode_entry()` call is therefore in-bounds. |
+| CUR `BITMAPINFOHEADER` scalar reads | A CUR DIB needs the first 40-byte header before any field is useful. Reading a single 40-byte header slice removes unreachable fixed-length `TryInto` failures without accepting new malformed input. |
+| CUR stored height division | `checked_div(2)` cannot fail; the only overflowing signed division is `MIN / -1`, not division by positive two. |
+| CUR default palette shift | This path is guarded by `bits <= 8`, so `1u32 << bits` is representable. |
+| CUR `pixel_offset`, `file_size`, and serialized BMP fields | Keep the checked arithmetic and `u32::try_from` gates. These values are written to BMP header fields and must not truncate. |
+| ICO mask row sizing | Non-CUR DIB dimensions are bounded to `<= 16384` before the bpp-specific decoders run; `(width.div_ceil(32) * 4)` and multiplication by `height` are representable for these private call paths. |
+| Palette size, palette slice, and AND-mask truncation checks | Keep these guards. `colors_used` and the DIB payload are attacker-controlled, and malformed inputs should return `None` instead of panicking or truncating. |
+
+Implementation plan:
+
+1. Update only `src/codecs/ico/decode.rs`.
+2. Collapse the fixed directory/header/shift/mask-row guards listed above.
+3. Do not touch serialized BMP size checks or palette/mask bounds checks.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- First Coverage MCP run: `1731729e-17dc-4d9b-9b04-d8cad024c3a7`,
+  snapshot `16140e4e-3749-4798-9cda-683640502f92`; result 5 passed, 0
+  failed, but discarded because it regressed ICO branch coverage from `62 / 62`
+  to `61 / 62`. Root cause: moving CUR parsing to `data.get(..40)` before the
+  header-size check bypassed the existing fixture that covers
+  `data.len() < header_size`.
+- Adjusted Coverage MCP run: `b3b04d17-65cb-49b9-bb62-6a0c393c3a38`.
+- Adjusted Coverage MCP snapshot: `4ea7fef9-6601-4319-b6f0-a74bf0bbaf7d`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adjusted ICO fixed-header and bounded-mask cleanup:
+  `25860 / 25864` lines, `3448 / 3454` branches,
+  `1594 / 1594` functions, and `41711 / 42245` regions.
+- Target file movement: `src/codecs/ico/decode.rs` moved from
+  `1079 / 1113` regions to `1063 / 1083` regions; missing regions fell from
+  `34` to `20`, and branch coverage remained complete at `62 / 62`.
+- Net: aggregate missing regions fell from `548` to `534`. Remaining ICO decode
+  gaps are still bound to serialized BMP size checks, palette/mask truncation,
+  and attacker-controlled palette counts; those should stay unless a fixture
+  proves an unhit branch is input-reachable.
 
 ## Attempt 74 plan: PNG decode redundant internal guard consolidation
 
