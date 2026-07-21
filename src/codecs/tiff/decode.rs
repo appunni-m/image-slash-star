@@ -862,6 +862,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out
     }
 
+    fn single_entry_ifd(tag: u16, field_type: u16, count: u32, value: [u8; 4]) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&1u16.to_le_bytes());
+        put_entry(&mut out, tag, field_type, count, value);
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out
+    }
+
     let _ = decode(&tiny_tiff(0, [0, 0, 0, 0], 1, 1, 1, 1, 1));
     let _ = decode(&tiny_tiff(2, [8, 0, 16, 0], 1, 1, 1, 1, 1));
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 0, 1, 1, 1));
@@ -883,6 +891,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 1);
     let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 2);
     let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 3);
+    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 4);
     let palette = [0, 0xffff, 0, 0, 0xffff, 0, 0, 0xffff, 0];
     let _ = convert_pixels(
         2,
@@ -895,13 +904,68 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(&palette),
         1,
     );
+    let short_palette = [0, 0, 0];
+    let _ = convert_pixels(1, 1, vec![], 3, 1, 1, Endian::Little, Some(&palette), 1);
+    let _ = convert_pixels(1, 1, vec![0], 3, 1, 1, Endian::Little, None, 1);
+    let _ = convert_pixels(
+        1,
+        1,
+        vec![0],
+        3,
+        1,
+        1,
+        Endian::Little,
+        Some(&short_palette),
+        1,
+    );
+    let bad_red_palette = [0x1_0000, 0, 0, 0, 0, 0];
+    let _ = convert_pixels(
+        1,
+        1,
+        vec![0],
+        3,
+        1,
+        1,
+        Endian::Little,
+        Some(&bad_red_palette),
+        1,
+    );
+    let bad_green_palette = [0, 0, 0x1_0000, 0, 0, 0];
+    let _ = convert_pixels(
+        1,
+        1,
+        vec![0],
+        3,
+        1,
+        1,
+        Endian::Little,
+        Some(&bad_green_palette),
+        1,
+    );
+    let bad_blue_palette = [0, 0, 0, 0, 0x1_0000, 0];
+    let _ = convert_pixels(
+        1,
+        1,
+        vec![0],
+        3,
+        1,
+        1,
+        Endian::Little,
+        Some(&bad_blue_palette),
+        1,
+    );
     let _ = convert_pixels(1, 1, vec![1, 2, 3, 4], 6, 3, 8, Endian::Little, None, 1);
+    let _ = convert_pixels(1, 1, vec![], 9, 1, 8, Endian::Little, None, 1);
+    let _ = unpack_indices(&[], 1, 1, 1);
+    let _ = unpack_indices(&[0], 9, 1, 1);
+    let _ = unpack_indices(&[0], 1, 1, 9);
 
     let _ = decode_packbits(&[], 0);
     let _ = decode_packbits(&[0], 0);
     let _ = decode_packbits(&[0, 7], 1);
     let _ = decode_packbits(&[0x80, 0, 9], 1);
     let _ = decode_packbits(&[0xff, 5], 2);
+    let _ = decode_packbits(&[0xff], 2);
     let _ = decode_packbits(&[2, 1], 3);
 
     fn pack_lzw_9(codes: &[u16]) -> Vec<u8> {
@@ -937,6 +1001,64 @@ pub(crate) fn __coverage_exercise_private_branches() {
         COMPRESSION_LZW as u16,
         &pack_lzw_9(&[65, 66, 67]),
     ));
+
+    let mut short_reader = MsbBits::new(&[0]);
+    let _ = short_reader.read(9);
+    let mut overflow_reader = MsbBits {
+        data: &[0],
+        bit: usize::MAX,
+    };
+    let _ = overflow_reader.read(1);
+    let _ = data_bit(&[], 0);
+    let _ = data_bit(&[0], 8);
+    let _ = Endian::Little.u16(&[0]);
+    let _ = Endian::Big.u16(&[0]);
+    let _ = Endian::Little.u32(&[0, 0, 0]);
+    let _ = Endian::Big.u32(&[0, 0, 0]);
+    let mut endian_bytes = [0; 4];
+    Endian::Little.write_u16(1, &mut endian_bytes[..2]);
+    Endian::Big.write_u32(1, &mut endian_bytes);
+
+    let _ = Directory::parse(&[], 0, Endian::Little);
+    let _ = Directory::parse(&[], usize::MAX, Endian::Little);
+    let oversized_count = 4097u16.to_le_bytes();
+    let _ = Directory::parse(&oversized_count, 0, Endian::Little);
+    let truncated_entry = 1u16.to_le_bytes();
+    let _ = Directory::parse(&truncated_entry, 0, Endian::Little);
+    let _ = Directory::parse(&single_entry_ifd(300, 13, 1, [0; 4]), 0, Endian::Little);
+    let _ = Directory::parse(
+        &single_entry_ifd(300, 5, 1, u32::MAX.to_le_bytes()),
+        0,
+        Endian::Little,
+    );
+
+    let overflow_values = Directory {
+        data: &[0],
+        endian: Endian::Little,
+        entries: vec![Entry {
+            tag: 1,
+            field_type: 1,
+            count: 1,
+            value_position: 0,
+            inline_position: usize::MAX,
+            byte_len: 1,
+        }],
+    };
+    let _ = overflow_values.values(1);
+    let unsupported_values = Directory {
+        data: &[0, 0, 0, 0],
+        endian: Endian::Little,
+        entries: vec![Entry {
+            tag: 1,
+            field_type: 5,
+            count: 1,
+            value_position: 0,
+            inline_position: 0,
+            byte_len: 1,
+        }],
+    };
+    let _ = unsupported_values.values(1);
+    let _ = unsupported_values.values(2);
 
     let mut predicted = vec![1, 2, 3, 4, 5, 6];
     reverse_horizontal_predictor(&mut predicted, 6, 3, 8, Endian::Little);

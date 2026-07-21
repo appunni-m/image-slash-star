@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `aa47ad37-6058-4f95-a397-731ec7b3c665`
-- Current measured commit metadata: `ca23c24eaf4fc9e5a1909e51bf598a106582a497`
-- Current source state: pushed `main` after Attempt 54.
-- Lines: 24797 / 24801
+- Current snapshot: `3106db30-36b6-4fe0-9432-d77e2a70cf61`
+- Current measured commit metadata: `78820953644221983c6f9cd2f25c6c69ad8f9cfd`
+- Current source state: Attempt 55 working tree based on pushed `main` at
+  `7882095`; this batch should be committed and pushed before the next sweep.
+- Lines: 24915 / 24919
 - Branches: 3438 / 3444
-- Functions: 1583 / 1583
-- Regions: 40479 / 41169
-- Remaining target: 4 lines, 6 branches, and 690 regions.
+- Functions: 1584 / 1584
+- Regions: 40597 / 41274
+- Remaining target: 4 lines, 6 branches, and 677 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -398,6 +399,55 @@ Measurement:
   `646 / 693` regions to `813 / 855` regions; missing regions fell from
   `47` to `42`.
 - Net: aggregate missing regions fell from `695` to `690`. Branch debt is
+  unchanged.
+
+## Attempt 55 plan: TIFF private helper guard sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 54 commit `7882095`.
+- Coverage MCP snapshot: `aa47ad37-6058-4f95-a397-731ec7b3c665`.
+- Snapshot commit metadata: `ca23c24eaf4fc9e5a1909e51bf598a106582a497`
+  because the managed run measured the working tree before Attempt 54 was
+  committed; the measured source is the same code now pushed as `7882095`.
+- Overall: `24797 / 24801` lines, `3438 / 3444` branches,
+  `1583 / 1583` functions, and `40479 / 41169` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently `749 / 749` lines,
+  `120 / 120` branches, `36 / 36` functions, and `1446 / 1551` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `MsbBits::read()` and `data_bit()` | Lines 557, 562, and 570. | These are private LZW bit-reader guard states: checked-add overflow, short read past the buffer, and direct out-of-range bit access. Public LZW malformed fixtures already cover equivalent decoder failures, but not every helper guard coordinate. Exercise directly through the coverage hook. |
+| `Endian::u16()` / `Endian::u32()` | Lines 588 and 603. | Short-slice endian conversion failures are helper precondition checks. Public decode paths pass exact-size slices after container bounds checks, so direct helper probes are the right boundary. |
+| `Directory::parse()` malformed IFD arithmetic | Lines 644, 650, 662, 664, 666, and 668. | Existing manifest fixtures cover truncated IFDs, bad value offsets, and unknown field types at the public boundary. Remaining raw spans are helper-level overflow/short-read subregions, including `offset.checked_add`, `start.checked_add`, oversized count, unknown type skip, and value-position slice bounds. Add minimal same-module IFD byte arrays instead of new duplicate fixtures. |
+| `Directory::values()` conversion guards | Lines 706, 712, and 717. | `values()` normally sees entries already validated by `parse()`. Directly constructing a `Directory` with inconsistent `Entry` metadata is acceptable in this `#[cfg(coverage)]` hook to prove private defensive branches that public TIFF bytes cannot reach after `parse()` validation. |
+
+Implementation plan:
+
+1. Extend `tiff::__coverage_exercise_private_branches()` with small direct
+   probes for the helper states above.
+2. Keep public fixture generation unchanged for this attempt. The manifest
+   already contains the corresponding malformed TIFF families, and adding more
+   public files would duplicate existing oracle behavior without reaching these
+   private coordinates.
+3. Validate with `cargo fmt --all`, `RUSTFLAGS='--cfg coverage' cargo check
+   --all-features`, `cargo check --all-features`, and the approved Coverage MCP
+   command `all-features-llvm-cov-json-nightly-branch`.
+4. Keep the batch only if aggregate region coverage improves.
+
+Measurement:
+
+- Coverage MCP run: `1f9c39b3-37c1-46b3-8a8b-4cdb47632739`.
+- Coverage MCP snapshot: `3106db30-36b6-4fe0-9432-d77e2a70cf61`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24915 / 24919` lines, `3438 / 3444` branches,
+  `1584 / 1584` functions, and `40597 / 41274` regions.
+- Target file movement: `src/codecs/tiff/decode.rs` moved from
+  `1446 / 1551` regions to `1564 / 1656` regions; missing regions fell from
+  `105` to `92`.
+- Net: aggregate missing regions fell from `690` to `677`. Branch debt is
   unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
