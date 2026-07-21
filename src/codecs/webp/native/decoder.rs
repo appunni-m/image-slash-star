@@ -158,6 +158,10 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             loop_count: LoopCount::Times(NonZeroU16::new(1).unwrap()),
         };
         decoder.read_data()?;
+        decoder.validate_output_buffer_size()?;
+        if decoder.is_animated() && decoder.num_frames == 0 {
+            return Err(DecodingError::ChunkMissing);
+        }
         Ok(decoder)
     }
 
@@ -381,20 +385,34 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             })
     }
 
-    /// Returns the number of bytes required to store the image or a single frame, or None if that
-    /// would take more than `usize::MAX` bytes.
-    pub fn output_buffer_size(&self) -> Option<usize> {
+    #[cfg(target_pointer_width = "32")]
+    fn validate_output_buffer_size(&self) -> Result<(), DecodingError> {
         let bytes_per_pixel = if self.has_alpha() { 4 } else { 3 };
-        (self.width as usize)
-            .checked_mul(self.height as usize)?
-            .checked_mul(bytes_per_pixel)
+        let Some(_) = (self.width as usize)
+            .checked_mul(self.height as usize)
+            .and_then(|pixels| pixels.checked_mul(bytes_per_pixel))
+        else {
+            return Err(DecodingError::ImageTooLarge);
+        };
+        Ok(())
+    }
+
+    #[cfg(not(target_pointer_width = "32"))]
+    fn validate_output_buffer_size(&self) -> Result<(), DecodingError> {
+        Ok(())
+    }
+
+    /// Returns the number of bytes required to store the image or a single frame.
+    pub fn output_buffer_size(&self) -> usize {
+        let bytes_per_pixel = if self.has_alpha() { 4 } else { 3 };
+        (self.width as usize) * (self.height as usize) * bytes_per_pixel
     }
 
     /// Returns the raw bytes of the image. For animated images, this is the first frame.
     ///
     /// Fails with `ImageTooLarge` if `buf` has length different than `output_buffer_size()`
     pub fn read_image(&mut self, buf: &mut [u8]) -> Result<(), DecodingError> {
-        (Some(buf.len()) == self.output_buffer_size())
+        (buf.len() == self.output_buffer_size())
             .then_some(())
             .ok_or(DecodingError::ImageTooLarge)?;
 
@@ -478,7 +496,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
     /// Panics if the image is not animated.
     pub fn read_frame(&mut self, buf: &mut [u8]) -> Result<u32, DecodingError> {
         assert!(self.is_animated());
-        assert_eq!(Some(buf.len()), self.output_buffer_size());
+        assert_eq!(buf.len(), self.output_buffer_size());
 
         (self.animation.next_frame != self.num_frames)
             .then_some(())
@@ -858,47 +876,47 @@ pub(crate) fn __coverage_exercise_private_branches() {
     });
 
     let mut decoder = animation_decoder(vec![0; 31], 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 16_384, 0, b"VP8L"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 16_384, b"VP8L"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true);
     decoder.animation.dispose_next_frame = true;
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 16_384, 0, b"ALPH"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 16_384, b"ALPH"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"ALPH"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
     anmf[20..24].copy_from_slice(&16u32.to_le_bytes());
     let mut decoder = animation_decoder(anmf, 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"JUNK"), 1, 1, false);
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true);
     decoder.animation.next_frame = 1;
-    let mut buf = vec![0; decoder.output_buffer_size().unwrap()];
+    let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 }
 

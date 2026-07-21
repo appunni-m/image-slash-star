@@ -1168,15 +1168,18 @@ fn test_decode_matrix() {
             let decoded = img::decode(&data);
             let direct = decode_direct(&data, fmt_name);
             if row.expect_error.unwrap_or(false) {
-                if decoded.is_none() && direct.is_none() {
+                let sequence_rejected = fmt_name != "webp"
+                    || img::codecs::webp::decode::decode_sequence(&data).is_none();
+                if decoded.is_none() && direct.is_none() && sequence_rejected {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input decoded successfully (auto={}, direct={})",
+                        "  FAIL [{}]: invalid input decoded successfully (auto={}, direct={}, sequence_rejected={})",
                         row.id,
                         decoded.is_some(),
-                        direct.is_some()
+                        direct.is_some(),
+                        sequence_rejected
                     );
                     failed += 1;
                 }

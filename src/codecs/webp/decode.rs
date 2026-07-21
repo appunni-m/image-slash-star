@@ -20,7 +20,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let (width, height) = decoder.dimensions();
     let has_alpha = decoder.has_alpha();
 
-    let buf_size = decoder.output_buffer_size()?;
+    let buf_size = decoder.output_buffer_size();
     let mut pixels = vec![0u8; buf_size];
     decoder.read_image(&mut pixels).ok()?;
 
@@ -47,7 +47,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     } else {
         ColorType::Rgb8
     };
-    let buffer_size = decoder.output_buffer_size()?;
+    let buffer_size = decoder.output_buffer_size();
     let frame_count = decoder.num_frames() as usize;
     let mut frames = Vec::with_capacity(frame_count);
     for _ in 0..frame_count {
@@ -68,15 +68,13 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         LoopCount::Times(count) => u32::from(count.get()),
     });
     let background = decoder.background_color().map(AnimationBackground::Rgba);
-    let sequence = DecodedSequence {
+    Some(DecodedSequence {
         width,
         height,
         frames,
         loop_count,
         background,
-    };
-    sequence.validate().ok()?;
-    Some(sequence)
+    })
 }
 
 #[cfg(coverage)]

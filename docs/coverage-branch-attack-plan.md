@@ -12,17 +12,17 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `d1eb3793-aa57-4966-bdd1-1284bb3be0cf`
-- Current measured commit metadata: `d6c95c6ab1fb37e4e8a0330b78161ba6ead4f268`
-- Current source state: PNG encode validated-row and IDAT chunk invariant sweep,
+- Current snapshot: `4cbd228c-4a94-4d86-ad4b-0a048f9a5714`
+- Current measured commit metadata: `c4f5e052acae11f2fa63a951078e07a7fba06946`
+- Current source state: WebP decode wrapper invariant and sequence-error sweep,
   measured before committing the sweep.
-- Lines: 24363 / 24369
-- Branches: 3424 / 3438
-- Functions: 1578 / 1578
-- Regions: 39813 / 40584
-- Remaining target: 6 lines, 14 branches, and 771 regions.
+- Lines: 24366 / 24372
+- Branches: 3428 / 3442
+- Functions: 1579 / 1579
+- Regions: 39807 / 40574
+- Remaining target: 6 lines, 14 branches, and 767 regions.
 - Remaining branch map from this snapshot:
-  - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
+  - `src/codecs/webp/native/decoder.rs`: 86 / 92 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
 - Remaining line gaps: aggregate line gap is 6, but the current raw per-file
@@ -39,6 +39,8 @@ from Coverage MCP before each implementation sweep.
     581 / 581 regions.
   - `src/codecs/png/encode.rs`: 30 / 30 branches and now
     548 / 548 regions.
+  - `src/codecs/webp/decode.rs`: 6 / 6 branches and now
+    103 / 103 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -368,6 +370,65 @@ Second measurement:
     chunk.
   - The generic fallible chunk writer and impossible coverage-only row-overflow
     probes were removed.
+
+## Attempt 22 plan: WebP decode wrapper invariants and sequence-error parity
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `c4f5e05` after the PNG encode sweep.
+- Coverage MCP snapshot: `d1eb3793-aa57-4966-bdd1-1284bb3be0cf`.
+- Overall: `24363 / 24369` lines, `3424 / 3438` branches,
+  `1578 / 1578` functions, and `39813 / 40584` regions.
+- Target file: `src/codecs/webp/decode.rs` at `55 / 55` lines,
+  `6 / 6` branches, `3 / 3` functions, and `107 / 111` regions.
+
+Source-mapped missing region entries:
+
+- line 23: failure side of `decoder.output_buffer_size()?` in `decode()`.
+- line 50: failure side of `decoder.output_buffer_size()?` in
+  `decode_sequence()`.
+- line 55: failure side of `decoder.read_frame(&mut pixels).ok()?` in
+  `decode_sequence()`.
+- line 78: failure side of `sequence.validate().ok()?`.
+
+Reverse-mapped finding:
+
+| Region | Finding | Action |
+| --- | --- | --- |
+| `output_buffer_size()?` in both wrappers | `WebPDecoder::new()` already bounds lossy/lossless dimensions to 14-bit values and extended canvas dimensions to a product fitting `u32`. On 64-bit targets the decoded byte length therefore fits `usize`; on 32-bit targets the native decoder should reject too-large buffers during construction, not leave wrapper-only `Option` exits. | Move the size-fit invariant into native decoder initialization with a 32-bit-only checked guard, then make `output_buffer_size()` infallible. |
+| `read_frame(...).ok()?` in `decode_sequence()` | Existing manifest error rows assert `decode()` rejects malformed WebP, but `test_decode_matrix` currently skips `decode_sequence()` for error rows. Animated malformed inputs that pass container parsing and fail during frame decode are real public sequence behavior. | Extend the manifest-driven decode matrix so WebP error rows also require direct `webp::decode_sequence()` rejection. Do not add ad-hoc unit tests. |
+| `sequence.validate().ok()?` | After native animated construction proves nonzero canvas dimensions and at least one valid frame, `decode_sequence()` creates full-canvas frames using the exact native output buffer size, with `left = top = 0`. The sequence validation failure is therefore a duplicate wrapper guard rather than a public WebP state. | Reject animated containers with zero valid frames in `WebPDecoder::new()`, then remove the wrapper-level `sequence.validate().ok()?`. |
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_decode_matrix`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured movement here, then commit and push.
+
+Result:
+
+- Coverage MCP run: `f3494bc1-dfa7-4b38-9be8-bf9e9518ff52`.
+- Coverage MCP snapshot: `4cbd228c-4a94-4d86-ad4b-0a048f9a5714`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24366 / 24372` lines, `3428 / 3442` branches,
+  `1579 / 1579` functions, and `39807 / 40574` regions.
+- Net missing regions: `771` down to `767`.
+- Target file movement: `src/codecs/webp/decode.rs` moved from
+  `55 / 55` lines, `6 / 6` branches, `3 / 3` functions,
+  and `107 / 111` regions to `53 / 53` lines, `6 / 6` branches,
+  `3 / 3` functions, and `103 / 103` regions.
+- Implemented:
+  - `WebPDecoder::new()` now rejects animated containers with no valid frames
+    and performs the 32-bit-only decoded-buffer fit guard during construction.
+  - `output_buffer_size()` is infallible for constructed native decoders.
+  - The WebP decode wrapper no longer carries duplicate `Option` exits for
+    proven native invariants.
+  - Manifest-driven decode matrix error rows now assert direct WebP
+    `decode_sequence()` rejection as well as still-image decode rejection.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 
