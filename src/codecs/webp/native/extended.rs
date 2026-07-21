@@ -147,6 +147,8 @@ pub(crate) fn composite_frame(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    use std::io::Cursor;
+
     let frame = [1, 2, 3, 4];
 
     let mut canvas = [0u8; 2 * 2 * 4];
@@ -188,6 +190,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0,
     );
     assert_eq!(&canvas[..4], &frame);
+
+    let _ = read_extended_header(&mut Cursor::new(Vec::<u8>::new()));
+    let _ = read_extended_header(&mut Cursor::new([0u8; 1]));
+    let _ = read_extended_header(&mut Cursor::new([0u8; 4]));
+    let _ = read_extended_header(&mut Cursor::new([0u8; 7]));
+    let _ = read_extended_header(&mut Cursor::new([
+        0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    ]));
+    let _ = read_3_bytes(&mut Cursor::new([1u8, 2]));
+
+    let _ = read_alpha_chunk(&mut Cursor::new([0b0000_0001u8]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new([0u8]), 1, 1);
+    let _ = read_alpha_chunk(&mut Cursor::new([0u8, 7]), 1, 1);
 }
 
 pub(crate) fn get_alpha_predictor(

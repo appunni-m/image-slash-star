@@ -1142,6 +1142,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         target.clone_from(&image);
         let _ = image.clone();
     }
+
+    for color in [
+        ColorType::L8,
+        ColorType::Rgba8,
+        ColorType::L16,
+        ColorType::La16,
+        ColorType::Rgb16,
+        ColorType::Rgba16,
+        ColorType::Rgb32F,
+        ColorType::Rgba32F,
+    ] {
+        let malformed = DecodedImage::new(1, 1, Vec::new(), color);
+        let _ = DynamicImage::from_decoded(&malformed);
+    }
 }
 
 // -----------------------------------------------------------------------

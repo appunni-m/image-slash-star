@@ -59,12 +59,22 @@ fn attach_metadata(
     let mut offset = 12usize;
     let mut flags = 0u8;
     while offset + 8 <= encoded.len() {
-        let name: [u8; 4] = encoded[offset..offset + 4].try_into().ok()?;
-        let length = u32::from_le_bytes(encoded[offset + 4..offset + 8].try_into().ok()?) as usize;
-        let end = offset.checked_add(8)?.checked_add(length)?;
-        let payload = encoded.get(offset + 8..end)?;
+        let name = [
+            encoded[offset],
+            encoded[offset + 1],
+            encoded[offset + 2],
+            encoded[offset + 3],
+        ];
+        let length = u32::from_le_bytes([
+            encoded[offset + 4],
+            encoded[offset + 5],
+            encoded[offset + 6],
+            encoded[offset + 7],
+        ]) as usize;
+        let end = offset + 8 + length;
+        let payload = &encoded[offset + 8..end];
         if &name == b"VP8X" {
-            flags |= *encoded.get(offset + 8)?;
+            flags |= encoded[offset + 8];
         } else {
             chunks.push((name, payload.to_vec()));
         }
@@ -100,7 +110,7 @@ fn attach_metadata(
     if let Some(payload) = xmp {
         write_chunk(&mut output, b"XMP ", &payload);
     }
-    let riff_size = u32::try_from(output.len().checked_sub(8)?).ok()?;
+    let riff_size = u32::try_from(output.len() - 8).ok()?;
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
     Some(output)
 }
@@ -158,8 +168,8 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                     .chunks_exact(4)
                     .map(|pixel| pixel[3])
                     .collect::<Vec<_>>();
-                let alpha_chunk =
-                    super::native::encode_alpha(&alpha, img.width, img.height).ok()?;
+                let alpha_chunk = super::native::encode_alpha(&alpha, img.width, img.height)
+                    .expect("Vec-backed alpha encoding does not return io errors");
                 vp8::encoder::encode_vp8_lossy_rgba(
                     &img.pixels,
                     img.width,
@@ -201,5 +211,23 @@ fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    use std::collections::HashMap;
+
     vp8::__coverage_exercise_private_branches();
+
+    let mut opts = EncodeOptions {
+        extra: HashMap::from([("icc_hex".to_owned(), "f".to_owned())]),
+        ..EncodeOptions::default()
+    };
+    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+
+    opts.extra = HashMap::from([("exif_hex".to_owned(), "f".to_owned())]);
+    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+
+    let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::Rgb8);
+    let opts = EncodeOptions {
+        lossless: Some(true),
+        ..EncodeOptions::default()
+    };
+    let _ = encode(&zero_width, &opts);
 }

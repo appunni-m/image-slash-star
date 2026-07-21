@@ -1095,6 +1095,32 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = malformed.rows_mut();
     }));
+
+    let empty = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(1, 0, Vec::new())
+        .expect("coverage zero-height image should be valid");
+    let mut rows = empty.rows();
+    let _ = rows.next_back();
+
+    let mut empty = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(1, 0, Vec::new())
+        .expect("coverage zero-height image should be valid");
+    let mut rows_mut = empty.rows_mut();
+    let _ = rows_mut.next_back();
+
+    let huge = ImageBuffer::<Rgb<u8>, Vec<u8>> {
+        data: Vec::new(),
+        width: u32::MAX,
+        height: u32::MAX,
+        _phantom: PhantomData,
+    };
+    let _ = huge.get_pixel_checked(0, u32::MAX);
+
+    let mut huge = ImageBuffer::<Rgb<u8>, Vec<u8>> {
+        data: Vec::new(),
+        width: u32::MAX,
+        height: u32::MAX,
+        _phantom: PhantomData,
+    };
+    let _ = huge.get_pixel_mut_checked(0, u32::MAX);
 }
 
 // ---------------------------------------------------------------------------

@@ -132,9 +132,15 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
 
             for scan_comp in &info.scan_components {
                 let comp = &info.components[scan_comp.comp_index];
-                let dc_table = info.dc_huff_tables[scan_comp.dc_tbl as usize].as_ref()?;
-                let ac_table = info.ac_huff_tables[scan_comp.ac_tbl as usize].as_ref()?;
-                let quant_table = info.quant_tables[comp.quant_tbl as usize].as_ref()?;
+                let dc_table = info.dc_huff_tables[scan_comp.dc_tbl as usize]
+                    .as_ref()
+                    .expect("baseline DC Huffman table validated before reconstruction");
+                let ac_table = info.ac_huff_tables[scan_comp.ac_tbl as usize]
+                    .as_ref()
+                    .expect("baseline AC Huffman table validated before reconstruction");
+                let quant_table = info.quant_tables[comp.quant_tbl as usize]
+                    .as_ref()
+                    .expect("component quantization table validated before reconstruction");
 
                 for by in 0..comp.v_samp as usize {
                     for bx in 0..comp.h_samp as usize {

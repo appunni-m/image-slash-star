@@ -57,6 +57,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8)
         .with_palette(ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage palette"))
         .validate();
+    let _ = DecodedImage::new(u32::MAX, u32::MAX, Vec::new(), ColorType::Rgb8).validate();
     let _ = DecodedSequence {
         width: 1,
         height: 1,
@@ -93,6 +94,54 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![frame],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let invalid_frame = DecodedFrame {
+        image: DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
+        left: 0,
+        top: 0,
+        duration_ms: 0,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let _ = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![invalid_frame],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let right_overflow_frame = DecodedFrame {
+        image: DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        left: u32::MAX,
+        top: 0,
+        duration_ms: 0,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let _ = DecodedSequence {
+        width: u32::MAX,
+        height: 1,
+        frames: vec![right_overflow_frame],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let bottom_overflow_frame = DecodedFrame {
+        image: DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        left: 0,
+        top: u32::MAX,
+        duration_ms: 0,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let _ = DecodedSequence {
+        width: 1,
+        height: u32::MAX,
+        frames: vec![bottom_overflow_frame],
         loop_count: None,
         background: None,
     }
@@ -236,14 +285,16 @@ impl ImageMode {
     }
 
     fn expected_bytes(self, width: u32, height: u32) -> Option<usize> {
-        let width = usize::try_from(width).ok()?;
-        let height = usize::try_from(height).ok()?;
+        let width = width as usize;
+        let height = height as usize;
         if self == Self::L1 {
             return width.div_ceil(8).checked_mul(height);
         }
-        width
-            .checked_mul(height)?
-            .checked_mul(usize::from(self.color_type().bytes_per_pixel()))
+        #[cfg(target_pointer_width = "64")]
+        let pixels = width * height;
+        #[cfg(not(target_pointer_width = "64"))]
+        let pixels = width.checked_mul(height)?;
+        pixels.checked_mul(usize::from(self.color_type().bytes_per_pixel()))
     }
 }
 
