@@ -175,13 +175,8 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut frequencies = [0u64; 256];
-    let mut a = 1u64;
-    let mut b = 1u64;
-    for frequency in frequencies.iter_mut().take(32) {
-        *frequency = a;
-        let next = a.saturating_add(b);
-        a = b;
-        b = next;
+    for (index, frequency) in frequencies.iter_mut().take(18).enumerate() {
+        *frequency = 1u64 << index;
     }
     let table = optimal_table(&frequencies).expect("pathological frequencies should build");
     assert!(!table.values.is_empty());
