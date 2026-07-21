@@ -1511,6 +1511,56 @@ Measurement:
   - `vp8_zero_height.webp` improves line 200 but normalized partials remain
     there; do not assume the zero-height side alone completes that predicate.
 
+## Attempt 39 plan: WebP VP8 both-zero dimensions fixture
+
+Baseline before editing:
+
+- Git state: clean `main` aligned with `origin/main` at `1d5d489`.
+- Coverage MCP snapshot: `b6c23cb8-4085-4630-88a2-9967f7723fa6`.
+- Overall baseline: `24580 / 24585` lines, `3435 / 3444` branches,
+  `1582 / 1582` functions, and `40095 / 40825` regions.
+- Target file: `src/codecs/webp/native/decoder.rs` at `749 / 749` lines,
+  `90 / 92` branches, `34 / 34` functions, and `1368 / 1416` regions.
+
+Reverse map and Pillow preflight:
+
+- After Attempt 38, line 200 (`self.width == 0 || self.height == 0`) still has
+  normalized partial branches even with separate zero-width and zero-height
+  manifest fixtures.
+- Candidate input: mutate `lossy.webp` VP8 keyframe width and height fields to
+  zero.
+- Pillow preflight in `/tmp`: rejected with
+  `OSError: could not create decoder object`.
+
+Selected implementation:
+
+1. Extend `scripts/generate_test_assets.py` to generate
+   `vp8_zero_dimensions.webp`.
+2. Add it to the existing WebP `error_malformed_container` manifest case.
+3. Regenerate WebP refs/matrix with `.oracle-venv/bin/python
+   scripts/generate_decode_refs.py --format webp`.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+5. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+6. Record measurement here; commit and push if coverage improves.
+
+Measurement and decision:
+
+- Coverage MCP run: `4b783787-847d-4bc0-b9b2-e5e7a08c00e1`.
+- Coverage MCP snapshot: `d84ff027-e683-48f6-812f-f608294f1fd3`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall with the fixture attempt: unchanged at `24580 / 24585` lines,
+  `3435 / 3444` branches, `1582 / 1582` functions, and
+  `40095 / 40825` regions.
+- Decision: do not retain `vp8_zero_dimensions.webp`. Separate
+  `vp8_zero_width.webp` and `vp8_zero_height.webp` already cover the useful
+  public oracle states; the both-zero fixture did not move aggregate coverage.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
