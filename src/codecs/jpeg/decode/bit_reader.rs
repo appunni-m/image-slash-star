@@ -148,6 +148,8 @@ impl<'a> BitReader<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
     let marker_padded = [0xFF, 0xFF, 0xD9];
     let mut br = BitReader::new(&marker_padded, 0, marker_padded.len());
     br.fill(1);
@@ -156,4 +158,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let empty = [];
     let mut br = BitReader::new(&empty, 0, 0);
     assert_eq!(br.read_bits(64), None);
+
+    let data = [0b1010_0000];
+    let mut br = BitReader::new(&data, 0, data.len());
+    br.fill(1);
+    assert!(catch_unwind(AssertUnwindSafe(|| br.peek_bits(0))).is_err());
+    assert!(catch_unwind(AssertUnwindSafe(|| br.peek_bits(br.bits_left() + 1))).is_err());
+
+    let mut br = BitReader::new(&data, 0, data.len());
+    br.fill(1);
+    assert!(catch_unwind(AssertUnwindSafe(|| br.get_bits(0))).is_err());
+    assert!(catch_unwind(AssertUnwindSafe(|| br.get_bits(br.bits_left() + 1))).is_err());
 }

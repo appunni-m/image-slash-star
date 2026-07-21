@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the zlib-ng private-branch hook batch.
+after the JPEG bit-reader debug-assert branch batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `7dad0fef-e1e7-4b40-a6ef-a2336dad942c`
-- Current measured commit metadata: `ac0645c25f989d35ac7ea86387e55e998339752a`
-- Lines: 21798 / 21799
-- Branches: 3323 / 3484
-- Functions: 1519 / 1519
-- Remaining target: 1 line and 161 branches.
+- Current snapshot: `baa84e21-a8cc-4a6b-9f4e-2bd05f291b1f`
+- Current measured commit metadata: `9ff6f3ff85c39a4cff33226601b1c362a9873605`
+- Lines: 21811 / 21812
+- Branches: 3327 / 3484
+- Functions: 1523 / 1523
+- Remaining target: 1 line and 157 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -314,6 +314,30 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
   371 / 380 branches.
 - Rationale: this is a private hash-table collision/self-candidate state and is
   independent of public compressed byte parity. Keep it behind `#[cfg(coverage)]`.
+
+### JPEG bit-reader debug-assert branch batch
+
+- Starting evidence: pushed `main` commit
+  `9ff6f3ff85c39a4cff33226601b1c362a9873605`, Coverage MCP snapshot
+  `e0741451-3f88-476f-9056-a9d3cbfbb163`.
+- Current `src/codecs/jpeg/decode/bit_reader.rs`: 90 / 90 lines and
+  22 / 26 branches.
+- Target lines: 119 and 126.
+- Implemented:
+  - Use the existing `#[cfg(coverage)]` private hook.
+  - Exercise `peek_bits(0)` and `peek_bits(bits + 1)` under
+    `std::panic::catch_unwind` to cover both invalid debug-assert sides.
+  - Exercise `get_bits(0)` and `get_bits(bits + 1)` under
+    `std::panic::catch_unwind` to cover both invalid debug-assert sides.
+- Coverage MCP run: `6f0e74a7-ea7a-4c2e-938f-097228bcbd95`
+- Coverage MCP snapshot: `baa84e21-a8cc-4a6b-9f4e-2bd05f291b1f`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3323 / 3484 to 3327 / 3484.
+- `src/codecs/jpeg/decode/bit_reader.rs`: now 103 / 103 lines and
+  26 / 26 branches.
+- Rationale: these are debug-only contract assertions, not production JPEG
+  decode behavior. Catching the expected debug assertion panic keeps the branch
+  evidence coverage-only and does not alter public byte/pixel parity.
 
 ## Execution order
 
