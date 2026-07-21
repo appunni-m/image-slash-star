@@ -12,12 +12,12 @@ after the latest pushed-head verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `0efc7f89-18f1-4947-b192-ef685546347f`
+- Current snapshot: `fc4d8182-71fa-4256-906c-ed388d40f8a7`
 - Current measured commit metadata: `0b294548813c1db2b9c7f3e6722e8fb2b19ed73e`
-- Lines: 22164 / 22165
-- Branches: 3352 / 3466
-- Functions: 1532 / 1532
-- Remaining target: 1 line and 114 branches.
+- Lines: 22186 / 22187
+- Branches: 3355 / 3466
+- Functions: 1533 / 1533
+- Remaining target: 1 line and 111 branches.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -232,6 +232,50 @@ Completed evidence:
   Pushed-head overall coverage is 22044 / 22045 lines, 3335 / 3466 branches,
   and 1528 / 1528 functions. Histogram remains 503 / 503 lines,
   107 / 112 branches, and 30 / 30 functions.
+
+## Planned WebP native encoder private-branch batch
+
+Coverage MCP pushed-head snapshot `4103ae89-e85a-4909-b0fd-54be5b675a5c`
+reports `src/codecs/webp/native/encoder.rs` at 1058 / 1058 lines,
+190 / 198 branches, and 62 / 62 functions. The remaining concrete branch
+lines are:
+
+- line 247: zero-length Huffman code repeat loop. Add a direct
+  `compressed_huffman_tokens(&[0; 300])` probe so the `code 18, extra 0x7f`
+  chunk subtracts 138 and loops again.
+- lines 379, 392, and 395: Huffman tree trimming. Defer if the simple helper
+  probes do not reveal a clean frequency vector; these need tree-shape-specific
+  frequencies rather than public image fixtures.
+- line 877: lossless WebP dimension validation. Existing hook covers
+  zero-width; add zero-height, too-wide, and too-tall calls with matching data
+  lengths so the precondition assert remains valid.
+- line 1027: palette delta minimization swaps a leading zero only when more
+  than 17 palette values are sortable. Existing hook covers the leading-zero
+  shape; add a signs-both/nonzero-leading input to drive one complementary
+  side.
+- line 1121: RIFF chunk padding. Add direct `write_chunk()` probes with odd and
+  even payload lengths.
+
+No Pillow manifest fixture is appropriate for these first-pass branches:
+dimension validation and RIFF padding are deterministic encoder boundary
+behavior, while Huffman/palette probes target private encoder normalization
+after candidate pixels have already been selected. Use coverage-only private
+hook assertions and verify with the approved Coverage MCP line+branch command.
+
+First-pass evidence before short-palette retry:
+
+- Coverage MCP run `a8904821-666e-45e8-b725-1f8aa32e9007`, snapshot
+  `8c4bb4bf-2278-4d10-9124-5b0f7e7a0222`, passed and improved overall
+  coverage to 3356 / 3468 branches, but introduced a hook assertion branch.
+- Final accepted Coverage MCP run `3b7d8f94-4f67-45eb-9187-0d991c4b10c5`,
+  snapshot `fc4d8182-71fa-4256-906c-ed388d40f8a7`, passed with 5 passed,
+  0 failed and
+  improved overall coverage to 3355 / 3466 branches. `encoder.rs` improved
+  from 190 / 198 to 193 / 198 branches. Dimension validation is now fully
+  covered.
+- Short-palette retry `a47a7e00-695c-483a-b8bf-6bd5932ebe9b`, snapshot
+  `df58d5f5-02a5-4f9a-b8ae-9244def3f610`, passed but did not improve overall
+  or target-file branch coverage, so the no-op probe was removed.
 
 ## Planned WebP VP8 filter-parameter private-branch batch
 

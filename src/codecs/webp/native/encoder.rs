@@ -1177,6 +1177,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = channels(0x1122_3344);
     let _ = chunk_size(3);
     let _ = chunk_size(4);
+    let _ = compressed_huffman_tokens(&[0; 300]);
+    let mut odd_chunk = Vec::new();
+    write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]).unwrap();
+    let mut even_chunk = Vec::new();
+    write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]).unwrap();
 
     let mut tree_bytes = Vec::new();
     let mut tree_writer = BitWriter {
@@ -1243,6 +1248,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .collect::<Vec<_>>();
     palette[0] = 0;
     minimize_palette_deltas(&mut palette);
+    let mut nonzero_first_palette = (0..20)
+        .map(|index| {
+            let value = ((index * 29 + 7) & 0xff) as u32;
+            0xff00_0000 | (value << 16) | (((value ^ 0xa5) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    minimize_palette_deltas(&mut nonzero_first_palette);
     let entropy_pixels = [
         0xff10_2010,
         0xff20_4020,
@@ -1288,4 +1300,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     WebPEncoder::new(&mut output)
         .encode(&[], 0, 1, ColorType::Rgb8)
         .expect_err("zero-width WebP must be rejected");
+    WebPEncoder::new(&mut output)
+        .encode(&[], 1, 0, ColorType::Rgb8)
+        .expect_err("zero-height WebP must be rejected");
+    WebPEncoder::new(&mut output)
+        .encode(&vec![0; 16_385 * 3], 16_385, 1, ColorType::Rgb8)
+        .expect_err("too-wide WebP must be rejected");
+    WebPEncoder::new(&mut output)
+        .encode(&vec![0; 16_385 * 3], 1, 16_385, ColorType::Rgb8)
+        .expect_err("too-tall WebP must be rejected");
 }
