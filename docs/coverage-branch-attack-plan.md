@@ -653,6 +653,26 @@ Expected validation:
 4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
 5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
 6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Measurement and decision:
+
+- Coverage MCP run: `d2106a96-679a-46ee-8a0a-485dab122117`.
+- Snapshot: `b9e44b9e-dbe8-4f40-abca-23445ef754ca`.
+- Overall result with the refactor: `24589 / 24594` lines,
+  `3437 / 3444` branches, `1583 / 1583` functions, and
+  `40108 / 40837` regions.
+- `src/codecs/webp/encode/mod.rs` result with the refactor:
+  `200 / 200` lines, `30 / 30` branches, `18 / 18` functions, and
+  `355 / 356` regions.
+- Raw segment result: the missing region moved from the direct
+  `u32::try_from(output.len() - 8).ok()?` expression to the caller-side
+  `riff_payload_size(output.len())?` propagation. The overflow helper itself
+  was coverable, but `attach_metadata()` still cannot reach `None` without an
+  output buffer larger than the RIFF `u32` size field.
+- Decision: revert the refactor. It adds covered instrumentation but does not
+  reduce missing regions. Keep `src/codecs/webp/encode/mod.rs` as a deferred
+  public-resource-limit guard unless we later introduce a maximum metadata size
+  policy that rejects oversized options before allocation.
 7. Record measured movement here, then commit and push.
 
 Result:
@@ -4590,6 +4610,39 @@ Validation after this batch:
 3. Run only the approved Coverage MCP command
    `all-features-llvm-cov-json-nightly-branch`.
 4. Record the new summary and zlib movement here.
+
+## Attempt 43 plan: one-region dispatcher/WebP encode sweep
+
+Current Coverage MCP baseline before editing:
+
+- Commit metadata: `21606356f54798a5942a82edd5df0677f17b7114`
+- Snapshot: `5fc1879b-6e98-4f28-92a6-664f8492c09e`
+- Overall baseline: `24580 / 24585` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40096 / 40825` regions.
+
+Smallest region targets:
+
+| File | Current regions | Raw segment | Reverse map | Action |
+| --- | ---: | --- | --- | --- |
+| `src/codecs/mod.rs` | `119 / 120` | `65:26` | `decode_format()` early return when an enabled decoder returns `Some(DecodedImage)` that fails `DecodedImage::validate()`. | Defer. A public fixture should not reach this unless a decoder violates its contract. Do not fabricate a fake decoder result just to cover the dispatcher guard. |
+| `src/codecs/webp/encode/mod.rs` | `343 / 344` | `113:57` | `attach_metadata()` rejects a RIFF output length whose `output.len() - 8` does not fit in `u32`. | Refactor the RIFF-size arithmetic into a production helper that accepts `usize` length, use it from `attach_metadata()`, and exercise both success and overflow states from the existing WebP coverage hook without allocating a multi-GiB metadata string. |
+
+Selected action:
+
+- Touch only `src/codecs/webp/encode/mod.rs`.
+- Keep `src/codecs/mod.rs` documented as a defensive boundary until a real
+  decoder input proves otherwise.
+- Revert the WebP change if Coverage MCP does not reduce the file's missing
+  region count or if it introduces new uncovered regions.
+
+Validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
 
 ### Attempt 13 plan: small-file region sweep after README push
 
