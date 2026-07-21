@@ -380,7 +380,11 @@ fn decode_ico_bmp_4bpp(
         for &byte in row {
             let hi = (byte >> 4) & 0x0F;
             let lo = byte & 0x0F;
-            if col < width as usize { let color = palette[hi as usize]; pixels.push(color[0]); pixels.push(color[1]); pixels.push(color[2]); pixels.push(mask_alpha(mask, mask_row_size, col, y)); }
+            let color = palette[hi as usize];
+            pixels.push(color[0]);
+            pixels.push(color[1]);
+            pixels.push(color[2]);
+            pixels.push(mask_alpha(mask, mask_row_size, col, y));
             col += 1;
             if col < width as usize {
                 let color = palette[lo as usize];

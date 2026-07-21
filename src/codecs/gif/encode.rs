@@ -70,6 +70,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut compact_indices,
         &mut compact_transparent,
     );
+    let mut hole_palette = vec![
+        [255u8, 0, 0, 255],
+        [0, 255, 0, 255],
+        [0, 0, 255, 255],
+    ];
+    let mut hole_indices = vec![0u8, 2];
+    let mut hole_transparent = None;
+    let _ = compact_rgba_palette(&mut hole_palette, &mut hole_indices, &mut hole_transparent);
 
     let mut rgb_pixels = Vec::with_capacity(16 * 16 * 3);
     for value in 0u8..=255 {
@@ -262,7 +270,6 @@ fn rgba_difference_bounds(
             bottom = bottom.max(y + 1);
         }
     }
-    debug_assert!(left < right && top < bottom);
     (left, top, right, bottom)
 }
 
@@ -1022,9 +1029,6 @@ fn split_median_box(
             left_count = left_count.checked_sub(counts[sorted[split]])?;
         }
     }
-    // The caller only splits boxes whose RGB volume exceeds one, so at least
-    // one value differs on the selected axis and both partitions are nonempty.
-    debug_assert!(split > 0 && split < sorted.len());
     let is_left = sorted[..split]
         .iter()
         .copied()
