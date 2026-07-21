@@ -3122,6 +3122,126 @@ Next PNG-specific work:
 3. Move to the next higher-yield region file if the remaining PNG starts are
    mostly defensive arithmetic rather than public Pillow states.
 
+### Attempt 15 plan: PNG encode validated-invariant and Vec-writer cleanup
+
+Git state before editing:
+
+- Branch: `main`
+- Pushed commit: `a2209fd` (`Improve PNG decode region coverage`)
+- Worktree: clean before this attempt.
+
+Coverage MCP baseline used for targeting:
+
+- Snapshot: `4ccc75f2-5565-46e7-b6a0-ee05dfe4dd21`
+- Run: `73eb5cac-b8e9-48b2-9262-75048ec1a908`
+- Lines: `24346 / 24352`
+- Branches: `3432 / 3446`
+- Functions: `1578 / 1578`
+- Regions: `39775 / 40637`
+- Missing regions: `862`
+
+Target: `src/codecs/png/encode.rs`
+
+- Current MCP file metrics: `538 / 559` regions, `294 / 294` lines,
+  `36 / 36` branches, `22 / 22` functions.
+- Source-mapped missing region starts:
+  `32:41`, `45:44`, `51:53`, `62:79`, `85:48`, `87:43`, `88:57`,
+  `90:63`, `93:56`, `94:52`, `95:44`, `177:83`, `178:50`, `317:64`,
+  `317:70`, `322:64`, `325:44`, `332:48`, `335:61`, `339:48`,
+  `345:51`.
+
+Reverse-mapped findings:
+
+| Target | Finding | Action |
+| --- | --- | --- |
+| Row-byte checked multiplications at lines 32, 45, and 51 | These duplicate `DecodedImage::validate()` layout checks. Other encoders already validate the image before encoding, and PNG encode should do the same. After validation, per-row byte counts are derived from the already-validated mode and dimensions. | Call `img.validate().ok()?` at entry, remove the duplicate zero-dimension/pixel-length checks, and replace row-byte checked multiplications with direct arithmetic. |
+| `write_chunk(...)?` for IHDR, PLTE, tRNS, fixed ancillary chunks, and IEND | The encoder writes into an owned `Vec<u8>`, so there is no recoverable write error. For IHDR/IEND and ancillary chunks payload sizes are fixed small constants. For PLTE/tRNS, validation proves the retained palette has at most 256 RGB entries and alpha entries are bounded by the palette length. | Split chunk writing into an infallible small-chunk helper and keep the fallible length-checked helper only where payload length can be image-size-derived, primarily IDAT. |
+| `write_requested_ancillary_chunks(...)?` | All requested ancillary payloads are fixed small chunks written to `Vec<u8>`. | Make this helper infallible. |
+| `plain_rows()` duplicate `stride.checked_add(1)?` | The second checked add is unreachable after the first succeeds. | Compute `row_len` once, keep the checked multiplication guard, and add a coverage-hook input for the checked-multiply overflow path. |
+| `requested()` string alternatives | Existing hook covers `"true"` only. `"1"`, `"yes"`, and false values are real option parser states. | Add coverage-hook calls for `"1"`, `"yes"`, and `"false"`. |
+| P8 without palette | This is a real public encode input: `DecodedImage::validate()` intentionally permits `P8` without a palette because decoders may preserve Pillow-tolerated palette-less PNGs. PNG encoding still needs a palette to emit PLTE. | Add a coverage-hook encode call for P8 with no palette and keep the `None` result. |
+
+Explicitly deferred:
+
+- `compress_zlib_chunked(...) ?`, fallible IDAT payload length, and the
+  remaining giant-filtered-buffer arithmetic stay as defensive large-image or
+  private zlib boundaries unless a portable invariant proves them dead.
+
+Validation after this batch:
+
+1. Run `cargo fmt --all`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run the manifest-driven coverage matrix test.
+4. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Record the new summary and PNG encode movement here.
+
+### Attempt 15 result
+
+Validation performed before measuring:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+5. Coverage MCP command `all-features-llvm-cov-json-nightly-branch`
+
+Coverage MCP run `0c1d869d-b7b8-491e-9a08-5f5b488c9287`, snapshot
+`92c25a4f-750a-4ce8-8427-fcbd416b0dd1`, passed and ingested.
+
+- Commit metadata recorded by the artifact:
+  `a2209fd38b39421e96835019e7186fd99bd4237c`
+- Lines: `24353 / 24359`
+- Branches: `3426 / 3440`
+- Functions: `1580 / 1580`
+- Regions: `39798 / 40642`
+- Missing regions: `844`
+
+Net from the Attempt 15 baseline:
+
+- Missing regions improved from `862` to `844` (`18` fewer).
+- Branch gap stayed at `14` missing. The total branch count dropped from
+  `3446` to `3440` because dead branch sites were removed, while the number of
+  uncovered branches stayed unchanged.
+- Line gap stayed at `6`.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/png/encode.rs` | `538 / 559` | `561 / 564` | `21 -> 3` |
+
+What moved:
+
+- PNG encode now validates `DecodedImage` once at entry, matching the other
+  encoders and removing duplicate layout arithmetic checks.
+- Fixed-size PNG chunks and validated palette chunks now use an infallible
+  `Vec<u8>` chunk writer. Only image-size-derived IDAT payload length remains
+  fallible.
+- Ancillary PNG chunks are now written through the infallible bounded writer.
+- `plain_rows()` now computes `row_len` once; the coverage hook exercises the
+  remaining checked-add and checked-multiply overflow states.
+- Coverage hooks now cover P8-without-palette encode rejection and the `"1"`,
+  `"yes"`, and false option parser states.
+
+Remaining source-mapped PNG encode region starts:
+
+- `51:79`: `plain_rows(...)?` propagation for giant filtered-row allocation
+  arithmetic.
+- `83:52`: IDAT chunk write propagation.
+- `344:51`: `u32::try_from(payload.len())` guard inside `write_chunk()`.
+
+Decision:
+
+- Keep the three remaining PNG encode regions. They are all the same
+  large-image/IDAT-length defensive boundary. Removing them would require a
+  portable proof that every valid `DecodedImage` produces a compressed IDAT
+  payload of at most `u32::MAX` bytes and that adding one filter byte per row
+  cannot overflow `usize`.
+- Move the next region-first sweep to another source-mapped file instead of
+  forcing these defensive checks.
+
 ### Attempt 10 plan: ICO encode public empty-BMP parity and region cleanup
 
 Current Coverage MCP baseline before editing:

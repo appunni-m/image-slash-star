@@ -11,9 +11,7 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// emits non-interlaced rows. Compression levels select the corresponding
 /// strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    if img.width == 0 || img.height == 0 {
-        return None;
-    }
+    img.validate().ok()?;
 
     let width = img.width as usize;
     let height = img.height as usize;
@@ -29,7 +27,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 big_endian
                     .extend_from_slice(&u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes());
             }
-            (0, 16, width.checked_mul(2)?, 2, big_endian)
+            (0, 16, width * 2, 2, big_endian)
         }
         _ => {
             let (png_color, channels) = match img.color {
@@ -39,18 +37,9 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 ColorType::Rgba8 => (6, 4),
                 _ => return None,
             };
-            (
-                png_color,
-                8,
-                width.checked_mul(channels)?,
-                channels,
-                img.pixels.clone(),
-            )
+            (png_color, 8, width * channels, channels, img.pixels.clone())
         }
     };
-    if pixels.len() != row_bytes.checked_mul(height)? {
-        return None;
-    }
 
     let filter = if img.mode == ImageMode::P8 {
         Filter::None
@@ -82,17 +71,17 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     header.extend_from_slice(&[depth, png_color, 0, 0, 0]);
 
     let mut output = PNG_SIGNATURE.to_vec();
-    write_chunk(&mut output, *b"IHDR", &header)?;
+    write_bounded_chunk(&mut output, *b"IHDR", &header);
     if img.mode == ImageMode::P8 {
         let palette = img.palette.as_ref()?;
-        write_chunk(&mut output, *b"PLTE", &palette.rgb)?;
+        write_bounded_chunk(&mut output, *b"PLTE", &palette.rgb);
         if !palette.alpha.is_empty() {
-            write_chunk(&mut output, *b"tRNS", &palette.alpha)?;
+            write_bounded_chunk(&mut output, *b"tRNS", &palette.alpha);
         }
     }
-    write_requested_ancillary_chunks(&mut output, opts)?;
+    write_requested_ancillary_chunks(&mut output, opts);
     write_chunk(&mut output, *b"IDAT", &compressed)?;
-    write_chunk(&mut output, *b"IEND", &[])?;
+    write_bounded_chunk(&mut output, *b"IEND", &[]);
     Some(output)
 }
 
@@ -121,6 +110,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .expect("coverage palette should be valid");
     let indexed = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(palette);
     let _ = encode(&indexed, &EncodeOptions::default());
+    let palette_less_indexed = DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
+    let _ = encode(&palette_less_indexed, &EncodeOptions::default());
 
     let rgb = DecodedImage::new(
         2,
@@ -144,6 +135,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&rgb, &bad_compression);
 
     let _ = plain_rows(&[], usize::MAX, 1, 1, Filter::None, false);
+    let _ = plain_rows(&[], usize::MAX - 1, 2, 1, Filter::None, false);
+
+    for value in ["1", "yes", "false"] {
+        let mut option = EncodeOptions::default();
+        option.extra.insert("gamma".to_owned(), value.to_owned());
+        let _ = requested(&option, "gamma");
+    }
+    let _ = requested(&EncodeOptions::default(), "gamma");
 
     let row = [10u8, 20, 40, 80];
     let previous = [1u8, 2, 4, 8];
@@ -174,8 +173,9 @@ fn plain_rows(
     filter: Filter,
     optimize: bool,
 ) -> Option<(Vec<u8>, Vec<usize>)> {
-    let mut output = Vec::with_capacity(stride.checked_add(1)?.checked_mul(height)?);
-    let input_chunks = vec![stride.checked_add(1)?; height];
+    let row_len = stride.checked_add(1)?;
+    let mut output = Vec::with_capacity(row_len.checked_mul(height)?);
+    let input_chunks = vec![row_len; height];
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
         append_filtered_row(&mut output, row, previous, filter_bytes, filter, optimize);
@@ -317,37 +317,46 @@ fn requested(opts: &EncodeOptions, key: &str) -> bool {
         .is_some_and(|value| matches!(value.as_str(), "true" | "1" | "yes"))
 }
 
-fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &EncodeOptions) -> Option<()> {
+fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &EncodeOptions) {
     if requested(opts, "gamma") {
-        write_chunk(output, *b"gAMA", &45_455u32.to_be_bytes())?;
+        write_bounded_chunk(output, *b"gAMA", &45_455u32.to_be_bytes());
     }
     if requested(opts, "srgb") {
-        write_chunk(output, *b"sRGB", &[0])?;
+        write_bounded_chunk(output, *b"sRGB", &[0]);
     }
     if requested(opts, "physical") {
         let mut payload = Vec::with_capacity(9);
         payload.extend_from_slice(&2_835u32.to_be_bytes());
         payload.extend_from_slice(&2_835u32.to_be_bytes());
         payload.push(1);
-        write_chunk(output, *b"pHYs", &payload)?;
+        write_bounded_chunk(output, *b"pHYs", &payload);
     }
     if requested(opts, "text_chunks") {
-        write_chunk(output, *b"tEXt", b"Comment\0pillow-rs")?;
+        write_bounded_chunk(output, *b"tEXt", b"Comment\0pillow-rs");
     }
     if requested(opts, "time") {
         let payload = [0x07, 0xea, 7, 4, 0, 0, 0]; // 2026-07-04 00:00:00 UTC.
-        write_chunk(output, *b"tIME", &payload)?;
+        write_bounded_chunk(output, *b"tIME", &payload);
     }
-    Some(())
 }
 
 fn write_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) -> Option<()> {
     let length = u32::try_from(payload.len()).ok()?;
+    append_chunk(output, kind, payload, length);
+    Some(())
+}
+
+fn write_bounded_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {
+    // Callers pass fixed metadata chunks or palettes already bounded by
+    // DecodedImage::validate().
+    append_chunk(output, kind, payload, payload.len() as u32);
+}
+
+fn append_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8], length: u32) {
     output.extend_from_slice(&length.to_be_bytes());
     output.extend_from_slice(&kind);
     output.extend_from_slice(payload);
     output.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
-    Some(())
 }
 
 fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
