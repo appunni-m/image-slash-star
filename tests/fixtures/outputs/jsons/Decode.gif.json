@@ -182,6 +182,19 @@
       ]
     },
     {
+      "id": "alternate_loop_extension_animext_bad_payload",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animext_bad_payload_gif.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "extension_gce",
       "status": "ok",
       "error_type": null,
@@ -369,6 +382,16 @@
     },
     {
       "id": "error_malformed_zero_frame_width",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "tile cannot extend outside image",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_zero_frame_height",
       "status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "tile cannot extend outside image",

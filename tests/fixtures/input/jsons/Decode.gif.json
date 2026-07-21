@@ -182,6 +182,19 @@
       }
     },
     {
+      "id": "alternate_loop_extension_animext_bad_payload",
+      "asset": "animext_bad_payload.gif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/animext_bad_payload.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "extension_gce",
       "asset": "gce.gif",
       "expect_error": false,
@@ -382,6 +395,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/zero_frame_width.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_zero_frame_height",
+      "asset": "zero_frame_height.gif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/zero_frame_height.gif",
         "operations": [
           "PIL.Image.open",
           "load",

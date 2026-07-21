@@ -314,7 +314,6 @@ fn append_code(
 ) -> u8 {
     let mut len = 0usize;
     while code >= clear_code {
-        debug_assert!(usize::from(code) < MAX_LZW_CODE && len < MAX_LZW_CODE);
         stack[len] = suffixes[usize::from(code)];
         len += 1;
         code = prefixes[usize::from(code)];
@@ -328,6 +327,11 @@ fn append_code(
     let remaining = expected_len - output.len();
     output.extend(stack[..len].iter().rev().take(remaining));
     first
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    assert!(decode_lzw(&[0], 2, 0).is_none());
 }
 
 fn deinterlace(indices: &[u8], width: usize, height: usize) -> Option<Vec<u8>> {

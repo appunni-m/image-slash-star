@@ -5,19 +5,24 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the latest pushed-head verification.
+after the latest local coverage verification.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4ddc5168-3d14-413e-92c6-6faed2fb1097`
-- Current measured commit metadata: `3d606c99303bde3b66b7cdee0474a46b3a366ecd`
-- Lines: 22418 / 22419
-- Branches: 3366 / 3456
-- Functions: 1543 / 1543
-- Remaining target: 1 line and 90 branches.
+- Current snapshot: `ca7bd301-b9d3-40a4-8c8b-11d249c80184`
+- Current measured commit metadata: `79c75eeee9c332c7d8287396cdb675f6e144647a`
+- Lines: 22685 / 22707
+- Branches: 3369 / 3452
+- Functions: 1544 / 1544
+- Remaining target: 22 lines and 83 branches.
+- Note: commit `79c75eeee9c332c7d8287396cdb675f6e144647a` is the local
+  GIF decoder coverage commit; `origin/main` was still at
+  `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
+  The preceding rustfmt pass did not change branch coverage, but split some
+  one-line branch bodies into separately counted lines.
 
 ## Planned zlib-ng compressor private-branch batch
 
@@ -1295,6 +1300,110 @@ Reverse-mapped cleanup evidence:
   baseline to 210 / 210 branches. No GIF encoder branch gaps remain.
 - `src/codecs/ico/decode.rs` improved from 63 / 64 branches at the pushed
   baseline to 62 / 62 branches. No ICO decoder branch gaps remain.
+
+## Refreshed missing branch map after rustfmt
+
+Coverage MCP snapshot `c3129258-5bc6-4b61-b276-de541e53b26c`, measured at
+commit `8bc46868de477a12eaf6d01094d38bb95c9636fd`, reports 3368 / 3456
+branches. The remaining 88 branch gaps are:
+
+| File | Branches | Deficit | Current gap lines |
+|---|---:|---:|---|
+| `src/codecs/gif/decode.rs` | 71 / 76 | 5 | 60, 164, 246, 317 |
+| `src/codecs/jpeg/decode/decode.rs` | 65 / 70 | 5 | 164, 295, 399, 410, 415 |
+| `src/codecs/png/decode.rs` | 81 / 86 | 5 | 32, 44-45, 53, 407 |
+| `src/codecs/webp/native/encoder.rs` | 193 / 198 | 5 | 247, 379, 392, 395, 1043, 1137 |
+| `src/codecs/jpeg/decode/parser.rs` | 91 / 98 | 7 | 99, 164, 278, 382, 410 |
+| `src/codecs/webp/native/vp8.rs` | 154 / 162 | 8 | 969, 1033, 1056, 1067, 1104, 1125, 1129, 1173, 1177, 1183, 1192, 1204, 1215, 1229, 1409, 1459, 1472, 1814, 1825, 1867 |
+| `src/codecs/webp/native/decoder.rs` | 74 / 84 | 10 | 196, 264, 274-277, 427, 533, 543, 595 |
+| `src/codecs/bmp/decode.rs` | 109 / 122 | 13 | 222, 247, 263, 294, 493, 503 |
+| `src/codecs/jpeg/decode/progressive.rs` | 104 / 118 | 14 | 84, 103, 133, 155, 160, 173, 183, 186, 209, 533, 595, 696 |
+| `src/codecs/tiff/decode.rs` | 100 / 114 | 14 | 32, 43, 51, 74, 79, 113, 253, 296, 418, 469 |
+| `src/codecs/webp/native/lossless.rs` | 108 / 110 | 2 | LLVM-normalized projection lists many partial lines; defer until a tighter branch-direction signal is available. |
+
+Execution order for this pass: fix one file at a time, starting with clean
+five-branch decode files. Each file gets a local reverse-mapping step before
+any fixture or private probe is added.
+
+## Planned GIF decode reverse-mapped batch
+
+Coverage MCP snapshot `c3129258-5bc6-4b61-b276-de541e53b26c` reports
+`src/codecs/gif/decode.rs` at 313 / 313 lines, 71 / 76 branches, and
+20 / 20 functions. This is the first target because the gap map is small and
+specific, unlike the LLVM-normalized `lossless.rs` map.
+
+Reverse-mapping targets before the next Coverage MCP run:
+
+- line 60: application extension loop parsing:
+  `is_loop_extension && payload.first() == Some(&1)`. Generate or directly
+  decode application extensions covering non-loop identifiers, loop identifiers
+  with first payload byte not `1`, and loop identifiers with short payloads.
+  Use Pillow-backed fixture rows only if Pillow accepts the resulting file;
+  otherwise use a coverage-only parser probe for malformed extension variants.
+- line 164: image descriptor rejects `width == 0 || height == 0`. Build tiny
+  image descriptors with zero width and zero height. These should be malformed
+  decode rows or private decode probes, not valid Pillow parity rows unless
+  Pillow accepts them consistently.
+- line 246: first LZW data code guard:
+  `code >= clear_code || output.len() >= expected_len`. Reverse-map direct LZW
+  byte streams for both failure sides: first code at/above clear code and an
+  already-full output case. This is an internal decoder-state predicate; prefer
+  direct `decode_lzw()` probes if public GIF bytes cannot naturally isolate it.
+- line 317: `append_code()` debug assertion while following dictionary
+  prefixes. Reverse-map whether valid `decode_lzw()` dictionary construction can
+  ever make `usize::from(code) >= MAX_LZW_CODE` or `len >= MAX_LZW_CODE`. If
+  unreachable for valid tables, simplify the debug assertion rather than
+  fabricate invalid private state.
+
+The first debugging action is a small code-level LZW packer/search that derives
+the shortest byte streams reaching line 246 and the valid/invalid dictionary
+shape behind line 317. Do not run coverage again until the candidate input or
+unreachable-branch simplification is documented here.
+
+Debug result:
+
+- Existing fixture `lzw_invalid_first.gif` maps to the first line-246 failure
+  side: first data code `6`, clear code `4`, `code >= clear_code == true`, and
+  `output.len() >= expected_len == false`.
+- A direct LZW stream with first data code `0`, minimum code size `2`, and
+  `expected_len = 0` maps to the other line-246 side:
+  `code >= clear_code == false` and `output.len() >= expected_len == true`.
+  Public GIF image descriptors cannot reach this because `decode_image()` first
+  rejects zero width/height. Add this as a coverage-only `decode_lzw()` probe.
+- Existing fixture `zero_frame_width.gif` maps to the line-164 `width == 0`
+  side. Add `zero_frame_height.gif` as a manifest malformed decode fixture for
+  the `height == 0` side.
+- Existing fixture `animext_loop.gif` maps to line 60 with a recognized
+  application identifier and payload byte `1`; `unknown_application.gif` maps
+  to an unrecognized identifier. Add `animext_bad_payload.gif`, a recognized
+  `ANIMEXTS1.0` extension with first payload byte `0`, for the short-circuited
+  payload side.
+- Line 317 is a debug-only invariant over `append_code()` prefix traversal.
+  Valid `decode_lzw()` construction only calls `append_code()` with codes below
+  `next_code`, inserts dictionary entries while `next_code < MAX_LZW_CODE`,
+  and stores prefixes from the same valid code domain. The false side would
+  require an invalid private prefix table, so remove the debug assertion rather
+  than fabricate impossible state.
+
+Completed evidence:
+
+- Regenerated only GIF assets/references with:
+  `.oracle-venv/bin/python scripts/generate_test_assets.py --format gif` and
+  `.oracle-venv/bin/python scripts/generate_decode_refs.py --format gif`.
+- Coverage MCP run `e8114f56-7728-4412-921d-7112169285d5`, snapshot
+  `6a210c57-879e-431f-a8df-fedcf37b9c68`, passed with 5 passed and 0 failed;
+  coverage artifact was ingested.
+- Overall coverage improved from 3368 / 3456 branches at snapshot
+  `c3129258-5bc6-4b61-b276-de541e53b26c` to 3369 / 3452 branches, reducing
+  missing branches from 88 to 83.
+- `src/codecs/gif/decode.rs` improved from 71 / 76 branches to 72 / 72
+  branches, 316 / 316 lines, and 21 / 21 functions. No GIF decoder branch gaps
+  remain.
+- Committed-head verification run
+  `73399bbd-6105-4832-9d66-f33a93533619`, snapshot
+  `ca7bd301-b9d3-40a4-8c8b-11d249c80184`, passed with 5 passed and 0 failed
+  at commit `79c75eeee9c332c7d8287396cdb675f6e144647a`; coverage artifact was
+  ingested and retained the same 3369 / 3452 branch result.
 
 ## Execution order
 

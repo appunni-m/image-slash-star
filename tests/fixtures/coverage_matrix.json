@@ -1540,6 +1540,24 @@
           ]
         },
         {
+          "id": "alternate_loop_extension_animext_bad_payload",
+          "type": "decode",
+          "format": "gif",
+          "category": "alternate",
+          "description": "ANIMEXTS1.0 carries the same loop payload as NETSCAPE2.0",
+          "asset": "animext_bad_payload.gif",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animext_bad_payload_gif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "asset": "gce.gif",
           "asset_path": "tests/fixtures/input/images/gif/gce.gif",
           "category": "extension",
@@ -1805,6 +1823,19 @@
           "category": "error",
           "description": "Invalid headers, descriptors, controls, and LZW roots",
           "asset": "zero_frame_width.gif",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "tile cannot extend outside image"
+        },
+        {
+          "id": "error_malformed_zero_frame_height",
+          "type": "decode",
+          "format": "gif",
+          "category": "error",
+          "description": "Invalid headers, descriptors, controls, and LZW roots",
+          "asset": "zero_frame_height.gif",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -14629,12 +14660,12 @@
     }
   },
   "summary": {
-    "total_rows": 793,
-    "decode_rows": 501,
+    "total_rows": 795,
+    "decode_rows": 503,
     "encode_rows": 260,
     "formats": 8,
-    "assets_available": 494,
-    "decode_active": 495,
+    "assets_available": 496,
+    "decode_active": 497,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

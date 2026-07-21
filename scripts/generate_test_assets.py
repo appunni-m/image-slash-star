@@ -993,6 +993,9 @@ def gen_gif():
     zero_frame_width = bytearray(static)
     zero_frame_width[image_offset + 5 : image_offset + 7] = b"\0\0"
     (d / "zero_frame_width.gif").write_bytes(zero_frame_width)
+    zero_frame_height = bytearray(static)
+    zero_frame_height[image_offset + 7 : image_offset + 9] = b"\0\0"
+    (d / "zero_frame_height.gif").write_bytes(zero_frame_height)
     min_code_one = bytearray(static)
     min_code_one[image_offset + 10] = 1
     (d / "min_code_one.gif").write_bytes(min_code_one)
@@ -1048,6 +1051,10 @@ def gen_gif():
     netscape = animext.index(b"NETSCAPE2.0")
     animext[netscape : netscape + 11] = b"ANIMEXTS1.0"
     (d / "animext_loop.gif").write_bytes(animext)
+    animext_bad_payload = bytearray(animext)
+    animext_payload = animext_bad_payload.index(b"\x03\x01", netscape)
+    animext_bad_payload[animext_payload + 1] = 0
+    (d / "animext_bad_payload.gif").write_bytes(animext_bad_payload)
 
     gce = bytearray((d / "gce.gif").read_bytes())
     gce_offset = gce.index(b"\x21\xf9")

@@ -948,6 +948,7 @@ formats:
       description: ANIMEXTS1.0 carries the same loop payload as NETSCAPE2.0
       test_assets:
       - animext_loop.gif
+      - animext_bad_payload.gif
     - id: extension_gce
       description: Graphic Control Extension (delay, disposal)
       test_assets:
@@ -986,6 +987,7 @@ formats:
       - invalid_signature.gif
       - unknown_block.gif
       - zero_frame_width.gif
+      - zero_frame_height.gif
       - min_code_one.gif
       - min_code_nine.gif
       - bad_gce_terminator.gif
