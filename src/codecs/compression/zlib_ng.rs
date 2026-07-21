@@ -269,6 +269,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = level3
         .longest_match(0, 4)
         .expect("level3 lookahead break should process");
+
+    let _ = quick_insert_level1(data, data.len(), &mut head);
+    let mut overflowing_position = usize::MAX;
+    let _ = tokenize_level1_position(
+        data,
+        data.len(),
+        &mut overflowing_position,
+        &mut head,
+        &mut tokens,
+    );
+    let _ = compress_level2(data, &[data.len(), usize::MAX]);
+    let _ = compress_level3(data, &[data.len(), usize::MAX]);
+    let _ = compress_level4(data, &[data.len(), usize::MAX]);
+    let _ = compress_level5(data, &[data.len(), usize::MAX]);
+    let _ = compress_level6(data, &[data.len(), usize::MAX]);
+    let _ = compress_level7(data, &[data.len(), usize::MAX]);
+    let _ = compress_level8(data, &[data.len(), usize::MAX]);
+    let _ = compress_level9(data, &[data.len(), usize::MAX]);
+
+    let _ = medium_candidate_can_improve(data, 0, 1, 0);
+    let _ = medium_candidate_can_improve(data, data.len(), 0, 3);
+    let _ = medium_candidate_can_improve(data, 0, data.len(), 8);
+
+    let mut short_level6 = Level6Matcher::new(b"abcd", 1, 4, 4);
+    short_level6.data.truncate(3);
+    let _ = short_level6.quick_insert(0);
+
+    let mut short_level9 = Level9Matcher::new(b"abcd");
+    short_level9.data.truncate(3);
+    short_level9.position = 1;
+    let _ = short_level9.refill_boundary();
+
+    let mut short_level3 = Level3Matcher::new(b"abc", 1, 4, 4, false);
+    let _ = short_level3.quick_insert(0);
+    short_level3.position = usize::MAX;
+    let _ = short_level3.candidate_can_improve(0, 3);
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {

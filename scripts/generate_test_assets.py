@@ -3006,6 +3006,18 @@ def gen_tiff():
     )
     img.save(d / "multipage.tiff", save_all=True, append_images=[img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)])
     d.joinpath("bad_ifd.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\xff\xff\xff")
+    d.joinpath("truncated_signature.tiff").write_bytes(b"I")
+    d.joinpath("truncated_magic.tiff").write_bytes(b"II")
+    d.joinpath("truncated_ifd_offset.tiff").write_bytes(b"II\x2a\x00")
+    d.joinpath("truncated_ifd_count.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00")
+    d.joinpath("truncated_ifd_entry.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\x01\x00")
+    d.joinpath("oob_tag_value_offset.tiff").write_bytes(
+        b"II"
+        + struct.pack("<HI", 42, 8)
+        + struct.pack("<H", 1)
+        + struct.pack("<HHII", 256, 4, 2, 0xFFFF_FFF0)
+        + struct.pack("<I", 0)
+    )
     invalid_magic = bytearray((d / "rgb.tiff").read_bytes())
     invalid_magic[2:4] = b"+\0"
     (d / "invalid_magic.tiff").write_bytes(invalid_magic)

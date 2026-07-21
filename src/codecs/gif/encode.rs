@@ -114,6 +114,189 @@ pub(crate) fn __coverage_exercise_private_branches() {
             transparency_override: None,
         },
     );
+
+    let luma = DecodedImage::new(1, 1, vec![7], ColorType::L8);
+    let still = DecodedSequence::from_image(luma.clone());
+    let _ = coalesce_identical_frames(&still, 1);
+
+    let identical_frames = vec![
+        crate::types::DecodedFrame {
+            image: luma.clone(),
+            left: 0,
+            top: 0,
+            duration_ms: u32::MAX,
+            disposal: FrameDisposal::Keep,
+            interlaced: false,
+        },
+        crate::types::DecodedFrame {
+            image: luma.clone(),
+            left: 0,
+            top: 0,
+            duration_ms: 1,
+            disposal: FrameDisposal::Keep,
+            interlaced: false,
+        },
+    ];
+    let _ = coalesce_identical_frames(
+        &DecodedSequence {
+            width: 1,
+            height: 1,
+            frames: identical_frames,
+            loop_count: None,
+            background: None,
+        },
+        2,
+    );
+
+    let background_frames = vec![
+        crate::types::DecodedFrame {
+            image: DecodedImage::new(1, 1, vec![255, 0, 0], ColorType::Rgb8),
+            left: 1,
+            top: 1,
+            duration_ms: 10,
+            disposal: FrameDisposal::Background,
+            interlaced: false,
+        },
+        crate::types::DecodedFrame {
+            image: DecodedImage::new(1, 1, vec![0, 255, 0], ColorType::Rgb8),
+            left: 0,
+            top: 0,
+            duration_ms: 10,
+            disposal: FrameDisposal::Reserved(7),
+            interlaced: false,
+        },
+    ];
+    let background_sequence = DecodedSequence {
+        width: 2,
+        height: 2,
+        frames: background_frames,
+        loop_count: None,
+        background: None,
+    };
+    let _ = coalesce_identical_frames(&background_sequence, 2);
+
+    let transparent_palette =
+        ImagePalette::new(vec![0, 0, 0], vec![0]).expect("coverage transparent palette");
+    let transparent_frame = crate::types::DecodedFrame {
+        image: DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8)
+            .with_palette(transparent_palette),
+        left: 0,
+        top: 0,
+        duration_ms: 0,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let mut canvas = vec![255; 4];
+    let _ = composite_frame(&mut canvas, 1, &transparent_frame);
+
+    let bad_palette =
+        ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage one-color palette");
+    let bad_index_frame = crate::types::DecodedFrame {
+        image: DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8).with_palette(bad_palette),
+        left: 0,
+        top: 0,
+        duration_ms: 0,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let _ = composite_frame(&mut canvas, 1, &bad_index_frame);
+
+    let _ = prepare_image(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8));
+    let _ = indexed_rgb(&[0, 1], &[0, 0, 0]);
+
+    let mut invalid_animated = EncodeOptions::none();
+    invalid_animated
+        .extra
+        .insert("animated".to_owned(), "maybe".to_owned());
+    let _ = encode_sequence(&still, &invalid_animated);
+    let mut invalid_loop = EncodeOptions::none();
+    invalid_loop
+        .extra
+        .insert("loop".to_owned(), "forever-ish".to_owned());
+    let _ = encode_sequence(&still, &invalid_loop);
+    let _ = parse_disposal("keep");
+    let _ = parse_loop_count(&{
+        let mut opts = EncodeOptions::none();
+        opts.extra.insert("loop".to_owned(), "false".to_owned());
+        opts
+    });
+
+    let oversized_sequence = DecodedSequence {
+        width: u32::from(u16::MAX) + 1,
+        height: 1,
+        frames: still.frames.clone(),
+        loop_count: None,
+        background: None,
+    };
+    let _ = write_gif(
+        &oversized_sequence,
+        &oversized_sequence.frames,
+        GifSettings {
+            interlaced: None,
+            local_color_table: false,
+            disposal_override: None,
+            loop_count: None,
+            transparency_override: None,
+        },
+    );
+
+    let bad_offset_frame = crate::types::DecodedFrame {
+        image: luma.clone(),
+        left: u32::from(u16::MAX) + 1,
+        top: 0,
+        duration_ms: u32::MAX,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let bad_offset_sequence = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![bad_offset_frame],
+        loop_count: None,
+        background: None,
+    };
+    let _ = write_gif(
+        &bad_offset_sequence,
+        &bad_offset_sequence.frames,
+        GifSettings {
+            interlaced: Some(false),
+            local_color_table: true,
+            disposal_override: Some(3),
+            loop_count: Some(0),
+            transparency_override: Some(true),
+        },
+    );
+
+    let _ = prepare_background(
+        &mut PreparedImage {
+            palette: vec![0, 0, 0],
+            indices: vec![0],
+            transparent: Some(0),
+        },
+        ImageMode::Rgba8,
+        Some(AnimationBackground::Rgba([0, 0, 0, 0])),
+    );
+    let _ = prepare_background(
+        &mut PreparedImage {
+            palette: vec![0; 256 * 3],
+            indices: vec![0],
+            transparent: None,
+        },
+        ImageMode::Rgb8,
+        Some(AnimationBackground::Rgba([1, 2, 3, 255])),
+    );
+    let _ = prepare_background(
+        &mut PreparedImage {
+            palette: vec![0, 0, 0],
+            indices: vec![0],
+            transparent: None,
+        },
+        ImageMode::P8,
+        Some(AnimationBackground::PaletteIndex(0)),
+    );
+
+    let _ = OctreeCube::new([usize::BITS, 0, 0, 0]);
+    let _ = OctreeCube::new([16, 16, 16, 16]);
 }
 
 /// Encode a still image or animation without discarding source frames.

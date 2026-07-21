@@ -1972,6 +1972,12 @@ formats:
       description: Corrupt headers, dimensions, tags, and strip bounds
       test_assets:
       - bad_ifd.tiff
+      - truncated_signature.tiff
+      - truncated_magic.tiff
+      - truncated_ifd_offset.tiff
+      - truncated_ifd_count.tiff
+      - truncated_ifd_entry.tiff
+      - oob_tag_value_offset.tiff
       - invalid_endian.tiff
       - invalid_magic.tiff
       - zero_width.tiff

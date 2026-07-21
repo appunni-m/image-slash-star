@@ -2451,3 +2451,97 @@ Next attack order:
    internals.
 4. WebP native decoder/VP8/VP8L branch-bearing files remain branch-priority
    after region-only cleanup because they still own the remaining branch gaps.
+
+### Attempt 4 plan
+
+Current Coverage MCP baseline before editing:
+
+- Snapshot: `da32b2c0-1291-434d-b20b-32297d826718`
+- Commit metadata: `33114d9b2994e8cdd2187f0ed0e6c3826aff1c3f`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Lines: `23699 / 23706`
+- Branches: `3422 / 3436`
+- Functions: `1576 / 1576`
+- Regions: `39429 / 40747`
+- Missing regions: `1318`
+
+The top remaining region files are fully line-covered, so MCP's file-gap view
+has no line ranges to report. The retained LLVM JSON was used only to map
+zero-count region starts to functions; MCP remains the source of truth for
+totals and validation.
+
+Selected broad sweep:
+
+| Target | Reverse-mapped gap | Action |
+| --- | --- | --- |
+| `src/codecs/tiff/decode.rs` | Region gaps at `data.get(...)?`, IFD count/entry bounds, and value-offset reads are public malformed-input states. | Add manifest-backed malformed TIFF assets for truncated signature/magic/IFD-offset bytes, truncated IFD counts/entries, and out-of-bounds tag value data. These are exact Pillow-error rows, not private hooks. |
+| `src/codecs/gif/encode.rs` | The largest clusters are private encode expression regions in `coalesce_identical_frames`, `clear_frame_rect`, `composite_frame`, `prepare_image`, option parsing, and `OctreeCube::new`. Existing manifest rows already cover real GIF encode outputs. | Extend the `cfg(coverage)` hook with targeted invalid/private states: requested still-frame coalescing, background disposal clearing, transparent P-frame compositing, invalid option parsing, oversized GIF dimensions, invalid indexed palette lookup, and octree checked-shift/size edges. Do not add random GIF rows because the observable GIF encode matrix is already broad. |
+| `src/codecs/compression/zlib_ng.rs` | Largest remaining clusters are checked arithmetic and slice-bound regions inside private matchers and Huffman writers. Public PNG compression rows already exercise the real level-specific byte oracle. | Add narrow `cfg(coverage)` probes for helper failure sides that are not public image behavior: short candidate comparisons, out-of-range quick inserts, and impossible chunk-length overflow states. Leave larger invariant simplifications for a separate zlib-only proof pass. |
+
+Validation after this batch:
+
+1. Regenerate deterministic fixture assets and the manifest-driven matrix.
+2. Run `cargo fmt`.
+3. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Query MCP summary and files, including lines, branches, functions, and
+   regions.
+5. Record the new snapshot and per-file movement here before continuing to the
+   remaining WebP branch gaps.
+
+### Attempt 4 result
+
+Coverage MCP run `4e89ee2f-aea4-437f-bd41-7153a8d5f608`, snapshot
+`e27f1a74-6d96-43c1-baa4-88429f54852d`, passed and ingested.
+
+- Lines: `23900 / 23907`
+- Branches: `3422 / 3436`
+- Functions: `1576 / 1576`
+- Regions: `39664 / 40944`
+- Missing regions: `1280`
+
+Net from attempt 3/current baseline:
+
+- Missing regions improved from `1318` to `1280` (`38` fewer).
+- Region rate improved from `96.765%` to `96.874%`.
+- Branches stayed at `3422 / 3436`; the remaining branch gaps are still the
+  WebP native decoder/VP8/VP8L files.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/compression/zlib_ng.rs` | `2701 / 3038` | `2783 / 3100` | `337 -> 317` |
+| `src/codecs/gif/encode.rs` | `2326 / 2450` | `2473 / 2585` | `124 -> 112` |
+| `src/codecs/tiff/decode.rs` | `1440 / 1551` | `1446 / 1551` | `111 -> 105` |
+
+Fixture rows added in this sweep:
+
+- `truncated_signature.tiff`
+- `truncated_magic.tiff`
+- `truncated_ifd_offset.tiff`
+- `truncated_ifd_count.tiff`
+- `truncated_ifd_entry.tiff`
+- `oob_tag_value_offset.tiff`
+
+These rows are active manifest-driven Pillow error-oracle inputs under
+`error_bad_ifd`, and were regenerated into `coverage_matrix.json` plus the TIFF
+decode input/output JSON indexes. The GIF and zlib changes stayed behind
+`cfg(coverage)` because their mapped gaps are private checked-arithmetic and
+state-machine edges already covered for public output behavior by existing
+manifest rows.
+
+Next attack order from this result:
+
+1. Continue region cleanup on `zlib_ng.rs`, but switch from adding probes to a
+   dedicated invariant simplification pass. The broad helper probes improved
+   only 20 missing regions while increasing total regions, so the next useful
+   zlib work is proving/removing unreachable checked arithmetic.
+2. Continue fixture-backed TIFF malformed coverage only where the mapped line
+   corresponds to a public parser/storage boundary. The short-read fixtures
+   covered the intended parser regions.
+3. For GIF encode, prefer invariant simplification in validated frame geometry
+   and quantizer internals. More hook volume has diminishing returns.
+4. After region-only cleanup, return to the remaining branch gaps:
+   `webp/native/decoder.rs` (6), `webp/native/vp8.rs` (6), and
+   `webp/native/lossless.rs` (2).
