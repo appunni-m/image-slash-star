@@ -723,6 +723,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         huffman_code_groups: Vec::new(),
     };
     let _ = info.get_huff_index(1, 0);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_0010u8; 8]));
+    let mut data = [0u8; 8];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(0, 257),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(1),
+        ]],
+    };
+    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
 }
 
 #[derive(Debug, Clone)]

@@ -1019,6 +1019,63 @@ Measurement and decision:
   WebP branch files: `vp8.rs` (`154 / 160`), `decoder.rs` (`88 / 92`), and
   `lossless.rs` (`108 / 110`).
 
+## Attempt 31 plan: VP8L backward-reference remaining-length guard
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `aab000d`.
+- Coverage MCP snapshot: `dda3ae34-8288-425d-b8cd-b94756595953`.
+- Overall: `24514 / 24520` lines, `3432 / 3444` branches,
+  `1581 / 1581` functions, and `40012 / 40748` regions.
+- Target file: `src/codecs/webp/native/lossless.rs` at `553 / 554` lines,
+  `108 / 110` branches, `27 / 27` functions, and `869 / 917` regions.
+
+Reverse map:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 564 | Backward-reference bounds guard | `index < dist` is false, but `num_values - index < length` is true. This means the copy distance points to already decoded data, but the requested copy length overruns the remaining image. |
+
+Selected action:
+
+- Keep this in the private VP8L hook because it targets a decoded Huffman state
+  below the public manifest layer.
+- Construct a minimal `decode_image_data()` state with two output pixels:
+  first a literal pixel, then a backward-reference symbol with `length = 2` and
+  `dist = 1` at `index = 1`.
+- Use `Cursor<Vec<u8>>` to avoid introducing an unrelated new generic
+  monomorphization of the lossless decoder.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured branch/region movement here, then commit and push if the
+   aggregate coverage target improves.
+
+Measurement and decision:
+
+- Coverage MCP run: `46d61041-beec-4695-91b9-6cd419d34660`.
+- Coverage MCP snapshot: `1b8cb0b5-5a4b-4f94-8131-cbfdd65bf4c8`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after the hook: `24532 / 24538` lines, `3432 / 3444` branches,
+  `1581 / 1581` functions, and `40030 / 40765` regions.
+- Net branch movement: unchanged at `3432 / 3444`.
+- Net region movement: missing regions improved from `736` to `735`.
+- Target file movement: `src/codecs/webp/native/lossless.rs` stayed at
+  `108 / 110` branches and moved from `869 / 917` regions to
+  `886 / 934` regions.
+- Line-level observation: the reverse-mapped backward-reference overrun hit the
+  intended `BitStreamError` return at line 565 and reduced the line 564
+  partial-branch subcount, but the LLVM aggregate branch numerator did not move.
+- Decision: keep the hook because it is a real VP8L invalid-copy state and it
+  improves aggregate region coverage. Continue branch work in `vp8.rs`
+  (`154 / 160`) and `decoder.rs` (`88 / 92`).
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
