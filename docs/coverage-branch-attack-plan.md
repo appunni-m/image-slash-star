@@ -5,19 +5,19 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the committed ICO zero-entry size-filter batch.
+after the committed JPEG Huffman prefix-gap hook batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `7df3a4f3-a4af-4ac5-9382-0c8a7a11039d`
-- Current commit: `61af0e202a12d69f9638a8b5a181a2bea85b0091`
-- Lines: 21708 / 21709
-- Branches: 3315 / 3484
+- Current snapshot: `bbf441d1-abaf-4f7a-a677-72573cc2b5ff`
+- Current commit: `218a0f6a3d7bf07cc878e24eb548879cdc3f0009`
+- Lines: 21703 / 21704
+- Branches: 3316 / 3484
 - Functions: 1518 / 1518
-- Remaining target: 1 line and 169 branches.
+- Remaining target: 1 line and 168 branches.
 
 Coverage MCP reports this warning for LLVM JSON:
 
@@ -144,8 +144,7 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
 | 22 | `src/codecs/webp/native/extended.rs` | 2 | 46-47 | Add WebP extended-header fixtures for feature flags and invalid/missing extended chunks. |
 | 23 | `src/codecs/jpeg/decode/huffman.rs` | 2 | 100, 181 | Add JPEG Huffman fixtures with deep code lengths, invalid/unused symbols, and entropy streams that force table boundary decisions. |
 | 24 | `src/codecs/webp/encode/vp8/encoder.rs` | 1 | 441 | Add WebP lossy encode source that triggers the remaining VP8 encoder branch; inspect line 441 first to decide if fixture or cleanup. |
-| 25 | `src/codecs/jpeg/encode/huffman.rs` | 1 | 141 | Add JPEG encode source producing the remaining Huffman code-length/count branch; use high-entropy and solid sources. |
-| 26 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
+| 25 | `src/codecs/webp/encode/vp8/bool_enc.rs` | 1 | 98 | Add WebP lossy encode data that drives the bool encoder across the remaining carry/range branch, likely high-entropy or threshold-sized image. |
 
 ## Completed while executing this plan
 
@@ -195,6 +194,20 @@ These fixture datasets cover most remaining branch gaps with real image inputs:
   requested sizes are empty or fully filtered. These rows are marked
   `encoded_only` because Pillow cannot re-open that zero-entry ICO for pixel
   roundtrip evidence, so parity is proven by exact encoded bytes.
+
+### JPEG Huffman prefix-gap coverage-hook batch
+
+- Commit: `218a0f6a3d7bf07cc878e24eb548879cdc3f0009`
+- Coverage MCP run: `9ed703ab-8c6e-4cf1-9028-5339d2ae53b1`
+- Coverage MCP snapshot: `bbf441d1-abaf-4f7a-a677-72573cc2b5ff`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Coverage movement: branches improved from 3315 / 3484 to 3316 / 3484.
+- `src/codecs/jpeg/encode/huffman.rs`: now 130 / 130 lines and 24 / 24 branches.
+- Exploration note: a deterministic private frequency vector with 18 nonzero
+  symbols at powers-of-two frequencies drives the JPEG optimal-Huffman
+  length-limiting pass through the empty-prefix-bucket backup branch at line
+  141. This is exercised through the existing `#[cfg(coverage)]` private hook;
+  production JPEG encoding behavior is unchanged.
 
 ## Execution order
 
