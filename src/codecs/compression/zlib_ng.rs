@@ -269,6 +269,73 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = level6_insert_overflow.find_match(usize::MAX, 4);
     let _ = level6_insert_overflow.longest_match(0, usize::MAX, 4);
+    let mut level6_refill_short = Level6Matcher::new(b"abcd", 128, 128, 16);
+    level6_refill_short.data.truncate(3);
+    level6_refill_short.position = 1;
+    let _ = level6_refill_short.refill_boundary();
+    let mut level6_process_slide = Level6Matcher::new(b"abcd", 128, 128, 16);
+    level6_process_slide.window_base = 2;
+    level6_process_slide.position = 1;
+    let _ = level6_process_slide.process(4, true);
+    let mut level6_process_find = Level6Matcher::new(b"abcd", 128, 128, 16);
+    level6_process_find.data.truncate(3);
+    let _ = level6_process_find.process(4, true);
+    let mut level6_literal_short = Level6Matcher::new(b"ab", 128, 128, 16);
+    level6_literal_short.data.truncate(0);
+    let _ = level6_literal_short.process(1, true);
+    let mut level6_missing_hash = Level6Matcher::new(b"abcd", 128, 128, 16);
+    level6_missing_hash.data.truncate(2);
+    let _ = level6_missing_hash.quick_insert(0);
+    let mut level6_missing_head = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
+    level6_missing_head.head.clear();
+    let _ = level6_missing_head.quick_insert(0);
+    let mut level6_missing_previous = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
+    let level6_hash = level6_missing_previous
+        .hash(0)
+        .expect("coverage level6 hash should compute");
+    level6_missing_previous.head[level6_hash] = 1;
+    level6_missing_previous.previous.clear();
+    let _ = level6_missing_previous.quick_insert(0);
+    let mut level6_insert_end_overflow = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
+    let _ = level6_insert_end_overflow.insert_match(
+        MediumMatch {
+            match_start: 0,
+            length: 4,
+            start: usize::MAX - 1,
+            original_start: 0,
+        },
+        16,
+    );
+    let mut level6_insert_quick_fail = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
+    level6_insert_quick_fail.data.truncate(4);
+    let _ = level6_insert_quick_fail.insert_match(
+        MediumMatch {
+            match_start: 0,
+            length: 5,
+            start: 0,
+            original_start: 0,
+        },
+        10,
+    );
+    let mut level6_insert_else_fail = Level6Matcher::new(b"abcdefgh", 128, 128, 0);
+    level6_insert_else_fail.data.truncate(6);
+    let _ = level6_insert_else_fail.insert_match(
+        MediumMatch {
+            match_start: 0,
+            length: 5,
+            start: 0,
+            original_start: 0,
+        },
+        10,
+    );
+    let mut level6_match_short = Level6Matcher::new(b"abcdefgh", 2, 128, 16);
+    level6_match_short.data.truncate(2);
+    level6_match_short.position = 4;
+    let _ = level6_match_short.longest_match(0, 4, 4);
+    let mut level6_empty_previous_chain = Level6Matcher::new(b"abcdwxyz", 2, 128, 16);
+    level6_empty_previous_chain.position = 4;
+    level6_empty_previous_chain.previous.clear();
+    let _ = level6_empty_previous_chain.longest_match(0, 4, 4);
 
     let mut level9 = Level9Matcher::new(b"abcdefghijkl");
     level9
@@ -320,6 +387,53 @@ pub(crate) fn __coverage_exercise_private_branches() {
     level9_overflow_match.position = usize::MAX - 1;
     level9_overflow_match.previous_length = 3;
     let _ = level9_overflow_match.longest_match(0, 8);
+    let mut level9_refill_short = Level9Matcher::new(b"abcd");
+    level9_refill_short.data.truncate(1);
+    let _ = level9_refill_short.refill_boundary();
+    let mut level9_process_short = Level9Matcher::new(b"abcd");
+    level9_process_short.data.truncate(2);
+    let _ = level9_process_short.process(4, true);
+    let mut level9_bad_distance = Level9Matcher::new(b"abcdefgh");
+    level9_bad_distance.position = 4;
+    level9_bad_distance.previous_length = 3;
+    level9_bad_distance.match_start = usize::MAX;
+    let _ = level9_bad_distance.process(5, true);
+    let mut level9_insert_failure = Level9Matcher::new(b"abcdefgh");
+    level9_insert_failure.position = 4;
+    level9_insert_failure.previous_length = 5;
+    level9_insert_failure.data.truncate(7);
+    let _ = level9_insert_failure.process(10, true);
+    let mut level9_literal_underflow = Level9Matcher::new(b"abcdefgh");
+    level9_literal_underflow.match_available = true;
+    level9_literal_underflow.previous_length = 0;
+    let _ = level9_literal_underflow.process(MIN_LOOKAHEAD, true);
+    let mut level9_hash_overflow = Level9Matcher::new(b"abcd");
+    let _ = level9_hash_overflow.quick_insert(usize::MAX);
+    let mut level9_missing_head = Level9Matcher::new(b"abcdefgh");
+    level9_missing_head.head.clear();
+    let _ = level9_missing_head.quick_insert(0);
+    let mut level9_missing_previous = Level9Matcher::new(b"abcdefgh");
+    let level9_hash = rolling_hash(
+        level9_missing_previous.hash,
+        level9_missing_previous.data[2],
+    );
+    level9_missing_previous.head[level9_hash] = 1;
+    level9_missing_previous.previous.clear();
+    let _ = level9_missing_previous.quick_insert(0);
+    let mut level9_match_short = Level9Matcher::new(b"abcdefgh");
+    level9_match_short.position = 4;
+    level9_match_short.previous_length = 3;
+    level9_match_short.data.truncate(5);
+    let _ = level9_match_short.longest_match(0, 8);
+    let mut level9_missing_chain_head = Level9Matcher::new(b"abcdefgh");
+    level9_missing_chain_head.position = 4;
+    level9_missing_chain_head.previous_length = 3;
+    level9_missing_chain_head.head.clear();
+    let _ = level9_missing_chain_head.longest_match(0, 8);
+    let mut level9_empty_previous_chain = Level9Matcher::new(b"abcdwxyz");
+    level9_empty_previous_chain.position = 4;
+    level9_empty_previous_chain.previous.clear();
+    let _ = level9_empty_previous_chain.longest_match(0, 4);
 
     let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 4, 6, false);
     level3.position = 4;

@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `2814bad1-9036-4c48-9feb-0aca8d8a29b2`
-- Current measured commit metadata: `eac43ed21d3aad663cfb159b570f3b743f2554aa`
-- Current source state: Attempt 59 retained working tree measured from pushed
-  parent `eac43ed`.
-- Lines: 25283 / 25287
+- Current snapshot: `e66e89a1-c214-4354-88bc-10f2e16504e1`
+- Current measured commit metadata: `a6b29c9846c7014d60268bba5969d80c12420d5b`
+- Current source state: Attempt 60 retained working tree measured from pushed
+  parent `a6b29c9`.
+- Lines: 25396 / 25400
 - Branches: 3438 / 3444
 - Functions: 1585 / 1585
-- Regions: 40975 / 41591
-- Remaining target: 4 lines, 6 branches, and 616 regions.
+- Regions: 41153 / 41750
+- Remaining target: 4 lines, 6 branches, and 597 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -47,6 +47,51 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 60 plan: zlib level-six and level-nine matcher guard regions
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 59 commit `a6b29c9`.
+- Coverage MCP snapshot: `2814bad1-9036-4c48-9feb-0aca8d8a29b2`.
+- Overall: `25283 / 25287` lines, `3438 / 3444` branches,
+  `1585 / 1585` functions, and `40975 / 41591` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `1925 / 1925` lines, `368 / 368` branches, `83 / 83` functions, and
+  `3114 / 3343` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `Level6Matcher::refill_boundary()` / `process()` | Lines 1055-1123. | Remaining spans are propagation from `slide_window_if_needed()`, `find_match()`, `insert_match()`, literal emission, and invalid distance guards. Valid tokenization cannot reach these with malformed internal state; use same-module hook mutation. |
+| `Level6Matcher::quick_insert()` / `insert_match()` / `longest_match()` | Lines 1157-1225. | Direct helper states remain for short data, empty hash/previous tables, insertion-end overflow, quick-insert propagation, empty chains, and truncated candidate comparisons. |
+| `Level9Matcher` | Lines 1295-1460. | These mirror slow matcher guards with the rolling-hash variant: refill short reads, process quick-insert/literal/distance failures, quick-insert table failures, and longest-match truncated comparison/empty-chain propagation. |
+
+Implementation plan:
+
+1. Extend the existing zlib coverage hook with one Level6/Level9 guard probe
+   block.
+2. Prefer direct state mutation over public fixtures because these states are
+   impossible for valid Pillow oracle compression inputs.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `fb6aa137-01c2-4bd2-8ace-f2107f9bad58`.
+- Coverage MCP snapshot: `e66e89a1-c214-4354-88bc-10f2e16504e1`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adding Level6/Level9 matcher guard probes:
+  `25396 / 25400` lines, `3438 / 3444` branches, `1585 / 1585`
+  functions, and `41153 / 41750` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `3114 / 3343` regions to `3292 / 3502` regions; missing regions fell from
+  `229` to `210`.
+- Net: aggregate missing regions fell from `616` to `597`. Branch debt is
+  unchanged.
 
 ## Attempt 59 plan: zlib level-one and slow-matcher guard regions
 
