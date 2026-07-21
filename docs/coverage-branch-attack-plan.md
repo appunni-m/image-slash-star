@@ -12,17 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4ccc75f2-5565-46e7-b6a0-ee05dfe4dd21`
+- Current snapshot: `3c0303ef-12a2-4cbe-8746-2096f98e6384`
 - Current measured commit metadata:
-  `d6cd96ad86c52d32cc6c93d658fc44faac080d72`
-- Current source state: post-PNG malformed/tolerated fixture batch; coverage
-  was measured before committing that batch, so the artifact still records the
-  previous commit metadata above.
-- Lines: 24346 / 24352
-- Branches: 3432 / 3446
-- Functions: 1578 / 1578
-- Regions: 39775 / 40637
-- Remaining target: 6 lines, 14 branches, and 862 regions.
+  `d0a8e05293ecc25e9b94f9f16a621a127e296a95`
+- Current source state: post-small ICO/WebP invariant sweep, before committing
+  that sweep.
+- Lines: 24353 / 24359
+- Branches: 3426 / 3440
+- Functions: 1579 / 1579
+- Regions: 39782 / 40620
+- Remaining target: 6 lines, 14 branches, and 838 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -3241,6 +3240,110 @@ Decision:
   cannot overflow `usize`.
 - Move the next region-first sweep to another source-mapped file instead of
   forcing these defensive checks.
+
+### Attempt 16 plan: small source-mapped wrapper/invariant sweep
+
+Git state before editing:
+
+- Branch: `main`
+- Pushed commit: `d0a8e05` (`Improve PNG encode region coverage`)
+- Worktree: clean before this attempt.
+
+Coverage MCP baseline used for targeting:
+
+- Snapshot: `92c25a4f-750a-4ce8-8427-fcbd416b0dd1`
+- Run: `0c1d869d-b7b8-491e-9a08-5f5b488c9287`
+- Lines: `24353 / 24359`
+- Branches: `3426 / 3440`
+- Functions: `1580 / 1580`
+- Regions: `39798 / 40642`
+- Missing regions: `844`
+
+Small source-mapped candidates inspected:
+
+| File | Gap | Source starts | Decision |
+| --- | ---: | --- | --- |
+| `src/codecs/ico/encode.rs` | 5 regions | `192:75`, `201:66`, `202:61`, `426:53`, `426:78` | Fix now. Public ICO paths bound frames to <=256px resized PNG/BMP entries through `ico_sizes()`, so frame lengths, offsets, and DIB byte counts fit `u32` and cannot overflow `usize`. Keep the directory-entry-count guard because a malicious `sizes` string can theoretically enumerate more than `u16::MAX` unique bounded sizes. |
+| `src/codecs/webp/decode.rs` | 5 regions | `23:48`, `50:51`, `51:65`, `55:63`, `78:29` | Fix only `51:65`. `WebPDecoder::num_frames()` returns `u32`, which fits `usize` on the supported targets used by this crate. The other starts require successful native WebP frame decode states or sequence-validation failure states and remain generator/native-wrapper debt. |
+| `src/codecs/webp/encode/mod.rs` | 1 region | `113:57` | Defer. This is the extended RIFF size guard after user-supplied metadata. `write_chunk()` currently casts chunk lengths, so a larger robustness change should treat all WebP metadata chunk lengths consistently rather than deleting only the final guard. |
+| `src/codecs/mod.rs` | 1 region | `65:26` | Defer. This is the defensive boundary for an enabled decoder returning an invalid `DecodedImage`; no public fixture can reach it without making a decoder violate its contract. |
+| `src/codecs/tiff/encode.rs` | 5 regions | `60:48`, `108:64`, `142:44`, `153:41`, `169:42` | Defer. These are zlib-ng compression and classic-TIFF `u32` offset/byte-count guards. Keep until a portable large-image proof or a targeted zlib invariant proof is written. |
+
+Selected sub-batch:
+
+1. In `encode_directory()`, replace the dead `checked_add(frame.len())` and
+   per-frame `u32::try_from(frame.len()/offset)` conversions with direct
+   arithmetic/casts after documenting the `ico_sizes()` <=256px public-path
+   invariant.
+2. In `encode_bmp_single_entry()`, replace the dead DIB-size checked additions
+   with direct arithmetic after the same <=256px bound.
+3. In WebP `decode_sequence()`, replace the dead `usize::try_from(u32)` frame
+   count conversion with a direct cast.
+
+Validation after this batch:
+
+1. Run `cargo fmt --all`.
+2. Run `cargo check --all-features` and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run the manifest-driven coverage matrix test.
+4. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Record the new summary and file movement here.
+
+### Attempt 16 result
+
+Validation performed before measuring:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+5. Coverage MCP command `all-features-llvm-cov-json-nightly-branch`
+
+Coverage MCP run `01ddff2a-8b63-4188-8da1-58868c24661f`, snapshot
+`3c0303ef-12a2-4cbe-8746-2096f98e6384`, passed and ingested.
+
+- Commit metadata recorded by the artifact:
+  `d0a8e05293ecc25e9b94f9f16a621a127e296a95`
+- Lines: `24353 / 24359`
+- Branches: `3426 / 3440`
+- Functions: `1579 / 1579`
+- Regions: `39782 / 40620`
+- Missing regions: `838`
+
+Net from the Attempt 16 baseline:
+
+- Missing regions improved from `844` to `838` (`6` fewer).
+- Branch gap stayed at `14` missing.
+- Line gap stayed at `6`.
+
+Target file movement:
+
+| File | Before | After | Missing-region delta |
+| --- | ---: | ---: | ---: |
+| `src/codecs/ico/encode.rs` | `780 / 785` | `767 / 767` | `5 -> 0` |
+| `src/codecs/webp/decode.rs` | `110 / 115` | `107 / 111` | `5 -> 4` |
+
+What moved:
+
+- ICO encode is now 100% lines, branches, functions, and regions.
+- Removed dead private ICO directory/DIB arithmetic guards that cannot be hit
+  through `ico_sizes()`-bounded public PNG/BMP ICO entries.
+- Removed the dead WebP `u32 -> usize` frame-count conversion in
+  `decode_sequence()`.
+
+Remaining source-mapped WebP wrapper starts:
+
+- `23:48`: `output_buffer_size()?` in single-image decode.
+- `50:51`: `output_buffer_size()?` in animation decode.
+- `55:63`: `read_frame(...).ok()?` in animation decode.
+- `78:29`: `DecodedSequence::validate()` failure after native frame reads.
+
+Decision:
+
+- Leave the remaining WebP wrapper regions until the native WebP generator can
+  produce successful-but-invalid frame/sequence states, or until native decoder
+  invariants prove these are unreachable. Do not add wrapper-only fake states.
 
 ### Attempt 10 plan: ICO encode public empty-BMP parity and region cleanup
 

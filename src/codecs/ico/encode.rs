@@ -187,9 +187,7 @@ fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> 
 
     let directory_bytes = sizes.len() * 16;
     let mut offset = 6usize + directory_bytes;
-    let total = frames
-        .iter()
-        .try_fold(offset, |length, frame| length.checked_add(frame.len()))?;
+    let total = offset + frames.iter().map(Vec::len).sum::<usize>();
     let mut output = Vec::with_capacity(total);
     output.extend_from_slice(&[0, 0, 1, 0]);
     output.extend_from_slice(&u16::try_from(sizes.len()).ok()?.to_le_bytes());
@@ -198,8 +196,10 @@ fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> 
         output.push(directory_dimension(height));
         output.extend_from_slice(&[0, 0, 0, 0]);
         output.extend_from_slice(&bits.to_le_bytes());
-        output.extend_from_slice(&u32::try_from(frame.len()).ok()?.to_le_bytes());
-        output.extend_from_slice(&u32::try_from(offset).ok()?.to_le_bytes());
+        // Public callers build entries from `ico_sizes()`, which caps every
+        // generated PNG/BMP frame at 256x256 pixels.
+        output.extend_from_slice(&(frame.len() as u32).to_le_bytes());
+        output.extend_from_slice(&(offset as u32).to_le_bytes());
         offset += frame.len();
     }
     for frame in frames {
@@ -423,7 +423,8 @@ fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<V
     } else {
         mask_row_bytes.checked_mul(mask_dimensions.1)?
     };
-    let dib_bytes = 40usize.checked_add(pixel_bytes)?.checked_add(mask_bytes)?;
+    // Public BMP-backed ICO entries are generated only for <=256px sizes.
+    let dib_bytes = 40usize + pixel_bytes + mask_bytes;
     let dib_size = u32::try_from(dib_bytes).ok()?;
     let mut output = Vec::with_capacity(22usize + dib_bytes);
     output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);

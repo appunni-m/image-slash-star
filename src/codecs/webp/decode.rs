@@ -48,7 +48,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         ColorType::Rgb8
     };
     let buffer_size = decoder.output_buffer_size()?;
-    let frame_count = usize::try_from(decoder.num_frames()).ok()?;
+    let frame_count = decoder.num_frames() as usize;
     let mut frames = Vec::with_capacity(frame_count);
     for _ in 0..frame_count {
         let mut pixels = vec![0; buffer_size];
