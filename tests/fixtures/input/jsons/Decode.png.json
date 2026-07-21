@@ -1079,6 +1079,19 @@
       }
     },
     {
+      "id": "error_malformed_structure_palette_overlong_plte",
+      "asset": "palette_overlong_plte.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_overlong_plte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
       "asset": "idat_truncated_chunk_no_iend.png",
       "expect_error": true,

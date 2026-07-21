@@ -983,6 +983,16 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_structure_palette_overlong_plte",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "invalid palette size",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
       "status": "error",
       "error_type": "builtins.OSError",

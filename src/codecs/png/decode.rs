@@ -456,4 +456,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(chunks.next().is_none());
     assert!(chunks.failed);
     assert!(chunks.next().is_none());
+
+    assert_eq!(row_bytes(usize::MAX, 2, 8), None);
+    assert_eq!(row_bytes(usize::MAX / 8 + 1, 1, 8), None);
+    assert_eq!(row_bytes(usize::MAX - 6, 1, 1), None);
+
+    assert_eq!(inflated_len(u32::MAX, u32::MAX, 2, 8, 0), None);
+    assert_eq!(inflated_len(u32::MAX, u32::MAX, 64, 16, 1), None);
+    assert_eq!(decode_scanlines(&[], u32::MAX, u32::MAX, 4, 8, 0), None);
+
+    let mut position = 0;
+    assert_eq!(unfilter_rows(&[], &mut position, usize::MAX, 1, 1, 8), None);
+    assert_eq!(unfilter_rows(&[], &mut position, 0, 0, usize::MAX, 8), None);
+    assert_eq!(
+        unfilter_rows(&[], &mut position, usize::MAX / 8, 9, 1, 8),
+        None
+    );
 }

@@ -689,6 +689,7 @@ formats:
       - zlib_dynamic_backreference_before_output.png
       - adam7_invalid_scanline_filter.png
       - adam7_giant_dimensions.png
+      - palette_overlong_plte.png
       - idat_truncated_chunk_no_iend.png
       expect_error: true
     - id: pillow_tolerated_malformed

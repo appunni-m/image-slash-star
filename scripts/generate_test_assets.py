@@ -1113,6 +1113,16 @@ def gen_png():
         + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
         + png_chunk(b"IEND", b"")
     )
+    overlong_palette = bytes(
+        value for index in range(257) for value in (index & 0xFF, index & 0xFF, index & 0xFF)
+    )
+    (d / "palette_overlong_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", overlong_palette)
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
     (d / "palette_trns_without_plte.png").write_bytes(
         b"\x89PNG\r\n\x1a\n"
         + png_chunk(b"IHDR", palette_header)

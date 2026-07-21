@@ -8948,6 +8948,19 @@
           "oracle_error_message": "Image size (18446744065119617025 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
         },
         {
+          "id": "error_malformed_structure_palette_overlong_plte",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "palette_overlong_plte.png",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "invalid palette size"
+        },
+        {
           "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
           "type": "decode",
           "format": "png",
@@ -16702,12 +16715,12 @@
     }
   },
   "summary": {
-    "total_rows": 941,
-    "decode_rows": 644,
+    "total_rows": 942,
+    "decode_rows": 645,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 637,
-    "decode_active": 638,
+    "assets_available": 638,
+    "decode_active": 639,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

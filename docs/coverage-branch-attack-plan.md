@@ -12,14 +12,14 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `f718439f-dbf5-4f78-87a3-70766342a243`
-- Current measured commit metadata: `c661201cf26893ccc4e4ec35dbd810743856fc61`
-- Current source state: pushed `main` after Attempt 49.
-- Lines: 24614 / 24618
+- Current snapshot: `6b8f3ab5-d12f-40b4-86ed-d0e88eb8447c`
+- Current measured commit metadata: `cb818c6f159a32bf6acab509ad9f37d3fef3f9ed`
+- Current source state: pushed `main` after Attempt 50.
+- Lines: 24625 / 24629
 - Branches: 3438 / 3444
 - Functions: 1582 / 1582
-- Regions: 40163 / 40880
-- Remaining target: 4 lines, 6 branches, and 717 regions.
+- Regions: 40201 / 40910
+- Remaining target: 4 lines, 6 branches, and 709 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -149,6 +149,58 @@ Measurement:
 - Net: one aggregate branch removed. Missing regions stayed at `717`; this
   probe covered its own new regions rather than reducing the outstanding region
   count.
+
+## Attempt 50 plan: PNG decode region reverse map
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 49.
+- Coverage MCP snapshot: `f718439f-dbf5-4f78-87a3-70766342a243`.
+- Overall: `24614 / 24618` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40163 / 40880` regions.
+- Target file: `src/codecs/png/decode.rs`, currently `363 / 363` lines,
+  `90 / 90` branches, `22 / 22` functions, and `651 / 684` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `inflated_len()` and `decode_scanlines()` arithmetic | Lines 104, 105, 107, 108, 118, 119, 120, 135, 136, and 137. | `u32 -> usize` failures are impossible on the supported 64-bit target, but row-size and sample-count overflow are real helper states. Exercise those through the existing same-module `#[cfg(coverage)]` hook. |
+| `unfilter_rows()` arithmetic and short reads | Lines 195, 196, 197, 200, 201, 202, 203, and 205. | Short reads are already covered by malformed PNG fixtures; checked-arithmetic overflows are bounded by slice positions or by `row_bytes()`. Use only direct helper calls for the reachable overflow states; do not fake impossible slice lengths. |
+| `build_image()` palette construction | Line 326, `ImagePalette::new(rgb, palette_alpha).ok()?`. | Public-input candidate: an indexed PNG with a `PLTE` chunk containing more than 256 RGB entries should reach the palette rejection path. Add it as a generated fixture and let the Pillow oracle classify it as tolerated or expected error. |
+| `Chunks::next()` parsing | Lines 423, 425, 430, 431, 432, 434, and 438. | The current malformed chunk hook covers truncated input. Remaining spans are conversions after exact-length `.get()` or overflow after slice-bound checks; keep them documented as defensive/instrumentation debt unless a safe public fixture moves aggregate coverage. |
+
+Implementation plan:
+
+1. Add `palette_overlong_plte.png` to `scripts/generate_test_assets.py` using
+   a 257-entry `PLTE` chunk and a valid one-pixel indexed scanline.
+2. Add the asset to `manifest.yaml` under the malformed PNG bucket after
+   probing the Pillow oracle classification with the generator; use
+   `expect_error: true` only if Pillow rejects it.
+3. Extend the existing PNG private coverage hook only for helper overflow
+   states that cannot be represented as practical Pillow fixtures:
+   `row_bytes()` overflow, non-interlaced/interlaced `inflated_len()`
+   overflow, and `decode_scanlines()` sample-count overflow.
+4. Regenerate PNG assets and PNG oracle references only:
+   `.oracle-venv/bin/python scripts/generate_test_assets.py --format png` and
+   `.oracle-venv/bin/python scripts/generate_decode_refs.py --format png`.
+5. Validate with `cargo fmt --all`, focused coverage-hook test/checks, and the
+   approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep the fixture/hook changes only if aggregate region coverage improves.
+
+Measurement:
+
+- Coverage MCP run: `11e6aad8-a8d7-44cb-9875-6934eb24fa0f`.
+- Coverage MCP snapshot: `6b8f3ab5-d12f-40b4-86ed-d0e88eb8447c`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24625 / 24629` lines, `3438 / 3444` branches,
+  `1582 / 1582` functions, and `40201 / 40910` regions.
+- Target file movement: `src/codecs/png/decode.rs` moved from
+  `651 / 684` regions to `689 / 714` regions; missing regions fell from
+  `33` to `25`.
+- Net: aggregate missing regions fell from `717` to `709`. Branch debt is
+  unchanged.
 
 ## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
 
