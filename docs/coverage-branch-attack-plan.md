@@ -14,8 +14,10 @@ from Coverage MCP before each implementation sweep.
 - Result: 5 passed, 0 failed
 - Current snapshot: `f4916efd-dddd-4676-8933-9878afcf8997`
 - Current measured commit metadata: `700fa272a2f3d1140f43671044337935838f4350`
-- Current source state: Attempt 62 retained working tree measured from pushed
-  parent `700fa27`.
+- Current coverage source state: Attempt 62 retained code, pushed in commit
+  `3f663e5`. Coverage MCP commit metadata still reports the measured
+  pre-commit parent because Attempt 62 was committed after the coverage run;
+  later documentation-only commits do not change these counters.
 - Lines: 25816 / 25820
 - Branches: 3448 / 3454
 - Functions: 1592 / 1592
@@ -47,6 +49,87 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 64 plan: JPEG progressive AC event state regions
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 62 commit `3f663e5`; the
+  Attempt 63 code probe was discarded after measurement.
+- Coverage MCP snapshot: `f4916efd-dddd-4676-8933-9878afcf8997`.
+- Overall: `25816 / 25820` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41679 / 42262` regions.
+- Target file: `src/codecs/jpeg/encode/mod.rs`, currently `938 / 938` lines,
+  `144 / 144` branches, `40 / 40` functions, and `1474 / 1539` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| Progressive AC-first events | Lines 1079-1106. | Existing full-image progressive encodes hit ordinary AC-first scans, but not the private pending-EOB flush before a later nonzero coefficient, the run-length > 15 ZRL path, or the `0x7fff` EOB auto-flush state. Exercise those states directly through `append_ac_first_events()`. |
+| Progressive AC-refine events | Lines 1136-1170. | Existing hook drives the long correction-bit flush, but leaves compact direct states for long zero runs before a new coefficient and explicit `0x7fff` EOB flushing. Exercise them through `append_ac_refine_events()`. |
+| `flush_progressive_eob()` | Lines 1188-1193. | Add direct width-zero and width-nonzero EOB flush probes so the symbol-only and symbol-plus-bits cases are represented without needing huge block sequences. |
+
+Implementation plan:
+
+1. Extend the existing JPEG encoder coverage hook with a compact progressive
+   AC state-machine probe batch.
+2. Avoid new public fixtures; these are private encoder-controlled states that
+   are hard to force through Pillow-style image fixtures.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `ff292569-9555-4aa2-a35e-b6abc47f2959`.
+- Coverage MCP snapshot: `f97e1dc9-c841-4c08-b89d-6c64826c70ae`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Outcome: discarded. Aggregate branches remained `3448 / 3454`, aggregate
+  missing regions remained `583`, and `src/codecs/jpeg/encode/mod.rs` kept
+  `65` missing regions after accounting for the added hook code. The direct
+  progressive-state probes only added covered hook regions; the code change was
+  reverted.
+
+## Attempt 63 plan: WebP lossless bit-reader monomorph branches
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 62 commit `3f663e5`.
+- Coverage MCP snapshot: `f4916efd-dddd-4676-8933-9878afcf8997`.
+- Overall: `25816 / 25820` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41679 / 42262` regions.
+- Target file: `src/codecs/webp/native/lossless.rs`, currently
+  `571 / 572` lines, `108 / 110` branches, `27 / 27` functions, and
+  `886 / 934` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `BitReader::read_bits()` | Stable aggregate branch debt maps to the `if self.nbits < num` guard at line 864. The normalized branch-line view is noisy because this generic helper is monomorphized for `u8`, `u16`, and `usize`. Existing public VP8L fixtures hit the source line, but not every monomorph's fill/no-fill side. |
+
+Implementation plan:
+
+1. Extend the existing WebP lossless coverage hook with direct `read_bits()`
+   calls for the remaining monomorph cases.
+2. Keep the hook tiny: use already available `Cursor` inputs, no new public
+   fixtures, no helper builders.
+3. Run `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, then the Coverage
+   MCP `all-features-llvm-cov-json-nightly-branch` command.
+4. Keep and commit only if aggregate branch debt or aggregate region debt falls.
+
+Measurement:
+
+- Coverage MCP run: `e92d500a-23a7-47f3-9d0a-5293fd051cac`.
+- Coverage MCP snapshot: `59fb41cb-1f9f-4600-93af-3d4ab9259a1e`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Outcome: discarded. Aggregate branches remained `3448 / 3454`, aggregate
+  missing regions remained `583`, and the target file remained
+  `108 / 110` branches. The direct `read_bits()` monomorph probes only added
+  covered hook regions; the code change was reverted.
 
 ## Attempt 62 plan: TIFF decode parser and layout region sweep
 
