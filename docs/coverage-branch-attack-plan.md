@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4f55b29e-1af5-40d8-983e-548abb9bec74`
-- Current measured commit metadata: `601f0fadc5c6bf933ac4a4c0f9a8852c2bc98d6b`
-- Current coverage source state: working tree over pushed `main` commit
-  `601f0fa`.
+- Current snapshot: `4987bfb8-5d4f-4bd3-a3cf-eb783ea66367`
+- Current measured commit metadata: `f12888eba7c1d6b983043fa8410d20a40feb1858`
+- Current coverage source state: pushed `main` commit `f12888e`.
 - Lines: 25850 / 25854
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
@@ -84,6 +83,9 @@ Measurement:
 - Coverage MCP run: `db22a2f0-9fd2-4d5e-a88c-24cd9cd79301`.
 - Coverage MCP snapshot: `4f55b29e-1af5-40d8-983e-548abb9bec74`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `ab595703-56c2-4f7b-8dc3-de324bd82e6a`,
+  snapshot `4987bfb8-5d4f-4bd3-a3cf-eb783ea66367`, commit
+  `f12888eba7c1d6b983043fa8410d20a40feb1858`; result unchanged.
 - Overall after deflate trailer fixed-slice cleanup:
   `25850 / 25854` lines, `3448 / 3454` branches,
   `1593 / 1593` functions, and `41702 / 42218` regions.
