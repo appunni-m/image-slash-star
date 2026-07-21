@@ -12,20 +12,20 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4330f9d2-cd5a-4e7e-829a-00ab1d3433b7`
-- Current measured commit metadata: `386775a9b88834d2eaeecf610b157df3f394607a`
-- Current source state: Attempt 57 working tree based on pushed `main` at
-  `386775a`; this batch should be committed and pushed before the next sweep.
-- Lines: 25006 / 25010
+- Current snapshot: `cb68c3a5-ccc4-4a41-b314-3fc615e7ad96`
+- Current measured commit metadata: `6701cc3c41a2671abe47ed98a8222297f2307a40`
+- Current source state: Attempt 58 retained working tree measured from pushed
+  parent `6701cc3`.
+- Lines: 25243 / 25247
 - Branches: 3438 / 3444
-- Functions: 1584 / 1584
-- Regions: 40733 / 41383
-- Remaining target: 4 lines, 6 branches, and 650 regions.
+- Functions: 1585 / 1585
+- Regions: 40893 / 41521
+- Remaining target: 4 lines, 6 branches, and 628 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
-- Remaining line gaps: aggregate line gap is 5, but the current raw per-file
+- Remaining line gaps: aggregate line gap is 4, but the current raw per-file
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
@@ -47,6 +47,51 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 58 plan: zlib Huffman tree and block-emission guard regions
+
+Baseline before editing:
+
+- Source state: clean pushed `main` after Attempt 57 commit `6701cc3`.
+- Coverage MCP snapshot: `4330f9d2-cd5a-4e7e-829a-00ab1d3433b7`.
+- Overall: `25006 / 25010` lines, `3438 / 3444` branches,
+  `1584 / 1584` functions, and `40733 / 41383` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `1648 / 1648` lines, `368 / 368` branches, `82 / 82` functions, and
+  `2872 / 3135` regions.
+
+Reverse map:
+
+| Source cluster | Raw missing spans | Decision |
+| --- | --- | --- |
+| `build_tree()` | Lines 1517, 1532, 1541-1556, 1562-1621. | These are private zlib-ng tree-construction guards: synthetic empty/single-frequency trees, arithmetic overflow defenses, short `static_lengths`, and over-constrained max-length repair. They are not public image fixtures. Exercise via the existing `#[cfg(coverage)]` zlib hook. |
+| `expand_tokens()` / `frequencies()` | Lines 1681, 1706-1707, 1722, and 1806-1815. | Invalid token streams cannot come from the matchers, but they are legitimate defensive states for the shared token-to-DEFLATE layer. Use direct helper probes for invalid match length, invalid match distance, and impossible backward copy distance. |
+| `send_tree()` / `emit_tokens()` / `emit_fixed_block()` | Lines 1876-1882 and 1911-2001. | These are Huffman emission boundary states: short tree headers, zero/nonzero run-length packets, invalid fixed/dynamic match indexes, and `send_code()` bounds. Use small synthetic trees and token lists in the hook. |
+
+Implementation plan:
+
+1. Extend `zlib_ng::__coverage_exercise_private_branches()` with one compact
+   tree/emission probe batch.
+2. Keep probes private and deterministic; do not change production compressor
+   behavior or generated Pillow-oracle fixtures.
+3. Validate with `cargo fmt --all`, `cargo check --all-features`,
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`, and then the
+   approved Coverage MCP command `all-features-llvm-cov-json-nightly-branch`.
+4. Keep and commit the batch only if aggregate missing regions fall.
+
+Measurement:
+
+- Coverage MCP run: `2bd159d2-4b2a-4a9a-b230-ea1b2ef92e2a`.
+- Coverage MCP snapshot: `cb68c3a5-ccc4-4a41-b314-3fc615e7ad96`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after adding the tree/emission guard probes:
+  `25243 / 25247` lines, `3438 / 3444` branches, `1585 / 1585`
+  functions, and `40893 / 41521` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `2872 / 3135` regions to `3032 / 3273` regions; missing regions fell from
+  `263` to `241`.
+- Net: aggregate missing regions fell from `650` to `628`. Branch debt is
+  unchanged.
 
 ## Attempt 48 plan: WebP VP8L bit-reader branch monomorphization
 

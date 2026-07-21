@@ -382,6 +382,250 @@ pub(crate) fn __coverage_exercise_private_branches() {
     short_level3.position = usize::MAX;
     let _ = short_level3.candidate_can_improve(0, 3);
     let _ = short_level3.candidate_can_improve(usize::MAX, 3);
+
+    let synthetic_tree = |lengths: &[u16]| {
+        let mut nodes = vec![Node::default(); lengths.len()];
+        for (node, &length) in nodes.iter_mut().zip(lengths) {
+            node.length = length;
+        }
+        HuffmanTree {
+            nodes,
+            max_code: lengths.len().saturating_sub(1),
+            bit_cost: 0,
+            static_cost: 0,
+        }
+    };
+
+    let literal_lengths = [1u16; LITERAL_CODES];
+    let distance_lengths = [1u16; DISTANCE_CODES];
+    let bit_length_lengths = [1u16; BIT_LENGTH_CODES];
+    let literal_tree = synthetic_tree(&literal_lengths);
+    let distance_tree = synthetic_tree(&distance_lengths);
+    let bit_length_tree = synthetic_tree(&bit_length_lengths);
+
+    let _ = expand_tokens(&[Token::Match {
+        length: 1,
+        distance: 1,
+    }]);
+    let _ = expand_tokens(&[Token::Match {
+        length: 1,
+        distance: 0,
+    }]);
+    let mut writer = BitWriter::default();
+    let _ = emit_blocks(
+        &[Token::Match {
+            length: 1,
+            distance: 1,
+        }],
+        1,
+        &mut writer,
+    );
+    let _ = frequencies(&[Token::Match {
+        length: 0,
+        distance: 1,
+    }]);
+    let _ = frequencies(&[Token::Match {
+        length: MIN_MATCH,
+        distance: 0,
+    }]);
+    let _ = write_block(
+        &[Token::Match {
+            length: 0,
+            distance: 1,
+        }],
+        &[],
+        true,
+        &mut writer,
+    );
+    let _ = write_block(&[], &[], true, &mut writer);
+
+    let _ = build_tree(
+        &[0],
+        TreeSpec {
+            elements: 1,
+            max_length: MAX_BITS,
+            extra_bits: &[],
+            extra_base: 0,
+            static_lengths: None,
+        },
+    );
+    let _ = build_tree(
+        &[u32::MAX, u32::MAX],
+        TreeSpec {
+            elements: 2,
+            max_length: MAX_BITS,
+            extra_bits: &[],
+            extra_base: 0,
+            static_lengths: None,
+        },
+    );
+    let short_static_lengths = [1u8];
+    let _ = build_tree(
+        &[0, 0, 1],
+        TreeSpec {
+            elements: 3,
+            max_length: MAX_BITS,
+            extra_bits: &[],
+            extra_base: 0,
+            static_lengths: Some(&short_static_lengths),
+        },
+    );
+    let _ = build_tree(
+        &[1, 1, 1, 1, 1],
+        TreeSpec {
+            elements: 5,
+            max_length: 1,
+            extra_bits: &[],
+            extra_base: 0,
+            static_lengths: None,
+        },
+    );
+
+    let mut bit_frequencies = [0u32; BIT_LENGTH_CODES];
+    let empty_tree = synthetic_tree(&[]);
+    let _ = scan_tree(&empty_tree.nodes, empty_tree.max_code, &mut bit_frequencies);
+    let individual_tree = synthetic_tree(&[1, 2, 3]);
+    let _ = scan_tree(
+        &individual_tree.nodes,
+        individual_tree.max_code,
+        &mut bit_frequencies,
+    );
+    let nonzero_run_tree = synthetic_tree(&[5, 5, 5, 5, 5]);
+    let _ = scan_tree(
+        &nonzero_run_tree.nodes,
+        nonzero_run_tree.max_code,
+        &mut bit_frequencies,
+    );
+    let short_zero_run_tree = synthetic_tree(&[0, 0, 0, 0, 0]);
+    let _ = scan_tree(
+        &short_zero_run_tree.nodes,
+        short_zero_run_tree.max_code,
+        &mut bit_frequencies,
+    );
+    let long_zero_run_tree = synthetic_tree(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    let _ = scan_tree(
+        &long_zero_run_tree.nodes,
+        long_zero_run_tree.max_code,
+        &mut bit_frequencies,
+    );
+
+    let _ = send_tree(
+        &empty_tree,
+        empty_tree.max_code,
+        &bit_length_tree,
+        &mut writer,
+    );
+    let _ = send_tree(
+        &individual_tree,
+        individual_tree.max_code,
+        &bit_length_tree,
+        &mut writer,
+    );
+    let _ = send_tree(
+        &nonzero_run_tree,
+        nonzero_run_tree.max_code,
+        &bit_length_tree,
+        &mut writer,
+    );
+    let _ = send_tree(
+        &short_zero_run_tree,
+        short_zero_run_tree.max_code,
+        &bit_length_tree,
+        &mut writer,
+    );
+    let _ = send_tree(
+        &long_zero_run_tree,
+        long_zero_run_tree.max_code,
+        &bit_length_tree,
+        &mut writer,
+    );
+
+    let _ = emit_tokens(
+        &[Token::Literal(7)],
+        &empty_tree,
+        &distance_tree,
+        &mut writer,
+    );
+    let _ = emit_tokens(
+        &[Token::Match {
+            length: 0,
+            distance: 1,
+        }],
+        &literal_tree,
+        &distance_tree,
+        &mut writer,
+    );
+    let _ = emit_tokens(
+        &[Token::Match {
+            length: usize::MAX,
+            distance: 1,
+        }],
+        &literal_tree,
+        &distance_tree,
+        &mut writer,
+    );
+    let _ = emit_tokens(
+        &[Token::Match {
+            length: MIN_MATCH,
+            distance: 0,
+        }],
+        &literal_tree,
+        &distance_tree,
+        &mut writer,
+    );
+    let _ = emit_tokens(
+        &[Token::Match {
+            length: MIN_MATCH,
+            distance: usize::MAX,
+        }],
+        &literal_tree,
+        &distance_tree,
+        &mut writer,
+    );
+
+    let _ = emit_fixed_block(
+        &[Token::Match {
+            length: 0,
+            distance: 1,
+        }],
+        true,
+        &mut writer,
+    );
+    let _ = emit_fixed_block(
+        &[Token::Match {
+            length: usize::MAX,
+            distance: 1,
+        }],
+        true,
+        &mut writer,
+    );
+    let _ = emit_fixed_block(
+        &[Token::Match {
+            length: MIN_MATCH,
+            distance: 0,
+        }],
+        true,
+        &mut writer,
+    );
+    let _ = emit_fixed_block(
+        &[Token::Match {
+            length: MIN_MATCH,
+            distance: usize::MAX,
+        }],
+        true,
+        &mut writer,
+    );
+    let invalid_length_tree = HuffmanTree {
+        nodes: vec![Node {
+            length: u16::MAX,
+            ..Node::default()
+        }],
+        max_code: 0,
+        bit_cost: 0,
+        static_cost: 0,
+    };
+    let _ = send_code(&mut writer, &empty_tree, 0);
+    let _ = send_code(&mut writer, &invalid_length_tree, 0);
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {
