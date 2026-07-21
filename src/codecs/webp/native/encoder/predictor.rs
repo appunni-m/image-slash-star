@@ -115,7 +115,9 @@ fn tile_histogram(
     let mut current = vec![0_u32; width + 1];
     if start_y > 0 {
         upper[..width].copy_from_slice(&source[(start_y - 1) * width..start_y * width]);
-        if start_y < height { upper[width] = source[start_y * width]; }
+        if start_y < height {
+            upper[width] = source[start_y * width];
+        }
     }
     for y in start_y..end_y {
         current[..width].copy_from_slice(&source[y * width..(y + 1) * width]);
@@ -286,6 +288,16 @@ pub(crate) fn apply_fixed(
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
     let _ = select_and_apply(&mut source, 2, 2, 1);
+    let source = vec![0xff00_0000, 0x0000_0001];
+    let _ = tile_histogram(&source, 2, 1, 0, 1, 1, 0);
+    let source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
+    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0);
+    let source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
+    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0);
     let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0);
+    let mut source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0);
+    let mut source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
     let _ = apply_fixed(&mut source, 2, 2, 1, 0);
 }

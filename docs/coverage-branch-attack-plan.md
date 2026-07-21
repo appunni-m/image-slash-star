@@ -5,19 +5,64 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the pushed WebP extended frame predicate coverage-hook batch.
+after the pushed WebP lossless-transform invariant cleanup batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `cb3f057a-1633-4b00-9232-3962046beec2`
-- Current measured commit metadata: `6acf02fc6d4a3826713bfc10b4c9279a49c57b46`
-- Lines: 21835 / 21836
-- Branches: 3327 / 3478
+- Current snapshot: `010a4828-7a2b-446d-982b-7ebc4c5568ca`
+- Current measured commit metadata: `f1255e4970fb4b6f56732140fee6ca231c384f5d`
+- Lines: 21847 / 21848
+- Branches: 3330 / 3478
 - Functions: 1524 / 1524
-- Remaining target: 1 line and 151 branches.
+- Remaining target: 1 line and 148 branches.
+
+## Planned WebP predictor private-branch batch
+
+Coverage MCP snapshot `5346a218-89b1-46e9-aea4-68d4a83522ee` reports
+`src/codecs/webp/native/encoder/predictor.rs` at 238 / 238 lines, 37 / 40
+branches, and 22 / 22 functions. The remaining branch lines are:
+
+- line 118: the private `tile_histogram` preload path has covered
+  `start_y > 0` with `start_y < height`, but not the bottom-boundary case where
+  `start_y == height`. Add a direct private hook call with `height == start_y`
+  so this boundary branch is covered without inventing a public WebP fixture
+  for an internal tile query.
+- line 139: inside `tile_histogram`, a transparent pixel currently covers the
+  `x == 0 && y != 0` true side. Add a transparent non-left-column pixel so the
+  false side of that predicate is covered while still exercising the alpha-zero
+  residual logic. First retry evidence showed that this only covers the
+  short-circuited `x == 0` false side; the remaining branch is the `y != 0`
+  false side. Add a transparent top-left pixel (`x == 0`, `y == 0`) as the
+  corrected probe.
+- line 200: inside `apply_modes`, the same transparent-pixel neighbor-update
+  predicate is missing the complementary side. Add an `apply_fixed` hook image
+  with a transparent non-left-column pixel. As with `tile_histogram`, the
+  corrected probe also needs a transparent top-left pixel to drive `x == 0`
+  true and `y != 0` false.
+
+No new Pillow manifest fixture is the right tool for this batch because all
+three gaps are private encoder helper predicates after the ARGB source pixels
+and predictor mode inputs have already been constructed. The coverage oracle is
+therefore a deterministic private hook, followed by a single Coverage MCP
+line+branch run.
+
+Completed evidence:
+
+- First retry Coverage MCP run: `8a671618-2a41-4469-b2c6-2374b84150e4`,
+  snapshot `cccbf409-205d-488e-b255-2f128073820f`; passed and improved
+  `predictor.rs` from 37 / 40 to 38 / 40 branches. This proved the
+  `start_y == height` tile-boundary probe was correct and showed that the
+  transparent non-left-column probe did not drive the remaining `y != 0` false
+  side.
+- Corrected Coverage MCP run: `837e98fd-512e-4d6b-8fca-c591ff2d708c`
+- Corrected Coverage MCP snapshot: `010a4828-7a2b-446d-982b-7ebc4c5568ca`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 21847 / 21848 lines, 3330 / 3478 branches, 1524 / 1524 functions.
+- Target file: `src/codecs/webp/native/encoder/predictor.rs` is 250 / 250
+  lines, 40 / 40 branches, and 22 / 22 functions.
 
 ## Planned WebP lossless-transform invariant cleanup batch
 
