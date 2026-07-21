@@ -2130,6 +2130,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     keyframe.extend_from_slice(&[0; 96]);
     let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
 
+    let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+    keyframe.extend_from_slice(&[0, 4, 0, 0]);
+    keyframe.extend_from_slice(&[0; 28]);
+    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+
     let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0x21, 0x00, 0x00, 0x00])).read_frame_header();
 
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

@@ -1184,6 +1184,70 @@ Measurement and decision:
   direct call created new uncovered VP8 parser arcs and was not an acceptable
   coverage tradeoff.
 
+## Attempt 34 plan: VP8 frame-header loop-filter-adjustment flag
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `6670139`.
+- Coverage MCP snapshot: `cb0ba237-faf2-4824-99e0-22dbb4d81ab4`.
+- Overall: `24532 / 24538` lines, `3432 / 3444` branches,
+  `1581 / 1581` functions, and `40030 / 40765` regions.
+- Target file: `src/codecs/webp/native/vp8.rs` at `1424 / 1428` lines,
+  `154 / 160` branches, `58 / 58` functions, and `2642 / 2665` regions.
+
+Reverse map:
+
+| Source line | Boundary | Reverse-mapped input/state |
+| --- | --- | --- |
+| 1192-1193 | Loop-filter-adjustment header flag | A keyframe first-partition bitstream sets color-space to zero, disables segmentation, then sets `loop_filter_adjustments_enabled = true`, forcing `read_loop_filter_adjustments()` through the frame-header parser path. |
+
+Probe insight:
+
+- The existing private hook exercises `read_loop_filter_adjustments()` directly,
+  but line 1193 remains uncovered because no frame-header bitstream reaches the
+  call site.
+- A small bool-decoder simulation of the VP8 arithmetic reader maps first
+  partition bytes starting `[0, 4, 0, 0]` to the flag sequence needed to keep
+  earlier fields valid and set the loop-filter-adjustment flag.
+
+Selected action:
+
+- Add one coverage-hook raw keyframe whose frame tag declares a 32-byte first
+  partition and whose first partition starts with `[0, 4, 0, 0]`.
+- Keep this private: the public manifest already covers VP8 decode outputs;
+  this is a parser-state branch below the oracle-output layer.
+
+Expected validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+7. Record measured branch/region movement here, then commit and push if the
+   aggregate coverage target improves.
+
+Measurement and decision:
+
+- Coverage MCP run: `c134191c-12ca-4c59-adeb-0dc120a78cd6`.
+- Coverage MCP snapshot: `b3c44fad-9285-4a8a-a383-f11df7a964f1`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after the hook: `24537 / 24542` lines, `3433 / 3444` branches,
+  `1581 / 1581` functions, and `40042 / 40775` regions.
+- Net movement versus current baseline `cb0ba237-faf2-4824-99e0-22dbb4d81ab4`:
+  - Lines improved from `24532 / 24538` to `24537 / 24542`; missing lines
+    dropped from `6` to `5`.
+  - Branches improved from `3432 / 3444` to `3433 / 3444`; missing branches
+    dropped from `12` to `11`.
+  - Regions improved from `40030 / 40765` to `40042 / 40775`; missing regions
+    dropped from `735` to `733`.
+- Target file movement: `src/codecs/webp/native/vp8.rs` moved from
+  `154 / 160` branches and `2642 / 2665` regions to `155 / 160` branches and
+  `2654 / 2675` regions.
+- Decision: keep the hook. It covers the real frame-header call site for
+  loop-filter adjustments and improves aggregate lines, branches, and regions.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
