@@ -558,6 +558,37 @@
       }
     },
     {
+      "id": "enc_error_zero_height",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "source_dimensions": [
+          1,
+          0
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            1,
+            0
+          ]
+        }
+      }
+    },
+    {
       "id": "enc_l8",
       "source_asset": "gray.png",
       "source_format": "png",

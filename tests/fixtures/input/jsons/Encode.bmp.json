@@ -167,6 +167,68 @@
       }
     },
     {
+      "id": "enc_error_oversized_height",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "source_dimensions": [
+          1,
+          2147483648
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            1,
+            2147483648
+          ]
+        }
+      }
+    },
+    {
+      "id": "enc_error_file_size_overflow",
+      "source_asset": "24bit.bmp",
+      "source_format": "bmp",
+      "params": {
+        "source_dimensions": [
+          2147483647,
+          2147483647
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            2147483647,
+            2147483647
+          ]
+        }
+      }
+    },
+    {
       "id": "enc_16bit",
       "source_asset": "24bit.bmp",
       "source_format": "bmp",

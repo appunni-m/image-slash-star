@@ -944,6 +944,46 @@
           "oracle_error_message": "signed integer is greater than maximum"
         },
         {
+          "id": "enc_error_oversized_height",
+          "type": "encode",
+          "format": "bmp",
+          "category": "error",
+          "description": "BMP height exceeds Pillow's signed 32-bit encoder limit",
+          "params": {
+            "source_dimensions": [
+              1,
+              2147483648
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OverflowError",
+          "oracle_error_message": "signed integer is greater than maximum"
+        },
+        {
+          "id": "enc_error_file_size_overflow",
+          "type": "encode",
+          "format": "bmp",
+          "category": "error",
+          "description": "BMP file size exceeds the 32-bit container limit",
+          "params": {
+            "source_dimensions": [
+              2147483647,
+              2147483647
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "bmp",
+          "source_asset": "24bit.bmp",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.MemoryError",
+          "oracle_error_message": ""
+        },
+        {
           "id": "enc_16bit",
           "type": "encode",
           "format": "bmp",
@@ -7755,6 +7795,26 @@
           "oracle_error_message": "not enough image data"
         },
         {
+          "id": "enc_error_zero_height",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "Zero-height source is rejected",
+          "params": {
+            "source_dimensions": [
+              1,
+              0
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "cannot write empty image"
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_l8",
@@ -14447,9 +14507,9 @@
     }
   },
   "summary": {
-    "total_rows": 784,
+    "total_rows": 787,
     "decode_rows": 501,
-    "encode_rows": 251,
+    "encode_rows": 254,
     "formats": 8,
     "assets_available": 494,
     "decode_active": 495,

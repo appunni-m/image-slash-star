@@ -762,6 +762,10 @@ formats:
       description: Pixel buffer shorter than the declared dimensions
       params: {'truncate_pixels': true}
       expect_error: true
+    - id: enc_error_zero_height
+      description: Zero-height source is rejected
+      params: {'source_dimensions': [1, 0]}
+      expect_error: true
     - id: enc_l8
       description: 
       params: {'color_type': 'L'}
@@ -1302,6 +1306,14 @@ formats:
     - id: enc_error_oversized_dimensions
       description: BMP dimensions exceed Pillow's signed 32-bit encoder limit
       params: {'source_dimensions': [2147483648, 1]}
+      expect_error: true
+    - id: enc_error_oversized_height
+      description: BMP height exceeds Pillow's signed 32-bit encoder limit
+      params: {'source_dimensions': [1, 2147483648]}
+      expect_error: true
+    - id: enc_error_file_size_overflow
+      description: BMP file size exceeds the 32-bit container limit
+      params: {'source_dimensions': [2147483647, 2147483647]}
       expect_error: true
     - id: enc_16bit
       description: Pillow accepts but ignores the BMP bit-depth option

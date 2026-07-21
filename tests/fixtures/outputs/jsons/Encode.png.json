@@ -325,6 +325,18 @@
       "error_message": "not enough image data"
     },
     {
+      "id": "enc_error_zero_height",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "cannot write empty image"
+    },
+    {
       "id": "enc_l8",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_l8.bin",
       "ref_bytes": 16384,

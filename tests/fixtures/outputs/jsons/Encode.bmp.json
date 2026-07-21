@@ -97,6 +97,30 @@
       "error_message": "signed integer is greater than maximum"
     },
     {
+      "id": "enc_error_oversized_height",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.OverflowError",
+      "error_message": "signed integer is greater than maximum"
+    },
+    {
+      "id": "enc_error_file_size_overflow",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.MemoryError",
+      "error_message": ""
+    },
+    {
       "id": "enc_16bit",
       "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_16bit.bin",
       "ref_bytes": 49152,
