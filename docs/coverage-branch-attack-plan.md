@@ -12,16 +12,15 @@ after the latest local coverage verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `97751138-7d88-42fe-9efa-042212b82598`
-- Current measured commit metadata: `0267a0c2ca84c53b7db9e9c1ff788de5e068c1c0`
-- Lines: 22696 / 22717
-- Branches: 3375 / 3448
+- Current snapshot: `9e996753-3e60-4a9a-b4c8-b8ffb75c34de`
+- Current measured commit metadata: `adf51eeb2d6cb299e3fdc4dd465881ce283d6183`
+- Lines: 22694 / 22715
+- Branches: 3380 / 3446
 - Functions: 1546 / 1546
-- Remaining target: 21 lines and 73 branches.
+- Remaining target: 21 lines and 66 branches.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
   - `src/codecs/webp/native/encoder.rs`: 193 / 198 branches, 5 missing.
-  - `src/codecs/jpeg/decode/parser.rs`: 91 / 98 branches, 7 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 162 branches, 8 missing.
   - `src/codecs/webp/native/decoder.rs`: 74 / 84 branches, 10 missing.
   - `src/codecs/bmp/decode.rs`: 109 / 122 branches, 13 missing.
@@ -32,6 +31,76 @@ after the latest local coverage verification.
   `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
   The preceding rustfmt pass did not change branch coverage, but split some
   one-line branch bodies into separately counted lines.
+
+## Planned JPEG parser malformed-fixture batch
+
+Coverage MCP snapshot `f6faccb2-65f5-4a1f-87ef-266fcd02c2a3`, measured at
+commit `adf51eeb2d6cb299e3fdc4dd465881ce283d6183`, reports
+`src/codecs/jpeg/decode/parser.rs` at 315 / 315 lines, 91 / 98 branches, and
+12 / 12 functions. This is the selected target because the smaller
+`src/codecs/webp/native/lossless.rs` entry is still noisy: MCP reports only
+2 aggregate missing branches but 50 partial-branch lines after LLVM
+normalization. `src/codecs/webp/native/encoder.rs` is smaller by aggregate
+branch count, but it mixes public encoder line gaps and late internal writer
+branches; the JPEG parser gaps are cleaner malformed-public-input predicates.
+
+Target branch/line gaps and reverse-mapping plan:
+
+- line 99: `marker_byte == 0x00 || marker_byte == 0xFF` in
+  `find_next_marker()`. Existing `prefixed_stuffed_marker.jpg` covers the
+  stuffed-byte `0x00` side. Reverse-map the missing fill-byte side with a
+  minimal malformed JPEG body `SOI, FF, FF, EOI`, so the first predicate is
+  false and the second predicate is true before marker scanning continues to
+  `EOI`. Fix type: malformed manifest fixture with `expect_error`.
+- line 164: `h_samp < 1 || h_samp > 4 || v_samp < 1 || v_samp > 4`.
+  Existing `sof_zero_sampling.jpg` sets sampling to `0x00`, which short-circuits
+  on `h_samp < 1`. Reverse-map the missing sides with three SOF mutations:
+  `0x51` for `h_samp > 4`, `0x10` for `v_samp < 1` after a valid horizontal
+  sample, and `0x15` for `v_samp > 4`. Fix type: malformed manifest fixtures
+  with `expect_error`.
+- line 278: `dc_tbl > 3 || ac_tbl > 3` in `parse_sos()`. Existing
+  `sos_bad_dc_table.jpg` covers the DC-table high side. Reverse-map the missing
+  AC-table side with an SOS table selector of `0x04`, leaving the DC table valid
+  and making only `ac_tbl > 3` true. Fix type: malformed manifest fixture with
+  `expect_error`.
+- lines 382 and 385: baseline `scan_components.is_empty()` after parsing an
+  `SOS`. Reverse mapping shows the false side is unreachable for baseline JPEGs:
+  this parser breaks immediately after the first non-progressive scan once
+  `find_eoi()` succeeds, and `scan_components` can only be populated by that
+  first `SOS` path. Do not fabricate private parser state. Fix type:
+  unreachable-branch simplification to assign `scan_components` and
+  `entropy_start` directly in the baseline branch.
+- line 410: `data.get(pos..pos + 5) == Some(b"Adobe") && length >= 14` for
+  APP14 parsing. Existing CMYK/APP14 fixtures cover the full Adobe marker and
+  `app14_non_adobe.jpg` covers the non-Adobe payload. Reverse-map the missing
+  side with a short APP14 marker whose payload starts with `Adobe` but whose
+  segment length is only `7` (`2` length bytes plus `5` payload bytes), making
+  the first predicate true and the transform-length predicate false. Fix type:
+  malformed error fixture because Pillow rejects the optional short APP14
+  marker.
+
+Completed evidence:
+
+- Coverage MCP run: `8482652a-4ae9-490e-bb1d-1b34a7f139fe`
+- Coverage MCP snapshot: `9e996753-3e60-4a9a-b4c8-b8ffb75c34de`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22694 / 22715 lines, 3380 / 3446 branches, and
+  1546 / 1546 functions.
+- Target file: `src/codecs/jpeg/decode/parser.rs` improved from
+  315 / 315 lines, 91 / 98 branches, and 12 / 12 functions to
+  313 / 313 lines, 96 / 96 branches, and 12 / 12 functions. No branch gaps
+  remain in this file.
+- Reverse-mapped inputs and simplification used:
+  - `fill_marker_only.jpg` covers the repeated `0xFF` fill-marker scanner side.
+  - `sof_high_h_sampling.jpg`, `sof_zero_v_sampling.jpg`, and
+    `sof_high_v_sampling.jpg` cover the remaining SOF sampling reject sides.
+  - `sos_bad_ac_table.jpg` covers the SOS AC-table high reject side.
+  - `app14_adobe_short_transform.jpg` covers an APP14 payload that starts with
+    `Adobe` but is too short to carry the transform byte; Pillow rejects the
+    minimal malformed file, so the manifest row is an exact error-parity row.
+  - The baseline `scan_components.is_empty()` false side was removed as an
+    invariant after reverse mapping the non-progressive parser flow: the parser
+    requires EOI and breaks immediately after the first baseline SOS.
 
 ## Planned JPEG baseline decoder batch
 

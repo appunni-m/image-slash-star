@@ -507,6 +507,19 @@
       }
     },
     {
+      "id": "malformed_markers_fill_marker_only",
+      "asset": "fill_marker_only.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/fill_marker_only.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "malformed_markers_markerless_tail",
       "asset": "markerless_tail.jpg",
       "expect_error": true,
@@ -551,6 +564,45 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_zero_sampling.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_high_h_sampling",
+      "asset": "sof_high_h_sampling.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_high_h_sampling.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_zero_v_sampling",
+      "asset": "sof_zero_v_sampling.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_zero_v_sampling.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_high_v_sampling",
+      "asset": "sof_high_v_sampling.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_high_v_sampling.jpg",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -655,6 +707,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_bad_dc_table.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sos_bad_ac_table",
+      "asset": "sos_bad_ac_table.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sos_bad_ac_table.jpg",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -785,6 +850,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_truncated_payload.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_app14_adobe_short_transform",
+      "asset": "app14_adobe_short_transform.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/app14_adobe_short_transform.jpg",
         "operations": [
           "PIL.Image.open",
           "load",

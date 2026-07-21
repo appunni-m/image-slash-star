@@ -4534,6 +4534,19 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "malformed_markers_fill_marker_only",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "fill_marker_only.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
           "id": "malformed_markers_markerless_tail",
           "type": "decode",
           "format": "jpeg",
@@ -4579,6 +4592,45 @@
           "category": "malformed",
           "description": "Invalid JPEG marker, table, frame, and scan structures",
           "asset": "sof_zero_sampling.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "malformed_markers_sof_high_h_sampling",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sof_high_h_sampling.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "malformed_markers_sof_zero_v_sampling",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sof_zero_v_sampling.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "malformed_markers_sof_high_v_sampling",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sof_high_v_sampling.jpg",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -4683,6 +4735,19 @@
           "category": "malformed",
           "description": "Invalid JPEG marker, table, frame, and scan structures",
           "asset": "sos_bad_dc_table.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file"
+        },
+        {
+          "id": "malformed_markers_sos_bad_ac_table",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "sos_bad_ac_table.jpg",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -4818,6 +4883,19 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "Truncated File Read"
+        },
+        {
+          "id": "malformed_markers_app14_adobe_short_transform",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "malformed",
+          "description": "Invalid JPEG marker, table, frame, and scan structures",
+          "asset": "app14_adobe_short_transform.jpg",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
           "id": "malformed_markers_tem_marker",
@@ -14779,12 +14857,12 @@
     }
   },
   "summary": {
-    "total_rows": 803,
-    "decode_rows": 511,
+    "total_rows": 809,
+    "decode_rows": 517,
     "encode_rows": 260,
     "formats": 8,
-    "assets_available": 504,
-    "decode_active": 505,
+    "assets_available": 510,
+    "decode_active": 511,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

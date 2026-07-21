@@ -245,10 +245,14 @@ formats:
       description: Invalid JPEG marker, table, frame, and scan structures
       test_assets:
       - dangling_marker.jpg
+      - fill_marker_only.jpg
       - markerless_tail.jpg
       - sof_precision_12.jpg
       - sof_two_components.jpg
       - sof_zero_sampling.jpg
+      - sof_high_h_sampling.jpg
+      - sof_zero_v_sampling.jpg
+      - sof_high_v_sampling.jpg
       - sof_bad_quant_table.jpg
       - sof_missing_quant_table.jpg
       - sof_sparse_quant_table.jpg
@@ -257,6 +261,7 @@ formats:
       - dht_oversubscribed.jpg
       - sos_zero_components.jpg
       - sos_bad_dc_table.jpg
+      - sos_bad_ac_table.jpg
       - sos_missing_dc_table.jpg
       - sos_missing_ac_table.jpg
       - sos_sparse_dc_table.jpg
@@ -267,6 +272,7 @@ formats:
       - wrong_soi.jpg
       - truncated_sof_payload.jpg
       - app14_truncated_payload.jpg
+      - app14_adobe_short_transform.jpg
       - tem_marker.jpg
       - entropy_unexpected_marker.jpg
       expect_error: true

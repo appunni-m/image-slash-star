@@ -492,6 +492,7 @@ def gen_jpeg():
         baseline.replace(b"\xff\x00", b"\xff\x02\x00\x02", 1)
     )
     d.joinpath("dangling_marker.jpg").write_bytes(b"\xff\xd8\xff")
+    d.joinpath("fill_marker_only.jpg").write_bytes(b"\xff\xd8\xff\xff\xd9")
     d.joinpath("markerless_tail.jpg").write_bytes(b"\xff\xd8NO-MARKER")
     d.joinpath("sof_precision_12.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xC0, 0, 12)
@@ -501,6 +502,15 @@ def gen_jpeg():
     )
     d.joinpath("sof_zero_sampling.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xC0, 7, 0)
+    )
+    d.joinpath("sof_high_h_sampling.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 7, 0x51)
+    )
+    d.joinpath("sof_zero_v_sampling.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 7, 0x10)
+    )
+    d.joinpath("sof_high_v_sampling.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xC0, 7, 0x15)
     )
     d.joinpath("sof_bad_quant_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xC0, 8, 4)
@@ -530,6 +540,9 @@ def gen_jpeg():
     )
     d.joinpath("sos_bad_dc_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xDA, 2, 0x40)
+    )
+    d.joinpath("sos_bad_ac_table.jpg").write_bytes(
+        mutate_jpeg_payload(baseline, 0xDA, 2, 0x04)
     )
     d.joinpath("sos_missing_dc_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xDA, 2, 0x20)
@@ -567,6 +580,9 @@ def gen_jpeg():
     )
     d.joinpath("app14_non_adobe.jpg").write_bytes(
         baseline[:2] + b"\xff\xee\x00\x0eNotAdobeData" + baseline[2:]
+    )
+    d.joinpath("app14_adobe_short_transform.jpg").write_bytes(
+        b"\xff\xd8\xff\xee\x00\x07Adobe\xff\xd9"
     )
     d.joinpath("tem_marker.jpg").write_bytes(baseline[:2] + b"\xff\x01" + baseline[2:])
     dqt_start, dqt_payload, dqt_end = jpeg_segment(baseline, 0xDB)
