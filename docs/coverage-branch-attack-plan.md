@@ -1705,6 +1705,50 @@ Measurement and decision:
 - Decision: keep the fixture. It is a manifest-driven, Pillow-accepted VP8
   image and covers the real segment-features-without-map-update state.
 
+## Attempt 42 plan: ImageBuffer iterator and constructor region edges
+
+Baseline before editing:
+
+- Git state: clean pushed `main` at `55212b3`.
+- Coverage MCP source-equivalent snapshot:
+  `4984c065-fb13-4c8e-a71c-1eaa37fe5075`.
+- Overall baseline: `24580 / 24585` lines, `3437 / 3444` branches,
+  `1582 / 1582` functions, and `40096 / 40825` regions.
+- Target file: `src/types/buffer.rs` at `535 / 535` lines,
+  `24 / 24` branches, `101 / 101` functions, and `664 / 666` regions.
+
+Reverse map:
+
+Coverage MCP reports normalized partial-branch lines in `types/buffer.rs`, but
+the aggregate branch count is already complete. Raw LLVM exposes no zero-count
+region entries for this file, so use the normalized lines only as candidate
+source locations, not as exact region proof.
+
+| Source line | Boundary | Reverse-mapped state |
+| --- | --- | --- |
+| `165` | immutable row iterator slices the declared image payload or panics | Existing hook constructs an invalid buffer and calls `rows()`, but may not cover every region/monomorphization form. |
+| `257` | mutable row iterator slices the declared image payload or panics | Existing hook constructs an invalid mutable buffer and calls `rows_mut()`, but may not cover every region/monomorphization form. |
+| `344` | `EnumeratePixels::next()` wraps from the last x position to the next row | Public iterator state: call `next()` past the final pixel of a one-row image. |
+| `743` | `pixel_indices()` rejects x or y out of bounds | Existing hook checks a large-y case. Add explicit x-out-of-bounds cases for immutable and mutable checked access. |
+| `859` | `ImageBuffer::new()` rejects dimensions whose byte length overflows | Public constructor panic state, coverable through `catch_unwind` without allocating. |
+
+Selected action:
+
+- Extend the existing `#[cfg(coverage)]` `types::buffer` hook only.
+- Do not add manifest fixtures; these are generic buffer API/invariant regions,
+  not codec byte-parity states.
+- Keep all panics inside `catch_unwind`, and revert if Coverage MCP does not
+  improve aggregate regions.
+
+Validation:
+
+1. `cargo fmt --all`
+2. `cargo check --all-features`
+3. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo test --all-features --test coverage_matrix_tests test_internal_coverage_hooks`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
 ## Region-first continuation plan from snapshot `41e480a1`
 
 User direction for this continuation: improve regions first, then branches, and
