@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `d7d5cbc5-6635-4eed-865a-a662b9ba7a77`
-- Current measured commit metadata: `92d60a6da57bb7f63007575d17017a5d64a23fcc`
-- Current coverage source state: pushed `main` commit `92d60a6`.
-- Lines: 25861 / 25865
+- Current snapshot: `478df8dc-4aef-496f-b61c-55acd93a86e2`
+- Current measured commit metadata: `13f89081ee0f70b0c9eb3db64867523d298c35c6`
+- Current coverage source state: working tree over pushed `main` commit
+  `13f8908`.
+- Lines: 25849 / 25853
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
-- Regions: 41708 / 42233
-- Remaining target: 4 lines, 6 branches, and 525 regions.
+- Regions: 41704 / 42223
+- Remaining target: 4 lines, 6 branches, and 519 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,54 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 77 plan: zlib-ng fixed hash read cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `13f8908`; latest code-changing
+  coverage re-anchor is pushed commit `92d60a6`.
+- Coverage MCP snapshot: `d7d5cbc5-6635-4eed-865a-a662b9ba7a77`.
+- Overall: `25861 / 25865` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41708 / 42233` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `3418 / 3617` regions and `368 / 368` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| Four-byte hash reads in quick/medium/slow matchers | Keep `data.get(position..position + 4)` and `position.checked_add(4)` because matcher positions remain input/window-dependent. Once the slice is present, a four-byte conversion cannot fail; replace `try_into().ok()?` with fixed array construction. |
+| Multiplicative hash conversion | The hash expression shifts a `u32` right by 16, so the value is at most `65535`; converting to `usize` is infallible on supported targets. Replace `usize::try_from(...).ok()?` with `as usize`. |
+| Hash-table indexing | Keep `head.get()` / `head.get_mut()` guards. Coverage hooks deliberately shrink tables to exercise malformed internal state, and the public path still benefits from defensive bounds. |
+| Matcher arithmetic, token emission, and Huffman tree balancing | Leave unchanged. These are real algorithm and malformed-input guards, not fixed-width parsing artifacts. |
+
+Implementation plan:
+
+1. Update only `src/codecs/compression/zlib_ng.rs`.
+2. Collapse four fixed-width hash conversion sites and the corresponding
+   infallible hash casts.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `f81ebf21-00d0-4dec-96e3-06acd7d145e0`.
+- Coverage MCP snapshot: `478df8dc-4aef-496f-b61c-55acd93a86e2`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after zlib-ng fixed hash read cleanup:
+  `25849 / 25853` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41704 / 42223` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `3418 / 3617` regions to `3414 / 3607` regions; missing regions fell from
+  `199` to `193`, and branch coverage remained complete at `368 / 368`.
+- Net: aggregate missing regions fell from `525` to `519`. Remaining zlib-ng
+  gaps are dominated by matcher arithmetic, token emission, Huffman tree
+  balancing, and deliberate coverage-hook malformed-state paths.
 
 ## Attempt 76 plan: TIFF decode exact-endian fixed-slice cleanup
 

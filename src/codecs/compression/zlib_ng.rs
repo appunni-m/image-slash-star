@@ -901,12 +901,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {
-    let word = u32::from_le_bytes(
-        data.get(position..position.checked_add(4)?)?
-            .try_into()
-            .ok()?,
-    );
-    let hash = usize::try_from(word.wrapping_mul(2_654_435_761) >> 16).ok()?;
+    let bytes = data.get(position..position.checked_add(4)?)?;
+    let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    let hash = (word.wrapping_mul(2_654_435_761) >> 16) as usize;
     let candidate = *head.get(hash)?;
     if candidate != position {
         *head.get_mut(hash)? = position;
@@ -1148,13 +1145,9 @@ impl SlowMatcher {
     }
 
     fn quick_insert(&mut self, position: usize) -> Option<usize> {
-        let word = u32::from_le_bytes(
-            self.data
-                .get(position..position.checked_add(4)?)?
-                .try_into()
-                .ok()?,
-        );
-        let hash = usize::try_from(word.wrapping_mul(2_654_435_761) >> 16).ok()?;
+        let bytes = self.data.get(position..position.checked_add(4)?)?;
+        let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        let hash = (word.wrapping_mul(2_654_435_761) >> 16) as usize;
         let candidate = *self.head.get(hash)?;
         if candidate != position {
             *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
@@ -1380,12 +1373,9 @@ impl Level6Matcher {
     }
 
     fn hash(&self, position: usize) -> Option<usize> {
-        let bytes: [u8; 4] = self
-            .data
-            .get(position..position.checked_add(4)?)?
-            .try_into()
-            .ok()?;
-        usize::try_from(u32::from_le_bytes(bytes).wrapping_mul(2_654_435_761) >> 16).ok()
+        let bytes = self.data.get(position..position.checked_add(4)?)?;
+        let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        Some((word.wrapping_mul(2_654_435_761) >> 16) as usize)
     }
 
     fn quick_insert(&mut self, position: usize) -> Option<usize> {
@@ -1855,13 +1845,9 @@ impl<'a> Level3Matcher<'a> {
     fn hash(&self, position: usize) -> Option<usize> {
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 insert_string.c:11-16 and
         // insert_string_tpl.h:49-73 (four-byte multiplicative hash).
-        let bytes: [u8; 4] = self
-            .data
-            .get(position..position.checked_add(4)?)?
-            .try_into()
-            .ok()?;
-        let hash = u32::from_le_bytes(bytes).wrapping_mul(2_654_435_761) >> 16;
-        usize::try_from(hash).ok()
+        let bytes = self.data.get(position..position.checked_add(4)?)?;
+        let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        Some((word.wrapping_mul(2_654_435_761) >> 16) as usize)
     }
 
     fn quick_insert(&mut self, position: usize) -> Option<usize> {
