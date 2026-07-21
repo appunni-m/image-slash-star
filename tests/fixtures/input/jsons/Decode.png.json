@@ -741,6 +741,19 @@
       }
     },
     {
+      "id": "error_malformed_structure_zero_height",
+      "asset": "zero_height.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zero_height.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_structure_invalid_filter_method",
       "asset": "invalid_filter_method.png",
       "expect_error": true,
@@ -1040,6 +1053,19 @@
       }
     },
     {
+      "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
+      "asset": "idat_truncated_chunk_no_iend.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/idat_truncated_chunk_no_iend.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "asset": "invalid_compression.png",
       "expect_error": false,
@@ -1071,6 +1097,32 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_trns_too_long.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_duplicate_plte",
+      "asset": "duplicate_plte.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/duplicate_plte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_duplicate_trns",
+      "asset": "duplicate_trns.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/duplicate_trns.png",
         "operations": [
           "PIL.Image.open",
           "load",

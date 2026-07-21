@@ -761,6 +761,9 @@ def gen_png():
     write_mutated_ihdr(
         "zero_width.png", lambda payload: payload.__setitem__(slice(0, 4), b"\0\0\0\0")
     )
+    write_mutated_ihdr(
+        "zero_height.png", lambda payload: payload.__setitem__(slice(4, 8), b"\0\0\0\0")
+    )
     write_mutated_ihdr("invalid_compression.png", lambda payload: payload.__setitem__(10, 1))
     write_mutated_ihdr("invalid_filter_method.png", lambda payload: payload.__setitem__(11, 1))
     write_mutated_ihdr("invalid_interlace.png", lambda payload: payload.__setitem__(12, 2))
@@ -771,6 +774,14 @@ def gen_png():
     )
     (d / "missing_iend.png").write_bytes((d / "rgb.png").read_bytes()[:-12])
     rgb_header = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
+    (d / "idat_truncated_chunk_no_iend.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
+        + struct.pack(">I", 4)
+        + b"tEXt"
+        + b"x"
+    )
     (d / "empty_idat.png").write_bytes(
         b"\x89PNG\r\n\x1a\n"
         + png_chunk(b"IHDR", rgb_header)
@@ -884,6 +895,23 @@ def gen_png():
         + png_chunk(b"IHDR", palette_header)
         + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
         + png_chunk(b"tRNS", b"\0\x80\xff")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "duplicate_plte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
+        + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
+        + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
+        + png_chunk(b"IEND", b"")
+    )
+    (d / "duplicate_trns.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", palette_header)
+        + png_chunk(b"PLTE", b"\0\0\0\xff\xff\xff")
+        + png_chunk(b"tRNS", b"\0\xff")
+        + png_chunk(b"tRNS", b"\0\xff")
         + png_chunk(b"IDAT", zlib.compress(b"\0\0"))
         + png_chunk(b"IEND", b"")
     )

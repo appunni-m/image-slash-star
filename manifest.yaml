@@ -620,6 +620,7 @@ formats:
       - wrong_ihdr_kind.png
       - short_ihdr.png
       - zero_width.png
+      - zero_height.png
       - invalid_filter_method.png
       - invalid_interlace.png
       - invalid_color_type.png
@@ -643,6 +644,7 @@ formats:
       - zlib_dynamic_backreference_before_output.png
       - adam7_invalid_scanline_filter.png
       - adam7_giant_dimensions.png
+      - idat_truncated_chunk_no_iend.png
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
@@ -650,6 +652,8 @@ formats:
       - invalid_compression.png
       - missing_iend.png
       - palette_trns_too_long.png
+      - duplicate_plte.png
+      - duplicate_trns.png
       - zlib_oversized_scanline.png
       - zlib_oversized_stored_scanline.png
       - zlib_oversized_backreference_scanline.png

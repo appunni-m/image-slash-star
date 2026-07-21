@@ -723,6 +723,16 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_structure_zero_height",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_structure_invalid_filter_method",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
@@ -953,6 +963,16 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "status": "ok",
       "error_type": null,
@@ -984,6 +1004,32 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_too_long_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_duplicate_plte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_duplicate_plte_png.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_duplicate_trns",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_duplicate_trns_png.bin",
       "ref_bytes": 1,
       "ref_mode": "P",
       "ref_size": [

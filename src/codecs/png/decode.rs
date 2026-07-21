@@ -439,3 +439,13 @@ impl<'a> Iterator for Chunks<'a> {
         result
     }
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let malformed = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x01tEXtx";
+    let mut chunks = Chunks::new(malformed).expect("coverage PNG signature should parse");
+
+    assert!(chunks.next().is_none());
+    assert!(chunks.failed);
+    assert!(chunks.next().is_none());
+}

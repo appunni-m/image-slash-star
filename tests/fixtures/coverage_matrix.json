@@ -6913,6 +6913,19 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "error_malformed_structure_zero_height",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "zero_height.png",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
           "id": "error_malformed_structure_invalid_filter_method",
           "type": "decode",
           "format": "png",
@@ -7212,6 +7225,19 @@
           "oracle_error_message": "Image size (18446744065119617025 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
         },
         {
+          "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "idat_truncated_chunk_no_iend.png",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Truncated File Read"
+        },
+        {
           "id": "pillow_tolerated_malformed",
           "type": "decode",
           "format": "png",
@@ -7258,6 +7284,42 @@
           "status": "active",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_palette_trns_too_long_png.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_duplicate_plte",
+          "type": "decode",
+          "format": "png",
+          "category": "pillow",
+          "description": "Malformed PNG structures tolerated by Pillow",
+          "asset": "duplicate_plte.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_duplicate_plte_png.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_duplicate_trns",
+          "type": "decode",
+          "format": "png",
+          "category": "pillow",
+          "description": "Malformed PNG structures tolerated by Pillow",
+          "asset": "duplicate_trns.png",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_duplicate_trns_png.bin",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -14660,12 +14722,12 @@
     }
   },
   "summary": {
-    "total_rows": 795,
-    "decode_rows": 503,
+    "total_rows": 799,
+    "decode_rows": 507,
     "encode_rows": 260,
     "formats": 8,
-    "assets_available": 496,
-    "decode_active": 497,
+    "assets_available": 500,
+    "decode_active": 501,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

@@ -12,17 +12,93 @@ after the latest local coverage verification.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ca7bd301-b9d3-40a4-8c8b-11d249c80184`
-- Current measured commit metadata: `79c75eeee9c332c7d8287396cdb675f6e144647a`
-- Lines: 22685 / 22707
-- Branches: 3369 / 3452
-- Functions: 1544 / 1544
-- Remaining target: 22 lines and 83 branches.
-- Note: commit `79c75eeee9c332c7d8287396cdb675f6e144647a` is the local
+- Current snapshot: `aff1b610-2b7a-4fbc-b744-25e15431709c`
+- Current measured commit metadata: `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a`
+- Lines: 22696 / 22718
+- Branches: 3374 / 3452
+- Functions: 1546 / 1546
+- Remaining target: 22 lines and 78 branches.
+- Remaining branch map from this snapshot:
+  - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
+  - `src/codecs/jpeg/decode/decode.rs`: 65 / 70 branches, 5 missing.
+  - `src/codecs/webp/native/encoder.rs`: 193 / 198 branches, 5 missing.
+  - `src/codecs/jpeg/decode/parser.rs`: 91 / 98 branches, 7 missing.
+  - `src/codecs/webp/native/vp8.rs`: 154 / 162 branches, 8 missing.
+  - `src/codecs/webp/native/decoder.rs`: 74 / 84 branches, 10 missing.
+  - `src/codecs/bmp/decode.rs`: 109 / 122 branches, 13 missing.
+  - `src/codecs/jpeg/decode/progressive.rs`: 104 / 118 branches, 14 missing.
+  - `src/codecs/tiff/decode.rs`: 100 / 114 branches, 14 missing.
+- Note: commit `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a` is the local
   GIF decoder coverage commit; `origin/main` was still at
   `816dbf474b72c3e33b34e40c9cde013ff327c8b2` when this section was refreshed.
   The preceding rustfmt pass did not change branch coverage, but split some
   one-line branch bodies into separately counted lines.
+
+## Planned PNG decoder malformed-fixture batch
+
+Coverage MCP snapshot `ac42d317-4668-45ab-965b-d1cc56eb799e`, measured at
+commit `55dbe9a2ab297dab77ef4573d9bf73c2c2f8004a`, reports
+`src/codecs/png/decode.rs` at 347 / 347 lines, 81 / 86 branches, and
+21 / 21 functions. This is the selected target because it is a clean
+five-branch file with no uncovered-line noise, and each branch is either public
+PNG decoder behavior or chunk-iterator terminal behavior.
+
+Target branch lines and reverse-mapping plan:
+
+- line 32: `width == 0 || height == 0 || filter != 0 || interlace > 1`.
+  Existing fixtures cover zero width, invalid filter method, and invalid
+  interlace. Reverse-map the missing side by creating a minimal PNG with
+  `height == 0`.
+  Fix type: malformed manifest fixtures, because these are public IHDR reject
+  paths.
+- line 44: `PLTE` is accepted only when `palette_rgb.is_none()`. Existing
+  indexed fixtures cover the first `PLTE`. Reverse-map the missing side with a
+  valid indexed PNG containing a duplicate `PLTE` after the first palette. Fix
+  type: Pillow-oracle manifest fixture if Pillow tolerates it; otherwise
+  malformed error fixture if Pillow rejects it.
+- line 45: `tRNS` is accepted only when `palette_alpha.is_empty()`. Existing
+  indexed-alpha fixtures cover the first `tRNS`. Reverse-map the missing side
+  with a valid indexed PNG containing a duplicate `tRNS` after the first alpha
+  chunk. Fix type: Pillow-oracle manifest fixture if Pillow tolerates it;
+  otherwise malformed error fixture if Pillow rejects it.
+- line 53: `compressed.is_empty() || (!saw_end && chunks.failed)`. Existing
+  malformed fixtures cover empty `IDAT` and the no-`IEND` / no-parser-failure
+  path. Reverse-map the missing side by building a PNG with non-empty `IDAT`,
+  no `IEND`, and a truncated following chunk so `!saw_end` and `chunks.failed`
+  are both true. Fix type: malformed error fixture because Pillow reports
+  `Truncated File Read`.
+- line 407: `Chunks::next()` stops on `self.failed || self.position ==
+  self.data.len()`. Public decoding naturally covers normal end-of-data after a
+  missing `IEND` and parse-failed state after malformed chunks. Reverse-map the
+  missing short-circuit side by proving which side remains from selected-line
+  hits. If no public PNG can isolate the side because decoding stops as soon as
+  `chunks.failed` is set, use a coverage-only private probe that advances a
+  local `Chunks` iterator to failure and calls `next()` again. Fix type:
+  private coverage probe only for the chunk iterator state-machine terminal
+  predicate.
+
+Completed evidence:
+
+- Coverage MCP run: `c5eebe5e-3e29-425f-b2a8-62a1813fd605`
+- Coverage MCP snapshot: `aff1b610-2b7a-4fbc-b744-25e15431709c`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 22696 / 22718 lines, 3374 / 3452 branches, and
+  1546 / 1546 functions.
+- Target file: `src/codecs/png/decode.rs` improved from 347 / 347 lines,
+  81 / 86 branches, and 21 / 21 functions to 354 / 354 lines,
+  86 / 86 branches, and 22 / 22 functions. No branch gaps remain in this
+  file.
+- Reverse-mapped inputs used:
+  - `zero_height.png` covers the missing IHDR height reject side.
+  - `duplicate_plte.png` covers the duplicate `PLTE` guard; Pillow tolerates
+    the input and the manifest stores its one-byte palette output.
+  - `duplicate_trns.png` covers the duplicate `tRNS` guard; Pillow tolerates
+    the input and the manifest stores its one-byte palette output.
+  - `idat_truncated_chunk_no_iend.png` covers the non-empty-IDAT plus
+    failed-chunk/no-IEND reject side; Pillow reports `Truncated File Read`.
+  - The `cfg(coverage)` `Chunks` probe covers the second `next()` call after a
+    parser failure, which public `decode()` cannot isolate because iteration
+    stops at the first `None`.
 
 ## Planned zlib-ng compressor private-branch batch
 
