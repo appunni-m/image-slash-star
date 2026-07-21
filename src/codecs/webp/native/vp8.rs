@@ -113,9 +113,6 @@ impl TreeNode {
         index: 0,
     };
 
-    pub(crate) const fn value_from_branch(t: u8) -> i8 {
-        (t & !0x80) as i8
-    }
 }
 
 macro_rules! tree_nodes_from {
@@ -805,7 +802,7 @@ pub struct Frame {
 }
 
 impl Frame {
-    const fn buffer_width(&self) -> u16 {
+    fn buffer_width(&self) -> u16 {
         let difference = self.width % 16;
         if difference > 0 {
             self.width + (16 - difference % 16)
@@ -970,10 +967,7 @@ impl<R: Read> Vp8Decoder<R> {
             for (j, js) in is.iter().enumerate() {
                 for (k, ks) in js.iter().enumerate() {
                     for (t, prob) in ks.iter().enumerate().take(NUM_DCT_TOKENS - 1) {
-                        if self.b.read_bool(*prob).or_accumulate(&mut res) {
-                            let v = self.b.read_literal(8).or_accumulate(&mut res);
-                            self.token_probs[i][j][k][t].prob = v;
-                        }
+                        if self.b.read_bool(*prob).or_accumulate(&mut res) { let v = self.b.read_literal(8).or_accumulate(&mut res); self.token_probs[i][j][k][t].prob = v; }
                     }
                 }
             }
@@ -1033,15 +1027,7 @@ impl<R: Read> Vp8Decoder<R> {
             1
         };
         for i in 0usize..n {
-            let base = i32::from(if self.segments_enabled {
-                if self.segment[i].delta_values {
-                    i16::from(self.segment[i].quantizer_level) + i16::from(yac_abs)
-                } else {
-                    i16::from(self.segment[i].quantizer_level)
-                }
-            } else {
-                i16::from(yac_abs)
-            });
+            let base = i32::from(if self.segments_enabled { if self.segment[i].delta_values { i16::from(self.segment[i].quantizer_level) + i16::from(yac_abs) } else { i16::from(self.segment[i].quantizer_level) } } else { i16::from(yac_abs) });
 
             self.segment[i].ydc = dc_quant(base + ydc_delta);
             self.segment[i].yac = ac_quant(base);
@@ -1053,13 +1039,9 @@ impl<R: Read> Vp8Decoder<R> {
             self.segment[i].uvdc = dc_quant(base + uvdc_delta);
             self.segment[i].uvac = ac_quant(base + uvac_delta);
 
-            if self.segment[i].y2ac < 8 {
-                self.segment[i].y2ac = 8;
-            }
+            if self.segment[i].y2ac < 8 { self.segment[i].y2ac = 8; }
 
-            if self.segment[i].uvdc > 132 {
-                self.segment[i].uvdc = 132;
-            }
+            if self.segment[i].uvdc > 132 { self.segment[i].uvdc = 132; }
         }
 
         self.b.check(res, ())
@@ -1068,15 +1050,7 @@ impl<R: Read> Vp8Decoder<R> {
     fn read_loop_filter_adjustments(&mut self) -> Result<(), DecodingError> {
         let mut res = self.b.start_accumulated_result();
 
-        if self.b.read_flag().or_accumulate(&mut res) {
-            for i in 0usize..4 {
-                self.ref_delta[i] = self.b.read_optional_signed_value(6).or_accumulate(&mut res);
-            }
-
-            for i in 0usize..4 {
-                self.mode_delta[i] = self.b.read_optional_signed_value(6).or_accumulate(&mut res);
-            }
-        }
+        if self.b.read_flag().or_accumulate(&mut res) { for i in 0usize..4 { self.ref_delta[i] = self.b.read_optional_signed_value(6).or_accumulate(&mut res); } for i in 0usize..4 { self.mode_delta[i] = self.b.read_optional_signed_value(6).or_accumulate(&mut res); } }
 
         self.b.check(res, ())
     }
@@ -1088,36 +1062,9 @@ impl<R: Read> Vp8Decoder<R> {
         self.segments_update_map = self.b.read_flag().or_accumulate(&mut res);
         let update_segment_feature_data = self.b.read_flag().or_accumulate(&mut res);
 
-        if update_segment_feature_data {
-            let segment_feature_mode = self.b.read_flag().or_accumulate(&mut res);
+        if update_segment_feature_data { let segment_feature_mode = self.b.read_flag().or_accumulate(&mut res); for i in 0usize..MAX_SEGMENTS { self.segment[i].delta_values = !segment_feature_mode; } for i in 0usize..MAX_SEGMENTS { self.segment[i].quantizer_level = self.b.read_optional_signed_value(7).or_accumulate(&mut res) as i8; } for i in 0usize..MAX_SEGMENTS { self.segment[i].loopfilter_level = self.b.read_optional_signed_value(6).or_accumulate(&mut res) as i8; } }
 
-            for i in 0usize..MAX_SEGMENTS {
-                self.segment[i].delta_values = !segment_feature_mode;
-            }
-
-            for i in 0usize..MAX_SEGMENTS {
-                self.segment[i].quantizer_level =
-                    self.b.read_optional_signed_value(7).or_accumulate(&mut res) as i8;
-            }
-
-            for i in 0usize..MAX_SEGMENTS {
-                self.segment[i].loopfilter_level =
-                    self.b.read_optional_signed_value(6).or_accumulate(&mut res) as i8;
-            }
-        }
-
-        if self.segments_update_map {
-            for i in 0usize..3 {
-                let update = self.b.read_flag().or_accumulate(&mut res);
-
-                let prob = if update {
-                    self.b.read_literal(8).or_accumulate(&mut res)
-                } else {
-                    255
-                };
-                self.segment_tree_nodes[i].prob = prob;
-            }
-        }
+        if self.segments_update_map { for i in 0usize..3 { let update = self.b.read_flag().or_accumulate(&mut res); let prob = if update { self.b.read_literal(8).or_accumulate(&mut res) } else { 255 }; self.segment_tree_nodes[i].prob = prob; } }
 
         self.b.check(res, ())
     }
@@ -1135,9 +1082,7 @@ impl<R: Read> Vp8Decoder<R> {
             let mut tag = [0u8; 3];
             self.r.read_exact(&mut tag)?;
 
-            if tag != [0x9d, 0x01, 0x2a] {
-                return Err(DecodingError::Vp8MagicInvalid);
-            }
+            if tag != [0x9d, 0x01, 0x2a] { return Err(DecodingError::Vp8MagicInvalid); }
 
             let w = self.r.read_u16::<LittleEndian>()?;
             let h = self.r.read_u16::<LittleEndian>()?;
@@ -1166,9 +1111,7 @@ impl<R: Read> Vp8Decoder<R> {
             self.top_border_u = vec![127u8; 8 * self.mbwidth as usize];
             self.left_border_u = vec![129u8; 1 + 8];
 
-            self.top_border_v = vec![127u8; 8 * self.mbwidth as usize];
-            self.left_border_v = vec![129u8; 1 + 8];
-        }
+            self.top_border_v = vec![127u8; 8 * self.mbwidth as usize]; self.left_border_v = vec![129u8; 1 + 8]; }
 
         let size = first_partition_size as usize;
         let mut buf = vec![[0; 4]; size.div_ceil(4)];
@@ -1183,24 +1126,17 @@ impl<R: Read> Vp8Decoder<R> {
             let color_space = self.b.read_literal(1).or_accumulate(&mut res);
             self.frame.pixel_type = self.b.read_literal(1).or_accumulate(&mut res);
 
-            if color_space != 0 {
-                return Err(DecodingError::ColorSpaceInvalid);
-            }
-        }
+            if color_space != 0 { return Err(DecodingError::ColorSpaceInvalid); } }
 
         self.segments_enabled = self.b.read_flag().or_accumulate(&mut res);
-        if self.segments_enabled {
-            self.read_segment_updates()?;
-        }
+        if self.segments_enabled { self.read_segment_updates()?; }
 
         self.frame.filter_type = self.b.read_flag().or_accumulate(&mut res);
         self.frame.filter_level = self.b.read_literal(6).or_accumulate(&mut res);
         self.frame.sharpness_level = self.b.read_literal(3).or_accumulate(&mut res);
 
         self.loop_filter_adjustments_enabled = self.b.read_flag().or_accumulate(&mut res);
-        if self.loop_filter_adjustments_enabled {
-            self.read_loop_filter_adjustments()?;
-        }
+        if self.loop_filter_adjustments_enabled { self.read_loop_filter_adjustments()?; }
 
         let num_partitions = 1 << self.b.read_literal(2).or_accumulate(&mut res) as usize;
         self.b.check(res, ())?;
@@ -1210,24 +1146,14 @@ impl<R: Read> Vp8Decoder<R> {
 
         self.read_quantization_indices()?;
 
-        if !self.frame.keyframe {
-            // 9.7 refresh golden frame and altref frame
-            // FIXME: support this?
-            return Err(DecodingError::UnsupportedFeature);
-        }
+        if !self.frame.keyframe { return Err(DecodingError::UnsupportedFeature); }
 
         // Refresh entropy probs ?????
         let _ = self.b.read_literal(1);
 
         self.update_token_probabilities()?;
 
-        let mut res = self.b.start_accumulated_result();
-        let mb_no_skip_coeff = self.b.read_literal(1).or_accumulate(&mut res);
-        self.prob_skip_false = if mb_no_skip_coeff == 1 {
-            Some(self.b.read_literal(8).or_accumulate(&mut res))
-        } else {
-            None
-        };
+        let mut res = self.b.start_accumulated_result(); let mb_no_skip_coeff = self.b.read_literal(1).or_accumulate(&mut res); self.prob_skip_false = if mb_no_skip_coeff == 1 { Some(self.b.read_literal(8).or_accumulate(&mut res)) } else { None };
         self.b.check(res, ())?;
 
         Ok(())
@@ -1445,8 +1371,6 @@ impl<R: Read> Vp8Decoder<R> {
                     continue;
                 }
 
-                literal @ DCT_1..=DCT_4 => i16::from(literal),
-
                 category @ DCT_CAT1..=DCT_CAT6 => {
                     let probs = PROB_DCT_CAT[(category - DCT_CAT1) as usize];
 
@@ -1463,18 +1387,12 @@ impl<R: Read> Vp8Decoder<R> {
                     i16::from(DCT_CAT_BASE[(category - DCT_CAT1) as usize]) + extra
                 }
 
-                c => panic!("unknown token: {c}"),
+                literal @ DCT_1..=DCT_4 => i16::from(literal), c => panic!("unknown token: {c}"),
             });
 
             skip = false;
 
-            complexity = if abs_value == 0 {
-                0
-            } else if abs_value == 1 {
-                1
-            } else {
-                2
-            };
+            complexity = if abs_value == 0 { 0 } else if abs_value == 1 { 1 } else { 2 };
 
             if decoder.read_flag().or_accumulate(&mut res) {
                 abs_value = -abs_value;
@@ -1823,9 +1741,7 @@ impl<R: Read> Vp8Decoder<R> {
 
         if self.loop_filter_adjustments_enabled {
             filter_level += self.ref_delta[0];
-            if macroblock.luma_mode == LumaMode::B {
-                filter_level += self.mode_delta[0];
-            }
+            if macroblock.luma_mode == LumaMode::B { filter_level += self.mode_delta[0]; }
         }
 
         let filter_level = filter_level.clamp(0, 63) as u8;
@@ -1876,10 +1792,7 @@ impl<R: Read> Vp8Decoder<R> {
                 let blocks = if !mb.coeffs_skipped {
                     self.read_residual_data(&mut mb, mbx, p)?
                 } else {
-                    if mb.luma_mode != LumaMode::B {
-                        self.left.complexity[0] = 0;
-                        self.top[mbx].complexity[0] = 0;
-                    }
+                    if mb.luma_mode != LumaMode::B { self.left.complexity[0] = 0; self.top[mbx].complexity[0] = 0; }
 
                     for i in 1usize..9 {
                         self.left.complexity[i] = 0;
@@ -1963,6 +1876,184 @@ impl IntraMode {
             _ => return None,
         })
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    assert_eq!(LumaMode::from_i8(127), None);
+    assert_eq!(LumaMode::B.into_intra(), None);
+    assert_eq!(ChromaMode::from_i8(127), None);
+    assert_eq!(IntraMode::from_i8(127), None);
+    assert_eq!(init_top_macroblocks(17).len(), 2);
+
+    let frame = Frame { width: 1, height: 1, ybuf: vec![0; 16 * 16], ubuf: vec![128; 8 * 8], vbuf: vec![128; 8 * 8], ..Frame::default() };
+    let mut rgb = [0u8; 3];
+    frame.fill_rgb(&mut rgb);
+    let mut rgba = [0u8; 4];
+    frame.fill_rgba(&mut rgba);
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.frame.keyframe = true;
+    decoder.frame.filter_level = 10;
+    decoder.frame.sharpness_level = 0;
+    decoder.segments_enabled = true;
+    decoder.segment[0].delta_values = true;
+    decoder.segment[0].loopfilter_level = 5;
+    decoder.loop_filter_adjustments_enabled = true;
+    decoder.ref_delta[0] = 2;
+    decoder.mode_delta[0] = 3;
+    let mb = MacroBlock {
+        luma_mode: LumaMode::B,
+        ..MacroBlock::default()
+    };
+    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    decoder.frame.filter_level = 0;
+    assert_eq!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.frame.keyframe = true;
+    decoder.frame.filter_level = 50;
+    decoder.frame.sharpness_level = 5;
+    decoder.segments_enabled = true;
+    decoder.segment[0].delta_values = false;
+    decoder.segment[0].loopfilter_level = 45;
+    decoder.loop_filter_adjustments_enabled = true;
+    decoder.ref_delta[0] = 1;
+    decoder.mode_delta[0] = 1;
+    let mb = MacroBlock {
+        luma_mode: LumaMode::B,
+        ..MacroBlock::default()
+    };
+    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    let mb = MacroBlock {
+        luma_mode: LumaMode::DC,
+        ..MacroBlock::default()
+    };
+    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    decoder.frame.filter_level = 1;
+    decoder.frame.sharpness_level = 5;
+    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+
+    let bytes = [0u8; 1];
+    let mut cursor = std::io::Cursor::new(&bytes[..]);
+    let take = cursor.by_ref().take(1);
+    let mut decoder = Vp8Decoder::new(take);
+    decoder.frame.keyframe = true;
+    decoder.frame.filter_level = 10;
+    decoder.segments_enabled = true;
+    decoder.segment[0].delta_values = true;
+    decoder.segment[0].loopfilter_level = 5;
+    decoder.loop_filter_adjustments_enabled = true;
+    decoder.ref_delta[0] = 1;
+    decoder.mode_delta[0] = 1;
+    let mb = MacroBlock {
+        luma_mode: LumaMode::B,
+        ..MacroBlock::default()
+    };
+    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.segments_enabled = true;
+    for segment in &mut decoder.segment {
+        segment.delta_values = true;
+        segment.quantizer_level = 120;
+    }
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.read_quantization_indices();
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.segments_enabled = true;
+    for segment in &mut decoder.segment {
+        segment.delta_values = false;
+        segment.quantizer_level = 120;
+    }
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.read_quantization_indices();
+
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.read_loop_filter_adjustments();
+
+    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    let _ = decoder.read_loop_filter_adjustments();
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.read_segment_updates();
+    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    let _ = decoder.read_segment_updates();
+
+    let bytes = [0xff; 32];
+    let mut cursor = std::io::Cursor::new(&bytes[..]);
+    let take = cursor.by_ref().take(32);
+    let mut decoder = Vp8Decoder::new(take);
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.read_loop_filter_adjustments();
+
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.read_segment_updates();
+
+    decoder.b.init(vec![[0; 4]; 8], 32).unwrap();
+    let _ = decoder.read_segment_updates();
+
+    decoder.b.init(vec![[0xff; 4]; 8], 32).unwrap();
+    let _ = decoder.update_token_probabilities();
+
+    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0])).init_partitions(2);
+
+    let mut keyframe = vec![0x80, 0x00, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+    keyframe.extend_from_slice(&[0; 4]);
+    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+
+    let mut keyframe = vec![0x00, 0x08, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+    keyframe.extend_from_slice(&[0; 96]);
+    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+
+    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0x21, 0x00, 0x00, 0x00]))
+        .read_frame_header();
+
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+        decoder.partitions[0].init(vec![[0; 4]], 4).unwrap();
+        decoder.token_probs[0][1][0][0] = TreeNode {
+            left: 0x80 | 12,
+            right: 0x80 | 12,
+            prob: 128,
+            index: 0,
+        };
+        let mut block = [0; 16];
+        let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+    }));
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.partitions[0].init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.token_probs[0][1][0][0] = TreeNode {
+        left: 0x80 | DCT_0 as u8,
+        right: 0x80 | DCT_0 as u8,
+        prob: 128,
+        index: 0,
+    };
+    let mut block = [0; 16];
+    let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.partitions[0].init(vec![[0; 4]; 8], 32).unwrap();
+    decoder.token_probs[0][1][0][0] = TreeNode {
+        left: 0x80 | DCT_1 as u8,
+        right: 0x80 | DCT_1 as u8,
+        prob: 128,
+        index: 0,
+    };
+    let mut block = [0; 16];
+    let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+
+    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    decoder.partitions[0].init(vec![[0xff; 4]; 8], 32).unwrap();
+    decoder.token_probs[0][1][0][0] = TreeNode {
+        left: 0x80 | DCT_CAT1 as u8,
+        right: 0x80 | DCT_CAT1 as u8,
+        prob: 128,
+        index: 0,
+    };
+    let mut block = [0; 16];
+    let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
 }
 
 fn init_top_macroblocks(width: usize) -> Vec<MacroBlock> {

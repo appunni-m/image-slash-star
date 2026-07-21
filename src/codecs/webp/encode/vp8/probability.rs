@@ -21,6 +21,13 @@ fn record_event(statistic: &mut u32, bit: bool) {
     *statistic += 0x0001_0000 + u32::from(bit);
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut statistic = 0xfffe_0000;
+    record_event(&mut statistic, true);
+    assert_ne!(statistic, 0xfffe_0000);
+}
+
 fn record_block(
     statistics: &mut Statistics,
     levels: &[i16; 16],

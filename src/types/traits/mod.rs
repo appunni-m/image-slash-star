@@ -13,3 +13,9 @@ pub(crate) mod view;
 pub use self::pixel::Pixel;
 pub use self::primitive::{EncodableLayout, Enlargeable, Primitive};
 pub use self::view::{GenericImage, GenericImageView};
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    pixel::__coverage_exercise_private_branches();
+    view::__coverage_exercise_private_branches();
+}

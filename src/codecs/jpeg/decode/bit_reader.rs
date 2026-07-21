@@ -17,6 +17,7 @@ pub(super) struct BitReader<'a> {
     end: usize,
     buf: u64,  // get_buffer — bits accumulate at MSB
     bits: u32, // bits_left — number of valid bits in buf
+    insufficient_data: bool,
 }
 
 // BIT_BUF_SIZE=64 on 64-bit platforms → MIN_GET_BITS = 64-7 = 57
@@ -32,6 +33,7 @@ impl<'a> BitReader<'a> {
             end,
             buf: 0,
             bits: 0,
+            insufficient_data: false,
         }
     }
 
@@ -40,11 +42,11 @@ impl<'a> BitReader<'a> {
     /// Fill the bit buffer to at least MIN_GET_BITS bits.
     /// Handles byte stuffing (0xFF 0x00 → data 0xFF) and stops at marker bytes.
     /// On exhausted data / marker, leaves whatever bits we have (zero-padding per IJG).
-    pub(super) fn fill(&mut self) {
+    pub(super) fn fill(&mut self, nbits: u32) {
         // IJG: while (bits_left < MIN_GET_BITS) { ... }
         while self.bits < MIN_GET_BITS {
             if self.pos >= self.end {
-                // IJG no_more_bytes: we have whatever bits we have
+                self.pad_with_zero_bits_if_needed(nbits);
                 return;
             }
             let byte = self.data[self.pos];
@@ -55,6 +57,7 @@ impl<'a> BitReader<'a> {
                 // We pre-split segments so we rarely see padding, but handle it.
                 loop {
                     if self.pos >= self.end {
+                        self.pad_with_zero_bits_if_needed(nbits);
                         return;
                     }
                     let next = self.data[self.pos];
@@ -71,6 +74,7 @@ impl<'a> BitReader<'a> {
                     } else {
                         // Other marker byte — end of entropy data
                         // IJG: save marker, goto no_more_bytes
+                        self.pad_with_zero_bits_if_needed(nbits);
                         return;
                     }
                 }
@@ -81,11 +85,28 @@ impl<'a> BitReader<'a> {
         }
     }
 
+    fn pad_with_zero_bits_if_needed(&mut self, nbits: u32) {
+        if nbits > self.bits {
+            let missing = MIN_GET_BITS - self.bits;
+            self.buf <<= missing;
+            self.bits = MIN_GET_BITS;
+            self.insufficient_data = true;
+        }
+    }
+
+    pub(super) fn insufficient_data(&self) -> bool {
+        self.insufficient_data
+    }
+
+    pub(super) fn bits_left(&self) -> u32 {
+        self.bits
+    }
+
     /// Ensure at least `n` bits are available. Returns true if successful.
     #[inline]
     pub(super) fn ensure(&mut self, n: u32) -> bool {
         if self.bits < n {
-            self.fill();
+            self.fill(n);
         }
         self.bits >= n
     }
@@ -123,4 +144,16 @@ impl<'a> BitReader<'a> {
         }
         Some(self.get_bits(n))
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let marker_padded = [0xFF, 0xFF, 0xD9];
+    let mut br = BitReader::new(&marker_padded, 0, marker_padded.len());
+    br.fill(1);
+    assert!(br.insufficient_data());
+
+    let empty = [];
+    let mut br = BitReader::new(&empty, 0, 0);
+    assert_eq!(br.read_bits(64), None);
 }

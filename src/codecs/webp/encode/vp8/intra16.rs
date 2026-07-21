@@ -268,3 +268,30 @@ pub(super) fn select(
         .min_by_key(|candidate| candidate.score)
         .expect("VP8 always has intra16 candidates")
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let source = [128u8; 256];
+    let top = [128u8; 16];
+    let left = [128u8; 16];
+    let matrices = super::quant::libwebp_segment_matrices(10, 0, 0);
+    let probabilities = [[[[128u8; 11]; 3]; 8]; 4];
+    let _ = select(
+        &source,
+        &top,
+        &left,
+        128,
+        false,
+        false,
+        [0; 4],
+        [0; 4],
+        0,
+        &matrices,
+        matrices.lambda_i16 as u32,
+        matrices.texture_lambda as u32,
+        Some(Intra16Mode::Dc),
+        false,
+        &probabilities,
+        false,
+    );
+}

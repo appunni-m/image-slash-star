@@ -362,7 +362,7 @@ impl ArithmeticDecoder {
             if new_index < tree.len() {
                 index = new_index;
             } else {
-                let value = TreeNode::value_from_branch(t);
+                let value = (t & 0x7f) as i8;
                 return self.keep_accumulating(res, value);
             }
         }
@@ -544,7 +544,7 @@ impl FastDecoder<'_> {
             let b = self.fast_read_bit(prob);
             let i = if b { node.right } else { node.left };
             let Some(next_node) = tree.get(usize::from(i)) else {
-                return TreeNode::value_from_branch(i);
+                return (i & 0x7f) as i8;
             };
             node = *next_node;
         }

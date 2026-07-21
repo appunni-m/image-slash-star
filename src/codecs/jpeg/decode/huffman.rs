@@ -97,9 +97,7 @@ impl HuffTable {
                 let fill_count = 1usize << (HUFF_LOOKAHEAD - l);
                 for ctr in 0..fill_count {
                     let idx = lookbits + ctr;
-                    if idx < 256 {
-                        lookup[idx] = entry;
-                    }
+                    if idx < 256 { lookup[idx] = entry; }
                 }
                 p += 1;
             }
@@ -135,9 +133,15 @@ impl HuffTable {
     ///   2. If code ≤ HUFF_LOOKAHEAD bits: DROP_BITS(nb), return symbol.
     ///   3. Slow path: jpeg_huff_decode — bit-by-bit traversal.
     pub(super) fn decode(&self, br: &mut BitReader) -> Option<u8> {
-        // Ensure at least HUFF_LOOKAHEAD bits for the fast path
-        if !br.ensure(HUFF_LOOKAHEAD) {
-            // Not enough bits for lookahead — go directly to slow path
+        // IJG HUFF_DECODE asks jpeg_fill_bit_buffer for lookahead with
+        // nbits=0. Near a marker/end of segment, that means "prefetch if
+        // bytes exist, but do not synthesize warning zero bits just to satisfy
+        // the fast lookup table."
+        if br.bits_left() < HUFF_LOOKAHEAD {
+            br.fill(0);
+        }
+        if br.bits_left() < HUFF_LOOKAHEAD {
+            // Not enough bits for lookahead — go directly to slow path.
             return self.decode_slow(br, 1);
         }
 
@@ -150,8 +154,10 @@ impl HuffTable {
             br.drop_bits(nb);
             Some((entry & 0xFF) as u8)
         } else {
-            // Slow path: code is > HUFF_LOOKAHEAD bits
-            self.decode_slow(br, 1)
+            // Slow path: code is > HUFF_LOOKAHEAD bits. IJG passes the
+            // lookup-table sentinel (HUFF_LOOKAHEAD + 1), so the first slow
+            // GET_BITS consumes the already-peeked 9-bit prefix.
+            self.decode_slow(br, nb)
         }
     }
 
@@ -172,15 +178,22 @@ impl HuffTable {
         // IJG: while (code > htbl->maxcode[l]) {
         //        code <<= 1; CHECK_BIT_BUFFER(1); code |= GET_BITS(1); l++; }
         while code > self.maxcode[l] {
-            l += 1;
-            if l > 16 {
-                // Corrupt data — reached sentinel at position 17
-                return None;
-            }
-            if !br.ensure(1) {
-                return None;
-            }
+            if !br.ensure(1) { return None; }
             code = (code << 1) | (br.get_bits(1) as i32);
+            l += 1;
+        }
+
+        if l > 16 {
+            // ✅ FIX: Match libjpeg-turbo jdhuff.c `jpeg_huff_decode`.
+            //    With garbage entropy, IJG consumes through the sentinel
+            //    length, warns, and returns a fake zero symbol instead of
+            //    aborting the image. Keep synthetic empty tables fatal; those
+            //    represent invalid DHT input that libjpeg rejects before
+            //    entropy decode.
+            return self.maxcode[1..=16]
+                .iter()
+                .any(|&max| max >= 0)
+                .then_some(0);
         }
 
         // IJG: return htbl->pub->huffval[code + htbl->valoffset[l]];
@@ -191,4 +204,27 @@ impl HuffTable {
             None
         }
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let empty = [];
+    let table = HuffTable {
+        lookup: [0x0900u16; 256],
+        values: Vec::new(),
+        maxcode: {
+            let mut maxcode = [-1; 18];
+            maxcode[1] = 0;
+            maxcode[17] = 0x7FFFFF;
+            maxcode
+        },
+        valoffset: [0; 18],
+    };
+
+    let mut br = BitReader::new(&empty, 0, 0);
+    assert_eq!(table.decode_slow(&mut br, 64), None);
+
+    let data = [0x00];
+    let mut br = BitReader::new(&data, 0, data.len());
+    assert_eq!(table.decode_slow(&mut br, 1), None);
 }

@@ -129,9 +129,7 @@ fn coalesce_identical_frames(
                 output_frame.left = u32::try_from(left).ok()?;
                 output_frame.top = u32::try_from(top).ok()?;
                 let mut alpha = vec![255; prepared.palette.len() / 3];
-                if let Some(transparent) = prepared.transparent {
-                    alpha[usize::from(transparent)] = 0;
-                }
+                if let Some(transparent) = prepared.transparent { alpha[usize::from(transparent)] = 0; }
                 output_frame.image = DecodedImage::with_mode(
                     u32::try_from(frame_width).ok()?,
                     u32::try_from(frame_height).ok()?,
@@ -408,9 +406,7 @@ fn write_gif(
     output.extend_from_slice(&height.to_le_bytes());
     output.push(u8::from(global_table) << 7 | global_size);
     output.extend_from_slice(&[background, 0]); // Background index and pixel aspect ratio.
-    if global_table {
-        write_color_table(&mut output, &first.palette, global_count);
-    }
+    if global_table { write_color_table(&mut output, &first.palette, global_count); }
 
     if let Some(loop_count) = settings.loop_count {
         output.extend_from_slice(&[

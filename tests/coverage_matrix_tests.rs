@@ -1648,6 +1648,12 @@ fn test_operation_matrix() {
     );
 }
 
+#[cfg(coverage)]
+#[test]
+fn test_internal_coverage_hooks() {
+    img::__coverage_exercise_private_branches();
+}
+
 fn exercise_buffer<P>(buffer: &mut img::ImageBuffer<P, Vec<P::Subpixel>>)
 where
     P: img::Pixel,
@@ -1694,6 +1700,7 @@ where
     assert!(buffer.get_pixel_mut_checked(0, 0).is_some());
     assert!(buffer.get_pixel_mut_checked(width, 0).is_none());
     assert!(buffer.get_pixel_mut_checked(0, height).is_none());
+    let _ = buffer[(0, 0)];
     {
         let mut pixels = buffer.pixels_mut();
         let _ = pixels.size_hint();
@@ -1726,7 +1733,10 @@ where
 
     assert!(GenericImageView::in_bounds(buffer, 0, 0));
     assert!(!GenericImageView::in_bounds(buffer, width, height));
-    let _ = GenericImageView::pixels(buffer).next();
+    let mut view_pixels = GenericImageView::pixels(buffer);
+    let _ = view_pixels.clone();
+    while view_pixels.next().is_some() {}
+    assert!(view_pixels.next().is_none());
     let _ = GenericImageView::buffer_like(buffer);
     let _ = GenericImageView::buffer_with_dimensions(buffer, 1, 1);
     GenericImage::copy_from(buffer, &clone, 0, 0).unwrap();
@@ -1986,6 +1996,98 @@ fn exercise_type_metadata() {
     rgb[2] = 4;
     let mut rgba: img::Rgba<u8> = [1, 2, 3, 4].into();
     rgba[3] = 5;
+    #[allow(deprecated)]
+    {
+        let _ = <img::Luma<u8> as Pixel>::from_channels(1, 2, 3, 4);
+        let _ = <img::LumaA<u8> as Pixel>::from_channels(1, 2, 3, 4);
+        let _ = <img::Rgb<u8> as Pixel>::from_channels(1, 2, 3, 4);
+        let _ = <img::Rgba<u8> as Pixel>::from_channels(1, 2, 3, 4);
+    }
+    #[derive(Clone, Copy)]
+    struct DefaultAlphaPixel([u8; 2]);
+    impl Pixel for DefaultAlphaPixel {
+        type Subpixel = u8;
+        const CHANNEL_COUNT: u8 = 2;
+        const COLOR_MODEL: &'static str = "YA";
+        const HAS_ALPHA: bool = true;
+        fn channels(&self) -> &[u8] {
+            &self.0
+        }
+        fn channels_mut(&mut self) -> &mut [u8] {
+            &mut self.0
+        }
+        #[allow(deprecated)]
+        fn channels4(&self) -> (u8, u8, u8, u8) {
+            (self.0[0], 255, 255, self.0[1])
+        }
+        #[allow(deprecated)]
+        fn from_channels(a: u8, _b: u8, _c: u8, d: u8) -> Self {
+            Self([a, d])
+        }
+        fn from_slice(_slice: &[u8]) -> &Self {
+            panic!("not needed by coverage matrix")
+        }
+        fn from_slice_mut(_slice: &mut [u8]) -> &mut Self {
+            panic!("not needed by coverage matrix")
+        }
+        fn to_rgb(&self) -> img::Rgb<u8> {
+            img::Rgb([self.0[0]; 3])
+        }
+        fn to_rgba(&self) -> img::Rgba<u8> {
+            img::Rgba([self.0[0], self.0[0], self.0[0], self.0[1]])
+        }
+        fn to_luma(&self) -> img::Luma<u8> {
+            img::Luma([self.0[0]])
+        }
+        fn to_luma_alpha(&self) -> img::LumaA<u8> {
+            img::LumaA(self.0)
+        }
+        fn map<F>(&self, mut f: F) -> Self
+        where
+            F: FnMut(u8) -> u8,
+        {
+            Self([f(self.0[0]), f(self.0[1])])
+        }
+        fn apply<F>(&mut self, mut f: F)
+        where
+            F: FnMut(u8) -> u8,
+        {
+            self.0 = [f(self.0[0]), f(self.0[1])];
+        }
+        fn map_with_alpha<F, G>(&self, mut f: F, mut g: G) -> Self
+        where
+            F: FnMut(u8) -> u8,
+            G: FnMut(u8) -> u8,
+        {
+            Self([f(self.0[0]), g(self.0[1])])
+        }
+        fn apply_with_alpha<F, G>(&mut self, mut f: F, mut g: G)
+        where
+            F: FnMut(u8) -> u8,
+            G: FnMut(u8) -> u8,
+        {
+            self.0 = [f(self.0[0]), g(self.0[1])];
+        }
+        fn map2<F>(&self, other: &Self, mut f: F) -> Self
+        where
+            F: FnMut(u8, u8) -> u8,
+        {
+            Self([f(self.0[0], other.0[0]), f(self.0[1], other.0[1])])
+        }
+        fn apply2<F>(&mut self, other: &Self, mut f: F)
+        where
+            F: FnMut(u8, u8) -> u8,
+        {
+            self.0 = [f(self.0[0], other.0[0]), f(self.0[1], other.0[1])];
+        }
+        fn invert(&mut self) {
+            self.0 = [255 - self.0[0], 255 - self.0[1]];
+        }
+        fn blend(&mut self, other: &Self) {
+            *self = *other;
+        }
+    }
+    assert_eq!(DefaultAlphaPixel([1, 7]).alpha(), 7);
 
     let mut gray_bg = img::LumaA([10u8, 100]);
     gray_bg.blend(&img::LumaA([20, 255]));
@@ -2135,6 +2237,20 @@ fn exercise_type_metadata() {
     assert!(img::decode(b"\0\0\0\x18ftypavif\0\0\0\0").is_none());
     assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_none());
     assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_none());
+    let zero_png = img::DecodedImage::new(0, 1, vec![], img::ColorType::L8);
+    assert!(img::codecs::png::encode::encode(&zero_png, &Default::default()).is_none());
+    let unsupported_tiff = img::DecodedImage::new(1, 1, vec![0; 4], img::ColorType::La16);
+    assert!(img::codecs::tiff::encode::encode(&unsupported_tiff, &Default::default()).is_none());
+    let unsupported_webp = img::DecodedImage::new(1, 1, vec![0, 0], img::ColorType::La8);
+    assert!(img::codecs::webp::encode::encode(&unsupported_webp, &Default::default()).is_none());
+    let mut bad_webp_metadata = img::encode_options::EncodeOptions::default();
+    bad_webp_metadata
+        .extra
+        .insert("xmp_hex".to_owned(), "f".to_owned());
+    assert!(img::codecs::webp::encode::encode(&valid, &bad_webp_metadata).is_none());
+    let mut lossless_webp = img::encode_options::EncodeOptions::default();
+    lossless_webp.lossless = Some(true);
+    assert!(img::codecs::webp::encode::encode(&unsupported_webp, &lossless_webp).is_none());
 
     exercise_primitive(1u8);
     exercise_primitive(1u16);

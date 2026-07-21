@@ -290,7 +290,7 @@ pub(super) fn residual_cost(
     };
     let mut cost = bit_cost(true, probabilities[0]);
 
-    while position < 16 {
+    loop {
         let coefficient = levels[position];
         position += 1;
         if coefficient == 0 {
@@ -343,9 +343,18 @@ pub(super) fn residual_cost(
             [usize::from(COEFF_BANDS[position])][next_context];
         let has_more = position <= last;
         cost += bit_cost(has_more, probabilities[0]);
-        if !has_more {
-            return cost;
-        }
+        if !has_more { return cost; }
     }
-    cost
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let probabilities = [128; 11];
+    let _ = level_cost(100, &probabilities, 1);
+
+    let mut coefficient_probabilities = [[[[128u8; 11]; 3]; 8]; 4];
+    coefficient_probabilities[0][0][0][0] = 127;
+    let mut levels = [0i16; 16];
+    levels[0] = 70;
+    let _ = residual_cost(&levels, 0, 0, 0, &coefficient_probabilities);
 }

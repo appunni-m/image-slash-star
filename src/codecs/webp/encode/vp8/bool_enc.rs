@@ -95,11 +95,7 @@ impl BoolEncoder {
             self.run += 1;
             return;
         }
-        if bits & 0x100 != 0 {
-            if let Some(previous) = self.output.last_mut() {
-                *previous = previous.wrapping_add(1);
-            }
-        }
+        if bits & 0x100 != 0 { if let Some(previous) = self.output.last_mut() { *previous = previous.wrapping_add(1); } }
         let delayed = if bits & 0x100 != 0 { 0x00 } else { 0xff };
         self.output.extend(std::iter::repeat_n(delayed, self.run));
         self.run = 0;

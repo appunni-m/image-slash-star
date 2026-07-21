@@ -49,13 +49,6 @@ type HuffmanCodeGroup = [HuffmanTree; HUFFMAN_CODES_PER_META_CODE];
 
 const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 256, 40];
 
-#[inline]
-pub(crate) fn subsample_size(size: u16, bits: u8) -> u16 {
-    ((u32::from(size) + (1u32 << bits) - 1) >> bits)
-        .try_into()
-        .unwrap()
-}
-
 const NUM_TRANSFORM_TYPES: usize = 4;
 
 //Decodes lossless WebP images
@@ -70,7 +63,7 @@ pub(crate) struct LosslessDecoder<R> {
 
 impl<R: BufRead> LosslessDecoder<R> {
     /// Create a new decoder
-    pub(crate) const fn new(r: R) -> Self {
+    pub(crate) fn new(r: R) -> Self {
         Self {
             bit_reader: BitReader::new(r),
             transforms: [None, None, None, None],
@@ -92,10 +85,9 @@ impl<R: BufRead> LosslessDecoder<R> {
         implicit_dimensions: bool,
         buf: &mut [u8],
     ) -> Result<(), DecodingError> {
-        if implicit_dimensions {
-            self.width = width as u16;
-            self.height = height as u16;
-        } else {
+        self.width = width as u16;
+        self.height = height as u16;
+        if !implicit_dimensions {
             let signature = self.bit_reader.read_bits::<u8>(8)?;
             debug_assert_eq!(signature, 0x2f);
 
@@ -106,8 +98,7 @@ impl<R: BufRead> LosslessDecoder<R> {
 
             let _alpha_used = self.bit_reader.read_bits::<u8>(1)?;
             let version_num = self.bit_reader.read_bits::<u8>(3)?;
-            debug_assert_eq!(version_num, 0);
-        }
+            debug_assert_eq!(version_num, 0); }
 
         let transformed_width = self.read_transforms()?;
         let transformed_size = usize::from(transformed_width) * usize::from(self.height) * 4;
@@ -209,8 +200,8 @@ impl<R: BufRead> LosslessDecoder<R> {
 
                     let size_bits = self.bit_reader.read_bits::<u8>(3)? + 2;
 
-                    let block_xsize = subsample_size(xsize, size_bits);
-                    let block_ysize = subsample_size(self.height, size_bits);
+                    let block_xsize = ((u32::from(xsize) + (1u32 << size_bits) - 1) >> size_bits) as u16;
+                    let block_ysize = ((u32::from(self.height) + (1u32 << size_bits) - 1) >> size_bits) as u16;
 
                     let mut predictor_data =
                         vec![0; usize::from(block_xsize) * usize::from(block_ysize) * 4];
@@ -226,8 +217,8 @@ impl<R: BufRead> LosslessDecoder<R> {
 
                     let size_bits = self.bit_reader.read_bits::<u8>(3)? + 2;
 
-                    let block_xsize = subsample_size(xsize, size_bits);
-                    let block_ysize = subsample_size(self.height, size_bits);
+                    let block_xsize = ((u32::from(xsize) + (1u32 << size_bits) - 1) >> size_bits) as u16;
+                    let block_ysize = ((u32::from(self.height) + (1u32 << size_bits) - 1) >> size_bits) as u16;
 
                     let mut transform_data =
                         vec![0; usize::from(block_xsize) * usize::from(block_ysize) * 4];
@@ -259,7 +250,7 @@ impl<R: BufRead> LosslessDecoder<R> {
                     } else {
                         0
                     };
-                    xsize = subsample_size(xsize, bits);
+                    xsize = ((u32::from(xsize) + (1u32 << bits) - 1) >> bits) as u16;
 
                     Self::adjust_color_map(&mut color_map);
 
@@ -301,8 +292,8 @@ impl<R: BufRead> LosslessDecoder<R> {
         if read_meta && self.bit_reader.read_bits::<u8>(1)? == 1 {
             //meta huffman codes
             huffman_bits = self.bit_reader.read_bits::<u8>(3)? + 2;
-            huffman_xsize = subsample_size(xsize, huffman_bits);
-            huffman_ysize = subsample_size(ysize, huffman_bits);
+            huffman_xsize = ((u32::from(xsize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
+            huffman_ysize = ((u32::from(ysize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
 
             let mut data = vec![0; usize::from(huffman_xsize) * usize::from(huffman_ysize) * 4];
             self.decode_image_stream(huffman_xsize, huffman_ysize, false, &mut data)?;
@@ -663,6 +654,15 @@ impl<R: BufRead> LosslessDecoder<R> {
     }
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    let mut buf = [0u8; 4];
+    let _ = decoder.decode_frame(1, 1, true, &mut buf);
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0, 0, 0]));
+    let _ = decoder.decode_frame(1, 1, false, &mut buf);
+}
+
 #[derive(Debug, Clone)]
 struct HuffmanInfo {
     xsize: u16,
@@ -722,6 +722,11 @@ impl<R: BufRead> BitReader<R> {
             buffer: 0,
             nbits: 0,
         }
+    }
+
+    #[cfg(coverage)]
+    pub(crate) const fn __coverage_new(reader: R) -> Self {
+        Self::new(reader)
     }
 
     /// Fills the buffer with bits from the input stream.

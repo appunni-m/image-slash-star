@@ -4690,6 +4690,114 @@
           ]
         },
         {
+          "id": "pillow_tolerated_malformed_entropy_empty_scan",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "entropy_empty_scan.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_empty_scan_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "entropy_early_eoi_1.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_early_eoi_1_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "entropy_early_eoi_64.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_early_eoi_64_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "entropy_truncated_tail_64.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_truncated_tail_64_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "entropy_stuffed_ff_prefix.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_entropy_stuffed_ff_prefix_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_progressive_scan0_empty",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "pillow",
+          "description": "Malformed optional JPEG marker ignored by Pillow",
+          "asset": "progressive_scan0_empty.jpg",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_scan0_empty_jpg.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "id": "dqt_16bit",
           "type": "decode",
           "format": "jpeg",
@@ -14251,12 +14359,12 @@
     }
   },
   "summary": {
-    "total_rows": 774,
-    "decode_rows": 495,
+    "total_rows": 780,
+    "decode_rows": 501,
     "encode_rows": 247,
     "formats": 8,
-    "assets_available": 488,
-    "decode_active": 489,
+    "assets_available": 494,
+    "decode_active": 495,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

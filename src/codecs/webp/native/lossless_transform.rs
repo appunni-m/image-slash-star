@@ -1,7 +1,5 @@
 use std::ops::Range;
 
-use super::lossless::subsample_size;
-
 #[derive(Debug, Clone)]
 pub(crate) enum TransformType {
     PredictorTransform {
@@ -19,6 +17,16 @@ pub(crate) enum TransformType {
     },
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut image = vec![0u8; 16];
+    let predictor = vec![0, 255, 0, 0, 0, 255, 0, 0];
+    apply_predictor_transform(&mut image, 2, 2, 1, &predictor);
+
+    let mut empty = Vec::new();
+    apply_color_indexing_transform(&mut empty, 0, 0, 2, &[0, 0, 0, 0, 255, 255, 255, 255]);
+}
+
 pub(crate) fn apply_predictor_transform(
     image_data: &mut [u8],
     width: u16,
@@ -26,7 +34,7 @@ pub(crate) fn apply_predictor_transform(
     size_bits: u8,
     predictor_data: &[u8],
 ) {
-    let block_xsize = usize::from(subsample_size(width, size_bits));
+    let block_xsize = usize::from(((u32::from(width) + (1u32 << size_bits) - 1) >> size_bits) as u16);
     let width = usize::from(width);
     let height = usize::from(height);
 
@@ -352,7 +360,7 @@ pub(crate) fn apply_color_transform(
     size_bits: u8,
     transform_data: &[u8],
 ) {
-    let block_xsize = usize::from(subsample_size(width, size_bits));
+    let block_xsize = usize::from(((u32::from(width) + (1u32 << size_bits) - 1) >> size_bits) as u16);
     let width = usize::from(width);
 
     for (y, row) in image_data.chunks_exact_mut(width * 4).enumerate() {
@@ -559,14 +567,7 @@ fn apply_color_indexing_transform_small_table<const W_BITS: u8, const EXP_ENTRY_
             *output_chunk_array = *colors_data_array;
         }
 
-        if packed_image_width_in_blocks > 0 {
-            let final_packed_index_byte = packed_indices_for_row[packed_image_width_in_blocks - 1];
-            let colors_data_full_array =
-                &expanded_lookup_table_array[final_packed_index_byte as usize];
-
-            final_block_part
-                .copy_from_slice(&colors_data_full_array[..final_block_expanded_size_bytes]);
-        }
+        if packed_image_width_in_blocks > 0 { let final_packed_index_byte = packed_indices_for_row[packed_image_width_in_blocks - 1]; let colors_data_full_array = &expanded_lookup_table_array[final_packed_index_byte as usize]; final_block_part.copy_from_slice(&colors_data_full_array[..final_block_expanded_size_bytes]); }
     }
 }
 

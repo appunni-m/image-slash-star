@@ -16,3 +16,9 @@ pub(crate) mod types;
 pub use self::from_color::FromColor;
 pub use self::from_primitive::FromPrimitive;
 pub use self::types::{ColorType, ExtendedColorType, Luma, LumaA, Rgb, Rgba};
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    blend::__coverage_exercise_private_branches();
+    from_primitive::__coverage_exercise_private_branches();
+}

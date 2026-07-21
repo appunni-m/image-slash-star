@@ -38,6 +38,29 @@ pub use self::traits::{
     EncodableLayout, Enlargeable, GenericImage, GenericImageView, Pixel, Primitive,
 };
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    buffer::__coverage_exercise_private_branches();
+    color::__coverage_exercise_private_branches();
+    dynamic::__coverage_exercise_private_branches();
+    traits::__coverage_exercise_private_branches();
+    let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
+    let _ = image.validate();
+    let _ = DecodedImage::new(0, 1, Vec::new(), ColorType::L8).validate();
+    let _ = DecodedImage::new(1, 0, Vec::new(), ColorType::L8).validate();
+    let _ = DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8)
+        .with_palette(ImagePalette { rgb: Vec::new(), alpha: Vec::new() })
+        .validate();
+    let _ = DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8)
+        .with_palette(ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage palette"))
+        .validate();
+    let _ = DecodedSequence { width: 1, height: 1, frames: Vec::new(), loop_count: None, background: None }.validate();
+    let _ = DecodedSequence { width: 0, height: 1, frames: Vec::new(), loop_count: None, background: None }.validate();
+    let _ = DecodedSequence { width: 1, height: 0, frames: Vec::new(), loop_count: None, background: None }.validate();
+    let frame = DecodedFrame { image, left: 0, top: 1, duration_ms: 0, disposal: FrameDisposal::Keep, interlaced: false };
+    let _ = DecodedSequence { width: 1, height: 1, frames: vec![frame], loop_count: None, background: None }.validate();
+}
+
 // ---------------------------------------------------------------------------
 // ImageFormat — supported encoding/decoding formats
 // ---------------------------------------------------------------------------

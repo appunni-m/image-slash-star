@@ -1072,6 +1072,31 @@ pub(crate) type Rgb16Image = ImageBuffer<Rgb<u16>, Vec<u16>>;
 #[allow(dead_code)]
 pub(crate) type Rgba16Image = ImageBuffer<Rgba<u16>, Vec<u16>>;
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    use std::marker::PhantomData;
+
+    let malformed = ImageBuffer::<Rgb<u8>, Vec<u8>> {
+        data: Vec::new(),
+        width: 1,
+        height: 1,
+        _phantom: PhantomData,
+    };
+    let _ = std::panic::catch_unwind(|| {
+        let _ = malformed.rows();
+    });
+
+    let mut malformed = ImageBuffer::<Rgb<u8>, Vec<u8>> {
+        data: Vec::new(),
+        width: 1,
+        height: 1,
+        _phantom: PhantomData,
+    };
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = malformed.rows_mut();
+    }));
+}
+
 // ---------------------------------------------------------------------------
 // ConvertBuffer trait
 // ---------------------------------------------------------------------------

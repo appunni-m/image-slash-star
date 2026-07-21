@@ -198,3 +198,8 @@ fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
         })
         .collect()
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    vp8::__coverage_exercise_private_branches();
+}

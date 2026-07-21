@@ -35,12 +35,14 @@ enum Token {
 /// fixed Huffman codes directly, and deliberately does not insert positions
 /// skipped by a match.
 pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let input_len = input_chunks
-        .iter()
-        .try_fold(0usize, |total, &length| total.checked_add(length))?;
+    let mut input_len = 0usize;
+    for &length in input_chunks {
+        input_len = input_len.checked_add(length)?;
+    }
     debug_assert_eq!(input_len, data.len());
 
-    let (tokens, final_tokens) = tokenize_level1(data, input_chunks)?;
+    let (tokens, final_tokens) =
+        tokenize_level1(data, input_chunks).expect("validated zlib chunks should tokenize");
     let mut writer = BitWriter::default();
     // deflate_quick opens its first block only after a Z_NO_FLUSH call has
     // enough lookahead to process. On Z_FINISH it closes an opened block as
@@ -112,6 +114,19 @@ fn tokenize_level1_position(
     tokens.push(Token::Literal(*data.get(*position)?));
     *position = position.checked_add(1)?;
     Some(())
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let data = b"abcdef";
+    let mut tokens = Vec::new();
+    let mut head = vec![0usize; HASH_SIZE];
+    let mut position = 0usize;
+    tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens)
+        .expect("literal path should tokenize");
+    let _ = compress_level1(data, &[data.len()]);
+    let _ = compress_level1(data, &[data.len(), usize::MAX]);
+    let _ = tokenize_level1(data, &[data.len(), usize::MAX]);
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {

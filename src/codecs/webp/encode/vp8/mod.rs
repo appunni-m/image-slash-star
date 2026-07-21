@@ -22,3 +22,11 @@ mod probability;
 mod quant;
 mod residual;
 mod tokenize;
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    cost::__coverage_exercise_private_branches();
+    encoder::__coverage_exercise_private_branches();
+    intra16::__coverage_exercise_private_branches();
+    probability::__coverage_exercise_private_branches();
+}

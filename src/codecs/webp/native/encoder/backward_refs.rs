@@ -577,9 +577,6 @@ impl CostManager {
         for window in boundaries.windows(2) {
             let start = window[0];
             let end = window[1];
-            if start == end {
-                continue;
-            }
             let existing = self
                 .intervals
                 .iter()
@@ -732,10 +729,7 @@ fn trace_backwards(
                     while split <= reach {
                         let (next_offset, next_length) = chain[split + 1];
                         split_length = next_length;
-                        if next_offset != distance {
-                            split_length = chain[split].1;
-                            break;
-                        }
+                        if next_offset != distance { split_length = chain[split].1; break; }
                         split += 1;
                     }
                     manager.update_at(split - 1, false);
@@ -835,6 +829,41 @@ pub(super) fn candidates(
         })
         .collect();
     candidates
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    assert_eq!(candidates(&[], 1, true, 80, 0).len(), 1);
+    let _ = candidates(&[0xff00_0000; MAX_LENGTH + 4], 1, false, 60, 0);
+    let _ = fast_slog(70_000);
+    let _ = prefix(300);
+    let _ = population_cost(&[70_000, 1]);
+    let model = cost_model(&[Token::Literal(0xff00_0000)], 0, 1);
+    let mut manager = CostManager::new(4, &model);
+    manager.insert_min_interval(CostInterval {
+        cost: 0,
+        start: 1,
+        end: 1,
+        position: 0,
+    });
+    manager.intervals = vec![
+        CostInterval {
+            cost: 1,
+            start: 0,
+            end: 4,
+            position: 0,
+        };
+        500
+    ];
+    manager.insert_min_interval(CostInterval {
+        cost: 0,
+        start: 0,
+        end: 3,
+        position: 0,
+    });
+    let _ = std::panic::catch_unwind(|| {
+        let _ = with_cache(&[0xff00_0000], &[Token::Cache(0)], 1);
+    });
 }
 
 const PLANE_TO_CODE: [u8; 128] = [

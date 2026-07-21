@@ -104,6 +104,11 @@ metadata, raw Pillow pixels, and exact Pillow encoder output. Failed byte
 comparisons report the first differing pixel coordinate, channel, and values;
 hashes and file sizes are not accepted as parity substitutes.
 
+The project goal is 100% line and 100% branch coverage, reached primarily by
+adding fixture-based manifest rows with exact Pillow input/output references.
+Coverage-only internal hooks are allowed only behind `cfg(coverage)` for private
+defensive paths that cannot be represented as public image fixtures.
+
 ## Development
 
 The required Rust release and components are pinned in `rust-toolchain.toml`.

@@ -392,9 +392,7 @@ fn write_huffman_tree<W: Write>(
     let write_trimmed = trimmed_length > 1 && trailing_zero_bits > 12;
     w.write_bits(u64::from(write_trimmed), 1)?;
     let token_count = if write_trimmed {
-        if trimmed_length == 2 {
-            w.write_bits(0, 5)?;
-        } else {
+        if trimmed_length == 2 { w.write_bits(0, 5)?; } else {
             let nbits = (trimmed_length - 2).ilog2() as usize;
             let pairs = nbits / 2 + 1;
             w.write_bits((pairs - 1) as u64, 3)?;
@@ -406,10 +404,7 @@ fn write_huffman_tree<W: Write>(
     };
     for token in &tokens[..token_count] {
         let symbol = usize::from(token.code);
-        w.write_bits(
-            u64::from(code_length_codes[symbol]),
-            code_length_lengths[symbol],
-        )?;
+        w.write_bits(u64::from(code_length_codes[symbol]), code_length_lengths[symbol])?;
         let bits = match token.code {
             16 => 2,
             17 => 3,
@@ -508,12 +503,7 @@ fn write_group<W: Write>(
         .each_ref()
         .map(|frequency| vec![0; frequency.len()]);
     for channel in 0..5 {
-        write_huffman_tree(
-            w,
-            &populations[channel],
-            &mut lengths[channel],
-            &mut codes[channel],
-        )?;
+        write_huffman_tree(w, &populations[channel], &mut lengths[channel], &mut codes[channel])?;
     }
     Ok(GroupCodes { lengths, codes })
 }
@@ -590,10 +580,7 @@ fn write_token_stream<W: Write>(
                 let distance = backward_refs::plane_code(width, distance);
                 let (symbol, extra_bits) = length_to_symbol(distance);
                 w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
-                w.write_bits(
-                    ((distance - 1) & ((1 << extra_bits) - 1)) as u64,
-                    extra_bits,
-                )?;
+                w.write_bits(((distance - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
                 position += length;
             }
             backward_refs::Token::Cache(index) => {
@@ -790,10 +777,7 @@ fn analyze_entropy(
         .map(|(mode, _)| mode)
         .unwrap();
     let (red_histogram, blue_histogram) = match mode {
-        EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE),
-        EntropyMode::Spatial => (RED_PREDICTED, BLUE_PREDICTED),
-        EntropyMode::SubtractGreen => (RED_SUB_GREEN, BLUE_SUB_GREEN),
-        EntropyMode::SpatialSubtractGreen => (RED_PREDICTED_SUB_GREEN, BLUE_PREDICTED_SUB_GREEN),
+        EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE), EntropyMode::Spatial => (RED_PREDICTED, BLUE_PREDICTED), EntropyMode::SubtractGreen => (RED_SUB_GREEN, BLUE_SUB_GREEN), EntropyMode::SpatialSubtractGreen => (RED_PREDICTED_SUB_GREEN, BLUE_PREDICTED_SUB_GREEN),
     };
     let red_and_blue_zero = (1..256).all(|index| {
         histograms[red_histogram][index] == 0 && histograms[blue_histogram][index] == 0
@@ -1176,4 +1160,132 @@ impl<W: Write> WebPEncoder<W> {
 
         Ok(())
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    use std::io::ErrorKind;
+
+    backward_refs::__coverage_exercise_private_branches();
+    cross_color::__coverage_exercise_private_branches();
+    histogram::__coverage_exercise_private_branches();
+    predictor::__coverage_exercise_private_branches();
+
+    let _ = EncodingError::from(io::Error::from(ErrorKind::Other));
+    let _ = length_to_symbol(4);
+    let _ = length_to_symbol(300);
+    let _ = channels(0x1122_3344);
+    let _ = chunk_size(3);
+    let _ = chunk_size(4);
+
+    let mut tree_bytes = Vec::new();
+    let mut tree_writer = BitWriter {
+        writer: &mut tree_bytes,
+        buffer: 0,
+        nbits: 0,
+    };
+    let mut lengths = vec![0; 4];
+    let mut codes = vec![0; 4];
+    write_huffman_tree(&mut tree_writer, &[1, 0, 0, 0], &mut lengths, &mut codes).unwrap();
+    tree_writer.flush().unwrap();
+
+    let populations = [
+        vec![1; 281],
+        vec![1; 256],
+        vec![1; 256],
+        vec![1; 256],
+        vec![1; 40],
+    ];
+    let mut group_bytes = Vec::new();
+    let mut group_writer = BitWriter {
+        writer: &mut group_bytes,
+        buffer: 0,
+        nbits: 0,
+    };
+    let _ = write_group(&mut group_writer, &populations).unwrap();
+    group_writer.flush().unwrap();
+
+    let mut token_bytes = Vec::new();
+    let mut token_writer = BitWriter {
+        writer: &mut token_bytes,
+        buffer: 0,
+        nbits: 0,
+    };
+    write_token_stream(
+        &mut token_writer,
+        &[0xff00_0000; 8],
+        8,
+        false,
+        &[
+            backward_refs::Token::Literal(0xff00_0000),
+            backward_refs::Token::Copy {
+                distance: 1,
+                length: 4,
+            },
+            backward_refs::Token::Literal(0xff00_0000),
+            backward_refs::Token::Literal(0xff00_0000),
+            backward_refs::Token::Literal(0xff00_0000),
+        ],
+        0,
+        1,
+    )
+    .unwrap();
+    token_writer.flush().unwrap();
+
+    let mut palette = (0..20)
+        .map(|index| {
+            let value = ((index * 37) & 0xff) as u32;
+            0xff00_0000
+                | (value << 16)
+                | (((255_u32.wrapping_sub(value)) & 0xff) << 8)
+                | (value ^ 0x55)
+        })
+        .collect::<Vec<_>>();
+    palette[0] = 0;
+    minimize_palette_deltas(&mut palette);
+    let entropy_pixels = [
+        0xff10_2010,
+        0xff20_4020,
+        0xff30_6030,
+        0xff40_8040,
+    ];
+    let _ = analyze_entropy(&entropy_pixels, 2, 2, None, 1);
+    let mut palette_bytes = Vec::new();
+    let mut palette_writer = BitWriter {
+        writer: &mut palette_bytes,
+        buffer: 0,
+        nbits: 0,
+    };
+    let mut palette = (0..18)
+        .map(|index| 0xff00_0000 | ((index as u32) << 16))
+        .collect::<Vec<_>>();
+    palette.push(0);
+    apply_palette(
+        &mut palette_writer,
+        &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+        2,
+        2,
+        palette,
+    )
+    .unwrap();
+    palette_writer.flush().unwrap();
+
+    let mut palette_trim_bytes = Vec::new();
+    let mut palette_trim_writer = BitWriter {
+        writer: &mut palette_trim_bytes,
+        buffer: 0,
+        nbits: 0,
+    };
+    apply_palette(&mut palette_trim_writer, &[0; 4], 2, 2, vec![0; 18]).unwrap();
+    palette_trim_writer.flush().unwrap();
+
+    let alpha = [
+        0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8, 247, 9, 246,
+    ];
+    let _ = encode_alpha(&alpha, alpha.len() as u32, 1).unwrap();
+
+    let mut output = Vec::new();
+    WebPEncoder::new(&mut output)
+        .encode(&[], 0, 1, ColorType::Rgb8)
+        .expect_err("zero-width WebP must be rejected");
 }

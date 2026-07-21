@@ -140,3 +140,12 @@ pub fn encode_sequence_format(
     let image = sequence.first()?;
     (sequence.frames.len() == 1).then(|| encode_format(image, format, options))?
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    compression::__coverage_exercise_private_branches();
+    #[cfg(feature = "jpeg")]
+    jpeg::__coverage_exercise_private_branches();
+    #[cfg(feature = "webp")]
+    webp::__coverage_exercise_private_branches();
+}

@@ -1,4 +1,12 @@
 version: 0.1.0
+quality_goals:
+  parity:
+    oracle: Pillow 12.2.0
+    contract: Every active manifest row must match Pillow's observable input/output behavior exactly, including decoded pixels and encoded bytes.
+  coverage:
+    target: 100% line and 100% branch coverage
+    method: Prefer fixture-based, manifest-driven parity rows that exercise real codec inputs and Pillow reference outputs.
+    fallback: Coverage-only internal hooks may exercise private unreachable or defensive branches, but should stay behind cfg(coverage) and should not replace fixture parity coverage for codec behavior.
 operations:
   - {id: convert_rgba_l, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: L}}
   - {id: convert_rgba_la, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: LA}}
@@ -262,6 +270,12 @@ formats:
       - app14_non_adobe.jpg
       - prefixed_stuffed_marker.jpg
       - entropy_eoi_padding.jpg
+      - entropy_empty_scan.jpg
+      - entropy_early_eoi_1.jpg
+      - entropy_early_eoi_64.jpg
+      - entropy_truncated_tail_64.jpg
+      - entropy_stuffed_ff_prefix.jpg
+      - progressive_scan0_empty.jpg
     - id: dqt_16bit
       description: Baseline JPEG using sixteen-bit quantization table entries
       test_assets:

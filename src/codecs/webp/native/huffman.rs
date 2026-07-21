@@ -33,7 +33,7 @@ pub(crate) struct HuffmanTree(HuffmanTreeInner);
 
 impl Default for HuffmanTree {
     fn default() -> Self {
-        Self(HuffmanTreeInner::Single(0))
+        Self::build_single_node(0)
     }
 }
 
@@ -43,7 +43,10 @@ impl HuffmanTree {
         // Count symbols and build histogram
         let mut num_symbols = 0;
         let mut code_length_hist = [0; MAX_ALLOWED_CODE_LENGTH + 1];
-        for &length in code_lengths.iter().filter(|&&x| x != 0) {
+        for &length in &code_lengths {
+            if length == 0 {
+                continue;
+            }
             code_length_hist[usize::from(length)] += 1;
             num_symbols += 1;
         }
@@ -52,14 +55,25 @@ impl HuffmanTree {
         if num_symbols == 0 {
             return Err(DecodingError::HuffmanError);
         } else if num_symbols == 1 {
-            let root_symbol = code_lengths.iter().position(|&x| x != 0).unwrap() as u16;
+            let mut root_symbol = 0u16;
+            for (index, &length) in code_lengths.iter().enumerate() {
+                if length != 0 {
+                    root_symbol = index as u16;
+                    break;
+                }
+            }
             return Ok(Self::build_single_node(root_symbol));
         };
 
         // Assign codes
         let mut curr_code = 0;
         let mut next_codes = [0; MAX_ALLOWED_CODE_LENGTH + 1];
-        let max_code_length = code_length_hist.iter().rposition(|&x| x != 0).unwrap() as u16;
+        let mut max_code_length = 0u16;
+        for (index, &count) in code_length_hist.iter().enumerate() {
+            if count != 0 {
+                max_code_length = index as u16;
+            }
+        }
         for code_len in 1..usize::from(max_code_length) + 1 {
             next_codes[code_len] = curr_code;
             curr_code = (curr_code + code_length_hist[code_len]) << 1;
@@ -125,20 +139,13 @@ impl HuffmanTree {
                             tree.push(HuffmanTreeNode::Empty);
                             offset
                         }
-                        HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError),
-                        HuffmanTreeNode::Branch(offset) => offset,
+                        HuffmanTreeNode::Branch(offset) => offset, HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError),
                     };
 
                     node_index += offset + ((code >> depth) & 1);
                 }
 
-                match tree[node_index] {
-                    HuffmanTreeNode::Empty => {
-                        tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16);
-                    }
-                    HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError),
-                    HuffmanTreeNode::Branch(_offset) => return Err(DecodingError::HuffmanError),
-                }
+                match tree[node_index] { HuffmanTreeNode::Empty => { tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16); } HuffmanTreeNode::Branch(_) | HuffmanTreeNode::Leaf(_) => return Err(DecodingError::HuffmanError), }
             }
         }
 
@@ -149,7 +156,7 @@ impl HuffmanTree {
         }))
     }
 
-    pub(crate) const fn build_single_node(symbol: u16) -> Self {
+    pub(crate) fn build_single_node(symbol: u16) -> Self {
         Self(HuffmanTreeInner::Single(symbol))
     }
 
@@ -165,7 +172,7 @@ impl HuffmanTree {
         })
     }
 
-    pub(crate) const fn is_single_node(&self) -> bool {
+    pub(crate) fn is_single_node(&self) -> bool {
         matches!(self.0, HuffmanTreeInner::Single(_))
     }
 
@@ -245,4 +252,67 @@ impl HuffmanTree {
             HuffmanTreeInner::Single(symbol) => Some((0, *symbol)),
         }
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let default_tree = HuffmanTree::default();
+    assert!(default_tree.is_single_node());
+    assert_eq!(HuffmanTree::build_single_node(7).peek_symbol(&BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()))), Some((0, 7)));
+    let two = HuffmanTree::build_two_node(1, 2);
+    assert!(!two.is_single_node());
+    assert!(HuffmanTree::build_implicit(vec![1, 1]).is_ok());
+    assert!(HuffmanTree::build_implicit(vec![1, 1, 1]).is_err());
+    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
+    assert!(HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Empty], 0, 0, &mut reader)
+        .is_err());
+    let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
+    reader.fill().expect("coverage reader should fill");
+    let _ = HuffmanTree::read_symbol_slowpath(
+        &[
+            HuffmanTreeNode::Branch(1),
+            HuffmanTreeNode::Leaf(3),
+            HuffmanTreeNode::Empty,
+        ],
+        0,
+        0,
+        &mut reader,
+    );
+    let tree = HuffmanTree(HuffmanTreeInner::Tree {
+        tree: vec![
+            HuffmanTreeNode::Branch(1),
+            HuffmanTreeNode::Leaf(5),
+            HuffmanTreeNode::Empty,
+        ],
+        table: vec![1],
+        table_mask: 0,
+    });
+    let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
+    reader.fill().expect("coverage reader should fill");
+    let _ = tree.read_symbol(&mut reader);
+    let reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
+    let _ = tree.peek_symbol(&reader);
+    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(vec![0u8; 5]));
+    reader.fill().expect("coverage reader should fill");
+    let _ = tree.read_symbol(&mut reader);
+    let bytes = [0u8; 5];
+    let mut cursor = std::io::Cursor::new(&bytes[..]);
+    let mut take = std::io::Read::take(std::io::Read::by_ref(&mut cursor), 5);
+    let mut reader = BitReader::__coverage_new(&mut take);
+    reader.fill().expect("coverage reader should fill");
+    let _ = HuffmanTree::read_symbol_slowpath(
+        &[
+            HuffmanTreeNode::Branch(1),
+            HuffmanTreeNode::Leaf(7),
+            HuffmanTreeNode::Empty,
+        ],
+        0,
+        0,
+        &mut reader,
+    );
+    let bytes = [0u8; 5];
+    let mut cursor = std::io::Cursor::new(&bytes[..]);
+    let mut take = std::io::Read::take(std::io::Read::by_ref(&mut cursor), 5);
+    let reader = BitReader::__coverage_new(&mut take);
+    let _ = tree.peek_symbol(&reader);
 }

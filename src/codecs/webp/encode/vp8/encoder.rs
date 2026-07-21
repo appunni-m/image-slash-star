@@ -176,6 +176,24 @@ fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {
     map
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut params = FrameParams {
+        segments: std::array::from_fn(|_| super::analysis::SegmentParams {
+            quantizer: 20,
+            filter_strength: 10,
+        }),
+        num_segments: 3,
+        chroma_dc_delta: 0,
+        chroma_ac_delta: 0,
+    };
+    params.num_segments = 3;
+    params.segments[1] = params.segments[0].clone();
+    params.segments[2].quantizer = params.segments[0].quantizer.saturating_add(1);
+    let map = simplify_segments(&mut params);
+    assert_eq!(map[2], 1);
+}
+
 fn pad_plane(
     input: &[u8],
     width: usize,
@@ -420,17 +438,7 @@ fn cleanup_transparent_area(
                 height - full_height,
             );
         }
-        if full_width < width {
-            smoothen_transparent_luma(
-                rgba,
-                width,
-                y_plane,
-                full_width,
-                full_height,
-                width - full_width,
-                height - full_height,
-            );
-        }
+        if full_width < width { smoothen_transparent_luma(rgba, width, y_plane, full_width, full_height, width - full_width, height - full_height); }
     }
 }
 

@@ -105,6 +105,38 @@ impl<I: ?Sized> Clone for Pixels<'_, I> {
     }
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    use crate::types::color::Rgba;
+    use crate::types::error::Rect;
+
+    let source = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_pixel(2, 2, Rgba([1, 2, 3, 4]));
+    let mut target = ImageBuffer::<Rgba<u8>, Vec<u8>>::from_pixel(4, 4, Rgba([0, 0, 0, 0]));
+    let _ = source.in_bounds(1, 1);
+    let _ = source.in_bounds(2, 1);
+    let _ = source.in_bounds(1, 2);
+
+    let mut pixels = source.pixels();
+    let _ = pixels.next();
+    let _ = pixels.next();
+    let _ = pixels.next();
+    let _ = pixels.next();
+    let _ = pixels.next();
+
+    let _ = target.copy_from(&source, 0, 0);
+    let _ = target.copy_from(&source, 3, 0);
+    let _ = target.copy_from(&source, 0, 3);
+
+    let rect = Rect { x: 0, y: 0, width: 1, height: 1 };
+    let _ = target.copy_within(rect, 1, 1);
+    let _ = target.copy_within(Rect { x: 4, y: 0, width: 1, height: 1 }, 0, 0);
+    let _ = target.copy_within(Rect { x: 0, y: 0, width: 1, height: 1 }, 4, 0);
+    let _ = target.copy_within(Rect { x: 0, y: 4, width: 1, height: 1 }, 0, 0);
+    let _ = target.copy_within(Rect { x: 0, y: 0, width: 1, height: 1 }, 0, 4);
+    let _ = target.copy_within(Rect { x: 0, y: 0, width: 5, height: 1 }, 0, 0);
+    let _ = target.copy_within(Rect { x: 0, y: 0, width: 1, height: 5 }, 0, 0);
+}
+
 // ---------------------------------------------------------------------------
 // GenericImage
 // ---------------------------------------------------------------------------

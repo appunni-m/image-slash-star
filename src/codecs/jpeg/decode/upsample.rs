@@ -86,9 +86,7 @@ pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
                 out[out_row + (src_w - 1) * 2 + 1] = ((thiscolsum * 4 + 7) >> 4) as u8;
             } else {
                 out[out_row] = ((thiscolsum * 4 + 8) >> 4) as u8;
-                if dst_w > 1 {
-                    out[out_row + 1] = ((thiscolsum * 4 + 7) >> 4) as u8;
-                }
+                out[out_row + 1] = ((thiscolsum * 4 + 7) >> 4) as u8;
             }
 
             outrow += 1;

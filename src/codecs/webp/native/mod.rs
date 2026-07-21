@@ -24,3 +24,12 @@ mod transform;
 pub(crate) mod vp8;
 mod vp8_arithmetic_decoder;
 mod yuv;
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    encoder::__coverage_exercise_private_branches();
+    huffman::__coverage_exercise_private_branches();
+    lossless::__coverage_exercise_private_branches();
+    lossless_transform::__coverage_exercise_private_branches();
+    vp8::__coverage_exercise_private_branches();
+}

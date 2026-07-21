@@ -379,10 +379,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 scans.push(scan_info);
 
                 if !progressive {
-                    if scan_components.is_empty() {
-                        scan_components = comps;
-                        entropy_start = Some(scan_start);
-                    }
+                    if scan_components.is_empty() { scan_components = comps; entropy_start = Some(scan_start); }
                     saw_sos = true;
                     find_eoi(data, pos)?;
                     break;

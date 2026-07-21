@@ -819,6 +819,84 @@
       }
     },
     {
+      "id": "pillow_tolerated_malformed_entropy_empty_scan",
+      "asset": "entropy_empty_scan.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_empty_scan.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
+      "asset": "entropy_early_eoi_1.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_early_eoi_1.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
+      "asset": "entropy_early_eoi_64.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_early_eoi_64.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
+      "asset": "entropy_truncated_tail_64.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_truncated_tail_64.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
+      "asset": "entropy_stuffed_ff_prefix.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/entropy_stuffed_ff_prefix.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_progressive_scan0_empty",
+      "asset": "progressive_scan0_empty.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_scan0_empty.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "dqt_16bit",
       "asset": "dqt_16bit.jpg",
       "expect_error": false,

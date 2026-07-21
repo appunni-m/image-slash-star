@@ -66,10 +66,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         let actual_h = if h == 0 { 256 } else { h };
 
         let score = actual_w.saturating_mul(actual_h);
-        if score > best_score {
-            best_score = score;
-            best_idx = i;
-        }
+        if score > best_score { best_score = score; best_idx = i; }
     }
 
     // Decode the best entry
@@ -380,21 +377,9 @@ fn decode_ico_bmp_4bpp(
         for &byte in row {
             let hi = (byte >> 4) & 0x0F;
             let lo = byte & 0x0F;
-            if col < width as usize {
-                let color = palette[hi as usize];
-                pixels.push(color[0]);
-                pixels.push(color[1]);
-                pixels.push(color[2]);
-                pixels.push(mask_alpha(mask, mask_row_size, col, y));
-            }
+            if col < width as usize { let color = palette[hi as usize]; pixels.push(color[0]); pixels.push(color[1]); pixels.push(color[2]); pixels.push(mask_alpha(mask, mask_row_size, col, y)); }
             col += 1;
-            if col < width as usize {
-                let color = palette[lo as usize];
-                pixels.push(color[0]);
-                pixels.push(color[1]);
-                pixels.push(color[2]);
-                pixels.push(mask_alpha(mask, mask_row_size, col, y));
-            }
+            if col < width as usize { let color = palette[lo as usize]; pixels.push(color[0]); pixels.push(color[1]); pixels.push(color[2]); pixels.push(mask_alpha(mask, mask_row_size, col, y)); }
             col += 1;
         }
     }

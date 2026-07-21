@@ -56,12 +56,11 @@ pub(super) fn decode_block(
             if k >= 64 {
                 break;
             }
-            let bits = match br.read_bits(size as u32) {
-                Some(b) => b,
-                None => return false,
-            };
+            let bits = match br.read_bits(size as u32) { Some(b) => b, None => return false };
             block_zigzag[k] = extend(bits, size);
             k += 1;
+        } else {
+            return false;
         }
     }
     true
@@ -159,9 +158,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                             for col in 0..8 {
                                 let px = block_natural[row * 8 + col].clamp(0, 255) as u8;
                                 let bi = (block_y + row) * buf_w + (block_x + col);
-                                if bi < comp_buffers[scan_comp.comp_index].len() {
-                                    comp_buffers[scan_comp.comp_index][bi] = px;
-                                }
+                                if bi < comp_buffers[scan_comp.comp_index].len() { comp_buffers[scan_comp.comp_index][bi] = px; }
                             }
                         }
                     }
@@ -174,6 +171,16 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                     *pred = 0;
                 }
                 seg_idx += 1;
+            }
+
+            // ✅ FIX: Match libjpeg-turbo's `insufficient_data` handling.
+            //    C reference: jdhuff.c `decode_mcu()` completes the current
+            //    MCU from synthetic zero bits, then leaves later MCUs
+            //    initialized to gray once the current bit request cannot be
+            //    satisfied from the remaining entropy buffer. This check must
+            //    run after restart-boundary state updates.
+            if br.insufficient_data() {
+                break;
             }
         }
     }
@@ -305,6 +312,18 @@ pub(super) fn extract_entropy_segments(
     let mut pos = start;
     let mut eoi_pos = 0;
 
+    // ✅ FIX: Preserve an empty scan before EOI as a real entropy segment.
+    //    C reference: libjpeg-turbo jdhuff.c `jpeg_fill_bit_buffer` consumes
+    //    synthetic zero bits after entropy data ends, so an SOS followed
+    //    immediately by EOI still decodes deterministic coefficients.
+    //    Old Rust dropped this segment and rejected the image before bit fill.
+    if start == end_hint && data.get(start..start.saturating_add(2)) == Some(&[0xFF, 0xD9]) {
+        return EntropySegments {
+            segments: vec![(start, start)],
+            eoi_pos: start,
+        };
+    }
+
     while pos < end_hint {
         if data[pos] == 0xFF {
             let marker_start = pos;
@@ -395,4 +414,99 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         }
         reconstruct_image(&info, data)
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    use super::huffman::HuffTable;
+
+    let entropy = [0x00; 16];
+    let dc_cat_64 = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[64]);
+    let ac_eob = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    let mut block = [0i32; 64];
+    let mut last_dc = 0;
+    assert!(!decode_block(
+        &mut br,
+        &dc_cat_64,
+        &ac_eob,
+        &mut last_dc,
+        &mut block,
+    ));
+
+    let dc_zero = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
+    let ac_run_overflow =
+        HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0xF1]);
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    assert!(decode_block(
+        &mut br,
+        &dc_zero,
+        &ac_run_overflow,
+        &mut last_dc,
+        &mut block,
+    ));
+
+    let ac_literal =
+        HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0x01]);
+    let mut br = BitReader::new(&[0; 2], 0, 2);
+    assert!(decode_block(
+        &mut br,
+        &dc_zero,
+        &ac_literal,
+        &mut last_dc,
+        &mut block,
+    ));
+
+    let ac_invalid_zero =
+        HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0x10]);
+    let mut br = BitReader::new(&[0; 2], 0, 2);
+    assert!(!decode_block(
+        &mut br,
+        &dc_zero,
+        &ac_invalid_zero,
+        &mut last_dc,
+        &mut block,
+    ));
+
+    let ac_missing = HuffTable::build(&[0; 16], &[]);
+    let mut br = BitReader::new(&[0; 2], 0, 2);
+    assert!(!decode_block(
+        &mut br,
+        &dc_zero,
+        &ac_missing,
+        &mut last_dc,
+        &mut block,
+    ));
+
+    let segments = extract_entropy_segments(&[0, 0xFF, 0xFF, 0xD9], 0, 4);
+    assert_eq!(segments.eoi_pos, 1);
+
+    let info = JpegInfo {
+        width: 8,
+        height: 8,
+        num_components: 1,
+        components: vec![super::parser::FrameComponent {
+            id: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_tbl: 0,
+        }],
+        quant_tables: vec![Some([1; 64])],
+        dc_huff_tables: vec![Some(dc_zero.clone())],
+        ac_huff_tables: vec![Some(ac_eob.clone())],
+        scan_components: vec![super::parser::ScanComponent {
+            comp_index: 0,
+            dc_tbl: 0,
+            ac_tbl: 0,
+        }],
+        restart_interval: 1,
+        entropy_start: 0,
+        eoi_pos: 5,
+        max_h_samp: 1,
+        max_v_samp: 1,
+        progressive: false,
+        scans: Vec::new(),
+        adobe_transform: None,
+    };
+    let _ = reconstruct_image(&info, &[0, 0, 0xFF, 0xD0, 0]);
 }

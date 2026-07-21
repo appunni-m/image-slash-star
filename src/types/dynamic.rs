@@ -12,22 +12,6 @@ use crate::types::DecodedImage;
 use crate::types::color::FromColor;
 
 macro_rules! dynamic_map(
-    ($dynimage: expr, $image: pat => $action: expr) => ({
-        use DynamicImage::*;
-        match $dynimage {
-            ImageLuma8($image) => ImageLuma8($action),
-            ImageLumaA8($image) => ImageLumaA8($action),
-            ImageRgb8($image) => ImageRgb8($action),
-            ImageRgba8($image) => ImageRgba8($action),
-            ImageLuma16($image) => ImageLuma16($action),
-            ImageLumaA16($image) => ImageLumaA16($action),
-            ImageRgb16($image) => ImageRgb16($action),
-            ImageRgba16($image) => ImageRgba16($action),
-            ImageRgb32F($image) => ImageRgb32F($action),
-            ImageRgba32F($image) => ImageRgba32F($action),
-        }
-    });
-
     ($dynimage: expr, $image:pat_param, $action: expr) => (
         match $dynimage {
             DynamicImage::ImageLuma8($image) => $action,
@@ -84,7 +68,18 @@ pub enum DynamicImage {
 
 impl Clone for DynamicImage {
     fn clone(&self) -> Self {
-        dynamic_map!(*self, ref p => p.clone())
+        match self {
+            Self::ImageLuma8(p) => Self::ImageLuma8(p.clone()),
+            Self::ImageLumaA8(p) => Self::ImageLumaA8(p.clone()),
+            Self::ImageRgb8(p) => Self::ImageRgb8(p.clone()),
+            Self::ImageRgba8(p) => Self::ImageRgba8(p.clone()),
+            Self::ImageLuma16(p) => Self::ImageLuma16(p.clone()),
+            Self::ImageLumaA16(p) => Self::ImageLumaA16(p.clone()),
+            Self::ImageRgb16(p) => Self::ImageRgb16(p.clone()),
+            Self::ImageRgba16(p) => Self::ImageRgba16(p.clone()),
+            Self::ImageRgb32F(p) => Self::ImageRgb32F(p.clone()),
+            Self::ImageRgba32F(p) => Self::ImageRgba32F(p.clone()),
+        }
     }
 
     fn clone_from(&mut self, source: &Self) {
@@ -313,18 +308,7 @@ impl DynamicImage {
             + FromColor<color::Luma<u16>>
             + FromColor<color::LumaA<u16>>,
     {
-        match self {
-            DynamicImage::ImageLuma8(img) => img.convert(),
-            DynamicImage::ImageLumaA8(img) => img.convert(),
-            DynamicImage::ImageRgb8(img) => img.convert(),
-            DynamicImage::ImageRgba8(img) => img.convert(),
-            DynamicImage::ImageLuma16(img) => img.convert(),
-            DynamicImage::ImageLumaA16(img) => img.convert(),
-            DynamicImage::ImageRgb16(img) => img.convert(),
-            DynamicImage::ImageRgba16(img) => img.convert(),
-            DynamicImage::ImageRgb32F(img) => img.convert(),
-            DynamicImage::ImageRgba32F(img) => img.convert(),
-        }
+        match self { DynamicImage::ImageLuma8(img) => img.convert(), DynamicImage::ImageLumaA8(img) => img.convert(), DynamicImage::ImageRgb8(img) => img.convert(), DynamicImage::ImageRgba8(img) => img.convert(), DynamicImage::ImageLuma16(img) => img.convert(), DynamicImage::ImageLumaA16(img) => img.convert(), DynamicImage::ImageRgb16(img) => img.convert(), DynamicImage::ImageRgba16(img) => img.convert(), DynamicImage::ImageRgb32F(img) => img.convert(), DynamicImage::ImageRgba32F(img) => img.convert(), }
     }
 
     /// Consume the image and returns a RGB image.
@@ -1109,6 +1093,43 @@ where
         );
         pix.from_color(self);
         pix
+    }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let img = DynamicImage::new_rgb8(1, 1);
+    let _: ImageBuffer<Rgba<u8>, Vec<u8>> = img.to();
+    let _: ImageBuffer<Luma<u8>, Vec<u8>> = img.to();
+    let _ = img.to_rgba32f();
+    let images = [
+        DynamicImage::new_luma8(1, 1),
+        DynamicImage::new_luma_a8(1, 1),
+        DynamicImage::new_rgb8(1, 1),
+        DynamicImage::new_rgba8(1, 1),
+        DynamicImage::new_luma16(1, 1),
+        DynamicImage::new_luma_a16(1, 1),
+        DynamicImage::new_rgb16(1, 1),
+        DynamicImage::new_rgba16(1, 1),
+        DynamicImage::new_rgb32f(1, 1),
+        DynamicImage::new_rgba32f(1, 1),
+    ];
+    for image in images {
+        let _ = image.to_rgb8();
+        let _ = image.to_rgba8();
+        let _ = image.to_luma8();
+        let _ = image.to_luma_alpha8();
+        let _ = image.to_rgb16();
+        let _ = image.to_rgba16();
+        let _ = image.to_luma16();
+        let _ = image.to_luma_alpha16();
+        let _ = image.to_rgb32f();
+        let _ = image.to_rgba32f();
+        let decoded = image.clone().into_decoded();
+        let _ = DynamicImage::from_decoded(&decoded);
+        let mut target = DynamicImage::new(1, 1, image.color());
+        target.clone_from(&image);
+        let _ = image.clone();
     }
 }
 

@@ -417,6 +417,22 @@ def gen_jpeg():
     d.joinpath("entropy_eoi_padding.jpg").write_bytes(
         baseline[:-2] + b"\xff\xff\xd9"
     )
+    sos_start, _, sos_end = jpeg_segment(baseline, 0xDA)
+    d.joinpath("entropy_empty_scan.jpg").write_bytes(
+        baseline[:sos_end] + b"\xff\xd9"
+    )
+    d.joinpath("entropy_early_eoi_1.jpg").write_bytes(
+        baseline[:sos_end + 1] + b"\xff\xd9"
+    )
+    d.joinpath("entropy_early_eoi_64.jpg").write_bytes(
+        baseline[:sos_end + 64] + b"\xff\xd9"
+    )
+    d.joinpath("entropy_truncated_tail_64.jpg").write_bytes(
+        baseline[:-66] + b"\xff\xd9"
+    )
+    d.joinpath("entropy_stuffed_ff_prefix.jpg").write_bytes(
+        baseline[:sos_end] + b"\xff\x00" + baseline[sos_end:]
+    )
     d.joinpath("entropy_unexpected_marker.jpg").write_bytes(
         baseline.replace(b"\xff\x00", b"\xff\x02\x00\x02", 1)
     )
@@ -464,7 +480,6 @@ def gen_jpeg():
     d.joinpath("duplicate_sof.jpg").write_bytes(
         baseline[:sof_end] + baseline[sof_start:sof_end] + baseline[sof_end:]
     )
-    sos_start, _, sos_end = jpeg_segment(baseline, 0xDA)
     d.joinpath("sos_before_sof.jpg").write_bytes(
         baseline[:2] + baseline[sos_start:sos_end] + b"\xff\xd9"
     )
@@ -493,6 +508,11 @@ def gen_jpeg():
     wide_dqt = b"\xff\xdb" + struct.pack(">H", len(wide_dqt_payload) + 2) + wide_dqt_payload
     d.joinpath("dqt_16bit.jpg").write_bytes(
         baseline[:dqt_start] + wide_dqt + baseline[dqt_end:]
+    )
+    progressive = (d / "progressive.jpg").read_bytes()
+    _, _, progressive_sos_end = jpeg_segment(progressive, 0xDA)
+    d.joinpath("progressive_scan0_empty.jpg").write_bytes(
+        progressive[:progressive_sos_end] + b"\xff\xd9"
     )
     print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
 
