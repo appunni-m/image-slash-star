@@ -515,6 +515,86 @@
       "ref_size": null
     },
     {
+      "id": "malformed_markers_sof_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_precision",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_height",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_width",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_components",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_comp_id",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_sampling",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sof_no_quant",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "malformed_markers_sof_precision_12",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
@@ -615,6 +695,46 @@
       "ref_size": null
     },
     {
+      "id": "malformed_markers_dqt_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dqt_no_info",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dqt_truncated_8bit_value",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dqt_truncated_16bit_value",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "malformed_markers_dht_bad_table",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -625,7 +745,127 @@
       "ref_size": null
     },
     {
+      "id": "malformed_markers_dht_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dht_no_info",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dht_truncated_counts",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dht_truncated_values",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "malformed_markers_dht_oversubscribed",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_component_count",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_comp_id",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_table",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_ss",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_se",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_no_ahal",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_sos_unknown_component",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "broken data stream when reading image file",
@@ -755,6 +995,46 @@
       "ref_size": null
     },
     {
+      "id": "malformed_markers_dri_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_dri_no_value",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_app14_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_app14_declared_too_long",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "malformed_markers_app14_truncated_payload",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -776,6 +1056,26 @@
     },
     {
       "id": "malformed_markers_tem_marker",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_unknown_no_length",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "malformed_markers_restart_before_scan",
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
       "error_message": "cannot identify image file <bytes>",

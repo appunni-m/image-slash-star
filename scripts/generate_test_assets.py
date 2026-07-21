@@ -474,6 +474,54 @@ def gen_jpeg():
     d.joinpath("corrupt.jpg").write_bytes(b"\xff\xd8\xde\xad\xbe\xef")
     baseline = (d / "baseline.jpg").read_bytes()
     baseline_gray = (d / "baseline_gray.jpg").read_bytes()
+
+    def jpeg_marker_segment(marker, payload):
+        return (
+            b"\xff"
+            + bytes([marker])
+            + struct.pack(">H", len(payload) + 2)
+            + payload
+        )
+
+    minimal_sof = jpeg_marker_segment(
+        0xC0, b"\x08\x00\x01\x00\x01\x01\x01\x11\x00"
+    )
+
+    def jpeg_truncated_sof(prefix_len):
+        payload = b"\x08\x00\x01\x00\x01\x01\x01\x11\x00"[:prefix_len]
+        return b"\xff\xd8\xff\xc0" + struct.pack(">H", 11) + payload
+
+    def jpeg_truncated_dqt(prefix_len, precision=0):
+        if precision == 0:
+            payload = bytes([0]) + bytes(range(1, 65))
+        else:
+            payload = bytes([0x10]) + b"".join(
+                struct.pack(">H", value) for value in range(1, 65)
+            )
+        return (
+            b"\xff\xd8\xff\xdb"
+            + struct.pack(">H", len(payload) + 2)
+            + payload[:prefix_len]
+        )
+
+    def jpeg_truncated_dht(prefix_len):
+        payload = bytes([0]) + bytes([1] + [0] * 15) + b"\x00"
+        return (
+            b"\xff\xd8\xff\xc4"
+            + struct.pack(">H", len(payload) + 2)
+            + payload[:prefix_len]
+        )
+
+    def jpeg_truncated_sos(prefix_len):
+        payload = b"\x01\x01\x00\x00\x3f\x00"
+        return (
+            b"\xff\xd8"
+            + minimal_sof
+            + b"\xff\xda"
+            + struct.pack(">H", len(payload) + 2)
+            + payload[:prefix_len]
+        )
+
     d.joinpath("sampling_3x1.jpg").write_bytes(
         zero_sample_jpeg(baseline, 24, 8, 0x31)
     )
@@ -505,6 +553,14 @@ def gen_jpeg():
     d.joinpath("dangling_marker.jpg").write_bytes(b"\xff\xd8\xff")
     d.joinpath("fill_marker_only.jpg").write_bytes(b"\xff\xd8\xff\xff\xd9")
     d.joinpath("markerless_tail.jpg").write_bytes(b"\xff\xd8NO-MARKER")
+    d.joinpath("sof_no_length.jpg").write_bytes(b"\xff\xd8\xff\xc0")
+    d.joinpath("sof_no_precision.jpg").write_bytes(jpeg_truncated_sof(0))
+    d.joinpath("sof_no_height.jpg").write_bytes(jpeg_truncated_sof(1))
+    d.joinpath("sof_no_width.jpg").write_bytes(jpeg_truncated_sof(3))
+    d.joinpath("sof_no_components.jpg").write_bytes(jpeg_truncated_sof(5))
+    d.joinpath("sof_no_comp_id.jpg").write_bytes(jpeg_truncated_sof(6))
+    d.joinpath("sof_no_sampling.jpg").write_bytes(jpeg_truncated_sof(7))
+    d.joinpath("sof_no_quant.jpg").write_bytes(jpeg_truncated_sof(8))
     d.joinpath("sof_precision_12.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xC0, 0, 12)
     )
@@ -538,13 +594,39 @@ def gen_jpeg():
     d.joinpath("dqt_bad_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xDB, 0, 4)
     )
+    d.joinpath("dqt_no_length.jpg").write_bytes(b"\xff\xd8\xff\xdb")
+    d.joinpath("dqt_no_info.jpg").write_bytes(jpeg_truncated_dqt(0))
+    d.joinpath("dqt_truncated_8bit_value.jpg").write_bytes(
+        jpeg_truncated_dqt(10)
+    )
+    d.joinpath("dqt_truncated_16bit_value.jpg").write_bytes(
+        jpeg_truncated_dqt(2, precision=1)
+    )
     d.joinpath("dht_bad_table.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xC4, 0, 4)
     )
+    d.joinpath("dht_no_length.jpg").write_bytes(b"\xff\xd8\xff\xc4")
+    d.joinpath("dht_no_info.jpg").write_bytes(jpeg_truncated_dht(0))
+    d.joinpath("dht_truncated_counts.jpg").write_bytes(jpeg_truncated_dht(5))
+    d.joinpath("dht_truncated_values.jpg").write_bytes(jpeg_truncated_dht(17))
     dht_start, _, dht_end = jpeg_segment(baseline, 0xC4)
     oversubscribed_dht = b"\xff\xc4" + struct.pack(">H", 22) + bytes([0, 3] + [0] * 15 + [0, 1, 2])
     d.joinpath("dht_oversubscribed.jpg").write_bytes(
         baseline[:dht_start] + oversubscribed_dht + baseline[dht_end:]
+    )
+    d.joinpath("sos_no_length.jpg").write_bytes(
+        b"\xff\xd8" + minimal_sof + b"\xff\xda"
+    )
+    d.joinpath("sos_no_component_count.jpg").write_bytes(jpeg_truncated_sos(0))
+    d.joinpath("sos_no_comp_id.jpg").write_bytes(jpeg_truncated_sos(1))
+    d.joinpath("sos_no_table.jpg").write_bytes(jpeg_truncated_sos(2))
+    d.joinpath("sos_no_ss.jpg").write_bytes(jpeg_truncated_sos(3))
+    d.joinpath("sos_no_se.jpg").write_bytes(jpeg_truncated_sos(4))
+    d.joinpath("sos_no_ahal.jpg").write_bytes(jpeg_truncated_sos(5))
+    d.joinpath("sos_unknown_component.jpg").write_bytes(
+        b"\xff\xd8"
+        + minimal_sof
+        + jpeg_marker_segment(0xDA, b"\x01\x02\x00\x00\x3f\x00")
     )
     d.joinpath("sos_zero_components.jpg").write_bytes(
         mutate_jpeg_payload(baseline, 0xDA, 0, 0)
@@ -583,8 +665,14 @@ def gen_jpeg():
     d.joinpath("prefixed_stuffed_marker.jpg").write_bytes(
         baseline[:2] + b"\xff\x00" + baseline[2:]
     )
+    d.joinpath("dri_no_length.jpg").write_bytes(b"\xff\xd8\xff\xdd")
+    d.joinpath("dri_no_value.jpg").write_bytes(b"\xff\xd8\xff\xdd\x00\x04\x00")
     d.joinpath("app14_short_length.jpg").write_bytes(
         baseline[:2] + b"\xff\xee\x00\x01" + baseline[2:]
+    )
+    d.joinpath("app14_no_length.jpg").write_bytes(b"\xff\xd8\xff\xee")
+    d.joinpath("app14_declared_too_long.jpg").write_bytes(
+        b"\xff\xd8\xff\xee\x00\x10Adobe"
     )
     d.joinpath("app14_truncated_payload.jpg").write_bytes(
         baseline[:2] + b"\xff\xee\xff\xff"
@@ -596,6 +684,8 @@ def gen_jpeg():
         b"\xff\xd8\xff\xee\x00\x07Adobe\xff\xd9"
     )
     d.joinpath("tem_marker.jpg").write_bytes(baseline[:2] + b"\xff\x01" + baseline[2:])
+    d.joinpath("unknown_no_length.jpg").write_bytes(b"\xff\xd8\xff\xe2")
+    d.joinpath("restart_before_scan.jpg").write_bytes(b"\xff\xd8\xff\xd0\xff\xd9")
     dqt_start, dqt_payload, dqt_end = jpeg_segment(baseline, 0xDB)
     dqt_source = baseline[dqt_payload:dqt_end]
     wide_dqt_payload = bytes([0x10 | (dqt_source[0] & 0x0F)]) + b"".join(

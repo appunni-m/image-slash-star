@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `3f9b643a-91f4-451e-8a28-a2e1908e109d`
-- Current measured commit metadata:
-- Current source state: post-GIF decode fixture/invariant sweep, before
-  committing that sweep.
-- Lines: 24358 / 24364
+- Current snapshot: `ece26b30-a0ed-45dd-aaf6-1cd8a06aafbe`
+- Current measured commit metadata: `53d37c8e0961a62a052335d5420dbfa3d3225215`
+- Current source state: JPEG parser malformed-fixture and invariant sweep,
+  measured before committing the sweep.
+- Lines: 24360 / 24366
 - Branches: 3426 / 3440
 - Functions: 1579 / 1579
-- Regions: 39781 / 40590
-- Remaining target: 6 lines, 14 branches, and 809 regions.
+- Regions: 39806 / 40583
+- Remaining target: 6 lines, 14 branches, and 777 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 82 / 88 branches, 6 missing.
   - `src/codecs/webp/native/vp8.rs`: 154 / 160 branches, 6 missing.
@@ -33,9 +33,132 @@ from Coverage MCP before each implementation sweep.
   - `src/codecs/jpeg/decode/progressive.rs`: 112 / 112 branches.
   - `src/codecs/bmp/decode.rs`: 112 / 112 branches and now
     759 / 759 regions.
+  - `src/codecs/jpeg/decode/parser.rs`: 96 / 96 branches and now
+    551 / 551 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 18 plan: JPEG parser short-read fixtures and parser invariants
+
+Baseline before editing:
+
+- Git state: clean `main`, pushed to `origin/main` at `53d37c8`.
+- Coverage MCP run: `b4cadb75-663f-4e84-a37a-5634505b9e77`.
+- Coverage MCP snapshot: `3f9b643a-91f4-451e-8a28-a2e1908e109d`.
+- Overall: `24358 / 24364` lines, `3426 / 3440` branches,
+  `1579 / 1579` functions, and `39781 / 40590` regions.
+
+Selected target:
+
+- File: `src/codecs/jpeg/decode/parser.rs`.
+- MCP aggregate: `313 / 313` lines, `96 / 96` branches,
+  `12 / 12` functions, and `526 / 558` regions.
+- Reason: this file is already line/branch complete, but raw LLVM source-region
+  starts map 32 remaining zero-count regions to real short-read parser exits
+  and two parser-state invariants.
+
+Source-mapped missing region starts:
+
+- SOF0 short reads: lines 142, 147, 148, 149, 159, 160, and 163.
+- DQT short reads: lines 188, 192, 202, and 204.
+- DHT short reads: lines 221, 225, 235, and 241.
+- SOS short reads and bad component/table states: lines 265, 266, 273, 274,
+  277, 288, 289, and 290.
+- DRI/APP14/unknown/restart/final parser states: lines 299, 300, 399, 402,
+  406, 418, 421, 430, and 442.
+
+Pillow-oracle probe:
+
+- The planned malformed inputs all fail under the installed Pillow oracle. The
+  observed error classes are either `UnidentifiedImageError`,
+  `OSError: Truncated File Read`, or
+  `OSError: broken data stream when reading image file`, depending on the
+  marker and how far Pillow parses before rejection.
+- These rows are public malformed JPEG behavior, so they belong in the manifest
+  under the existing `malformed_markers` error case rather than in a private
+  coverage hook.
+
+Selected fixture set:
+
+| Marker area | Fixture files |
+| --- | --- |
+| SOF0 truncation | `sof_no_length.jpg`, `sof_no_precision.jpg`, `sof_no_height.jpg`, `sof_no_width.jpg`, `sof_no_components.jpg`, `sof_no_comp_id.jpg`, `sof_no_sampling.jpg`, `sof_no_quant.jpg` |
+| DQT truncation | `dqt_no_length.jpg`, `dqt_no_info.jpg`, `dqt_truncated_8bit_value.jpg`, `dqt_truncated_16bit_value.jpg` |
+| DHT truncation | `dht_no_length.jpg`, `dht_no_info.jpg`, `dht_truncated_counts.jpg`, `dht_truncated_values.jpg` |
+| SOS truncation/state | `sos_no_length.jpg`, `sos_no_component_count.jpg`, `sos_no_comp_id.jpg`, `sos_no_table.jpg`, `sos_no_ss.jpg`, `sos_no_se.jpg`, `sos_no_ahal.jpg`, `sos_unknown_component.jpg` |
+| DRI/APP14/unknown/restart | `dri_no_length.jpg`, `dri_no_value.jpg`, `app14_no_length.jpg`, `app14_declared_too_long.jpg`, `unknown_no_length.jpg`, `restart_before_scan.jpg` |
+
+Parser invariant cleanup:
+
+| Region | Reverse-mapped finding | Action |
+| --- | --- | --- |
+| Final `find_eoi(data, 0)?` | The parser already proves the EOI position when a baseline scan is accepted, and a literal `M_EOI` marker arm can record its own marker position. Re-scanning from byte zero creates an avoidable `?` region after `saw_sos` has already been proven. | Track `eoi_pos` as parser state. Set it from the accepted baseline entropy scan and from the `M_EOI` arm, then use it directly in `JpegInfo`. |
+| `entropy_start: entropy_start?` | `entropy_start` is assigned whenever `saw_sos` is set. The final `if !saw_sos { return None; }` proves this before constructing `JpegInfo`. | Replace `Option<usize>` with direct `usize` parser state initialized to zero and assigned at SOS. |
+
+Explicit deferrals:
+
+- Do not change DQT/DHT segment-length underflow behavior in this batch unless
+  a new fixture exposes a panic.
+- Do not claim C/libjpeg parity from this pass. The oracle claim here is Pillow
+  rejection behavior for malformed public inputs plus local parser invariants.
+
+Validation after implementation:
+
+1. Regenerate assets and oracle refs with `.oracle-venv/bin/python`.
+2. Run `cargo test --all-features --test coverage_matrix_tests test_decode_matrix`.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`.
+5. Run only the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Record the measured movement here before commit.
+
+First measurement:
+
+- Coverage MCP run: `7c1d31e0-1bcf-4c5c-93da-0c28c2f2b8a6`.
+- Coverage MCP snapshot: `e35b730a-1535-4bae-a66f-09e458382427`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24359 / 24365` lines, `3426 / 3440` branches,
+  `1579 / 1579` functions, and `39805 / 40583` regions.
+- Net missing regions: `809` down to `778`.
+- Target file movement: `src/codecs/jpeg/decode/parser.rs` moved from
+  `526 / 558` regions to `550 / 551` regions. Lines, branches, and functions
+  remain complete.
+
+Post-measurement refinement before the second run:
+
+- Raw LLVM region-entry mapping identifies the one remaining parser region as
+  line 405, the overflow side of `pos.checked_add(length - 2)?` in APP14
+  payload-bound handling.
+- This is not a Pillow-observable input state. `length` is a 16-bit JPEG
+  segment length, `length >= 2` is already handled before the subtraction, and
+  the real public bound is whether the payload length fits in the remaining
+  slice.
+- Replace the checked-add `?` with:
+  - `payload_len = length - 2`;
+  - `payload_len > data.len().saturating_sub(pos)` for the public truncation
+    check;
+  - direct `payload_end = pos + payload_len` after the bound is proven.
+
+Second measurement:
+
+- Coverage MCP run: `87babc47-5072-4e92-97b2-90b7a7a130fc`.
+- Coverage MCP snapshot: `ece26b30-a0ed-45dd-aaf6-1cd8a06aafbe`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `24360 / 24366` lines, `3426 / 3440` branches,
+  `1579 / 1579` functions, and `39806 / 40583` regions.
+- Net missing regions for the whole attempt: `809` down to `777`.
+- Target file movement: `src/codecs/jpeg/decode/parser.rs` is now complete at
+  `315 / 315` lines, `96 / 96` branches, `12 / 12` functions, and
+  `551 / 551` regions.
+- Implemented inputs/invariants:
+  - Added the selected SOF0/DQT/DHT/SOS/DRI/APP14/unknown/restart malformed
+    JPEG assets under the manifest-driven `malformed_markers` Pillow-error row.
+  - Replaced parser-local `entropy_start: Option<usize>` and final EOI rescan
+    with direct state proven by SOS/EOI parser control flow.
+  - Replaced the APP14 checked-add overflow `?` with a safe remaining-slice
+    bound check and direct addition after the bound is proven.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 

@@ -320,14 +320,14 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
     let mut ac_huff_tables: Vec<Option<HuffTable>> = Vec::new();
     let mut scan_components: Vec<ScanComponent> = Vec::new();
     let mut restart_interval: u16 = 0;
-    let mut entropy_start: Option<usize> = None;
+    let mut entropy_start = 0usize;
     let mut saw_sof = false;
     let mut saw_sos = false;
     let mut progressive = false;
     let mut scans: Vec<ScanInfo> = Vec::new();
     let mut adobe_transform = None;
 
-    loop {
+    let eoi_pos = loop {
         let marker = find_next_marker(data, &mut pos)?;
 
         match marker {
@@ -382,15 +382,14 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                     // Baseline JPEG has exactly one entropy-coded scan in this
                     // parser: after SOS, we require EOI and break immediately.
                     scan_components = comps;
-                    entropy_start = Some(scan_start);
+                    entropy_start = scan_start;
                     saw_sos = true;
-                    find_eoi(data, pos)?;
-                    break;
+                    break find_eoi(data, pos)?;
                 } else {
                     saw_sos = true;
                     if scan_components.is_empty() {
                         scan_components = comps;
-                        entropy_start = Some(scan_start);
+                        entropy_start = scan_start;
                     }
                     pos = scan_end;
                 }
@@ -403,17 +402,18 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 if length < 2 {
                     continue;
                 }
-                if pos.checked_add(length - 2)? > data.len() {
+                let payload_len = length - 2;
+                if payload_len > data.len().saturating_sub(pos) {
                     return None;
                 }
-                let payload_end = pos + length - 2;
+                let payload_end = pos + payload_len;
                 if data.get(pos..pos + 5) == Some(b"Adobe") && length >= 14 {
                     adobe_transform = data.get(pos + 11).copied();
                 }
                 pos = payload_end;
             }
             M_EOI => {
-                break;
+                break pos - 2;
             }
             0xFFD0..=0xFFD7 => {}
             0xFF01 => return None,
@@ -422,12 +422,11 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 pos += length - 2;
             }
         }
-    }
+    };
 
     if !saw_sos {
         return None;
     }
-    let eoi_pos = find_eoi(data, 0)?;
 
     Some(JpegInfo {
         width,
@@ -439,7 +438,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
         ac_huff_tables,
         scan_components,
         restart_interval,
-        entropy_start: entropy_start?,
+        entropy_start,
         eoi_pos,
         max_h_samp,
         max_v_samp,
