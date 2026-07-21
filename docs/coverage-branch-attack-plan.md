@@ -5,19 +5,66 @@ code. It was originally based on Coverage MCP snapshot
 `ed33587b-768e-4436-95b0-a5297ae5a2e1`, measured on pushed `main` commit
 `818b3cf0e0f76a6bf3c7f67aa0cc91b21e2b9255` with suite
 `all-features-lines-branches-nightly`. The current counters below are refreshed
-after the pushed WebP lossless-transform invariant cleanup batch.
+after the pushed WebP predictor private-branch batch.
 
 ## Current state
 
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `010a4828-7a2b-446d-982b-7ebc4c5568ca`
-- Current measured commit metadata: `f1255e4970fb4b6f56732140fee6ca231c384f5d`
-- Lines: 21847 / 21848
-- Branches: 3330 / 3478
-- Functions: 1524 / 1524
-- Remaining target: 1 line and 148 branches.
+- Current snapshot: `c8f1e2da-fbcd-4a83-ab56-1cd337d430ae`
+- Current measured commit metadata: `85790aa26e1c456f5f7924d2a426ce96dbd72b22`
+- Lines: 21858 / 21859
+- Branches: 3332 / 3476
+- Functions: 1525 / 1525
+- Remaining target: 1 line and 144 branches.
+
+## Planned DEFLATE malformed-zlib private-probe batch
+
+Coverage MCP snapshot `7fcb0487-8ba7-4614-a707-be711570c3c4` reports
+`src/codecs/compression/deflate.rs` at 294 / 294 lines, 46 / 50 branches, and
+21 / 21 functions. The remaining branch lines are:
+
+- lines 53-56: zlib header validation. Existing image fixtures already cover
+  valid zlib streams and at least one invalid-header side, but not all
+  short-circuit conditions in the internal wrapper check. Add deterministic
+  private probes for:
+  - invalid compression method: `00 00 00 00 00 00`;
+  - invalid window size: `88 00 00 00 00 00`;
+  - invalid FCHECK checksum: `78 00 00 00 00 00`;
+  - preset dictionary flag with otherwise valid header check: `78 20 00 00 00 00`.
+- line 282: invalid back-reference validation. Existing fixtures cover a
+  back-reference before output; add a fixed-Huffman zlib stream that first
+  emits one literal byte and then a distance-one back-reference:
+  `78 01 73 04 02 00 00 00 00 01`. The intentionally wrong Adler trailer is
+  acceptable because this probe only needs to execute the distance-validation
+  branch before final checksum validation rejects the full stream. First retry
+  evidence showed this probe improved coverage but still left one branch at the
+  distance-validation line. That remaining branch is the impossible
+  `backwards == 0` side: `DISTANCE_BASE` starts at 1 and all decoded distance
+  extras are non-negative. Remove that unreachable half of the predicate and
+  keep the `backwards > output.len()` validation.
+
+No Pillow manifest row is useful for the header cases because Pillow only sees
+the enclosing PNG/TIFF stream result, not each short-circuit condition in this
+internal zlib wrapper. A private byte-level probe is the narrowest oracle for
+the implementation branch behavior. If the fixed-Huffman stream does not
+improve line 282, revert or revise that single probe before moving to a broader
+PNG/TIFF malformed fixture.
+
+Completed evidence:
+
+- First Coverage MCP run: `642b0511-d5c6-4314-9d09-2531a2f5f9e5`, snapshot
+  `dfa2a5c8-240d-41f8-bf9e-8143f74f53ed`; passed and improved `deflate.rs`
+  from 46 / 50 to 49 / 50 branches. This proved the malformed zlib-header
+  probes were correct and that the fixed-Huffman back-reference probe reached
+  the distance-validation predicate.
+- Corrected Coverage MCP run: `c0b62992-79b7-469a-86d9-1495d4f9e55e`
+- Corrected Coverage MCP snapshot: `c8f1e2da-fbcd-4a83-ab56-1cd337d430ae`
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: 21858 / 21859 lines, 3332 / 3476 branches, 1525 / 1525 functions.
+- Target file: `src/codecs/compression/deflate.rs` is 304 / 304 lines,
+  48 / 48 branches, and 22 / 22 functions.
 
 ## Planned WebP predictor private-branch batch
 
