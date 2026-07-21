@@ -85,6 +85,51 @@
       "encoded_ref_bytes": 67100
     },
     {
+      "id": "enc_empty_sizes",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_empty_sizes.bin",
+      "encoded_ref_bytes": 6
+    },
+    {
+      "id": "enc_width_filtered_sizes",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_width_filtered_sizes.bin",
+      "encoded_ref_bytes": 6
+    },
+    {
+      "id": "enc_height_filtered_sizes",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_height_filtered_sizes.bin",
+      "encoded_ref_bytes": 6
+    },
+    {
+      "id": "enc_width_cap_filtered_sizes",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_width_cap_filtered_sizes.bin",
+      "encoded_ref_bytes": 6
+    },
+    {
+      "id": "enc_height_cap_filtered_sizes",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_height_cap_filtered_sizes.bin",
+      "encoded_ref_bytes": 6
+    },
+    {
       "id": "enc_bmp_entry",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_entry.bin",
       "ref_bytes": 1024,

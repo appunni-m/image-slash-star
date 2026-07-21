@@ -53,7 +53,7 @@ fn ico_sizes(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<(usize, usi
         .collect::<Option<Vec<_>>>()?;
     sizes.sort_unstable();
     sizes.dedup();
-    (!sizes.is_empty()).then_some(sizes)
+    Some(sizes)
 }
 
 fn thumbnail_dimensions(

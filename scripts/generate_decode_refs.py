@@ -180,6 +180,7 @@ def encode_params(fmt, params):
         "alpha",
         "truncate_pixels",
         "source_dimensions",
+        "encoded_only",
     ):
         take(source_property)
 
@@ -834,8 +835,11 @@ def describe_encode_call(fmt_name, row):
         "method": "PIL.Image.Image.save",
         "format": fmt_pil(fmt_name),
         "kwargs": json_pillow_value(kwargs),
-        "roundtrip": ["PIL.Image.open", "load", "tobytes"],
     }
+    if row.get("params", {}).get("encoded_only"):
+        call["roundtrip"] = None
+    else:
+        call["roundtrip"] = ["PIL.Image.open", "load", "tobytes"]
     if row.get("params", {}).get("truncate_pixels"):
         call["source_transform"] = "PIL.Image.frombytes(mode, size, tobytes()[:-1])"
     if source_dimensions := row.get("params", {}).get("source_dimensions"):
@@ -1046,10 +1050,10 @@ def validate_generated_outputs(matrix):
                 if row.get("oracle_status") != "error" or not row.get("oracle_error_type"):
                     failures.append(f"{case_name}: error row lacks Pillow exception evidence")
                 continue
-            for path_field, size_field, label in (
-                ("ref_path", "ref_bytes", "roundtrip pixels"),
-                ("encoded_ref_path", "encoded_ref_bytes", "encoded bytes"),
-            ):
+            evidence = [("encoded_ref_path", "encoded_ref_bytes", "encoded bytes")]
+            if not row.get("params", {}).get("encoded_only"):
+                evidence.insert(0, ("ref_path", "ref_bytes", "roundtrip pixels"))
+            for path_field, size_field, label in evidence:
                 reference = row.get(path_field)
                 if not reference:
                     failures.append(f"{case_name}: active encode row lacks {label}")
@@ -1064,6 +1068,8 @@ def validate_generated_outputs(matrix):
 
 def exact_encode_parity_supported(fmt_name, row):
     """Pinned Pillow makes every active encode roundtrip deterministic."""
+    if row.get("params", {}).get("encoded_only"):
+        return False
     return True
 
 

@@ -2210,6 +2210,28 @@ formats:
       description: Four-resolution icon
       params: {'sizes': [[16, 16], [32, 32], [48, 48], [256, 256]]}
       source_asset: 256x256.ico
+    - id: enc_empty_sizes
+      description: Pillow emits a zero-entry ICO when the requested size list is empty
+      params: {'sizes': [], 'encoded_only': true}
+      source_asset: 256x256.ico
+    - id: enc_width_filtered_sizes
+      description: Pillow emits a zero-entry ICO when all requested widths exceed the source
+      params: {'sizes': [[512, 16]], 'encoded_only': true}
+      source_asset: 256x256.ico
+    - id: enc_height_filtered_sizes
+      description: Pillow emits a zero-entry ICO when all requested heights exceed the source
+      params: {'sizes': [[16, 512]], 'encoded_only': true}
+      source_asset: 256x256.ico
+    - id: enc_width_cap_filtered_sizes
+      description: Pillow emits a zero-entry ICO when requested widths exceed the ICO 256px cap
+      source_format: png
+      source_asset: large.png
+      params: {'sizes': [[257, 16]], 'encoded_only': true}
+    - id: enc_height_cap_filtered_sizes
+      description: Pillow emits a zero-entry ICO when requested heights exceed the ICO 256px cap
+      source_format: png
+      source_asset: large.png
+      params: {'sizes': [[16, 257]], 'encoded_only': true}
     - id: enc_bmp_entry
       description: 
       params: {'entry_type': 'bmp'}

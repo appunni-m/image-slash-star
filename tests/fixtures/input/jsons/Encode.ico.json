@@ -231,6 +231,136 @@
       }
     },
     {
+      "id": "enc_empty_sizes",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [],
+        "encoded_only": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": []
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_width_filtered_sizes",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            512,
+            16
+          ]
+        ],
+        "encoded_only": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              512,
+              16
+            ]
+          ]
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_height_filtered_sizes",
+      "source_asset": "256x256.ico",
+      "source_format": "ico",
+      "params": {
+        "sizes": [
+          [
+            16,
+            512
+          ]
+        ],
+        "encoded_only": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/256x256.ico",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              512
+            ]
+          ]
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_width_cap_filtered_sizes",
+      "source_asset": "large.png",
+      "source_format": "png",
+      "params": {
+        "sizes": [
+          [
+            257,
+            16
+          ]
+        ],
+        "encoded_only": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              257,
+              16
+            ]
+          ]
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_height_cap_filtered_sizes",
+      "source_asset": "large.png",
+      "source_format": "png",
+      "params": {
+        "sizes": [
+          [
+            16,
+            257
+          ]
+        ],
+        "encoded_only": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              257
+            ]
+          ]
+        },
+        "roundtrip": null
+      }
+    },
+    {
       "id": "enc_bmp_entry",
       "source_asset": "16x16.ico",
       "source_format": "ico",

@@ -680,7 +680,12 @@ fn assert_ico_contract(
         return Err("encoded ICO has an invalid header".to_owned());
     }
     let count = usize::from(read_le_u16(encoded, 4).ok_or("truncated ICO header")?);
-    if count == 0 || encoded.len() < 6 + count * 16 {
+    if count == 0 {
+        return (encoded.len() == 6)
+            .then_some(())
+            .ok_or_else(|| "zero-entry ICO has trailing data".to_owned());
+    }
+    if encoded.len() < 6 + count * 16 {
         return Err("encoded ICO has an invalid image directory".to_owned());
     }
 
@@ -1498,6 +1503,16 @@ fn test_encode_matrix() {
             if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &encoded) {
                 eprintln!("  FAIL [{}]: {message}", row.id);
                 failed += 1;
+                continue;
+            }
+            if row
+                .params
+                .get("encoded_only")
+                .and_then(serde_json::Value::as_bool)
+                == Some(true)
+            {
+                eprintln!("  OK   [{}] {}B, encoded-byte parity", row.id, encoded.len());
+                passed += 1;
                 continue;
             }
 
