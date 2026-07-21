@@ -78,6 +78,19 @@
       ]
     },
     {
+      "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_solid_17x19_q90_m0_webp.bin",
+      "ref_bytes": 969,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        19
+      ]
+    },
+    {
       "id": "lossy_vp8_filter_variants",
       "status": "ok",
       "error_type": null,

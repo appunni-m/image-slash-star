@@ -12,18 +12,18 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `b6c23cb8-4085-4630-88a2-9967f7723fa6`
-- Current measured commit metadata: `41f38c734460c57ba11013512fec732c4d148697`
-- Current source state: WebP decoder malformed still-image fixtures measured
-  before committing Attempt 38.
+- Current snapshot: `0b69cfcb-4c4d-4b60-813b-291d8f8569c1`
+- Current measured commit metadata: `5492042bb631519e40e9523e15423fc04925fcd3`
+- Current source state: Attempt 40 WebP skipped-B fixture measured before
+  commit.
 - Lines: 24580 / 24585
-- Branches: 3435 / 3444
+- Branches: 3436 / 3444
 - Functions: 1582 / 1582
-- Regions: 40095 / 40825
-- Remaining target: 5 lines, 9 branches, and 730 regions.
+- Regions: 40096 / 40825
+- Remaining target: 5 lines, 8 branches, and 729 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 90 / 92 branches, 2 missing.
-  - `src/codecs/webp/native/vp8.rs`: 155 / 160 branches, 5 missing.
+  - `src/codecs/webp/native/vp8.rs`: 156 / 160 branches, 4 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
 - Remaining line gaps: aggregate line gap is 5, but the current raw per-file
   summaries do not expose a stable source-file line map for those gaps. Do not
@@ -1560,6 +1560,79 @@ Measurement and decision:
 - Decision: do not retain `vp8_zero_dimensions.webp`. Separate
   `vp8_zero_width.webp` and `vp8_zero_height.webp` already cover the useful
   public oracle states; the both-zero fixture did not move aggregate coverage.
+
+## Attempt 40 plan: VP8 skipped-B macroblock fixture search
+
+Baseline before editing:
+
+- Git state: clean `main` aligned with `origin/main` at `5492042`.
+- Coverage MCP snapshot: `1a23bb6a-0ba4-429a-9ef6-1ecc20031286`.
+- Overall baseline: `24580 / 24585` lines, `3435 / 3444` branches,
+  `1582 / 1582` functions, and `40095 / 40825` regions.
+- Remaining branch files:
+  - `src/codecs/webp/native/decoder.rs`: `90 / 92` branches.
+  - `src/codecs/webp/native/vp8.rs`: `155 / 160` branches.
+  - `src/codecs/webp/native/lossless.rs`: `108 / 110` branches.
+
+Reverse map:
+
+| Source line | Boundary | Current evidence |
+| --- | --- | --- |
+| `vp8.rs:1229` | `segments_enabled && segments_update_map` macroblock condition | Existing manifest VP8 fixtures already reach practical false and true states: `seg=false/update=false` and `seg=true/update=true`. Earlier isolated `read_macroblock_header()` hooks regressed aggregate coverage, so do not repeat them. |
+| `vp8.rs:1863` | skipped-coefficient macroblock resets luma complexity only when `luma_mode != B` | Existing manifest VP8 fixtures reach `coeffs_skipped=true` only with `luma=DC`. A real fixture should seek `coeffs_skipped=true` and `luma=B` through normal frame decoding. |
+
+Selected search:
+
+1. Use temporary `#[cfg(coverage)]` probe prints in `read_macroblock_header()`
+   to classify candidate VP8 frame states. Remove them before any commit.
+2. Generate temporary lossy WebP candidates with Pillow/libwebp parameters and
+   synthetic pixel patterns, then decode them through the public WebP decoder.
+3. Keep only a manifest fixture if the candidate is Pillow-accepted for pixel
+   parity or Pillow-rejected for an existing malformed-WebP error row.
+4. If no generated candidate reaches `skip=true/luma=B`, record that result and
+   move to the next branch file rather than adding another isolated parser hook.
+
+Validation if a fixture is retained:
+
+1. Regenerate assets/refs with `.oracle-venv/bin/python`.
+2. `cargo fmt --all`
+3. `cargo check --all-features`
+4. `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+5. `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+6. Coverage MCP run of `all-features-llvm-cov-json-nightly-branch`.
+
+Measurement and decision:
+
+- Temporary search generated 1600 Pillow/libwebp lossy WebP candidates in
+  `/private/tmp/image-star-vp8-probe`. The smallest retained candidate was
+  `17x19_solid_q90_m0`: a solid RGB image saved as lossy WebP with
+  `quality=90` and `method=0`.
+- Temporary probe output confirmed the retained candidate reaches
+  `coeffs_skipped=true` with `luma=B` through normal `decode_frame_()` macroblock
+  decoding. The temporary probe test, temporary generation script, and probe
+  prints were removed before validation.
+- Retained fixture:
+  `tests/fixtures/input/images/webp/lossy_solid_17x19_q90_m0.webp`.
+- Pillow oracle reference:
+  `tests/fixtures/outputs/raws/Decode.webp_lossy_solid_17x19_q90_m0_webp.bin`.
+- Local validation passed:
+  - `cargo fmt --all`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+  - `cargo test --all-features --test coverage_matrix_tests test_coverage_matrix`
+  - `cargo test --all-features --test coverage_matrix_tests test_decode_matrix`
+- Coverage MCP run: `ba0728f0-b346-42b5-b2a0-3adcb6e9d482`.
+- Coverage MCP snapshot: `0b69cfcb-4c4d-4b60-813b-291d8f8569c1`.
+- Overall movement:
+  - Branches improved from `3435 / 3444` to `3436 / 3444`.
+  - Regions improved from `40095 / 40825` to `40096 / 40825`.
+  - Lines stayed at `24580 / 24585`.
+- Target file movement: `src/codecs/webp/native/vp8.rs` moved from
+  `155 / 160` branches and `2654 / 2675` regions to `156 / 160` branches and
+  `2655 / 2675` regions.
+- Decision: keep the fixture. It is a manifest-driven, Pillow-accepted VP8
+  image and covers the real skipped-B macroblock state that isolated parser
+  hooks could not cover without regressing aggregate coverage.
 
 ## Region-first continuation plan from snapshot `41e480a1`
 

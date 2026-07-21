@@ -78,6 +78,19 @@
       }
     },
     {
+      "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
+      "asset": "lossy_solid_17x19_q90_m0.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_solid_17x19_q90_m0.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "lossy_vp8_filter_variants",
       "asset": "lossy_simple_filter.webp",
       "expect_error": false,

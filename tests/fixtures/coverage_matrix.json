@@ -12951,6 +12951,24 @@
           "oracle_status": "ok"
         },
         {
+          "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy WebP (VP8 codec)",
+          "asset": "lossy_solid_17x19_q90_m0.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_solid_17x19_q90_m0_webp.bin",
+          "ref_bytes": 969,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            19
+          ]
+        },
+        {
           "id": "lossy_vp8_filter_variants",
           "type": "decode",
           "format": "webp",
@@ -16666,12 +16684,12 @@
     }
   },
   "summary": {
-    "total_rows": 939,
-    "decode_rows": 642,
+    "total_rows": 940,
+    "decode_rows": 643,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 635,
-    "decode_active": 636,
+    "assets_available": 636,
+    "decode_active": 637,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

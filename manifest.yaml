@@ -1532,6 +1532,7 @@ formats:
       - lossy_q50.webp
       - lossy_q90.webp
       - lossy_q100.webp
+      - lossy_solid_17x19_q90_m0.webp
     - id: lossy_vp8_filter_variants
       description: libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters
       test_assets:

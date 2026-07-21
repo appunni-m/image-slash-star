@@ -1942,6 +1942,12 @@ def gen_webp():
     img.save(d / "lossy.webp", lossless=False)
     for quality in (10, 50, 90, 100):
         img.save(d / f"lossy_q{quality}.webp", lossless=False, quality=quality)
+    Image.new("RGB", (17, 19), (83, 121, 177)).save(
+        d / "lossy_solid_17x19_q90_m0.webp",
+        lossless=False,
+        quality=90,
+        method=0,
+    )
     cwebp = os.environ.get("CWEBP")
     vp8_variants = {
         "lossy_simple_filter.webp": ["-q", "75", "-m", "4", "-nostrong", "-f", "60"],
