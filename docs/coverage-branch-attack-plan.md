@@ -12,19 +12,19 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `7a803c3f-54bc-47bf-a48c-d89fa06204fb`
-- Current measured commit metadata: `0fe29a1e00b5590bbbd409938a254404e004a517`
-- Current coverage source state: pushed `main` commit `0fe29a1`.
-- Lines: 25853 / 25857
-- Branches: 3442 / 3448
-- Functions: 1592 / 1592
-- Regions: 41625 / 42116
-- Remaining target: 4 lines, 6 branches, and 491 regions.
+- Current snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`
+- Current measured commit metadata: `fa9cc99522387e763b93d73aa97e6d577fd39c4c`
+- Current coverage source state: pushed `main` commit `fa9cc99`.
+- Lines: 25864 / 25867
+- Branches: 3441 / 3446
+- Functions: 1594 / 1594
+- Regions: 41637 / 42126
+- Remaining target: 3 lines, 5 branches, and 489 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
-  - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
-- Remaining line gaps: aggregate line gap is 4, but the current raw per-file
+  - `src/codecs/webp/native/lossless.rs`: 107 / 108 branches, 1 missing.
+- Remaining line gaps: aggregate line gap is 3, but the current raw per-file
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
