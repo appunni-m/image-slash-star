@@ -120,6 +120,10 @@ fn inflated_len(
     Some(total)
 }
 
+fn decoded_sample_count(width: usize, height: usize, channels: usize) -> Option<usize> {
+    width.checked_mul(height)?.checked_mul(channels)
+}
+
 fn decode_scanlines(
     data: &[u8],
     width: u32,
@@ -130,7 +134,7 @@ fn decode_scanlines(
 ) -> Option<Vec<u16>> {
     let width = width as usize;
     let height = height as usize;
-    let sample_count = width.checked_mul(height)?.checked_mul(channels)?;
+    let sample_count = decoded_sample_count(width, height, channels)?;
     let mut samples = vec![0u16; sample_count];
     let mut position = 0usize;
 
@@ -180,6 +184,19 @@ fn decode_scanlines(
     (position == data.len()).then_some(samples)
 }
 
+fn read_filtered_row<'a>(
+    data: &'a [u8],
+    position: &mut usize,
+    stride: usize,
+) -> Option<(u8, &'a [u8])> {
+    let filter = *data.get(*position)?;
+    *position += 1;
+    let source_end = (*position).checked_add(stride)?;
+    let source = data.get(*position..source_end)?;
+    *position = source_end;
+    Some((filter, source))
+}
+
 fn unfilter_rows(
     data: &[u8],
     position: &mut usize,
@@ -193,11 +210,7 @@ fn unfilter_rows(
     let mut rows = vec![0u8; stride.checked_mul(height)?];
 
     for row in 0..height {
-        let filter = *data.get(*position)?;
-        *position += 1;
-        let source_end = position.checked_add(stride)?;
-        let source = data.get(*position..source_end)?;
-        *position = source_end;
+        let (filter, source) = read_filtered_row(data, position, stride)?;
         let row_start = row * stride;
 
         for column in 0..stride {
@@ -379,6 +392,25 @@ fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
     !crc
 }
 
+fn chunk_payload_with_crc<'a>(
+    data: &'a [u8],
+    kind: &[u8; 4],
+    start: usize,
+    length: usize,
+) -> Option<(&'a [u8], usize)> {
+    let end = start.checked_add(length)?;
+    let payload = data.get(start..end)?;
+    let crc_end = end + 4;
+    let expected_bytes = data.get(end..crc_end)?;
+    let expected = u32::from_be_bytes([
+        expected_bytes[0],
+        expected_bytes[1],
+        expected_bytes[2],
+        expected_bytes[3],
+    ]);
+    (crc32(kind, payload) == expected).then_some((payload, crc_end))
+}
+
 struct Chunk<'a> {
     kind: [u8; 4],
     data: &'a [u8],
@@ -418,19 +450,7 @@ impl<'a> Iterator for Chunks<'a> {
             let kind_bytes = self.data.get(self.position + 4..self.position + 8)?;
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
             let start = self.position + 8;
-            let end = start.checked_add(length)?;
-            let payload = self.data.get(start..end)?;
-            let crc_end = end + 4;
-            let expected_bytes = self.data.get(end..crc_end)?;
-            let expected = u32::from_be_bytes([
-                expected_bytes[0],
-                expected_bytes[1],
-                expected_bytes[2],
-                expected_bytes[3],
-            ]);
-            if crc32(&kind, payload) != expected {
-                return None;
-            }
+            let (payload, crc_end) = chunk_payload_with_crc(self.data, &kind, start, length)?;
             self.position = crc_end;
             Some(Chunk {
                 kind,
@@ -457,8 +477,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(row_bytes(usize::MAX / 8 + 1, 1, 8), None);
     assert_eq!(row_bytes(usize::MAX - 6, 1, 1), None);
 
+    assert_eq!(inflated_len(1, 1, usize::MAX, 8, 0), None);
+    assert_eq!(inflated_len(8, 8, usize::MAX, 8, 1), None);
     assert_eq!(inflated_len(u32::MAX, u32::MAX, 2, 8, 0), None);
     assert_eq!(inflated_len(u32::MAX, u32::MAX, 64, 16, 1), None);
+    assert_eq!(decoded_sample_count(usize::MAX, 2, 1), None);
     assert_eq!(decode_scanlines(&[], u32::MAX, u32::MAX, 4, 8, 0), None);
 
     let mut position = 0;
@@ -474,4 +497,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut position = 0;
     assert_eq!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8), None);
+
+    let mut position = 0;
+    assert!(read_filtered_row(&[0], &mut position, usize::MAX).is_none());
+
+    assert!(chunk_payload_with_crc(&[], b"IDAT", usize::MAX, 1).is_none());
 }

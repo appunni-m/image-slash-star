@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `507ae3a0-ec7e-43b1-8ec7-aafdefa51c85`
-- Current measured commit metadata: `bf8a25ad1baf567bd5c0e19c0ed27c444e237507`
-- Current coverage source state: pushed `main` commit `adeebbb`, which is
-  source-equivalent to snapshot `507ae3a0` measured before committing Attempt
-  98.
-- Lines: 25995 / 25998
-- Branches: 3457 / 3462
-- Functions: 1598 / 1598
-- Regions: 41800 / 42290
-- Remaining target: 3 lines, 5 branches, and 490 regions.
+- Current snapshot: `78820651-c007-43f4-b1c2-aec369790485`
+- Current measured commit metadata: `fd9b52f91f059dc3eb86a05baa9b6517a5c571bd`
+- Current coverage source state: Attempt 101 source changes measured in the
+  working tree before commit; source-equivalent to the commit that records this
+  attempt.
+- Lines: 26018 / 26021
+- Branches: 3455 / 3460
+- Functions: 1601 / 1601
+- Regions: 41847 / 42332
+- Remaining target: 3 lines, 5 branches, and 485 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -45,9 +45,68 @@ from Coverage MCP before each implementation sweep.
     103 / 103 regions.
   - `src/codecs/jpeg/encode/huffman.rs`: 24 / 24 branches and now
     209 / 209 regions.
+  - `src/codecs/png/decode.rs`: 88 / 88 branches and now
+    732 / 732 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 101 plan: PNG decode defensive-region sweep
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `fd9b52f` with only this document dirty.
+- Coverage MCP snapshot: `28c4dea3-5e2e-4580-90ba-cb8be4f2132c`.
+- Overall: `25995 / 25998` lines, `3457 / 3462` branches,
+  `1598 / 1598` functions, and `41800 / 42290` regions.
+- Target file: `src/codecs/png/decode.rs`, currently `685 / 690` regions and
+  `90 / 90` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `src/codecs/png/decode.rs:107`, non-interlaced inflated-length `row_bytes(...)?` | Raw LLVM JSON from the approved MCP run shows the only zero region on the line is the `row_bytes` `?` failure, not the later `checked_mul`. Public PNG color layouts cap channels/depth, so a manifest fixture cannot make `row_bytes` overflow here. | Add a coverage-hook call to `inflated_len` with a private impossible `channels = usize::MAX` value to cover the defensive `row_bytes` failure without changing production behavior. |
+| `src/codecs/png/decode.rs:116`, Adam7 inflated-length `row_bytes(...)?` | The existing hook covers the Adam7 `checked_mul(pass_height)?` failure but not the pass `row_bytes` failure. Public PNG layouts cannot reach this overflow. | Add the same impossible-channel probe with `interlace = 1`. |
+| `src/codecs/png/decode.rs:133`, `width.checked_mul(height)?` in sample allocation | `width` and `height` are `u32`, so on the current 64-bit target their product cannot overflow `usize`; only the later multiply by channels can. The zero region is therefore a defensive artifact of the generic checked expression. | Extract sample-count calculation into a private helper and cover its first-multiply overflow directly from the coverage hook. Existing malformed probes already cover the public call-site failure path through the second multiply. |
+| `src/codecs/png/decode.rs:198`, `position.checked_add(stride)?` in row unfiltering | To reach this through `unfilter_rows`, `position` must first index a real slice byte and then be close enough to `usize::MAX` for `+ stride` to overflow, which is impossible with an in-memory slice fixture. | Extract one-row source parsing into a private helper. Existing short-row probes cover normal `None` propagation; the coverage hook calls the helper with `stride = usize::MAX` to cover the overflow branch. |
+| `src/codecs/png/decode.rs:421`, chunk payload `start.checked_add(length)?` | `start` comes from a valid in-slice position, so public bytes cannot make it approach `usize::MAX`; malformed chunk fixtures already cover truncated payload/CRC paths. | Extract chunk payload/CRC bounds into a private helper and cover the overflow branch directly from the coverage hook. |
+
+Implementation/search plan:
+
+1. Keep public PNG behavior unchanged.
+2. Prefer small private helper extraction over hidden production options.
+3. Add coverage-hook assertions only for states impossible to encode as
+   fixture-sized Pillow-oracle inputs.
+4. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep only if aggregate missing regions improve without increasing missing
+   lines, branches, or functions.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run `854196b1-e3c6-4fd8-bbff-a87e173d53ff` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `78820651-c007-43f4-b1c2-aec369790485`.
+- Overall changed from `25995 / 25998` lines, `3457 / 3462` branches,
+  `1598 / 1598` functions, and `41800 / 42290` regions to
+  `26018 / 26021` lines, `3455 / 3460` branches, `1601 / 1601`
+  functions, and `41847 / 42332` regions.
+- Missing counts changed from 3 lines, 5 branches, and 490 regions to 3 lines,
+  5 branches, and 485 regions. The apparent branch-total drop is from splitting
+  complex checked expressions into private helpers; missing branch count did
+  not increase.
+- `src/codecs/png/decode.rs` is now closed to 100% regions:
+  `732 / 732` regions and `88 / 88` branches.
+- Retention decision: keep. The sweep removed all 5 PNG decode region gaps
+  with no additional missing lines, branches, or functions; all new private
+  states are coverage-hook-only probes for impossible public fixture states.
 
 ## Attempt 99 plan: WebP aggregate branch sweep
 
@@ -106,6 +165,54 @@ Initial measurement and adjustment:
   documented reverse map as evidence and use a different strategy next:
   isolate the counted branch instantiations with smaller temporary scripts
   before editing source again.
+
+## Attempt 100 plan: VP8 counted-instantiation branch sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `fd9b52f`.
+- Coverage source for branch mapping: local LLVM JSON from discarded Attempt 99
+  snapshot `d6caf4fb-623a-4d91-a36d-87db1f465eda`; retained baseline remains
+  snapshot `507ae3a0-ec7e-43b1-8ec7-aafdefa51c85` because Attempt 99 code was
+  discarded.
+- Retained overall baseline: `25995 / 25998` lines, `3457 / 3462` branches,
+  `1598 / 1598` functions, and `41800 / 42290` regions.
+
+Reverse map:
+
+| Source cluster | Function-level evidence | Decision |
+| --- | --- | --- |
+| `src/codecs/webp/native/vp8.rs:1576`, `loop_filter` subblock-filter guard | The counted one-sided record is in `Vp8Decoder<Cursor<Vec<u8>>>::loop_filter`, at the right side of `mb.luma_mode == B || (!mb.coeffs_skipped && mb.non_zero_dct)`. The discarded Attempt 99 hook used a B-mode macroblock, which short-circuited before evaluating the right side, and a skipped macroblock, which evaluated the right side false. | Add a DC-mode macroblock with `coeffs_skipped = false` and `non_zero_dct = true` so the right side is evaluated true in the counted monomorphization. |
+| `src/codecs/webp/native/vp8.rs:1810`, `calculate_filter_parameters` B-mode adjustment | The one-sided record is in `Vp8Decoder<Take<Cursor<&[u8]>>>::calculate_filter_parameters`; existing hook covers B-mode true for this reader type. | Add a `Take<Cursor<&[u8]>>` decoder call with a DC macroblock while loop-filter adjustments are enabled, covering the false side. |
+| `src/codecs/webp/native/vp8.rs:1821`, sharpness shift branch | Same counted `Take<Cursor<&[u8]>>` monomorphization has only one side of `sharpness_level > 4`. | Add a low-sharpness `Take<Cursor<&[u8]>>` call to pair with the existing high-sharpness path. |
+| `src/codecs/webp/native/vp8.rs:1067`, `read_loop_filter_adjustments` flag | The counted record is in `Vp8Decoder<Take<Cursor<&[u8]>>>::read_loop_filter_adjustments`; existing hook covers the true side. | Add a zero-bit `Take<Cursor<&[u8]>>` decoder call to cover the false side. |
+| `src/codecs/webp/native/vp8.rs:981`, `CoverageReadError` `init_partitions` guard | The counted record is in the custom `CoverageReadError` monomorphization; existing hook calls `init_partitions(1)` and covers only the false side of `n > 1`. | Add `init_partitions(2)` with `CoverageReadError` to cover the true/error side. |
+
+Implementation/search plan:
+
+1. Extend only `src/codecs/webp/native/vp8.rs` `#[cfg(coverage)]` hooks.
+2. Validate locally with `cargo fmt --all --check`, `cargo check --all-features`,
+   and `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+3. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+4. Keep only if aggregate missing branches or regions improve without line or
+   function regression; otherwise discard and record the measurement.
+
+Measurement/outcome:
+
+- Coverage MCP run `9fcd6eb5-7729-428c-9c48-24b3d32fd290` passed and
+  ingested snapshot `eba4f70a-2aaa-42ea-845c-67ac31c3bc5d`.
+- Overall remained at 3 missing lines, 5 missing branches, and 490 missing
+  regions. The code probes did not improve the aggregate target.
+- Retention decision: discard the `vp8.rs` hook additions. The per-function
+  one-sided records are useful for explaining noise, but they are not the
+  branches driving the file aggregate counters in a way that this hook pattern
+  can close.
+- Next strategy: use `target/llvm-cov.txt` / human-readable branch output from
+  the approved run artifacts, if available, to identify the exact counted
+  branch IDs. If that artifact does not expose the IDs, prioritize concrete
+  line gaps and region-only files instead of spending more cycles on
+  monomorphization noise.
 
 ## Attempt 98 plan: smallest defensive-region sweep
 
