@@ -295,7 +295,7 @@ fn convert_pixels(
         (0 | 1, 1, 16) => {
             let mut output = Vec::with_capacity(pixels.len());
             for bytes in pixels.chunks_exact(2) {
-                let value = endian.u16(bytes)?;
+                let value = endian.u16_exact([bytes[0], bytes[1]]);
                 let value = if photometric == 0 { !value } else { value };
                 output.extend_from_slice(&value.to_le_bytes());
             }
@@ -320,9 +320,10 @@ fn convert_pixels(
         (2, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8)),
         (3, 1, 1 | 2 | 4 | 8) => {
             let indices = unpack_indices(&pixels, width, height, bits)?;
-            let entries = 1usize.checked_shl(u32::from(bits))?;
-            let map = color_map?.get(..entries.checked_mul(3)?)?;
-            let mut rgb = Vec::with_capacity(entries.checked_mul(3)?);
+            let entries = 1usize << usize::from(bits);
+            let map_len = entries * 3;
+            let map = color_map?.get(..map_len)?;
+            let mut rgb = Vec::with_capacity(map_len);
             for index in 0..entries {
                 rgb.push(u8::try_from(map[index] >> 8).ok()?);
                 rgb.push(u8::try_from(map[entries + index] >> 8).ok()?);
@@ -585,14 +586,6 @@ impl Endian {
             Endian::Little => u16::from_le_bytes(bytes),
             Endian::Big => u16::from_be_bytes(bytes),
         }
-    }
-
-    fn u16(self, bytes: &[u8]) -> Option<u16> {
-        let bytes: [u8; 2] = bytes.try_into().ok()?;
-        Some(match self {
-            Endian::Little => u16::from_le_bytes(bytes),
-            Endian::Big => u16::from_be_bytes(bytes),
-        })
     }
 
     fn u32_exact(self, bytes: [u8; 4]) -> u32 {
@@ -1329,8 +1322,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = overflow_reader.read(1);
     let _ = data_bit(&[], 0);
     let _ = data_bit(&[0], 8);
-    let _ = Endian::Little.u16(&[0]);
-    let _ = Endian::Big.u16(&[0]);
     let mut endian_bytes = [0; 4];
     Endian::Little.write_u16(1, &mut endian_bytes[..2]);
     Endian::Big.write_u32(1, &mut endian_bytes);

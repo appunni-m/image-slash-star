@@ -47,6 +47,57 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 82 plan: TIFF fixed-width palette and 16-bit sample cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `b586216`; latest code-changing
+  coverage re-anchor is pushed commit `a9d6c05`.
+- Coverage MCP snapshot: `a076eb5f-e22d-4046-9ff3-1d8c21947342`.
+- Overall: `25861 / 25865` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41661 / 42159` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently
+  `1953 / 2023` regions and `130 / 130` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| 16-bit grayscale/chroma sample read | The decode arm uses `pixels.chunks_exact(2)`, so every loop body receives exactly two bytes. The `Endian::u16(&[u8])` slice-length failure branch is unreachable here; use the fixed-array helper instead and remove the slice helper if it has no remaining caller. |
+| Coverage-only helper hooks | Remove the coverage hook calls that targeted the deleted slice helper; leaving them would keep an implementation path solely for coverage rather than production behavior. |
+| Palette entry count | The match arm restricts `bits` to `1`, `2`, `4`, or `8`, so `1 << bits` is bounded to at most 256 entries. `entries * 3` is bounded to at most 768 bytes and cannot overflow. |
+| Color map lookup and value narrowing | Keep the `color_map?.get(..map_len)?` guard and `u8::try_from(map[..] >> 8).ok()?` conversions. The tag may still be malformed or carry out-of-range values, so those remain real validation. |
+| Index unpacking math | Leave unchanged. Row stride, row slicing, and packed-bit offsets are still driven by image dimensions and malformed input. |
+
+Implementation plan:
+
+1. Update only `src/codecs/tiff/decode.rs`.
+2. Replace the 16-bit sample slice conversion with the fixed-array endian read.
+3. Replace the palette `checked_shl()` and duplicate `checked_mul(3)?`
+   calculations with bounded direct arithmetic.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `e6787fdb-5185-4c3b-b49b-a1c97616571c`.
+- Coverage MCP snapshot: `0da5392c-83f3-4a11-9000-2e22e5d90ccd`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after TIFF fixed-width palette and 16-bit sample cleanup:
+  `25854 / 25858` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41642 / 42136` regions.
+- Target file movement: `src/codecs/tiff/decode.rs` moved from
+  `1953 / 2023` regions to `1934 / 2000` regions; missing regions fell from
+  `70` to `66`, and branch coverage remained complete at `130 / 130`.
+- Net: aggregate missing regions fell from `498` to `494`. The line gap
+  remained four, the branch gap remained six, and function coverage remained
+  complete; the removed `Endian::u16(&[u8])` helper was an unreachable
+  production path with coverage-only hook calls.
+
 ## Attempt 81 plan: zlib-ng matcher direct cursor increment cleanup
 
 Baseline before editing:
