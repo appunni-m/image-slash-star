@@ -47,6 +47,54 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 96 plan: WebP decoder VP8X immediate loop-exit fixture
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `7c6943f`, code-equivalent to
+  measured source commit `182c14f55324caf00536a4bd50b9c7cd54762581`.
+- Coverage MCP snapshot: `f6d6fea5-024d-4d7e-8c96-93a3b825ba3d`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41638 / 42126` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1373 / 1420` regions and `83 / 84` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| VP8X chunk loop guard at line 234, `while position < max_position` | Attempt 95 added `extended_vp8x_no_chunks.webp`, but with a truthful RIFF size the decoder still enters the loop and exits through the EOF mapping. Raw LLVM JSON still shows a one-sided line-234 record. A local Pillow probe with the same VP8X bytes but an intentionally short RIFF size field (`12`) fails as `builtins.OSError: could not create decoder object`, making it an oracle-valid expected-error fixture. | Add a single malformed VP8X fixture that contains the VP8X header bytes but sets the RIFF size field small enough that `max_position == position`, forcing the loop guard's immediate false side through public decode. |
+
+Implementation/search plan:
+
+1. Extend `write_vp8x_container()` with an optional RIFF-size override.
+2. Generate `extended_vp8x_short_riff_size.webp` using the existing VP8X payload
+   and `riff_size=12`.
+3. Add it to the active `error_malformed_container` manifest group with
+   `expect_error: true`, regenerate WebP assets/oracle metadata, and validate
+   with `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep only if aggregate missing branches or regions improve without
+   line/function regression; otherwise discard and record the measurement.
+
+Measurement/outcome:
+
+- Temporary fixture `extended_vp8x_short_riff_size.webp` used the same VP8X
+  payload as `extended_vp8x_no_chunks.webp` but set the RIFF size field to `12`
+  so the VP8X chunk-loop bound should exit immediately.
+- Pillow oracle behavior: `PIL.Image.open(...).load()` failed with
+  `builtins.OSError: could not create decoder object`, so the fixture was valid
+  as an `expect_error: true` manifest candidate.
+- Validation before coverage: `cargo fmt --all`, `cargo check --all-features`,
+  and `RUSTFLAGS='--cfg coverage' cargo check --all-features` all passed.
+- Coverage MCP run: `c22f33aa-d32b-4bd6-946d-a52c439917aa`, snapshot
+  `907112e6-ea9c-4ac5-97d3-4130f9080746`.
+- Result: no aggregate improvement beyond the current baseline. Overall remained
+  `25864 / 25867` lines, `3441 / 3446` branches, `1594 / 1594` functions, and
+  `41638 / 42126` regions. Decision: discard the fixture.
+
 ## Attempt 94 plan: WebP decoder zero-valid-frame animation guard
 
 Baseline before editing:
