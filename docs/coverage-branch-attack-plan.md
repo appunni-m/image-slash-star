@@ -47,6 +47,57 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 83 plan: PNG range-slicing cursor cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `e0866db`; latest code-changing
+  coverage re-anchor is pushed commit `adb6a66`.
+- Coverage MCP snapshot: `271b937f-9906-41c5-9224-7b844c7ed0d7`.
+- Overall: `25854 / 25858` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41642 / 42136` regions.
+- Target file: `src/codecs/png/decode.rs`, currently
+  `685 / 690` regions and `90 / 90` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| Non-interlaced and Adam7 inflated row lengths | Keep the existing arithmetic. The row count and total inflate length are PNG dimension validation, and the current coverage hooks deliberately exercise oversized dimensions. |
+| Scanline sample count | Keep `width.checked_mul(height)?.checked_mul(channels)?`; huge but syntactically valid PNG headers must still fail cleanly before allocating. |
+| `unfilter_rows()` row cursor advance | After `data.get(*position)` succeeds, the remaining row payload can be bounded with nested slices: `data.get(*position..)?.get(..stride)?`. This removes an unreachable `position.checked_add(stride)` overflow region while still returning `None` for truncated data. Advancing by `stride` is then bounded by `data.len()`. |
+| PNG chunk payload cursor | The chunk iterator can parse from `self.data.get(self.position..)?`, then bound payload and CRC with nested slices. This removes the explicit `start.checked_add(length)?` overflow region while preserving malformed chunk rejection and without relying on unchecked range endpoints. |
+
+Implementation plan:
+
+1. Update only `src/codecs/png/decode.rs`.
+2. Rewrite `unfilter_rows()` row payload slicing to use remaining-slice bounds
+   and direct cursor advancement after those bounds are proven.
+3. Rewrite `Chunks::next()` payload and CRC slicing from a cursor-relative
+   remaining slice, deriving the new absolute position from the remaining tail.
+4. Leave inflated length and sample-count arithmetic unchanged.
+5. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+6. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+7. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `402d4c07-73d8-4091-8b7f-48c2cb93015c`.
+- Coverage MCP snapshot: `79d1c9bb-2e52-4c61-b49e-4a8daaab0f8f`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after PNG range-slicing cursor cleanup:
+  `25854 / 25858` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41650 / 42147` regions.
+- Target file movement: `src/codecs/png/decode.rs` moved from
+  `685 / 690` regions to `693 / 701` regions; missing regions increased from
+  `5` to `8`.
+- Decision: discarded and reverted. Nested slicing preserved behavior but
+  increased LLVM region fragmentation more than it removed explicit arithmetic
+  regions.
+
 ## Attempt 82 plan: TIFF fixed-width palette and 16-bit sample cleanup
 
 Baseline before editing:
