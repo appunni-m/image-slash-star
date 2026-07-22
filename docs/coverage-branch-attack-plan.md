@@ -47,6 +47,121 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 97 plan: PNG zlib-ng encode source-shape region sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `97cd616`, code-equivalent to
+  measured source commit `182c14f55324caf00536a4bd50b9c7cd54762581` for
+  coverage-relevant files.
+- Coverage MCP snapshot: `f6d6fea5-024d-4d7e-8c96-93a3b825ba3d`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41638 / 42126` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `3403 / 3589` regions and `368 / 368` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| zlib-ng encoder region-only gaps across level 1–9 tokenizers and block emission | Coverage MCP reports no uncovered lines or branches for `zlib_ng.rs`; the remaining 186 missing regions are LLVM region-only segments. Existing public PNG encode rows cover each compression level on the default source, plus 1×1 short-input cases and boundary-source cases for levels 1, 3, 6, and 9. The uncovered clusters include all compression strategy families, so source shape is the likely missing public dimension. | Add manifest-only PNG encode rows using existing assets: cover `zlib_boundary_source.png` for the compression levels not yet paired with that source (`2`, `4`, `5`, `7`, `8`) and cover long solid matches through `large.png` at representative levels (`1`, `6`, `9`). Generate exact Pillow encoded refs and keep only if aggregate regions improve. |
+
+Implementation/search plan:
+
+1. Add PNG encode cases:
+   - `enc_compress_2_boundary`
+   - `enc_compress_4_boundary`
+   - `enc_compress_5_boundary`
+   - `enc_compress_7_boundary`
+   - `enc_compress_8_boundary`
+   - `enc_compress_1_large_solid`
+   - `enc_compress_6_large_solid`
+   - `enc_compress_9_large_solid`
+2. Regenerate only PNG Pillow refs through
+   `scripts/generate_decode_refs.py --format png`.
+3. Validate with `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep the batch only if aggregate missing regions improve without line,
+   branch, or function regression; otherwise discard and record the measurement.
+
+Initial validation result and debug plan:
+
+- The first batch failed before coverage ingest because
+  `enc_compress_1_large_solid` exposed a real exact-byte parity bug in the
+  level-one quick compressor: Rust emitted 3926 bytes, Pillow emitted 3919
+  bytes. Keep the row active and debug it as the first divergence.
+- Isolate the failing fixture outside the full coverage suite by dumping the
+  Pillow oracle PNG IDAT stream and the Rust-encoded IDAT stream for the same
+  `large.png` source at `compression: 1`.
+- Compare zlib header, Adler-32, and DEFLATE block bytes. If the raw image bytes
+  and Adler match, the bug is in level-one tokenization or fixed-Huffman block
+  emission rather than PNG filtering.
+- Trace the Rust level-one token stream around the first differing compressed
+  byte, then patch the smallest `src/codecs/compression/zlib_ng.rs` behavior
+  that differs from zlib-ng `deflate_quick`.
+
+Debug result:
+
+- Local oracle details from `.oracle-venv`: Pillow `12.2.0`,
+  `features.version("zlib") == "1.3.1.zlib-ng"`, and
+  `_imaging.zlib_ng_version == "2.3.3"`.
+- Pillow `ZipEncode.c` feeds one filtered PNG row into `deflate()` with
+  `Z_NO_FLUSH`; `PngImagePlugin.py` writes those encoder outputs as IDAT
+  chunks with `ImageFile.MAXBLOCK == 65536`.
+- The failing Rust and Pillow PNGs had identical zlib headers (`78 01`),
+  identical Adler-32 (`a21d0282`), and identical decompressed scanline bytes
+  (`395780` bytes). The bug was therefore inside level-one DEFLATE match
+  selection, not PNG filtering or framing.
+- First DEFLATE token divergence:
+  - Position `65454`, row/column `(42, 774)`, `position % 32768 == 32686`.
+  - Pillow: `match(length=258, distance=1)`.
+  - Rust before fix: `match(length=258, distance=258)`.
+- The same pattern recurred only in the zlib 32 KiB pre-slide guard zone after
+  the first 64 KiB fill window (`position >= 65536 - 262` and
+  `position % 32768 > 32768 - 262`). Earlier first-window guard-zone matches
+  must not be rewritten; doing so changes many already-correct tokens.
+- Fix retained: in `tokenize_level1_position()`, when the current level-one
+  match starts in that post-first-slide guard zone and `position - 1` gives a
+  distance-one repeated-byte match at least as long as the current candidate,
+  emit the distance-one match. Re-generated actual output for
+  `enc_compress_1_large_solid` is byte-identical to the Pillow reference
+  (`3919` bytes).
+- Coverage follow-up: Coverage MCP snapshot
+  `2744fed3-9d19-414b-933b-507de193a560` passed all tests and covered the
+  parity path, but the new helper introduced one uncovered branch at
+  `zlib_ng.rs:153`. Add same-module coverage-hook probes for the helper's
+  false outcomes: one where the repeated-byte distance-one run is shorter than
+  the current candidate, and one where it is shorter than `MIN_MATCH`.
+- Region follow-up: Coverage MCP snapshot
+  `e959a59c-0551-49d0-b731-c7863cd89685` restored 100% branch coverage for
+  `zlib_ng.rs`, but aggregate missing regions increased by 6 because the new
+  helper's early-return guard regions were not all exercised. Add
+  same-module coverage-hook probes for each guard: before the first slide
+  guard, inside the earlier non-rewritten guard boundary, and repeated-byte
+  mismatch.
+
+Final retained result:
+
+- Coverage MCP run `1c92ba2a-631c-45ef-b9f3-03c6abac8183` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `a178c234-9bc1-4081-9daf-08b1d7cda735`.
+- Overall after the parity fix and PNG encode rows: `25937 / 25940` lines,
+  `3451 / 3456` branches, `1595 / 1595` functions, and
+  `41711 / 42205` regions.
+- Direct comparison against baseline snapshot
+  `f6d6fea5-024d-4d7e-8c96-93a3b825ba3d`: +73 covered lines, +10 covered
+  branches with +10 total branches (no new missing branches), +1 covered
+  function, and +73 covered regions with +79 total regions.
+- `src/codecs/compression/zlib_ng.rs` after guard probes: `2212 / 2212`
+  lines, `378 / 378` branches, `84 / 84` functions, and `3476 / 3668`
+  regions. The file has no uncovered line, branch, or function gaps.
+- Retention decision: keep despite aggregate missing-region count increasing by
+  6 because this sweep fixed a real exact-byte Pillow parity bug exposed by
+  the new manifest row; the branch objective did not regress in missing-count
+  terms, and the zlib level-one helper is fully branch-covered.
+
 ## Attempt 96 plan: WebP decoder VP8X immediate loop-exit fixture
 
 Baseline before editing:

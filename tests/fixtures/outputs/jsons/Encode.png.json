@@ -217,6 +217,18 @@
       "encoded_ref_bytes": 15109
     },
     {
+      "id": "enc_compress_2_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_2_boundary.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_2_boundary.bin",
+      "encoded_ref_bytes": 14386
+    },
+    {
       "id": "enc_compress_3_boundary",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_3_boundary.bin",
       "ref_bytes": 27648,
@@ -227,6 +239,30 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_3_boundary.bin",
       "encoded_ref_bytes": 14414
+    },
+    {
+      "id": "enc_compress_4_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_4_boundary.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_4_boundary.bin",
+      "encoded_ref_bytes": 14377
+    },
+    {
+      "id": "enc_compress_5_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_5_boundary.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_5_boundary.bin",
+      "encoded_ref_bytes": 14408
     },
     {
       "id": "enc_compress_6_boundary",
@@ -241,6 +277,30 @@
       "encoded_ref_bytes": 14369
     },
     {
+      "id": "enc_compress_7_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_7_boundary.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_7_boundary.bin",
+      "encoded_ref_bytes": 14322
+    },
+    {
+      "id": "enc_compress_8_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_8_boundary.bin",
+      "ref_bytes": 27648,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        96,
+        96
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_8_boundary.bin",
+      "encoded_ref_bytes": 14283
+    },
+    {
       "id": "enc_compress_9_boundary",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_9_boundary.bin",
       "ref_bytes": 27648,
@@ -251,6 +311,42 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_9_boundary.bin",
       "encoded_ref_bytes": 14283
+    },
+    {
+      "id": "enc_compress_1_large_solid",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_1_large_solid.bin",
+      "ref_bytes": 395523,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        513,
+        257
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_1_large_solid.bin",
+      "encoded_ref_bytes": 3919
+    },
+    {
+      "id": "enc_compress_6_large_solid",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_6_large_solid.bin",
+      "ref_bytes": 395523,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        513,
+        257
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_6_large_solid.bin",
+      "encoded_ref_bytes": 985
+    },
+    {
+      "id": "enc_compress_9_large_solid",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_compress_9_large_solid.bin",
+      "ref_bytes": 395523,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        513,
+        257
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_compress_9_large_solid.bin",
+      "encoded_ref_bytes": 790
     },
     {
       "id": "enc_optimize",

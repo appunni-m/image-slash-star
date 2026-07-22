@@ -370,6 +370,27 @@
       }
     },
     {
+      "id": "enc_compress_2_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 2
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_compress_3_boundary",
       "source_asset": "zlib_boundary_source.png",
       "source_format": "png",
@@ -382,6 +403,48 @@
         "format": "PNG",
         "kwargs": {
           "compress_level": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_4_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_5_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 5
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 5
         },
         "roundtrip": [
           "PIL.Image.open",
@@ -412,6 +475,48 @@
       }
     },
     {
+      "id": "enc_compress_7_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 7
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 7
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_8_boundary",
+      "source_asset": "zlib_boundary_source.png",
+      "source_format": "png",
+      "params": {
+        "compression": 8
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 8
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_compress_9_boundary",
       "source_asset": "zlib_boundary_source.png",
       "source_format": "png",
@@ -420,6 +525,69 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_boundary_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 9
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_1_large_solid",
+      "source_asset": "large.png",
+      "source_format": "png",
+      "params": {
+        "compression": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_6_large_solid",
+      "source_asset": "large.png",
+      "source_format": "png",
+      "params": {
+        "compression": 6
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {
+          "compress_level": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_compress_9_large_solid",
+      "source_asset": "large.png",
+      "source_format": "png",
+      "params": {
+        "compression": 9
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/large.png",
         "method": "PIL.Image.Image.save",
         "format": "PNG",
         "kwargs": {

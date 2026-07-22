@@ -780,17 +780,49 @@ formats:
       description: Alternating repeated and noisy rows exercising zlib-ng quick matcher boundaries
       source_asset: zlib_boundary_source.png
       params: {'compression': 1}
+    - id: enc_compress_2_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng fast matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 2}
     - id: enc_compress_3_boundary
       description: Alternating repeated and noisy rows exercising zlib-ng early matcher boundaries
       source_asset: zlib_boundary_source.png
       params: {'compression': 3}
+    - id: enc_compress_4_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng medium matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 4}
+    - id: enc_compress_5_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng lookahead matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 5}
     - id: enc_compress_6_boundary
       description: Alternating repeated and noisy rows exercising zlib-ng medium matcher boundaries
       source_asset: zlib_boundary_source.png
       params: {'compression': 6}
+    - id: enc_compress_7_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng slow matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 7}
+    - id: enc_compress_8_boundary
+      description: Alternating repeated and noisy rows exercising zlib-ng maximum slow matcher boundaries
+      source_asset: zlib_boundary_source.png
+      params: {'compression': 8}
     - id: enc_compress_9_boundary
       description: Alternating repeated and noisy rows exercising zlib-ng filtered matcher boundaries
       source_asset: zlib_boundary_source.png
+      params: {'compression': 9}
+    - id: enc_compress_1_large_solid
+      description: Long solid scanlines exercising zlib-ng quick long-match paths
+      source_asset: large.png
+      params: {'compression': 1}
+    - id: enc_compress_6_large_solid
+      description: Long solid scanlines exercising zlib-ng medium long-match paths
+      source_asset: large.png
+      params: {'compression': 6}
+    - id: enc_compress_9_large_solid
+      description: Long solid scanlines exercising zlib-ng filtered long-match paths
+      source_asset: large.png
       params: {'compression': 9}
     - id: enc_optimize
       description: Optimized adaptive filters with forced maximum compression

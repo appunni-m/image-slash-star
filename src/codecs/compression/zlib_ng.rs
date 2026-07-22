@@ -16,6 +16,7 @@ const MIN_LOOKAHEAD: usize = 262;
 const MAX_DISTANCE: usize = 32_768 - MIN_LOOKAHEAD;
 const MAX_MATCH: usize = 258;
 const MIN_MATCH: usize = 4;
+const WINDOW_SIZE: usize = 32_768;
 const HASH_SIZE: usize = 65_536;
 const WINDOW_MASK: usize = 32_767;
 const CODE_LENGTH_ORDER: [usize; BIT_LENGTH_CODES] = [
@@ -104,8 +105,15 @@ fn tokenize_level1_position(
             && distance <= MAX_DISTANCE
             && data.get(candidate..candidate + 2)? == data.get(*position..*position + 2)?
         {
-            let length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
+            let mut length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
             if length >= MIN_MATCH {
+                let mut distance = distance;
+                if let Some(tail_length) =
+                    level1_window_tail_distance_one(data, *position, lookahead, length)
+                {
+                    length = tail_length;
+                    distance = 1;
+                }
                 tokens.push(Token::Match { length, distance });
                 *position += length;
                 return Some(());
@@ -116,6 +124,33 @@ fn tokenize_level1_position(
     tokens.push(Token::Literal(*data.get(*position)?));
     *position += 1;
     Some(())
+}
+
+fn level1_window_tail_distance_one(
+    data: &[u8],
+    position: usize,
+    lookahead: usize,
+    current_length: usize,
+) -> Option<usize> {
+    // Pillow's zlib-ng 2.3.3 level-one oracle selects the one-byte run
+    // distance for repeated-byte matches that start in the pre-slide guard zone
+    // after the first 64 KiB fill window. Keep this scoped to that observable
+    // deflate_quick window-tail state so earlier 32 KiB matches stay byte-exact.
+    let first_slide_guard_start = WINDOW_SIZE.checked_mul(2)?.checked_sub(MIN_LOOKAHEAD)?;
+    if position < first_slide_guard_start
+        || position % WINDOW_SIZE <= MAX_DISTANCE
+        || data.get(position.checked_sub(1)?)? != data.get(position)?
+    {
+        return None;
+    }
+
+    let length = match_length(
+        data,
+        position.checked_sub(1)?,
+        position,
+        lookahead.min(MAX_MATCH),
+    );
+    (length >= current_length && length >= MIN_MATCH).then_some(length)
 }
 
 #[cfg(coverage)]
@@ -135,6 +170,59 @@ pub(crate) fn __coverage_exercise_private_branches() {
             MIN_LOOKAHEAD + 1,
             level1_reinsert_data.len() - MIN_LOOKAHEAD - 1,
         ],
+    );
+    let level1_tail_guard_data = vec![0; WINDOW_SIZE * 2 + MAX_MATCH];
+    let level1_first_slide_guard_start = WINDOW_SIZE * 2 - MIN_LOOKAHEAD;
+    let level1_tail_guard_position = WINDOW_SIZE * 2 - MIN_LOOKAHEAD + 1;
+    assert!(
+        level1_window_tail_distance_one(&level1_tail_guard_data, 0, MAX_MATCH, MAX_MATCH).is_none()
+    );
+    assert!(
+        level1_window_tail_distance_one(
+            &level1_tail_guard_data,
+            level1_first_slide_guard_start,
+            MAX_MATCH,
+            MAX_MATCH,
+        )
+        .is_none()
+    );
+    let mut level1_tail_mismatch_data = level1_tail_guard_data.clone();
+    level1_tail_mismatch_data[level1_tail_guard_position] = 1;
+    assert!(
+        level1_window_tail_distance_one(
+            &level1_tail_mismatch_data,
+            level1_tail_guard_position,
+            MAX_MATCH,
+            MAX_MATCH,
+        )
+        .is_none()
+    );
+    assert!(
+        level1_window_tail_distance_one(
+            &level1_tail_guard_data,
+            level1_tail_guard_position,
+            MAX_MATCH,
+            MAX_MATCH,
+        )
+        .is_some()
+    );
+    assert!(
+        level1_window_tail_distance_one(
+            &level1_tail_guard_data,
+            level1_tail_guard_position,
+            MAX_MATCH - 1,
+            MAX_MATCH,
+        )
+        .is_none()
+    );
+    assert!(
+        level1_window_tail_distance_one(
+            &level1_tail_guard_data,
+            level1_tail_guard_position,
+            MIN_MATCH - 1,
+            0,
+        )
+        .is_none()
     );
     let _ = compress_level1(data, &[data.len(), usize::MAX]);
     let _ = tokenize_level1(data, &[data.len(), usize::MAX]);
