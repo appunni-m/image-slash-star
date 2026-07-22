@@ -1105,6 +1105,58 @@
       }
     },
     {
+      "id": "error_malformed_structure_ihdr_only",
+      "asset": "ihdr_only.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/ihdr_only.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_ihdr_trailing_byte",
+      "asset": "ihdr_trailing_byte.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/ihdr_trailing_byte.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_truncated_ancillary_chunk",
+      "asset": "truncated_ancillary_chunk.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/truncated_ancillary_chunk.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_structure_actl_short",
+      "asset": "actl_short.png",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/actl_short.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "asset": "invalid_compression.png",
       "expect_error": false,
@@ -1235,6 +1287,19 @@
       }
     },
     {
+      "id": "pillow_tolerated_malformed_actl_zero_frames",
+      "asset": "actl_zero_frames.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/actl_zero_frames.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
       "asset": "zlib_oversized_scanline.png",
       "expect_error": false,
@@ -1279,6 +1344,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_minimal_dynamic.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "transparency_rgb",
+      "asset": "rgb_trns.png",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb_trns.png",
         "operations": [
           "PIL.Image.open",
           "load",

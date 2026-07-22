@@ -90,6 +90,9 @@ struct DecodeRow {
     asset: Option<String>,
     asset_path: Option<String>,
     expect_error: Option<bool>,
+    oracle_status: Option<String>,
+    oracle_error_type: Option<String>,
+    oracle_error_message: Option<String>,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
     ref_path: Option<String>,
@@ -126,6 +129,12 @@ struct EncodeRow {
     status: String,
     #[serde(default)]
     expect_error: bool,
+    #[serde(default)]
+    oracle_status: Option<String>,
+    #[serde(default)]
+    oracle_error_type: Option<String>,
+    #[serde(default)]
+    oracle_error_message: Option<String>,
     #[serde(default)]
     source_format: Option<String>,
     #[serde(default)]
@@ -1072,7 +1081,9 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
     let Some(expected) = &row.sequence else {
         return Ok(());
     };
-    let actual = img::decode_sequence(data).ok_or("sequence decode returned None")?;
+    let actual = img::decode_sequence(data)
+        .map_err(|error| format!("sequence decode failed: {error}"))?
+        .content;
     if actual.loop_count != expected.loop_count {
         return Err(format!(
             "loop count mismatch: actual {:?}, expected {:?}",
@@ -1132,6 +1143,29 @@ fn decode_direct(data: &[u8], format: &str) -> Option<img::DecodedImage> {
         "webp" => img::codecs::webp::decode::decode(data),
         "ico" => img::codecs::ico::decode::decode(data),
         "avif" => img::codecs::avif::decode::decode(data),
+        _ => None,
+    }
+}
+
+fn inspect_direct(data: &[u8], format: &str) -> Option<img::ImageInfo> {
+    match format {
+        "jpeg" => img::codecs::jpeg::inspect::inspect(data),
+        "png" => img::codecs::png::inspect::inspect(data),
+        "gif" => img::codecs::gif::inspect::inspect(data),
+        _ => None,
+    }
+}
+
+fn format_from_name(format: &str) -> Option<img::ImageFormat> {
+    match format {
+        "jpeg" => Some(img::ImageFormat::Jpeg),
+        "png" => Some(img::ImageFormat::Png),
+        "gif" => Some(img::ImageFormat::Gif),
+        "bmp" => Some(img::ImageFormat::Bmp),
+        "tiff" => Some(img::ImageFormat::Tiff),
+        "webp" => Some(img::ImageFormat::WebP),
+        "ico" => Some(img::ImageFormat::Ico),
+        "avif" => Some(img::ImageFormat::Avif),
         _ => None,
     }
 }
@@ -1205,20 +1239,59 @@ fn test_decode_matrix() {
 
             let decoded = img::decode(&data);
             let direct = decode_direct(&data, fmt_name);
+            let direct_info = inspect_direct(&data, fmt_name);
             if row.expect_error.unwrap_or(false) {
+                if row.oracle_status.as_deref() != Some("error")
+                    || row.oracle_error_type.as_deref().is_none_or(str::is_empty)
+                {
+                    eprintln!(
+                        "  FAIL [{}]: error fixture lacks Pillow oracle type/status ({:?}: {:?})",
+                        row.id, row.oracle_error_type, row.oracle_error_message
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if matches!(fmt_name.as_str(), "png" | "jpeg" | "gif") {
+                    let _ = img::inspect(&data);
+                    let _ = direct_info.as_ref();
+                }
                 let sequence_rejected = match fmt_name.as_str() {
-                    "webp" => img::codecs::webp::decode::decode_sequence(&data).is_none(),
-                    "avif" => img::codecs::avif::decode::decode_sequence(&data).is_none(),
+                    "gif" | "webp" | "avif" => match img::decode_sequence(&data) {
+                        Err(img::ImageError::UnknownFormat) => {
+                            img::detect_format(&data) == Err(img::ImageError::UnknownFormat)
+                        }
+                        Err(img::ImageError::Malformed { format, .. }) => {
+                            format_from_name(fmt_name) == Some(format)
+                        }
+                        _ => false,
+                    },
                     _ => true,
                 };
-                if decoded.is_none() && direct.is_none() && sequence_rejected {
+                let expected_format = format_from_name(fmt_name).unwrap();
+                let structured_error = match img::detect_format(&data) {
+                    Err(img::ImageError::UnknownFormat) => {
+                        matches!(decoded, Err(img::ImageError::UnknownFormat))
+                    }
+                    Ok(format) => {
+                        format == expected_format
+                            && matches!(
+                                decoded,
+                                Err(img::ImageError::Malformed {
+                                    format: error_format,
+                                    ..
+                                }) if error_format == expected_format
+                            )
+                    }
+                    Err(_) => false,
+                };
+                if structured_error && direct.is_none() && sequence_rejected {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
                         "  FAIL [{}]: invalid input decoded successfully (auto={}, direct={}, sequence_rejected={})",
                         row.id,
-                        decoded.is_some(),
+                        decoded.is_ok(),
                         direct.is_some(),
                         sequence_rejected
                     );
@@ -1228,13 +1301,89 @@ fn test_decode_matrix() {
             }
 
             let decoded = match decoded {
-                Some(d) => d,
-                None => {
-                    eprintln!("  FAIL [{}]: decode returned None", row.id);
+                Ok(decoded) => decoded,
+                Err(error) => {
+                    eprintln!("  FAIL [{}]: decode failed: {error}", row.id);
                     failed += 1;
                     continue;
                 }
             };
+            let expected_format = format_from_name(fmt_name).unwrap();
+            if decoded.format != expected_format {
+                eprintln!(
+                    "  FAIL [{}]: detected {:?}, expected {:?}",
+                    row.id, decoded.format, expected_format
+                );
+                failed += 1;
+                continue;
+            }
+            let borrowed = decoded.as_ref();
+            if borrowed.format != expected_format || borrowed.content != &decoded.content {
+                eprintln!(
+                    "  FAIL [{}]: decoded envelope borrow changed content",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
+            let decoded = decoded.into_inner();
+            if matches!(fmt_name.as_str(), "png" | "jpeg" | "gif") {
+                let info = match img::inspect(&data) {
+                    Ok(info) => info,
+                    Err(error) => {
+                        eprintln!("  FAIL [{}]: metadata inspection failed: {error}", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if direct_info.as_ref() != Some(&info) {
+                    eprintln!(
+                        "  FAIL [{}]: direct and auto-detected metadata differ",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                let expected_mode = row.ref_mode.as_deref().and_then(expected_image_mode);
+                let expected_frames = row
+                    .sequence
+                    .as_ref()
+                    .map(|sequence| sequence.frames.len() as u32)
+                    .unwrap_or(1);
+                if info.format != expected_format
+                    || Some(info.width)
+                        != row.ref_size.as_ref().and_then(|size| size.first()).copied()
+                    || Some(info.height)
+                        != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
+                    || Some(info.mode) != expected_mode
+                    || (fmt_name == "png" && info.palette != decoded.palette)
+                    || (fmt_name == "gif" && info.palette.is_some() != decoded.palette.is_some())
+                    || info.has_palette() != (decoded.mode == img::ImageMode::P8)
+                    || (row.sequence.is_some()
+                        && (info.frame_count != Some(expected_frames)
+                            || info.is_animated != (expected_frames > 1)))
+                {
+                    eprintln!(
+                        "  FAIL [{}]: metadata {:?} differs from Pillow mode/size/frame and decoded palette",
+                        row.id, info
+                    );
+                    failed += 1;
+                    continue;
+                }
+            } else if !matches!(
+                img::inspect(&data),
+                Err(img::ImageError::Unsupported {
+                    format: Some(format),
+                    ..
+                }) if format == expected_format
+            ) {
+                eprintln!(
+                    "  FAIL [{}]: unmigrated metadata parser did not report structured unsupported",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
             let direct = match direct {
                 Some(image) if image == decoded => image,
                 Some(_) => {
@@ -1376,11 +1525,11 @@ fn test_encode_matrix() {
             if let Entry::Vacant(entry) = decoded_cache.entry(asset_path.clone()) {
                 let asset_data = asset_cache.get(&asset_path).unwrap();
                 match img::decode_sequence(asset_data) {
-                    Some(decoded) => {
-                        entry.insert(decoded);
+                    Ok(decoded) => {
+                        entry.insert(decoded.content);
                     }
-                    None => {
-                        eprintln!("  FAIL [{}]: source decode failed", row.id);
+                    Err(error) => {
+                        eprintln!("  FAIL [{}]: source decode failed: {error}", row.id);
                         failed += 1;
                         continue;
                     }
@@ -1465,39 +1614,52 @@ fn test_encode_matrix() {
                 let mut malformed = decoded.first().unwrap().clone();
                 malformed.pixels.pop();
                 encode_direct(&malformed, format, &opts)
-                    .or_else(|| img::encode(&malformed, format, &opts))
+                    .map(Ok)
+                    .unwrap_or_else(|| img::encode(&malformed, format, &opts))
             } else if let Some(dimensions) = row.params.get("source_dimensions") {
                 let dimensions = dimensions.as_array().unwrap();
                 let mut malformed = decoded.first().unwrap().clone();
                 malformed.width = u32::try_from(dimensions[0].as_u64().unwrap()).unwrap();
                 malformed.height = u32::try_from(dimensions[1].as_u64().unwrap()).unwrap();
                 encode_direct(&malformed, format, &opts)
-                    .or_else(|| img::encode(&malformed, format, &opts))
+                    .map(Ok)
+                    .unwrap_or_else(|| img::encode(&malformed, format, &opts))
             } else {
                 img::encode_sequence(decoded, format, &opts)
             };
             if row.expect_error {
-                if encoded.is_none() {
+                let fixture_has_oracle_error = row.oracle_status.as_deref() == Some("error")
+                    && row
+                        .oracle_error_type
+                        .as_deref()
+                        .is_some_and(|value| !value.is_empty());
+                if encoded.is_err() && fixture_has_oracle_error {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
-                    eprintln!("  FAIL [{}]: invalid input encoded successfully", row.id);
+                    eprintln!(
+                        "  FAIL [{}]: fixture error mismatch (encoded_ok={}, oracle={:?}: {:?})",
+                        row.id,
+                        encoded.is_ok(),
+                        row.oracle_error_type,
+                        row.oracle_error_message
+                    );
                     failed += 1;
                 }
                 continue;
             }
             let encoded = match encoded {
-                Some(e) => e,
-                None => {
-                    eprintln!("  FAIL [{}]: encode returned None", row.id);
+                Ok(encoded) => encoded,
+                Err(error) => {
+                    eprintln!("  FAIL [{}]: encode failed: {error}", row.id);
                     failed += 1;
                     continue;
                 }
             };
             if decoded.frames.len() == 1 {
                 match img::encode(decoded.first().unwrap(), format, &opts) {
-                    Some(still) if still == encoded => {}
-                    Some(_) => {
+                    Ok(still) if still == encoded => {}
+                    Ok(_) => {
                         eprintln!(
                             "  FAIL [{}]: still and one-frame sequence encoders differ",
                             row.id
@@ -1505,8 +1667,8 @@ fn test_encode_matrix() {
                         failed += 1;
                         continue;
                     }
-                    None => {
-                        eprintln!("  FAIL [{}]: still-image encoder returned None", row.id);
+                    Err(error) => {
+                        eprintln!("  FAIL [{}]: still-image encoder failed: {error}", row.id);
                         failed += 1;
                         continue;
                     }
@@ -1568,7 +1730,8 @@ fn test_encode_matrix() {
 
             // Roundtrip: re-decode and compare pixels against the PIL reference.
             match img::decode(&encoded) {
-                Some(redecoded) => {
+                Ok(redecoded) => {
+                    let redecoded = redecoded.content;
                     if let Some(expected) = row.ref_path.as_deref().and_then(|ref_path| {
                         load_pixel_reference(
                             manifest_dir,
@@ -1608,8 +1771,8 @@ fn test_encode_matrix() {
                         failed += 1;
                     }
                 }
-                None => {
-                    eprintln!("  FAIL [{}]: re-decode failed", row.id);
+                Err(error) => {
+                    eprintln!("  FAIL [{}]: re-decode failed: {error}", row.id);
                     failed += 1;
                 }
             }
@@ -1637,7 +1800,7 @@ fn test_operation_matrix() {
             .join(&row.source_asset);
         let source = fs::read(source_path).unwrap();
         let decoded = img::decode(&source).unwrap();
-        let mut dynamic = img::DynamicImage::from_decoded(&decoded).unwrap();
+        let mut dynamic = img::DynamicImage::from_decoded(&decoded.content).unwrap();
         dynamic = match row
             .params
             .get("intermediate")
@@ -2338,17 +2501,15 @@ fn exercise_type_metadata() {
     assert!(outside.validate().is_err());
     assert_eq!(
         img::detect_format(b"\0\0\0\x18ftypavif\0\0\0\0"),
-        Some(img::ImageFormat::Avif)
+        Ok(img::ImageFormat::Avif)
     );
     for brand in [b"avis", b"mif1", b"msf1"] {
         let mut header = *b"\0\0\0\x18ftyp____";
         header[8..12].copy_from_slice(brand);
-        assert_eq!(img::detect_format(&header), Some(img::ImageFormat::Avif));
+        assert_eq!(img::detect_format(&header), Ok(img::ImageFormat::Avif));
     }
-    assert_eq!(img::detect_format(b"\0\0\0\x18ftypheic"), None);
-    assert!(img::decode(b"\0\0\0\x18ftypavif\0\0\0\0").is_none());
-    assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_some());
-    assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_some());
+    assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_ok());
+    assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_ok());
     let zero_png = img::DecodedImage::new(0, 1, vec![], img::ColorType::L8);
     assert!(img::codecs::png::encode::encode(&zero_png, &Default::default()).is_none());
     let unsupported_tiff = img::DecodedImage::new(1, 1, vec![0; 4], img::ColorType::La16);
@@ -2397,7 +2558,23 @@ fn exercise_type_metadata() {
     assert!(img::ImageFormat::from_path("a.unknown").is_err());
     let errors = [
         img::ImageError::Dimensions,
-        img::ImageError::Unsupported("x".to_owned()),
+        img::ImageError::UnknownFormat,
+        img::ImageError::FeatureDisabled {
+            format: img::ImageFormat::Png,
+            feature: "png",
+        },
+        img::ImageError::Malformed {
+            format: img::ImageFormat::Png,
+            message: "x".to_owned(),
+        },
+        img::ImageError::Unsupported {
+            format: Some(img::ImageFormat::Png),
+            message: "x".to_owned(),
+        },
+        img::ImageError::Unsupported {
+            format: None,
+            message: "x".to_owned(),
+        },
         img::ImageError::Parameter("x".to_owned()),
         img::ImageError::IoError("x".to_owned()),
     ];

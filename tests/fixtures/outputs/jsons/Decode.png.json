@@ -1003,6 +1003,46 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_structure_ihdr_only",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_ihdr_trailing_byte",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_truncated_ancillary_chunk",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_structure_actl_short",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "APNG contains truncated acTL chunk",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "status": "ok",
       "error_type": null,
@@ -1133,6 +1173,19 @@
       ]
     },
     {
+      "id": "pillow_tolerated_malformed_actl_zero_frames",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_actl_zero_frames_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
       "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
       "status": "ok",
       "error_type": null,
@@ -1177,6 +1230,19 @@
       "error_type": null,
       "error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_zlib_minimal_dynamic_png.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "transparency_rgb",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgb_trns_png.bin",
       "ref_bytes": 3,
       "ref_mode": "Rgb8",
       "ref_size": [

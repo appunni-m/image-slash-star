@@ -19,6 +19,33 @@ buffer backend for `pillow-rs` and `pillow-rs-js`.
 The migration should remove duplicated codec logic from `pillow-rs` while
 keeping image manipulation semantics and operation execution in `pillow-rs`.
 
+## Reviewed Worktree Findings
+
+The July 2026 migration worktrees are design prototypes, not merge sources.
+They predate the current AVIF implementation and package rename, and applying
+them wholesale would regress AVIF decoding, sequence support, and compatible
+brand detection. Their useful ideas are structured codec errors, explicit
+feature forwarding, generic decoded-buffer conversion, palette-alpha
+preservation, metadata caching, and persistent materialization.
+
+The following parts must be redesigned rather than copied:
+
+- metadata parsers must live under each feature-gated codec, not one module
+  that pulls every parser into small builds
+- ICO inspection must select the same best entry as decoding
+- TIFF inspection must not claim a single frame after examining only one IFD
+- loaded Pillow storage must retain mode, source format, metadata, palette, and
+  palette alpha
+- palette operations must be proven index-preserving before avoiding color
+  expansion
+- all behavior must be exercised by manifest fixtures and exact Pillow-oracle
+  output before replacing an existing path
+
+Each migration slice is accepted only when it preserves current AVIF behavior,
+passes the relevant feature builds, matches active manifest references exactly,
+and restores 100% line, branch, function, and region coverage through Coverage
+MCP.
+
 ## Domain Boundary
 
 ### `image-slash-star`
@@ -96,23 +123,23 @@ Cargo's underscore-normalized crate name:
 image_slash_star
 ```
 
-It already exposes centralized codec APIs:
+Its centralized codec APIs are being migrated to this canonical contract:
 
 ```rust
-pub fn detect_format(data: &[u8]) -> Option<ImageFormat>;
-pub fn decode(data: &[u8]) -> Option<DecodedImage>;
-pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence>;
+pub fn detect_format(data: &[u8]) -> ImageResult<ImageFormat>;
+pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>>;
+pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>>;
 pub fn encode(
     img: &DecodedImage,
     format: ImageFormat,
     opts: &EncodeOptions,
-) -> Option<Vec<u8>>;
+) -> ImageResult<Vec<u8>>;
 pub fn encode_sequence(
     sequence: &DecodedSequence,
     format: ImageFormat,
     opts: &EncodeOptions,
-) -> Option<Vec<u8>>;
-pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> Option<Vec<u8>>;
+) -> ImageResult<Vec<u8>>;
+pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> ImageResult<Vec<u8>>;
 ```
 
 Current features:
@@ -161,7 +188,7 @@ common contract for all indexed codecs.
 Missing today:
 
 - no metadata-only `ImageInfo`
-- no public `Result`-based decode/encode/inspect APIs
+- no metadata inspection API yet
 - no structured distinction between unknown format, disabled feature,
   malformed data, unsupported data, invalid parameters, and I/O failures
 - incomplete paletted preservation across codecs
@@ -309,80 +336,78 @@ Compatibility naming can be added at crate edges when needed.
 
 ### Result APIs
 
-Keep existing `Option` APIs as compatibility wrappers, but add structured
-`Result` APIs:
+The canonical APIs return structured `Result` values directly. This is an
+intentional pre-1.0 breaking cleanup; permanent `try_*` duplicates and `Option`
+compatibility wrappers are not retained.
 
 ```rust
 pub type ImageResult<T> = Result<T, ImageError>;
 
-pub fn try_detect_format(data: &[u8]) -> ImageResult<ImageFormat>;
+pub fn detect_format(data: &[u8]) -> ImageResult<ImageFormat>;
 
-pub fn try_decode(data: &[u8]) -> ImageResult<DecodedImage>;
+pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>>;
 
-pub fn try_decode_sequence(data: &[u8]) -> ImageResult<DecodedSequence>;
+pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>>;
 
-pub fn try_encode(
+pub fn encode(
     image: &DecodedImage,
     format: ImageFormat,
     options: &EncodeOptions,
 ) -> ImageResult<Vec<u8>>;
 
-pub fn try_encode_sequence(
+pub fn encode_sequence(
     sequence: &DecodedSequence,
     format: ImageFormat,
     options: &EncodeOptions,
 ) -> ImageResult<Vec<u8>>;
 ```
 
-Compatibility wrappers:
+Container format and decoded sample mode are different properties. Automatic
+decode retains both through an envelope:
 
 ```rust
-pub fn detect_format(data: &[u8]) -> Option<ImageFormat> {
-    try_detect_format(data).ok()
-}
-
-pub fn decode(data: &[u8]) -> Option<DecodedImage> {
-    try_decode(data).ok()
+pub struct Decoded<T> {
+    pub format: ImageFormat,
+    pub content: T,
 }
 ```
+
+`DecodedImage` remains the format-independent pixel value and retains exact
+`ImageMode`, `ColorType`, pixels, palette RGB, and palette alpha. Programmatic
+images therefore do not need a fictitious source format. Encoding keeps an
+explicit target `ImageFormat`; pixels alone cannot determine whether callers
+want PNG, JPEG, WebP, or another container.
 
 ### Error Type
 
 Use a non-exhaustive Rust error enum:
 
 ```rust
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ImageError {
-    #[error("unknown image format")]
     UnknownFormat,
 
-    #[error("codec feature `{feature}` is disabled for {format:?}")]
     FeatureDisabled {
         format: ImageFormat,
         feature: &'static str,
     },
 
-    #[error("malformed image data")]
     Malformed {
-        format: Option<ImageFormat>,
+        format: ImageFormat,
         message: String,
     },
 
-    #[error("unsupported image data")]
     Unsupported {
         format: Option<ImageFormat>,
         message: String,
     },
 
-    #[error("invalid image dimensions")]
     Dimensions,
 
-    #[error("invalid parameter: {0}")]
     Parameter(String),
 
-    #[error("I/O error: {0}")]
-    Io(String),
+    IoError(String),
 }
 ```
 
@@ -395,18 +420,14 @@ Semantics:
   implemented
 - `Dimensions`: dimensions overflow or violate decoded-buffer invariants
 - `Parameter`: caller-provided encode/decode options are invalid
-- `Io`: file or stream access failed
+- `IoError`: file or stream access failed
 
 ### Metadata Inspection
 
 Add metadata-only inspection:
 
 ```rust
-pub fn try_inspect(data: &[u8]) -> ImageResult<ImageInfo>;
-
-pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
-    try_inspect(data).ok()
-}
+pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo>;
 ```
 
 Proposed type:
@@ -448,8 +469,8 @@ Reader/path variants can be added later if path-based inspection should avoid
 reading entire files:
 
 ```rust
-pub fn try_inspect_reader<R: Read + Seek>(reader: R) -> ImageResult<ImageInfo>;
-pub fn try_inspect_path(path: impl AsRef<Path>) -> ImageResult<ImageInfo>;
+pub fn inspect_reader<R: Read + Seek>(reader: R) -> ImageResult<ImageInfo>;
+pub fn inspect_path(path: impl AsRef<Path>) -> ImageResult<ImageInfo>;
 ```
 
 ### Paletted Decode Contract
@@ -801,20 +822,17 @@ Target:
 
 1. Add `ImageError`.
 2. Add `ImageResult<T>`.
-3. Add `try_detect_format`.
-4. Add `try_decode`.
-5. Add `try_decode_sequence`.
-6. Add `try_encode`.
-7. Add `try_encode_sequence`.
-8. Keep existing `Option` APIs as wrappers.
-9. Return `FeatureDisabled` for disabled codecs.
-10. Add validation for `DecodedImage`.
-11. Normalize paletted decode representation.
+3. Convert the canonical detect/decode/encode APIs to `Result`.
+4. Add `Decoded<T>` so automatic decode retains source format.
+5. Return `FeatureDisabled` for disabled codecs.
+6. Preserve current AVIF still, sequence, and brand behavior.
+7. Add validation for `DecodedImage`.
+8. Normalize paletted decode representation.
 
 ### Phase 2: Add Metadata Inspection
 
 1. Add `ImageInfo`.
-2. Add `try_inspect`.
+2. Add canonical `inspect` returning `ImageResult<ImageInfo>`.
 3. Implement cheap metadata paths format by format.
 4. Preserve palette RGB/alpha in metadata where available.
 5. Avoid full pixel decode in inspect paths.
@@ -837,7 +855,7 @@ Suggested order:
 2. Use `default-features = false`.
 3. Add missing forwarded codec features.
 4. Keep AVIF explicit opt-in.
-5. Replace local decode paths with `try_decode`.
+5. Replace local decode paths with `decode`.
 6. Map `image-slash-star::ImageError` into the `pillow-rs` error type, or reuse
    it if practical.
 
@@ -916,6 +934,8 @@ Do not block still-image migration on this.
 ### Codec Backend
 
 - `image-slash-star` exposes `Result` APIs.
+- automatic decoding retains both source `ImageFormat` and exact pixel mode
+- encoding requires an explicit target format
 - Disabled features return structured errors.
 - Unknown formats, malformed files, and unsupported modes are distinguishable.
 - Paletted formats decode as `P8 + ImagePalette`.
@@ -996,7 +1016,7 @@ make clippy
 3. Add `pillow-rs` feature forwarding.
 4. Add generic `DecodedImage -> Image` conversion in `pillow-rs`.
 5. Remove direct PNG-specific palette decode from `pillow-rs`.
-6. Add `ImageInfo` and `try_inspect` to `image-slash-star`.
+6. Add `ImageInfo` and `inspect` to `image-slash-star`.
 7. Use `ImageInfo` in `pillow-rs`.
 8. Make `load(&mut self)` persistent.
 9. Measure WASM size for codec feature sets and logging variants.

@@ -295,6 +295,12 @@ formats:
       - eoi_without_sos.jpg
       - wrong_soi.jpg
       - truncated_sof_payload.jpg
+      - sof_short_height.jpg
+      - sof_partial_height.jpg
+      - sof_short_width.jpg
+      - sof_short_components.jpg
+      - sof_short_component_table.jpg
+      - fill_marker_truncated.jpg
       - dri_no_length.jpg
       - dri_no_value.jpg
       - app14_no_length.jpg
@@ -303,6 +309,8 @@ formats:
       - app14_adobe_short_transform.jpg
       - tem_marker.jpg
       - unknown_no_length.jpg
+      - sof_zero_width.jpg
+      - sof_zero_height.jpg
       - restart_before_scan.jpg
       - entropy_unexpected_marker.jpg
       expect_error: true
@@ -310,6 +318,7 @@ formats:
       description: Malformed optional JPEG marker ignored by Pillow
       test_assets:
       - app14_short_length.jpg
+      - unknown_short_length.jpg
       - app14_non_adobe.jpg
       - prefixed_stuffed_marker.jpg
       - entropy_eoi_padding.jpg
@@ -691,6 +700,10 @@ formats:
       - adam7_giant_dimensions.png
       - palette_overlong_plte.png
       - idat_truncated_chunk_no_iend.png
+      - ihdr_only.png
+      - ihdr_trailing_byte.png
+      - truncated_ancillary_chunk.png
+      - actl_short.png
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
@@ -705,6 +718,7 @@ formats:
       - palette_trns_without_plte.png
       - duplicate_plte.png
       - duplicate_trns.png
+      - actl_zero_frames.png
       - zlib_oversized_scanline.png
       - zlib_oversized_stored_scanline.png
       - zlib_oversized_backreference_scanline.png
@@ -712,6 +726,10 @@ formats:
       description: Minimal valid dynamic-Huffman zlib stream
       test_assets:
       - zlib_minimal_dynamic.png
+    - id: transparency_rgb
+      description: RGB tRNS metadata is ignored by the pixel decoder
+      test_assets:
+      - rgb_trns.png
     - id: apng_static
       description: APNG with single frame (backward compatible)
       test_assets:
@@ -2629,6 +2647,11 @@ formats:
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:
       - animated.avif
+    - id: error_unsupported_major_brand
+      description: ISO BMFF input whose major brand is not an accepted AVIF brand
+      test_assets:
+      - unsupported_major_brand.avif
+      expect_error: true
     encode_edge_cases:
     - id: enc_default_rgb
       description: Pillow default AVIF settings from RGB input

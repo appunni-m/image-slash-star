@@ -89,6 +89,19 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "error_unsupported_major_brand",
+      "asset": "unsupported_major_brand.avif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/unsupported_major_brand.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }

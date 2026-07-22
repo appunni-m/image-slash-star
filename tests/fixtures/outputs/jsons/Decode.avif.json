@@ -209,6 +209,16 @@
           }
         ]
       }
+    },
+    {
+      "id": "error_unsupported_major_brand",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
     }
   ]
 }

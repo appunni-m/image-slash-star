@@ -53,6 +53,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             b"IDAT" => compressed.extend_from_slice(chunk.data),
             b"PLTE" if palette_rgb.is_none() => palette_rgb = Some(chunk.data.to_vec()),
             b"tRNS" if palette_alpha.is_empty() => palette_alpha.extend_from_slice(chunk.data),
+            b"acTL" if chunk.data.len() != 8 => return None,
             b"IEND" => {
                 saw_end = true;
                 break;

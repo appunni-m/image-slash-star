@@ -173,6 +173,68 @@ pub enum ImageFormat {
     Avif,
 }
 
+/// A decoded value paired with the encoded container format detected from its input.
+///
+/// The envelope deliberately keeps source format separate from [`DecodedImage`] and
+/// [`DecodedSequence`]. Pixel buffers and sequences created by callers have no
+/// intrinsic encoded format until an encoder is selected.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Decoded<T> {
+    /// Encoded container format selected by signature detection.
+    pub format: ImageFormat,
+    /// Decoded still image or retained image sequence.
+    pub content: T,
+}
+
+/// Header metadata obtained without materializing compressed pixel payloads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImageInfo {
+    /// Detected encoded container format.
+    pub format: ImageFormat,
+    /// Canvas width in pixels.
+    pub width: u32,
+    /// Canvas height in pixels.
+    pub height: u32,
+    /// Observable decoded pixel/sample mode.
+    pub mode: ImageMode,
+    /// Encoded bits per channel or palette index.
+    pub bit_depth: u8,
+    /// Palette retained from a separately stored color table.
+    pub palette: Option<ImagePalette>,
+    /// Whether the container declares more than one presentation frame.
+    pub is_animated: bool,
+    /// Exact frame count when a cheap container scan provides it.
+    pub frame_count: Option<u32>,
+}
+
+impl ImageInfo {
+    /// Whether the encoded image uses indexed palette samples.
+    #[must_use]
+    pub const fn has_palette(&self) -> bool {
+        matches!(self.mode, ImageMode::P8)
+    }
+}
+
+impl<T> Decoded<T> {
+    /// Pair decoded content with its detected encoded format.
+    #[must_use]
+    pub const fn new(format: ImageFormat, content: T) -> Self {
+        Self { format, content }
+    }
+
+    /// Borrow the decoded content without discarding its source format.
+    #[must_use]
+    pub const fn as_ref(&self) -> Decoded<&T> {
+        Decoded::new(self.format, &self.content)
+    }
+
+    /// Consume the envelope and return only its decoded content.
+    #[must_use]
+    pub fn into_inner(self) -> T {
+        self.content
+    }
+}
+
 impl ImageFormat {
     /// Attempt to detect the image format from a file path extension.
     pub fn from_path<P: AsRef<std::path::Path>>(path: P) -> Result<ImageFormat, ImageError> {
@@ -191,10 +253,10 @@ impl ImageFormat {
             "tiff" | "tif" => Ok(ImageFormat::Tiff),
             "ico" => Ok(ImageFormat::Ico),
             "avif" => Ok(ImageFormat::Avif),
-            _ => Err(ImageError::Unsupported(format!(
-                "unknown extension: {}",
-                ext
-            ))),
+            _ => Err(ImageError::Unsupported {
+                format: None,
+                message: format!("unknown extension: {ext}"),
+            }),
         }
     }
 }

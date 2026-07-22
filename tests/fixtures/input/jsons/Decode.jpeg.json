@@ -1157,6 +1157,84 @@
       }
     },
     {
+      "id": "malformed_markers_sof_short_height",
+      "asset": "sof_short_height.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_short_height.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_partial_height",
+      "asset": "sof_partial_height.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_partial_height.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_short_width",
+      "asset": "sof_short_width.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_short_width.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_short_components",
+      "asset": "sof_short_components.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_short_components.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_short_component_table",
+      "asset": "sof_short_component_table.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_short_component_table.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_fill_marker_truncated",
+      "asset": "fill_marker_truncated.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/fill_marker_truncated.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "malformed_markers_dri_no_length",
       "asset": "dri_no_length.jpg",
       "expect_error": true,
@@ -1261,6 +1339,32 @@
       }
     },
     {
+      "id": "malformed_markers_sof_zero_width",
+      "asset": "sof_zero_width.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_zero_width.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "malformed_markers_sof_zero_height",
+      "asset": "sof_zero_height.jpg",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sof_zero_height.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "malformed_markers_restart_before_scan",
       "asset": "restart_before_scan.jpg",
       "expect_error": true,
@@ -1292,6 +1396,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_short_length.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_unknown_short_length",
+      "asset": "unknown_short_length.jpg",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/unknown_short_length.jpg",
         "operations": [
           "PIL.Image.open",
           "load",

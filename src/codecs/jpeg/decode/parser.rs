@@ -146,6 +146,9 @@ pub(super) fn parse_sof0(
     }
     let height = read_u16(data, pos)?;
     let width = read_u16(data, pos)?;
+    if width == 0 || height == 0 {
+        return None;
+    }
     let num_components = read_u8(data, pos)?;
     if num_components != 1 && num_components != 3 && num_components != 4 {
         return None;
@@ -419,6 +422,9 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
             0xFF01 => return None,
             _ => {
                 let length = read_u16(data, &mut pos)? as usize;
+                if length < 2 {
+                    continue;
+                }
                 pos += length - 2;
             }
         }

@@ -662,6 +662,20 @@ def gen_jpeg():
     d.joinpath("missing_eoi.jpg").write_bytes(baseline[:-2])
     d.joinpath("wrong_soi.jpg").write_bytes(b"\xff\xd7" + baseline[2:])
     d.joinpath("truncated_sof_payload.jpg").write_bytes(b"\xff\xd8\xff\xc0\x00\x02")
+    d.joinpath("sof_short_height.jpg").write_bytes(b"\xff\xd8\xff\xc0\x00\x03\x08")
+    d.joinpath("sof_partial_height.jpg").write_bytes(
+        b"\xff\xd8\xff\xc0\x00\x04\x08\x00"
+    )
+    d.joinpath("sof_short_width.jpg").write_bytes(
+        b"\xff\xd8\xff\xc0\x00\x05\x08\x00\x01"
+    )
+    d.joinpath("sof_short_components.jpg").write_bytes(
+        b"\xff\xd8\xff\xc0\x00\x07\x08\x00\x01\x00\x01"
+    )
+    d.joinpath("sof_short_component_table.jpg").write_bytes(
+        b"\xff\xd8\xff\xc0\x00\x08\x08\x00\x01\x00\x01\x03"
+    )
+    d.joinpath("fill_marker_truncated.jpg").write_bytes(b"\xff\xd8\xff\xff")
     d.joinpath("prefixed_stuffed_marker.jpg").write_bytes(
         baseline[:2] + b"\xff\x00" + baseline[2:]
     )
@@ -685,6 +699,15 @@ def gen_jpeg():
     )
     d.joinpath("tem_marker.jpg").write_bytes(baseline[:2] + b"\xff\x01" + baseline[2:])
     d.joinpath("unknown_no_length.jpg").write_bytes(b"\xff\xd8\xff\xe2")
+    d.joinpath("unknown_short_length.jpg").write_bytes(
+        baseline[:2] + b"\xff\xe2\x00\x01" + baseline[2:]
+    )
+    zero_width = mutate_jpeg_payload(baseline, 0xC0, 3, 0)
+    zero_width = mutate_jpeg_payload(zero_width, 0xC0, 4, 0)
+    d.joinpath("sof_zero_width.jpg").write_bytes(zero_width)
+    zero_height = mutate_jpeg_payload(baseline, 0xC0, 1, 0)
+    zero_height = mutate_jpeg_payload(zero_height, 0xC0, 2, 0)
+    d.joinpath("sof_zero_height.jpg").write_bytes(zero_height)
     d.joinpath("restart_before_scan.jpg").write_bytes(b"\xff\xd8\xff\xd0\xff\xd9")
     dqt_start, dqt_payload, dqt_end = jpeg_segment(baseline, 0xDB)
     dqt_source = baseline[dqt_payload:dqt_end]
@@ -962,6 +985,40 @@ def gen_png():
     )
     (d / "missing_iend.png").write_bytes((d / "rgb.png").read_bytes()[:-12])
     rgb_header = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
+    d.joinpath("ihdr_only.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n" + png_chunk(b"IHDR", rgb_header)
+    )
+    d.joinpath("ihdr_trailing_byte.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n" + png_chunk(b"IHDR", rgb_header) + b"\0"
+    )
+    d.joinpath("truncated_ancillary_chunk.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + struct.pack(">I", 4)
+        + b"tEXt"
+        + b"x"
+    )
+    d.joinpath("rgb_trns.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"tRNS", b"\0\0\0\0\0\0")
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
+    d.joinpath("actl_short.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"acTL", b"\0" * 7)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
+    d.joinpath("actl_zero_frames.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"acTL", b"\0" * 8)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
     (d / "idat_truncated_chunk_no_iend.png").write_bytes(
         b"\x89PNG\r\n\x1a\n"
         + png_chunk(b"IHDR", rgb_header)
@@ -3813,6 +3870,13 @@ def gen_ico():
     print(f"  ICO: {len(list(d.glob('*.ico')))} files")
 
 
+def gen_avif():
+    d = OUT / "avif"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "unsupported_major_brand.avif").write_bytes(b"\0\0\0\x18ftypheic")
+    print("  AVIF: wrote unsupported-major-brand error fixture")
+
+
 def main():
     generators = {
         "jpeg": gen_jpeg,
@@ -3822,6 +3886,7 @@ def main():
         "webp": gen_webp,
         "tiff": gen_tiff,
         "ico": gen_ico,
+        "avif": gen_avif,
     }
     parser = argparse.ArgumentParser()
     parser.add_argument("--format", choices=generators)
