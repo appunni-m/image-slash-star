@@ -8,7 +8,7 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::map_unwrap_or)]
 
-//! pillow-rs-image — dependency-light pixel-perfect image decoders and encoders.
+//! image-slash-star — dependency-light pixel-perfect image decoders and encoders.
 //!
 //! Goal: produce bit-exact observable output against the pinned Pillow oracle
 //! in `manifest.yaml`. `bytemuck` is the sole third-party Rust runtime utility

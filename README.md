@@ -6,6 +6,9 @@
 Image codec implementation with byte-exact parity against a pinned Pillow
 oracle.
 
+The Cargo package is `image-slash-star`; Rust source imports it as
+`image_slash_star`.
+
 The default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO codecs are 100% Rust:
 zero Pillow imports and zero native codec libraries. `bytemuck` remains the
 only third-party Rust runtime dependency. The opt-in `avif` feature uses the

@@ -26,7 +26,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use pillow_rs_image as img;
+use image_slash_star as img;
 
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
 

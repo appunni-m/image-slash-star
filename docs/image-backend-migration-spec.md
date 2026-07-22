@@ -89,11 +89,11 @@ It must not contain codec logic.
 
 ### `image-slash-star`
 
-The package is currently still named `pillow-rs-image`, so downstream imports
-use:
+The Cargo package is named `image-slash-star`, so downstream Rust imports use
+Cargo's underscore-normalized crate name:
 
 ```rust
-pillow_rs_image
+image_slash_star
 ```
 
 It already exposes centralized codec APIs:
@@ -200,7 +200,7 @@ pub enum Image {
 
 Current behavior:
 
-- lazy sources decode through `pillow_rs_image::decode`
+- lazy sources decode through `image_slash_star::decode`
 - decoded images are converted through `DynamicImage::from_decoded`
 - operation pipelines execute in `pillow-rs`
 - `Image::open` and `Image::open_bytes` eagerly probe PNG palette state using
@@ -216,10 +216,10 @@ Current feature forwarding is incomplete:
 
 ```toml
 image-codecs-all = ["image-gif", "image-png", "image-tiff", "image-webp"]
-image-gif = ["pillow-rs-image/gif"]
-image-png = ["pillow-rs-image/png"]
-image-tiff = ["pillow-rs-image/tiff"]
-image-webp = ["pillow-rs-image/webp"]
+image-gif = ["image-slash-star/gif"]
+image-png = ["image-slash-star/png"]
+image-tiff = ["image-slash-star/tiff"]
+image-webp = ["image-slash-star/webp"]
 ```
 
 Missing forwarded features:
@@ -532,10 +532,10 @@ Do not rely on broad codec defaults for WASM.
 
 ### Dependency And Feature Wiring
 
-Point `pillow-rs-image` at `~/work/image-slash-star` during local migration:
+Point `image-slash-star` at `~/work/image-slash-star` during local migration:
 
 ```toml
-pillow-rs-image = {
+image-slash-star = {
     path = "../image-slash-star",
     default-features = false
 }
@@ -554,14 +554,14 @@ image-codecs-all = [
     "image-ico",
 ]
 
-image-jpeg = ["pillow-rs-image/jpeg"]
-image-png = ["pillow-rs-image/png"]
-image-gif = ["pillow-rs-image/gif"]
-image-bmp = ["pillow-rs-image/bmp"]
-image-tiff = ["pillow-rs-image/tiff"]
-image-webp = ["pillow-rs-image/webp"]
-image-ico = ["pillow-rs-image/ico"]
-image-avif = ["pillow-rs-image/avif"]
+image-jpeg = ["image-slash-star/jpeg"]
+image-png = ["image-slash-star/png"]
+image-gif = ["image-slash-star/gif"]
+image-bmp = ["image-slash-star/bmp"]
+image-tiff = ["image-slash-star/tiff"]
+image-webp = ["image-slash-star/webp"]
+image-ico = ["image-slash-star/ico"]
+image-avif = ["image-slash-star/avif"]
 ```
 
 Recommendation: keep AVIF explicit opt-in until implementation maturity,
@@ -574,7 +574,7 @@ data:
 
 ```rust
 fn image_from_decoded(
-    decoded: pillow_rs_image::DecodedImage,
+    decoded: image_slash_star::DecodedImage,
     format: Option<ImageFormat>,
 ) -> Result<Image, ImageError>;
 ```
@@ -1001,4 +1001,3 @@ make clippy
 8. Make `load(&mut self)` persistent.
 9. Measure WASM size for codec feature sets and logging variants.
 10. Add animated image support separately.
-

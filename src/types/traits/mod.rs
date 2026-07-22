@@ -1,4 +1,4 @@
-//! Core traits for the pillow-rs-image type system.
+//! Core traits for the image-slash-star type system.
 //!
 //! Split into focused submodules:
 //! - `primitive`: numeric foundations (`Primitive`, `Enlargeable`, `EncodableLayout`)

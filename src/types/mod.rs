@@ -1,7 +1,7 @@
-//! The pillow-rs-image type system.
+//! The image-slash-star type system.
 //!
 //! This module provides the core image types matching the `image` crate's API,
-//! allowing `pillow-rs` to swap `use image::*` for `use pillow_rs_image::*`.
+//! allowing `pillow-rs` to swap `use image::*` for `use image_slash_star::*`.
 
 pub mod buffer;
 pub mod color;
