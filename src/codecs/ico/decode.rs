@@ -313,7 +313,9 @@ fn decode_ico_bmp_8bpp(
 ) -> Option<DecodedImage> {
     let header_size = 40;
     let color_count = (if colors_used == 0 { 256 } else { colors_used }) as usize;
-    let palette_size = color_count.checked_mul(4)?;
+    let palette_size = ico_palette_bytes(color_count);
+    #[cfg(not(target_pointer_width = "64"))]
+    let palette_size = palette_size?;
     let palette_end = header_size + palette_size;
 
     let row_size = width as usize;
@@ -364,7 +366,9 @@ fn decode_ico_bmp_4bpp(
 ) -> Option<DecodedImage> {
     let header_size = 40;
     let color_count = (if colors_used == 0 { 16 } else { colors_used }) as usize;
-    let palette_size = color_count.checked_mul(4)?;
+    let palette_size = ico_palette_bytes(color_count);
+    #[cfg(not(target_pointer_width = "64"))]
+    let palette_size = palette_size?;
     let palette_end = header_size + palette_size;
 
     // 4bpp: 2 pixels per byte
@@ -428,7 +432,9 @@ fn decode_ico_bmp_1bpp(
 ) -> Option<DecodedImage> {
     let header_size = 40;
     let color_count = (if colors_used == 0 { 2 } else { colors_used }) as usize;
-    let palette_size = color_count.checked_mul(4)?;
+    let palette_size = ico_palette_bytes(color_count);
+    #[cfg(not(target_pointer_width = "64"))]
+    let palette_size = palette_size?;
     let palette_end = header_size + palette_size;
 
     // 1bpp: 8 pixels per byte
@@ -484,6 +490,16 @@ fn ico_and_mask_after_xor(data: &[u8], width: u32, height: u32) -> (&[u8], usize
     let size = row_size * height as usize;
     debug_assert!(data.len() >= size);
     (&data[data.len() - size..], row_size)
+}
+
+#[cfg(target_pointer_width = "64")]
+fn ico_palette_bytes(color_count: usize) -> usize {
+    color_count * 4
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+fn ico_palette_bytes(color_count: usize) -> Option<usize> {
+    color_count.checked_mul(4)
 }
 
 fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {

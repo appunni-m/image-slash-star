@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `35568a97-8cfc-4fb7-bbcd-1b8460fa1512`
-- Current measured commit metadata: `f64e6c0f6257a6693bad2038c7e06f90915e9f12`
-- Current coverage source state: Attempt 102 source changes measured in the
+- Current snapshot: `7822860e-6d2f-45ee-bc21-4b7781449837`
+- Current measured commit metadata: `6feb743865031a802f5f2bd662b007f8d4c1794f`
+- Current coverage source state: Attempt 103 source changes measured in the
   working tree before commit; source-equivalent to the commit that records this
   attempt.
-- Lines: 26038 / 26041
+- Lines: 26041 / 26044
 - Branches: 3455 / 3460
-- Functions: 1602 / 1602
-- Regions: 41884 / 42352
-- Remaining target: 3 lines, 5 branches, and 468 regions.
+- Functions: 1603 / 1603
+- Regions: 41887 / 42352
+- Remaining target: 3 lines, 5 branches, and 465 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -47,6 +47,8 @@ from Coverage MCP before each implementation sweep.
     209 / 209 regions.
   - `src/codecs/png/decode.rs`: 88 / 88 branches and now
     732 / 732 regions.
+  - `src/codecs/ico/decode.rs`: 62 / 62 branches and now
+    1103 / 1103 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -165,6 +167,56 @@ Measurement/outcome:
   - `decode_ico_bmp_1bpp`: `color_count.checked_mul(4)?`
 - Retention decision: keep. The sweep removed 17 ICO decode region gaps without
   adding missing lines, branches, or functions.
+
+## Attempt 103 plan: ICO palette-size target-width sweep
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `6feb743`.
+- Coverage MCP snapshot: `35568a97-8cfc-4fb7-bbcd-1b8460fa1512`.
+- Overall: `26038 / 26041` lines, `3455 / 3460` branches,
+  `1602 / 1602` functions, and `41884 / 42352` regions.
+- Target file: `src/codecs/ico/decode.rs`, currently `1100 / 1103` regions
+  and `62 / 62` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `src/codecs/ico/decode.rs:316`, `367`, `431`, indexed palette-size multiply | After Attempt 102, raw LLVM JSON shows the only ICO zero regions are `color_count.checked_mul(4)?` in 8/4/1 bpp indexed DIB paths. `color_count` comes from a `u32`; on the current 64-bit target, `u32::MAX * 4` is well below `usize::MAX`, so the overflow side is impossible. On 32-bit targets, the checked guard is still meaningful. | Add a tiny target-width helper: compile to unchecked bounded `u32-derived * 4` on 64-bit, keep `checked_mul(4)?` on non-64-bit. This removes impossible regions from the measured target without weakening 32-bit behavior. |
+
+Implementation/search plan:
+
+1. Add no fixture or coverage-only probe; this is a portability-aware code-shape
+   fix.
+2. Keep the checked path under `#[cfg(not(target_pointer_width = "64"))]`.
+3. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep only if ICO decode reaches 100% regions and aggregate missing regions
+   improve without increasing missing lines, branches, or functions.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run `11e67130-fddd-4f81-a532-d1bccb9afe5a` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `7822860e-6d2f-45ee-bc21-4b7781449837`.
+- Overall changed from `26038 / 26041` lines, `3455 / 3460` branches,
+  `1602 / 1602` functions, and `41884 / 42352` regions to
+  `26041 / 26044` lines, `3455 / 3460` branches, `1603 / 1603`
+  functions, and `41887 / 42352` regions.
+- Missing counts changed from 3 lines, 5 branches, and 468 regions to 3 lines,
+  5 branches, and 465 regions.
+- `src/codecs/ico/decode.rs` is now closed to 100% regions:
+  `1103 / 1103` regions and `62 / 62` branches.
+- Retention decision: keep. The target-width helper removed the final 3
+  measured ICO decode region gaps while preserving checked palette-size
+  arithmetic on non-64-bit targets.
 
 ## Attempt 99 plan: WebP aggregate branch sweep
 
