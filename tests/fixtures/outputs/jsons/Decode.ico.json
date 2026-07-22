@@ -23,7 +23,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "multi_res",
@@ -36,7 +38,24 @@
       "ref_size": [
         32,
         32
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "multi_res_multi_descending",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_multi_descending_ico.bin",
+      "ref_bytes": 3072,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        32,
+        32
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "png_entry",
@@ -49,7 +68,9 @@
       "ref_size": [
         32,
         32
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_entry",
@@ -62,7 +83,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_depths",
@@ -75,7 +98,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_depths_bmp_4bit",
@@ -88,7 +113,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_depths_bmp_8bit",
@@ -101,7 +128,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_depths_bmp_32bit",
@@ -114,7 +143,24 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "bmp_default_palette",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_default_palette_ico.bin",
+      "ref_bytes": 1024,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_mask_transparency",
@@ -127,7 +173,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "bmp_odd_width",
@@ -140,7 +188,9 @@
       "ref_size": [
         15,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "cursor",
@@ -153,7 +203,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "cursor_cursor_default_palette",
@@ -166,7 +218,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "cursor_cursor_24bit",
@@ -179,7 +233,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_16x16",
@@ -192,7 +248,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_256x256",
@@ -205,7 +263,9 @@
       "ref_size": [
         256,
         256
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "error_malformed",
@@ -215,7 +275,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_invalid_reserved",
@@ -225,7 +287,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_invalid_type",
@@ -235,7 +299,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_zero_entries",
@@ -245,7 +311,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_truncated_directory",
@@ -255,7 +323,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_zero_entry",
@@ -265,7 +335,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_truncated_entry",
@@ -275,7 +347,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_short_dib",
@@ -285,7 +359,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_bmp_32bit_truncated_pixels",
@@ -295,7 +371,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_bmp_24bit_truncated_pixels",
@@ -305,7 +383,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_bmp_8bit_truncated_pixels",
@@ -315,7 +395,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_bmp_4bit_truncated_pixels",
@@ -325,7 +407,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_bmp_1bit_truncated_pixels",
@@ -335,7 +419,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_zero_width",
@@ -345,7 +431,45 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_zero_height",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_oversized_width",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "negative seek value -32514",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_oversized_height",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "negative seek value -65222",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_unsupported_bpp",
@@ -355,7 +479,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_cursor_short_header",
@@ -365,7 +491,81 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_cursor_header_oob",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_cursor_truncated_dib",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_cursor_palette_overflow",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP Palette size (4294967295)",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_png_short_header",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_zero_offset",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Truncated File Read",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_too_many_entries",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     }
   ]
 }

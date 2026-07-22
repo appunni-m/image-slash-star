@@ -95,6 +95,10 @@ struct DecodeRow {
     oracle_error_message: Option<String>,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
+    #[serde(default)]
+    ref_frame_count: Option<u32>,
+    #[serde(default)]
+    ref_is_animated: Option<bool>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
     #[serde(default)]
@@ -1152,6 +1156,11 @@ fn inspect_direct(data: &[u8], format: &str) -> Option<img::ImageInfo> {
         "jpeg" => img::codecs::jpeg::inspect::inspect(data),
         "png" => img::codecs::png::inspect::inspect(data),
         "gif" => img::codecs::gif::inspect::inspect(data),
+        "bmp" => img::codecs::bmp::inspect::inspect(data),
+        "webp" => img::codecs::webp::inspect::inspect(data),
+        "tiff" => img::codecs::tiff::inspect::inspect(data),
+        "ico" => img::codecs::ico::inspect::inspect(data),
+        "avif" => img::codecs::avif::inspect::inspect(data),
         _ => None,
     }
 }
@@ -1251,7 +1260,10 @@ fn test_decode_matrix() {
                     failed += 1;
                     continue;
                 }
-                if matches!(fmt_name.as_str(), "png" | "jpeg" | "gif") {
+                if matches!(
+                    fmt_name.as_str(),
+                    "png" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "ico" | "avif"
+                ) {
                     let _ = img::inspect(&data);
                     let _ = direct_info.as_ref();
                 }
@@ -1327,7 +1339,10 @@ fn test_decode_matrix() {
                 continue;
             }
             let decoded = decoded.into_inner();
-            if matches!(fmt_name.as_str(), "png" | "jpeg" | "gif") {
+            if matches!(
+                fmt_name.as_str(),
+                "png" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "ico" | "avif"
+            ) {
                 let info = match img::inspect(&data) {
                     Ok(info) => info,
                     Err(error) => {
@@ -1345,23 +1360,21 @@ fn test_decode_matrix() {
                     continue;
                 }
                 let expected_mode = row.ref_mode.as_deref().and_then(expected_image_mode);
-                let expected_frames = row
-                    .sequence
-                    .as_ref()
-                    .map(|sequence| sequence.frames.len() as u32)
-                    .unwrap_or(1);
+                let expected_is_animated = row
+                    .ref_is_animated
+                    .unwrap_or(row.ref_frame_count.is_some_and(|count| count > 1));
                 if info.format != expected_format
                     || Some(info.width)
                         != row.ref_size.as_ref().and_then(|size| size.first()).copied()
                     || Some(info.height)
                         != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
                     || Some(info.mode) != expected_mode
-                    || (fmt_name == "png" && info.palette != decoded.palette)
+                    || (matches!(fmt_name.as_str(), "png" | "bmp" | "tiff" | "ico")
+                        && info.palette != decoded.palette)
                     || (fmt_name == "gif" && info.palette.is_some() != decoded.palette.is_some())
                     || info.has_palette() != (decoded.mode == img::ImageMode::P8)
-                    || (row.sequence.is_some()
-                        && (info.frame_count != Some(expected_frames)
-                            || info.is_animated != (expected_frames > 1)))
+                    || info.frame_count != row.ref_frame_count
+                    || info.is_animated != expected_is_animated
                 {
                     eprintln!(
                         "  FAIL [{}]: metadata {:?} differs from Pillow mode/size/frame and decoded palette",

@@ -23,7 +23,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "subsampling_422",
@@ -36,7 +38,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "subsampling_420",
@@ -49,7 +53,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "subsampling_411",
@@ -62,7 +68,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "subsampling_gray",
@@ -75,7 +83,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_ycbcr",
@@ -88,7 +98,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_rgb",
@@ -101,7 +113,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_cmyk",
@@ -114,7 +128,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_cmyk_raw",
@@ -127,7 +143,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "huffman_default",
@@ -140,7 +158,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "huffman_optimized",
@@ -153,7 +173,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "huffman_progressive",
@@ -166,7 +188,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_100",
@@ -179,7 +203,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_100_q90",
@@ -192,7 +218,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_100_q75",
@@ -205,7 +233,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_50",
@@ -218,7 +248,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_50_q25",
@@ -231,7 +263,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_10",
@@ -244,7 +278,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "quality_1",
@@ -257,7 +293,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_minimal",
@@ -270,7 +308,9 @@
       "ref_size": [
         8,
         8
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd",
@@ -283,7 +323,9 @@
       "ref_size": [
         17,
         17
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd_33x33",
@@ -296,7 +338,9 @@
       "ref_size": [
         33,
         33
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_large",
@@ -309,7 +353,9 @@
       "ref_size": [
         257,
         129
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_1x1",
@@ -322,7 +368,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "narrow_422",
@@ -335,7 +383,9 @@
       "ref_size": [
         1,
         8
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "unusual_sampling",
@@ -348,7 +398,9 @@
       "ref_size": [
         24,
         8
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "unusual_sampling_sampling_1x3",
@@ -361,7 +413,9 @@
       "ref_size": [
         8,
         24
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "restart_none",
@@ -374,7 +428,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "restart_interval",
@@ -387,7 +443,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "exif_orientation",
@@ -400,7 +458,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "exif_thumbnail",
@@ -413,7 +473,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "no_exif",
@@ -426,7 +488,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "trailing_data",
@@ -439,7 +503,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "multiple_eoi",
@@ -452,7 +518,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "zero_length",
@@ -462,7 +530,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "truncated",
@@ -472,7 +542,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "corrupt_header",
@@ -482,7 +554,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers",
@@ -492,7 +566,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_fill_marker_only",
@@ -502,7 +578,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_markerless_tail",
@@ -512,7 +590,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_length",
@@ -522,7 +602,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_precision",
@@ -532,7 +614,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_height",
@@ -542,7 +626,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_width",
@@ -552,7 +638,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_components",
@@ -562,7 +650,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_comp_id",
@@ -572,7 +662,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_sampling",
@@ -582,7 +674,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_no_quant",
@@ -592,7 +686,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_precision_12",
@@ -602,7 +698,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_two_components",
@@ -612,7 +710,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_zero_sampling",
@@ -622,7 +722,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_high_h_sampling",
@@ -632,7 +734,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_zero_v_sampling",
@@ -642,7 +746,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_high_v_sampling",
@@ -652,7 +758,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_bad_quant_table",
@@ -662,7 +770,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_missing_quant_table",
@@ -672,7 +782,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_sparse_quant_table",
@@ -682,7 +794,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dqt_bad_table",
@@ -692,7 +806,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dqt_no_length",
@@ -702,7 +818,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dqt_no_info",
@@ -712,7 +830,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dqt_truncated_8bit_value",
@@ -722,7 +842,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dqt_truncated_16bit_value",
@@ -732,7 +854,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dht_bad_table",
@@ -742,7 +866,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dht_no_length",
@@ -752,7 +878,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dht_no_info",
@@ -762,7 +890,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dht_truncated_counts",
@@ -772,7 +902,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dht_truncated_values",
@@ -782,7 +914,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dht_oversubscribed",
@@ -792,7 +926,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_length",
@@ -802,7 +938,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_component_count",
@@ -812,7 +950,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_comp_id",
@@ -822,7 +962,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_table",
@@ -832,7 +974,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_ss",
@@ -842,7 +986,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_se",
@@ -852,7 +998,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_no_ahal",
@@ -862,7 +1010,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_unknown_component",
@@ -872,7 +1022,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_zero_components",
@@ -882,7 +1034,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_bad_dc_table",
@@ -892,7 +1046,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_bad_ac_table",
@@ -902,7 +1058,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_missing_dc_table",
@@ -912,7 +1070,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_missing_ac_table",
@@ -922,7 +1082,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_sparse_dc_table",
@@ -932,7 +1094,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_sparse_ac_table",
@@ -942,7 +1106,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_duplicate_sof",
@@ -952,7 +1118,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sos_before_sof",
@@ -962,7 +1130,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_eoi_without_sos",
@@ -972,7 +1142,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_wrong_soi",
@@ -982,7 +1154,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_truncated_sof_payload",
@@ -992,7 +1166,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_short_height",
@@ -1002,7 +1178,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_partial_height",
@@ -1012,7 +1190,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_short_width",
@@ -1022,7 +1202,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_short_components",
@@ -1032,7 +1214,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_short_component_table",
@@ -1042,7 +1226,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_fill_marker_truncated",
@@ -1052,7 +1238,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dri_no_length",
@@ -1062,7 +1250,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_dri_no_value",
@@ -1072,7 +1262,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_app14_no_length",
@@ -1082,7 +1274,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_app14_declared_too_long",
@@ -1092,7 +1286,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_app14_truncated_payload",
@@ -1102,7 +1298,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_app14_adobe_short_transform",
@@ -1112,7 +1310,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_tem_marker",
@@ -1122,7 +1322,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_unknown_no_length",
@@ -1132,7 +1334,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_zero_width",
@@ -1142,7 +1346,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_sof_zero_height",
@@ -1152,7 +1358,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_restart_before_scan",
@@ -1162,7 +1370,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "malformed_markers_entropy_unexpected_marker",
@@ -1172,7 +1382,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "pillow_tolerated_malformed",
@@ -1185,7 +1397,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_unknown_short_length",
@@ -1198,7 +1412,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_app14_non_adobe",
@@ -1211,7 +1427,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_prefixed_stuffed_marker",
@@ -1224,7 +1442,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_entropy_eoi_padding",
@@ -1237,7 +1457,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_entropy_empty_scan",
@@ -1250,7 +1472,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
@@ -1263,7 +1487,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
@@ -1276,7 +1502,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
@@ -1289,7 +1517,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
@@ -1302,7 +1532,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_progressive_scan0_empty",
@@ -1315,7 +1547,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "dqt_16bit",
@@ -1328,7 +1562,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "missing_eoi",
@@ -1338,7 +1574,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "baseline_standard",
@@ -1351,7 +1589,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "progressive_spectral",
@@ -1364,7 +1604,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "progressive_modes",
@@ -1377,7 +1619,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "progressive_modes_progressive_cmyk",
@@ -1390,7 +1634,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "progressive_restart",
@@ -1403,7 +1649,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     }
   ]
 }

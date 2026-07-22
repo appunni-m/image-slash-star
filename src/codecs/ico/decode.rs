@@ -173,7 +173,7 @@ fn decode_cur_bmp(data: &[u8]) -> Option<DecodedImage> {
     crate::codecs::bmp::decode::decode(&bmp)
 }
 
-fn cur_bmp_prefix(
+pub(super) fn cur_bmp_prefix(
     data_len: usize,
     header_size: usize,
     palette_entries: usize,

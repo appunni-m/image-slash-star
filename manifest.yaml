@@ -1336,6 +1336,7 @@ formats:
       - palette_blue_mismatch.bmp
       - palette_green_mismatch.bmp
       - palette_red_mismatch.bmp
+      - 8bit_implicit_palette.bmp
     - id: depth_16
       description: 16-bit (RGB555)
       test_assets:
@@ -1413,6 +1414,10 @@ formats:
       description: Pillow ignores a nonstandard planes field
       test_assets:
       - invalid_planes.bmp
+    - id: data_offset_before_header
+      description: Pillow accepts a pixel offset one byte before the declared DIB header end
+      test_assets:
+      - data_offset_before_header.bmp
     - id: error_not_bmp
       description: File without BM magic
       test_assets:
@@ -1422,6 +1427,8 @@ formats:
       description: Malformed BMP headers, palettes, and pixel payloads
       test_assets:
       - invalid_header_size.bmp
+      - core_zero_width.bmp
+      - 4bit_gray.bmp
       - invalid_width.bmp
       - invalid_height.bmp
       - oversized_width.bmp
@@ -1722,6 +1729,7 @@ formats:
       test_assets:
       - bad_riff_chunk.webp
       - bad_webp_signature.webp
+      - short_riff.webp
       - vp8_interframe.webp
       - vp8_zero_width.webp
       - vp8_zero_height.webp
@@ -1732,6 +1740,8 @@ formats:
       - extended_missing_image_chunk.webp
       - extended_vp8x_no_chunks.webp
       - extended_vp8x_truncated_chunk_header.webp
+      - vp8x_short_header.webp
+      - animated_short_anmf_header.webp
       - animated_missing_anim.webp
       - animated_missing_anmf.webp
       - animated_anim_payload_eof_after_anmf.webp
@@ -1748,6 +1758,7 @@ formats:
       - alpha_invalid_preprocessing.webp
       - alpha_invalid_compression.webp
       - vp8l_alpha_header_only.webp
+      - vp8l_short_header.webp
       - vp8l_truncated_6.webp
       - vp8l_truncated_8.webp
       - vp8l_truncated_12.webp
@@ -2105,6 +2116,10 @@ formats:
       test_assets:
       - palette2.tiff
       - palette4.tiff
+    - id: palette_map_leniency
+      description: Pillow retains palette indices when ColorMap is too short
+      test_assets:
+      - short_color_map.tiff
     - id: rgb
       description: RGB
       test_assets:
@@ -2186,6 +2201,14 @@ formats:
       description: Multi-page TIFF (decode first page)
       test_assets:
       - multipage.tiff
+    - id: cyclic_ifd_leniency
+      description: Pillow stops a self-referential IFD chain after the first unique page
+      test_assets:
+      - cyclic_ifd.tiff
+    - id: truncated_later_ifd_leniency
+      description: Pillow counts a referenced truncated later IFD before ending the chain
+      test_assets:
+      - truncated_second_ifd.tiff
     - id: error_bad_ifd
       description: Corrupt headers, dimensions, tags, and strip bounds
       test_assets:
@@ -2201,6 +2224,7 @@ formats:
       - zero_width.tiff
       - zero_height.tiff
       - mixed_bits.tiff
+      - empty_bits.tiff
       - rows_zero.tiff
       - unknown_compression.tiff
       - unsupported_photometric.tiff
@@ -2218,6 +2242,7 @@ formats:
       - ascii_width.tiff
       - ascii_height.tiff
       - ascii_bits.tiff
+      - missing_color_map.tiff
       - ascii_strip_offsets.tiff
       - ascii_compressed_strip_byte_counts.tiff
       - compressed_descending_strip_offsets.tiff
@@ -2401,6 +2426,7 @@ formats:
       description: Multiple resolution entries
       test_assets:
       - multi.ico
+      - multi_descending.ico
     - id: png_entry
       description: ICO with embedded PNG data
       test_assets:
@@ -2416,6 +2442,10 @@ formats:
       - bmp_4bit.ico
       - bmp_8bit.ico
       - bmp_32bit.ico
+    - id: bmp_default_palette
+      description: Indexed BMP entry using the implicit full palette size
+      test_assets:
+      - bmp_default_palette.ico
     - id: bmp_mask_transparency
       description: 24-bit BMP entry transparency supplied by the ICO AND mask
       test_assets:
@@ -2455,8 +2485,17 @@ formats:
       - bmp_4bit_truncated_pixels.ico
       - bmp_1bit_truncated_pixels.ico
       - zero_width.ico
+      - zero_height.ico
+      - oversized_width.ico
+      - oversized_height.ico
       - unsupported_bpp.ico
       - cursor_short_header.cur
+      - cursor_header_oob.cur
+      - cursor_truncated_dib.cur
+      - cursor_palette_overflow.cur
+      - png_short_header.ico
+      - zero_offset.ico
+      - too_many_entries.ico
       expect_error: true
     encode_edge_cases:
     - id: enc_16x16

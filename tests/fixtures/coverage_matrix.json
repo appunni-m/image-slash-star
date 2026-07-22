@@ -18,7 +18,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "10bit.avif",
@@ -96,7 +98,9 @@
                 "duration_ms": 1000
               }
             ]
-          }
+          },
+          "ref_frame_count": 5,
+          "ref_is_animated": true
         },
         {
           "asset": "alpha.avif",
@@ -114,7 +118,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "hdr.avif",
@@ -132,7 +138,9 @@
           "ref_size": [
             200,
             200
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "grid.avif",
@@ -150,7 +158,9 @@
           "ref_size": [
             80,
             80
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "animated.avif",
@@ -228,7 +238,9 @@
                 "duration_ms": 33
               }
             ]
-          }
+          },
+          "ref_frame_count": 5,
+          "ref_is_animated": true
         },
         {
           "id": "error_unsupported_major_brand",
@@ -269,7 +281,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba",
@@ -295,7 +309,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_luma",
@@ -321,7 +337,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_luma_alpha",
@@ -347,7 +365,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_cmyk",
@@ -373,7 +393,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bilevel",
@@ -399,7 +421,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_indexed_opaque",
@@ -426,7 +450,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_indexed_alpha",
@@ -453,7 +479,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_quality_100_444",
@@ -483,7 +511,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_limited_422",
@@ -513,7 +543,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_alpha_premultiplied",
@@ -541,7 +573,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_monochrome",
@@ -569,7 +603,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_explicit_tiles",
@@ -599,7 +635,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_metadata",
@@ -629,7 +667,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_orientation",
@@ -657,7 +697,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_advanced_tune",
@@ -688,7 +730,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_animation",
@@ -719,7 +763,9 @@
           "ref_size": [
             150,
             150
-          ]
+          ],
+          "ref_frame_count": 5,
+          "ref_is_animated": true
         },
         {
           "id": "enc_invalid_subsampling",
@@ -877,7 +923,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_1bit_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "4bit.bmp",
@@ -895,7 +943,9 @@
             16,
             16
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "8bit.bmp",
@@ -914,7 +964,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_8bit_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_8_gray",
@@ -932,7 +984,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_8_palette_blue_mismatch",
@@ -950,7 +1004,9 @@
           "ref_size": [
             2,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_8_palette_green_mismatch",
@@ -968,7 +1024,9 @@
           "ref_size": [
             2,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_8_palette_red_mismatch",
@@ -986,7 +1044,29 @@
           "ref_size": [
             2,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "depth_8_8bit_implicit_palette",
+          "type": "decode",
+          "format": "bmp",
+          "category": "depth",
+          "description": "8-bit indexed BMP",
+          "asset": "8bit_implicit_palette.bmp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_8bit_implicit_palette_bmp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "16bit.bmp",
@@ -1004,7 +1084,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "24bit.bmp",
@@ -1023,7 +1105,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_24bit_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "32bit.bmp",
@@ -1042,7 +1126,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_32bit_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "uncompressed.bmp",
@@ -1060,7 +1146,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "rle8.bmp",
@@ -1079,7 +1167,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle8_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_rle8_rle8_mixed",
@@ -1097,7 +1187,9 @@
           "ref_size": [
             9,
             4
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_rle8_rle8_top_down",
@@ -1115,7 +1207,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_rle8_rle8_delta",
@@ -1133,7 +1227,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_rle8_rle8_absolute_odd",
@@ -1151,7 +1247,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "rle4.bmp",
@@ -1169,7 +1267,9 @@
             16,
             16
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_rle4_rle4_mixed",
@@ -1187,7 +1287,9 @@
           "ref_size": [
             9,
             4
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "bitfields.bmp",
@@ -1205,7 +1307,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_bitfields_bitfields_v2_32_no_alpha",
@@ -1223,7 +1327,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_bitfields_v4header16",
@@ -1241,7 +1347,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "top_down.bmp",
@@ -1259,7 +1367,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "top_down_top_down_1",
@@ -1277,7 +1387,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "top_down_top_down_1_canonical",
@@ -1295,7 +1407,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "top_down_top_down_4",
@@ -1313,7 +1427,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "top_down_top_down_8",
@@ -1331,7 +1447,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "top_down_top_down_16",
@@ -1349,7 +1467,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "top_down_top_down_32",
@@ -1367,7 +1487,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "bottom_up.bmp",
@@ -1385,7 +1507,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bottom_up_bottom_up_1_palette",
@@ -1403,7 +1527,9 @@
           "ref_size": [
             9,
             5
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "os2v1.bmp",
@@ -1421,7 +1547,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "v4header.bmp",
@@ -1439,7 +1567,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "v5header.bmp",
@@ -1457,7 +1587,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "1x1.bmp",
@@ -1476,7 +1608,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_1x1_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "odd_width.bmp",
@@ -1495,7 +1629,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_odd_width_bmp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_width2",
@@ -1513,7 +1649,9 @@
             2,
             5
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_width3",
@@ -1531,7 +1669,9 @@
             3,
             5
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_width31",
@@ -1549,7 +1689,9 @@
             31,
             7
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "planes_nonstandard",
@@ -1567,7 +1709,29 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "data_offset_before_header",
+          "type": "decode",
+          "format": "bmp",
+          "category": "data",
+          "description": "Pillow accepts a pixel offset one byte before the declared DIB header end",
+          "asset": "data_offset_before_header.bmp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_data_offset_before_header_bmp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "not_bmp.bmp",
@@ -1596,6 +1760,32 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "Unsupported BMP header type (16)"
+        },
+        {
+          "id": "error_malformed_core_zero_width",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "core_zero_width.bmp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_4bit_gray",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "4bit_gray.bmp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "codec configuration error when reading image file"
         },
         {
           "id": "error_malformed_invalid_width",
@@ -2230,7 +2420,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_4bit",
@@ -2252,7 +2444,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2274,7 +2468,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale",
@@ -2296,7 +2492,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_error_grayscale_alpha",
@@ -2410,7 +2608,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2432,7 +2632,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2454,7 +2656,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2476,7 +2680,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bi_rle8",
@@ -2498,7 +2704,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bi_rle4",
@@ -2520,7 +2728,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bi_bitfields",
@@ -2542,7 +2752,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_top_down",
@@ -2564,7 +2776,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2586,7 +2800,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2608,7 +2824,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_v4_header",
@@ -2630,7 +2848,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_v5_header",
@@ -2652,7 +2872,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2677,7 +2899,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -2702,7 +2926,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     },
@@ -2725,7 +2951,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_static_gif.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "animated.gif",
@@ -2744,7 +2972,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_animated_gif.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_gif_animated_3frame",
@@ -2762,7 +2992,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 3,
+          "ref_is_animated": true
         },
         {
           "asset": "transparent.gif",
@@ -2781,7 +3013,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_transparent_gif.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "interlaced.gif",
@@ -2800,7 +3034,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_interlaced_gif.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "global_ct.gif",
@@ -2818,7 +3054,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "local_ct.gif",
@@ -2836,7 +3074,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_table_local_local_palette_only",
@@ -2854,7 +3094,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "palette_absent",
@@ -2872,7 +3114,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "palette_absent_animated_no_palette",
@@ -2890,7 +3134,9 @@
           "ref_size": [
             8,
             8
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "ignored_extension",
@@ -2908,7 +3154,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "ignored_extension_unknown_application",
@@ -2926,7 +3174,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alternate_loop_extension",
@@ -2944,7 +3194,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "alternate_loop_extension_animext_bad_payload",
@@ -2962,7 +3214,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "alternate_loop_extension_short_loop_payload",
@@ -2980,7 +3234,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "gce.gif",
@@ -2999,7 +3255,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_gce_gif.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "extension_gce_gce_previous",
@@ -3017,7 +3275,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "extension_gce_disposal_keep",
@@ -3035,7 +3295,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "extension_gce_disposal_reserved",
@@ -3053,7 +3315,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "extension_gce_nonstandard_gce_size",
@@ -3071,7 +3335,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "logical_canvas_fallback",
@@ -3089,7 +3355,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "logical_canvas_fallback_frame_outside_logical",
@@ -3107,7 +3375,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "transparency_index_leniency",
@@ -3125,7 +3395,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "palette_index_leniency",
@@ -3143,7 +3415,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lzw_boundary_leniency",
@@ -3161,7 +3435,9 @@
           "ref_size": [
             3,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lzw_boundary_leniency_lzw_kwkwk_clipped",
@@ -3179,7 +3455,9 @@
           "ref_size": [
             2,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lzw_boundary_leniency_lzw_no_eoi",
@@ -3197,7 +3475,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lzw_boundary_leniency_lzw_dictionary_saturation",
@@ -3215,7 +3495,9 @@
           "ref_size": [
             4100,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "1x1.gif",
@@ -3234,7 +3516,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.gif_1x1_gif.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "empty.gif",
@@ -3832,7 +4116,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -3855,7 +4141,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_animated_luminance",
@@ -3878,7 +4166,9 @@
           "ref_size": [
             8,
             8
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "description": "",
@@ -3902,7 +4192,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_background",
@@ -3926,7 +4218,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_previous",
@@ -3950,7 +4244,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_animated_rgba",
@@ -3973,7 +4269,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgba_opaque",
@@ -3996,7 +4294,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgba_background_partial",
@@ -4019,7 +4319,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgba_background_opaque",
@@ -4042,7 +4344,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgb",
@@ -4065,7 +4369,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgb_background_existing",
@@ -4088,7 +4394,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgb_full_delta",
@@ -4111,7 +4419,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_rgb_background_full_palette",
@@ -4134,7 +4444,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "enc_error_cmyk",
@@ -4244,7 +4556,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4266,7 +4580,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4288,7 +4604,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4310,7 +4628,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4332,7 +4652,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4354,7 +4676,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4376,7 +4700,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4398,7 +4724,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_local_ct",
@@ -4420,7 +4748,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -4445,7 +4775,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgb",
@@ -4465,7 +4797,9 @@
           "ref_size": [
             8,
             8
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgb_high_color",
@@ -4485,7 +4819,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale",
@@ -4505,7 +4841,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba",
@@ -4525,7 +4863,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba_mixed",
@@ -4545,7 +4885,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba_high_color",
@@ -4565,7 +4907,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba_octree",
@@ -4585,7 +4929,9 @@
           "ref_size": [
             16385,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba_octree_sorted",
@@ -4605,7 +4951,9 @@
           "ref_size": [
             32896,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba_opaque",
@@ -4625,7 +4973,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     },
@@ -4648,7 +4998,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.ico_single_ico.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "multi.ico",
@@ -4667,7 +5019,29 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.ico_multi_ico.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "multi_res_multi_descending",
+          "type": "decode",
+          "format": "ico",
+          "category": "multi",
+          "description": "Multiple resolution entries",
+          "asset": "multi_descending.ico",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_multi_descending_ico.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "png_entry.ico",
@@ -4686,7 +5060,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.ico_png_entry_ico.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "bmp_entry.ico",
@@ -4704,7 +5080,9 @@
             16,
             16
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bmp_depths",
@@ -4722,7 +5100,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bmp_depths_bmp_4bit",
@@ -4740,7 +5120,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bmp_depths_bmp_8bit",
@@ -4758,7 +5140,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bmp_depths_bmp_32bit",
@@ -4776,7 +5160,29 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "bmp_default_palette",
+          "type": "decode",
+          "format": "ico",
+          "category": "bmp",
+          "description": "Indexed BMP entry using the implicit full palette size",
+          "asset": "bmp_default_palette.ico",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_bmp_default_palette_ico.bin",
+          "ref_bytes": 1024,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bmp_mask_transparency",
@@ -4794,7 +5200,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "bmp_odd_width",
@@ -4812,7 +5220,9 @@
           "ref_size": [
             15,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "cursor",
@@ -4830,7 +5240,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "cursor_cursor_default_palette",
@@ -4848,7 +5260,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "cursor_cursor_24bit",
@@ -4866,7 +5280,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "16x16.ico",
@@ -4885,7 +5301,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.ico_16x16_ico.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "256x256.ico",
@@ -4903,7 +5321,9 @@
             256,
             256
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "error_malformed",
@@ -5088,6 +5508,45 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "error_malformed_zero_height",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "zero_height.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_oversized_width",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "oversized_width.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "negative seek value -32514"
+        },
+        {
+          "id": "error_malformed_oversized_height",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "oversized_height.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "negative seek value -65222"
+        },
+        {
           "id": "error_malformed_unsupported_bpp",
           "type": "decode",
           "format": "ico",
@@ -5112,6 +5571,84 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "Unsupported BMP header type (20)"
+        },
+        {
+          "id": "error_malformed_cursor_header_oob",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "cursor_header_oob.cur",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Truncated File Read"
+        },
+        {
+          "id": "error_malformed_cursor_truncated_dib",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "cursor_truncated_dib.cur",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Truncated File Read"
+        },
+        {
+          "id": "error_malformed_cursor_palette_overflow",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "cursor_palette_overflow.cur",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP Palette size (4294967295)"
+        },
+        {
+          "id": "error_malformed_png_short_header",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "png_short_header.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_zero_offset",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "zero_offset.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Truncated File Read"
+        },
+        {
+          "id": "error_malformed_too_many_entries",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "Malformed ICO headers, directories, and entry payloads",
+          "asset": "too_many_entries.ico",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
         }
       ],
       "encode": [
@@ -5140,7 +5677,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "32x32 icon",
@@ -5167,7 +5706,9 @@
           "ref_size": [
             32,
             32
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "48x48 icon",
@@ -5194,7 +5735,9 @@
           "ref_size": [
             48,
             48
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "256x256 icon",
@@ -5221,7 +5764,9 @@
           "ref_size": [
             256,
             256
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Two-resolution icon",
@@ -5252,7 +5797,9 @@
           "ref_size": [
             32,
             32
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Four-resolution icon",
@@ -5291,7 +5838,9 @@
           "ref_size": [
             256,
             256
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_empty_sizes",
@@ -5435,7 +5984,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -5457,7 +6008,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -5479,7 +6032,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -5501,7 +6056,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -5523,7 +6080,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_hotspot",
@@ -5548,7 +6107,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_oversized_source",
@@ -5568,7 +6129,9 @@
           "ref_size": [
             256,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_gray_resize",
@@ -5595,7 +6158,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba_resize",
@@ -5622,7 +6187,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_integer_scale_resize",
@@ -5649,7 +6216,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bmp_rgba",
@@ -5671,7 +6240,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bmp_256",
@@ -5699,7 +6270,9 @@
           "ref_size": [
             256,
             256
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_bmp_empty_sizes",
@@ -5836,7 +6409,9 @@
           "ref_size": [
             16,
             16
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Multi-resolution",
@@ -5867,7 +6442,9 @@
           "ref_size": [
             32,
             32
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     },
@@ -5890,7 +6467,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_444_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_422.jpg",
@@ -5909,7 +6488,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_422_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_420.jpg",
@@ -5928,7 +6509,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_420_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_411.jpg",
@@ -5947,7 +6530,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_411_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_gray.jpg",
@@ -5966,7 +6551,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_gray_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_ycbcr.jpg",
@@ -5984,7 +6571,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_rgb_jpeg.jpg",
@@ -6002,7 +6591,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_cmyk.jpg",
@@ -6020,7 +6611,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_cmyk_raw",
@@ -6038,7 +6631,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_default.jpg",
@@ -6056,7 +6651,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_optimized.jpg",
@@ -6074,7 +6671,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "progressive.jpg",
@@ -6093,7 +6692,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "q100.jpg",
@@ -6112,7 +6713,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_q100_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "quality_100_q90",
@@ -6130,7 +6733,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "quality_100_q75",
@@ -6148,7 +6753,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "q50.jpg",
@@ -6167,7 +6774,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_q50_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "quality_50_q25",
@@ -6185,7 +6794,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "q10.jpg",
@@ -6204,7 +6815,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_q10_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "q1.jpg",
@@ -6223,7 +6836,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_q1_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "8x8.jpg",
@@ -6242,7 +6857,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_8x8_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "17x17.jpg",
@@ -6261,7 +6878,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_17x17_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_33x33",
@@ -6279,7 +6898,9 @@
             33,
             33
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "large.jpg",
@@ -6297,7 +6918,9 @@
             257,
             129
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "1x1.jpg",
@@ -6316,7 +6939,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_1x1_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "narrow_422",
@@ -6334,7 +6959,9 @@
           "ref_size": [
             1,
             8
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "unusual_sampling",
@@ -6352,7 +6979,9 @@
           "ref_size": [
             24,
             8
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "unusual_sampling_sampling_1x3",
@@ -6370,7 +6999,9 @@
           "ref_size": [
             8,
             24
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "baseline_default.jpg",
@@ -6388,7 +7019,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "restart.jpg",
@@ -6407,7 +7040,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_restart_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "exif_orientation.jpg",
@@ -6425,7 +7060,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "exif_thumbnail.jpg",
@@ -6443,7 +7080,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "no_exif.jpg",
@@ -6461,7 +7100,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "trailing_data.jpg",
@@ -6479,7 +7120,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "multiple_eoi.jpg",
@@ -6497,7 +7140,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "empty.jpg",
@@ -7457,7 +8102,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_unknown_short_length",
@@ -7475,7 +8122,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_app14_non_adobe",
@@ -7493,7 +8142,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_prefixed_stuffed_marker",
@@ -7511,7 +8162,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_entropy_eoi_padding",
@@ -7529,7 +8182,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_entropy_empty_scan",
@@ -7547,7 +8202,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
@@ -7565,7 +8222,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
@@ -7583,7 +8242,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
@@ -7601,7 +8262,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
@@ -7619,7 +8282,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_progressive_scan0_empty",
@@ -7637,7 +8302,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "dqt_16bit",
@@ -7655,7 +8322,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "missing_eoi",
@@ -7687,7 +8356,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "progressive_spectral.jpg",
@@ -7706,7 +8377,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_spectral_jpg.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "progressive_modes",
@@ -7724,7 +8397,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "progressive_modes_progressive_cmyk",
@@ -7742,7 +8417,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "progressive_restart",
@@ -7760,7 +8437,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ],
       "encode": [
@@ -7784,7 +8463,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7806,7 +8487,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7828,7 +8511,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7850,7 +8535,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7872,7 +8559,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7894,7 +8583,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7916,7 +8607,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7938,7 +8631,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7960,7 +8655,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -7982,7 +8679,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8004,7 +8703,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8026,7 +8727,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8048,7 +8751,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8070,7 +8775,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8095,7 +8802,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_zero_width",
@@ -8140,7 +8849,9 @@
           "ref_size": [
             8,
             8
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8165,7 +8876,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_exif",
@@ -8187,7 +8900,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8209,7 +8924,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8231,7 +8948,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8253,7 +8972,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_dct_fast",
@@ -8275,7 +8996,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_dct_slow",
@@ -8297,7 +9020,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8319,7 +9044,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_optimize_odd",
@@ -8345,7 +9072,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_optimize_restart",
@@ -8368,7 +9097,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_progressive_grayscale",
@@ -8391,7 +9122,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_progressive_eob_limit",
@@ -8414,7 +9147,9 @@
           "ref_size": [
             2048,
             1024
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -8436,7 +9171,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Quality 100 (max)",
@@ -8458,7 +9195,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Quality 85 (default)",
@@ -8480,7 +9219,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Quality 50",
@@ -8502,7 +9243,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Quality 10 (min)",
@@ -8524,7 +9267,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "4:4:4 chroma",
@@ -8546,7 +9291,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "4:2:0 chroma",
@@ -8568,7 +9315,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     },
@@ -8591,7 +9340,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_gray_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "gray_alpha.png",
@@ -8610,7 +9361,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_gray_alpha_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "rgb.png",
@@ -8629,7 +9382,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgb_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "rgba.png",
@@ -8648,7 +9403,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_rgba_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_rgba_alpha_checker",
@@ -8666,7 +9423,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_rgba_alpha_partial",
@@ -8684,7 +9443,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "indexed.png",
@@ -8703,7 +9464,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_indexed_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_indexed_palette_2color",
@@ -8721,7 +9484,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_indexed_palette_256color",
@@ -8739,7 +9504,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_indexed_palette_2bit",
@@ -8757,7 +9524,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_indexed_palette_4bit",
@@ -8775,7 +9544,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "indexed_alpha.png",
@@ -8794,7 +9565,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_indexed_alpha_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "color_indexed_alpha_palette_trns_opaque",
@@ -8812,7 +9585,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "1bit.png",
@@ -8831,7 +9606,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_1bit_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "2bit.png",
@@ -8850,7 +9627,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_2bit_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "4bit.png",
@@ -8869,7 +9648,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_4bit_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "8bit.png",
@@ -8888,7 +9669,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_8bit_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "16bit.png",
@@ -8907,7 +9690,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_16bit_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_16_rgb16",
@@ -8925,7 +9710,9 @@
           "ref_size": [
             9,
             7
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_16_la16",
@@ -8943,7 +9730,9 @@
           "ref_size": [
             9,
             7
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_16_rgba16",
@@ -8961,7 +9750,9 @@
           "ref_size": [
             9,
             7
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "no_interlace.png",
@@ -8980,7 +9771,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_no_interlace_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "adam7.png",
@@ -8999,7 +9792,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_adam7_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "interlace_adam7_adam7_1x1",
@@ -9017,7 +9812,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "interlace_adam7_adam7_2x3",
@@ -9035,7 +9832,9 @@
           "ref_size": [
             2,
             3
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "filter_none.png",
@@ -9054,7 +9853,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_filter_none_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "filter_sub.png",
@@ -9073,7 +9874,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_filter_sub_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "filter_up.png",
@@ -9092,7 +9895,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_filter_up_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "filter_average.png",
@@ -9111,7 +9916,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_filter_average_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "filter_paeth.png",
@@ -9130,7 +9937,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_filter_paeth_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "filter_mixed.png",
@@ -9149,7 +9958,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_filter_mixed_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "compress_default.png",
@@ -9168,7 +9979,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_compress_default_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compress_default_compress_fast",
@@ -9186,7 +9999,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compress_default_compress_mid",
@@ -9204,7 +10019,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "compress_none.png",
@@ -9223,7 +10040,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_compress_none_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "compress_max.png",
@@ -9242,7 +10061,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_compress_max_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "gama.png",
@@ -9261,7 +10082,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_gama_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "srgb.png",
@@ -9280,7 +10103,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_srgb_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "iccp.png",
@@ -9298,7 +10123,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "text_chunks.png",
@@ -9317,7 +10144,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_text_chunks_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "time_chunk.png",
@@ -9335,7 +10164,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "bkgd.png",
@@ -9353,7 +10184,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "phys.png",
@@ -9371,7 +10204,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "1x1.png",
@@ -9390,7 +10225,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_1x1_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "16x16.png",
@@ -9408,7 +10245,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "large.png",
@@ -9426,7 +10265,9 @@
             513,
             257
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "odd_size.png",
@@ -9445,7 +10286,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.png_odd_size_png.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_2x3",
@@ -9463,7 +10306,9 @@
             2,
             3
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_1x255",
@@ -9481,7 +10326,9 @@
             1,
             255
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "size_odd_255x1",
@@ -9499,7 +10346,9 @@
             255,
             1
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "truncated.png",
@@ -10015,7 +10864,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_missing_iend",
@@ -10033,7 +10884,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_palette_trns_too_long",
@@ -10051,7 +10904,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_palette_missing_plte",
@@ -10069,7 +10924,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_palette_empty_plte",
@@ -10087,7 +10944,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_palette_short_plte",
@@ -10105,7 +10964,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_palette_partial_plte",
@@ -10123,7 +10984,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_palette_trns_without_plte",
@@ -10141,7 +11004,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_duplicate_plte",
@@ -10159,7 +11024,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_duplicate_trns",
@@ -10177,7 +11044,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_actl_zero_frames",
@@ -10195,7 +11064,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
@@ -10213,7 +11084,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
@@ -10231,7 +11104,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
@@ -10249,7 +11124,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_dynamic_manual",
@@ -10267,7 +11144,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "transparency_rgb",
@@ -10285,7 +11164,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "apng_static.png",
@@ -10303,7 +11184,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "apng_animated.png",
@@ -10321,7 +11204,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         }
       ],
       "encode": [
@@ -10345,7 +11230,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_1",
@@ -10367,7 +11254,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_1_1x1",
@@ -10389,7 +11278,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_2",
@@ -10411,7 +11302,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -10433,7 +11326,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_3_1x1",
@@ -10455,7 +11350,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_4",
@@ -10477,7 +11374,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_5",
@@ -10499,7 +11398,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -10521,7 +11422,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_7",
@@ -10543,7 +11446,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_8",
@@ -10565,7 +11470,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -10587,7 +11494,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_7_1x1",
@@ -10609,7 +11518,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_8_1x1",
@@ -10631,7 +11542,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_9_1x1",
@@ -10653,7 +11566,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_stored",
@@ -10675,7 +11590,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_1_boundary",
@@ -10697,7 +11614,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_2_boundary",
@@ -10719,7 +11638,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_3_boundary",
@@ -10741,7 +11662,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_4_boundary",
@@ -10763,7 +11686,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_5_boundary",
@@ -10785,7 +11710,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_6_boundary",
@@ -10807,7 +11734,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_7_boundary",
@@ -10829,7 +11758,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_8_boundary",
@@ -10851,7 +11782,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_9_boundary",
@@ -10873,7 +11806,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_1_large_solid",
@@ -10895,7 +11830,9 @@
           "ref_size": [
             513,
             257
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_6_large_solid",
@@ -10917,7 +11854,9 @@
           "ref_size": [
             513,
             257
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_compress_9_large_solid",
@@ -10939,7 +11878,9 @@
           "ref_size": [
             513,
             257
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_optimize",
@@ -10961,7 +11902,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_optimize_average",
@@ -10983,7 +11926,9 @@
           "ref_size": [
             64,
             4
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_error_compression_level",
@@ -11091,7 +12036,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11113,7 +12060,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11135,7 +12084,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11157,7 +12108,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11179,7 +12132,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_indexed_alpha",
@@ -11201,7 +12156,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_indexed_opaque_trns",
@@ -11223,7 +12180,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11245,7 +12204,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_adam7",
@@ -11267,7 +12228,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11289,7 +12252,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11311,7 +12276,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11333,7 +12300,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_filter_none",
@@ -11355,7 +12324,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_filter_sub",
@@ -11377,7 +12348,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_filter_up",
@@ -11399,7 +12372,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_filter_avg",
@@ -11421,7 +12396,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_filter_paeth",
@@ -11443,7 +12420,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_filter_adaptive",
@@ -11465,7 +12444,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11487,7 +12468,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11509,7 +12492,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11531,7 +12516,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11553,7 +12540,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11575,7 +12564,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11600,7 +12591,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -11625,7 +12618,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Default compression",
@@ -11647,7 +12642,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Max compression (9)",
@@ -11669,7 +12666,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "No compression",
@@ -11691,7 +12690,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_interlaced",
@@ -11713,7 +12714,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "RGB output",
@@ -11735,7 +12738,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "RGBA output",
@@ -11757,7 +12762,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Grayscale output",
@@ -11779,7 +12786,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Grayscale+alpha output",
@@ -11801,7 +12810,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     },
@@ -11824,7 +12835,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_le_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "be.tiff",
@@ -11842,7 +12855,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "uncompressed.tiff",
@@ -11861,7 +12876,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_uncompressed_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "lzw.tiff",
@@ -11880,7 +12897,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_gray_lzw",
@@ -11898,7 +12917,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_rgba_lzw",
@@ -11916,7 +12937,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_rgb_lzw_predictor",
@@ -11934,7 +12957,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_gray16_lzw_predictor",
@@ -11952,7 +12977,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_lzw_no_eoi",
@@ -11970,7 +12997,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_lzw_trailing_code",
@@ -11988,7 +13017,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_lzw_kwkwk_clipped",
@@ -12006,7 +13037,9 @@
           "ref_size": [
             2,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_lzw_dictionary_saturation",
@@ -12024,7 +13057,9 @@
           "ref_size": [
             4100,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_lzw_lzw_post_ifd_empty_count",
@@ -12042,7 +13077,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "deflate.tiff",
@@ -12061,7 +13098,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_deflate_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_deflate_gray_deflate",
@@ -12079,7 +13118,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_deflate_rgb_deflate_predictor",
@@ -12097,7 +13138,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_deflate_gray16_deflate_predictor",
@@ -12115,7 +13158,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_deflate_float32_deflate_predictor",
@@ -12133,7 +13178,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_deflate_be_float32_predictor",
@@ -12151,7 +13198,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "sample_format_i32",
@@ -12169,7 +13218,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "sample_format_i32_be_signed32_predictor",
@@ -12187,7 +13238,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "sample_format_i32_signed32",
@@ -12205,7 +13258,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "packbits.tiff",
@@ -12223,7 +13278,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_packbits_packbits_noop",
@@ -12241,7 +13298,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_packbits_packbits_literal_overrun",
@@ -12259,7 +13318,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compression_packbits_packbits_run_overrun",
@@ -12277,7 +13338,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "bilevel.tiff",
@@ -12296,7 +13359,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_bilevel_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "photometric_miniswhite",
@@ -12314,7 +13379,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "photometric_miniswhite_miniswhite_8bit",
@@ -12332,7 +13399,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "photometric_miniswhite_miniswhite_2bit",
@@ -12350,7 +13419,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "photometric_miniswhite_miniswhite_4bit",
@@ -12368,7 +13439,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "gray.tiff",
@@ -12387,7 +13460,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "grayscale_alpha",
@@ -12405,7 +13480,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "palette.tiff",
@@ -12423,7 +13500,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "palette_low_depth",
@@ -12441,7 +13520,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "palette_low_depth_palette4",
@@ -12459,7 +13540,29 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "palette_map_leniency",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "Pillow retains palette indices when ColorMap is too short",
+          "asset": "short_color_map.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_short_color_map_tiff.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "rgb.tiff",
@@ -12478,7 +13581,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "rgb_rgb_dpi",
@@ -12496,7 +13601,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "rgb_byte_strip_offset",
@@ -12514,7 +13621,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "rgb_unknown_field_type",
@@ -12532,7 +13641,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "rgba.tiff",
@@ -12551,7 +13662,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgba_tiff.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "cmyk.tiff",
@@ -12569,7 +13682,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "ycbcr",
@@ -12587,7 +13702,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "1bit.tiff",
@@ -12605,7 +13722,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_2",
@@ -12623,7 +13742,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "depth_4",
@@ -12641,7 +13762,9 @@
           "ref_size": [
             17,
             13
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "8bit.tiff",
@@ -12659,7 +13782,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "16bit.tiff",
@@ -12677,7 +13802,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "float32.tiff",
@@ -12695,7 +13822,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "stripped.tiff",
@@ -12713,7 +13842,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "stripped_leniency",
@@ -12731,7 +13862,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "stripped_leniency_uncompressed_missing_strips",
@@ -12749,7 +13882,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "tiled.tiff",
@@ -12767,7 +13902,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "tiled_missing_byte_counts",
@@ -12785,7 +13922,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "tiled_predictor",
@@ -12803,7 +13942,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "tiled_predictor_tiled_adobe_deflate_predictor",
@@ -12821,7 +13962,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "tiled_lzw_predictor",
@@ -12839,7 +13982,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "compressed_strip_count_leniency",
@@ -12857,7 +14002,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "single.tiff",
@@ -12875,7 +14022,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "multipage.tiff",
@@ -12893,7 +14042,49 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 2,
+          "ref_is_animated": true
+        },
+        {
+          "id": "cyclic_ifd_leniency",
+          "type": "decode",
+          "format": "tiff",
+          "category": "cyclic",
+          "description": "Pillow stops a self-referential IFD chain after the first unique page",
+          "asset": "cyclic_ifd.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_cyclic_ifd_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "truncated_later_ifd_leniency",
+          "type": "decode",
+          "format": "tiff",
+          "category": "truncated",
+          "description": "Pillow counts a referenced truncated later IFD before ending the chain",
+          "asset": "truncated_second_ifd.tiff",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_truncated_second_ifd_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": null,
+          "ref_is_animated": true
         },
         {
           "asset": "bad_ifd.tiff",
@@ -13047,6 +14238,19 @@
           "category": "error",
           "description": "Corrupt headers, dimensions, tags, and strip bounds",
           "asset": "mixed_bits.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_bad_ifd_empty_bits",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "empty_bits.tiff",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -13275,6 +14479,19 @@
           "oracle_error_message": "cannot identify image file <bytes>"
         },
         {
+          "id": "error_bad_ifd_missing_color_map",
+          "type": "decode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Corrupt headers, dimensions, tags, and strip bounds",
+          "asset": "missing_color_map.tiff",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
           "id": "error_bad_ifd_ascii_strip_offsets",
           "type": "decode",
           "format": "tiff",
@@ -13413,7 +14630,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13435,7 +14654,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13457,7 +14678,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13479,7 +14702,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_error_compression_type",
@@ -13518,7 +14743,9 @@
           "ref_size": [
             520,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lzw_solid",
@@ -13540,7 +14767,9 @@
           "ref_size": [
             512,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lzw_width_boundary",
@@ -13562,7 +14791,9 @@
           "ref_size": [
             255,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lzw_clear_boundary",
@@ -13584,7 +14815,9 @@
           "ref_size": [
             3952,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lzw_byte_aligned",
@@ -13606,7 +14839,9 @@
           "ref_size": [
             16,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13628,7 +14863,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_byte_be",
@@ -13650,7 +14887,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13672,7 +14911,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13694,7 +14935,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_alpha",
@@ -13716,7 +14959,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13738,7 +14983,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13760,7 +15007,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13782,7 +15031,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13804,7 +15055,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13826,7 +15079,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13848,7 +15103,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_i32",
@@ -13870,7 +15127,9 @@
           "ref_size": [
             4,
             2
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13892,7 +15151,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_tiled",
@@ -13914,7 +15175,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13936,7 +15199,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_multi_page",
@@ -13958,7 +15223,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -13980,7 +15247,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -14002,7 +15271,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_error_predictor_range",
@@ -14060,7 +15331,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -14085,7 +15358,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Uncompressed",
@@ -14107,7 +15382,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "LZW compression",
@@ -14129,7 +15406,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Deflate compression",
@@ -14151,7 +15430,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Little-endian",
@@ -14173,7 +15454,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_be",
@@ -14195,7 +15478,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     },
@@ -14218,7 +15503,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_lossy_q10",
@@ -14236,7 +15523,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_lossy_q50",
@@ -14254,7 +15543,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_lossy_q90",
@@ -14272,7 +15563,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_lossy_q100",
@@ -14290,7 +15583,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
@@ -14308,7 +15603,9 @@
           "ref_size": [
             17,
             19
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_lossy_checker_17x19_q1_m0",
@@ -14326,7 +15623,9 @@
           "ref_size": [
             17,
             19
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_filter_variants",
@@ -14344,7 +15643,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
@@ -14362,7 +15663,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_filter_off",
@@ -14380,7 +15683,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_segment_one",
@@ -14398,7 +15703,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
@@ -14416,7 +15723,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "lossless.webp",
@@ -14435,7 +15744,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants",
@@ -14453,7 +15764,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_horizontal",
@@ -14471,7 +15784,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_vertical",
@@ -14489,7 +15804,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_diagonal",
@@ -14507,7 +15824,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_checker2",
@@ -14525,7 +15844,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_palette4",
@@ -14543,7 +15864,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_palette16",
@@ -14561,7 +15884,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_palette17",
@@ -14579,7 +15904,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_palette32",
@@ -14597,7 +15924,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_palette64",
@@ -14615,7 +15944,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_palette256",
@@ -14633,7 +15964,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_noise",
@@ -14651,7 +15984,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode0",
@@ -14669,7 +16004,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
@@ -14687,7 +16024,9 @@
           "ref_size": [
             192,
             192
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_diag_reverse",
@@ -14705,7 +16044,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_xor",
@@ -14723,7 +16064,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_product",
@@ -14741,7 +16084,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_radial",
@@ -14759,7 +16104,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_diamond",
@@ -14777,7 +16124,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_bilinear",
@@ -14795,7 +16144,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_stripes",
@@ -14813,7 +16164,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_steps",
@@ -14831,7 +16184,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_saw",
@@ -14849,7 +16204,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_quadrants",
@@ -14867,7 +16224,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_random_walk",
@@ -14885,7 +16244,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode5",
@@ -14903,7 +16264,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode6",
@@ -14921,7 +16284,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode7",
@@ -14939,7 +16304,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode8",
@@ -14957,7 +16324,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode9",
@@ -14975,7 +16344,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode10",
@@ -14993,7 +16364,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode13",
@@ -15011,7 +16384,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_sparse",
@@ -15029,7 +16404,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
@@ -15047,7 +16424,9 @@
           "ref_size": [
             2,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -15065,7 +16444,9 @@
           "ref_size": [
             5,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "lossless_transform_variants_vp8l_single_cache_peek",
@@ -15083,7 +16464,9 @@
           "ref_size": [
             6,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "extended.webp",
@@ -15102,7 +16485,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_extended_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "no_alpha.webp",
@@ -15121,7 +16506,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_no_alpha_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "with_alpha.webp",
@@ -15140,7 +16527,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_with_alpha_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "with_alpha_alpha_lossy",
@@ -15158,7 +16547,9 @@
             128,
             128
           ],
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "alpha_lossless.webp",
@@ -15177,7 +16568,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_alpha_lossless_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_lossy_horizontal",
@@ -15195,7 +16588,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_lossy_vertical",
@@ -15213,7 +16608,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_lossy_gradient",
@@ -15231,7 +16628,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_lossy_noise",
@@ -15249,7 +16648,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_lossy_vertical_filter",
@@ -15267,7 +16668,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_lossy_gradient_filter",
@@ -15285,7 +16688,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_uncompressed",
@@ -15303,7 +16708,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "alpha_lossless_alpha_preprocessing",
@@ -15321,7 +16728,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "animated.webp",
@@ -15367,7 +16776,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha",
@@ -15412,7 +16823,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_holes_partial_background",
@@ -15457,7 +16870,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_holes_opaque_background",
@@ -15502,7 +16917,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_rgb_opaque_background",
@@ -15547,7 +16964,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_rgb_palette_background",
@@ -15592,7 +17011,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_rgb_full_delta",
@@ -15637,7 +17058,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_lossy",
@@ -15682,7 +17105,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_overlap",
@@ -15727,7 +17152,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_holes",
@@ -15772,7 +17199,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_loop_twice",
@@ -15817,7 +17246,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_blend",
@@ -15862,7 +17293,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_full",
@@ -15907,7 +17340,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_full_dispose",
@@ -15952,7 +17387,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_alpha_full_blend_after_dispose",
@@ -15997,7 +17434,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_dispose",
@@ -16042,7 +17481,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_rgb_full_dispose",
@@ -16087,7 +17528,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "animated_animated_rgb_partial_dispose",
@@ -16132,7 +17575,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "asset": "16x16.webp",
@@ -16151,7 +17596,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_16x16_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "odd.webp",
@@ -16170,7 +17617,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_odd_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "icc.webp",
@@ -16189,7 +17638,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_icc_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "xmp.webp",
@@ -16208,7 +17659,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_xmp_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "exif.webp",
@@ -16227,7 +17680,9 @@
           "status": "active",
           "type": "decode",
           "ref_path": "tests/fixtures/outputs/raws/Decode.webp_exif_webp.bin",
-          "oracle_status": "ok"
+          "oracle_status": "ok",
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "asset": "truncated.webp",
@@ -16290,6 +17745,19 @@
           "category": "error",
           "description": "Malformed WebP container and codec headers",
           "asset": "bad_webp_signature.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>"
+        },
+        {
+          "id": "error_malformed_container_short_riff",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "short_riff.webp",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -16420,6 +17888,32 @@
           "category": "error",
           "description": "Malformed WebP container and codec headers",
           "asset": "extended_vp8x_truncated_chunk_header.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_vp8x_short_header",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8x_short_header.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_short_anmf_header",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_short_anmf_header.webp",
           "expect_error": true,
           "status": "active",
           "oracle_status": "error",
@@ -16633,6 +18127,19 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.OSError",
           "oracle_error_message": "failed to read next frame"
+        },
+        {
+          "id": "error_malformed_container_vp8l_short_header",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_short_header.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
         },
         {
           "id": "error_malformed_container_vp8l_truncated_6",
@@ -17626,7 +19133,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "pillow_tolerated_malformed_animated_frame_too_large",
@@ -17671,7 +19180,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "pillow_tolerated_malformed_animated_frame_dimension_mismatch",
@@ -17716,7 +19227,9 @@
                 "duration_ms": 100
               }
             ]
-          }
+          },
+          "ref_frame_count": 2,
+          "ref_is_animated": true
         },
         {
           "id": "pillow_tolerated_malformed_animated_bad_nested_chunk",
@@ -17734,7 +19247,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
@@ -17752,7 +19267,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
@@ -17770,7 +19287,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_alpha_missing_chunk",
@@ -17788,7 +19307,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
@@ -17806,7 +19327,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
@@ -17824,7 +19347,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ],
       "encode": [
@@ -17849,7 +19374,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -17872,7 +19399,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -17895,7 +19424,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -17918,7 +19449,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -17941,7 +19474,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -17963,7 +19498,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_grayscale",
@@ -17986,7 +19523,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_grayscale",
@@ -18009,7 +19548,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18032,7 +19573,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_opaque_rgba",
@@ -18055,7 +19598,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_odd_alpha",
@@ -18078,7 +19623,9 @@
           "ref_size": [
             17,
             19
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_horizontal",
@@ -18100,7 +19647,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_vertical",
@@ -18122,7 +19671,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_solid",
@@ -18144,7 +19695,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18167,7 +19720,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_alpha_exif",
@@ -18191,7 +19746,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18213,7 +19770,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_hint_photo",
@@ -18235,7 +19794,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_hint_graph",
@@ -18257,7 +19818,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_hint_picture",
@@ -18279,7 +19842,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18301,7 +19866,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18323,7 +19890,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18345,7 +19914,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18367,7 +19938,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18389,7 +19962,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_cmyk",
@@ -18411,7 +19986,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_cmyk",
@@ -18433,7 +20010,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_noise",
@@ -18455,7 +20034,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_checker",
@@ -18477,7 +20058,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_solid",
@@ -18499,7 +20082,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_palette256",
@@ -18521,7 +20106,9 @@
           "ref_size": [
             64,
             64
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_predictor_sparse",
@@ -18543,7 +20130,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_predictor_random_walk",
@@ -18565,7 +20154,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_predictor_radial",
@@ -18587,7 +20178,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_predictor_quadrants",
@@ -18609,7 +20202,9 @@
           "ref_size": [
             96,
             96
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_subtract_green",
@@ -18636,7 +20231,9 @@
           "ref_size": [
             17,
             17
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -18661,7 +20258,9 @@
           "ref_size": [
             1,
             1
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Lossy WebP",
@@ -18683,7 +20282,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Lossy quality 100",
@@ -18706,7 +20307,9 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "description": "Lossy quality 10",
@@ -18729,18 +20332,20 @@
           "ref_size": [
             128,
             128
-          ]
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         }
       ]
     }
   },
   "summary": {
-    "total_rows": 1053,
-    "decode_rows": 725,
+    "total_rows": 1077,
+    "decode_rows": 749,
     "encode_rows": 296,
     "formats": 8,
-    "assets_available": 724,
-    "decode_active": 725,
+    "assets_available": 748,
+    "decode_active": 749,
     "decode_planned": 0,
     "encode_not_wired": 0,
     "operation_rows": 32

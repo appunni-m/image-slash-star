@@ -125,6 +125,50 @@ pub fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInf
         );
     }
 
+    #[cfg(feature = "bmp")]
+    if format == ImageFormat::Bmp {
+        return decoded_or_malformed(
+            bmp::inspect::inspect(_data),
+            format,
+            "codec rejected image metadata",
+        );
+    }
+
+    #[cfg(feature = "webp")]
+    if format == ImageFormat::WebP {
+        return decoded_or_malformed(
+            webp::inspect::inspect(_data),
+            format,
+            "codec rejected image metadata",
+        );
+    }
+
+    #[cfg(feature = "tiff")]
+    if format == ImageFormat::Tiff {
+        return decoded_or_malformed(
+            tiff::inspect::inspect(_data),
+            format,
+            "codec rejected image metadata",
+        );
+    }
+
+    #[cfg(feature = "ico")]
+    if format == ImageFormat::Ico {
+        return decoded_or_malformed(
+            ico::inspect::inspect(_data),
+            format,
+            "codec rejected image metadata",
+        );
+    }
+
+    #[cfg(feature = "avif")]
+    return decoded_or_malformed(
+        avif::inspect::inspect(_data),
+        format,
+        "codec rejected image metadata",
+    );
+
+    #[cfg(not(feature = "avif"))]
     Err(ImageError::Unsupported {
         format: Some(format),
         message: "metadata inspection is not implemented for this format".to_owned(),

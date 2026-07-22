@@ -23,7 +23,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_lossy_q10",
@@ -36,7 +38,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_lossy_q50",
@@ -49,7 +53,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_lossy_q90",
@@ -62,7 +68,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_lossy_q100",
@@ -75,7 +83,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
@@ -88,7 +98,9 @@
       "ref_size": [
         17,
         19
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_lossy_checker_17x19_q1_m0",
@@ -101,7 +113,9 @@
       "ref_size": [
         17,
         19
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_filter_variants",
@@ -114,7 +128,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
@@ -127,7 +143,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_filter_off",
@@ -140,7 +158,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_segment_one",
@@ -153,7 +173,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
@@ -166,7 +188,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_vp8l",
@@ -179,7 +203,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants",
@@ -192,7 +218,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_horizontal",
@@ -205,7 +233,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_vertical",
@@ -218,7 +248,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_diagonal",
@@ -231,7 +263,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_checker2",
@@ -244,7 +278,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_palette4",
@@ -257,7 +293,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_palette16",
@@ -270,7 +308,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_palette17",
@@ -283,7 +323,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_palette32",
@@ -296,7 +338,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_palette64",
@@ -309,7 +353,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_palette256",
@@ -322,7 +368,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_noise",
@@ -335,7 +383,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode0",
@@ -348,7 +398,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
@@ -361,7 +413,9 @@
       "ref_size": [
         192,
         192
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_diag_reverse",
@@ -374,7 +428,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_xor",
@@ -387,7 +443,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_product",
@@ -400,7 +458,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_radial",
@@ -413,7 +473,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_diamond",
@@ -426,7 +488,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_bilinear",
@@ -439,7 +503,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_stripes",
@@ -452,7 +518,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_steps",
@@ -465,7 +533,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_saw",
@@ -478,7 +548,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_quadrants",
@@ -491,7 +563,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_random_walk",
@@ -504,7 +578,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode5",
@@ -517,7 +593,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode6",
@@ -530,7 +608,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode7",
@@ -543,7 +623,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode8",
@@ -556,7 +638,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode9",
@@ -569,7 +653,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode10",
@@ -582,7 +668,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode13",
@@ -595,7 +683,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_sparse",
@@ -608,7 +698,9 @@
       "ref_size": [
         96,
         96
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
@@ -621,7 +713,9 @@
       "ref_size": [
         2,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -634,7 +728,9 @@
       "ref_size": [
         5,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "lossless_transform_variants_vp8l_single_cache_peek",
@@ -647,7 +743,9 @@
       "ref_size": [
         6,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "extended",
@@ -660,7 +758,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "no_alpha",
@@ -673,7 +773,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "with_alpha",
@@ -686,7 +788,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "with_alpha_alpha_lossy",
@@ -699,7 +803,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless",
@@ -712,7 +818,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_lossy_horizontal",
@@ -725,7 +833,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_lossy_vertical",
@@ -738,7 +848,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_lossy_gradient",
@@ -751,7 +863,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_lossy_noise",
@@ -764,7 +878,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_lossy_vertical_filter",
@@ -777,7 +893,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_lossy_gradient_filter",
@@ -790,7 +908,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_uncompressed",
@@ -803,7 +923,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "alpha_lossless_alpha_preprocessing",
@@ -816,7 +938,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "animated",
@@ -830,6 +954,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -870,6 +996,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -910,6 +1038,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -950,6 +1080,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -990,6 +1122,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1030,6 +1164,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1070,6 +1206,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1110,6 +1248,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1150,6 +1290,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1190,6 +1332,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1230,6 +1374,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 2,
         "frames": [
@@ -1270,6 +1416,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1310,6 +1458,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1350,6 +1500,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1390,6 +1542,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1430,6 +1584,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1470,6 +1626,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1510,6 +1668,8 @@
         64,
         64
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -1549,7 +1709,9 @@
       "ref_size": [
         16,
         16
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd",
@@ -1562,7 +1724,9 @@
       "ref_size": [
         17,
         19
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "icc_profile",
@@ -1575,7 +1739,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "xmp_metadata",
@@ -1588,7 +1754,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "exif_metadata",
@@ -1601,7 +1769,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "error_truncated",
@@ -1611,7 +1781,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_vp8_magic",
@@ -1621,7 +1793,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_animated_vp8_magic",
@@ -1631,7 +1805,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container",
@@ -1641,7 +1817,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_bad_webp_signature",
@@ -1651,7 +1829,21 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_container_short_riff",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_interframe",
@@ -1661,7 +1853,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_zero_width",
@@ -1671,7 +1865,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_zero_height",
@@ -1681,7 +1877,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_bad_vp8l_signature",
@@ -1691,7 +1889,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_bad_vp8l_version",
@@ -1701,7 +1901,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_bad_initial_chunk",
@@ -1711,7 +1913,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_extended_vp8l_alpha_header_only",
@@ -1721,7 +1925,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_extended_missing_image_chunk",
@@ -1731,7 +1937,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_extended_vp8x_no_chunks",
@@ -1741,7 +1949,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_extended_vp8x_truncated_chunk_header",
@@ -1751,7 +1961,33 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_container_vp8x_short_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_container_animated_short_anmf_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_missing_anim",
@@ -1761,7 +1997,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_missing_anmf",
@@ -1771,7 +2009,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_anim_payload_eof_after_anmf",
@@ -1781,7 +2021,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_alpha_missing_nested_vp8_header",
@@ -1791,7 +2033,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_extended_vp8_dimension_mismatch",
@@ -1801,7 +2045,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_extended_canvas_too_large",
@@ -1811,7 +2057,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_bad_anmf_scan_size",
@@ -1821,7 +2069,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_bad_anmf_decode_size",
@@ -1831,7 +2081,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_anim_chunk_too_small",
@@ -1841,7 +2093,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_frame_outside",
@@ -1851,7 +2105,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_nested_chunk_too_large",
@@ -1861,7 +2117,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_alpha_chunk_too_large",
@@ -1871,7 +2129,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_animated_alpha_vp8_too_large",
@@ -1881,7 +2141,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_alpha_invalid_preprocessing",
@@ -1891,7 +2153,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_alpha_invalid_compression",
@@ -1901,7 +2165,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_alpha_header_only",
@@ -1911,7 +2177,21 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_short_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_6",
@@ -1921,7 +2201,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_8",
@@ -1931,7 +2213,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_12",
@@ -1941,7 +2225,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_16",
@@ -1951,7 +2237,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_24",
@@ -1961,7 +2249,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_32",
@@ -1971,7 +2261,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_64",
@@ -1981,7 +2273,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_truncated_128",
@@ -1991,7 +2285,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_plane_distance_truncated_12",
@@ -2001,7 +2297,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_meta_cache_truncated_10",
@@ -2011,7 +2309,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_single_cache_truncated_18",
@@ -2021,7 +2321,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_empty_payload",
@@ -2031,7 +2333,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_three_byte_payload",
@@ -2041,7 +2345,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_short_header_payload",
@@ -2051,7 +2357,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_short_partition_payload",
@@ -2061,7 +2369,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_half_payload",
@@ -2071,7 +2381,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_tail_truncated",
@@ -2081,7 +2393,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_header_only",
@@ -2091,7 +2405,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_duplicate_transform",
@@ -2101,7 +2417,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_invalid_color_cache",
@@ -2111,7 +2429,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_invalid_zero_symbol",
@@ -2121,7 +2441,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_empty_code_length_tree",
@@ -2131,7 +2453,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
@@ -2141,7 +2465,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_invalid_max_symbol",
@@ -2151,7 +2477,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_color_index_size_truncated",
@@ -2161,7 +2489,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_predictor_transform_stream_truncated",
@@ -2171,7 +2501,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_color_transform_stream_truncated",
@@ -2181,7 +2513,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_meta_huffman_stream_truncated",
@@ -2191,7 +2525,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_two_symbol_truncated_one_symbol",
@@ -2201,7 +2537,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_code_lengths_max_symbol_flag_truncated",
@@ -2211,7 +2549,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_code_lengths_length_nbits_truncated",
@@ -2221,7 +2561,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_code_lengths_max_value_truncated",
@@ -2231,7 +2573,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_color_index_stream_truncated",
@@ -2241,7 +2585,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_zero_symbol_truncated",
@@ -2251,7 +2597,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_code_length_alphabet_truncated",
@@ -2261,7 +2609,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_repeat_code17_extra_truncated",
@@ -2271,7 +2621,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_repeat_code18_extra_truncated",
@@ -2281,7 +2633,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_repeat_overflow",
@@ -2291,7 +2645,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_single_backref",
@@ -2301,7 +2657,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8l_backref_before_output",
@@ -2311,7 +2669,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_0",
@@ -2321,7 +2681,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_1",
@@ -2331,7 +2693,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_2",
@@ -2341,7 +2705,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_3",
@@ -2351,7 +2717,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_4",
@@ -2361,7 +2729,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_5",
@@ -2371,7 +2741,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_6",
@@ -2381,7 +2753,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_7",
@@ -2391,7 +2765,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_8",
@@ -2401,7 +2777,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_9",
@@ -2411,7 +2789,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_10",
@@ -2421,7 +2801,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_11",
@@ -2431,7 +2813,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_12",
@@ -2441,7 +2825,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_13",
@@ -2451,7 +2837,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_14",
@@ -2461,7 +2849,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_15",
@@ -2471,7 +2861,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_16",
@@ -2481,7 +2873,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_17",
@@ -2491,7 +2885,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_18",
@@ -2501,7 +2897,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_19",
@@ -2511,7 +2909,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_20",
@@ -2521,7 +2921,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_21",
@@ -2531,7 +2933,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_22",
@@ -2541,7 +2945,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_23",
@@ -2551,7 +2957,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_24",
@@ -2561,7 +2969,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_25",
@@ -2571,7 +2981,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_26",
@@ -2581,7 +2993,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_27",
@@ -2591,7 +3005,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_28",
@@ -2601,7 +3017,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_29",
@@ -2611,7 +3029,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_30",
@@ -2621,7 +3041,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_31",
@@ -2631,7 +3053,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_container_vp8_partition_32",
@@ -2641,7 +3065,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "pillow_tolerated_malformed",
@@ -2655,6 +3081,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -2695,6 +3123,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -2735,6 +3165,8 @@
         128,
         128
       ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": 0,
         "frames": [
@@ -2774,7 +3206,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
@@ -2787,7 +3221,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
@@ -2800,7 +3236,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_alpha_missing_chunk",
@@ -2813,7 +3251,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
@@ -2826,7 +3266,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
@@ -2839,7 +3281,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     }
   ]
 }

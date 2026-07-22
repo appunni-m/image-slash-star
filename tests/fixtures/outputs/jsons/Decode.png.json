@@ -23,7 +23,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_gray_alpha",
@@ -36,7 +38,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_rgb",
@@ -49,7 +53,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_rgba",
@@ -62,7 +68,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_rgba_alpha_checker",
@@ -75,7 +83,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_rgba_alpha_partial",
@@ -88,7 +98,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed",
@@ -101,7 +113,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed_palette_2color",
@@ -114,7 +128,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed_palette_256color",
@@ -127,7 +143,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed_palette_2bit",
@@ -140,7 +158,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed_palette_4bit",
@@ -153,7 +173,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed_alpha",
@@ -166,7 +188,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "color_indexed_alpha_palette_trns_opaque",
@@ -179,7 +203,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_1",
@@ -192,7 +218,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_2",
@@ -205,7 +233,9 @@
       "ref_size": [
         17,
         13
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_4",
@@ -218,7 +248,9 @@
       "ref_size": [
         17,
         13
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_8",
@@ -231,7 +263,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_16",
@@ -244,7 +278,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_16_rgb16",
@@ -257,7 +293,9 @@
       "ref_size": [
         9,
         7
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_16_la16",
@@ -270,7 +308,9 @@
       "ref_size": [
         9,
         7
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "depth_16_rgba16",
@@ -283,7 +323,9 @@
       "ref_size": [
         9,
         7
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "no_interlace",
@@ -296,7 +338,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "interlace_adam7",
@@ -309,7 +353,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "interlace_adam7_adam7_1x1",
@@ -322,7 +368,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "interlace_adam7_adam7_2x3",
@@ -335,7 +383,9 @@
       "ref_size": [
         2,
         3
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "filter_none",
@@ -348,7 +398,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "filter_sub",
@@ -361,7 +413,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "filter_up",
@@ -374,7 +428,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "filter_average",
@@ -387,7 +443,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "filter_paeth",
@@ -400,7 +458,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "filter_mixed",
@@ -413,7 +473,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "compress_default",
@@ -426,7 +488,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "compress_default_compress_fast",
@@ -439,7 +503,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "compress_default_compress_mid",
@@ -452,7 +518,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "compress_none",
@@ -465,7 +533,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "compress_max",
@@ -478,7 +548,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_gama",
@@ -491,7 +563,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_srgb",
@@ -504,7 +578,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_iccp",
@@ -517,7 +593,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_text",
@@ -530,7 +608,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_time",
@@ -543,7 +623,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_background",
@@ -556,7 +638,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "chunk_phys",
@@ -569,7 +653,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_1x1",
@@ -582,7 +668,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_small",
@@ -595,7 +683,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_large",
@@ -608,7 +698,9 @@
       "ref_size": [
         513,
         257
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd",
@@ -621,7 +713,9 @@
       "ref_size": [
         17,
         17
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd_2x3",
@@ -634,7 +728,9 @@
       "ref_size": [
         2,
         3
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd_1x255",
@@ -647,7 +743,9 @@
       "ref_size": [
         1,
         255
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "size_odd_255x1",
@@ -660,7 +758,9 @@
       "ref_size": [
         255,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "error_truncated",
@@ -670,7 +770,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_truncated_short_signature",
@@ -680,7 +782,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_corrupt_crc",
@@ -690,7 +794,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_wrong_magic",
@@ -700,7 +806,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure",
@@ -710,7 +818,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_short_ihdr",
@@ -720,7 +830,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_short_chunk_kind",
@@ -730,7 +842,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zero_width",
@@ -740,7 +854,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zero_height",
@@ -750,7 +866,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_invalid_filter_method",
@@ -760,7 +878,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_invalid_interlace",
@@ -770,7 +890,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_invalid_color_type",
@@ -780,7 +902,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_invalid_color_depth",
@@ -790,7 +914,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_empty_idat",
@@ -800,7 +926,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_invalid_scanline_filter",
@@ -810,7 +938,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_short_inflated_scanline",
@@ -820,7 +950,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_short_header",
@@ -830,7 +962,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_invalid_header",
@@ -840,7 +974,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_reserved_block",
@@ -850,7 +986,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_bad_stored_complement",
@@ -860,7 +998,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_bad_adler",
@@ -870,7 +1010,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_backreference_before_output",
@@ -880,7 +1022,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_reserved_distance_symbol",
@@ -890,7 +1034,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_reserved_literal_symbol",
@@ -900,7 +1046,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_truncated_fixed_block",
@@ -910,7 +1058,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_empty_code_length_tree",
@@ -920,7 +1070,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_oversubscribed_code_length_tree",
@@ -930,7 +1082,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_dynamic_repeat_overflow",
@@ -940,7 +1094,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_undecodable_code_length",
@@ -950,7 +1106,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_zlib_dynamic_backreference_before_output",
@@ -960,7 +1118,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_adam7_invalid_scanline_filter",
@@ -970,7 +1130,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_adam7_giant_dimensions",
@@ -980,7 +1142,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_palette_overlong_plte",
@@ -990,7 +1154,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
@@ -1000,7 +1166,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_ihdr_only",
@@ -1010,7 +1178,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_ihdr_trailing_byte",
@@ -1020,7 +1190,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_truncated_ancillary_chunk",
@@ -1030,7 +1202,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "error_malformed_structure_actl_short",
@@ -1040,7 +1214,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     },
     {
       "id": "pillow_tolerated_malformed",
@@ -1053,7 +1229,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_missing_iend",
@@ -1066,7 +1244,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_palette_trns_too_long",
@@ -1079,7 +1259,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_palette_missing_plte",
@@ -1092,7 +1274,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_palette_empty_plte",
@@ -1105,7 +1289,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_palette_short_plte",
@@ -1118,7 +1304,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_palette_partial_plte",
@@ -1131,7 +1319,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_palette_trns_without_plte",
@@ -1144,7 +1334,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_duplicate_plte",
@@ -1157,7 +1349,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_duplicate_trns",
@@ -1170,7 +1364,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_actl_zero_frames",
@@ -1183,7 +1379,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
@@ -1196,7 +1394,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
@@ -1209,7 +1409,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
@@ -1222,7 +1424,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "compression_dynamic_manual",
@@ -1235,7 +1439,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "transparency_rgb",
@@ -1248,7 +1454,9 @@
       "ref_size": [
         1,
         1
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "apng_static",
@@ -1261,7 +1469,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "apng_animated",
@@ -1274,7 +1484,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true
     }
   ]
 }

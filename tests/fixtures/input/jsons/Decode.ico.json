@@ -39,6 +39,19 @@
       }
     },
     {
+      "id": "multi_res_multi_descending",
+      "asset": "multi_descending.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/multi_descending.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "png_entry",
       "asset": "png_entry.ico",
       "expect_error": false,
@@ -109,6 +122,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_32bit.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "bmp_default_palette",
+      "asset": "bmp_default_palette.ico",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_default_palette.ico",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -390,6 +416,45 @@
       }
     },
     {
+      "id": "error_malformed_zero_height",
+      "asset": "zero_height.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/zero_height.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_oversized_width",
+      "asset": "oversized_width.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/oversized_width.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_oversized_height",
+      "asset": "oversized_height.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/oversized_height.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_unsupported_bpp",
       "asset": "unsupported_bpp.ico",
       "expect_error": true,
@@ -408,6 +473,84 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_short_header.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_cursor_header_oob",
+      "asset": "cursor_header_oob.cur",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor_header_oob.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_cursor_truncated_dib",
+      "asset": "cursor_truncated_dib.cur",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor_truncated_dib.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_cursor_palette_overflow",
+      "asset": "cursor_palette_overflow.cur",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/cursor_palette_overflow.cur",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_png_short_header",
+      "asset": "png_short_header.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/png_short_header.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_zero_offset",
+      "asset": "zero_offset.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/zero_offset.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_too_many_entries",
+      "asset": "too_many_entries.ico",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/too_many_entries.ico",
         "operations": [
           "PIL.Image.open",
           "load",

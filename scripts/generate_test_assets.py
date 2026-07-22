@@ -1552,7 +1552,7 @@ def write_bmp_24(path, image, top_down=False, core_header=False):
     write_bmp(path, dib, bytes(rows))
 
 
-def write_bmp_4(path, width=16, height=16):
+def write_bmp_4(path, width=16, height=16, grayscale_palette=False):
     stride = ((width + 1) // 2 + 3) & ~3
     rows = bytearray()
     for y in range(height - 1, -1, -1):
@@ -1564,7 +1564,12 @@ def write_bmp_4(path, width=16, height=16):
         row.extend(b"\0" * (stride - len(row)))
         rows.extend(row)
     dib = bmp_info_header(width, height, 4, 0, len(rows), 16)
-    write_bmp(path, dib, bytes(rows), bmp_palette(16))
+    palette = (
+        bytes(value for index in range(16) for value in (index, index, index, 0))
+        if grayscale_palette
+        else bmp_palette(16)
+    )
+    write_bmp(path, dib, bytes(rows), palette)
 
 
 def write_bmp_2(path, grayscale_palette=False, width=9, height=5):
@@ -1778,7 +1783,11 @@ def gen_bmp():
     write_bmp_2(d / "2bit.bmp")
     write_bmp_2(d / "2bit_gray.bmp", grayscale_palette=True)
     write_bmp_4(d / "4bit.bmp")
+    write_bmp_4(d / "4bit_gray.bmp", grayscale_palette=True)
     img.convert("P").save(d / "8bit.bmp")
+    implicit_palette = bytearray((d / "8bit.bmp").read_bytes())
+    struct.pack_into("<I", implicit_palette, 46, 0)
+    (d / "8bit_implicit_palette.bmp").write_bytes(implicit_palette)
     write_bmp_16(d / "16bit.bmp", img)
     img.convert("L").save(d / "gray.bmp")
     img.save(d / "uncompressed.bmp")
@@ -1918,6 +1927,14 @@ def gen_bmp():
         b"BM" + struct.pack("<IHH", 0, 0, 0) + b"\0"
     )
     (d / "truncated_dib_header_size.bmp").write_bytes(bmp_file_header())
+    write_bmp(
+        d / "core_zero_width.bmp",
+        struct.pack("<IHHHH", 12, 0, 1, 1, 24),
+        b"\0" * 4,
+    )
+    offset_before_header = bytearray(baseline)
+    struct.pack_into("<I", offset_before_header, 10, 53)
+    (d / "data_offset_before_header.bmp").write_bytes(offset_before_header)
 
     core_prefix = struct.pack("<I", 12)
     write_bmp_prefix(d / "core_header_truncated_width.bmp", core_prefix, 26)
@@ -2456,6 +2473,7 @@ def gen_webp():
     (d / "animated_rgb_partial_dispose.webp").write_bytes(animated_rgb_partial_dispose)
     (d / "animated_rgb_partial.webp").unlink()
     d.joinpath("truncated.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
+    d.joinpath("short_riff.webp").write_bytes(b"RIFF")
     bad_vp8_magic = bytearray((d / "lossy.webp").read_bytes())
     vp8_chunk = bad_vp8_magic.find(b"VP8 ")
     if vp8_chunk < 0:
@@ -2864,6 +2882,22 @@ def gen_webp():
 
     write_vp8x_container("extended_vp8x_no_chunks.webp")
     write_vp8x_container("extended_vp8x_truncated_chunk_header.webp", trailing=b"JUNK")
+    short_vp8x = b"VP8X" + struct.pack("<I", 9) + b"\0" * 9 + b"\0"
+    short_vp8x_payload = b"WEBP" + short_vp8x
+    (d / "vp8x_short_header.webp").write_bytes(
+        b"RIFF" + struct.pack("<I", len(short_vp8x_payload)) + short_vp8x_payload
+    )
+    short_anmf = b"ANMF" + struct.pack("<I", 16) + b"\0" * 16
+    write_vp8x_container(
+        "animated_short_anmf_header.webp",
+        flags=0x02,
+        trailing=short_anmf,
+    )
+    short_vp8l = b"VP8L" + struct.pack("<I", 1) + b"\x2f\0"
+    short_vp8l_payload = b"WEBP" + short_vp8l
+    (d / "vp8l_short_header.webp").write_bytes(
+        b"RIFF" + struct.pack("<I", len(short_vp8l_payload)) + short_vp8l_payload
+    )
 
     def write_extended_vp8l_alpha_header_only():
         source = (d / "with_alpha.webp").read_bytes()
@@ -2872,6 +2906,8 @@ def gen_webp():
             raise RuntimeError("with_alpha WebP did not contain a VP8L chunk")
         payload = source[vp8l + 8 : vp8l + 13]
         header = int.from_bytes(payload[1:5], "little")
+        header |= 1 << 28
+        payload = payload[:1] + header.to_bytes(4, "little")
         width = (1 + header) & 0x3FFF
         height = (1 + (header >> 14)) & 0x3FFF
 
@@ -2887,6 +2923,10 @@ def gen_webp():
         payload = b"WEBP" + vp8x_chunk + vp8l_chunk
         webp = b"RIFF" + struct.pack("<I", len(payload)) + payload
         (d / "extended_vp8l_alpha_header_only.webp").write_bytes(webp)
+
+        payload = b"WEBP" + vp8l_chunk
+        webp = b"RIFF" + struct.pack("<I", len(payload)) + payload
+        (d / "vp8l_alpha_header_only.webp").write_bytes(webp)
 
     write_extended_vp8l_alpha_header_only()
 
@@ -3546,6 +3586,45 @@ def mutate_tiff_tag_type(source, destination, tag, field_type):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
+def mutate_tiff_tag_id(source, destination, tag, replacement):
+    """Rename one classic-TIFF directory tag while retaining its payload."""
+    data = bytearray(source.read_bytes())
+    byte_order = "<" if data[:2] == b"II" else ">"
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        actual_tag = struct.unpack_from(byte_order + "H", data, start)[0]
+        if actual_tag == tag:
+            struct.pack_into(byte_order + "H", data, start, replacement)
+            destination.write_bytes(data)
+            return
+    raise ValueError(f"TIFF tag {tag} not found")
+
+
+def mutate_tiff_next_ifd(source, destination, next_offset):
+    """Patch the first classic-TIFF directory's next-IFD pointer."""
+    data = bytearray(source.read_bytes())
+    byte_order = "<" if data[:2] == b"II" else ">"
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    position = ifd_offset + 2 + entry_count * 12
+    struct.pack_into(byte_order + "I", data, position, next_offset)
+    destination.write_bytes(data)
+
+
+def write_tiff_truncated_second_ifd(source, destination):
+    """Append an incomplete second IFD and point the first directory at it."""
+    data = bytearray(source.read_bytes())
+    byte_order = "<" if data[:2] == b"II" else ">"
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    position = ifd_offset + 2 + entry_count * 12
+    struct.pack_into(byte_order + "I", data, position, len(data))
+    data.extend(b"\x01")
+    destination.write_bytes(data)
+
+
 def write_descending_strip_offsets_tiff(path):
     """Write a compressed classic TIFF with inferred descending strip offsets."""
     entries = [
@@ -3714,6 +3793,9 @@ def gen_tiff():
     mutate_tiff_tag(d / "rgb.tiff", d / "zero_width.tiff", 256, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "zero_height.tiff", 257, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "mixed_bits.tiff", 258, 16, 1)
+    mutate_tiff_tag_count(d / "rgb.tiff", d / "empty_bits.tiff", 258, 0)
+    mutate_tiff_next_ifd(d / "rgb.tiff", d / "cyclic_ifd.tiff", 8)
+    write_tiff_truncated_second_ifd(d / "rgb.tiff", d / "truncated_second_ifd.tiff")
     mutate_tiff_tag(d / "rgb.tiff", d / "rows_zero.tiff", 278, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "unknown_compression.tiff", 259, 999)
     mutate_tiff_tag(d / "rgb.tiff", d / "unsupported_photometric.tiff", 262, 4)
@@ -3722,6 +3804,8 @@ def gen_tiff():
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_width.tiff", 256, 2)
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_height.tiff", 257, 2)
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_bits.tiff", 258, 2)
+    mutate_tiff_tag_id(d / "palette.tiff", d / "missing_color_map.tiff", 320, 65000)
+    mutate_tiff_tag_count(d / "palette.tiff", d / "short_color_map.tiff", 320, 1)
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_strip_offsets.tiff", 273, 2)
     mutate_tiff_tag_type(
         d / "deflate.tiff", d / "ascii_compressed_strip_byte_counts.tiff", 279, 2
@@ -3772,6 +3856,15 @@ def gen_ico():
     img.save(d / "16x16.ico", format="ICO", sizes=[(16,16)])
     img.save(d / "single.ico", format="ICO", sizes=[(16,16)])
     pattern_img("RGB").save(d / "multi.ico", format="ICO", sizes=[(16,16),(32,32)])
+    multi_descending = bytearray((d / "multi.ico").read_bytes())
+    multi_count = struct.unpack_from("<H", multi_descending, 4)[0]
+    multi_entries = [
+        bytes(multi_descending[6 + index * 16 : 22 + index * 16])
+        for index in range(multi_count)
+    ]
+    for index, entry in enumerate(reversed(multi_entries)):
+        multi_descending[6 + index * 16 : 22 + index * 16] = entry
+    (d / "multi_descending.ico").write_bytes(multi_descending)
     img.convert("RGBA").resize((32,32)).save(d / "png_entry.ico", format="ICO", sizes=[(32,32)])
     img.resize((16,16)).save(
         d / "bmp_entry.ico",
@@ -3807,6 +3900,9 @@ def gen_ico():
     ico.extend(struct.pack("<BBBBHHII", 16, 16, 16, 0, 1, 4, len(dib), 22))
     ico.extend(dib)
     (d / "bmp_4bit.ico").write_bytes(ico)
+    bmp_default_palette = bytearray(ico)
+    struct.pack_into("<I", bmp_default_palette, 22 + 32, 0)
+    (d / "bmp_default_palette.ico").write_bytes(bmp_default_palette)
     cursor = bytearray(ico)
     struct.pack_into("<H", cursor, 2, 2)
     struct.pack_into("<HH", cursor, 10, 3, 5)
@@ -3842,6 +3938,8 @@ def gen_ico():
     write_truncated_payload("bmp_8bit_truncated_pixels.ico", "bmp_8bit.ico", 40)
     write_truncated_payload("bmp_4bit_truncated_pixels.ico", "bmp_4bit.ico", 40)
     write_truncated_payload("bmp_1bit_truncated_pixels.ico", "bmp_1bit.ico", 40)
+    write_truncated_payload("png_short_header.ico", "png_entry.ico", 8)
+    write_truncated_payload("cursor_truncated_dib.cur", "cursor.cur", 20)
 
     short_dib = bytearray(ico[: 22 + 20])
     struct.pack_into("<I", short_dib, 14, 20)
@@ -3849,12 +3947,28 @@ def gen_ico():
     zero_width = bytearray(ico)
     struct.pack_into("<I", zero_width, 22 + 4, 0)
     (d / "zero_width.ico").write_bytes(zero_width)
+    zero_height = bytearray(ico)
+    struct.pack_into("<I", zero_height, 22 + 8, 0)
+    (d / "zero_height.ico").write_bytes(zero_height)
+    oversized_width = bytearray(ico)
+    struct.pack_into("<I", oversized_width, 22 + 4, 16_385)
+    (d / "oversized_width.ico").write_bytes(oversized_width)
+    oversized_height = bytearray(ico)
+    struct.pack_into("<I", oversized_height, 22 + 8, 32_770)
+    (d / "oversized_height.ico").write_bytes(oversized_height)
     unsupported_bpp = bytearray(ico)
     struct.pack_into("<H", unsupported_bpp, 22 + 14, 2)
     (d / "unsupported_bpp.ico").write_bytes(unsupported_bpp)
     cursor_short_header = bytearray(cursor)
     struct.pack_into("<I", cursor_short_header, 22, 20)
     (d / "cursor_short_header.cur").write_bytes(cursor_short_header)
+    cursor_header_oob = bytearray(cursor)
+    cursor_payload_len = struct.unpack_from("<I", cursor_header_oob, 14)[0]
+    struct.pack_into("<I", cursor_header_oob, 22, cursor_payload_len + 1)
+    (d / "cursor_header_oob.cur").write_bytes(cursor_header_oob)
+    cursor_palette_overflow = bytearray(cursor)
+    struct.pack_into("<I", cursor_palette_overflow, 22 + 32, 0xFFFF_FFFF)
+    (d / "cursor_palette_overflow.cur").write_bytes(cursor_palette_overflow)
 
     (d / "empty.ico").write_bytes(b"")
     (d / "invalid_reserved.ico").write_bytes(struct.pack("<HHH", 1, 1, 0))
@@ -3864,6 +3978,10 @@ def gen_ico():
     zero_entry = bytearray(struct.pack("<HHH", 0, 1, 1))
     zero_entry.extend(struct.pack("<BBBBHHII", 16, 16, 0, 0, 1, 32, 0, 0))
     (d / "zero_entry.ico").write_bytes(zero_entry)
+    zero_offset = bytearray(ico)
+    struct.pack_into("<I", zero_offset, 18, 0)
+    (d / "zero_offset.ico").write_bytes(zero_offset)
+    (d / "too_many_entries.ico").write_bytes(struct.pack("<HHH", 0, 1, 256))
     (d / "truncated_entry.ico").write_bytes(ico[:-20])
     img.resize((256,256)).save(d / "256x256.ico", format="ICO", sizes=[(256,256)])
     img.resize((48, 48)).save(d / "48x48.ico", format="ICO", sizes=[(48, 48)])

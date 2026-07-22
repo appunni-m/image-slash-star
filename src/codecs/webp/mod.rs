@@ -2,6 +2,7 @@
 
 pub mod decode;
 pub mod encode;
+pub mod inspect;
 mod native;
 
 #[cfg(coverage)]

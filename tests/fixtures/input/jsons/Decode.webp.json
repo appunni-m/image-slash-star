@@ -1183,6 +1183,19 @@
       }
     },
     {
+      "id": "error_malformed_container_short_riff",
+      "asset": "short_riff.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/short_riff.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_vp8_interframe",
       "asset": "vp8_interframe.webp",
       "expect_error": true,
@@ -1305,6 +1318,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_vp8x_truncated_chunk_header.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8x_short_header",
+      "asset": "vp8x_short_header.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8x_short_header.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_animated_short_anmf_header",
+      "asset": "animated_short_anmf_header.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_short_anmf_header.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1513,6 +1552,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_alpha_header_only.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_short_header",
+      "asset": "vp8l_short_header.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_short_header.webp",
         "operations": [
           "PIL.Image.open",
           "load",

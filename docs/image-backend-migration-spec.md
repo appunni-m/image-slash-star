@@ -1,6 +1,6 @@
 # image-slash-star Backend Migration Spec
 
-Status: design spec.
+Status: active migration; Phases 1 and 2 complete.
 
 This spec describes the intended migration from local codec logic in
 `pillow-rs` to `image-slash-star` as the shared codec and decoded-buffer
@@ -185,14 +185,21 @@ PNG decode already preserves indexed PNG as `ImageMode::P8` with
 `ImagePalette` from `PLTE` and `tRNS`. That representation should become the
 common contract for all indexed codecs.
 
-Missing today:
+Implemented today:
 
-- no metadata-only `ImageInfo`
-- no metadata inspection API yet
-- no structured distinction between unknown format, disabled feature,
-  malformed data, unsupported data, invalid parameters, and I/O failures
-- incomplete paletted preservation across codecs
-- default features are too broad for WASM-oriented consumers
+- canonical `Result` APIs and structured `ImageError` variants
+- automatic decode envelopes retaining the detected `ImageFormat`
+- exact `DecodedImage` mode, color type, pixels, palette RGB, and palette alpha
+- metadata-only `ImageInfo` and feature-gated `inspect`
+- header-only PNG, JPEG, GIF, BMP, WebP, TIFF, and ICO inspection
+- native-parser AVIF inspection
+- manifest-driven Pillow-oracle assertions for automatic detection, decoded
+  format/mode, metadata, successful output, and structured errors
+
+Still missing:
+
+- complete paletted preservation across every naturally indexed codec
+- narrow default features for WASM-oriented consumers
 
 ### `pillow-rs`
 
@@ -840,14 +847,20 @@ Target:
 
 Suggested order:
 
-1. PNG
-2. GIF
-3. JPEG
-4. BMP
-5. WebP
-6. TIFF
-7. ICO
-8. AVIF, if supported
+1. PNG (complete)
+2. JPEG (complete)
+3. GIF (complete)
+4. BMP (complete)
+5. WebP (complete)
+6. TIFF (complete)
+7. ICO (complete)
+8. AVIF (complete; native parser)
+
+BMP acceptance evidence includes OS/2 and Windows headers, 1/4/8-bit
+palettes, implicit palette sizes, RLE, bitfields, top-down rows, malformed
+headers, and exact Pillow mode/palette parity. The oracle also establishes two
+non-obvious compatibility rules: grayscale 4-bit BMP materialization is
+rejected, while a pixel offset one byte before the declared DIB end is accepted.
 
 ### Phase 3: Wire `pillow-rs` To `image-slash-star`
 

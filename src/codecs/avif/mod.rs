@@ -2,6 +2,7 @@
 
 pub mod decode;
 pub mod encode;
+pub mod inspect;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native;

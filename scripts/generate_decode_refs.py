@@ -798,6 +798,16 @@ def write_pixel_ref(row, image, ref_name):
     row["ref_bytes"] = len(raw)
     row["ref_mode"] = mode_name(image)
     row["ref_size"] = list(image.size)
+    try:
+        row["ref_frame_count"] = int(getattr(image, "n_frames", 1))
+    except Exception:
+        row["ref_frame_count"] = None
+    fallback_animated = bool(
+        row["ref_frame_count"] is not None and row["ref_frame_count"] > 1
+    )
+    row["ref_is_animated"] = bool(
+        getattr(image, "is_animated", fallback_animated)
+    )
     return raw
 
 
@@ -839,6 +849,8 @@ def clear_pixel_ref(row):
     row.pop("ref_bytes", None)
     row.pop("ref_mode", None)
     row.pop("ref_size", None)
+    row.pop("ref_frame_count", None)
+    row.pop("ref_is_animated", None)
     row.pop("sequence", None)
 
 
@@ -1285,6 +1297,8 @@ def generate_decode(manifest, matrix, target_format=None):
                 "ref_bytes": r.get("ref_bytes"),
                 "ref_mode": r.get("ref_mode"),
                 "ref_size": r.get("ref_size"),
+                "ref_frame_count": r.get("ref_frame_count"),
+                "ref_is_animated": r.get("ref_is_animated"),
                 **({"sequence": r["sequence"]} if r.get("sequence") else {}),
             }
             for r in dec_cases

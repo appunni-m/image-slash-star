@@ -481,6 +481,19 @@
       }
     },
     {
+      "id": "palette_map_leniency",
+      "asset": "short_color_map.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/short_color_map.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "rgb",
       "asset": "rgb.tiff",
       "expect_error": false,
@@ -793,6 +806,32 @@
       }
     },
     {
+      "id": "cyclic_ifd_leniency",
+      "asset": "cyclic_ifd.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/cyclic_ifd.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "truncated_later_ifd_leniency",
+      "asset": "truncated_second_ifd.tiff",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/truncated_second_ifd.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_bad_ifd",
       "asset": "bad_ifd.tiff",
       "expect_error": true,
@@ -941,6 +980,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/mixed_bits.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_empty_bits",
+      "asset": "empty_bits.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/empty_bits.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1162,6 +1214,19 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_bits.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_bad_ifd_missing_color_map",
+      "asset": "missing_color_map.tiff",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/missing_color_map.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

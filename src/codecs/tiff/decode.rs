@@ -329,21 +329,21 @@ fn convert_pixels(
             let indices = unpack_indices(&pixels, width, height, bits)?;
             let entries = 1usize << usize::from(bits);
             let map_len = entries * 3;
-            let map = color_map?.get(..map_len)?;
+            let image = DecodedImage::with_mode(width, height, indices, ImageMode::P8);
+            let map = color_map?;
+            let Some(map) = map.get(..map_len) else {
+                return Some(image);
+            };
             let mut rgb = Vec::with_capacity(map_len);
             for index in 0..entries {
                 rgb.push(u8::try_from(map[index] >> 8).ok()?);
                 rgb.push(u8::try_from(map[entries + index] >> 8).ok()?);
                 rgb.push(u8::try_from(map[entries * 2 + index] >> 8).ok()?);
             }
-            Some(
-                DecodedImage::with_mode(width, height, indices, ImageMode::P8).with_palette(
-                    ImagePalette {
-                        rgb,
-                        alpha: Vec::new(),
-                    },
-                ),
-            )
+            Some(image.with_palette(ImagePalette {
+                rgb,
+                alpha: Vec::new(),
+            }))
         }
         (5, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Cmyk8)),
         (6, 3, 8) => {
@@ -595,20 +595,20 @@ fn data_bit_unchecked(data: &[u8], bit: usize) -> u8 {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Endian {
+pub(super) enum Endian {
     Little,
     Big,
 }
 
 impl Endian {
-    fn u16_exact(self, bytes: [u8; 2]) -> u16 {
+    pub(super) fn u16_exact(self, bytes: [u8; 2]) -> u16 {
         match self {
             Endian::Little => u16::from_le_bytes(bytes),
             Endian::Big => u16::from_be_bytes(bytes),
         }
     }
 
-    fn u32_exact(self, bytes: [u8; 4]) -> u32 {
+    pub(super) fn u32_exact(self, bytes: [u8; 4]) -> u32 {
         match self {
             Endian::Little => u32::from_le_bytes(bytes),
             Endian::Big => u32::from_be_bytes(bytes),
@@ -632,10 +632,11 @@ impl Endian {
     }
 }
 
-struct Directory<'a> {
+pub(super) struct Directory<'a> {
     data: &'a [u8],
     endian: Endian,
     entries: Vec<Entry>,
+    next_offset: usize,
 }
 
 struct Entry {
@@ -648,7 +649,7 @@ struct Entry {
 }
 
 impl<'a> Directory<'a> {
-    fn parse(data: &'a [u8], offset: usize, endian: Endian) -> Option<Self> {
+    pub(super) fn parse(data: &'a [u8], offset: usize, endian: Endian) -> Option<Self> {
         let count_bytes = data.get(offset..offset.checked_add(2)?)?;
         let count = usize::from(endian.u16_exact([count_bytes[0], count_bytes[1]]));
         if count > 4096 {
@@ -691,26 +692,33 @@ impl<'a> Directory<'a> {
                 byte_len,
             });
         }
+        let next_position = entries_start + count * 12;
+        let next = data.get(next_position..next_position + 4)?;
         Some(Self {
             data,
             endian,
             entries,
+            next_offset: endian.u32_exact([next[0], next[1], next[2], next[3]]) as usize,
         })
     }
 
-    fn one(&self, tag: u16) -> Option<usize> {
+    pub(super) fn next_offset(&self) -> usize {
+        self.next_offset
+    }
+
+    pub(super) fn one(&self, tag: u16) -> Option<usize> {
         self.values(tag)?.into_iter().next()
     }
 
-    fn one_or(&self, tag: u16, default: usize) -> usize {
+    pub(super) fn one_or(&self, tag: u16, default: usize) -> usize {
         self.one(tag).unwrap_or(default)
     }
 
-    fn values_or(&self, tag: u16, default: &[usize]) -> Vec<usize> {
+    pub(super) fn values_or(&self, tag: u16, default: &[usize]) -> Vec<usize> {
         self.values(tag).unwrap_or_else(|| default.to_vec())
     }
 
-    fn values(&self, tag: u16) -> Option<Vec<usize>> {
+    pub(super) fn values(&self, tag: u16) -> Option<Vec<usize>> {
         let entry = self.entries.iter().find(|entry| entry.tag == tag)?;
         let position = if entry.byte_len <= 4 {
             entry.inline_position
@@ -1482,6 +1490,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         data: &[],
         endian: Endian::Little,
         entries: Vec::new(),
+        next_offset: 0,
     };
     let _ = empty_directory.one_or(1, 7);
     let _ = empty_directory.values_or(1, &[7, 8]);
@@ -1512,6 +1521,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             inline_position: usize::MAX,
             byte_len: 1,
         }],
+        next_offset: 0,
     };
     let _ = overflow_values.values(1);
     let huge_values = Directory {
@@ -1525,6 +1535,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             inline_position: 1,
             byte_len: usize::MAX,
         }],
+        next_offset: 0,
     };
     let _ = huge_values.values(1);
     let unsupported_values = Directory {
@@ -1538,6 +1549,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             inline_position: 0,
             byte_len: 1,
         }],
+        next_offset: 0,
     };
     let _ = unsupported_values.values(1);
     let _ = unsupported_values.values(2);

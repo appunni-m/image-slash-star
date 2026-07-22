@@ -104,6 +104,19 @@
       }
     },
     {
+      "id": "depth_8_8bit_implicit_palette",
+      "asset": "8bit_implicit_palette.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/8bit_implicit_palette.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "depth_16",
       "asset": "16bit.bmp",
       "expect_error": false,
@@ -520,6 +533,19 @@
       }
     },
     {
+      "id": "data_offset_before_header",
+      "asset": "data_offset_before_header.bmp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/data_offset_before_header.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_not_bmp",
       "asset": "not_bmp.bmp",
       "expect_error": true,
@@ -538,6 +564,32 @@
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_header_size.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_core_zero_width",
+      "asset": "core_zero_width.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/core_zero_width.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_4bit_gray",
+      "asset": "4bit_gray.bmp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/4bit_gray.bmp",
         "operations": [
           "PIL.Image.open",
           "load",

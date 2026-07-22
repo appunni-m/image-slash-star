@@ -23,7 +23,9 @@
       "ref_size": [
         128,
         128
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "high_bitdepth",
@@ -37,6 +39,8 @@
         64,
         64
       ],
+      "ref_frame_count": 5,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": null,
         "frames": [
@@ -109,7 +113,9 @@
       "ref_size": [
         64,
         64
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "hdr",
@@ -122,7 +128,9 @@
       "ref_size": [
         200,
         200
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "grid",
@@ -135,7 +143,9 @@
       "ref_size": [
         80,
         80
-      ]
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
     },
     {
       "id": "animated",
@@ -149,6 +159,8 @@
         150,
         150
       ],
+      "ref_frame_count": 5,
+      "ref_is_animated": true,
       "sequence": {
         "loop_count": null,
         "frames": [
@@ -218,7 +230,9 @@
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,
-      "ref_size": null
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
     }
   ]
 }

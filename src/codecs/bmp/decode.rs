@@ -335,6 +335,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             };
             entry[0] == expected && entry[1] == expected && entry[2] == expected
         });
+    // Pillow configures its raw `P;4` decoder before promoting a grayscale
+    // palette and rejects this otherwise well-formed combination.
+    if bit_depth == BmpBitDepth::Four && palette_is_grayscale {
+        return None;
+    }
 
     // --- Seek to pixel data ---
     if r.position() != data_offset {
