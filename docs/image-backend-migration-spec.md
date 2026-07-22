@@ -1,6 +1,7 @@
 # image-slash-star Backend Migration Spec
 
-Status: active migration; Phases 1 and 2 complete.
+Status: active migration; Phases 1 and 2 complete, Phase 3 implemented and
+awaiting the downstream Coverage MCP gate.
 
 This spec describes the intended migration from local codec logic in
 `pillow-rs` to `image-slash-star` as the shared codec and decoded-buffer
@@ -871,6 +872,30 @@ rejected, while a pixel offset one byte before the declared DIB end is accepted.
 5. Replace local decode paths with `decode`.
 6. Map `image-slash-star::ImageError` into the `pillow-rs` error type, or reuse
    it if practical.
+
+Implementation checkpoint (July 2026):
+
+- the historical `pillow-rs-image` workspace member is excluded and retained
+  only as a reference directory
+- `pillow-rs` aliases the external package `image-slash-star` as the Rust crate
+  name `pillow_rs_image`, avoiding a broad import-only rewrite
+- JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO are forwarded by
+  `image-codecs-all`; AVIF remains an explicit opt-in feature
+- the direct `png` dependency and PNG-specific palette reader are removed
+- `Path` and `Bytes` cache feature-gated `ImageInfo` without pixel decode
+- persistent loaded storage retains exact decoded mode, source format, header
+  metadata, palette RGB, and palette alpha
+- `load(&mut self)` replaces lazy state, while `verify(&self)` performs a full
+  decode without changing state
+- save and PNG byte output pass retained `P8 + ImagePalette` directly to the
+  generic encoder
+- Python and JS bindings call the persistent load and verification APIs; JS
+  transparency application is now mutating
+- a Pillow 12.2 manifest fixture set covers exact bytes and state transitions
+  for every codec plus structured unknown/malformed errors
+
+This checkpoint is not accepted until its registered Coverage MCP command has
+passed and line, branch, function, and region metrics have been reviewed.
 
 ### Phase 4: Replace PNG-Specific Palette Logic
 
