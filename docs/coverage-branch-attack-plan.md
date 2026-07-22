@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `a17f2e85-2839-4a26-bee6-8d2ea011868c`
-- Current measured commit metadata: `053312d65f28e3dbb7a199a12ce23e3f9ba180a0`
-- Current coverage source state: working tree over pushed `main` commit
-  `053312d`.
+- Current snapshot: `ff00e9c4-9114-402b-9508-e497f7bf8b79`
+- Current measured commit metadata: `6a98afb6e251c258e05826c67a169d1e3c4cc16e`
+- Current coverage source state: pushed `main` commit `6a98afb`.
 - Lines: 25857 / 25861
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
@@ -90,6 +89,9 @@ Measurement:
 - Coverage MCP run: `ae055b24-2911-4a51-b91e-4bde7de7b79d`.
 - Coverage MCP snapshot: `a17f2e85-2839-4a26-bee6-8d2ea011868c`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `433d86af-d8a6-403d-b930-88447c2b051e`,
+  snapshot `ff00e9c4-9114-402b-9508-e497f7bf8b79`, commit
+  `6a98afb6e251c258e05826c67a169d1e3c4cc16e`; result unchanged.
 - Overall after JPEG bounded symbol conversion cleanup:
   `25857 / 25861` lines, `3448 / 3454` branches,
   `1593 / 1593` functions, and `41672 / 42177` regions.
