@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `78820651-c007-43f4-b1c2-aec369790485`
-- Current measured commit metadata: `fd9b52f91f059dc3eb86a05baa9b6517a5c571bd`
-- Current coverage source state: Attempt 101 source changes measured in the
+- Current snapshot: `35568a97-8cfc-4fb7-bbcd-1b8460fa1512`
+- Current measured commit metadata: `f64e6c0f6257a6693bad2038c7e06f90915e9f12`
+- Current coverage source state: Attempt 102 source changes measured in the
   working tree before commit; source-equivalent to the commit that records this
   attempt.
-- Lines: 26018 / 26021
+- Lines: 26038 / 26041
 - Branches: 3455 / 3460
-- Functions: 1601 / 1601
-- Regions: 41847 / 42332
-- Remaining target: 3 lines, 5 branches, and 485 regions.
+- Functions: 1602 / 1602
+- Regions: 41884 / 42352
+- Remaining target: 3 lines, 5 branches, and 468 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -107,6 +107,64 @@ Measurement/outcome:
 - Retention decision: keep. The sweep removed all 5 PNG decode region gaps
   with no additional missing lines, branches, or functions; all new private
   states are coverage-hook-only probes for impossible public fixture states.
+
+## Attempt 102 plan: ICO decode invariant-region sweep
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `f64e6c0`.
+- Coverage MCP snapshot: `78820651-c007-43f4-b1c2-aec369790485`.
+- Overall: `26018 / 26021` lines, `3455 / 3460` branches,
+  `1601 / 1601` functions, and `41847 / 42332` regions.
+- Target file: `src/codecs/ico/decode.rs`, currently `1063 / 1083` regions
+  and `62 / 62` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `src/codecs/ico/decode.rs:138`, CUR DIB short header | Raw LLVM JSON shows the `data.get(..4)?` failure region is not covered. | Add a direct coverage-hook probe for `decode_cur_bmp(&[])`. |
+| `src/codecs/ico/decode.rs:163-170`, CUR synthetic BMP file header fields | The missing regions are overflow/`u32` conversion guards while building the synthetic BMP header. Public CUR directory data cannot provide a slice near `usize::MAX`; `pixel_offset` `u32` conversion can be hit by a tiny CUR DIB with `colors_used = u32::MAX`, while the pure arithmetic overflows need direct helper probes. | Extract CUR prefix calculation into a private helper, cover impossible arithmetic states directly, and cover call-site failure through the oversized palette-offset DIB. |
+| `src/codecs/ico/decode.rs:172`, synthetic BMP height patch | Once the header is accepted, the synthetic BMP is always at least 54 bytes, so `bmp.get_mut(22..26)?` cannot fail. | Replace the defensive `get_mut` with an invariant slice write and document why it is safe. |
+| `src/codecs/ico/decode.rs:270`, `326`, `378`, `442`, `472`, AND mask propagation | For 24/8/4/1 bpp decoders, a successful XOR-plane slice proves the buffer is at least as large as the AND mask size. The current `Option` mask helper creates impossible `None` regions and repeated impossible call-site `?` regions. | Replace the fallible mask helper with an invariant helper used only after XOR-plane validation. |
+| `src/codecs/ico/decode.rs:315`, `367`, `431`, indexed palette slices | `pixels_raw` is sliced after `palette_end`, so if it succeeds, `data[40..palette_end]` is already known valid. | Use direct invariant palette slices after successful pixel slicing. |
+| `src/codecs/ico/decode.rs:303`, `354`, `418`, indexed palette-size multiply | `colors_used` is `u32`; on the current 64-bit coverage target this multiply cannot overflow. Keeping the checked expression is more portable than replacing it with unchecked arithmetic. | Leave these three region gaps for a later 32-bit/portability-specific decision rather than weakening bounds. |
+
+Implementation/search plan:
+
+1. Keep public ICO/CUR decode behavior unchanged for all states reachable through
+   the public `decode` entry point.
+2. Add no new fixtures in this attempt; these are private invariant and
+   impossible-overflow regions, not Pillow byte-oracle cases.
+3. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep only if aggregate missing regions improve without increasing missing
+   lines, branches, or functions.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run `aedbcb4d-f6e9-45b2-9185-9d9ba6e22aa3` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `35568a97-8cfc-4fb7-bbcd-1b8460fa1512`.
+- Overall changed from `26018 / 26021` lines, `3455 / 3460` branches,
+  `1601 / 1601` functions, and `41847 / 42332` regions to
+  `26038 / 26041` lines, `3455 / 3460` branches, `1602 / 1602`
+  functions, and `41884 / 42352` regions.
+- Missing counts changed from 3 lines, 5 branches, and 485 regions to 3 lines,
+  5 branches, and 468 regions.
+- `src/codecs/ico/decode.rs` moved from `1063 / 1083` to `1100 / 1103`
+  regions while keeping `62 / 62` branches. Remaining ICO gaps are only:
+  - `decode_ico_bmp_8bpp`: `color_count.checked_mul(4)?`
+  - `decode_ico_bmp_4bpp`: `color_count.checked_mul(4)?`
+  - `decode_ico_bmp_1bpp`: `color_count.checked_mul(4)?`
+- Retention decision: keep. The sweep removed 17 ICO decode region gaps without
+  adding missing lines, branches, or functions.
 
 ## Attempt 99 plan: WebP aggregate branch sweep
 

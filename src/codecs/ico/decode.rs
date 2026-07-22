@@ -159,19 +159,34 @@ fn decode_cur_bmp(data: &[u8]) -> Option<DecodedImage> {
     } else {
         0
     };
+    let (file_size, file_size_bytes, pixel_offset_bytes) =
+        cur_bmp_prefix(data.len(), header_size, palette_entries)?;
+    let mut bmp = Vec::with_capacity(file_size);
+    bmp.extend_from_slice(b"BM");
+    bmp.extend_from_slice(&file_size_bytes);
+    bmp.extend_from_slice(&[0; 4]);
+    bmp.extend_from_slice(&pixel_offset_bytes);
+    bmp.extend_from_slice(data);
+    // `data.len() >= header_size >= 40`, so the synthetic BMP is always at
+    // least 54 bytes (`14 + data.len()`), and the height field is present.
+    bmp[22..26].copy_from_slice(&actual_height.to_le_bytes());
+    crate::codecs::bmp::decode::decode(&bmp)
+}
+
+fn cur_bmp_prefix(
+    data_len: usize,
+    header_size: usize,
+    palette_entries: usize,
+) -> Option<(usize, [u8; 4], [u8; 4])> {
     let pixel_offset = 14usize
         .checked_add(header_size)?
         .checked_add(palette_entries.checked_mul(4)?)?;
-    let file_size = 14usize.checked_add(data.len())?;
-    let mut bmp = Vec::with_capacity(file_size);
-    bmp.extend_from_slice(b"BM");
-    bmp.extend_from_slice(&u32::try_from(file_size).ok()?.to_le_bytes());
-    bmp.extend_from_slice(&[0; 4]);
-    bmp.extend_from_slice(&u32::try_from(pixel_offset).ok()?.to_le_bytes());
-    bmp.extend_from_slice(data);
-    bmp.get_mut(22..26)?
-        .copy_from_slice(&actual_height.to_le_bytes());
-    crate::codecs::bmp::decode::decode(&bmp)
+    let file_size = 14usize.checked_add(data_len)?;
+    Some((
+        file_size,
+        u32::try_from(file_size).ok()?.to_le_bytes(),
+        u32::try_from(pixel_offset).ok()?.to_le_bytes(),
+    ))
 }
 
 /// Decode an embedded BMP/DIB entry inside an ICO file.
@@ -262,12 +277,10 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
     // Pillow IcoImagePlugin reads the padded AND mask from the end of the DIB
     // entry. Its BMP writer may emit fewer explicit mask bytes, in which case
     // this deliberately overlaps the tail of the XOR bitmap as Pillow does.
-    let mask_row_size = (width as usize).div_ceil(32) * 4;
-    let mask_size = mask_row_size * height as usize;
     // A valid 24-bit XOR plane is always larger than its mask, so the slice is
     // present once `pixels_raw` above succeeded. Pillow overlaps the XOR tail
     // when explicit mask bytes are omitted.
-    let mask = data.get(data.len().checked_sub(mask_size)?..)?;
+    let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
 
     for y in (0..height as usize).rev() {
@@ -312,7 +325,7 @@ fn decode_ico_bmp_8bpp(
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Read palette (BGRA → RGBA)
-    let palette_raw = data.get(header_size..palette_end)?;
+    let palette_raw = &data[header_size..palette_end];
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
         let offset = i * 4;
@@ -323,7 +336,7 @@ fn decode_ico_bmp_8bpp(
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
-    let (mask, mask_row_size) = ico_and_mask(data, width, height)?;
+    let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
@@ -364,7 +377,7 @@ fn decode_ico_bmp_4bpp(
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Read palette
-    let palette_raw = data.get(header_size..palette_end)?;
+    let palette_raw = &data[header_size..palette_end];
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
         let offset = i * 4;
@@ -375,7 +388,7 @@ fn decode_ico_bmp_4bpp(
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
-    let (mask, mask_row_size) = ico_and_mask(data, width, height)?;
+    let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
@@ -428,7 +441,7 @@ fn decode_ico_bmp_1bpp(
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Read palette
-    let palette_raw = data.get(header_size..palette_end)?;
+    let palette_raw = &data[header_size..palette_end];
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
         let offset = i * 4;
@@ -439,7 +452,7 @@ fn decode_ico_bmp_1bpp(
     }
 
     let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
-    let (mask, mask_row_size) = ico_and_mask(data, width, height)?;
+    let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
         let row_start = y * padded_row;
@@ -466,10 +479,11 @@ fn decode_ico_bmp_1bpp(
     Some(DecodedImage::new(width, height, pixels, ColorType::Rgba8))
 }
 
-fn ico_and_mask(data: &[u8], width: u32, height: u32) -> Option<(&[u8], usize)> {
+fn ico_and_mask_after_xor(data: &[u8], width: u32, height: u32) -> (&[u8], usize) {
     let row_size = (width as usize).div_ceil(32) * 4;
     let size = row_size * height as usize;
-    Some((data.get(data.len().checked_sub(size)?..)?, row_size))
+    debug_assert!(data.len() >= size);
+    (&data[data.len() - size..], row_size)
 }
 
 fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
@@ -511,10 +525,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let short_payload = &two_entries[..39];
     assert!(decode_entry(short_payload, 0, false).is_none());
+    assert!(decode_cur_bmp(&[]).is_none());
     assert!(decode_cur_bmp(&[39, 0, 0, 0]).is_none());
     assert!(decode_cur_bmp(&[40, 0, 0, 0]).is_none());
     let cur_dib = indexed_dib(1, 1, 8, 2, &[1]);
     assert!(decode_cur_bmp(&cur_dib).is_some());
+    let mut cur_oversized_palette = vec![0u8; 40];
+    cur_oversized_palette[0..4].copy_from_slice(&40u32.to_le_bytes());
+    cur_oversized_palette[8..12].copy_from_slice(&2i32.to_le_bytes());
+    cur_oversized_palette[14..16].copy_from_slice(&8u16.to_le_bytes());
+    cur_oversized_palette[32..36].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(decode_cur_bmp(&cur_oversized_palette).is_none());
+    assert!(cur_bmp_prefix(1, usize::MAX, 0).is_none());
+    assert!(cur_bmp_prefix(1, usize::MAX - 20, 4).is_none());
+    assert!(cur_bmp_prefix(1, 0, usize::MAX).is_none());
+    assert!(cur_bmp_prefix(usize::MAX, 0, 0).is_none());
+    assert!(cur_bmp_prefix(u32::MAX as usize, 0, 0).is_none());
 
     for (width, stored_height) in [(0u32, 2u32), (1, 0), (16_385, 2), (1, 32_770)] {
         let mut dib = vec![0u8; 40];
@@ -550,7 +576,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_ico_bmp_1bpp(&dib1_masked, 2, 1, 2).is_some());
     let dib1_default_palette = indexed_dib(1, 1, 1, 2, &[0x80]);
     assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0).is_some());
-    assert!(ico_and_mask(&[], 256, 256).is_none());
 }
 
 #[cfg(coverage)]
