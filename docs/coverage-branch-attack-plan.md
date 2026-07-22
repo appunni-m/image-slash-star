@@ -47,6 +47,58 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 87 plan: WebP animated container with no frames
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `93f224f`, with coverage measured
+  on the code-equivalent pushed commit `1e13e4a`.
+- Coverage MCP snapshot: `435164c1-70d2-444b-be64-0dfe90ba8874`.
+- Overall: `25863 / 25867` lines, `3450 / 3456` branches,
+  `1592 / 1592` functions, and `41637 / 42128` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1378 / 1426` regions and `91 / 92` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `WebPDecoder<Cursor<&[u8]>>::new()` final animated validation at line 162 | MCP reports the file is short by one aggregate branch. The MCP-produced LLVM export shows the remaining source-level branch is the true side of `decoder.is_animated() && decoder.num_frames == 0` for the public borrowed-slice decoder monomorphization. Other reader shapes already cover the source expression, so direct private probes would only add covered hook code. | Add a public malformed WebP fixture: a valid RIFF/WEBP container with `VP8X` animation metadata and an `ANIM` chunk but no `ANMF` frame chunks. Put it under the manifest-driven `error_malformed_container` bucket with `expect_error: true`. |
+
+Implementation plan:
+
+1. Update `scripts/generate_test_assets.py` to derive
+   `animated_no_frames.webp` from the existing deterministic `animated.webp`
+   by deleting all `ANMF` chunks and fixing the RIFF size.
+2. Add `animated_no_frames.webp` to the WebP `error_malformed_container`
+   manifest row.
+3. Regenerate only WebP assets and the manifest-driven reference matrix.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate branch or region missing count falls and
+   byte/pixel parity remains manifest-driven.
+
+Measurement:
+
+- Coverage MCP run: `91a29efb-970e-469f-87b9-2f4d69750837`.
+- Coverage MCP snapshot: `90924c4d-abbc-4647-bcbf-5e4984c94d8d`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `25863 / 25867` lines, `3450 / 3456` branches,
+  `1592 / 1592` functions, and `41637 / 42128` regions.
+- Target movement: `src/codecs/webp/native/decoder.rs` stayed at
+  `1378 / 1426` regions and `91 / 92` branches.
+- Finding: the generated `animated_no_frames.webp` row was a valid
+  Pillow-error oracle input, but it exited earlier in `read_data()` at the
+  extended-container chunk-missing predicate around lines 277-286 because the
+  container had no `ANMF` chunk. It never reached the final
+  `decoder.is_animated() && decoder.num_frames == 0` validation at line 162.
+- Outcome: discarded. Reverted the manifest, generator, generated matrix/json,
+  and removed the untracked fixture. Do not retry the no-`ANMF` fixture for the
+  line 162 branch; the next candidate needs an `ANMF` chunk whose nested frame
+  subchunk is not `VP8`, `VP8L`, or `ALPH`.
+
 ## Attempt 86 plan: ImageBuffer defensive API region probes
 
 Baseline before editing:
