@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `dca2643f-b917-49e1-89da-03ac6cb8cf88`
-- Current measured commit metadata: `aa6316b53dd063021210977e9b78682b6343862b`
-- Current coverage source state: Attempt 104 source changes measured in the
+- Current snapshot: `bae355eb-17f0-4cfd-91f6-1e4a531d31a2`
+- Current measured commit metadata: `5a0d49e34a38ca6a2f5a5588cc30eb37b276844e`
+- Current coverage source state: Attempt 105 source changes measured in the
   working tree before commit; source-equivalent to the commit that records this
   attempt.
-- Lines: 26105 / 26108
+- Lines: 26158 / 26161
 - Branches: 3457 / 3462
-- Functions: 1605 / 1605
-- Regions: 41944 / 42378
-- Remaining target: 3 lines, 5 branches, and 434 regions.
+- Functions: 1608 / 1608
+- Regions: 42045 / 42471
+- Remaining target: 3 lines, 5 branches, and 426 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -29,15 +29,6 @@ from Coverage MCP before each implementation sweep.
 - Remaining line gaps: aggregate line gap is 3, but the current raw per-file
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
-- Remaining `src/codecs/compression/deflate.rs` region map from this snapshot:
-  - Dynamic-Huffman repeat symbol 16 paths:
-    `deflate.rs:508`, `509`, and `510`.
-  - Dynamic-Huffman repeat symbol 17 paths:
-    `deflate.rs:513` and `514`.
-  - Dynamic-Huffman repeat symbol 18 path:
-    `deflate.rs:519`.
-  - Final dynamic literal/distance table rejection paths:
-    `deflate.rs:525` and `526`.
 - Files now at 100% branch coverage from this sweep:
   - `src/codecs/tiff/decode.rs`: 132 / 132 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 114 / 114 branches and now
@@ -58,6 +49,8 @@ from Coverage MCP before each implementation sweep.
     732 / 732 regions.
   - `src/codecs/ico/decode.rs`: 62 / 62 branches and now
     1103 / 1103 regions.
+  - `src/codecs/compression/deflate.rs`: 50 / 50 branches and now
+    969 / 969 regions.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
@@ -294,6 +287,60 @@ Measurement/outcome:
   literal/distance Huffman table rejection.
 - Retention decision: keep. The sweep removed 31 aggregate missing regions with
   no additional missing lines, branches, or functions.
+
+## Attempt 105 plan: DEFLATE dynamic-Huffman completion
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `5a0d49e`.
+- Coverage MCP snapshot: `dca2643f-b917-49e1-89da-03ac6cb8cf88`.
+- Overall: `26105 / 26108` lines, `3457 / 3462` branches,
+  `1605 / 1605` functions, and `41944 / 42378` regions.
+- Target file: `src/codecs/compression/deflate.rs`, currently `868 / 876`
+  regions and `50 / 50` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| Code-length repeat symbol 16 at `deflate.rs:508`-`510` | Raw LLVM JSON shows the remaining gaps are the no-previous-symbol exit, the short 2-bit repeat read, and the repeat-overrun exit. These are real malformed dynamic-Huffman table exits, but constructing exact public zlib bytes for each partial-bit state would be brittle. | Extract the code-length expansion loop into a private helper and feed exact `BitReader` states from the coverage hook. |
+| Code-length repeat symbol 17 at `deflate.rs:513`-`514` | The gaps are the short 3-bit repeat read and repeat-overrun exit for zero repeats. | Cover with the same helper and exact private bit states. |
+| Code-length repeat symbol 18 at `deflate.rs:519` | The gap is the short 7-bit repeat read for the long zero-repeat symbol. | Cover with the same helper and exact private bit state. |
+| Final dynamic literal/distance table rejection at `deflate.rs:525`-`526` | The gaps are valid-length-vector states that fail only when the final literal or distance Huffman table is empty. | Extract final dynamic table construction into a private helper and cover both rejection exits directly. |
+
+Implementation/search plan:
+
+1. Preserve public zlib/DEFLATE behavior; this is helper extraction plus
+   coverage-only malformed state probes.
+2. Keep the helper inputs exact and deterministic. No random test data.
+3. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep only if `src/codecs/compression/deflate.rs` reaches 100% regions and
+   aggregate missing lines, branches, and functions do not regress.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run `b646ed1d-0358-4202-87f7-e45300ece492` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `bae355eb-17f0-4cfd-91f6-1e4a531d31a2`.
+- Overall changed from `26105 / 26108` lines, `3457 / 3462` branches,
+  `1605 / 1605` functions, and `41944 / 42378` regions to
+  `26158 / 26161` lines, `3457 / 3462` branches, `1608 / 1608`
+  functions, and `42045 / 42471` regions.
+- Missing counts changed from 3 lines, 5 branches, and 434 regions to 3 lines,
+  5 branches, and 426 regions.
+- `src/codecs/compression/deflate.rs` is now closed to 100% regions:
+  `590 / 590` lines, `50 / 50` branches, `28 / 28` functions, and
+  `969 / 969` regions.
+- Retention decision: keep. The helper extraction covered all remaining
+  dynamic-Huffman malformed table states without adding missing lines, branches,
+  or functions.
 
 ## Attempt 99 plan: WebP aggregate branch sweep
 

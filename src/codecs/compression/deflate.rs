@@ -127,6 +127,41 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     assert!(read_dynamic_tables(&mut bits).is_none());
 
+    let symbol_16 = huffman_with_symbol(16);
+    let mut bits = BitReader::new(&[0]);
+    assert!(read_dynamic_code_lengths(&mut bits, &symbol_16, 1).is_none());
+
+    let zero_then_16 = huffman_with_symbols(&[(0, 1), (16, 1)]);
+    let mut bits = BitReader {
+        data: &[0b0100_0000],
+        bit_position: 5,
+    };
+    assert!(read_dynamic_code_lengths(&mut bits, &zero_then_16, 4).is_none());
+    let mut bits = BitReader::new(&[0b0000_0010]);
+    assert!(read_dynamic_code_lengths(&mut bits, &zero_then_16, 2).is_none());
+
+    let symbol_17 = huffman_with_symbol(17);
+    let mut bits = BitReader {
+        data: &[0],
+        bit_position: 7,
+    };
+    assert!(read_dynamic_code_lengths(&mut bits, &symbol_17, 1).is_none());
+    let mut bits = BitReader::new(&[0]);
+    assert!(read_dynamic_code_lengths(&mut bits, &symbol_17, 1).is_none());
+
+    let symbol_18 = huffman_with_symbol(18);
+    let mut bits = BitReader {
+        data: &[0],
+        bit_position: 7,
+    };
+    assert!(read_dynamic_code_lengths(&mut bits, &symbol_18, 1).is_none());
+
+    let zero_lengths = vec![0; 258];
+    assert!(build_dynamic_tables(&zero_lengths, 257).is_none());
+    let mut no_distance_lengths = vec![0; 258];
+    no_distance_lengths[0] = 1;
+    assert!(build_dynamic_tables(&no_distance_lengths, 257).is_none());
+
     let literal_zero = huffman_with_symbol(0);
     let literal_end = huffman_with_symbol(256);
     let literal_match = huffman_with_symbol(257);
@@ -299,6 +334,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
 fn huffman_with_symbol(symbol: usize) -> Huffman {
     let mut lengths = vec![0; symbol + 1];
     lengths[symbol] = 1;
+    Huffman::from_lengths(&lengths).expect("coverage huffman should build")
+}
+
+#[cfg(coverage)]
+fn huffman_with_symbols(symbols: &[(usize, u8)]) -> Huffman {
+    let max_symbol = symbols
+        .iter()
+        .map(|&(symbol, _)| symbol)
+        .max()
+        .expect("coverage huffman should have symbols");
+    let mut lengths = vec![0; max_symbol + 1];
+    for &(symbol, length) in symbols {
+        lengths[symbol] = length;
+    }
     Huffman::from_lengths(&lengths).expect("coverage huffman should build")
 }
 
@@ -499,6 +548,15 @@ fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
     let code_length_table = Huffman::from_lengths(&code_lengths)?;
 
     let total = literal_count + distance_count;
+    let lengths = read_dynamic_code_lengths(bits, &code_length_table, total)?;
+    build_dynamic_tables(&lengths, literal_count)
+}
+
+fn read_dynamic_code_lengths(
+    bits: &mut BitReader<'_>,
+    code_length_table: &Huffman,
+    total: usize,
+) -> Option<Vec<u8>> {
     let mut lengths = Vec::with_capacity(total);
     while lengths.len() < total {
         let symbol = code_length_table.decode(bits)?;
@@ -521,7 +579,10 @@ fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
             }
         }
     }
+    Some(lengths)
+}
 
+fn build_dynamic_tables(lengths: &[u8], literal_count: usize) -> Option<(Huffman, Huffman)> {
     let literal = Huffman::from_lengths(&lengths[..literal_count])?;
     let distance = Huffman::from_lengths(&lengths[literal_count..])?;
     Some((literal, distance))
