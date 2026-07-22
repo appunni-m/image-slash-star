@@ -1710,11 +1710,14 @@ formats:
       - bad_vp8l_signature.webp
       - bad_vp8l_version.webp
       - bad_initial_chunk.webp
+      - extended_vp8l_alpha_header_only.webp
       - extended_missing_image_chunk.webp
       - extended_vp8x_no_chunks.webp
       - extended_vp8x_truncated_chunk_header.webp
       - animated_missing_anim.webp
       - animated_missing_anmf.webp
+      - animated_anim_payload_eof_after_anmf.webp
+      - animated_alpha_missing_nested_vp8_header.webp
       - extended_vp8_dimension_mismatch.webp
       - extended_canvas_too_large.webp
       - bad_anmf_scan_size.webp
@@ -1751,6 +1754,19 @@ formats:
       - vp8l_empty_code_length_tree.webp
       - vp8l_incomplete_huffman_tree.webp
       - vp8l_invalid_max_symbol.webp
+      - vp8l_color_index_size_truncated.webp
+      - vp8l_predictor_transform_stream_truncated.webp
+      - vp8l_color_transform_stream_truncated.webp
+      - vp8l_meta_huffman_stream_truncated.webp
+      - vp8l_two_symbol_truncated_one_symbol.webp
+      - vp8l_code_lengths_max_symbol_flag_truncated.webp
+      - vp8l_code_lengths_length_nbits_truncated.webp
+      - vp8l_code_lengths_max_value_truncated.webp
+      - vp8l_color_index_stream_truncated.webp
+      - vp8l_zero_symbol_truncated.webp
+      - vp8l_code_length_alphabet_truncated.webp
+      - vp8l_repeat_code17_extra_truncated.webp
+      - vp8l_repeat_code18_extra_truncated.webp
       - vp8l_repeat_overflow.webp
       - vp8l_single_backref.webp
       - vp8l_backref_before_output.webp

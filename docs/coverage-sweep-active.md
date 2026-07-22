@@ -7,25 +7,358 @@ active checklist for getting the remaining LLVM source regions and branch to
 
 ## Current retained baseline
 
-- Coverage MCP run: `5bdbffc9-86fe-44a4-bb1d-cfaadd9e16e1`
-- Coverage MCP snapshot: `0060828f-ffce-4589-b59a-99a11a8e23c4`
+- Coverage MCP run: `4aa00aa6-c25e-45bc-bd84-d534930dbe2b`
+- Coverage MCP snapshot: `ea55a704-d482-45ce-97e6-b3cf2db786f4`
 - Command: `all-features-llvm-cov-json-nightly-branch`
 - Result: `5 passed / 0 failed`
 - Lines: `26811 / 26811` (100%)
 - Functions: `1620 / 1620` (100%)
 - Branches: `3477 / 3478` (1 missing)
-- Regions: `42501 / 42575` (74 missing)
+- Regions: `42511 / 42575` (64 missing)
 
 ## Remaining gap map
 
 | File | Missing regions | Missing branches | Current reason |
 | --- | ---: | ---: | --- |
 | `src/codecs/compression/zlib_ng.rs` | 0 | 0 | Complete after converting proven generated-token/matcher invariants to direct operations or invariant `expect(...)` calls. |
-| `src/codecs/webp/native/decoder.rs` | 35 | 0 | Missing-`ALPH` parity is fixed; remaining debt is exact `Seek`/`Read` propagation in VP8X/ANIM/ANMF plus normalized animation/alpha regions. |
-| `src/codecs/webp/native/lossless.rs` | 29 | 1 | VP8L truncation fixtures reduced public EOF/read propagation debt; the retained branch gap maps to coverage-only generic `BitReader::read_bits` monomorphs, not a Pillow image path. |
+| `src/codecs/webp/native/decoder.rs` | 33 | 0 | Missing-`ALPH` parity is fixed; remaining debt is exact `Seek`/`Read` propagation in VP8X/ANIM/ANMF plus normalized animation/alpha regions. |
+| `src/codecs/webp/native/lossless.rs` | 21 | 1 | Targeted VP8L byte-boundary truncation fixtures reduced public EOF/read propagation debt; the retained branch gap still maps to `BitReader::read_bits`. |
 | `src/codecs/tiff/decode.rs` | 0 | 0 | Complete after coverage-only malformed header overflow fixtures. |
 | `src/codecs/webp/native/vp8.rs` | 9 | 0 | VP8 parser/loop-filter region debt, mostly malformed payload read propagation and macroblock/residual decode propagation. |
 | `src/codecs/webp/native/encoder.rs` | 1 | 0 | Top-level `WebPEncoder::encode()` source-region artifact remains after direct writer-failure hook coverage. |
+
+## Batch 59 plan
+
+Goal: make one fixture-first sweep across the remaining WebP native region debt,
+prioritizing public Pillow-oracle malformed byte streams over new private
+coverage hooks.
+
+Reverse mapping from retained snapshot
+`e0363b79-3da6-4fbf-8fc7-91a552bfa49f`:
+
+- `lossless.rs` has the only remaining branch gap and the largest actionable
+  fixture surface: 29 missing regions. The source loci cluster in:
+  - transform parsing and recursive transform image streams:
+    `read_transforms()` lines 207, 220, 239, 262, and 265;
+  - meta Huffman parsing and recursive entropy images:
+    `read_huffman_codes()` lines 315, 317, and 324;
+  - Huffman tree construction and code-length parsing:
+    `read_huffman_code()` / `read_huffman_code_lengths()` lines 392, 400,
+    421, 422, 423, and 442;
+  - pixel decode fill/symbol propagation:
+    `decode_image_data()` lines 501 and 555;
+  - the retained branch miss is still attributed by MCP to
+    `BitReader::read_bits()` line 1320.
+- Prior direct `BitReader::read_bits()` hook calls did not improve the branch
+  or aggregate region totals, so Batch 59 will not add a new generic reader
+  hook first.
+- Public VP8L files can only end on byte boundaries, so bit reads immediately
+  after 1, 3, or 6 consumed bits may be impossible to EOF using committed image
+  bytes. Candidate fixtures should therefore target byte-boundary-aligned
+  parser states first: color-indexing size truncation, recursive transform
+  stream truncation, meta Huffman stream truncation, two-symbol Huffman
+  truncation, and max-symbol/code-length truncation.
+- `decoder.rs` remaining regions are mostly `Seek`/`Read` propagation and
+  normalized animation/alpha paths. Some are public-byte reachable through
+  malformed VP8X/ANMF chunk layouts, but several require a reader that fails
+  after a successful header scan; those should not block the VP8L fixture sweep.
+- `vp8.rs` remaining regions are parser/residual propagation sites around
+  `init_partitions()`, `read_frame_header()`, and residual coefficient reads.
+  The previous hook attempt regressed coverage, so this batch should only add
+  VP8 byte fixtures if their malformed partition/frame payloads are
+  Pillow-rejected and do not introduce new hook code.
+- `encoder.rs` retains one top-level region artifact after writer-failure hooks;
+  no new encoder hook is planned in this fixture batch.
+
+Planned edit:
+
+- Add reproducible VP8L malformed fixtures in
+  `scripts/generate_test_assets.py`, then register them in the WebP
+  `error_malformed_container` manifest group only if Pillow rejects them.
+- Initial candidates:
+  - `vp8l_color_index_size_truncated.webp`;
+  - `vp8l_predictor_transform_stream_truncated.webp`;
+  - `vp8l_color_transform_stream_truncated.webp`;
+  - `vp8l_meta_huffman_stream_truncated.webp`;
+  - `vp8l_two_symbol_truncated_one_symbol.webp`;
+  - `vp8l_code_lengths_max_symbol_flag_truncated.webp`;
+  - `vp8l_code_lengths_length_nbits_truncated.webp`;
+  - `vp8l_code_lengths_max_value_truncated.webp`.
+- Regenerate WebP fixtures and Pillow oracle references.
+- Run local non-coverage gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain the batch only if it preserves 100% line/function coverage and reduces
+  aggregate missing regions or branches.
+
+Applied edit:
+
+- Added reproducible generation for eight Pillow-rejected VP8L malformed
+  fixtures:
+  - `vp8l_color_index_size_truncated.webp`;
+  - `vp8l_predictor_transform_stream_truncated.webp`;
+  - `vp8l_color_transform_stream_truncated.webp`;
+  - `vp8l_meta_huffman_stream_truncated.webp`;
+  - `vp8l_two_symbol_truncated_one_symbol.webp`;
+  - `vp8l_code_lengths_max_symbol_flag_truncated.webp`;
+  - `vp8l_code_lengths_length_nbits_truncated.webp`;
+  - `vp8l_code_lengths_max_value_truncated.webp`.
+- Added those fixtures to the WebP `error_malformed_container` manifest group.
+- Regenerated WebP assets and Pillow oracle references with:
+  - `.oracle-venv/bin/python scripts/generate_test_assets.py --format webp`;
+  - `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`.
+- Pillow classified all eight new fixtures as
+  `builtins.OSError: failed to read next frame`.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `git diff --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+
+Coverage MCP validation:
+
+- Run: `c94c0a0b-fd6b-45ed-b70b-d15eecf47a0b`.
+- Snapshot: `a8cfbdff-2d5a-46e7-bff5-46a99b9344d3`.
+- Result: `5 passed / 0 failed`.
+- Lines: `26811 / 26811` (100%).
+- Functions: `1620 / 1620` (100%).
+- Branches: `3477 / 3478` (1 missing, unchanged).
+- Regions: `42508 / 42575` (67 missing), improved by 7.
+- `src/codecs/webp/native/lossless.rs`: improved from 29 to 22 missing
+  regions.
+
+Retention:
+
+- Retain Batch 59. It reduces public VP8L malformed-bitstream region debt with
+  Pillow-rejected byte fixtures and preserves 100% line/function coverage.
+
+## Batch 60 plan
+
+Goal: continue the VP8L fixture sweep with byte-boundary EOF cases that Batch
+59 did not explicitly target.
+
+Reverse mapping from retained snapshot
+`a8cfbdff-2d5a-46e7-bff5-46a99b9344d3`:
+
+- `lossless.rs` remains the only branch-missing file and has 22 missing
+  regions.
+- MCP detailed file view confirms the aggregate lossless raw metrics
+  (`1248 / 1270` regions, `113 / 114` branches), but it does not expose exact
+  per-region coordinates beyond normalized source-line groups. The remaining
+  normalized groups still cluster around transform/Huffman setup and
+  code-length/pixel decode propagation.
+- Public-byte candidates left after Batch 59:
+  - color-indexing transform after a successful table-size byte, then EOF in
+    the recursive color-map image stream (`read_transforms()` line 265);
+  - simple Huffman tree with `is_first_8bits = 1`, then EOF while reading the
+    8-bit zero symbol (`read_huffman_code()` around lines 382-385);
+  - implicit Huffman tree with declared code-length alphabet longer than the
+    bytes provided, then EOF while reading a 3-bit code-length code length
+    (`read_huffman_code()` line 403);
+  - code-length repeat symbol 17 and 18 paths with too few extra bits
+    (`read_huffman_code_lengths()` line 467).
+- These are still real malformed VP8L byte streams and should be
+  Pillow-rejected fixtures, not private hooks.
+
+Planned edit:
+
+- Add reproducible generation and manifest rows for:
+  - `vp8l_color_index_stream_truncated.webp`;
+  - `vp8l_zero_symbol_truncated.webp`;
+  - `vp8l_code_length_alphabet_truncated.webp`;
+  - `vp8l_repeat_code17_extra_truncated.webp`;
+  - `vp8l_repeat_code18_extra_truncated.webp`.
+- Regenerate WebP assets and Pillow oracle references.
+- Run local gates and Coverage MCP.
+- Retain only if aggregate regions or branches improve without losing 100%
+  line/function coverage.
+
+Applied edit:
+
+- Added reproducible generation for five additional Pillow-rejected VP8L
+  malformed fixtures:
+  - `vp8l_color_index_stream_truncated.webp`;
+  - `vp8l_zero_symbol_truncated.webp`;
+  - `vp8l_code_length_alphabet_truncated.webp`;
+  - `vp8l_repeat_code17_extra_truncated.webp`;
+  - `vp8l_repeat_code18_extra_truncated.webp`.
+- Added those fixtures to the WebP `error_malformed_container` manifest group.
+- Regenerated WebP assets and Pillow oracle references with:
+  - `.oracle-venv/bin/python scripts/generate_test_assets.py --format webp`;
+  - `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`.
+- Pillow classified all five fixtures as
+  `builtins.OSError: failed to read next frame`.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `git diff --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+
+Coverage MCP validation:
+
+- Run: `73dfbc9d-51f5-4637-97e1-bf6855001a64`.
+- Snapshot: `97ef0db7-bfdc-4bfd-b0a3-e97573f4ffad`.
+- Result: `5 passed / 0 failed`.
+- Lines: `26811 / 26811` (100%).
+- Functions: `1620 / 1620` (100%).
+- Branches: `3477 / 3478` (1 missing, unchanged).
+- Regions: `42509 / 42575` (66 missing), improved by 1.
+- `src/codecs/webp/native/lossless.rs`: improved from 22 to 21 missing
+  regions.
+
+Retention:
+
+- Retain Batch 60. It still improves aggregate regions without regressing
+  line/function/branch coverage, but the low yield indicates that the remaining
+  public byte-boundary VP8L EOF cases are nearly exhausted.
+
+## Batch 61 plan
+
+Goal: try the smallest public-byte WebP decoder fixtures for the remaining
+`decoder.rs` region debt before adding any new private reader hooks.
+
+Reverse mapping from retained snapshot
+`97ef0db7-bfdc-4bfd-b0a3-e97573f4ffad` plus MCP source windows:
+
+- `decoder.rs` has 35 missing regions and 0 missing branches.
+- The remaining source loci are:
+  - VP8X scan error propagation around line 278;
+  - ANIM seek/read propagation around lines 305 and 307;
+  - first-ANMF nested scan seek propagation around line 322;
+  - VP8L alpha decode propagation around line 426;
+  - lossy alpha range-reader propagation around line 456;
+  - animation frame seek propagation around line 509;
+  - animated `ALPH` next-chunk seek/read propagation around lines 573 and 574.
+- Existing coverage-only hooks already include failing-seek readers for many of
+  these paths. Batch 61 should therefore avoid adding new hook machinery and
+  only try public malformed containers.
+- Public-byte candidates that should reach source not yet covered by regular
+  fixtures:
+  - a valid `ANMF` scanned before an `ANIM` chunk whose header declares 6 bytes
+    but physically contains only 4; VP8X validation can pass, then
+    `read_image()` should fail at the ANIM `read_exact(...) ?`;
+  - an animated alpha frame truncated immediately after the `ALPH` payload;
+    `read_frame()` should read alpha, seek to the next nested chunk start, then
+    fail reading the missing VP8 chunk header.
+
+Planned edit:
+
+- Add reproducible generation and manifest rows for:
+  - `animated_anim_payload_eof_after_anmf.webp`;
+  - `animated_alpha_missing_nested_vp8_header.webp`.
+- Regenerate WebP assets and Pillow oracle references.
+- Run local gates and Coverage MCP.
+- Retain only if aggregate regions or branches improve without losing 100%
+  line/function coverage.
+
+Applied edit:
+
+- Added reproducible generation for two Pillow-rejected animated WebP malformed
+  fixtures:
+  - `animated_anim_payload_eof_after_anmf.webp`;
+  - `animated_alpha_missing_nested_vp8_header.webp`.
+- Added those fixtures to the WebP `error_malformed_container` manifest group.
+- Regenerated WebP assets and Pillow oracle references with:
+  - `.oracle-venv/bin/python scripts/generate_test_assets.py --format webp`;
+  - `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`.
+- Pillow classified both fixtures as
+  `builtins.OSError: could not create decoder object`.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `git diff --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+
+Coverage MCP validation:
+
+- Run: `b7714256-0862-4d84-a4f4-dc6ead98f2aa`.
+- Snapshot: `451cab41-c1ce-4bcf-952e-036438077773`.
+- Result: `5 passed / 0 failed`.
+- Lines: `26811 / 26811` (100%).
+- Functions: `1620 / 1620` (100%).
+- Branches: `3477 / 3478` (1 missing, unchanged).
+- Regions: `42510 / 42575` (65 missing), improved by 1.
+- `src/codecs/webp/native/decoder.rs`: improved from 35 to 34 missing
+  regions.
+
+Retention:
+
+- Retain Batch 61. It proves one remaining decoder path is public-byte
+  reachable, but the low yield indicates the remaining decoder region debt is
+  mostly failing-reader or source-region artifact work.
+
+## Batch 62 plan
+
+Goal: cover the remaining public VP8L-alpha decode propagation in
+`decoder.rs`.
+
+Reverse mapping after Batch 61:
+
+- Current retained snapshot: `451cab41-c1ce-4bcf-952e-036438077773`.
+- Remaining zero-region entries from the MCP-produced LLVM artifact:
+  - `decoder.rs`: lines 278, 305, 322, 426, 456, 509, and 573;
+  - `lossless.rs`: lines 207, 220, 239, 315, 317, 442, 501, and 555;
+  - `vp8.rs`: lines 999, 1193, 1200, 1202, 1220, 1492, 1547, and 1860.
+- Batch 61 cleared the public ANIM/ALPH read EOF loci at decoder lines 307 and
+  574.
+- Decoder line 426 is the `VP8L` image path when `self.has_alpha` is true:
+  `decoder.decode_frame(self.width, self.height, buf)?`.
+- Existing `vp8l_alpha_header_only.webp` does not set `self.has_alpha` because
+  its standalone VP8L header has alpha bit `0`. The public way to make
+  `self.has_alpha` true for a lossless image is a VP8X container with the alpha
+  flag set and a `VP8L` image chunk.
+
+Planned edit:
+
+- Add reproducible generation and a manifest row for
+  `extended_vp8l_alpha_header_only.webp`: VP8X alpha flag set, dimensions taken
+  from the source VP8L header, and the VP8L chunk truncated to its five-byte
+  signature/header.
+- Regenerate WebP assets and Pillow oracle references.
+- Run local gates and Coverage MCP.
+- Retain only if aggregate regions or branches improve without losing 100%
+  line/function coverage.
+
+Applied edit:
+
+- Added reproducible generation for
+  `extended_vp8l_alpha_header_only.webp`, a VP8X alpha container whose VP8L
+  payload is truncated to the five-byte signature/header.
+- Added the fixture to the WebP `error_malformed_container` manifest group.
+- Regenerated WebP assets and Pillow oracle references with:
+  - `.oracle-venv/bin/python scripts/generate_test_assets.py --format webp`;
+  - `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`.
+- Pillow classified the fixture as
+  `builtins.OSError: failed to read next frame`.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `git diff --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+
+Coverage MCP validation:
+
+- Run: `4aa00aa6-c25e-45bc-bd84-d534930dbe2b`.
+- Snapshot: `ea55a704-d482-45ce-97e6-b3cf2db786f4`.
+- Result: `5 passed / 0 failed`.
+- Lines: `26811 / 26811` (100%).
+- Functions: `1620 / 1620` (100%).
+- Branches: `3477 / 3478` (1 missing, unchanged).
+- Regions: `42511 / 42575` (64 missing), improved by 1.
+- `src/codecs/webp/native/decoder.rs`: improved from 34 to 33 missing
+  regions.
+
+Retention:
+
+- Retain Batch 62. It confirms decoder line 426 was public-byte reachable only
+  through VP8X alpha metadata, not the standalone VP8L header alpha bit.
 
 ## Batch 54 plan
 

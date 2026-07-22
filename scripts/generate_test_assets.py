@@ -2533,6 +2533,61 @@ def gen_webp():
     append_lsb(bits, 300, 16)
     write_vp8l_bits("vp8l_invalid_max_symbol.webp", bits)
 
+    write_vp8l_bits("vp8l_color_index_size_truncated.webp", [1, 1, 1])
+
+    bits = [1, 0, 0]
+    append_lsb(bits, 0, 3)
+    write_vp8l_bits("vp8l_predictor_transform_stream_truncated.webp", bits)
+
+    bits = [1, 1, 0]
+    append_lsb(bits, 0, 3)
+    write_vp8l_bits("vp8l_color_transform_stream_truncated.webp", bits)
+
+    bits = [0, 0, 1]
+    append_lsb(bits, 0, 3)
+    write_vp8l_bits("vp8l_meta_huffman_stream_truncated.webp", bits)
+
+    bits = [0, 0, 0, 1, 1, 0, 0]
+    write_vp8l_bits("vp8l_two_symbol_truncated_one_symbol.webp", bits)
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 4, 4)
+    for length in (1, 1, 0, 0, 0, 0, 0, 0):
+        append_lsb(bits, length, 3)
+    write_vp8l_bits("vp8l_code_lengths_max_symbol_flag_truncated.webp", bits)
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 1, 4)
+    for length in (1, 1, 0, 0, 0):
+        append_lsb(bits, length, 3)
+    bits.append(1)
+    write_vp8l_bits("vp8l_code_lengths_length_nbits_truncated.webp", bits)
+
+    bits = code_length_tree_prefix()
+    bits.append(1)
+    append_lsb(bits, 0, 3)
+    write_vp8l_bits("vp8l_code_lengths_max_value_truncated.webp", bits)
+
+    bits = [1, 1, 1]
+    append_lsb(bits, 0, 8)
+    write_vp8l_bits("vp8l_color_index_stream_truncated.webp", bits)
+
+    write_vp8l_bits("vp8l_zero_symbol_truncated.webp", [0, 0, 0, 1, 0, 1])
+
+    bits = [0, 0, 0, 0]
+    append_lsb(bits, 2, 4)
+    for length in (1, 1, 0, 0, 0):
+        append_lsb(bits, length, 3)
+    write_vp8l_bits("vp8l_code_length_alphabet_truncated.webp", bits)
+
+    bits = code_length_tree_prefix()
+    bits.extend((0, 0))
+    write_vp8l_bits("vp8l_repeat_code17_extra_truncated.webp", bits)
+
+    bits = code_length_tree_prefix()
+    bits.extend((0, 1))
+    write_vp8l_bits("vp8l_repeat_code18_extra_truncated.webp", bits)
+
     bits = code_length_tree_prefix()
     bits.append(0)
     for repeat_extra in (127, 127, 0):
@@ -2752,6 +2807,32 @@ def gen_webp():
 
     write_vp8x_container("extended_vp8x_no_chunks.webp")
     write_vp8x_container("extended_vp8x_truncated_chunk_header.webp", trailing=b"JUNK")
+
+    def write_extended_vp8l_alpha_header_only():
+        source = (d / "with_alpha.webp").read_bytes()
+        vp8l = source.find(b"VP8L")
+        if vp8l < 0:
+            raise RuntimeError("with_alpha WebP did not contain a VP8L chunk")
+        payload = source[vp8l + 8 : vp8l + 13]
+        header = int.from_bytes(payload[1:5], "little")
+        width = (1 + header) & 0x3FFF
+        height = (1 + (header >> 14)) & 0x3FFF
+
+        vp8x_payload = bytearray([0x10, 0, 0, 0])
+        vp8x_payload.extend((width - 1).to_bytes(3, "little"))
+        vp8x_payload.extend((height - 1).to_bytes(3, "little"))
+        vp8x_chunk = b"VP8X" + struct.pack("<I", len(vp8x_payload)) + bytes(vp8x_payload)
+
+        vp8l_chunk = b"VP8L" + struct.pack("<I", len(payload)) + payload
+        if len(payload) & 1:
+            vp8l_chunk += b"\0"
+
+        payload = b"WEBP" + vp8x_chunk + vp8l_chunk
+        webp = b"RIFF" + struct.pack("<I", len(payload)) + payload
+        (d / "extended_vp8l_alpha_header_only.webp").write_bytes(webp)
+
+    write_extended_vp8l_alpha_header_only()
+
     write_mutated_webp(
         "animated_missing_anim.webp", "animated.webp", remove_top_level_chunk(b"ANIM")
     )
@@ -2814,6 +2895,48 @@ def gen_webp():
         struct.pack_into("<I", data, 4, len(data) - 8)
 
     write_mutated_webp("anim_chunk_too_small.webp", "animated.webp", shrink_anim_chunk)
+
+    def webp_chunk_bytes(data, fourcc):
+        cursor = 12
+        while cursor + 8 <= len(data):
+            chunk_size = struct.unpack_from("<I", data, cursor + 4)[0]
+            chunk_end = cursor + 8 + chunk_size + (chunk_size & 1)
+            if data[cursor : cursor + 4] == fourcc:
+                return bytes(data[cursor:chunk_end])
+            cursor = chunk_end
+        raise RuntimeError(f"WebP did not contain a {fourcc!r} chunk")
+
+    def riff_from_webp_chunks(chunks):
+        payload = b"WEBP" + b"".join(chunks)
+        return b"RIFF" + struct.pack("<I", len(payload)) + payload
+
+    def write_anim_payload_eof_after_anmf():
+        source = (d / "animated.webp").read_bytes()
+        vp8x = webp_chunk_bytes(source, b"VP8X")
+        anmf = webp_chunk_bytes(source, b"ANMF")
+        anim = webp_chunk_bytes(source, b"ANIM")
+        truncated_anim = b"ANIM" + struct.pack("<I", 6) + anim[8:12]
+        (d / "animated_anim_payload_eof_after_anmf.webp").write_bytes(
+            riff_from_webp_chunks((vp8x, anmf, truncated_anim))
+        )
+
+    write_anim_payload_eof_after_anmf()
+
+    def truncate_after_first_nested_alpha(data):
+        anmf = data.find(b"ANMF")
+        alpha = data.find(b"ALPH", anmf + 8)
+        if alpha < 0:
+            raise RuntimeError("animated alpha WebP did not contain a nested ALPH chunk")
+        alpha_size = struct.unpack_from("<I", data, alpha + 4)[0]
+        alpha_end = alpha + 8 + alpha_size + (alpha_size & 1)
+        del data[alpha_end:]
+        struct.pack_into("<I", data, 4, len(data) - 8)
+
+    write_mutated_webp(
+        "animated_alpha_missing_nested_vp8_header.webp",
+        "animated_alpha_lossy.webp",
+        truncate_after_first_nested_alpha,
+    )
 
     def set_animation_loop(data, count):
         anim = data.find(b"ANIM")
