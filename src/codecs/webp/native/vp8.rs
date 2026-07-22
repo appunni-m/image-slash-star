@@ -1969,6 +1969,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }};
     }
 
+    macro_rules! with_cursor_decoder {
+        ($bytes:expr, |$decoder:ident| $body:block) => {{
+            let data = $bytes;
+            let bytes: &[u8] = data.as_ref();
+            let mut $decoder = Vp8Decoder::new(std::io::Cursor::new(bytes));
+            $body
+        }};
+    }
+
+    macro_rules! exercise_init_partitions {
+        ($bytes:expr, $partitions:expr) => {{
+            with_cursor_decoder!($bytes, |decoder| {
+                let _ = decoder.init_partitions($partitions);
+            });
+        }};
+    }
+
+    macro_rules! exercise_frame_header {
+        ($bytes:expr) => {{
+            with_cursor_decoder!($bytes, |decoder| {
+                let _ = decoder.read_frame_header();
+            });
+        }};
+    }
+
     assert_eq!(LumaMode::from_i8(127), None);
     assert_eq!(LumaMode::B.into_intra(), None);
     assert_eq!(ChromaMode::from_i8(127), None);
@@ -1992,74 +2017,77 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut rgba = [0u8; 4];
     frame.fill_rgba(&mut rgba);
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.frame.keyframe = true;
-    decoder.frame.filter_level = 10;
-    decoder.frame.sharpness_level = 0;
-    decoder.segments_enabled = true;
-    decoder.segment[0].delta_values = true;
-    decoder.segment[0].loopfilter_level = 5;
-    decoder.loop_filter_adjustments_enabled = true;
-    decoder.ref_delta[0] = 2;
-    decoder.mode_delta[0] = 3;
-    let mb = MacroBlock {
-        luma_mode: LumaMode::B,
-        ..MacroBlock::default()
-    };
-    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-    decoder.frame.filter_level = 0;
-    assert_eq!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.frame.keyframe = true;
+        decoder.frame.filter_level = 10;
+        decoder.frame.sharpness_level = 0;
+        decoder.segments_enabled = true;
+        decoder.segment[0].delta_values = true;
+        decoder.segment[0].loopfilter_level = 5;
+        decoder.loop_filter_adjustments_enabled = true;
+        decoder.ref_delta[0] = 2;
+        decoder.mode_delta[0] = 3;
+        let mb = MacroBlock {
+            luma_mode: LumaMode::B,
+            ..MacroBlock::default()
+        };
+        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+        decoder.frame.filter_level = 0;
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.frame.keyframe = true;
-    decoder.frame.filter_level = 50;
-    decoder.frame.sharpness_level = 5;
-    decoder.segments_enabled = true;
-    decoder.segment[0].delta_values = false;
-    decoder.segment[0].loopfilter_level = 45;
-    decoder.loop_filter_adjustments_enabled = true;
-    decoder.ref_delta[0] = 1;
-    decoder.mode_delta[0] = 1;
-    let mb = MacroBlock {
-        luma_mode: LumaMode::B,
-        ..MacroBlock::default()
-    };
-    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-    let mb = MacroBlock {
-        luma_mode: LumaMode::DC,
-        ..MacroBlock::default()
-    };
-    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-    decoder.frame.filter_level = 1;
-    decoder.frame.sharpness_level = 5;
-    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.frame.keyframe = true;
+        decoder.frame.filter_level = 50;
+        decoder.frame.sharpness_level = 5;
+        decoder.segments_enabled = true;
+        decoder.segment[0].delta_values = false;
+        decoder.segment[0].loopfilter_level = 45;
+        decoder.loop_filter_adjustments_enabled = true;
+        decoder.ref_delta[0] = 1;
+        decoder.mode_delta[0] = 1;
+        let mb = MacroBlock {
+            luma_mode: LumaMode::B,
+            ..MacroBlock::default()
+        };
+        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+        let mb = MacroBlock {
+            luma_mode: LumaMode::DC,
+            ..MacroBlock::default()
+        };
+        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+        decoder.frame.filter_level = 1;
+        decoder.frame.sharpness_level = 5;
+        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.frame.keyframe = true;
-    decoder.frame.filter_level = 10;
-    decoder.frame.sharpness_level = 0;
-    let mb = MacroBlock {
-        luma_mode: LumaMode::DC,
-        ..MacroBlock::default()
-    };
-    assert_eq!(decoder.calculate_filter_parameters(&mb), (10, 10, 0));
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.frame.keyframe = true;
+        decoder.frame.filter_level = 10;
+        decoder.frame.sharpness_level = 0;
+        let mb = MacroBlock {
+            luma_mode: LumaMode::DC,
+            ..MacroBlock::default()
+        };
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (10, 10, 0));
 
-    decoder.frame.filter_level = 20;
-    decoder.frame.sharpness_level = 0;
-    assert_eq!(decoder.calculate_filter_parameters(&mb), (20, 20, 1));
+        decoder.frame.filter_level = 20;
+        decoder.frame.sharpness_level = 0;
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (20, 20, 1));
 
-    decoder.frame.filter_level = 4;
-    decoder.frame.sharpness_level = 1;
-    assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
+        decoder.frame.filter_level = 4;
+        decoder.frame.sharpness_level = 1;
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
 
-    decoder.frame.filter_level = 1;
-    decoder.frame.sharpness_level = 1;
-    assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
+        decoder.frame.filter_level = 1;
+        decoder.frame.sharpness_level = 1;
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
 
-    decoder.loop_filter_adjustments_enabled = true;
-    decoder.ref_delta[0] = 0;
-    decoder.mode_delta[0] = 0;
-    assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
+        decoder.loop_filter_adjustments_enabled = true;
+        decoder.ref_delta[0] = 0;
+        decoder.mode_delta[0] = 0;
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
+    });
 
     let bytes = [0u8; 1];
     with_take_decoder!(&bytes, |decoder| {
@@ -2088,33 +2116,35 @@ pub(crate) fn __coverage_exercise_private_branches() {
         assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
     });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.segments_enabled = true;
-    for segment in &mut decoder.segment {
-        segment.delta_values = true;
-        segment.quantizer_level = 120;
-    }
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.read_quantization_indices();
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.segments_enabled = true;
+        for segment in &mut decoder.segment {
+            segment.delta_values = true;
+            segment.quantizer_level = 120;
+        }
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_quantization_indices();
+    });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.segments_enabled = true;
-    for segment in &mut decoder.segment {
-        segment.delta_values = false;
-        segment.quantizer_level = 120;
-    }
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.read_quantization_indices();
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.segments_enabled = true;
+        for segment in &mut decoder.segment {
+            segment.delta_values = false;
+            segment.quantizer_level = 120;
+        }
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_quantization_indices();
 
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.read_loop_filter_adjustments();
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_loop_filter_adjustments();
 
-    decoder.b.init(vec![[0; 4]; 8], 32);
-    let _ = decoder.read_loop_filter_adjustments();
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.read_segment_updates();
-    decoder.b.init(vec![[0; 4]; 8], 32);
-    let _ = decoder.read_segment_updates();
+        decoder.b.init(vec![[0; 4]; 8], 32);
+        let _ = decoder.read_loop_filter_adjustments();
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_segment_updates();
+        decoder.b.init(vec![[0; 4]; 8], 32);
+        let _ = decoder.read_segment_updates();
+    });
 
     let bytes = [0xff; 32];
     with_take_decoder!(&bytes, |decoder| {
@@ -2152,91 +2182,93 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = decoder.update_token_probabilities();
     });
 
-    let _ = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new())).init_partitions(2);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![1, 0, 0])).init_partitions(2);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
-        .init_partitions(2);
+    exercise_init_partitions!(Vec::<u8>::new(), 2);
+    exercise_init_partitions!(vec![1, 0, 0], 2);
+    exercise_init_partitions!(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2);
 
-    let _ = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new())).read_frame_header();
-    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0])).read_frame_header();
-    let _ =
-        Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0x9d, 0x01, 0x2a])).read_frame_header();
-    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0]))
-        .read_frame_header();
+    exercise_frame_header!(Vec::<u8>::new());
+    exercise_frame_header!(vec![0, 0, 0]);
+    exercise_frame_header!(vec![0, 0, 0, 0x9d, 0x01, 0x2a]);
+    exercise_frame_header!(vec![0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0]);
 
     let mut keyframe = vec![0x80, 0x00, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
     keyframe.extend_from_slice(&[0; 4]);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+    exercise_frame_header!(keyframe);
 
     let mut keyframe = vec![0x00, 0x08, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
     keyframe.extend_from_slice(&[0; 96]);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+    exercise_frame_header!(keyframe);
 
     let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
     keyframe.extend_from_slice(&[0, 4, 0, 0]);
     keyframe.extend_from_slice(&[0; 28]);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+    exercise_frame_header!(keyframe);
 
-    let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0x21, 0x00, 0x00, 0x00])).read_frame_header();
+    exercise_frame_header!(vec![0x21, 0x00, 0x00, 0x00]);
 
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-        decoder.partitions[0].init(vec![[0; 4]], 4);
+        with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+            decoder.partitions[0].init(vec![[0; 4]], 4);
+            decoder.token_probs[0][1][0][0] = TreeNode {
+                left: 0x80 | 12,
+                right: 0x80 | 12,
+                prob: 128,
+                index: 0,
+            };
+            let mut block = [0; 16];
+            let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+        });
+    }));
+
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.partitions[0].init(vec![[0; 4]; 8], 32);
         decoder.token_probs[0][1][0][0] = TreeNode {
-            left: 0x80 | 12,
-            right: 0x80 | 12,
+            left: 0x80 | DCT_0 as u8,
+            right: 0x80 | DCT_0 as u8,
             prob: 128,
             index: 0,
         };
         let mut block = [0; 16];
         let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-    }));
+    });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.partitions[0].init(vec![[0; 4]; 8], 32);
-    decoder.token_probs[0][1][0][0] = TreeNode {
-        left: 0x80 | DCT_0 as u8,
-        right: 0x80 | DCT_0 as u8,
-        prob: 128,
-        index: 0,
-    };
-    let mut block = [0; 16];
-    let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.partitions[0].init(vec![[0; 4]; 8], 32);
+        decoder.token_probs[0][1][0][0] = TreeNode {
+            left: 0x80 | DCT_1 as u8,
+            right: 0x80 | DCT_1 as u8,
+            prob: 128,
+            index: 0,
+        };
+        let mut block = [0; 16];
+        let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+        let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 1, 1);
+    });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.partitions[0].init(vec![[0; 4]; 8], 32);
-    decoder.token_probs[0][1][0][0] = TreeNode {
-        left: 0x80 | DCT_1 as u8,
-        right: 0x80 | DCT_1 as u8,
-        prob: 128,
-        index: 0,
-    };
-    let mut block = [0; 16];
-    let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-    let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 1, 1);
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.partitions[0].init(vec![[0xff; 4]; 8], 32);
+        decoder.token_probs[0][1][0][0] = TreeNode {
+            left: 0x80 | DCT_CAT1 as u8,
+            right: 0x80 | DCT_CAT1 as u8,
+            prob: 128,
+            index: 0,
+        };
+        let mut block = [0; 16];
+        let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
+    });
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.partitions[0].init(vec![[0xff; 4]; 8], 32);
-    decoder.token_probs[0][1][0][0] = TreeNode {
-        left: 0x80 | DCT_CAT1 as u8,
-        right: 0x80 | DCT_CAT1 as u8,
-        prob: 128,
-        index: 0,
-    };
-    let mut block = [0; 16];
-    let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.b.init(vec![[0; 4]; 8], 32);
-    let _ = decoder.read_quantization_indices();
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.b.init(vec![[0; 4]; 8], 32);
+        let _ = decoder.read_quantization_indices();
+    });
 
     let mut interframe = vec![1, 4, 0];
     interframe.extend_from_slice(&[0; 32]);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(interframe)).read_frame_header();
+    exercise_frame_header!(interframe);
 
     let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
     keyframe.extend_from_slice(&[0xff; 32]);
-    let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+    exercise_frame_header!(keyframe);
 
     let take_frame_cases = {
         let mut cases = vec![
@@ -2277,39 +2309,40 @@ pub(crate) fn __coverage_exercise_private_branches() {
         });
     }
 
-    let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    decoder.frame.keyframe = true;
-    decoder.frame.width = 32;
-    decoder.frame.height = 32;
-    decoder.mbwidth = 2;
-    decoder.mbheight = 2;
-    decoder.frame.ybuf = vec![128; 32 * 32];
-    decoder.frame.ubuf = vec![128; 16 * 16];
-    decoder.frame.vbuf = vec![128; 16 * 16];
-    decoder.top = init_top_macroblocks(32);
-    decoder.left = MacroBlock::default();
-    decoder.frame.filter_level = 10;
-    decoder.frame.sharpness_level = 0;
-    decoder.frame.filter_type = true;
-    let mb = MacroBlock {
-        luma_mode: LumaMode::B,
-        non_zero_dct: true,
-        ..MacroBlock::default()
-    };
-    decoder.loop_filter(0, 0, &mb);
-    decoder.loop_filter(1, 1, &mb);
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.frame.keyframe = true;
+        decoder.frame.width = 32;
+        decoder.frame.height = 32;
+        decoder.mbwidth = 2;
+        decoder.mbheight = 2;
+        decoder.frame.ybuf = vec![128; 32 * 32];
+        decoder.frame.ubuf = vec![128; 16 * 16];
+        decoder.frame.vbuf = vec![128; 16 * 16];
+        decoder.top = init_top_macroblocks(32);
+        decoder.left = MacroBlock::default();
+        decoder.frame.filter_level = 10;
+        decoder.frame.sharpness_level = 0;
+        decoder.frame.filter_type = true;
+        let mb = MacroBlock {
+            luma_mode: LumaMode::B,
+            non_zero_dct: true,
+            ..MacroBlock::default()
+        };
+        decoder.loop_filter(0, 0, &mb);
+        decoder.loop_filter(1, 1, &mb);
 
-    decoder.frame.filter_type = false;
-    decoder.loop_filter(1, 1, &mb);
-    let mb_without_subblocks = MacroBlock {
-        luma_mode: LumaMode::DC,
-        coeffs_skipped: true,
-        non_zero_dct: false,
-        ..MacroBlock::default()
-    };
-    decoder.loop_filter(1, 1, &mb_without_subblocks);
-    decoder.frame.filter_level = 0;
-    decoder.loop_filter(0, 0, &mb);
+        decoder.frame.filter_type = false;
+        decoder.loop_filter(1, 1, &mb);
+        let mb_without_subblocks = MacroBlock {
+            luma_mode: LumaMode::DC,
+            coeffs_skipped: true,
+            non_zero_dct: false,
+            ..MacroBlock::default()
+        };
+        decoder.loop_filter(1, 1, &mb_without_subblocks);
+        decoder.frame.filter_level = 0;
+        decoder.loop_filter(0, 0, &mb);
+    });
 }
 
 fn init_top_macroblocks(width: usize) -> Vec<MacroBlock> {

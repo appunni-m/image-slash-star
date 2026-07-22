@@ -814,15 +814,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         payload
     }
 
-    fn animation_decoder_from_stream(
+    fn exercise_animation_data(
         stream: Vec<u8>,
         width: u32,
         height: u32,
         has_alpha: bool,
         num_frames: u32,
-    ) -> WebPDecoder<Cursor<Vec<u8>>> {
-        WebPDecoder {
-            r: Cursor::new(stream),
+        next_frame: u32,
+        dispose_next_frame: bool,
+        read_count: usize,
+    ) {
+        let mut decoder = WebPDecoder {
+            r: Cursor::new(stream.as_slice()),
             width,
             height,
             extended: Some(WebPExtendedInfo {
@@ -838,16 +841,38 @@ pub(crate) fn __coverage_exercise_private_branches() {
             num_frames,
             loop_count: LoopCount::Forever,
             chunks: HashMap::new(),
+        };
+        decoder.animation.next_frame = next_frame;
+        decoder.animation.dispose_next_frame = dispose_next_frame;
+        let mut buf = vec![0; decoder.output_buffer_size()];
+        for _ in 0..read_count {
+            let _ = decoder.read_frame(&mut buf);
         }
     }
 
-    fn animation_decoder(
+    fn exercise_animation_state(
         anmf: Vec<u8>,
         width: u32,
         height: u32,
         has_alpha: bool,
-    ) -> WebPDecoder<Cursor<Vec<u8>>> {
-        animation_decoder_from_stream(chunk(b"ANMF", &anmf), width, height, has_alpha, 1)
+        next_frame: u32,
+        dispose_next_frame: bool,
+        read_count: usize,
+    ) {
+        exercise_animation_data(
+            chunk(b"ANMF", &anmf),
+            width,
+            height,
+            has_alpha,
+            1,
+            next_frame,
+            dispose_next_frame,
+            read_count,
+        );
+    }
+
+    fn exercise_animation(anmf: Vec<u8>, width: u32, height: u32, has_alpha: bool) {
+        exercise_animation_state(anmf, width, height, has_alpha, 0, false, 1);
     }
 
     fn exercise_animation_stream<R: BufRead + Seek>(
@@ -1039,126 +1064,129 @@ pub(crate) fn __coverage_exercise_private_branches() {
     no_trailing_chunks[4..8].copy_from_slice(&10u32.to_le_bytes());
     exercise_new(no_trailing_chunks);
 
-    let mut short_anmf = chunk_declared(b"ANMF", 32, &[]);
-    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    short_anmf = chunk_declared(b"ANMF", 32, &[0; 3]);
-    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    short_anmf = chunk_declared(b"ANMF", 32, &[0; 8]);
-    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    short_anmf = chunk_declared(b"ANMF", 32, &[0; 9]);
-    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    short_anmf = chunk_declared(b"ANMF", 32, &[0; 14]);
-    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    short_anmf = chunk_declared(b"ANMF", 32, &[0; 15]);
-    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    short_anmf = chunk_declared(b"ANMF", 32, &[0; 16]);
-    let mut decoder = animation_decoder_from_stream(short_anmf, 1, 1, true, 1);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(vec![0; 31], 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 16_384, 0, b"VP8L"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 16_384, b"VP8L"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true);
-    decoder.animation.dispose_next_frame = true;
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let public_reader_vp8l_width_too_large =
-        chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"VP8L"));
-    exercise_animation_stream(
-        Cursor::new(public_reader_vp8l_width_too_large.as_slice()),
+    exercise_animation_data(chunk_declared(b"ANMF", 32, &[]), 1, 1, true, 1, 0, false, 1);
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[0; 3]),
         1,
         1,
         true,
+        1,
+        0,
+        false,
+        1,
+    );
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[0; 8]),
+        1,
+        1,
+        true,
+        1,
+        0,
+        false,
+        1,
+    );
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[0; 9]),
+        1,
+        1,
+        true,
+        1,
+        0,
+        false,
+        1,
+    );
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[0; 14]),
+        1,
+        1,
+        true,
+        1,
+        0,
+        false,
+        1,
+    );
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[0; 15]),
+        1,
+        1,
+        true,
+        1,
+        0,
+        false,
+        1,
+    );
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[0; 16]),
+        1,
+        1,
+        true,
+        1,
+        0,
+        false,
         1,
     );
 
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 16_384, 0, b"ALPH"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(vec![0; 31], 1, 1, true);
+    exercise_animation(anmf_payload(0, 0, 16_384, 0, b"VP8L"), 1, 1, true);
+    exercise_animation(anmf_payload(0, 0, 0, 16_384, b"VP8L"), 1, 1, true);
+    exercise_animation_state(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true, 0, true, 1);
 
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 16_384, b"ALPH"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"ALPH"), 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let public_reader_alpha_width_too_large =
-        chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"ALPH"));
-    exercise_animation_stream(
-        Cursor::new(public_reader_alpha_width_too_large.as_slice()),
+    let public_reader_vp8l_width_too_large =
+        chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"VP8L"));
+    exercise_animation_data(
+        public_reader_vp8l_width_too_large,
         1,
         1,
         true,
+        1,
+        0,
+        false,
+        1,
+    );
+
+    exercise_animation(anmf_payload(0, 0, 16_384, 0, b"ALPH"), 1, 1, true);
+    exercise_animation(anmf_payload(0, 0, 0, 16_384, b"ALPH"), 1, 1, true);
+    exercise_animation(anmf_payload(0, 0, 0, 0, b"ALPH"), 1, 1, true);
+
+    let public_reader_alpha_width_too_large =
+        chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"ALPH"));
+    exercise_animation_data(
+        public_reader_alpha_width_too_large,
+        1,
+        1,
+        true,
+        1,
+        0,
+        false,
         1,
     );
 
     let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
     anmf[20..24].copy_from_slice(&16u32.to_le_bytes());
-    let mut decoder = animation_decoder(anmf, 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(anmf, 1, 1, true);
 
     let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
     anmf[20..24].copy_from_slice(&1u32.to_le_bytes());
-    let mut decoder = animation_decoder(anmf, 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(anmf, 1, 1, true);
 
     let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
     anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
     anmf.resize(42, 0);
     anmf[26..30].copy_from_slice(b"VP8 ");
     anmf[30..34].copy_from_slice(&9u32.to_le_bytes());
-    let mut decoder = animation_decoder(anmf, 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(anmf, 1, 1, true);
 
     let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
     anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
     anmf.resize(42, 0);
     anmf[26..30].copy_from_slice(b"VP8 ");
     anmf[30..34].copy_from_slice(&0u32.to_le_bytes());
-    let mut decoder = animation_decoder(anmf, 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(anmf, 1, 1, true);
 
     let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
     anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
     anmf.truncate(26);
-    let mut decoder = animation_decoder(anmf, 1, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(anmf, 1, 1, true);
 
     let alph_for_seek = chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"ALPH"));
     exercise_animation_stream(fail_seek_after(alph_for_seek.clone(), 0), 1, 1, true, 1);
@@ -1187,49 +1215,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ]);
     vp8l_solid_64.push(0);
 
-    let mut decoder = animation_decoder(vp8l_solid_64.clone(), 1, 64, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(vp8l_solid_64.clone(), 64, 1, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(vp8l_solid_64.clone(), 1, 64, true);
+    exercise_animation(vp8l_solid_64.clone(), 64, 1, true);
 
     let mut vp8l_solid_y_outside = vp8l_solid_64.clone();
     vp8l_solid_y_outside[3..6].copy_from_slice(&1u32.to_le_bytes()[..3]);
     let public_reader_y_outside = chunk(b"ANMF", &vp8l_solid_y_outside);
-    exercise_animation_stream(
-        Cursor::new(public_reader_y_outside.as_slice()),
-        64,
-        64,
-        true,
-        1,
-    );
+    exercise_animation_data(public_reader_y_outside, 64, 64, true, 1, 0, false, 1);
 
-    let mut decoder = animation_decoder(vp8l_solid_64.clone(), 64, 64, true);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(vp8l_solid_64.clone(), 64, 64, false);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(vp8l_solid_64.clone(), 64, 64, true);
+    exercise_animation(vp8l_solid_64.clone(), 64, 64, false);
 
     let first_frame = chunk(b"ANMF", &vp8l_solid_64);
     let mut two_frames = first_frame.clone();
     two_frames.extend_from_slice(&first_frame);
-    let mut decoder = animation_decoder_from_stream(two_frames, 64, 64, true, 2);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation_data(two_frames, 64, 64, true, 2, 0, false, 2);
 
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"JUNK"), 1, 1, false);
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
-
-    let mut decoder = animation_decoder(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true);
-    decoder.animation.next_frame = 1;
-    let mut buf = vec![0; decoder.output_buffer_size()];
-    let _ = decoder.read_frame(&mut buf);
+    exercise_animation(anmf_payload(0, 0, 0, 0, b"JUNK"), 1, 1, false);
+    exercise_animation_state(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true, 1, false, 1);
 
     let mut decoder = WebPDecoder {
         r: fail_seek_after(Vec::new(), 0),
@@ -1308,8 +1311,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_image(&mut buf);
 
+    let empty = Vec::<u8>::new();
     let mut decoder = WebPDecoder {
-        r: Cursor::new(Vec::<u8>::new()),
+        r: Cursor::new(empty.as_slice()),
         width: 1,
         height: 1,
         extended: None,

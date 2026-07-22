@@ -1717,6 +1717,185 @@ Retention:
 | `src/codecs/webp/native/vp8.rs` | 8 | 0 |
 | `src/codecs/webp/native/encoder.rs` | 1 | 0 |
 
+## Batch 71 plan
+
+Goal: continue reducing WebP native region debt by applying the successful
+Batch 70 reader-shape cleanup to synthetic animated-frame decoder states.
+
+Baseline evidence:
+
+- Current retained Coverage MCP snapshot:
+  `394eb598-e87c-4944-a560-5c65e59a0da9`.
+- Retained counters: lines `27001 / 27001`, functions `1631 / 1631`,
+  branches `3487 / 3488`, regions `42719 / 42776`.
+- Remaining retained gap map:
+  - `src/codecs/webp/native/decoder.rs`: 27 regions, 0 branches;
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch;
+  - `src/codecs/webp/native/vp8.rs`: 8 regions, 0 branches;
+  - `src/codecs/webp/native/encoder.rs`: 1 region, 0 branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `decoder.rs` synthetic animation helpers returning `WebPDecoder<Cursor<Vec<u8>>>` | Batch 70 reduced decoder region debt by 5 when malformed constructor-only inputs stopped creating hook-only `Cursor<Vec<u8>>` decoder instantiations. The remaining decoder gap list still clusters around `read_frame()` and animated state handling. Existing `animation_decoder_from_stream(...)` and `animation_decoder(...)` own byte buffers only so the returned decoder can be used immediately by coverage hooks. | Replace returned synthetic animation decoders with non-generic helpers that own the `Vec<u8>` for the duration of `read_frame()` and instantiate `WebPDecoder<Cursor<&[u8]>>`. Preserve mutation cases (`dispose_next_frame`, `next_frame`, two-frame reads) through explicit helper parameters instead of returning a decoder. |
+| `decoder.rs` failing seek/read wrappers | These wrappers intentionally exercise impossible I/O failures and must remain custom reader shapes. | Leave them unchanged in this batch; they are not the hook-only `Cursor<Vec<u8>>` source of Batch 70's improvement. |
+| `vp8.rs` coverage-hook `Vp8Decoder::new(Cursor<Vec<u8>>)` probes | Batch 70 explicitly called out VP8 as the next candidate if decoder constructor-shape cleanup improved retained coverage. The current hook still has many direct VP8 parser probes backed by owned `Vec<u8>` cursors, while public VP8 decode reaches borrowed/taken reader shapes. | Convert equivalent VP8 hook probes to borrowed-slice helper macros without adding new VP8 inputs. |
+| `lossless.rs` and `encoder.rs` residual gaps | Prior direct probes for `BitReader` and writer failure did not improve retained coverage. | Do not add new probes here until the reader-shape sweep is validated. |
+
+Planned edit:
+
+- Remove `animation_decoder_from_stream(...)` and `animation_decoder(...)`
+  helpers that return `WebPDecoder<Cursor<Vec<u8>>>`.
+- Add a single `exercise_animation_data(...)` helper that builds
+  `WebPDecoder<Cursor<&[u8]>>`, optionally seeds `next_frame` and
+  `dispose_next_frame`, and performs one or more `read_frame()` calls.
+- Convert direct synthetic animation decoder blocks to
+  `exercise_animation_data(...)`.
+- Keep `exercise_animation_stream(...)` for custom failing readers only.
+- Convert direct `Vp8Decoder::new(Cursor<Vec<u8>>)` coverage-hook calls to
+  borrowed-slice helper macros, preserving the same byte inputs and internal
+  state mutations.
+- Run local checks, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions fall below 57.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+First Coverage MCP validation:
+
+- Run: `f59b72fa-e9e6-45c1-9ef4-9f578c70735e`.
+- Snapshot: `8cd904c7-d95a-4b55-bbcc-f615dbd4c86d`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines regressed to `26972 / 27006`.
+- Functions regressed to `1632 / 1634`.
+- Branches stayed `3487 / 3488`.
+- Regions were `42521 / 42588` (67 missing).
+- Root cause: two returning animation helpers had been reintroduced only to
+  satisfy a stale coverage-cfg compile error; they were compiled but not hit by
+  the managed coverage path.
+- Retention: rejected. The helpers added uncovered line/function debt.
+
+Correction:
+
+- Removed the unused returning `animation_decoder_from_stream(...)` and
+  `animation_decoder(...)` helpers entirely.
+- Kept the borrowed-slice `exercise_animation_data(...)` helper and the VP8
+  borrowed-slice macro conversions.
+
+Corrected local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Corrected Coverage MCP validation:
+
+- Run: `7a1ec429-eb80-428b-9565-e6793a4ad581`.
+- Snapshot: `fd087b82-75c2-4602-8511-bfaa254c27bb`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26972 / 26972` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42521 / 42565` (44 missing), improved by 13 from Batch 70.
+- `src/codecs/webp/native/decoder.rs`: improved from 27 to 14 missing
+  regions.
+- `src/codecs/webp/native/vp8.rs`: stayed at 8 missing regions.
+
+Retention:
+
+- Retain Batch 71. The retained improvement comes from removing returned
+  animated-frame `WebPDecoder<Cursor<Vec<u8>>>` helper shapes and executing
+  those synthetic states through borrowed-slice helpers instead. The VP8
+  borrowed-slice conversion is neutral in this snapshot but keeps the hook
+  aligned with public reader shapes.
+
+## Current retained gap map after Batch 71
+
+| File | Missing regions | Missing branches |
+| --- | ---: | ---: |
+| `src/codecs/webp/native/decoder.rs` | 14 | 0 |
+| `src/codecs/webp/native/lossless.rs` | 21 | 1 |
+| `src/codecs/webp/native/vp8.rs` | 8 | 0 |
+| `src/codecs/webp/native/encoder.rs` | 1 | 0 |
+
+## Batch 72 plan
+
+Goal: reduce the largest remaining WebP native region cluster by applying the
+retained reader-shape cleanup to VP8L/lossless coverage-only decoder states.
+
+Baseline evidence:
+
+- Current retained Coverage MCP snapshot:
+  `fd087b82-75c2-4602-8511-bfaa254c27bb`.
+- Retained counters: lines `26972 / 26972`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42521 / 42565`.
+- Remaining retained gap map:
+  - `src/codecs/webp/native/decoder.rs`: 14 regions, 0 branches;
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch;
+  - `src/codecs/webp/native/vp8.rs`: 8 regions, 0 branches;
+  - `src/codecs/webp/native/encoder.rs`: 1 region, 0 branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `lossless.rs` coverage-hook `LosslessDecoder::new(Cursor<Vec<u8>>)` cases | `rg` still finds many lossless coverage-only decoder probes backed by owned vectors. Batch 70 and Batch 71 proved that removing hook-only `Cursor<Vec<u8>>` reader shapes can reduce retained region debt without adding new inputs. | Convert equivalent `LosslessDecoder::new(...)` hook probes to borrowed-slice helpers while preserving byte inputs and downstream calls. |
+| `lossless.rs` manual `LosslessDecoder { bit_reader: BitReader { reader: Cursor<Vec<u8>>, ... } }` states | These manually seeded states exist only to reverse-map exact Huffman/color-cache branches and create separate `LosslessDecoder<Cursor<Vec<u8>>>` monomorphs. | Convert them to a borrowed-slice `decoder_with_bits(Cursor<&[u8]>, ...)` helper shape. |
+| `LosslessDecoder::<Cursor<Vec<u8>>>::...` static method probes | These type-qualified calls force the old owned-vector decoder type even when no owned buffer is needed. | Retarget to `LosslessDecoder::<Cursor<&[u8]>>` with a borrowed-slice `BitReader`. |
+| Custom `ErrorReader` and one-byte error readers | These are intentional I/O-failure reader shapes. | Leave unchanged in this batch. |
+
+Planned edit:
+
+- Add local coverage-hook macros for borrowed-slice lossless decoders and
+  seeded lossless bit-reader states.
+- Convert owned-vector lossless decoder probes to those macros.
+- Convert type-qualified `LosslessDecoder::<Cursor<Vec<u8>>>` probes to
+  borrowed-slice type-qualified probes.
+- Do not add new VP8L bitstream inputs in this batch.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions fall below 44.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `ee4a8c09-2548-4e2c-8d4a-fac1aa500146`.
+- Snapshot: `f040e808-7330-4d69-b581-eee6ce38c947`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26976 / 26976` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42545 / 42589` (44 missing), unchanged from Batch 71.
+- `src/codecs/webp/native/lossless.rs`: stayed at 21 missing regions and one
+  missing branch.
+
+Retention:
+
+- Reject Batch 72 and revert the lossless source changes. The reader-shape
+  cleanup preserved line/function/branch coverage but did not reduce missing
+  regions or the single branch gap.
+
 ## Batch 49 retained validation
 
 Scope: finish zlib region cleanup.
