@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `435164c1-70d2-444b-be64-0dfe90ba8874`
-- Current measured commit metadata: `1e13e4a39815e88751b71ffa132e36ac1bf1c5fa`
-- Current coverage source state: pushed `main` commit `1e13e4a`.
-- Lines: 25863 / 25867
-- Branches: 3450 / 3456
+- Current snapshot: `7a803c3f-54bc-47bf-a48c-d89fa06204fb`
+- Current measured commit metadata: `0fe29a1e00b5590bbbd409938a254404e004a517`
+- Current coverage source state: pushed `main` commit `0fe29a1`.
+- Lines: 25853 / 25857
+- Branches: 3442 / 3448
 - Functions: 1592 / 1592
-- Regions: 41637 / 42128
+- Regions: 41625 / 42116
 - Remaining target: 4 lines, 6 branches, and 491 regions.
 - Remaining branch map from this snapshot:
-  - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
+  - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
   - `src/codecs/webp/native/lossless.rs`: 108 / 110 branches, 2 missing.
 - Remaining line gaps: aggregate line gap is 4, but the current raw per-file
@@ -93,6 +93,10 @@ Measurement:
 - Result: 5 passed, 0 failed; coverage artifact ingested.
 - Measured source state: dirty retained EXIF/XMP parity patch on commit
   metadata `f786a76c0064458c74bb97f38400abb37cdfc3b5`.
+- Clean re-anchor after commit:
+  - Commit: `0fe29a1e00b5590bbbd409938a254404e004a517`.
+  - Coverage MCP run: `32e3191f-a9df-4603-99a1-c03a4453f6b4`.
+  - Coverage MCP snapshot: `7a803c3f-54bc-47bf-a48c-d89fa06204fb`.
 - Overall: `25853 / 25857` lines, `3442 / 3448` branches,
   `1592 / 1592` functions, and `41625 / 42116` regions.
 - Missing counts: 4 lines, 6 branches, and 491 regions.
