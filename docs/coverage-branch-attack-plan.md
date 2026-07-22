@@ -47,6 +47,53 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 86 plan: ImageBuffer defensive API region probes
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `de89c90`, with coverage measured
+  on the code-equivalent pushed commit `1e13e4a`.
+- Coverage MCP snapshot: `435164c1-70d2-444b-be64-0dfe90ba8874`.
+- Re-anchor run: `7d7f1544-bb7f-4434-b0fd-af3ff804c860`.
+- Overall: `25863 / 25867` lines, `3450 / 3456` branches,
+  `1592 / 1592` functions, and `41637 / 42128` regions.
+- Target file: `src/types/buffer.rs`, currently `664 / 666` regions and
+  `24 / 24` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| `pixel_indices()` bounds rejection | This private helper backs public panicking accessors (`get_pixel()` and `get_pixel_mut()`). Existing matrix exercise covers valid access and checked access, but not both public panic axes through this helper. Add coverage-hook calls for x-out-of-bounds and y-out-of-bounds access and catch the panics. |
+| `ImageBuffer::new()` overflow rejection | This is a public non-codec API invariant, not a Pillow-observable image fixture. Calling `ImageBuffer::<Rgb<u8>>::new(u32::MAX, u32::MAX)` reaches the checked length overflow before allocation, so catch the expected panic in the coverage hook. |
+| `Rows` / `RowsMut` malformed backing storage | Existing hook inputs already build malformed buffers and catch `rows()` / `rows_mut()` panics. Do not duplicate without evidence. |
+
+Implementation plan:
+
+1. Update only `src/types/buffer.rs`.
+2. Extend the existing `#[cfg(coverage)]` hook with public API calls that reach
+   the defensive paths above.
+3. Do not add manifest rows because these are generic buffer API invariants,
+   not Pillow byte/pixel parity cases.
+4. Run `cargo fmt --all` and compile gates.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `1df20d9c-342c-45e9-8238-8ea3f769502b`.
+- Coverage MCP snapshot: `b75ab00d-fd90-445a-9a2d-766ee78cf698`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall with the probe code: `25887 / 25891` lines, `3450 / 3456`
+  branches, `1597 / 1597` functions, and `41667 / 42158` regions.
+- Target movement: `src/types/buffer.rs` moved from `664 / 666` to
+  `694 / 696` regions; missing regions stayed at 2.
+- Net: aggregate missing regions stayed at 491. The probe code only added
+  covered hook regions and did not close the existing missing regions. Discard
+  the code change and keep this measurement as a negative result.
+
 ## Attempt 85 plan: TIFF packed-index post-validation arithmetic cleanup
 
 Baseline before editing:
