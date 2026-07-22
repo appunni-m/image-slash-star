@@ -14,8 +14,9 @@ from Coverage MCP before each implementation sweep.
 - Result: 5 passed, 0 failed
 - Current snapshot: `507ae3a0-ec7e-43b1-8ec7-aafdefa51c85`
 - Current measured commit metadata: `bf8a25ad1baf567bd5c0e19c0ed27c444e237507`
-- Current coverage source state: working tree based on pushed `main` commit
-  `bf8a25a`, with Attempt 98 changes applied.
+- Current coverage source state: pushed `main` commit `adeebbb`, which is
+  source-equivalent to snapshot `507ae3a0` measured before committing Attempt
+  98.
 - Lines: 25995 / 25998
 - Branches: 3457 / 3462
 - Functions: 1598 / 1598
@@ -47,6 +48,64 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 99 plan: WebP aggregate branch sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `adeebbb`.
+- Coverage MCP snapshot: `507ae3a0-ec7e-43b1-8ec7-aafdefa51c85`.
+- Overall: `25995 / 25998` lines, `3457 / 3462` branches,
+  `1598 / 1598` functions, and `41800 / 42290` regions.
+- Remaining aggregate branch gaps:
+  - `src/codecs/webp/native/decoder.rs`: `83 / 84`, 1 missing.
+  - `src/codecs/webp/native/lossless.rs`: `107 / 108`, 1 missing.
+  - `src/codecs/webp/native/vp8.rs`: `157 / 160`, 3 missing.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `src/codecs/webp/native/decoder.rs:234`, VP8X chunk-loop guard | Raw LLVM branch records show three `WebPDecoder<R>` monomorphizations at the loop guard. Two have both loop-enter and loop-exit sides covered; one has `true=1, false=0`. The existing hook covers `Cursor<Vec<u8>>` no-trailing-chunk exit and an `OtherErrorAt` non-EOF error path, so the missing side is the normal exit for the custom reader monomorphization. | Add a same-shape `OtherErrorAt` VP8X stream with no trailing chunks and `fail_at = u64::MAX`, so that reader type reaches the loop guard's false side normally. |
+| `src/codecs/webp/native/lossless.rs:876`, `BitReader::read_bits` refill guard | File aggregate reports exactly one missing branch, while normalized line projection lists many template lines. Raw branch records show one-sided `read_bits` instantiations for production-used output types. Existing hook covers `u8` in some reader states, but not all type/refill combinations. | Add direct same-module probes for `read_bits::<u8>`, `read_bits::<u16>`, and `read_bits::<usize>` on both refill and no-refill sides. This targets the monomorphized guard without constructing fragile full VP8L streams. |
+| `src/codecs/webp/native/vp8.rs`, loop-filter and frame-header private state branches | Coverage MCP reports 3 missing aggregate branches. The visible clusters are private decoder-state branches in `read_frame_header`, `loop_filter`, and `calculate_filter_parameters`; exact VP8 bitstreams for every state combination would be brittle and not needed for byte-parity fixtures. | Add direct same-module `loop_filter` probes with 2×2 macroblock buffers, both simple/complex filter types, border/non-border macroblock positions, and subblock-filtering true/false macroblocks. Keep existing frame-header malformed probes unchanged unless coverage still misses branches. |
+
+Implementation/search plan:
+
+1. Extend only existing `#[cfg(coverage)]` hooks.
+2. Do not add new manifest fixtures in this attempt; these are private state
+   and monomorphization branches, not Pillow-oracle byte cases.
+3. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep only if aggregate missing branches or regions improve without line or
+   function regression; otherwise discard and record the measurement.
+
+Initial measurement and adjustment:
+
+- First Attempt 99 coverage run `1fe69e74-bd71-4ba0-a5ab-cab53d8daf05`
+  passed and ingested snapshot `fefb2915-8a33-4ba4-84d7-44f9eb25e693`.
+- Overall missing counts did not improve: still 3 lines, 5 branches, and
+  490 regions. Do not commit the first probe set as-is.
+- The custom-reader VP8X loop-exit probe did cover `decoder.rs:234` completely
+  (`6 / 6` line branches after the run), but the decoder file still reports
+  `83 / 84` aggregate branches. Raw branch records show the remaining
+  one-sided custom-reader shape at `decoder.rs:169`, the initial RIFF-header
+  guard.
+- Adjustment before the next coverage run: add a non-RIFF `OtherErrorAt`
+  stream with `fail_at = u64::MAX` so the same custom reader monomorphization
+  covers the line-169 false side. If this closes the decoder aggregate branch,
+  keep only the probes that contributed to the retained result.
+- Adjusted coverage run `bbbad9df-63a0-4f3b-a93b-a69fefaf4d4b` passed and
+  ingested snapshot `d6caf4fb-623a-4d91-a36d-87db1f465eda`, but aggregate
+  missing counts still did not improve: 3 lines, 5 branches, and 490 regions.
+- Retention decision: discard the Attempt 99 hook code. The probes changed
+  normalized line/region detail such as fully covering `decoder.rs:234`, but
+  they did not improve the aggregate branch or region target. Keep the
+  documented reverse map as evidence and use a different strategy next:
+  isolate the counted branch instantiations with smaller temporary scripts
+  before editing source again.
 
 ## Attempt 98 plan: smallest defensive-region sweep
 
