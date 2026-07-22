@@ -177,8 +177,16 @@ impl HuffmanTree {
         })
     }
 
+    #[cfg(coverage)]
     pub(crate) fn is_single_node(&self) -> bool {
         matches!(self.0, HuffmanTreeInner::Single(_))
+    }
+
+    pub(crate) const fn single_symbol(&self) -> Option<u16> {
+        match &self.0 {
+            HuffmanTreeInner::Single(symbol) => Some(*symbol),
+            HuffmanTreeInner::Tree { .. } => None,
+        }
     }
 
     #[inline(never)]

@@ -514,8 +514,12 @@ impl<R: BufRead> LosslessDecoder<R> {
                 // symbol, then the pixel data isn't written to the bitstream
                 // and we can just fill the output buffer with the symbol
                 // directly.
-                if tree[..4].iter().all(|t| t.is_single_node()) {
-                    let code = tree[GREEN].read_symbol(&mut self.bit_reader)?;
+                if let (Some(code), Some(red), Some(blue), Some(alpha)) = (
+                    tree[GREEN].single_symbol(),
+                    tree[RED].single_symbol(),
+                    tree[BLUE].single_symbol(),
+                    tree[ALPHA].single_symbol(),
+                ) {
                     if code < 256 {
                         let n = if huffman_info.bits == 0 {
                             num_values
@@ -523,9 +527,6 @@ impl<R: BufRead> LosslessDecoder<R> {
                             next_block_start - index
                         };
 
-                        let red = tree[RED].read_symbol(&mut self.bit_reader)?;
-                        let blue = tree[BLUE].read_symbol(&mut self.bit_reader)?;
-                        let alpha = tree[ALPHA].read_symbol(&mut self.bit_reader)?;
                         let value = [red as u8, code as u8, blue as u8, alpha as u8];
 
                         for i in 0..n {
@@ -681,7 +682,74 @@ impl<R: BufRead> LosslessDecoder<R> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use std::io::Cursor;
+    use std::io::{self, BufRead, Cursor, Read};
+
+    struct ErrorReader;
+
+    impl Read for ErrorReader {
+        fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
+            Err(io::Error::from(io::ErrorKind::Other))
+        }
+    }
+
+    impl BufRead for ErrorReader {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            Err(io::Error::from(io::ErrorKind::Other))
+        }
+
+        fn consume(&mut self, _amt: usize) {}
+    }
+
+    struct OneThenErrorReader {
+        byte: [u8; 1],
+        consumed: bool,
+    }
+
+    impl Read for OneThenErrorReader {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            if self.consumed {
+                return Err(io::Error::from(io::ErrorKind::Other));
+            }
+            if buf.is_empty() {
+                return Ok(0);
+            }
+            buf[0] = self.byte[0];
+            self.consumed = true;
+            Ok(1)
+        }
+    }
+
+    impl BufRead for OneThenErrorReader {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            if self.consumed {
+                Err(io::Error::from(io::ErrorKind::Other))
+            } else {
+                Ok(&self.byte)
+            }
+        }
+
+        fn consume(&mut self, _amt: usize) {
+            self.consumed = true;
+        }
+    }
+
+    let make_color_cache = || {
+        Some(ColorCache {
+            color_cache_bits: 1,
+            color_cache: vec![[3, 5, 7, 255]; 2],
+        })
+    };
+    let mut scratch = [0u8; 1];
+    let mut error_reader = ErrorReader;
+    let _ = error_reader.read(&mut scratch);
+    error_reader.consume(0);
+    let mut one_then_error = OneThenErrorReader {
+        byte: [0x55],
+        consumed: false,
+    };
+    let _ = one_then_error.read(&mut []);
+    let _ = one_then_error.read(&mut scratch);
+    let _ = one_then_error.read(&mut scratch);
 
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     let mut buf = [0u8; 4];
@@ -697,6 +765,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = reader.fill();
     let _ = reader.consume(1);
     let _: Result<u8, _> = reader.read_bits(1);
+    let mut reader = BitReader::__coverage_new(ErrorReader);
+    let _ = reader.fill();
+    let _: Result<u8, _> = reader.read_bits(1);
+    let mut reader = BitReader::__coverage_new(OneThenErrorReader {
+        byte: [0],
+        consumed: false,
+    });
+    let _ = reader.fill();
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 1]));
     let _ = reader.fill();
@@ -707,10 +783,28 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_color_cache();
     let mut decoder = LosslessDecoder::new(Cursor::new([0xff; 1]));
     let _ = decoder.read_color_cache();
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: Cursor::new(Vec::<u8>::new()),
+            buffer: 1,
+            nbits: 1,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let _ = decoder.read_color_cache();
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0b1010_1010u8; 8]));
     let _ = reader.fill();
     let _ = LosslessDecoder::<Cursor<[u8; 8]>>::get_copy_distance(&mut reader, 4);
+    let mut reader = BitReader {
+        reader: Cursor::new(Vec::<u8>::new()),
+        buffer: 0,
+        nbits: 0,
+    };
+    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::get_copy_distance(&mut reader, 4);
     let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(1, 121);
     let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(8, 1);
     let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(8, 8);
@@ -735,6 +829,376 @@ pub(crate) fn __coverage_exercise_private_branches() {
         huffman_code_groups: Vec::new(),
     };
     let _ = info.get_huff_index(1, 0);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut data = [0u8; 8];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: make_color_cache(),
+        image: vec![0],
+        bits: 1,
+        mask: 1,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(7),
+            HuffmanTree::build_single_node(11),
+            HuffmanTree::build_single_node(13),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: make_color_cache(),
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(17, 17),
+            HuffmanTree::build_single_node(19),
+            HuffmanTree::build_single_node(23),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: Cursor::new(Vec::<u8>::new()),
+            buffer: 0,
+            nbits: 1,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(17, 17),
+            HuffmanTree::build_two_node(19, 19),
+            HuffmanTree::build_single_node(23),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: Cursor::new(Vec::<u8>::new()),
+            buffer: 0,
+            nbits: 1,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(17, 17),
+            HuffmanTree::build_single_node(19),
+            HuffmanTree::build_two_node(23, 23),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: Cursor::new(Vec::<u8>::new()),
+            buffer: 0,
+            nbits: 1,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(17, 17),
+            HuffmanTree::build_single_node(19),
+            HuffmanTree::build_single_node(23),
+            HuffmanTree::build_two_node(255, 255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: OneThenErrorReader {
+                byte: [0],
+                consumed: false,
+            },
+            buffer: 0,
+            nbits: 0,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(17, 17),
+            HuffmanTree::build_single_node(19),
+            HuffmanTree::build_single_node(23),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(256),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(260),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(256),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_two_node(0, 0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(256),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(4),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0b0000_0010u8; 1]));
+    let mut data = [0u8; 8];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(29, 256),
+            HuffmanTree::build_single_node(31),
+            HuffmanTree::build_single_node(37),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0b0011_0000u8; 1]));
+    let mut data = [0u8; 32];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(41, 256),
+            HuffmanTree::build_single_node(43),
+            HuffmanTree::build_single_node(47),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(4),
+        ]],
+    };
+    let _ = decoder.decode_image_data(8, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0b0000_1100u8; 1]));
+    let mut data = [0u8; 16];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(53, 256),
+            HuffmanTree::build_single_node(59),
+            HuffmanTree::build_single_node(61),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(4),
+        ]],
+    };
+    let _ = decoder.decode_image_data(4, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(280),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut data = [0u8; 8];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: make_color_cache(),
+        image: vec![0],
+        bits: 1,
+        mask: 1,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(280),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: Cursor::new(Vec::<u8>::new()),
+            buffer: 0,
+            nbits: 1,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 2,
+        height: 1,
+    };
+    let mut data = [0u8; 8];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: make_color_cache(),
+        image: vec![0],
+        bits: 1,
+        mask: 1,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_two_node(280, 280),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(0),
+            HuffmanTree::build_single_node(255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
+
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: ErrorReader,
+            buffer: 0,
+            nbits: 0,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let _ = decoder.read_color_cache();
 
     let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_0010u8; 8]));
     let mut data = [0u8; 8];

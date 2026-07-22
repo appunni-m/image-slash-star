@@ -12,23 +12,22 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `bae355eb-17f0-4cfd-91f6-1e4a531d31a2`
-- Current measured commit metadata: `5a0d49e34a38ca6a2f5a5588cc30eb37b276844e`
-- Current coverage source state: Attempt 105 source changes measured in the
+- Current snapshot: `2932bf30-2174-4ab0-8368-1be63f66249f`
+- Current measured commit metadata: `612785fa48d524f8ffc523ae8d46c586a8325529`
+- Current coverage source state: Attempt 106 source changes measured in the
   working tree before commit; source-equivalent to the commit that records this
   attempt.
-- Lines: 26158 / 26161
-- Branches: 3457 / 3462
-- Functions: 1608 / 1608
-- Regions: 42045 / 42471
-- Remaining target: 3 lines, 5 branches, and 426 regions.
+- Lines: 26585 / 26588
+- Branches: 3463 / 3468
+- Functions: 1615 / 1615
+- Regions: 42393 / 42815
+- Remaining target: 3 lines, 5 branches, and 422 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
-  - `src/codecs/webp/native/lossless.rs`: 107 / 108 branches, 1 missing.
-- Remaining line gaps: aggregate line gap is 3, but the current raw per-file
-  summaries do not expose a stable source-file line map for those gaps. Do not
-  carry forward the older normalized line map as source of truth.
+  - `src/codecs/webp/native/lossless.rs`: 113 / 114 branches, 1 missing.
+- Remaining line gap map from this snapshot:
+  - `src/codecs/webp/native/vp8.rs`: 1429 / 1432 lines, 3 missing.
 - Files now at 100% branch coverage from this sweep:
   - `src/codecs/tiff/decode.rs`: 132 / 132 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 114 / 114 branches and now
@@ -341,6 +340,62 @@ Measurement/outcome:
 - Retention decision: keep. The helper extraction covered all remaining
   dynamic-Huffman malformed table states without adding missing lines, branches,
   or functions.
+
+## Attempt 106 plan: WebP lossless image-data and bit-reader sweep
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `612785f`.
+- Coverage MCP snapshot: `bae355eb-17f0-4cfd-91f6-1e4a531d31a2`.
+- Overall: `26158 / 26161` lines, `3457 / 3462` branches,
+  `1608 / 1608` functions, and `42045 / 42471` regions.
+- Target file: `src/codecs/webp/native/lossless.rs`, currently `898 / 944`
+  regions and `107 / 108` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `decode_image_data` fast/literal/backref/color-cache paths at `lossless.rs:501`, `518`, `526`-`528`, `535`, `545`, `551`-`556`, `570`, `572`-`573`, `590`, `601`, `613`, and `621` | Raw LLVM JSON shows source zero regions in the private image-data decoder. These states are expressible as exact Huffman trees and bit sequences without needing brittle full WebP fixture bytes. | Add coverage-hook helper cases that build `HuffmanInfo` directly: fast-path literal with a color cache, non-fast literal with a color cache, backward-reference error, `dist == 1` copy, `dist != 1` fast/slow copy, color-cache missing error, and color-cache repeated-symbol peek. |
+| `read_color_cache` and copy-distance fallible exits at `lossless.rs:636`-`637` and `661` | Current hook covers valid/no-cache and invalid cache bits, but not all short-read and extra-bit consume exits. | Add exact short-reader probes and a get-copy-distance consume-failure probe. |
+| `BitReader::fill`/`read_bits` I/O error regions at `lossless.rs:832`, `843`, and `877` | Cursor-backed probes cannot make `BufRead::fill_buf` fail, so these are real I/O error arms but impossible with the current hook reader. | Add tiny coverage-only `BufRead` implementations that fail immediately or after one byte to cover I/O error propagation without changing production behavior. |
+
+Implementation/search plan:
+
+1. Do not change the public lossless decoder algorithm.
+2. Add coverage-only helper builders for `HuffmanInfo`, `ColorCache`, and
+   deterministic failing `BufRead` inputs.
+3. Keep every new probe deterministic and private; no random data.
+4. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep only if missing regions improve and missing lines, branches, and
+   functions do not regress.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run `804fd3fa-3c7c-4649-bcb1-0cd996167eba` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `2932bf30-2174-4ab0-8368-1be63f66249f`.
+- Overall changed from `26158 / 26161` lines, `3457 / 3462` branches,
+  `1608 / 1608` functions, and `42045 / 42471` regions to
+  `26585 / 26588` lines, `3463 / 3468` branches, `1615 / 1615`
+  functions, and `42393 / 42815` regions.
+- Missing counts changed from 3 lines, 5 branches, and 426 regions to 3 lines,
+  5 branches, and 422 regions.
+- `src/codecs/webp/native/huffman.rs` remains closed at 100% regions:
+  `337 / 337` regions and `26 / 26` branches.
+- `src/codecs/webp/native/lossless.rs` improved from `898 / 944` regions and
+  `107 / 108` branches to `1240 / 1282` regions and `113 / 114` branches.
+- Retention decision: keep. The fast-path change removed fallible reads from a
+  single-symbol invariant state, and the added coverage probes exercise real
+  image-data and bit-reader error states without increasing missing lines,
+  branches, or functions.
 
 ## Attempt 99 plan: WebP aggregate branch sweep
 
