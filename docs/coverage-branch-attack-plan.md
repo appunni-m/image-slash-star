@@ -12,14 +12,14 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `07cdf563-07b9-4f00-b1fa-d237b7abfed3`
-- Current measured commit metadata: `00924ef1db1432766b643e6f2a8a279463e511dc`
-- Current coverage source state: pushed `main` commit `00924ef`.
-- Lines: 25854 / 25858
-- Branches: 3448 / 3454
+- Current snapshot: `435164c1-70d2-444b-be64-0dfe90ba8874`
+- Current measured commit metadata: `1e13e4a39815e88751b71ffa132e36ac1bf1c5fa`
+- Current coverage source state: pushed `main` commit `1e13e4a`.
+- Lines: 25863 / 25867
+- Branches: 3450 / 3456
 - Functions: 1592 / 1592
-- Regions: 41642 / 42136
-- Remaining target: 4 lines, 6 branches, and 494 regions.
+- Regions: 41637 / 42128
+- Remaining target: 4 lines, 6 branches, and 491 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -28,7 +28,7 @@ from Coverage MCP before each implementation sweep.
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
 - Files now at 100% branch coverage from this sweep:
-  - `src/codecs/tiff/decode.rs`: 130 / 130 branches.
+  - `src/codecs/tiff/decode.rs`: 132 / 132 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 114 / 114 branches and now
     1353 / 1353 regions.
   - `src/codecs/bmp/decode.rs`: 112 / 112 branches and now
@@ -94,6 +94,11 @@ Measurement:
   to 63. Branch coverage remained complete at `132 / 132`.
 - Net: aggregate missing regions improved from 494 to 491. Line gap stayed at
   4 and branch gap stayed at 6. Keep the cleanup.
+- Pushed re-anchor: run `7d7f1544-bb7f-4434-b0fd-af3ff804c860` measured
+  pushed commit `1e13e4a39815e88751b71ffa132e36ac1bf1c5fa` and ingested
+  snapshot `435164c1-70d2-444b-be64-0dfe90ba8874` with the same counters:
+  `25863 / 25867` lines, `3450 / 3456` branches, `1592 / 1592` functions,
+  and `41637 / 42128` regions.
 
 ## Attempt 84 plan: WebP native private chunk writer monomorphization cleanup
 
