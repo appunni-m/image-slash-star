@@ -360,7 +360,7 @@ pub(crate) fn read_alpha_chunk<R: BufRead>(
     };
 
     let data = if lossless_compression {
-        let mut decoder = LosslessDecoder::new(reader);
+        let mut decoder = LosslessDecoder::new(Box::new(reader));
 
         let mut data = vec![0; usize::from(width) * usize::from(height) * 4];
         decoder.decode_frame_implicit_dimensions(u32::from(width), u32::from(height), &mut data)?;

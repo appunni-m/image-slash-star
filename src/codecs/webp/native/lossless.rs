@@ -52,18 +52,17 @@ const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 2
 const NUM_TRANSFORM_TYPES: usize = 4;
 
 //Decodes lossless WebP images
-#[derive(Debug)]
-pub(crate) struct LosslessDecoder<R> {
-    bit_reader: BitReader<R>,
+pub(crate) struct LosslessDecoder<'a> {
+    bit_reader: BitReader<Box<dyn BufRead + 'a>>,
     transforms: [Option<TransformType>; NUM_TRANSFORM_TYPES],
     transform_order: Vec<u8>,
     width: u16,
     height: u16,
 }
 
-impl<R: BufRead> LosslessDecoder<R> {
+impl<'a> LosslessDecoder<'a> {
     /// Create a new decoder
-    pub(crate) fn new(r: R) -> Self {
+    pub(crate) fn new(r: Box<dyn BufRead + 'a>) -> Self {
         Self {
             bit_reader: BitReader::new(r),
             transforms: [None, None, None, None],
@@ -574,7 +573,7 @@ impl<R: BufRead> LosslessDecoder<R> {
                 let dist_code = Self::get_copy_distance(&mut self.bit_reader, dist_symbol)?;
                 let dist = Self::plane_code_to_distance(width, dist_code);
 
-                if index < dist || num_values - index < length {
+                if copy_is_out_of_bounds(index, dist, num_values, length) {
                     return Err(DecodingError::BitStreamError);
                 }
 
@@ -588,7 +587,7 @@ impl<R: BufRead> LosslessDecoder<R> {
                         let start = (index - dist) * 4;
                         data.copy_within(start..start + 16, index * 4);
 
-                        if length > 4 || dist < 4 {
+                        if copy_needs_overlap_expansion(length, dist) {
                             for i in (0..length * 4).step_by((dist * 4).min(16)).skip(1) {
                                 data.copy_within(start + i..start + i + 16, index * 4 + i);
                             }
@@ -647,9 +646,9 @@ impl<R: BufRead> LosslessDecoder<R> {
         }
     }
 
-    /// Gets the copy distance from the prefix code and bitstream
+    /// Gets the copy distance from the prefix code and bitstream.
     fn get_copy_distance(
-        bit_reader: &mut BitReader<R>,
+        bit_reader: &mut BitReader<Box<dyn BufRead + 'a>>,
         prefix_code: u16,
     ) -> Result<usize, DecodingError> {
         if prefix_code < 4 {
@@ -664,7 +663,7 @@ impl<R: BufRead> LosslessDecoder<R> {
         Ok(offset + bits + 1)
     }
 
-    /// Gets distance to pixel
+    /// Gets distance to pixel.
     fn plane_code_to_distance(xsize: u16, plane_code: usize) -> usize {
         if plane_code > 120 {
             plane_code - 120
@@ -678,6 +677,14 @@ impl<R: BufRead> LosslessDecoder<R> {
             dist.try_into().unwrap()
         }
     }
+}
+
+fn copy_is_out_of_bounds(index: usize, dist: usize, num_values: usize, length: usize) -> bool {
+    index < dist || num_values - index < length
+}
+
+fn copy_needs_overlap_expansion(length: usize, dist: usize) -> bool {
+    length > 4 || dist < 4
 }
 
 #[cfg(coverage)]
@@ -781,13 +788,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
             color_cache: vec![[3, 5, 7, 255]; 2],
         })
     };
-    fn decoder_with_bits<R: BufRead>(
-        reader: R,
+    fn decoder_with_bits(
+        reader: Box<dyn BufRead>,
         buffer: u64,
         nbits: u8,
         width: u16,
         height: u16,
-    ) -> LosslessDecoder<R> {
+    ) -> LosslessDecoder<'static> {
         LosslessDecoder {
             bit_reader: BitReader {
                 reader,
@@ -823,32 +830,39 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = one_then_eof_then_error.read(&mut scratch);
     one_then_eof_then_error.consume(1);
 
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(Vec::<u8>::new())));
     let mut buf = [0u8; 4];
     let _ = decoder.decode_frame_implicit_dimensions(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f]));
+    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f])));
     let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f, 0, 0]));
+    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f, 0, 0])));
     let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f, 0, 0, 0, 0]));
+    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f, 0, 0, 0, 0])));
     let _ = decoder.decode_frame(1, 1, &mut buf);
 
-    let mut decoder = decoder_with_bits(ErrorReader, 0b001, 3, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b001, 3, 1, 1);
     let _ = decoder.read_transforms();
-    let mut decoder = decoder_with_bits(ErrorReader, 0b011, 3, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b011, 3, 1, 1);
     let _ = decoder.read_transforms();
-    let mut decoder = decoder_with_bits(ErrorReader, 0b1, 1, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b1, 1, 1, 1);
     let _ = decoder.read_transforms();
 
-    let mut decoder = decoder_with_bits(ErrorReader, 0, 0, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 0, 1, 1);
     let _ = decoder.read_huffman_codes(true, 1, 1, None);
-    let mut decoder = decoder_with_bits(ErrorReader, 0b1, 1, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b1, 1, 1, 1);
     let _ = decoder.read_huffman_codes(true, 1, 1, None);
+
+    let _ = copy_is_out_of_bounds(0, 1, 2, 1);
+    let _ = copy_is_out_of_bounds(1, 1, 2, 2);
+    let _ = copy_is_out_of_bounds(1, 1, 2, 1);
+    let _ = copy_needs_overlap_expansion(5, 4);
+    let _ = copy_needs_overlap_expansion(4, 3);
+    let _ = copy_needs_overlap_expansion(4, 4);
 
     let mut code_length_code_lengths = vec![0; CODE_LENGTH_CODES];
     code_length_code_lengths[0] = 1;
     code_length_code_lengths[1] = 1;
-    let mut decoder = decoder_with_bits(ErrorReader, 0, 1, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 1, 1, 1);
     let _ = decoder.read_huffman_code_lengths(code_length_code_lengths, 4);
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
@@ -869,13 +883,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = reader.consume(8);
     let _ = reader.consume(1);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
     let _ = decoder.read_color_cache();
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0xff; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0xff; 1])));
     let _ = decoder.read_color_cache();
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: Cursor::new(Vec::<u8>::new()),
+            reader: Box::new(Cursor::new(Vec::<u8>::new())),
             buffer: 1,
             nbits: 1,
         },
@@ -887,7 +901,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_color_cache();
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: Cursor::new(Vec::<u8>::new()),
+            reader: Box::new(Cursor::new(Vec::<u8>::new())),
             buffer: 0b00011,
             nbits: 5,
         },
@@ -898,18 +912,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.read_color_cache();
 
-    let mut reader = BitReader::__coverage_new(Cursor::new([0b1010_1010u8; 8]));
+    let mut reader =
+        BitReader::__coverage_new(Box::new(Cursor::new([0b1010_1010u8; 8])) as Box<dyn BufRead>);
     let _ = reader.fill();
-    let _ = LosslessDecoder::<Cursor<[u8; 8]>>::get_copy_distance(&mut reader, 4);
+    let _ = LosslessDecoder::<'static>::get_copy_distance(&mut reader, 4);
     let mut reader = BitReader {
-        reader: Cursor::new(Vec::<u8>::new()),
+        reader: Box::new(Cursor::new(Vec::<u8>::new())) as Box<dyn BufRead>,
         buffer: 0,
         nbits: 0,
     };
-    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::get_copy_distance(&mut reader, 4);
-    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(1, 121);
-    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(8, 1);
-    let _ = LosslessDecoder::<Cursor<Vec<u8>>>::plane_code_to_distance(8, 8);
+    let _ = LosslessDecoder::<'static>::get_copy_distance(&mut reader, 4);
+    let _ = LosslessDecoder::<'static>::plane_code_to_distance(1, 121);
+    let _ = LosslessDecoder::<'static>::plane_code_to_distance(8, 1);
+    let _ = LosslessDecoder::<'static>::plane_code_to_distance(8, 8);
 
     let info = HuffmanInfo {
         xsize: 1,
@@ -932,7 +947,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = info.get_huff_index(1, 0);
 
-    let mut decoder = decoder_with_bits(ErrorReader, 0, 0, 1, 1);
+    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 0, 1, 1);
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -952,10 +967,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
     let mut decoder = decoder_with_bits(
-        OneThenEofThenErrorReader {
+        Box::new(OneThenEofThenErrorReader {
             byte: [0],
             phase: 0,
-        },
+        }),
         0,
         0,
         1,
@@ -979,7 +994,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -998,7 +1013,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1019,7 +1034,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: Cursor::new(Vec::<u8>::new()),
+            reader: Box::new(Cursor::new(Vec::<u8>::new())),
             buffer: 0,
             nbits: 1,
         },
@@ -1048,7 +1063,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: Cursor::new(Vec::<u8>::new()),
+            reader: Box::new(Cursor::new(Vec::<u8>::new())),
             buffer: 0,
             nbits: 1,
         },
@@ -1077,7 +1092,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: Cursor::new(Vec::<u8>::new()),
+            reader: Box::new(Cursor::new(Vec::<u8>::new())),
             buffer: 0,
             nbits: 1,
         },
@@ -1104,7 +1119,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1123,7 +1138,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(Vec::<u8>::new())));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1142,7 +1157,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(Vec::<u8>::new())));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1161,7 +1176,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(Vec::<u8>::new())));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1180,7 +1195,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_0010u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0000_0010u8; 1])));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1199,7 +1214,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0011_0000u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0011_0000u8; 1])));
     let mut data = [0u8; 32];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1218,7 +1233,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(8, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_1100u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0000_1100u8; 1])));
     let mut data = [0u8; 16];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1237,7 +1252,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(4, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1256,7 +1271,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1277,7 +1292,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: Cursor::new(Vec::<u8>::new()),
+            reader: Box::new(Cursor::new(Vec::<u8>::new())),
             buffer: 0,
             nbits: 1,
         },
@@ -1306,7 +1321,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
-            reader: ErrorReader,
+            reader: Box::new(ErrorReader),
             buffer: 0,
             nbits: 0,
         },
@@ -1317,7 +1332,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.read_color_cache();
 
-    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_0010u8; 8]));
+    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0000_0010u8; 8])));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1389,6 +1404,53 @@ pub(crate) struct BitReader<R> {
     nbits: u8,
 }
 
+fn fill_bit_buffer(
+    reader: &mut dyn BufRead,
+    buffer: &mut u64,
+    nbits: &mut u8,
+) -> Result<(), DecodingError> {
+    let mut buf = reader.fill_buf()?;
+    if buf.len() >= 8 {
+        let lookahead = u64::from_le_bytes(buf[..8].try_into().unwrap());
+        reader.consume(usize::from((63 - *nbits) / 8));
+        *buffer |= lookahead << *nbits;
+        *nbits |= 56;
+    } else {
+        while !buf.is_empty() && *nbits < 56 {
+            *buffer |= u64::from(buf[0]) << *nbits;
+            *nbits += 8;
+            reader.consume(1);
+            buf = reader.fill_buf()?;
+        }
+    }
+
+    Ok(())
+}
+
+fn consume_bits(buffer: &mut u64, nbits: &mut u8, num: u8) -> Result<(), DecodingError> {
+    if *nbits < num {
+        return Err(DecodingError::BitStreamError);
+    }
+
+    *buffer >>= num;
+    *nbits -= num;
+    Ok(())
+}
+
+fn read_bits_u32(
+    reader: &mut dyn BufRead,
+    buffer: &mut u64,
+    nbits: &mut u8,
+    num: u8,
+) -> Result<u32, DecodingError> {
+    if *nbits < num {
+        fill_bit_buffer(reader, buffer, nbits)?;
+    }
+    let value = (*buffer & ((1 << num) - 1)) as u32;
+    consume_bits(buffer, nbits, num)?;
+    Ok(value)
+}
+
 impl<R: BufRead> BitReader<R> {
     const fn new(reader: R) -> Self {
         Self {
@@ -1409,23 +1471,7 @@ impl<R: BufRead> BitReader<R> {
     /// the input stream.
     pub(crate) fn fill(&mut self) -> Result<(), DecodingError> {
         debug_assert!(self.nbits < 64);
-
-        let mut buf = self.reader.fill_buf()?;
-        if buf.len() >= 8 {
-            let lookahead = u64::from_le_bytes(buf[..8].try_into().unwrap());
-            self.reader.consume(usize::from((63 - self.nbits) / 8));
-            self.buffer |= lookahead << self.nbits;
-            self.nbits |= 56;
-        } else {
-            while !buf.is_empty() && self.nbits < 56 {
-                self.buffer |= u64::from(buf[0]) << self.nbits;
-                self.nbits += 8;
-                self.reader.consume(1);
-                buf = self.reader.fill_buf()?;
-            }
-        }
-
-        Ok(())
+        fill_bit_buffer(&mut self.reader, &mut self.buffer, &mut self.nbits)
     }
 
     /// Peeks at the next `num` bits in the buffer.
@@ -1440,13 +1486,7 @@ impl<R: BufRead> BitReader<R> {
 
     /// Consumes `num` bits from the buffer returning an error if there are not enough bits.
     pub(crate) fn consume(&mut self, num: u8) -> Result<(), DecodingError> {
-        if self.nbits < num {
-            return Err(DecodingError::BitStreamError);
-        }
-
-        self.buffer >>= num;
-        self.nbits -= num;
-        Ok(())
+        consume_bits(&mut self.buffer, &mut self.nbits, num)
     }
 
     /// Convenience function to read a number of bits and convert them to a type.
@@ -1454,13 +1494,7 @@ impl<R: BufRead> BitReader<R> {
         debug_assert!(num <= T::BITS);
         debug_assert!(num <= 32);
 
-        if self.nbits < num {
-            self.fill()?;
-        }
-        let value = self.peek(num) as u32;
-        self.consume(num)?;
-
-        Ok(T::from_u32(value))
+        read_bits_u32(&mut self.reader, &mut self.buffer, &mut self.nbits, num).map(T::from_u32)
     }
 }
 

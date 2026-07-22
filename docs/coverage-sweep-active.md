@@ -1896,6 +1896,780 @@ Retention:
   cleanup preserved line/function/branch coverage but did not reduce missing
   regions or the single branch gap.
 
+## Batch 73 plan
+
+Goal: reduce retained WebP native region debt by covering the success side of
+custom failing-reader instantiations instead of adding new malformed byte
+fixtures.
+
+Baseline evidence:
+
+- Current retained Coverage MCP snapshot:
+  `a71665a6-7344-4996-a70c-3a75144ac5e8` on commit
+  `d8a403dbf4206397568b2c58358d4e086256c25e`.
+- Retained counters: lines `26972 / 26972`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42521 / 42565`.
+- Remaining retained gap map:
+  - `src/codecs/webp/native/decoder.rs`: 14 regions, 0 branches, with
+    instantiations `61 / 65`;
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch, with
+    instantiations `129 / 207`;
+  - `src/codecs/webp/native/vp8.rs`: 8 regions, 0 branches, with
+    instantiations `85 / 86`;
+  - `src/codecs/webp/native/encoder.rs`: 1 region, 0 branches, with
+    instantiations `72 / 72`.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `decoder.rs` `WebPDecoder<FailingReadCursor>` constructor shape | Raw LLVM function records show uncovered instantiations for `is_animated()` and `validate_output_buffer_size()` under the custom read-failure type. Existing probes only make that reader fail early inside `WebPDecoder::new(...)`. | Add one deterministic valid VP8 header through `FailingReadCursor` with the failure offset beyond EOF so the same type reaches the normal constructor tail. |
+| `decoder.rs` `WebPDecoder<FailingSeekCursor>` constructor shape | Raw LLVM function records show an uncovered `validate_output_buffer_size()` instantiation under the custom seek-failure type. Existing probes use the type only for early seek errors. | Add one deterministic valid VP8 header through `FailingSeekCursor` with enough allowed seeks to reach normal constructor success. |
+| `decoder.rs` animated `read_frame()` closure under `FailingSeekCursor` | Raw LLVM function records show an uncovered closure at `read_frame()` canvas initialization line 622 for `WebPDecoder<FailingSeekCursor>`. Existing animated seek-failure probes fail before canvas initialization. | Replay the existing valid VP8L solid-frame ANMF stream through `FailingSeekCursor` with enough allowed seeks to hit the normal animated frame path. |
+| `vp8.rs` residual one uncovered instantiation | Detailed MCP still shows one uncovered VP8 instantiation. Batches 58, 65, and 69 already proved duplicated malformed VP8 input generation and borrowed-slice replay do not move the retained VP8 region count. | Do not add new VP8 parser probes in this batch. |
+| `lossless.rs` single branch and generic-instantiation debt | Batch 72 proved borrowed-slice lossless reader-shape cleanup was neutral. The planned animated `FailingSeekCursor` success probe may cover some lossless `Take<FailingSeekCursor>` instantiations indirectly. | Let the decoder success-path probe measure this indirectly; do not add direct lossless edits. |
+
+Planned edit:
+
+- In `decoder::__coverage_exercise_private_branches()`, add:
+  - valid simple VP8 constructor success through `FailingReadCursor`;
+  - valid simple VP8 constructor success through `FailingSeekCursor`;
+  - valid VP8L animated-frame success through `FailingSeekCursor` using the
+    existing `vp8l_solid_64` bytes.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions fall below 44.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `a944b1aa-dcff-44e2-b2e1-a36ba58a9f29`.
+- Snapshot: `06f191c7-4315-4003-a090-51f0d501f155`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26982 / 26982` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42536 / 42580` (44 missing), unchanged from Batch 72.
+- `src/codecs/webp/native/decoder.rs`: instantiations improved from
+  `61 / 65` to `65 / 65`, but missing regions stayed at 14.
+- `src/codecs/webp/native/lossless.rs`: instantiations improved from
+  `129 / 207` to `150 / 207`, but missing regions stayed at 21 and the branch
+  miss stayed unchanged.
+- `src/codecs/webp/native/vp8.rs`: stayed at 8 missing regions.
+
+Retention:
+
+- Reject Batch 73 and revert the source probes. Covering the custom-reader
+  success instantiations improves LLVM instantiation coverage but does not reduce
+  the retained aggregate region or branch debt. This confirms the remaining
+  gaps are not caused by those custom-reader early exits.
+
+## Batch 74 plan
+
+Goal: clear the remaining lossless branch debt with a minimal backward-reference
+state that hits the copy-length-overrun side of `decode_image_data(...)`.
+
+Baseline evidence:
+
+- Current retained Coverage MCP snapshot:
+  `a71665a6-7344-4996-a70c-3a75144ac5e8`.
+- Retained counters: lines `26972 / 26972`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42521 / 42565`.
+- `src/codecs/webp/native/lossless.rs` is the only file with branch debt:
+  branches `119 / 120`, regions `1361 / 1382`.
+- MCP file gaps and selected line records keep pointing at
+  `decode_image_data(...)` line 577:
+  `if index < dist || num_values - index < length`.
+
+Reverse map:
+
+| Condition side | Existing coverage | Missing state |
+| --- | --- | --- |
+| `index < dist` | Existing backward-reference hooks start at pixel index `0`, so every non-zero distance trips the left side. | Already covered. |
+| `num_values - index < length` | Existing valid-copy hooks use length values that fit the remaining output. | Need a prior literal pixel so `index >= dist`, then a backward-reference length that exceeds the remaining pixels. |
+
+Planned edit:
+
+- Add one deterministic coverage-hook state in
+  `lossless::__coverage_exercise_private_branches()`:
+  - two-pixel image (`width = 2`, `height = 1`);
+  - green Huffman tree emits a literal on bit `0`, then copy-length symbol
+    `257` on bit `1`;
+  - distance tree emits prefix `1`, which maps to plane-code distance `1`;
+  - data byte `0b0000_0010` drives the literal then backward reference.
+- Expected execution: first pixel is decoded literally, then at `index = 1`,
+  `dist = 1` is valid but `length = 2` exceeds the one remaining pixel, taking
+  the RHS of line 577.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt decreases or does not regress, and total
+  missing regions does not increase.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `72f00266-2d65-4da7-88e2-9ff01ff67b5e`.
+- Snapshot: `b0d85ec6-c75d-47bc-af84-1fdfd6e2ad0a`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26990 / 26990` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42538 / 42582` (44 missing), unchanged from the retained
+  baseline.
+- `src/codecs/webp/native/lossless.rs`: branch debt stayed at `119 / 120`,
+  and missing regions stayed at 21.
+
+Retention:
+
+- Reject Batch 74 and revert the source probe. The constructed
+  copy-length-overrun state did not clear the retained branch gap or region
+  debt. This means the remaining lossless branch is not the straightforward RHS
+  of line 577 under the retained aggregate metric, despite the noisy MCP line
+  gap pointing there.
+
+## Batch 75 plan
+
+Goal: clear the retained lossless branch by reverse-mapping from the branch-owning
+primitive instead of the downstream decode-image line.
+
+Baseline evidence:
+
+- Retained Coverage MCP snapshot:
+  `a71665a6-7344-4996-a70c-3a75144ac5e8`.
+- Retained counters: lines `26972 / 26972`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42521 / 42565`.
+- `src/codecs/webp/native/lossless.rs` is the only file with branch debt:
+  branches `119 / 120`, regions `1361 / 1382`.
+- Batch 74 proved the missing branch is not the straightforward
+  `decode_image_data(...)` line 577 copy-length-overrun RHS.
+
+Reverse map:
+
+| Source construct | Existing coverage | Missing state |
+| --- | --- | --- |
+| `BitReader::fill()` line 1414, `if buf.len() >= 8` | Covered by existing `Cursor::new([0u8; 8])` and short-buffer states. | No new action. |
+| `BitReader::fill()` line 1420, `while !buf.is_empty() && self.nbits < 56` | Existing hooks cover empty buffer, short non-empty buffer with `nbits < 56`, refill to EOF, and reader errors. | A non-empty buffer with `nbits == 56` so the left side is true and the right side is false. |
+| `BitReader::read_bits()` line 1457, `if self.nbits < num` | Existing hooks cover buffered and fill-needed reads, including reader errors. Previous direct `read_bits` probes did not clear the retained branch. | No new action until the `fill()` short-circuit state is measured. |
+
+Planned edit:
+
+- Add one coverage-only `BitReader` state in
+  `lossless::__coverage_exercise_private_branches()`:
+  - reader: `Cursor::new([0u8; 1])`;
+  - `buffer = 0`;
+  - `nbits = 56`;
+  - call `fill()`.
+- This directly exercises the `while` condition with a non-empty buffer where
+  `self.nbits < 56` is false.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt decreases or does not regress, and total
+  missing regions does not increase.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `5e8418cd-dc17-49b4-b3e4-1d8407738cd4`.
+- Snapshot: `fa5506a3-708d-4cba-ac07-be088e476f72`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26978 / 26978` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42524 / 42568` (44 missing), unchanged.
+- `src/codecs/webp/native/lossless.rs`: regions changed to
+  `1364 / 1385`, while branch debt stayed `119 / 120`.
+
+Retention:
+
+- Reject Batch 75 and revert the source probe. The non-empty-buffer
+  `nbits == 56` state executes and is fully covered, but it does not clear the
+  retained branch or region debt. The remaining lossless branch is therefore not
+  the direct `BitReader::fill()` `while` RHS false state.
+
+## Batch 76 plan
+
+Goal: reduce retained decoder region debt by reverse-mapping source regions that
+come from repeated validation combinator expressions inside generic
+`WebPDecoder<R>` methods.
+
+Baseline evidence:
+
+- Retained Coverage MCP snapshot:
+  `a71665a6-7344-4996-a70c-3a75144ac5e8`.
+- Retained counters: lines `26972 / 26972`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42521 / 42565`.
+- `src/codecs/webp/native/decoder.rs`: branches `90 / 90`, regions
+  `1562 / 1576`.
+- Decoder line gaps cluster on pure validation expressions in generic methods:
+  lines 183-185, 411-413, 441-443, 499-501, 549-551, and 559-561.
+- Batches 70-73 proved that reducing hook-only reader shapes can help, but
+  adding more reader success inputs does not reduce the retained gap once those
+  instantiations are covered.
+
+Reverse map:
+
+| Source construct | Existing coverage | Planned action |
+| --- | --- | --- |
+| `(condition).then_some(()).ok_or(error)?` in `read_data`, `read_image`, and `read_frame` | Every semantic true/false path is already covered, but LLVM still records retained region debt in the generic caller source. | Move the branch shape into one non-generic `require(...)` helper and call it from the generic methods. |
+| `WebPDecoder<R>` generic monomorphs | Existing coverage uses `Cursor<&[u8]>`, `FailingSeekCursor`, and other reader shapes; adding success states for those types was neutral. | Avoid creating more monomorph-specific validation regions. |
+
+Planned edit:
+
+- Add a private non-generic `require(condition, error)` helper in
+  `decoder.rs`.
+- Replace the repeated `.then_some(()).ok_or(...)?` validation chains with
+  `require(..., ...)?`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions falls below 44.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `0b60ada7-604d-4511-952c-11fe240fe3b8`.
+- Snapshot: `f9a6ddfa-3e8a-49a9-8992-6d99cfa5e27a`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26981 / 26981` (100%).
+- Functions: `1633 / 1633` (100%).
+- Branches: `3489 / 3490` (1 missing, unchanged).
+- Regions: `42514 / 42558` (44 missing), unchanged.
+- `src/codecs/webp/native/decoder.rs`: total regions decreased from `1576`
+  to `1569`, but covered regions decreased by the same amount; retained
+  decoder debt stayed at 14 missing regions.
+
+Retention:
+
+- Reject Batch 76 and revert the source helper. Moving repeated
+  `.then_some(()).ok_or(...)` validation expressions into a non-generic helper
+  reduced source-region totals but did not reduce retained missing regions.
+  The remaining decoder debt is therefore not caused by those validation
+  combinator expressions.
+
+## Batch 77 plan
+
+Goal: reduce retained VP8 region debt with exact reverse-mapped private states
+for the smallest normal reader-shape gaps.
+
+Baseline evidence:
+
+- Retained Coverage MCP snapshot:
+  `a71665a6-7344-4996-a70c-3a75144ac5e8`.
+- Retained counters: lines `26972 / 26972`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42521 / 42565`.
+- `src/codecs/webp/native/vp8.rs`: branches `160 / 160`, regions
+  `2726 / 2734`.
+- Raw reverse-map from the LLVM JSON artifact produced by Coverage MCP shows
+  small remaining normal reader-shape gaps at:
+  - `init_partitions(...)` line 999 (`read_to_end`) for `Cursor<&[u8]>` and
+    `Take<Cursor<&[u8]>>`;
+  - `read_coefficients(...)` line 1469 for the `zigzag == 0` quantizer arm;
+  - `loop_filter(...)` line 1577 for the RHS-driven subblock-filtering case.
+
+Reverse map:
+
+| Source construct | Existing coverage | Missing state |
+| --- | --- | --- |
+| `init_partitions(1)` final partition read | Existing hooks cover `n > 1` and an `ErrorReader` failure for `n == 1`. | Successful empty final partition for both cursor and taken cursor reader shapes. |
+| `block[zigzag] = abs_value * if zigzag > 0 { acq } else { dcq }` | Existing hooks hit AC coefficient writes and mixed parser paths. | Fresh plane-1 coefficient read where `first == 0` and the first decoded token writes `zigzag == 0`. |
+| `mb.luma_mode == B || (!mb.coeffs_skipped && mb.non_zero_dct)` | Existing loop-filter hook covers left side true and whole expression false. | Non-B macroblock with `coeffs_skipped == false` and `non_zero_dct == true`, so the RHS alone drives subblock filtering. |
+
+Planned edit:
+
+- Extend `vp8::__coverage_exercise_private_branches()` with:
+  - direct `init_partitions(1)` success for `Cursor<&[u8]>`;
+  - direct `init_partitions(1)` success for `Take<Cursor<&[u8]>>`;
+  - a fresh plane-1 `read_coefficients(...)` call with a `DCT_1` fixed token;
+  - a loop-filter call using a non-B, non-skipped, non-zero macroblock.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions falls below 44.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `e8ec3770-99ff-4f5e-9001-a900c1892f9f`.
+- Snapshot: `0850e8ad-6f10-425e-b810-551cf520a555`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26995 / 26995` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42546 / 42589` (43 missing), improved by 1.
+- `src/codecs/webp/native/vp8.rs`: regions changed from `2726 / 2734`
+  to `2751 / 2758`, reducing missing VP8 regions from 8 to 7.
+
+Retention:
+
+- Retain Batch 77. The improvement confirms that at least one remaining VP8
+  region is reachable through exact reverse-mapped private states, specifically
+  the normal reader-shape states around final partition/coefficient/loop-filter
+  handling.
+
+## Batch 78 plan
+
+Goal: reduce the next retained VP8 region by replaying an existing invalid-token
+coefficient state through the taken-reader shape used by container decode.
+
+Baseline evidence:
+
+- Retained Coverage MCP snapshot after Batch 77:
+  `0850e8ad-6f10-425e-b810-551cf520a555`.
+- Retained counters: lines `26995 / 26995`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42546 / 42589`.
+- `src/codecs/webp/native/vp8.rs`: branches `160 / 160`, regions
+  `2751 / 2758`.
+- Raw reverse-map from the Batch 77 LLVM JSON shows a two-region gap in
+  `read_coefficients(...)` line 1455 for
+  `Vp8Decoder<Take<Cursor<&[u8]>>>`.
+
+Reverse map:
+
+| Source construct | Existing coverage | Missing state |
+| --- | --- | --- |
+| `read_coefficients(...)` line 1455 `c => panic!("unknown token: {c}")` | Existing `catch_unwind` hook covers an invalid fixed token under `Vp8Decoder<Cursor<&[u8]>>`. | Replay the same invalid fixed-token state under `Vp8Decoder<Take<Cursor<&[u8]>>>`. |
+
+Planned edit:
+
+- Add a second `catch_unwind` coefficient hook in
+  `vp8::__coverage_exercise_private_branches()` using `with_take_decoder!`.
+- Keep the same token tree and block call as the existing cursor-backed invalid
+  token hook.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions falls below 43.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `1f5a7bc0-7d91-42c5-a240-f131922317f1`.
+- Snapshot: `b7648354-9fc4-40b4-98a8-f9503d46cdb7`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27010 / 27010` (100%).
+- Functions: `1633 / 1633` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42563 / 42606` (43 missing), unchanged from Batch 77.
+- `src/codecs/webp/native/vp8.rs`: regions changed to `2768 / 2775`,
+  keeping VP8 debt at 7 missing regions.
+
+Retention:
+
+- Reject Batch 78 and revert the source hook. Replaying the invalid-token panic
+  arm under `Take<Cursor<&[u8]>>` adds fully covered hook code but does not
+  reduce retained aggregate VP8 debt. The line-1455 raw function gap is not one
+  of the retained seven aggregate regions.
+
+## Batch 79 plan
+
+Goal: reduce retained VP8 region debt at `read_segment_updates()` line 1107 by
+using reverse-mapped VP8 arithmetic bytes instead of guessed buffers.
+
+Baseline evidence:
+
+- Retained Coverage MCP snapshot after Batch 77:
+  `0850e8ad-6f10-425e-b810-551cf520a555`.
+- Retained counters: lines `26995 / 26995`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42546 / 42589`.
+- `src/codecs/webp/native/vp8.rs`: branches `160 / 160`, regions
+  `2751 / 2758`.
+- Raw reverse-map from the Batch 77 LLVM JSON shows a one-region normal
+  `Cursor<&[u8]>` gap at `read_segment_updates(...)` line 1107, the default
+  probability value arm.
+
+Reverse map:
+
+| `read_segment_updates()` flag | Needed value | Derived byte source |
+| --- | --- | --- |
+| `segments_update_map` | `true` | VP8 arithmetic flag 1 from `80 00 00 00`. |
+| `update_segment_feature_data` | `false` | VP8 arithmetic flag 2 from `80 00 00 00`. |
+| three segment-tree `update` flags | all `false` | VP8 arithmetic flags 3-5 from `80 00 00 00`, reaching `prob = 255`. |
+
+Derivation:
+
+- A small script modeled `ArithmeticDecoder::fast_read_flag()` and found
+  `80 00 00 00` yields flag sequence
+  `[true, false, false, false, false]`.
+
+Planned edit:
+
+- Add one coverage-only `with_cursor_decoder!` state:
+  - `decoder.b.init(vec![[0x80, 0, 0, 0]], 4)`;
+  - call `decoder.read_segment_updates()`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions falls below 43.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all --check`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `70550dd1-d5f4-43fc-9688-5a1889ecf369`.
+- Snapshot: `2732de16-0a3b-4907-9198-2ae11037a4b6`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `26997 / 26997`.
+- Functions: `1632 / 1632`.
+- Branches: `3487 / 3488`.
+- Regions: `42551 / 42594` (43 missing), unchanged.
+- `src/codecs/webp/native/vp8.rs`: regions `2756 / 2763`, still
+  7 missing.
+
+Decision:
+
+- Reject Batch 79 and revert the source hook. The derived bytes reach the
+  reverse-mapped source line and change normalized line-gap evidence, but the
+  retained gate is aggregate region debt. Total missing regions remain 43, so
+  this is not one of the retained VP8 aggregate gaps.
+
+## Batch 80 plan
+
+Goal: use file-level reverse mapping, not noisy generic function mappings, to
+attack the retained VP8 aggregate region debt.
+
+Baseline evidence:
+
+- Retained Coverage MCP snapshot after Batch 77:
+  `0850e8ad-6f10-425e-b810-551cf520a555`.
+- Retained counters: lines `26995 / 26995`, functions `1632 / 1632`,
+  branches `3487 / 3488`, regions `42546 / 42589`.
+- `src/codecs/webp/native/vp8.rs`: branches `160 / 160`, regions
+  `2751 / 2758`.
+- Raw LLVM file-level zero-region entries in the latest artifact map the
+  retained VP8 debt to:
+
+| Source coordinate | Source construct | Reverse-mapped input/state |
+| --- | --- | --- |
+| `1193:48-49` | `read_loop_filter_adjustments()?` in `read_frame_header()` | Keyframe with first-partition bytes `00 06`, derived to enable loop-filter adjustments and then run out inside the adjustment reader. |
+| `1200:45-46` | `init_partitions(num_partitions)?` in `read_frame_header()` | Keyframe with first-partition bytes `00 01 00 00`, derived to set `num_partitions = 2`, with no trailing partition-size bytes. |
+| `1220:30-31` | final `self.b.check(res, ())?` in `read_frame_header()` | Keyframe with first-partition bytes `00 00 00 00 00 19`, derived to pass token-probability updates, set `mb_no_skip_coeff = 1`, and run out while reading the skip probability. |
+| `1492:96-97` | Y2 `read_coefficients(...)?` in `read_residual_data()` | Direct private state: force plane-1 coefficient tokens to `DCT_1` and use an empty coefficient partition, so the caller-side `?` returns `Err`. |
+| `1547:95-96` | UV `read_coefficients(...)?` in `read_residual_data()` | Direct private state: force plane-3 luma blocks to `DCT_EOB`, force plane-2 UV blocks to `DCT_1`, and use exactly one coefficient byte so the first UV caller-side `?` returns `Err`. |
+| `1860:62-63` | `read_macroblock_header(mbx)?` in `decode_frame_()` | Decode a one-macroblock keyframe with six zero first-partition bytes, which makes `read_frame_header()` succeed and leaves the macroblock header reader at EOF. |
+
+Planned edit:
+
+- Extend only `vp8::__coverage_exercise_private_branches()`.
+- Add a small `keyframe_with_first_partition()` helper for the three frame-header
+  byte probes and the decode-frame macroblock-header probe.
+- Add a generic `force_plane_token()` helper for the two residual-data
+  caller-side error probes.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions falls below 43.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all --check`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `cabb5c91-a66e-4814-8d89-edeb4da3727e`.
+- Snapshot: `a89216e4-afb6-4f0d-b388-1c9fe816dcc9`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27050 / 27050`.
+- Functions: `1634 / 1634`.
+- Branches: `3487 / 3488`.
+- Regions: `42629 / 42672` (43 missing), unchanged from retained Batch 77.
+- `src/codecs/webp/native/vp8.rs`: regions `2834 / 2841`, still
+  7 missing.
+
+Observation:
+
+- The three `read_frame_header()` source coordinates and the Y2 residual
+  coordinate disappeared from the MCP selected-line gap view, so the
+  reverse-mapped inputs do execute the intended source paths.
+- The remaining raw LLVM file-level zero-region entries are still:
+  - `1547:95-96`, UV `read_coefficients(...)?`;
+  - `1860:62-63`, `read_macroblock_header(mbx)?`.
+- Reverse-mapping the raw function records shows those two retained gaps belong
+  to the `Take<Cursor<&[u8]>>` monomorphization, while Batch 80's new residual
+  and decode-frame probes used `Cursor<&[u8]>`.
+
+Decision:
+
+- Do not mark Batch 80 retained by itself because aggregate missing regions did
+  not fall below 43. Keep it temporarily as the measured transition state for
+  Batch 81; revert Batch 80 together with Batch 81 if the combined result does
+  not reduce aggregate debt.
+
+## Batch 81 plan
+
+Goal: convert Batch 80's neutral transition into a retained VP8 reduction by
+replaying the two remaining aggregate coordinates through the exact
+`Take<Cursor<&[u8]>>` monomorphization.
+
+Baseline evidence:
+
+- Coverage MCP snapshot after Batch 80:
+  `a89216e4-afb6-4f0d-b388-1c9fe816dcc9`.
+- Counters: lines `27050 / 27050`, functions `1634 / 1634`,
+  branches `3487 / 3488`, regions `42629 / 42672`.
+- `src/codecs/webp/native/vp8.rs`: branches `160 / 160`, regions
+  `2834 / 2841`.
+- Raw file-level zero-region entries:
+  - `1547:95-96`;
+  - `1860:62-63`.
+
+Reverse map:
+
+| Source coordinate | Batch 80 issue | Batch 81 correction |
+| --- | --- | --- |
+| `1547:95-96` | The UV residual EOF probe used `with_cursor_decoder!`, but the retained raw gap is in `Vp8Decoder<Take<Cursor<&[u8]>>>.read_residual_data`. | Replay the same forced plane-3 `DCT_EOB` / plane-2 `DCT_1` state with `with_take_decoder!`. |
+| `1860:62-63` | The macroblock-header EOF decode used `Vp8Decoder::decode_frame(Cursor<&[u8]>)`, but the retained raw gap is in `Vp8Decoder<Take<Cursor<&[u8]>>>.decode_frame_`. | Build `Vp8Decoder::new(cursor.by_ref().take(...))` through `with_take_decoder!` and call `decoder.decode_frame_()`. |
+
+Planned edit:
+
+- Extend only `vp8::__coverage_exercise_private_branches()`.
+- Add two `with_take_decoder!` states:
+  - the UV residual caller-side EOF state;
+  - the macroblock-header EOF frame decode state.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain the combined Batch 80 + Batch 81 source only if Coverage MCP produces a
+  valid ingested snapshot, line/function coverage remains 100%, branch debt does
+  not increase, and total missing regions falls below 43.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all --check`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `a8851c0f-e166-4053-b61e-47880c9a3731`.
+- Snapshot: `a5e40a0a-6d7b-4818-90e2-9fa1328542c2`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27067 / 27067`.
+- Functions: `1634 / 1634`.
+- Branches: `3487 / 3488`.
+- Regions: `42651 / 42694` (43 missing), unchanged.
+- `src/codecs/webp/native/vp8.rs`: regions `2856 / 2863`, still
+  7 missing.
+
+Observation:
+
+- The `Take<Cursor<&[u8]>>` probes executed, but the two raw zero-width
+  coordinates remained:
+  - `1547:95-96`;
+  - `1860:62-63`.
+- The all-zero six-byte frame reaches `read_macroblock_header()` successfully,
+  then continues to the residual path. It does not cover the `1860` error
+  propagation side.
+- The one-byte UV residual state runs out too early, before the first UV block,
+  so it does not cover the `1547` caller-side `?`.
+
+Decision:
+
+- Do not mark Batch 81 retained by itself. Keep the combined source temporarily
+  for Batch 82 with corrected reverse-mapped inputs; revert the whole stack if
+  Batch 82 does not reduce aggregate missing regions.
+
+## Batch 82 plan
+
+Goal: use corrected reverse-mapped VP8 inputs for the two remaining raw
+file-level coordinates after Batch 81.
+
+Baseline evidence:
+
+- Coverage MCP snapshot after Batch 81:
+  `a5e40a0a-6d7b-4818-90e2-9fa1328542c2`.
+- Counters: lines `27067 / 27067`, functions `1634 / 1634`,
+  branches `3487 / 3488`, regions `42651 / 42694`.
+- `src/codecs/webp/native/vp8.rs`: branches `160 / 160`, regions
+  `2856 / 2863`.
+- Raw function records still show `1547:95-96` in `read_residual_data()` and
+  `1860:62-63` in `decode_frame_()` for both normal and coverage-reader
+  monomorphizations.
+
+Reverse map:
+
+| Source coordinate | Failed input | Corrected input |
+| --- | --- | --- |
+| `1860:62-63` | Six zero first-partition bytes make `read_macroblock_header()` succeed. | First-partition bytes `00 00 00 00 00 03`, derived with the VP8 arithmetic/model tree script to pass `read_frame_header()` and make `read_macroblock_header()` return `Err`. |
+| `1547:95-96` | One coefficient byte runs out before reaching the UV block. | Two coefficient bytes let the 16 forced plane-3 `DCT_EOB` luma blocks finish, then run out in the first forced plane-2 `DCT_1` UV block. |
+
+Planned edit:
+
+- Extend only `vp8::__coverage_exercise_private_branches()`.
+- Add the corrected macroblock-header EOF first-partition bytes for both
+  `Cursor<&[u8]>` and `Take<Cursor<&[u8]>>`.
+- Change/add the UV residual EOF probe to use two bytes for both
+  `Cursor<&[u8]>` and `Take<Cursor<&[u8]>>`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain the combined Batch 80-82 source only if Coverage MCP produces a valid
+  ingested snapshot, line/function coverage remains 100%, branch debt does not
+  increase, and total missing regions falls below 43.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all --check`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `d07a0304-f9d1-4da4-a1e1-4a440b818313`.
+- Snapshot: `e5104150-e09c-4d8b-b380-66185c33071b`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27074 / 27074`.
+- Functions: `1634 / 1634`.
+- Branches: `3487 / 3488`.
+- Regions: `42664 / 42705` (41 missing), improved by 2.
+- `src/codecs/webp/native/vp8.rs`: regions `2869 / 2874`, improved to
+  5 missing.
+
+Retention:
+
+- Retain Batches 80-82. The corrected macroblock-header EOF bytes and two-byte
+  UV residual state clear the two raw VP8 zero-width coordinates while preserving
+  100% line/function coverage and all previously covered branches.
+- Remaining project debt after Batch 82:
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch;
+  - `src/codecs/webp/native/decoder.rs`: 14 regions;
+  - `src/codecs/webp/native/vp8.rs`: 5 regions;
+  - `src/codecs/webp/native/encoder.rs`: 1 region.
+
+## Batch 83 plan
+
+Goal: clear the smallest remaining file debt, the single retained region in
+`src/codecs/webp/native/encoder.rs`.
+
+Baseline evidence:
+
+- Coverage MCP snapshot after Batch 82:
+  `e5104150-e09c-4d8b-b380-66185c33071b`.
+- Counters: lines `27074 / 27074`, functions `1634 / 1634`,
+  branches `3487 / 3488`, regions `42664 / 42705`.
+- `src/codecs/webp/native/encoder.rs`: branches `194 / 194`, regions
+  `1851 / 1852`.
+
+Reverse map:
+
+| Source coordinate | Evidence | Input |
+| --- | --- | --- |
+| `1160:61-62` | Raw function records show the missing region at `let frame = encode_frame(data, width, height, color)?;`, specifically in `WebPEncoder<Cursor<&mut [u8]>>::encode`. | Use `Cursor<&mut [u8]>` with empty output, call `encode(&[], 0, 1, ColorType::Rgba8)`. The size assertion passes (`0 * 1 * 4 == 0`), then `encode_frame()` returns `EncodingError::InvalidDimensions`, exercising the caller-side `?`. |
+
+Planned edit:
+
+- Extend only `encoder::__coverage_exercise_private_branches()`.
+- Add one `Cursor<&mut [u8]>` invalid-dimensions encode probe.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP produces a valid ingested snapshot, line/function
+  coverage remains 100%, branch debt does not increase, and total missing
+  regions falls below 41.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all --check`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `2a894f71-237a-466c-ad5a-df774d341a9a`.
+- Snapshot: `e5a6b988-d6d0-48dc-8f8c-d5f7a8eabeb3`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27081 / 27081`.
+- Functions: `1634 / 1634`.
+- Branches: `3487 / 3488`.
+- Regions: `42672 / 42712` (40 missing), improved by 1.
+- `src/codecs/webp/native/encoder.rs`: regions `1859 / 1859`, branches
+  `194 / 194`.
+
+Retention:
+
+- Retain Batch 83. The `Cursor<&mut [u8]>` invalid-dimensions probe covers the
+  encoder `encode_frame(...)?` error propagation while preserving all prior
+  line/function/branch coverage.
+- Remaining project debt after Batch 83:
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch;
+  - `src/codecs/webp/native/decoder.rs`: 14 regions;
+  - `src/codecs/webp/native/vp8.rs`: 5 regions.
+
 ## Batch 49 retained validation
 
 Scope: finish zlib region cleanup.
@@ -2555,3 +3329,1463 @@ Retention:
 | `src/codecs/webp/native/lossless.rs` | 39 | 1 |
 | `src/codecs/webp/native/vp8.rs` | 12 | 0 |
 | `src/codecs/webp/native/encoder.rs` | 1 | 0 |
+
+## Batch 84 plan
+
+Goal: use reverse mapping on the current retained WebP-native debt, starting
+with `lossless.rs` because it still owns the only missing branch.
+
+Reverse mapping from snapshot `e5a6b988-d6d0-48dc-8f8c-d5f7a8eabeb3`:
+
+- Global retained state is lines/functions at 100%, branches `3487 / 3488`,
+  and regions `42672 / 42712` (40 missing).
+- Current file debt:
+  - `lossless.rs`: 21 regions and 1 branch.
+  - `decoder.rs`: 14 regions and 0 branches.
+  - `vp8.rs`: 5 regions and 0 branches.
+- `lossless.rs` file segments have no zero-entry regions. The remaining debt
+  is expression/generic-region coverage, so the useful map is function-region
+  instantiation data plus source context.
+- Collapsing branch records by source span shows every source-level branch side
+  is covered. The single missing branch is therefore instantiation-specific.
+  The strongest repeated branch locus is `BitReader::read_bits()` at
+  `if self.nbits < num`.
+- The remaining region clusters map to:
+  - `read_transforms()` color-index table-size bands (`<=2`, `<=4`, `<=16`,
+    and `>16`) after a successful nested color-map stream;
+  - `read_huffman_codes()` meta-Huffman group growth in the entropy-image map;
+  - `decode_image_data()` fast path/literal/back-reference/color-cache decisions;
+  - `get_copy_distance()` / `plane_code_to_distance()` prefix and plane-distance
+    decisions;
+  - `BitReader::{fill,consume,read_bits}` concrete reader instantiations.
+
+Planned edit:
+
+- Add coverage-only bit-packing helpers inside
+  `lossless::__coverage_exercise_private_branches()` so inputs are generated
+  from the exact parser order instead of hand-guessed byte constants.
+- Add direct `read_transforms()` probes for color-index table sizes 1, 3, 5,
+  and 17 with a valid nested zero-image Huffman stream.
+- Add direct `read_huffman_codes()` probe whose nested entropy image emits
+  meta-Huffman code `1`, then supplies two groups of simple zero-symbol trees.
+- Add exact `BitReader::read_bits()` probes for `Cursor<[u8; 1]>`,
+  `Cursor<[u8; 8]>`, `Cursor<Vec<u8>>`, and `Take<Cursor<&[u8]>>` so both
+  buffered and fill-required sides execute on the concrete reader families seen
+  in the retained artifact.
+- Add one fast-path `decode_image_data()` case with `bits == 0` and an active
+  color cache, because the retained source map still points at that optional
+  insertion path.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, and
+  total missing regions or the single missing branch improves.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `fb74873b-1ec2-40ea-94e9-9ee682f07fd7`.
+- Snapshot: `17d5ff16-fde8-4dab-8f6d-9324c916f49a`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100%, but the batch regressed aggregate coverage:
+  - branches changed from `3487 / 3488` to `3488 / 3490`;
+  - missing branches increased from 1 to 2;
+  - missing regions increased from 40 to 41.
+- `src/codecs/webp/native/lossless.rs` changed from
+  `1361 / 1382` regions and `119 / 120` branches to `1539 / 1561`
+  regions and `120 / 122` branches.
+
+Retention:
+
+- Reject Batch 84 and revert the source probes. The bit-packed inputs executed,
+  but they introduced new coverage-hook helper/generic branch surfaces faster
+  than they reduced retained debt. The useful conclusion is that future
+  lossless reverse mapping must avoid adding new helper functions or new
+  generic reader families; it should either reuse existing hook types with
+  inline states or remove/merge proven-dead private defensive branches.
+
+## Batch 85 plan
+
+Goal: reduce the smallest retained file debt, `vp8.rs` at 5 missing regions,
+without adding new helper functions or generic reader families.
+
+Reverse mapping from clean snapshot `0d9e107a-8c9e-4c7f-9c73-3d3e3132ccc3`:
+
+- Global retained state is lines/functions at 100%, branches `3487 / 3488`,
+  regions `42672 / 42712` (40 missing).
+- `vp8.rs`: regions `2869 / 2874`, branches `160 / 160`.
+- Raw function records show `Vp8Decoder<Cursor<&[u8]>>` still has zero-count
+  prediction/decode regions:
+  - `intra_predict_luma`: count `0`;
+  - `intra_predict_chroma`: count `0`;
+  - `decode_frame_`: partial direct cursor success coverage only.
+- Production WebP container decode exercises the successful lossy path through
+  `Take<Cursor<&[u8]>>`, but the direct raw VP8 `Cursor<&[u8]>` shape is used
+  in coverage hooks only for malformed/error states.
+- `decoder.rs` already contains a valid raw 17×19 VP8 payload used to exercise
+  container-level read-image paths. Replaying that same payload directly through
+  `Vp8Decoder::decode_frame(Cursor<&[u8]>)` should cover the direct cursor
+  prediction/decode monomorphization without introducing any new helper code.
+
+Planned edit:
+
+- Extend only `vp8::__coverage_exercise_private_branches()`.
+- Add one inline `lossy_vp8_17x19` byte array copied from the existing decoder
+  coverage hook and call
+  `Vp8Decoder::decode_frame(std::io::Cursor::new(lossy_vp8_17x19.as_slice()))`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention gate:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, branch
+  debt does not increase, and total missing regions falls below 40.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `47cd2d1a-ca3a-4509-8778-8d7a407ed3f4`.
+- Snapshot: `3cb63c33-d2ad-47a7-8d6a-edb32953897e`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100%, but aggregate debt was unchanged:
+  - branches stayed `3487 / 3488`;
+  - regions changed from `42672 / 42712` to `42677 / 42717`;
+  - total missing regions stayed at 40.
+- `src/codecs/webp/native/vp8.rs` changed from `2869 / 2874` regions to
+  `2874 / 2879` regions, leaving the same 5 missing regions.
+
+Retention:
+
+- Reject Batch 85 and revert the source probe. The direct raw VP8
+  `Cursor<&[u8]>` success replay executed and added only covered regions; it did
+  not clear the retained VP8 debt. The remaining VP8 regions are therefore not
+  solved by direct valid-frame replay through the raw cursor reader shape.
+
+## Batch 86 plan
+
+Goal: reduce the remaining `vp8.rs` debt by reverse-mapping only the normal
+`Take<Cursor<&[u8]>>` private-method regions, reusing existing hook macros and
+existing byte inputs.
+
+Baseline evidence:
+
+- Clean retained Coverage MCP run:
+  `007440cc-5947-4f6e-974f-f5fe6015c4aa`.
+- Snapshot: `98fcad48-4dd9-4b2a-b9a9-421904299a1d`.
+- Global counters: lines `27081 / 27081`, functions `1634 / 1634`,
+  branches `3487 / 3488`, regions `42672 / 42712` (40 missing).
+- Remaining file debt:
+  - `src/codecs/webp/native/vp8.rs`: 5 regions, 0 branches;
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch;
+  - `src/codecs/webp/native/decoder.rs`: 14 regions, 0 branches.
+
+Reverse map:
+
+| Raw coordinate | Source construct | Input decision |
+| --- | --- | --- |
+| `983:52-53`, `993:54-55` | `init_partitions(2)` `read_exact(...)?` error propagation under `Take<Cursor<&[u8]>>`. | Add direct taken-reader `init_partitions(2)` calls with too-short partition-size bytes and with a declared second-partition byte but no payload. |
+| `999:37-38` | `init_partitions(...)` final `read_to_end(...)?` error propagation under `Take<Cursor<&[u8]>>`. | No direct input can make `Take<Cursor<&[u8]>>` return an I/O error from `read_to_end`; measure nearby exact states first, then consider code-shape cleanup only if still retained. |
+| `1193:48-49`, `1200:45-46`, `1220:30-31` | `read_frame_header()` caller-side `?` regions for loop-filter adjustment, partition init, and final accumulated bit-reader check under `Take<Cursor<&[u8]>>`. | Replay the three already-derived `keyframe_with_first_partition(...)` cases through `with_take_decoder!` instead of only through the cursor path. |
+| `1492:96-97` | `read_residual_data()` plane-1 `read_coefficients(...)?` error propagation under `Take<Cursor<&[u8]>>`. | Mirror the existing cursor plane-1 EOF state through `with_take_decoder!`. |
+| `1811` / `1813` | `calculate_filter_parameters()` loop-filter-adjustment branch under `Take<Cursor<&[u8]>>`. | Add a taken-reader state with adjustments enabled and a non-`B` luma mode, covering the false side while the outer adjustment block is active. |
+
+Planned edit:
+
+- Extend only `vp8::__coverage_exercise_private_branches()`.
+- Do not add helper functions or new reader families.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, branch
+  debt does not increase, and total missing regions falls below 40.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `42cd05b6-7ef2-416f-96a8-92bca9420e59`.
+- Snapshot: `d1c2a06e-1250-4c6c-aa25-a6329e12bb06`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27112 / 27112`.
+- Functions: `1634 / 1634`.
+- Branches: `3487 / 3488`, unchanged.
+- Regions: `42723 / 42759`, improving missing regions from 40 to 36.
+- `src/codecs/webp/native/vp8.rs`: regions changed from `2869 / 2874`
+  to `2920 / 2921`, improving VP8 debt from 5 regions to 1.
+
+Retention:
+
+- Retain Batch 86. The reverse-mapped taken-reader states covered the reachable
+  VP8 `init_partitions`, `read_frame_header`, `read_residual_data`, and
+  `calculate_filter_parameters` gaps while preserving 100% line/function
+  coverage and not increasing branch debt.
+- Remaining project debt after Batch 86:
+  - `src/codecs/webp/native/lossless.rs`: 21 regions, 1 branch;
+  - `src/codecs/webp/native/decoder.rs`: 14 regions;
+  - `src/codecs/webp/native/vp8.rs`: 1 region.
+
+## Batch 87 plan
+
+Goal: decide whether the final VP8 region is reachable by input or requires
+code-shape cleanup.
+
+Reverse mapping from snapshot `d1c2a06e-1250-4c6c-aa25-a6329e12bb06`:
+
+- `vp8.rs` has one retained missing region.
+- Raw LLVM records show the remaining source-coordinate candidate is
+  `init_partitions()` line `999`, the `?` on
+  `self.r.read_to_end(&mut buf)?`.
+- The same coordinate is zero under `Cursor<&[u8]>` and
+  `Take<Cursor<&[u8]>>`; those reader implementations cannot return an I/O
+  error from `read_to_end()` for any byte input.
+- The existing `ErrorReader` probe does cover the source span, proving the
+  generic error path itself is reachable, but the concrete no-error reader
+  monomorphs still keep a one-region artifact.
+
+Planned exploration:
+
+- First try no new input for this coordinate; it is not byte-reachable for the
+  concrete readers that own the missing region.
+- Inspect code-shape options that preserve generic I/O error handling while not
+  creating an uncovered `?` region for the no-error reader monomorphs.
+- Retain only if coverage improves and the production semantics are unchanged.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `260e0697-d579-4447-8e89-255b188edb6c`.
+- Snapshot: `b5a998a2-191c-4bc1-8897-e51f6400dcfe`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- The code-shape change regressed coverage:
+  - lines changed from `27112 / 27112` to `27112 / 27113`;
+  - branches stayed `3487 / 3488`;
+  - regions changed from `42723 / 42759` to `42722 / 42759`;
+  - `vp8.rs` changed from `2920 / 2921` regions to `2919 / 2921`.
+
+Retention:
+
+- Reject Batch 87 and revert the source change. The explicit `match` preserved
+  runtime semantics, but the `Err` arm is still impossible for the normal
+  cursor-backed readers and now produces an uncovered source line. The final VP8
+  region remains a monomorph-specific I/O-error artifact, not a missing byte
+  fixture.
+
+## Batch 88 plan
+
+Goal: clear the only missing branch in `lossless.rs` by reverse-mapping the
+branch-owning bit-buffer state, without adding helper functions or new custom
+reader families.
+
+Reverse mapping:
+
+- `lossless.rs` owns the only retained branch debt: branches `119 / 120`.
+- Raw LLVM branch records point to `BitReader::read_bits()` line `1457`:
+  `if self.nbits < num`.
+- The missing side is the true side for concrete reader/value instantiations
+  that are otherwise live:
+  - `BitReader<Cursor<[u8; 8]>>::read_bits::<u8>`;
+  - `BitReader<Cursor<Vec<u8>>>::read_bits::<usize>` and
+    `read_bits::<u16>`;
+  - `BitReader<Take<Cursor<&[u8]>>>::read_bits::<usize>` and
+    `read_bits::<u16>`.
+- Public WebP bytes do not isolate those private bit-buffer states reliably
+  because higher-level Huffman parsing consumes different bit widths before
+  reaching the branch.
+
+Planned edit:
+
+- Extend only `lossless::__coverage_exercise_private_branches()`.
+- Reuse existing reader families:
+  - drive the existing `Cursor<[u8; 8]>` reader from `nbits > 0` to `nbits == 0`,
+    then call `read_bits::<u8>(1)`;
+  - add direct empty `Cursor<Vec<u8>>` `read_bits::<usize>(1)` and
+    `read_bits::<u16>(1)` calls;
+  - add direct empty `Take<Cursor<&[u8]>>` `read_bits::<usize>(1)` and
+    `read_bits::<u16>(1)` calls.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, total
+  missing branches drops below 1, and total missing regions does not increase.
+
+Validation:
+
+- First local coverage-configured compile caught a bad reverse-map type label:
+  raw suffix `j` maps here to `usize`, not `u32`, because `LosslessBitValue`
+  is implemented for `u8`, `u16`, and `usize`.
+- Corrected local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- First Coverage MCP run: `f19dd659-b4fa-4f85-97c5-3c72e6c8600a`,
+  snapshot `4653e876-81ce-4ef9-9999-f939333b506b`.
+  - Lines/functions stayed 100%.
+  - Branches stayed `3487 / 3488`.
+  - Regions changed to `42750 / 42786`; total missing regions stayed 36.
+- Raw follow-up showed the probes covered some `read_bits` true-side rows but
+  introduced or left one-sided rows for the same generic instantiations, so the
+  batch was adjusted to cover both sides for `usize`/`u16` direct states.
+- Adjusted Coverage MCP run: `6bc53f1a-164f-4395-910a-e7935399c1a8`,
+  snapshot `84ecfc9a-f27e-4711-84f0-aa5049038a6b`.
+  - Lines/functions stayed 100%.
+  - Branches stayed `3487 / 3488`.
+  - Regions changed to `42800 / 42836`; total missing regions still stayed 36.
+
+Retention:
+
+- Reject Batch 88 and revert the source probes. Direct `BitReader::read_bits`
+  states can move raw per-instantiation branch records, but they do not reduce
+  the retained aggregate branch or region debt and add covered-only hook
+  surface. The remaining lossless branch is therefore not solved by direct
+  bit-buffer `read_bits` probes.
+
+## Batch 89 plan
+
+Goal: reduce decoder region debt by removing a hook-only custom-reader
+monomorphization that no longer provides unique aggregate coverage.
+
+Baseline evidence:
+
+- Clean retained Coverage MCP run:
+  `4dc29da2-21c6-4597-9220-04c15cd96ede`.
+- Snapshot: `cc0d4dd4-2375-4d7e-a0c4-e3fbfd12b275`.
+- Global counters: lines `27112 / 27112`, functions `1634 / 1634`,
+  branches `3487 / 3488`, regions `42723 / 42759` (36 missing).
+- `decoder.rs` owns 14 retained missing regions.
+- Raw reverse map shows the largest decoder raw debt is
+  `WebPDecoder<FailingReadCursor>::read_data`, created by a single
+  coverage-hook call to `WebPDecoder::new(fail_read_at(...))`.
+- The policy that call was intended to cover is the VP8X chunk-scan rule:
+  ignore `UnexpectedEof`, but return non-EOF I/O errors. That logic now lives
+  in `allow_vp8x_chunk_scan_error(...)` and is already directly covered by the
+  coverage hook for both `UnexpectedEof` and `Other`.
+
+Planned edit:
+
+- Remove only the broad `WebPDecoder::new(fail_read_at(vp8x_scan_read_error,
+  30))` coverage-hook call.
+- Keep the `FailingReadCursor` direct method probes, so the custom reader itself
+  is still exercised.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, branch
+  debt does not increase, and total missing regions falls below 36.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `c19cd9e7-ec62-43f2-bb65-573799874778`.
+- Snapshot: `18d24f60-60dc-4569-bbab-b1fa3c511503`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100%.
+- Branches stayed `3487 / 3488`.
+- Regions changed from `42723 / 42759` to `42715 / 42751`; total missing
+  regions stayed 36.
+- `decoder.rs` stayed at 14 missing regions, but the raw
+  `WebPDecoder<FailingReadCursor>::read_data` debt disappeared from the reverse
+  map.
+
+Retention:
+
+- Retain Batch 89 as a coverage-hook cleanup, not a debt reducer. Removing the
+  broad `FailingReadCursor` constructor probe does not reduce aggregate missing
+  regions, but it removes obsolete hook-only monomorphization noise while
+  preserving line/function/branch coverage. The remaining decoder raw debt now
+  concentrates on `FailingSeekCursor`.
+
+## Batch 90 plan
+
+Goal: test whether broad `WebPDecoder<FailingSeekCursor>::new(...)` probes are
+still needed, now that direct `range_reader(fail_seek_after(...))` covers seek
+failure.
+
+Reverse mapping:
+
+- After Batch 89, the largest decoder raw gaps are all
+  `FailingSeekCursor` monomorphs:
+  - `read_frame`;
+  - `read_data`;
+  - `read_image`;
+  - `new`;
+  - `range_reader`.
+- The actual seek-failure primitive is `range_reader(...)`, and the hook already
+  calls `range_reader(fail_seek_after(Vec::new(), 0), 0..0)` directly.
+- The constructor-level `WebPDecoder::new(fail_seek_after(...))` cases create
+  the full generic decoder state machine under a reader that is only meant to
+  fail seeking.
+
+Planned edit:
+
+- Remove only the constructor-level `WebPDecoder::new(fail_seek_after(...))`
+  calls.
+- Keep direct `range_reader(...)` and later `read_image` / `read_frame`
+  `FailingSeekCursor` probes for this batch.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention rule:
+
+- Retain if Coverage MCP passes, line/function coverage stays 100%, branch debt
+  does not increase, and total missing regions does not increase. Prefer a
+  reduction, but accept neutral cleanup if raw decoder debt becomes materially
+  simpler.
+
+## Batch 101 validation
+
+- Local gates passed: `cargo fmt --all`, `cargo check --all-features`, coverage
+  configuration check, and `git diff --check`.
+- Coverage MCP run: `abe6ee35-23ec-4931-92b2-8064acbe67c3`.
+- Snapshot: `d3a6dc3d-f710-47dc-b643-df2503106727`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100%.
+- Branches stayed `3487 / 3488`; Batch 101 alone does not meet its branch
+  retention rule.
+- Missing regions improved from 35 to 32, and all four BitReader partial-branch
+  loci disappeared from the MCP gap list.
+- This proves the remaining summary branch is above BitReader. Keep Batch 101
+  only as part of the combined reverse-map attempt below; otherwise revert it.
+
+## Batch 102 plan
+
+Goal: reverse-map the remaining branch above BitReader by removing generic
+instantiation from the two pure copy-distance helpers.
+
+Reverse mapping:
+
+- After Batch 101, MCP reports the largest newly isolated per-instantiation
+  split at `get_copy_distance` line 655: 14 raw branch rows, 7 covered. Runtime
+  counts prove both source sides execute (`10906` prefix codes below 4 and
+  `32928` codes at least 4), so the miss is concrete-instantiation debt.
+- `get_copy_distance` is an associated function inside `impl<R>` even though it
+  only reads `BitReader.buffer` and updates `BitReader.nbits`; it never touches
+  `R`.
+- `plane_code_to_distance` is also inside `impl<R>` despite having no reader
+  input. MCP shows the same per-instantiation split at lines 669 and 675.
+- Existing coverage-hook inputs already cover prefix codes below/above 4,
+  plane codes below/above 120, and clamped/unclamped distances.
+
+Planned edit:
+
+- Move `get_copy_distance` to a free non-generic function operating on
+  `&mut u64` and `&mut u8`; reuse the non-generic `consume_bits` state helper.
+- Move `plane_code_to_distance` to a free non-generic function.
+- Update production and coverage-hook call sites without changing inputs or
+  output calculations.
+
+Retention rule:
+
+- Retain Batches 101 and 102 together only if Coverage MCP passes,
+  lines/functions stay 100%, branches reach 100%, and missing regions remain
+  below the retained 35-gap baseline.
+
+Validation:
+
+- Local gates passed after removing the newly dead `BitReader::peek` method.
+- Coverage MCP run: `f2cbdad2-186f-4b9c-a73a-f407d9d16f45`.
+- Snapshot: `41eaeac8-7e3f-4179-9f37-52a9ffbae3e5`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Branches stayed `3487 / 3488` and missing regions stayed 32.
+- Lines regressed to `27006 / 27008`; the generic helper branch loci vanished,
+  proving they are not the summary miss, but the batch fails its retention rule.
+
+Retention:
+
+- Reject and revert Batch 102. Continue from Batch 101's 100% line/function
+  state and 32 missing regions.
+
+## Batch 103 plan
+
+Goal: cover the final short-circuit branch with the exact buffered state that
+reaches it.
+
+Reverse mapping:
+
+- After Batch 101 removes BitReader branch duplication, the earliest remaining
+  compound condition is `read_huffman_codes` line 315:
+  `read_meta && self.bit_reader.read_bits::<u8>(1)? == 1`.
+- Existing states cover:
+  - `read_meta == false`, which short-circuits the bit read;
+  - `read_meta == true` with one buffered `1`, which enters the meta-Huffman
+    path;
+  - `read_meta == true` with `nbits == 0` and `ErrorReader`, which returns an I/O
+    error before the bit comparison and therefore does not cover RHS false.
+- The missing third successful control-flow path is exactly `read_meta == true`
+  with `buffer == 0` and `nbits == 1`.
+
+Planned edit:
+
+- Add one coverage-hook `decoder_with_bits(ErrorReader, 0, 1, 1, 1)` call to
+  `read_huffman_codes(true, 1, 1, None)`.
+- Its first bit read returns zero without touching the reader; later parsing may
+  fail on `ErrorReader`, which is acceptable because the target branch has
+  already executed.
+- Do not add or change public fixtures.
+
+Retention rule:
+
+- Retain with Batch 101 only if Coverage MCP passes, lines/functions remain
+  100%, branches become 100%, and the 32-gap region state does not regress.
+
+Validation:
+
+- Coverage MCP run: `e5d4451c-0a9e-437d-b6b3-5cc2450be57c`.
+- Snapshot: `8c8d5ecc-3c92-41e6-9b66-ad003a0544e3`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100% and missing regions stayed 32.
+- The raw missed count at line 315 dropped from 8 to 7, proving the intended
+  RHS-false path executed, but summary branches stayed `3487 / 3488`.
+
+Retention:
+
+- Reject and revert Batch 103. The exact path was useful diagnostic evidence
+  but did not improve aggregate coverage.
+
+## Batch 104 plan
+
+Goal: isolate the two remaining compound `||` predicates reported by MCP and
+cover every executable short-circuit path directly.
+
+Reverse mapping:
+
+- Line 577 rejects a backward copy when
+  `index < dist || num_values - index < length`.
+- Line 591 enters the overlapping-copy expansion when
+  `length > 4 || dist < 4`.
+- For each `||`, three control-flow paths exist: left true (RHS skipped), left
+  false/RHS true, and both false.
+- The source tracker shows 15 per-instantiation misses at each line, while all
+  bodies are line-covered. This is the strongest remaining signature for the
+  one summary branch miss after ruling out BitReader and line 315.
+
+Planned edit:
+
+- Extract each pure predicate into a private non-generic function.
+- Keep the existing `if` call sites and calculations unchanged.
+- Exercise the three executable truth-table paths for both helpers in the
+  coverage hook with exact integer states.
+
+Retention rule:
+
+- Retain with Batch 101 only if Coverage MCP passes, lines/functions remain
+  100%, branches become 100%, and missing regions stay at or below 32.
+
+Validation:
+
+- Coverage MCP run: `8b1f9246-c548-47ea-8e52-4b6175989570`.
+- Snapshot: `5f086ccc-3542-42bf-a3e4-179c0dcae970`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines: `27013 / 27013`.
+- Functions: `1639 / 1639`.
+- Branches: `3488 / 3488` (100%; final branch closed).
+- Regions: `42618 / 42650` (32 missing, unchanged from Batch 101).
+- `lossless.rs` is now branches `120 / 120` and regions `1404 / 1422`.
+
+Retention:
+
+- Retain Batches 101 and 104. The missing summary branch was one of the two
+  copy-condition short-circuit edges; the non-generic truth-table helpers
+  remove the ambiguity and keep behavior unchanged.
+
+## Batch 105 plan
+
+Goal: remove all 14 decoder regions by matching the private decoder's reader
+type to the actual byte-slice API.
+
+Reverse mapping:
+
+- Retained snapshot `5f086ccc-3542-42bf-a3e4-179c0dcae970` reports only:
+  - `decoder.rs`: 14 regions, 0 branches;
+  - `lossless.rs`: 18 regions, 0 branches.
+- The 14 decoder records are the previously mapped `stream_position`, `seek`,
+  `seek_relative`, `range_reader(...)?`, and VP8X scan error arms on
+  `WebPDecoder<Cursor<&[u8]>>`.
+- Both public WebP entry points construct exactly `Cursor<&[u8]>`; no other
+  production caller supplies a generic reader.
+- Batch 96's full trait-object erasure changed the downstream VP8 reader type
+  and regressed VP8. Concretizing to `Cursor<&[u8]>` keeps the existing
+  `Take<&mut Cursor<&[u8]>>` VP8 instantiation, so it avoids that regression.
+
+Planned edit:
+
+- Change private `WebPDecoder<R>` to `WebPDecoder<'a>` storing
+  `Cursor<&'a [u8]>`; keep `WebPDecoder::new(cursor)` unchanged for callers.
+- Replace infallible cursor `stream_position`/`seek` operations with
+  `position`/`set_position`.
+- Specialize `range_reader` for the cursor and make it infallible; remove `?`
+  at its three call sites.
+- Treat a truncated VP8X chunk-header scan as the only possible cursor read
+  failure and stop scanning; remove the now-unneeded generic scan-error policy.
+- Remove coverage-only failing-reader scaffolding that no production type can
+  instantiate after this change.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, lines/functions/branches stay 100%, VP8
+  stays fully covered, and decoder missing regions become zero without raising
+  total missing regions above 18.
+
+Validation:
+
+- Local gates passed: normal and `--cfg coverage` all-feature checks, rustfmt,
+  and `git diff --check`.
+- Coverage MCP run: `fd56cd0f-2aea-4dd4-9f45-418f623554c6`.
+- Snapshot: `f9fa0a73-1091-49e5-a5a1-cac058357e29`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions/branches stayed 100%:
+  - lines `26932 / 26932`;
+  - functions `1628 / 1628`;
+  - branches `3480 / 3480`.
+- Decoder regions became `1299 / 1299` and total missing regions fell from 32
+  to 18 (`42509 / 42527`).
+- The only remaining region debt is `lossless.rs` at `1404 / 1422`.
+
+Retention:
+
+- Retain Batch 105. The private decoder now represents its only real input
+  type, so impossible seek failures are absent from both the implementation and
+  the coverage model.
+
+## Batch 106 plan
+
+Goal: remove the final 18 regions in `lossless.rs` without changing decoded
+pixels or bitstream semantics.
+
+Reverse mapping:
+
+- Snapshot `f9fa0a73-1091-49e5-a5a1-cac058357e29` reports 100% lines,
+  functions, and branches, but LLVM records only `130 / 166` covered generic
+  instantiations in `lossless.rs` and `1404 / 1422` regions.
+- The 39 partial-source rows span the whole `LosslessDecoder<R>` state machine:
+  transforms, meta-Huffman setup, Huffman decoding, copy/cache paths, and color
+  cache validation. Their broad distribution cannot correspond to 18 new
+  image states after every aggregate branch is already covered; it is the
+  signature of the same source branches being emitted once per reader type.
+- Production currently instantiates the decoder with both owned `Take<...>`
+  readers and borrowed readers from ALPH decoding. The coverage hook adds
+  `Cursor`, `ErrorReader`, and staged-error reader instantiations so it can
+  reverse-map exact error states. Each extra generic decoder instance requires
+  its own complete branch matrix for LLVM region coverage.
+- Batch 101 already routes the bit-buffer I/O through `dyn BufRead`, so reader
+  method dispatch in the hot fill path is already type-erased. Unifying the
+  owning decoder therefore does not add a new dispatch layer to that path.
+
+Planned edit:
+
+- Change `LosslessDecoder<R>` to `LosslessDecoder<'a>` and store one
+  `BitReader<Box<dyn BufRead + 'a>>`.
+- Make `LosslessDecoder::new` accept that boxed trait object directly and box
+  the reader at the three private production call sites. This costs one small
+  allocation per VP8L/ALPH decoder and prevents even the constructor from
+  acquiring per-reader generic instantiations.
+- Update coverage-only direct state construction to box its exact scripted
+  readers. Keep the existing reverse-mapped byte/state probes unchanged.
+- Do not change Huffman, transform, copy, or cache algorithms.
+
+Retention rule:
+
+- Retain only if normal and coverage builds pass, Coverage MCP reports five
+  passing tests, all four metrics reach 100%, and exact Pillow parity remains
+  intact through the manifest-driven suite.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `331df368-78a0-4f42-9779-81d6b33356f2`.
+- Snapshot: `8a939154-c18c-4532-8b5c-b7bb716aaa4c`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Repository totals are fully covered:
+  - lines `26934 / 26934`;
+  - functions `1628 / 1628`;
+  - branches `3480 / 3480`;
+  - regions `42536 / 42536`.
+- `lossless.rs` is now lines `1123 / 1123`, functions `44 / 44`, branches
+  `120 / 120`, regions `1431 / 1431`, and LLVM generic instantiations
+  `79 / 79`.
+- Decoder and VP8 remain fully covered, confirming that the reader unification
+  did not recreate the Batch 96 downstream-reader regression.
+
+Retention:
+
+- Retain Batch 106. The last 18 misses were duplicated generic-instantiation
+  regions, not undiscovered image states. One owned reader representation lets
+  the existing reverse-mapped fixture/state matrix prove every emitted region.
+
+## Batch 101 plan
+
+Goal: remove the final lossless branch by de-monomorphizing the actual
+BitReader state machine, using the retained reverse map rather than adding more
+byte fixtures.
+
+Reverse mapping:
+
+- Retained snapshot `fd68f5be-99e5-4c54-a55d-396ca7bc046d` is lines
+  `26983 / 26983`, functions `1634 / 1634`, branches `3487 / 3488`, and
+  regions `42575 / 42610`.
+- `lossless.rs` is the only file with summary branch debt: branches
+  `119 / 120`, regions `1361 / 1382`, and 150 LLVM instantiations.
+- The duplicated partial branch rows cluster in generic
+  `BitReader<R>::fill`, `consume`, and `read_bits` at lines 1414, 1420, 1443,
+  and 1457.
+- Batch 99 extracted only another method inside `impl<R>`; it remained generic,
+  so it did not change the LLVM branch summary. Batches 97, 98, and 100 also
+  prove that changing concrete hook input types or adding another direct read
+  cannot clear this debt.
+- The retained probes already reverse-map both required states:
+  - empty/short and eight-byte input for `fill`;
+  - insufficient and sufficient buffered bits for `consume`;
+  - `read_bits` with and without a refill.
+
+Planned edit:
+
+- Move buffer filling, consuming, and the `u32` bit read state machine into
+  private non-generic functions accepting `&mut dyn BufRead`, `&mut u64`, and
+  `&mut u8`.
+- Keep `BitReader<R>` generic and keep its existing method API; wrappers will
+  delegate directly, preserving static storage and call sites.
+- Use `Result::map` in the generic typed conversion wrapper so no new generic
+  `?` error region is created.
+- Do not change fixtures, oracle outputs, or Huffman behavior.
+
+Retention rule:
+
+- Retain only if local gates pass, Coverage MCP passes, lines/functions stay at
+  100%, the branch count becomes 100%, and missing regions do not increase.
+
+## Batch 98 plan: reverse-map the remaining lossless branch
+
+Current MCP snapshot: `fd68f5be-99e5-4c54-a55d-396ca7bc046d`.
+
+Current counters:
+
+- Lines: `26983 / 26983`
+- Functions: `1634 / 1634`
+- Branches: `3487 / 3488`
+- Regions: `42575 / 42610`
+
+Reverse mapping:
+
+- File summary says `src/codecs/webp/native/lossless.rs` has the only branch
+  miss: `119 / 120` branches.
+- Source line coverage is already 100%; the miss is hidden by generic
+  instantiation aggregation.
+- Raw LLVM rows show the concrete missing branch is:
+  - function: `BitReader<Cursor<[u8; 5]>>::consume`
+  - source span: `lossless.rs:1443` (`if self.nbits < num`)
+  - current counts: true arm `0`, false arm `2`
+- Reverse use-site search maps `Cursor<[u8; 5]>` to
+  `src/codecs/webp/native/huffman.rs::__coverage_exercise_private_branches`.
+  That hook fills a 5-byte reader and exercises Huffman reads, but never calls
+  `consume` with a count larger than the 40 bits loaded from the 5-byte buffer.
+
+Planned edit:
+
+- In the huffman coverage hook, add a direct
+  `BitReader<Cursor<[u8; 5]>>::consume(41)` probe after a successful 5-byte
+  `fill()`.
+- This is fixture-based/reverse-mapped: it uses the exact reader type and state
+  already responsible for the missing instantiated branch.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, total branch coverage becomes
+  `3488 / 3488`, and no file regresses in line/function/branch coverage.
+- If only regions improve but the branch remains missing, retain only if there
+  is no regression and the raw reverse map proves the intended instantiation was
+  affected.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run: `5eb47ff9-7bec-4eaf-86c3-2d71e5620843`
+- Snapshot: `eb1a9173-5240-4f3b-9ef9-0a74ae6e9a85`
+- Result:
+  - Lines: `26986 / 26986`
+  - Functions: `1634 / 1634`
+  - Branches: `3487 / 3488`
+  - Regions: `42584 / 42619`
+
+Decision:
+
+- Reject and revert the `huffman.rs` hook. It covered the directly suspected
+  5-byte cursor state, but aggregate branch and missing-region debt stayed
+  unchanged. The remaining aggregate miss is not the
+  `BitReader<Cursor<[u8; 5]>>::consume(41)` state.
+
+## Batch 99 plan: de-multiply `read_bits<T>` branch coverage
+
+Current retained counters remain from snapshot
+`fd68f5be-99e5-4c54-a55d-396ca7bc046d`:
+
+- Lines: `26983 / 26983`
+- Functions: `1634 / 1634`
+- Branches: `3487 / 3488`
+- Regions: `42575 / 42610`
+
+Reverse mapping:
+
+- Repeated raw LLVM rows still cluster at `lossless.rs:1457`, inside
+  `BitReader<R>::read_bits<T>()`:
+  `if self.nbits < num { self.fill()?; }`.
+- The branch is generic over both reader type `R` and output type `T`
+  (`u8`, `u16`, `usize`). Prior direct probes for `read_bits<T>` did not clear
+  the aggregate miss because every new `T`/reader combination creates another
+  instantiation surface.
+- This is monomorphization debt, not missing fixture bytes: the same fill
+  decision does not semantically depend on `T`; it depends only on the reader
+  state and requested bit count.
+
+Planned edit:
+
+- Extract the fill decision from `read_bits<T>` into a private helper on
+  `BitReader<R>` that is generic only over `R`, not over `T`.
+- `read_bits<T>` will call the helper before `peek` and `consume`.
+- This keeps decode behavior unchanged while reducing the number of coverage
+  branch instantiations for the same source decision.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes and either:
+  - total branch coverage reaches `3488 / 3488`; or
+  - total missing regions decrease with no line/function/branch regression.
+- Revert if it only moves the branch debt or creates new region debt elsewhere.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run: `ca3b9ce6-ca96-4103-b21a-f8c9a209a317`
+- Snapshot: `771db5a6-16fb-411b-8f3a-aa4a2b23fed3`
+- Result:
+  - Lines: `26987 / 26987`
+  - Functions: `1635 / 1635`
+  - Branches: `3487 / 3488`
+  - Regions: `42582 / 42617`
+
+Decision:
+
+- Do not retain Batch 99 by itself. It moved the branch from
+  `read_bits<T>` to `fill_if_needed`, but aggregate debt remained unchanged.
+- The post-refactor raw map is useful: the remaining one-sided helper row is
+  `BitReader<Cursor<[u8; 8]>>::fill_if_needed`, false side only. Batch 100
+  will test the exact true-side state against the de-multiplied helper. Revert
+  both B99 and B100 if the combined result does not reduce retained debt.
+
+## Batch 100 plan: exact true-side state after de-multiplication
+
+Current temporary state: Batch 99 helper is present but not retained alone.
+
+Reverse mapping:
+
+- After Batch 99, raw LLVM rows no longer report branch misses inside
+  `read_bits<T>`.
+- The remaining helper miss maps to:
+  - function: `BitReader<Cursor<[u8; 8]>>::fill_if_needed`
+  - branch: `lossless.rs:1432`, `if self.nbits < num`
+  - current counts: true side `0`, false side `1`
+- Existing coverage hook state for `Cursor<[u8; 8]>` pre-fills the buffer and
+  then calls `read_bits(1)`, so it only exercises the false side
+  (`nbits >= num`).
+
+Planned edit:
+
+- Add one direct coverage-hook state in
+  `lossless::__coverage_exercise_private_branches()`:
+  `BitReader::__coverage_new(Cursor::new([0u8; 8])).read_bits::<u8>(1)`
+  without pre-filling.
+- This drives the exact reader instantiation through the true side:
+  `nbits == 0`, `num == 1`, then `fill()` succeeds from the 8-byte cursor.
+
+Retention rule:
+
+- Retain the combined Batch 99 + Batch 100 source only if Coverage MCP passes
+  and total branch coverage becomes `3488 / 3488` or total missing regions
+  decreases with no branch regression.
+- If aggregate debt remains unchanged, revert both source changes and keep only
+  this documentation.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run: `f5cf0fc4-20b5-4d33-8b8f-fdb58b0b8da7`
+- Snapshot: `255cde32-b925-4998-a84a-a3c8cf4c53b4`
+- Result:
+  - Lines: `26989 / 26989`
+  - Functions: `1635 / 1635`
+  - Branches: `3487 / 3488`
+  - Regions: `42588 / 42623`
+
+Decision:
+
+- Reject and revert the combined Batch 99 + Batch 100 source changes. The
+  de-multiplied helper plus exact `Cursor<[u8; 8]>` true-side state still left
+  aggregate branch and missing-region debt unchanged.
+- This confirms the retained branch miss is not cleared by reshaping or directly
+  driving the `read_bits` fill decision. Continue reverse mapping elsewhere,
+  especially aggregate region-owning decoder/lossless propagation sites.
+
+## Batch 95 plan
+
+Goal: remove the single remaining VP8 region by eliminating a generic
+`read_to_end?` instrumentation split, without changing encoded/decoded bytes.
+
+Reverse mapping:
+
+- Coverage MCP raw regions identify the remaining VP8 miss at
+  `Vp8Decoder<Take<Cursor<&[u8]>>>::init_partitions` and
+  `Vp8Decoder<Cursor<&[u8]>>::init_partitions`, line 999, columns 37-38.
+- Source:
+  - `self.r.read_to_end(&mut buf)?;`
+- The uncovered region is the error-propagation side of `?`.
+- Fixture feasibility:
+  - `Cursor<&[u8]>` and `Take<Cursor<&[u8]>>` cannot produce a read I/O error;
+  - a failing reader already reaches the same source path through
+    `Vp8Decoder<ErrorReader>::init_partitions(1)`;
+  - LLVM still accounts the generic `init_partitions<R>` source region
+    separately for infallible reader monomorphs.
+
+Planned edit:
+
+- Move only the final-partition read into a private non-generic helper:
+  `init_final_partition(&mut dyn Read, &mut ArithmeticDecoder)`.
+- Keep the partition byte layout and `ArithmeticDecoder::init(...)` call
+  unchanged.
+- Call the helper from `Vp8Decoder<R>::init_partitions(...)`.
+- Rely on existing success fixtures and the existing `ErrorReader`
+  reverse-mapped probe to cover the shared helper success/error sides.
+
+Retention rule:
+
+- Retain only if local gates pass, Coverage MCP passes, line/function coverage
+  stays 100%, branch debt does not increase, and total missing regions drops
+  below 36.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `38f323fc-3ee6-4820-983f-ecf5374fca6e`.
+- Snapshot: `8c6edee5-cc7e-4cb3-9053-2fc24857e093`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100%.
+- Branches stayed `3487 / 3488`.
+- Regions changed from `42569 / 42605` to `42575 / 42610`; total missing
+  regions dropped from 36 to 35.
+- `src/codecs/webp/native/vp8.rs` is now fully covered:
+  - lines `1635 / 1635`;
+  - branches `160 / 160`;
+  - functions `61 / 61`;
+  - regions `2926 / 2926`.
+
+Retention:
+
+- Retain Batch 95. Reverse mapping showed the remaining VP8 miss was a generic
+  `read_to_end?` error arm for infallible `Cursor` readers. Moving only the
+  final-partition read into a non-generic helper let the existing successful
+  fixtures and failing-reader probe cover the shared helper sides without
+  changing partition bytes or decode behavior.
+
+## Batch 96 plan
+
+Goal: reduce `src/codecs/webp/native/decoder.rs` region debt after Batch 95
+cleared VP8.
+
+Reverse mapping:
+
+- Snapshot `8c6edee5-cc7e-4cb3-9053-2fc24857e093` reports:
+  - total regions `42575 / 42610` (35 missing);
+  - `decoder.rs` regions `1408 / 1422` (14 missing);
+  - `lossless.rs` regions `1361 / 1382` and branches `119 / 120`.
+- Raw file-level zero region-entry segments for `decoder.rs` are exactly:
+  - `read_data`: lines 188, 242, 255, 258, 275, 278, 305, 322;
+  - `read_image`: lines 423, 439, 456;
+  - `read_frame`: lines 509, 567, 573.
+- Source classification:
+  - all except line 278 are `stream_position`, `seek`, `seek_relative`, or
+    `range_reader` `?` error-propagation arms;
+  - line 278 is the non-EOF `allow_vp8x_chunk_scan_error(error)?` arm while
+    scanning VP8X chunks.
+- Fixture feasibility:
+  - successful public fixtures use `Cursor<&[u8]>`, whose seek and
+    `stream_position` calls cannot fail;
+  - targeted failing readers can reach these arms, but previous generic
+    `WebPDecoder<FailingSeekCursor>` probes created broad monomorph noise;
+  - `WebPDecoder` is only `pub(crate)` through `webp::native`, so changing its
+    private representation is acceptable if the public WebP decode wrapper
+    remains unchanged.
+
+Planned edit:
+
+- Replace generic `WebPDecoder<R>` storage with `WebPDecoder<'a>` containing
+  `Box<dyn BufReadSeek + 'a>`, where `BufReadSeek: BufRead + Seek`.
+- Keep `WebPDecoder::new(...)`, dimensions, animation, and read APIs unchanged
+  for callers.
+- Make `range_reader` operate on `&mut dyn BufReadSeek` so the range seek error
+  arm is shared instead of monomorphized per reader.
+- Add targeted failing-reader coverage-hook probes for the reverse-mapped
+  decoder seek/read sites after the type-erasure boundary is in place.
+
+Retention rule:
+
+- Retain only if local gates pass, Coverage MCP passes, line/function coverage
+  stays 100%, branch debt does not increase, and total missing regions drops
+  below 35.
+
+Validation:
+
+- Local gates passed before coverage:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `b915d7e4-f6dd-4b4a-aabd-e467b16a1a2b`.
+- Snapshot: `949d33fd-01c7-4b8b-98cc-6618da34cf24`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- The decoder type-erasure experiment reduced `decoder.rs` to 1 missing region,
+  but failed the retention rule:
+  - total lines regressed to `27071 / 27074`;
+  - total branches regressed to `3484 / 3488`;
+  - `vp8.rs` regressed to lines `1632 / 1635`, branches `157 / 160`, and
+    regions `2916 / 2926`.
+
+Retention:
+
+- Reject and revert Batch 96 source changes. The experiment proved that full
+  `WebPDecoder` reader type-erasure can remove most decoder generic-region debt,
+  but it changes downstream VP8 reader instantiations enough to create larger
+  coverage debt. Keep Batch 95; do not keep Batch 96.
+
+Post-revert validation:
+
+- Local gates passed after reverting Batch 96:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `4d610f92-ab5d-4e53-8aad-9a6b4b29caa6`.
+- Snapshot: `3a35a0bd-e86c-492a-be1d-840c14314478`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Retained state restored:
+  - lines `26983 / 26983`;
+  - functions `1634 / 1634`;
+  - branches `3487 / 3488`;
+  - regions `42575 / 42610` (35 missing).
+- Remaining file debt:
+  - `decoder.rs`: regions `1408 / 1422` (14 missing), branches 100%;
+  - `lossless.rs`: regions `1361 / 1382` (21 missing), branches `119 / 120`;
+  - `vp8.rs`: fully covered.
+
+## Batch 97 plan
+
+Goal: attack the remaining `lossless.rs` branch debt with reverse mapping, not
+random fixtures.
+
+Reverse mapping:
+
+- Retained snapshot `3a35a0bd-e86c-492a-be1d-840c14314478` reports
+  `lossless.rs` at branches `119 / 120` and regions `1361 / 1382`.
+- `lossless.rs` has 326 raw branch rows, 60 unique source branch spans, and 0
+  source spans with an aggregate one-sided miss.
+- Every source span has at least one both-sided covered row; the remaining
+  branch miss is therefore a concrete-instantiation miss, not a missing source
+  condition.
+- One-sided raw rows cluster in the BitReader state machine:
+  - `fill()` around lines 1414 and 1420;
+  - `consume()` around line 1443;
+  - `read_bits()` around line 1457.
+- The coverage hook directly instantiates fixed-size reader types:
+  - `BitReader<Cursor<[u8; 8]>>`;
+  - `BitReader<Cursor<[u8; 1]>>`.
+- Those concrete array reader types make opposite `fill()` sides impossible for
+  the same instantiation, while the `Cursor<Vec<u8>>` reader type can exercise
+  both short and long buffer states.
+
+Planned edit:
+
+- Change only coverage-hook direct BitReader probes from fixed arrays to
+  `Vec<u8>`:
+  - `Cursor::new([0u8; 8])` -> `Cursor::new(vec![0u8; 8])`;
+  - `Cursor::new([0u8; 1])` -> `Cursor::new(vec![0u8; 1])`;
+  - `Cursor::new([0b1010_1010u8; 8])` -> `Cursor::new(vec![0b1010_1010u8; 8])`.
+- Keep all production code unchanged.
+
+Retention rule:
+
+- Retain only if local gates pass, Coverage MCP passes, line/function coverage
+  stays 100%, and either branch debt drops to zero or region debt drops without
+  increasing branch debt.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `84136344-fc54-49c9-bb25-8104c2a9e4f6`.
+- Snapshot: `fd68f5be-99e5-4c54-a55d-396ca7bc046d`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Metrics were unchanged:
+  - lines `26983 / 26983`;
+  - functions `1634 / 1634`;
+  - branches `3487 / 3488`;
+  - regions `42575 / 42610`.
+- `lossless.rs` remained at branches `119 / 120` and regions `1361 / 1382`.
+
+Retention:
+
+- Reject and revert Batch 97. Replacing fixed-size direct BitReader reader
+  probes with `Cursor<Vec<u8>>` did not change aggregate branch or region debt.
+  This rules out fixed-array BitReader hook instantiations as the counted
+  remaining lossless branch miss.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- First Coverage MCP run: `2d2f9a7d-a455-42d6-9e91-cd4fbbab6d8b`.
+- First snapshot: `e4be7344-c3e2-4235-878c-21ca5a8dffa2`.
+  - Lines/functions stayed 100%.
+  - Branches stayed `3487 / 3488`.
+  - Regions changed from `42684 / 42720` to `42565 / 42602`; total missing
+    regions increased from 36 to 37, so the batch was not retainable as first
+    written.
+- Raw reverse map showed the regression was the newly isolated
+  `range_reader<FailingSeekCursor>` success return at line 1179. The failure
+  case `range_reader(fail_seek_after(Vec::new(), 0), 0..0)` covered the `seek?`
+  error side, but no input covered `Ok(r.take(...))` for that same concrete
+  reader type.
+- Adjustment: add `range_reader(fail_seek_after(Vec::new(), 1), 0..0)` to cover
+  the success side without restoring broad `WebPDecoder<FailingSeekCursor>`
+  probes.
+- Adjusted local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Adjusted Coverage MCP run: `09c47671-9d53-4d19-adbe-a0b910f8e8a0`.
+- Adjusted snapshot: `5a400543-ecb2-49b3-bfb1-3c206f867b99`.
+  - Result: `5 passed / 0 failed`, exit code `0`.
+  - Lines/functions stayed 100%.
+  - Branches stayed `3487 / 3488`.
+  - Regions changed from `42684 / 42720` to `42569 / 42605`; total missing
+    regions stayed 36.
+  - `decoder.rs` stayed at 14 missing regions.
+
+Retention:
+
+- Retain adjusted Batch 91 as a coverage-hook cleanup. It removes the broad
+  `WebPDecoder<FailingSeekCursor>` read-frame/read-image/read-data
+  monomorphization debt while preserving aggregate line/function/branch/region
+  coverage. The remaining decoder raw debt is now only the normal
+  `Cursor<&[u8]>` decoder monomorphs plus one `range_reader<Cursor<&[u8]>>`
+  region.
+
+## Batch 92 plan
+
+Goal: attack the smallest aggregate target: the remaining VP8 region.
+
+Reverse mapping:
+
+- Aggregate after Batch 91:
+  - Lines `26977 / 26977`;
+  - functions `1633 / 1633`;
+  - branches `3487 / 3488`;
+  - regions `42569 / 42605` (36 missing).
+- File debt:
+  - `lossless.rs`: 21 regions, 1 branch;
+  - `decoder.rs`: 14 regions;
+  - `vp8.rs`: 1 region.
+- Raw VP8 reverse map shows the smallest live aggregate target is
+  `Vp8Decoder<Take<Cursor<&[u8]>>>::init_partitions` /
+  `Vp8Decoder<Cursor<&[u8]>>::init_partitions` around lines 980-1006.
+- Prior Batch 87 showed that changing the `read_to_end(...)?` source shape with
+  a manual `match` regresses line/region coverage, so do not reshape the
+  production helper for this attempt.
+
+Planned edit:
+
+- Inspect exact missing region records for `init_partitions`.
+- Add only targeted inputs that reach the missing line-side for the same
+  concrete reader type, or reject if the missing region is a non-input-coverable
+  LLVM artifact of `read_to_end(...)?`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, branch
+  debt does not increase, and total missing regions drops below 36.
+
+Validation:
+
+- Exact raw records for the live `init_partitions` miss:
+  - `Vp8Decoder<Take<Cursor<&[u8]>>>::init_partitions`, line 999 columns
+    37-38, count `0`;
+  - `Vp8Decoder<Cursor<&[u8]>>::init_partitions`, line 999 columns 37-38,
+    count `0`.
+- Source expression:
+  - `self.r.read_to_end(&mut buf)?;`
+- The missed region is the error-propagation arm of the `?` operator.
+- Reverse-mapped input feasibility:
+  - `Cursor<&[u8]>` cannot return an I/O error from `read_to_end`;
+  - `Take<Cursor<&[u8]>>` cannot return an I/O error from `read_to_end`;
+  - the existing `Vp8Decoder<ErrorReader>::init_partitions(1)` covers the same
+    source expression's error arm for a fallible reader, but LLVM still retains
+    a per-concrete-reader source region for the infallible readers.
+- Prior Batch 87 proved that manually reshaping this `?` into a `match`
+  regresses line/region coverage, so no production source rewrite is retained
+  here.
+
+Retention:
+
+- No source edit. Treat the one VP8 region as a non-input-coverable LLVM/generic
+  instrumentation artifact unless we later choose an explicit production
+  refactor that removes the generic `?` site without adding performance or
+  readability cost.
+
+## Batch 93 plan
+
+Goal: reduce decoder's remaining 14 regions after Batch 91 simplified away the
+custom failing-reader monomorphs.
+
+Reverse mapping:
+
+- Current decoder raw debt after Batch 91:
+  - `WebPDecoder<Cursor<&[u8]>>::read_data`: 8 regions;
+  - `WebPDecoder<Cursor<&[u8]>>::read_image`: 3 regions;
+  - `WebPDecoder<Cursor<&[u8]>>::read_frame`: 3 regions;
+  - `range_reader<Cursor<&[u8]>>`: 1 raw region, already folded into the 14
+    aggregate decoder regions.
+- The broad `FailingSeekCursor` and `FailingReadCursor` `WebPDecoder`
+  monomorphs are gone, so remaining decoder misses are normal public-reader
+  paths. Reverse mapping must identify whether each missing region is:
+  - an error arm for infallible `Cursor<&[u8]>` reads/seeks;
+  - a missing valid/invalid RIFF fixture path;
+  - or a source shape artifact similar to VP8 line 999.
+
+Planned edit:
+
+- Inspect exact missing raw region records for the four decoder groups.
+- Prefer targeted RIFF/WebP bytes that reach a missing source side for
+  `Cursor<&[u8]>`.
+- If a region is only an infallible `Cursor` I/O error arm, document it rather
+  than adding impossible fixtures.
+- Run local gates and Coverage MCP only after a source/test hook change is made.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, branch
+  debt does not increase, and total missing regions drops below 36 or raw
+  decoder debt becomes materially simpler without increasing total missing
+  regions.
+
+Validation:
+
+- Exact raw missing region records after Batch 91:
+  - `range_reader<Cursor<&[u8]>>`: line 1179, columns 45-46;
+  - `WebPDecoder<Cursor<&[u8]>>::read_data`: lines 188, 242, 255, 258, 275,
+    278, 305, 322;
+  - `WebPDecoder<Cursor<&[u8]>>::read_image`: lines 423, 439, 456;
+  - `WebPDecoder<Cursor<&[u8]>>::read_frame`: lines 509, 567, 573.
+- Source classification:
+  - line 188: `stream_position()?`;
+  - lines 242, 255, 258, 275, 305, 322, 509, 573, and 1179:
+    `seek(...)` / `seek_relative(...)` / `range_reader(...)` error arms;
+  - lines 423, 439, and 456: `range_reader(&mut self.r, ...)?` error arms;
+  - line 567: `stream_position()?`;
+  - line 278: `allow_vp8x_chunk_scan_error(error)?` non-EOF error arm while
+    scanning VP8X chunks.
+- Reverse-mapped input feasibility:
+  - `Cursor<&[u8]>` `stream_position`, `seek(Start(...))`, and these bounded
+    positive `seek_relative(...)` calls are infallible for byte fixtures;
+  - `range_reader<Cursor<&[u8]>>` uses `seek(Start(...))`, also infallible;
+  - VP8X chunk scan over a `Cursor<&[u8]>` can produce EOF, which
+    `allow_vp8x_chunk_scan_error` intentionally ignores, but cannot produce a
+    non-EOF `io::ErrorKind::Other`; that policy arm is covered directly by
+    `allow_vp8x_chunk_scan_error(...)` in the coverage hook.
+
+Retention:
+
+- No source edit. Treat the 14 decoder regions as non-input-coverable
+  `Cursor<&[u8]>` I/O error artifacts. The previous batches already removed the
+  artificial failing-reader decoder monomorph noise; further reduction would
+  require a production refactor that removes generic `?` sites or dynamic-read
+  helpers, not new byte fixtures.
+
+## Batch 94 plan
+
+Goal: attack the only remaining branch miss, which lives in
+`src/codecs/webp/native/lossless.rs`.
+
+Reverse mapping:
+
+- Aggregate after Batch 91 remains:
+  - Lines `26977 / 26977`;
+  - functions `1633 / 1633`;
+  - branches `3487 / 3488`;
+  - regions `42569 / 42605` (36 missing).
+- File debt:
+  - `lossless.rs`: 21 regions, 1 branch;
+  - `decoder.rs`: 14 non-input-coverable regions;
+  - `vp8.rs`: 1 non-input-coverable generic `?` region.
+- Prior Batch 88 showed that simple direct `BitReader::read_bits` probes can
+  move raw per-instantiation records but do not reduce aggregate branch/region
+  debt.
+
+Planned edit:
+
+- Reverse-map the aggregate missing branch to exact `lossless.rs` source and
+  concrete helper.
+- Prefer input/state construction that reaches the opposite side through the
+  existing coverage hook without adding new broad decoder monomorphs.
+- If the missing branch is another infallible-reader or dead generic artifact,
+  document it explicitly with source lines and reader type.
+- Run local gates, then Coverage MCP only after a source/test hook change is
+  made.
+
+Retention rule:
+
+- Retain only if Coverage MCP passes, line/function coverage stays 100%, branch
+  debt drops to zero, and total missing regions does not increase.
+
+Validation:
+
+- MCP file summary still reports `lossless.rs` at branches `119 / 120` and
+  regions `1361 / 1382`.
+- Raw file branch rows are duplicated heavily by generic instantiation. A
+  source-location aggregation over all file-level LLVM branch records found:
+  - 60 unique branch source locations;
+  - 0 source locations where either side has aggregate count 0.
+- The noisy branch clusters remain:
+  - `BitReader::fill()` lines 1414 and 1420;
+  - `BitReader::consume()` line 1443;
+  - `BitReader::read_bits()` line 1457;
+  - `read_color_cache()`, `get_copy_distance()`, and
+    `plane_code_to_distance()` around lines 637-675;
+  - Huffman/meta-Huffman decode branches around lines 315-330 and 376-602.
+- Prior rejected batches already tested the plausible direct input/state
+  mappings:
+  - direct `BitReader::read_bits()` states (Batches 44, 57/66, 84, 88);
+  - `BitReader::fill()` non-empty / `nbits == 56` state (Batch 75);
+  - `decode_image_data()` copy-length-overrun state (Batch 74);
+  - broad public VP8L fixture generation and bit-packed lossless states
+    (Batch 84).
+
+Retention:
+
+- No source edit. The remaining lossless branch is not currently mapped to a
+  source location with a missing aggregate side, and all previously measured
+  direct state probes were no-ops or regressions. Treat it as unresolved
+  LLVM/generic summary debt until we either:
+  - produce a normalized branch report that identifies the exact uncovered
+    instantiation without contradictory source aggregation; or
+  - perform a deliberate production refactor that reduces generic
+    `BitReader<R>` monomorphization without changing decode behavior.
+
+Validation:
+
+- Local gates passed:
+  - `cargo fmt --all`;
+  - `cargo check --all-features`;
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`;
+  - `git diff --check`.
+- Coverage MCP run: `fa70bc10-aee9-4a7c-b37c-7d4e07c0623d`.
+- Snapshot: `892f1389-0b90-45f1-8b86-b71b8cc91572`.
+- Result: `5 passed / 0 failed`, exit code `0`.
+- Lines/functions stayed 100%.
+- Branches stayed `3487 / 3488`.
+- Regions changed from `42715 / 42751` to `42684 / 42720`; total missing
+  regions stayed 36.
+- `decoder.rs` stayed at 14 missing regions, but constructor-level
+  `FailingSeekCursor` raw debt was reduced.
+
+Retention:
+
+- Retain Batch 90 as a coverage-hook cleanup. It removes broad constructor-level
+  `FailingSeekCursor` probes without losing aggregate line/function/branch
+  coverage. Remaining decoder raw debt is still dominated by
+  `FailingSeekCursor` read-frame/read-image probes.
+
+## Batch 91 plan
+
+Goal: remove broad `WebPDecoder<FailingSeekCursor>` animation/read-image probes
+that only exist to force seek errors, while preserving direct coverage of the
+custom reader itself and the `range_reader(...)` seek-failure primitive.
+
+Reverse mapping:
+
+- After Batch 90, raw decoder debt still concentrates in:
+  - `WebPDecoder<FailingSeekCursor>::read_frame`;
+  - `WebPDecoder<FailingSeekCursor>::read_image`;
+  - `WebPDecoder<FailingSeekCursor>::read_data`;
+  - small helper wrappers for `read_fourcc`, `read_chunk_header`, and
+    `range_reader`.
+- The broad animation/read-image probes instantiate the full generic decoder
+  state machine for a reader whose purpose is only to fail seeking.
+- Direct method calls can keep `FailingSeekCursor::{read, fill_buf, consume,
+  seek}` lines covered without pulling `WebPDecoder<FailingSeekCursor>` through
+  every decode path.
+
+Planned edit:
+
+- Add direct coverage-hook calls to `FailingSeekCursor::read(...)` and both
+  success/failure `seek(...)` states.
+- Remove remaining `WebPDecoder::new(fail_seek_after(...))` constructor probes.
+- Remove `exercise_animation_stream(fail_seek_after(...))` calls.
+- Remove direct `WebPDecoder { r: fail_seek_after(...) }.read_image(...)`
+  probes.
+- Keep `range_reader(fail_seek_after(Vec::new(), 0), 0..0)`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+
+Retention rule:
+
+- Retain if Coverage MCP passes, line/function coverage stays 100%, branch debt
+  does not increase, and total missing regions does not increase. Prefer a
+  reduction, but accept neutral cleanup if raw decoder debt becomes materially
+  simpler.

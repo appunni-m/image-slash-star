@@ -1237,6 +1237,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut even_fixed_buffer = [0u8; 12];
     let mut even_fixed = Cursor::new(&mut even_fixed_buffer[..]);
     write_chunk(&mut even_fixed, b"EVEN", &[1, 2, 3, 4]).unwrap();
+    let mut invalid_dimension_buffer = [0u8; 0];
+    let _ = WebPEncoder::new(Cursor::new(&mut invalid_dimension_buffer[..])).encode(
+        &[],
+        0,
+        1,
+        ColorType::Rgba8,
+    );
     let mut odd_fixed_buffer = [0u8; 12];
     let mut odd_fixed = Cursor::new(&mut odd_fixed_buffer[..]);
     write_chunk(&mut odd_fixed, b"ODD!", &[1, 2, 3]).unwrap();

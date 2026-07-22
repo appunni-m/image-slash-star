@@ -902,6 +902,20 @@ pub struct Vp8Decoder<R> {
     left_border_v: Vec<u8>,
 }
 
+fn init_final_partition(
+    reader: &mut dyn Read,
+    partition: &mut ArithmeticDecoder,
+) -> Result<(), DecodingError> {
+    let mut buf = Vec::new();
+    reader.read_to_end(&mut buf)?;
+    let size = buf.len();
+    let mut chunks = vec![[0; 4]; size.div_ceil(4)];
+    chunks.as_mut_slice().as_flattened_mut()[..size].copy_from_slice(&buf);
+    partition.init(chunks, size);
+
+    Ok(())
+}
+
 impl<R: Read> Vp8Decoder<R> {
     /// Create a new decoder.
     /// The reader must present a raw vp8 bitstream to the decoder
@@ -995,14 +1009,7 @@ impl<R: Read> Vp8Decoder<R> {
             }
         }
 
-        let mut buf = Vec::new();
-        self.r.read_to_end(&mut buf)?;
-        let size = buf.len();
-        let mut chunks = vec![[0; 4]; size.div_ceil(4)];
-        chunks.as_mut_slice().as_flattened_mut()[..size].copy_from_slice(&buf);
-        self.partitions[n - 1].init(chunks, size);
-
-        Ok(())
+        init_final_partition(&mut self.r, &mut self.partitions[n - 1])
     }
 
     fn read_quantization_indices(&mut self) -> Result<(), DecodingError> {
@@ -1994,6 +2001,34 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }};
     }
 
+    fn keyframe_with_first_partition(first_partition: &[u8], tail: &[u8]) -> Vec<u8> {
+        let first_partition_size = first_partition.len() as u32;
+        let tag = (first_partition_size << 5).to_le_bytes();
+
+        let mut keyframe = Vec::with_capacity(10 + first_partition.len() + tail.len());
+        keyframe.extend_from_slice(&tag[..3]);
+        keyframe.extend_from_slice(&[0x9d, 0x01, 0x2a, 16, 0, 16, 0]);
+        keyframe.extend_from_slice(first_partition);
+        keyframe.extend_from_slice(tail);
+        keyframe
+    }
+
+    fn force_plane_token<R: Read>(decoder: &mut Vp8Decoder<R>, plane: usize, token: i8) {
+        let token = 0x80 | token as u8;
+        for band in &mut decoder.token_probs[plane] {
+            for complexity in band {
+                for node in complexity {
+                    *node = TreeNode {
+                        left: token,
+                        right: token,
+                        prob: 128,
+                        index: 0,
+                    };
+                }
+            }
+        }
+    }
+
     assert_eq!(LumaMode::from_i8(127), None);
     assert_eq!(LumaMode::B.into_intra(), None);
     assert_eq!(ChromaMode::from_i8(127), None);
@@ -2114,6 +2149,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
             ..MacroBlock::default()
         };
         assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
+
+        decoder.loop_filter_adjustments_enabled = true;
+        decoder.ref_delta[0] = 0;
+        decoder.mode_delta[0] = 0;
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
     });
 
     with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
@@ -2182,6 +2222,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = decoder.update_token_probabilities();
     });
 
+    exercise_init_partitions!(Vec::<u8>::new(), 1);
+    let empty_partition = [0u8; 0];
+    with_take_decoder!(&empty_partition, |decoder| {
+        let _ = decoder.init_partitions(1);
+    });
+    let short_partition_sizes = [0u8; 2];
+    with_take_decoder!(&short_partition_sizes, |decoder| {
+        let _ = decoder.init_partitions(2);
+    });
+    let short_second_partition = [1, 0, 0];
+    with_take_decoder!(&short_second_partition, |decoder| {
+        let _ = decoder.init_partitions(2);
+    });
     exercise_init_partitions!(Vec::<u8>::new(), 2);
     exercise_init_partitions!(vec![1, 0, 0], 2);
     exercise_init_partitions!(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2);
@@ -2205,6 +2258,29 @@ pub(crate) fn __coverage_exercise_private_branches() {
     exercise_frame_header!(keyframe);
 
     exercise_frame_header!(vec![0x21, 0x00, 0x00, 0x00]);
+    exercise_frame_header!(keyframe_with_first_partition(&[0x00, 0x06], &[]));
+    exercise_frame_header!(keyframe_with_first_partition(
+        &[0x00, 0x01, 0x00, 0x00],
+        &[]
+    ));
+    exercise_frame_header!(keyframe_with_first_partition(
+        &[0x00, 0x00, 0x00, 0x00, 0x00, 0x19],
+        &[]
+    ));
+
+    let macroblock_header_eof = keyframe_with_first_partition(&[0; 6], &[]);
+    let _ = Vp8Decoder::decode_frame(std::io::Cursor::new(macroblock_header_eof.as_slice()));
+    with_take_decoder!(&macroblock_header_eof, |decoder| {
+        decoder.frame.keyframe = false;
+        let _ = decoder.decode_frame_();
+    });
+    let macroblock_header_error =
+        keyframe_with_first_partition(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x03], &[]);
+    let _ = Vp8Decoder::decode_frame(std::io::Cursor::new(macroblock_header_error.as_slice()));
+    with_take_decoder!(&macroblock_header_error, |decoder| {
+        decoder.frame.keyframe = false;
+        let _ = decoder.decode_frame_();
+    });
 
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
@@ -2233,6 +2309,56 @@ pub(crate) fn __coverage_exercise_private_branches() {
     });
 
     with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.top = init_top_macroblocks(16);
+        decoder.partitions[0].init(Vec::<[u8; 4]>::new(), 0);
+        force_plane_token(&mut decoder, 1, DCT_1);
+        let mut mb = MacroBlock {
+            luma_mode: LumaMode::DC,
+            coeffs_skipped: false,
+            ..MacroBlock::default()
+        };
+        let _ = decoder.read_residual_data(&mut mb, 0, 0);
+    });
+    let y2_residual_eof = [0u8; 0];
+    with_take_decoder!(&y2_residual_eof, |decoder| {
+        decoder.top = init_top_macroblocks(16);
+        decoder.partitions[0].init(Vec::<[u8; 4]>::new(), 0);
+        force_plane_token(&mut decoder, 1, DCT_1);
+        let mut mb = MacroBlock {
+            luma_mode: LumaMode::DC,
+            coeffs_skipped: false,
+            ..MacroBlock::default()
+        };
+        let _ = decoder.read_residual_data(&mut mb, 0, 0);
+    });
+
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.top = init_top_macroblocks(16);
+        decoder.partitions[0].init(vec![[0; 4]], 2);
+        force_plane_token(&mut decoder, 3, DCT_EOB);
+        force_plane_token(&mut decoder, 2, DCT_1);
+        let mut mb = MacroBlock {
+            luma_mode: LumaMode::B,
+            coeffs_skipped: false,
+            ..MacroBlock::default()
+        };
+        let _ = decoder.read_residual_data(&mut mb, 0, 0);
+    });
+    let uv_residual_eof = [0u8; 2];
+    with_take_decoder!(&uv_residual_eof, |decoder| {
+        decoder.top = init_top_macroblocks(16);
+        decoder.partitions[0].init(vec![[0; 4]], 2);
+        force_plane_token(&mut decoder, 3, DCT_EOB);
+        force_plane_token(&mut decoder, 2, DCT_1);
+        let mut mb = MacroBlock {
+            luma_mode: LumaMode::B,
+            coeffs_skipped: false,
+            ..MacroBlock::default()
+        };
+        let _ = decoder.read_residual_data(&mut mb, 0, 0);
+    });
+
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
         decoder.partitions[0].init(vec![[0; 4]; 8], 32);
         decoder.token_probs[0][1][0][0] = TreeNode {
             left: 0x80 | DCT_1 as u8,
@@ -2243,6 +2369,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let mut block = [0; 16];
         let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
         let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 1, 1);
+    });
+    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
+        decoder.partitions[0].init(vec![[0; 4]; 8], 32);
+        decoder.token_probs[1][0][0][0] = TreeNode {
+            left: 0x80 | DCT_1 as u8,
+            right: 0x80 | DCT_1 as u8,
+            prob: 128,
+            index: 0,
+        };
+        let mut block = [0; 16];
+        let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 3, 5);
     });
 
     with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
@@ -2292,6 +2429,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         cases.push(keyframe);
 
         cases.push(vec![0x21, 0x00, 0x00, 0x00]);
+        cases.push(keyframe_with_first_partition(&[0x00, 0x06], &[]));
+        cases.push(keyframe_with_first_partition(
+            &[0x00, 0x01, 0x00, 0x00],
+            &[],
+        ));
+        cases.push(keyframe_with_first_partition(
+            &[0x00, 0x00, 0x00, 0x00, 0x00, 0x19],
+            &[],
+        ));
 
         let mut interframe = vec![1, 4, 0];
         interframe.extend_from_slice(&[0; 32]);
@@ -2333,6 +2479,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         decoder.frame.filter_type = false;
         decoder.loop_filter(1, 1, &mb);
+        let mb_with_rhs_subblocks = MacroBlock {
+            luma_mode: LumaMode::DC,
+            coeffs_skipped: false,
+            non_zero_dct: true,
+            ..MacroBlock::default()
+        };
+        decoder.loop_filter(1, 1, &mb_with_rhs_subblocks);
         let mb_without_subblocks = MacroBlock {
             luma_mode: LumaMode::DC,
             coeffs_skipped: true,
