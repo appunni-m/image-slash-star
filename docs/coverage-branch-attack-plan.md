@@ -48,6 +48,65 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 94 plan: WebP decoder zero-valid-frame animation guard
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `4b8ed50`, code-equivalent to
+  measured source commit `fa9cc99522387e763b93d73aa97e6d577fd39c4c`.
+- Coverage MCP snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41637 / 42126` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1372 / 1420` regions and `83 / 84` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `WebPDecoder::new()` line 162, `if decoder.is_animated() && decoder.num_frames == 0` | Raw LLVM JSON for `decoder.rs` reports one aggregate missing branch. The only non-zero one-sided branch at a final public constructor guard is line 162, with the animated/zero-frame path unexecuted. Existing `animated_bad_nested_chunk.webp` does not hit this guard because it mutates only the first frame of a two-frame animation; the second valid frame still increments `num_frames`. | Add an active malformed WebP fixture that keeps VP8X `ANIM` and `ANMF` chunks structurally present but replaces every nested `VP8 ` frame chunk FourCC with `JUNK`, so `read_data()` succeeds with `is_animated() == true` and `num_frames == 0`, then `new()` returns the constructor guard error. |
+
+Implementation/search plan:
+
+1. Add a deterministic generator mutation based on existing `animated.webp`,
+   replacing every nested `VP8 ` chunk inside `ANMF` chunks with `JUNK`.
+2. Add the fixture under the existing `error_malformed_container` manifest
+   group with `expect_error: true`.
+3. Regenerate WebP assets and Pillow refs through
+   `scripts/generate_test_assets.py --format webp` and
+   `scripts/generate_decode_refs.py --format webp`.
+4. Validate with `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep only if `decoder.rs` gains its missing aggregate branch and aggregate
+   missing branches/regions improve without line/function regression; otherwise
+   discard and record the measurement.
+
+Measurement/outcome:
+
+- Temporary fixture `animated_zero_valid_frames.webp` replaced every nested
+  `VP8 ` frame chunk in `animated.webp` with `JUNK`, preserving VP8X `ANIM` and
+  `ANMF` structure while leaving zero valid image subchunks.
+- Pillow oracle behavior: `PIL.Image.open(...).load()` failed with
+  `builtins.OSError: could not create decoder object`, so the fixture was valid
+  as an `expect_error: true` manifest candidate.
+- Validation before coverage: `cargo fmt --all`, `cargo check --all-features`,
+  and `RUSTFLAGS='--cfg coverage' cargo check --all-features` all passed.
+- Coverage MCP run: `3cc4f8e9-06c7-4192-9501-e62b3e996149`, snapshot
+  `55a28043-c245-4180-8cbf-41abf7c7ecca`.
+- Result: no aggregate improvement. Overall remained `25864 / 25867` lines,
+  `3441 / 3446` branches, `1594 / 1594` functions, and `41637 / 42126`
+  regions. `src/codecs/webp/native/decoder.rs` remained `1372 / 1420` regions
+  and `83 / 84` branches.
+- Raw LLVM JSON after the run showed line 162 gained non-zero counts, proving
+  the fixture reached the constructor guard, but that branch record was not the
+  remaining aggregate decoder branch. Decision: discard the fixture. Next
+  decoder sweep should focus on the remaining non-zero one-sided raw candidates:
+  the initial RIFF pattern (`169`), VP8X chunk loop exit (`234`), VP8X
+  `UnexpectedEof` mapping (`268`), and animation missing-ANIM/missing-ANMF
+  subconditions (`278`/`279`).
+
 ## Attempt 93 plan: VP8 retained corpus fixture search
 
 Baseline before editing:
