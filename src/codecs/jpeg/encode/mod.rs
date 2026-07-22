@@ -630,7 +630,7 @@ fn baseline_frequencies(
                             &component.blocks[block_row * component.blocks_per_row + block_column];
                         let difference = i32::from(block[0]) - last_dc[ci];
                         last_dc[ci] = i32::from(block[0]);
-                        let dc_symbol = usize::try_from(jpeg_nbits(difference)).ok()?;
+                        let dc_symbol = jpeg_nbits(difference) as usize;
                         dc[dc_slot][dc_symbol] = dc[dc_slot][dc_symbol].checked_add(1)?;
 
                         let mut run = 0usize;
@@ -644,7 +644,7 @@ fn baseline_frequencies(
                                 ac[ac_slot][0xf0] = ac[ac_slot][0xf0].checked_add(1)?;
                                 run -= 16;
                             }
-                            let width = usize::try_from(jpeg_nbits(coefficient)).ok()?;
+                            let width = jpeg_nbits(coefficient) as usize;
                             let symbol = (run << 4) | width;
                             ac[ac_slot][symbol] = ac[ac_slot][symbol].checked_add(1)?;
                             run = 0;
@@ -968,17 +968,17 @@ fn dc_progressive_events(
             let width = jpeg_nbits(difference);
             events.push(ProgressiveEvent::Symbol {
                 table: usize::from(component.dc_tbl),
-                value: u8::try_from(width).ok()?,
+                value: width as u8,
             });
             if width != 0 {
                 events.push(ProgressiveEvent::Bits {
                     value: mag_bits(difference, width),
-                    width: u8::try_from(width).ok()?,
+                    width: width as u8,
                 });
             }
         } else {
             events.push(ProgressiveEvent::Bits {
-                value: u32::try_from((raw >> scan.al) & 1).ok()?,
+                value: ((raw >> scan.al) & 1) as u32,
                 width: 1,
             });
         }
@@ -1090,11 +1090,11 @@ fn append_ac_first_events(
         let width = jpeg_nbits(absolute);
         events.push(ProgressiveEvent::Symbol {
             table,
-            value: u8::try_from((run << 4).checked_add(usize::try_from(width).ok()?)?).ok()?,
+            value: ((run << 4) + width as usize) as u8,
         });
         events.push(ProgressiveEvent::Bits {
             value: mag_bits(if sign == 0 { absolute } else { -absolute }, width),
-            width: u8::try_from(width).ok()?,
+            width: width as u8,
         });
         run = 0;
         last_nonzero = Some(coefficient);
@@ -1122,18 +1122,17 @@ fn append_ac_refine_events(
             let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
             let sign = raw >> 31;
             let absolute = (raw ^ sign).wrapping_sub(sign) >> scan.al;
-            (raw, u32::try_from(absolute).ok())
+            (raw, absolute as u32)
         })
         .collect::<Vec<_>>();
     let last_new = coefficients
         .iter()
-        .rposition(|(_, absolute)| *absolute == Some(1));
+        .rposition(|(_, absolute)| *absolute == 1);
     let mut run = 0usize;
     let mut block_corrections = Vec::<u8>::new();
     let mut last_nonzero = None;
 
     for (index, &(raw, absolute)) in coefficients.iter().enumerate() {
-        let absolute = absolute?;
         if absolute == 0 {
             run = run.checked_add(1)?;
             continue;
@@ -1153,7 +1152,7 @@ fn append_ac_refine_events(
         flush_progressive_eob(events, table, eob_run, correction_bits)?;
         events.push(ProgressiveEvent::Symbol {
             table,
-            value: u8::try_from((run << 4) | 1).ok()?,
+            value: ((run << 4) | 1) as u8,
         });
         events.push(ProgressiveEvent::Bits {
             value: u32::from(raw >= 0),

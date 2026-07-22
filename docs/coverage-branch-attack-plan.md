@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `4987bfb8-5d4f-4bd3-a3cf-eb783ea66367`
-- Current measured commit metadata: `f12888eba7c1d6b983043fa8410d20a40feb1858`
-- Current coverage source state: pushed `main` commit `f12888e`.
-- Lines: 25850 / 25854
+- Current snapshot: `a17f2e85-2839-4a26-bee6-8d2ea011868c`
+- Current measured commit metadata: `053312d65f28e3dbb7a199a12ce23e3f9ba180a0`
+- Current coverage source state: working tree over pushed `main` commit
+  `053312d`.
+- Lines: 25857 / 25861
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
-- Regions: 41702 / 42218
-- Remaining target: 4 lines, 6 branches, and 516 regions.
+- Regions: 41672 / 42177
+- Remaining target: 4 lines, 6 branches, and 505 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,58 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 79 plan: JPEG encode bounded symbol conversion cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `053312d`; latest code-changing
+  coverage re-anchor is pushed commit `f12888e`.
+- Coverage MCP snapshot: `4987bfb8-5d4f-4bd3-a3cf-eb783ea66367`.
+- Overall: `25850 / 25854` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41702 / 42218` regions.
+- Target file: `src/codecs/jpeg/encode/mod.rs`, currently
+  `1474 / 1539` regions and `144 / 144` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| Baseline Huffman `jpeg_nbits()` symbols | `jpeg_nbits(i32)` returns at most `31`; converting to `usize` for table indexing is infallible. The actual block coefficients are `i16`-derived, so the produced JPEG symbols remain within the 256-entry histogram tables. |
+| Progressive DC `jpeg_nbits()` events | The width is at most `31`; converting to `u8` for event storage is infallible. |
+| Progressive DC refinement bit | `(raw >> scan.al) & 1` is exactly `0` or `1`; converting to `u32` is infallible. |
+| Progressive AC refinement absolute values | Raw coefficients are `i16`-derived; the sign/magnitude transform cannot produce a negative value or overflow `u32`. Keep the existing `absolute == 0`, `absolute > 1`, and EOB logic unchanged. |
+| Progressive AC symbol packing | At a newly significant coefficient, the loop has emitted ZRL symbols until `run <= 15`, and the magnitude width is bounded by the `i16` coefficient range. Packing into one JPEG symbol byte is infallible. |
+| Restart interval and counter increments | Leave unchanged. Those are format bounds or histogram saturation guards, not fixed-width conversion artifacts. |
+
+Implementation plan:
+
+1. Update only `src/codecs/jpeg/encode/mod.rs`.
+2. Replace the infallible `TryFrom` conversions in baseline symbol collection and
+   progressive event construction.
+3. Do not change restart interval bounds, histogram saturation checks, or EOB
+   accumulation guards.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `ae055b24-2911-4a51-b91e-4bde7de7b79d`.
+- Coverage MCP snapshot: `a17f2e85-2839-4a26-bee6-8d2ea011868c`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after JPEG bounded symbol conversion cleanup:
+  `25857 / 25861` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41672 / 42177` regions.
+- Target file movement: `src/codecs/jpeg/encode/mod.rs` moved from
+  `1474 / 1539` regions to `1444 / 1498` regions; missing regions fell from
+  `65` to `54`, and branch coverage remained complete at `144 / 144`.
+- Net: aggregate missing regions fell from `516` to `505`. Remaining JPEG
+  encode gaps are still tied to restart interval bounds, histogram saturation,
+  MCU coordinate arithmetic, and EOB accumulation guards.
 
 ## Attempt 78 plan: deflate zlib trailer fixed-slice cleanup
 
