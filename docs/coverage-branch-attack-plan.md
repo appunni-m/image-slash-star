@@ -12,15 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`
-- Current measured commit metadata: `fa9cc99522387e763b93d73aa97e6d577fd39c4c`
-- Current coverage source state: pushed `main` commit `53d39ba`, code-equivalent
-  to measured source commit `fa9cc99` for coverage-relevant files.
+- Current snapshot: `c358deba-624c-4208-8704-1ad505337e73`
+- Current measured commit metadata: `50b8163cb2d69d43fc040f50ff936bb518a7d444`
+- Current coverage source state: dirty retained Attempt 95 fixture batch on
+  pushed `main` commit `50b8163`.
 - Lines: 25864 / 25867
 - Branches: 3441 / 3446
 - Functions: 1594 / 1594
-- Regions: 41637 / 42126
-- Remaining target: 3 lines, 5 branches, and 489 regions.
+- Regions: 41638 / 42126
+- Remaining target: 3 lines, 5 branches, and 488 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -106,6 +106,65 @@ Measurement/outcome:
   the initial RIFF pattern (`169`), VP8X chunk loop exit (`234`), VP8X
   `UnexpectedEof` mapping (`268`), and animation missing-ANIM/missing-ANMF
   subconditions (`278`/`279`).
+
+## Attempt 95 plan: WebP decoder VP8X malformed-container branch batch
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `50b8163`, code-equivalent to
+  measured source commit `fa9cc99522387e763b93d73aa97e6d577fd39c4c`.
+- Coverage MCP snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41637 / 42126` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1372 / 1420` regions and `83 / 84` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| VP8X chunk loop and validation candidates at lines 234, 268, 278, and 279 | After Attempt 94, raw LLVM JSON showed the zero-valid-frame constructor guard at line 162 was reached but the aggregate branch count did not move. The remaining non-zero one-sided raw candidates are the VP8X chunk loop exit, the VP8X `UnexpectedEof` mapping, and the animation missing-ANIM/missing-ANMF subconditions. Local Pillow probes showed all four malformed states below fail with `builtins.OSError: could not create decoder object`, so they are valid public oracle error inputs. | Add a small batch of manifest-driven malformed VP8X fixtures rather than isolated hooks: VP8X with no following image chunks, VP8X with a truncated trailing chunk header, animation flag with `ANMF` but no `ANIM`, and animation flag with `ANIM` but no `ANMF`. |
+
+Implementation/search plan:
+
+1. Extend the WebP asset generator with deterministic malformed fixtures:
+   - `extended_vp8x_no_chunks.webp`
+   - `extended_vp8x_truncated_chunk_header.webp`
+   - `animated_missing_anim.webp`
+   - `animated_missing_anmf.webp`
+2. Add them to the existing active `error_malformed_container` manifest group
+   with `expect_error: true`.
+3. Regenerate WebP assets and Pillow refs through
+   `scripts/generate_test_assets.py --format webp` and
+   `scripts/generate_decode_refs.py --format webp`.
+4. Validate with `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep only if aggregate missing branches or regions improve without
+   line/function regression. If the batch improves, inspect raw JSON afterward
+   to determine whether all four fixtures are justified or whether a narrower
+   subset should be retained.
+
+Decomposition step:
+
+- Full four-fixture batch run `29928c01-5674-433d-b898-8bd2f26c874d`
+  ingested snapshot `c358deba-624c-4208-8704-1ad505337e73`.
+- Result: branches unchanged, aggregate regions improved by one
+  (`41637 / 42126` to `41638 / 42126`), and `decoder.rs` regions improved by
+  one (`1372 / 1420` to `1373 / 1420`).
+- Raw LLVM JSON still showed one-sided records at the VP8X no-chunk/truncated
+  candidates (`234` and `268`), but no longer at the animation missing
+  `ANIM`/`ANMF` subconditions (`278`/`279`). Therefore the next measurement
+  narrows the retained candidate set to only `animated_missing_anim.webp` and
+  `animated_missing_anmf.webp`.
+- Narrowed two-fixture run `fc7c90f6-4b16-4f06-9629-cecde1559a22` ingested
+  snapshot `5d41582c-5ec9-418f-b884-915871e28a58`; the aggregate region gain
+  disappeared and counts returned to `41637 / 42126` regions. Decision: retain
+  the full four-fixture batch measured by snapshot
+  `c358deba-624c-4208-8704-1ad505337e73`, because it is the smallest measured
+  set in this sweep that improves aggregate regions without line/function
+  regression.
 
 ## Attempt 93 plan: VP8 retained corpus fixture search
 

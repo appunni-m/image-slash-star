@@ -1724,6 +1724,46 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_container_extended_vp8x_no_chunks",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_extended_vp8x_truncated_chunk_header",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_animated_missing_anim",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_animated_missing_anmf",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_container_extended_vp8_dimension_mismatch",
       "status": "error",
       "error_type": "builtins.OSError",

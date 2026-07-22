@@ -1679,6 +1679,10 @@ formats:
       - bad_vp8l_version.webp
       - bad_initial_chunk.webp
       - extended_missing_image_chunk.webp
+      - extended_vp8x_no_chunks.webp
+      - extended_vp8x_truncated_chunk_header.webp
+      - animated_missing_anim.webp
+      - animated_missing_anmf.webp
       - extended_vp8_dimension_mismatch.webp
       - extended_canvas_too_large.webp
       - bad_anmf_scan_size.webp

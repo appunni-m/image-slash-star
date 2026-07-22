@@ -15124,6 +15124,58 @@
           "oracle_error_message": "could not create decoder object"
         },
         {
+          "id": "error_malformed_container_extended_vp8x_no_chunks",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "extended_vp8x_no_chunks.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_extended_vp8x_truncated_chunk_header",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "extended_vp8x_truncated_chunk_header.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_missing_anim",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_missing_anim.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
+          "id": "error_malformed_container_animated_missing_anmf",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "animated_missing_anmf.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object"
+        },
+        {
           "id": "error_malformed_container_extended_vp8_dimension_mismatch",
           "type": "decode",
           "format": "webp",
@@ -16816,12 +16868,12 @@
     }
   },
   "summary": {
-    "total_rows": 949,
-    "decode_rows": 652,
+    "total_rows": 953,
+    "decode_rows": 656,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 645,
-    "decode_active": 646,
+    "assets_available": 649,
+    "decode_active": 650,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

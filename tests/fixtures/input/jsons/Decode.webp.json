@@ -1274,6 +1274,58 @@
       }
     },
     {
+      "id": "error_malformed_container_extended_vp8x_no_chunks",
+      "asset": "extended_vp8x_no_chunks.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_vp8x_no_chunks.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_extended_vp8x_truncated_chunk_header",
+      "asset": "extended_vp8x_truncated_chunk_header.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_vp8x_truncated_chunk_header.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_animated_missing_anim",
+      "asset": "animated_missing_anim.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_missing_anim.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_animated_missing_anmf",
+      "asset": "animated_missing_anmf.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_missing_anmf.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_extended_vp8_dimension_mismatch",
       "asset": "extended_vp8_dimension_mismatch.webp",
       "expect_error": true,

@@ -2697,8 +2697,48 @@ def gen_webp():
 
         return remove
 
+    def remove_all_top_level_chunks(fourcc):
+        def remove(data):
+            cursor = 12
+            removed = 0
+            while cursor + 8 <= len(data):
+                chunk_size = struct.unpack_from("<I", data, cursor + 4)[0]
+                chunk_end = cursor + 8 + chunk_size + (chunk_size & 1)
+                if data[cursor : cursor + 4] == fourcc:
+                    del data[cursor:chunk_end]
+                    struct.pack_into("<I", data, 4, len(data) - 8)
+                    removed += 1
+                    continue
+                cursor = chunk_end
+            if removed == 0:
+                raise RuntimeError(f"WebP did not contain a {fourcc!r} chunk")
+
+        return remove
+
     write_mutated_webp("extended_missing_exif_chunk.webp", "exif.webp", remove_top_level_chunk(b"EXIF"))
     write_mutated_webp("extended_missing_xmp_chunk.webp", "xmp.webp", remove_top_level_chunk(b"XMP "))
+
+    def write_vp8x_container(name, flags=0, trailing=b""):
+        vp8x_payload = bytearray([flags, 0, 0, 0])
+        vp8x_payload.extend((15).to_bytes(3, "little"))
+        vp8x_payload.extend((15).to_bytes(3, "little"))
+        vp8x_chunk = bytearray(b"VP8X")
+        vp8x_chunk.extend(struct.pack("<I", len(vp8x_payload)))
+        vp8x_chunk.extend(vp8x_payload)
+        payload = b"WEBP" + bytes(vp8x_chunk) + trailing
+        webp = bytearray(b"RIFF")
+        webp.extend(struct.pack("<I", len(payload)))
+        webp.extend(payload)
+        (d / name).write_bytes(webp)
+
+    write_vp8x_container("extended_vp8x_no_chunks.webp")
+    write_vp8x_container("extended_vp8x_truncated_chunk_header.webp", trailing=b"JUNK")
+    write_mutated_webp(
+        "animated_missing_anim.webp", "animated.webp", remove_top_level_chunk(b"ANIM")
+    )
+    write_mutated_webp(
+        "animated_missing_anmf.webp", "animated.webp", remove_all_top_level_chunks(b"ANMF")
+    )
 
     def write_extended_vp8_dimension_mismatch():
         source = (d / "lossy.webp").read_bytes()
