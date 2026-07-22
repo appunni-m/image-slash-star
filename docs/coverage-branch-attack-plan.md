@@ -14,7 +14,8 @@ from Coverage MCP before each implementation sweep.
 - Result: 5 passed, 0 failed
 - Current snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`
 - Current measured commit metadata: `fa9cc99522387e763b93d73aa97e6d577fd39c4c`
-- Current coverage source state: pushed `main` commit `fa9cc99`.
+- Current coverage source state: pushed `main` commit `53d39ba`, code-equivalent
+  to measured source commit `fa9cc99` for coverage-relevant files.
 - Lines: 25864 / 25867
 - Branches: 3441 / 3446
 - Functions: 1594 / 1594
@@ -90,6 +91,35 @@ Implementation/search plan:
 6. Keep and commit only if aggregate missing branches or regions fall without
    line/function regression; otherwise discard candidate fixtures and keep the
    measured search result documented.
+
+Measurement/outcome:
+
+- Temporary VP8 probe classification over the existing 1600-file corpus found
+  `17x19_solid_q1_m0.webp` as the smallest candidate that reached a retained
+  state not present in current fixtures: `probskip=true` with skipped non-B
+  macroblocks (`skip_non_b=2`) and `hev2=1`.
+- The candidate was reproducible from the pinned Pillow oracle using
+  `Image.new("RGB", (17, 19), (83, 121, 177)).save(..., lossless=False,
+  quality=1, method=0)`: 66 bytes, SHA-256
+  `49772d0eb89b162232b0f8a02813ac53ddcc39941688fd34ec20a6ca03801627`.
+- It was added temporarily as
+  `tests/fixtures/input/images/webp/lossy_solid_17x19_q1_m0.webp` through
+  `manifest.yaml`, `scripts/generate_test_assets.py`, and
+  `scripts/generate_decode_refs.py --format webp`.
+- Validation before coverage: `cargo fmt --all`, `cargo check --all-features`,
+  and `RUSTFLAGS='--cfg coverage' cargo check --all-features` all passed.
+- Coverage MCP run: `8cc82a84-1a8c-4c54-b14d-bfaba12dc0c8`, snapshot
+  `da655d48-b3d2-4104-a996-383baa78ba46`.
+- Result: no aggregate improvement. Overall remained `25864 / 25867` lines,
+  `3441 / 3446` branches, `1594 / 1594` functions, and `41637 / 42126`
+  regions. `src/codecs/webp/native/vp8.rs` remained `2655 / 2675` regions and
+  `157 / 160` branches.
+- Decision: discard the candidate fixture and all temporary probe code. The
+  skipped non-B macroblock state is not one of the remaining aggregate VP8
+  branch gaps. Next VP8 sweep should bias away from simple skip-state variants
+  and toward partition/header/filter/update-probability states, or map the
+  remaining VP8 aggregate branch IDs through the raw LLVM JSON/profdata rather
+  than source-coordinate-only reports.
 
 ## Attempt 92 plan: VP8L bit-reader fill high-buffer short input branch
 
