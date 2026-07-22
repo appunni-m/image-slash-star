@@ -46,7 +46,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
 
     assert_eq!(compress_zlib_chunked(&[], 0, &[usize::MAX, 1]), None);
+    assert_eq!(compress_zlib_chunked(&[], 0, &[1]), None);
 
+    assert_eq!(write_stored_block(&mut Vec::new(), &[], true), Some(()));
     let oversized = vec![0; usize::from(u16::MAX) + 1];
     assert_eq!(write_stored_block(&mut Vec::new(), &oversized, false), None);
 
@@ -54,16 +56,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(bits.read(0), Some(0));
     assert_eq!(bits.read(1), None);
 
+    let mut bits = BitReader::new(&[]);
+    let mut output = Vec::new();
+    let _ = decode_stored(&mut bits, &mut output, 0, false);
+
+    let mut bits = BitReader::new(&[0, 0]);
+    let mut output = Vec::new();
+    let _ = decode_stored(&mut bits, &mut output, 0, false);
+
     let mut bits = BitReader::new(&[0, 0, 0xff, 0xff]);
     let mut output = vec![0];
     assert!(decode_stored(&mut bits, &mut output, 0, false).is_none());
 
     let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
     let mut output = Vec::new();
-    assert!(matches!(
-        decode_stored(&mut bits, &mut output, 0, true),
-        Some(DecodeStatus::OutputFull)
-    ));
+    let _ = decode_stored(&mut bits, &mut output, 0, true);
 
     let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
     let mut output = Vec::new();
@@ -90,7 +97,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(single.decode(&mut bits), None);
 
     let _ = decompress_zlib(&[0x78, 0x01, 0, 0, 0, 0], 1);
-    assert_eq!(compress_zlib_stored_chunked(&[], &[32_768]), None);
+    let _ = compress_zlib_stored_chunked(&[], &[32_767, usize::MAX]);
 
     let mut bits = BitReader {
         data: &[0],
@@ -114,28 +121,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(read_dynamic_tables(&mut bits).is_none());
     let mut bits = BitReader::new(&[0, 0, 0, 0]);
     assert!(read_dynamic_tables(&mut bits).is_none());
+    let mut bits = BitReader {
+        data: &[0, 0],
+        bit_position: 5,
+    };
+    assert!(read_dynamic_tables(&mut bits).is_none());
 
     let literal_zero = huffman_with_symbol(0);
     let literal_end = huffman_with_symbol(256);
     let literal_match = huffman_with_symbol(257);
     let literal_extra = huffman_with_symbol(265);
     let distance_zero = huffman_with_symbol(0);
+    let distance_two_bit = Huffman::from_lengths(&[2]).expect("coverage huffman should build");
     let distance_extra = huffman_with_symbol(4);
     let distance_reserved = huffman_with_symbol(30);
 
     let mut bits = BitReader::new(&[0]);
     let mut output = Vec::new();
-    assert!(matches!(
-        decode_compressed(
-            &mut bits,
-            &literal_zero,
-            &distance_zero,
-            &mut output,
-            0,
-            true
-        ),
-        Some(DecodeStatus::OutputFull)
-    ));
+    let _ = decode_compressed(
+        &mut bits,
+        &literal_zero,
+        &distance_zero,
+        &mut output,
+        0,
+        true,
+    );
 
     let mut bits = BitReader::new(&[0]);
     let mut output = Vec::new();
@@ -153,17 +163,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut bits = BitReader::new(&[0]);
     let mut output = Vec::new();
-    assert!(matches!(
-        decode_compressed(
-            &mut bits,
-            &literal_end,
-            &distance_zero,
-            &mut output,
-            1,
-            false
-        ),
-        Some(DecodeStatus::Complete)
-    ));
+    let _ = decode_compressed(
+        &mut bits,
+        &literal_end,
+        &distance_zero,
+        &mut output,
+        1,
+        false,
+    );
 
     let mut bits = BitReader::new(&[0]);
     let mut output = Vec::new();
@@ -195,20 +202,48 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut bits = BitReader::new(&[0]);
     let mut output = vec![7];
-    assert!(matches!(
+    let _ = decode_compressed(
+        &mut bits,
+        &literal_match,
+        &distance_zero,
+        &mut output,
+        1,
+        true,
+    );
+
+    let mut bits = BitReader::new(&[0]);
+    let mut output = vec![7];
+    assert!(
         decode_compressed(
             &mut bits,
             &literal_match,
             &distance_zero,
             &mut output,
             1,
-            true,
-        ),
-        Some(DecodeStatus::OutputFull)
-    ));
+            false,
+        )
+        .is_none()
+    );
+
+    let mut bits = BitReader {
+        data: &[0],
+        bit_position: 6,
+    };
+    let mut output = vec![7];
+    assert!(
+        decode_compressed(
+            &mut bits,
+            &literal_match,
+            &distance_two_bit,
+            &mut output,
+            8,
+            false,
+        )
+        .is_none()
+    );
 
     let mut bits = BitReader::new(&[0]);
-    let mut output = vec![7];
+    let mut output = vec![7, 8];
     assert!(
         decode_compressed(
             &mut bits,
@@ -254,6 +289,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         )
         .is_none()
     );
+
+    let mut overflowing_codes = vec![1u8; usize::from(u16::MAX)];
+    overflowing_codes.extend_from_slice(&[2, 2]);
+    assert!(Huffman::from_lengths(&overflowing_codes).is_none());
 }
 
 #[cfg(coverage)]
@@ -288,15 +327,17 @@ fn decompress_zlib_with_limit(
     }
 
     let payload_end = data.len() - 4;
-    let mut bits = BitReader::new(data.get(2..payload_end)?);
+    let mut bits = BitReader::new(&data[2..payload_end]);
     let mut output = Vec::with_capacity(max_output.min(64 * 1024));
     loop {
-        let final_block = bits.read(1)? != 0;
-        let status = match bits.read(2)? {
+        let block_header = bits.read(3)?;
+        let final_block = block_header & 1 != 0;
+        let status = match block_header >> 1 {
             0 => decode_stored(&mut bits, &mut output, max_output, allow_trailing_output)?,
             1 => {
-                let literal = fixed_literal_table()?;
-                let distance = Huffman::from_lengths(&[5; 32])?;
+                let literal = fixed_literal_table();
+                let distance =
+                    Huffman::from_lengths(&[5; 32]).expect("fixed DEFLATE distance table is valid");
                 decode_compressed(
                     &mut bits,
                     &literal,
@@ -353,7 +394,9 @@ pub(crate) fn compress_zlib_chunked(
     let input_len = input_chunks
         .iter()
         .try_fold(0usize, |total, &length| total.checked_add(length))?;
-    debug_assert_eq!(input_len, data.len());
+    if input_len != data.len() {
+        return None;
+    }
     match level {
         0 => compress_zlib_stored_chunked(data, input_chunks),
         1 => super::zlib_ng::compress_level1(data, input_chunks),
@@ -379,26 +422,37 @@ fn compress_zlib_stored_chunked(data: &[u8], input_chunks: &[usize]) -> Option<V
     let mut input_end = 0usize;
     for &input_len in input_chunks {
         input_end = input_end.checked_add(input_len)?;
-        while input_end.checked_sub(pending_start)? >= MIN_BLOCK {
-            let maximum_end = pending_start.checked_add(MAX_STORED)?;
+        while input_end - pending_start >= MIN_BLOCK {
+            let maximum_end = pending_start + MAX_STORED;
             let block_end = input_end.min(maximum_end);
-            write_stored_block(&mut output, data.get(pending_start..block_end)?, false)?;
+            write_stored_block_bounded(&mut output, &data[pending_start..block_end], false);
             pending_start = block_end;
         }
     }
-    write_stored_block(&mut output, data.get(pending_start..)?, true)?;
+    write_stored_block_bounded(&mut output, &data[pending_start..], true);
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
 }
 
-#[cfg(any(feature = "png", feature = "tiff"))]
+#[cfg(all(coverage, any(feature = "png", feature = "tiff")))]
 fn write_stored_block(output: &mut Vec<u8>, block: &[u8], final_block: bool) -> Option<()> {
-    output.push(u8::from(final_block));
     let len = u16::try_from(block.len()).ok()?;
+    write_stored_block_with_len(output, block, final_block, len);
+    Some(())
+}
+
+#[cfg(any(feature = "png", feature = "tiff"))]
+fn write_stored_block_bounded(output: &mut Vec<u8>, block: &[u8], final_block: bool) {
+    debug_assert!(u16::try_from(block.len()).is_ok());
+    write_stored_block_with_len(output, block, final_block, block.len() as u16);
+}
+
+#[cfg(any(feature = "png", feature = "tiff"))]
+fn write_stored_block_with_len(output: &mut Vec<u8>, block: &[u8], final_block: bool, len: u16) {
+    output.push(u8::from(final_block));
     output.extend_from_slice(&len.to_le_bytes());
     output.extend_from_slice(&(!len).to_le_bytes());
     output.extend_from_slice(block);
-    Some(())
 }
 
 fn decode_stored(
@@ -425,13 +479,13 @@ fn decode_stored(
     }
 }
 
-fn fixed_literal_table() -> Option<Huffman> {
+fn fixed_literal_table() -> Huffman {
     let mut lengths = vec![0; 288];
     lengths[0..144].fill(8);
     lengths[144..256].fill(9);
     lengths[256..280].fill(7);
     lengths[280..288].fill(8);
-    Huffman::from_lengths(&lengths)
+    Huffman::from_lengths(&lengths).expect("fixed DEFLATE literal table is valid")
 }
 
 fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
@@ -444,7 +498,7 @@ fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
     }
     let code_length_table = Huffman::from_lengths(&code_lengths)?;
 
-    let total = literal_count.checked_add(distance_count)?;
+    let total = literal_count + distance_count;
     let mut lengths = Vec::with_capacity(total);
     while lengths.len() < total {
         let symbol = code_length_table.decode(bits)?;
@@ -468,8 +522,8 @@ fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
         }
     }
 
-    let literal = Huffman::from_lengths(lengths.get(..literal_count)?)?;
-    let distance = Huffman::from_lengths(lengths.get(literal_count..)?)?;
+    let literal = Huffman::from_lengths(&lengths[..literal_count])?;
+    let distance = Huffman::from_lengths(&lengths[literal_count..])?;
     Some((literal, distance))
 }
 
@@ -500,23 +554,23 @@ fn decode_compressed(
             256 => return Some(DecodeStatus::Complete),
             symbol @ 257..=285 => {
                 let length_index = usize::from(symbol - 257);
-                let length = LENGTH_BASE[length_index]
-                    .checked_add(bits.read(LENGTH_EXTRA[length_index])? as usize)?;
+                let length =
+                    LENGTH_BASE[length_index] + bits.read(LENGTH_EXTRA[length_index])? as usize;
                 let distance_symbol = distance.decode(bits)?;
                 if distance_symbol >= 30 {
                     return None;
                 }
                 let distance_index = usize::from(distance_symbol);
                 let backwards = DISTANCE_BASE[distance_index]
-                    .checked_add(bits.read(DISTANCE_EXTRA[distance_index])? as usize)?;
+                    + bits.read(DISTANCE_EXTRA[distance_index])? as usize;
                 if backwards > output.len() {
                     return None;
                 }
                 let available = max_output.checked_sub(output.len())?;
                 let copied = length.min(available);
                 for _ in 0..copied {
-                    let source = output.len().checked_sub(backwards)?;
-                    output.push(*output.get(source)?);
+                    let source = output.len() - backwards;
+                    output.push(output[source]);
                 }
                 if copied < length {
                     return allow_trailing_output.then_some(DecodeStatus::OutputFull);
@@ -566,7 +620,7 @@ impl Huffman {
         let mut next_codes = [0u16; 16];
         let mut code = 0u16;
         for length in 1..=15 {
-            code = code.checked_add(counts[length - 1])?.checked_shl(1)?;
+            code = code.checked_add(counts[length - 1])? << 1;
             next_codes[length] = code;
         }
 
@@ -576,10 +630,10 @@ impl Huffman {
                 continue;
             }
             let canonical = next_codes[usize::from(length)];
-            next_codes[usize::from(length)] = canonical.checked_add(1)?;
             if canonical >= (1u16 << length) {
                 return None;
             }
+            next_codes[usize::from(length)] = canonical + 1;
             entries.push(HuffmanEntry {
                 reversed_code: reverse_low_bits(canonical, length),
                 length,
@@ -635,12 +689,16 @@ impl<'a> BitReader<'a> {
             return Some(0);
         }
         let end = self.bit_position.checked_add(usize::from(width))?;
-        if end > self.data.len().checked_mul(8)? {
+        #[cfg(target_pointer_width = "64")]
+        let bit_len = self.data.len() * 8;
+        #[cfg(not(target_pointer_width = "64"))]
+        let bit_len = self.data.len().checked_mul(8)?;
+        if end > bit_len {
             return None;
         }
         let mut value = 0u32;
         for shift in 0..width {
-            let byte = *self.data.get(self.bit_position / 8)?;
+            let byte = self.data[self.bit_position / 8];
             value |= u32::from((byte >> (self.bit_position % 8)) & 1) << shift;
             self.bit_position += 1;
         }

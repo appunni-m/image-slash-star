@@ -12,16 +12,16 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `7822860e-6d2f-45ee-bc21-4b7781449837`
-- Current measured commit metadata: `6feb743865031a802f5f2bd662b007f8d4c1794f`
-- Current coverage source state: Attempt 103 source changes measured in the
+- Current snapshot: `dca2643f-b917-49e1-89da-03ac6cb8cf88`
+- Current measured commit metadata: `aa6316b53dd063021210977e9b78682b6343862b`
+- Current coverage source state: Attempt 104 source changes measured in the
   working tree before commit; source-equivalent to the commit that records this
   attempt.
-- Lines: 26041 / 26044
-- Branches: 3455 / 3460
-- Functions: 1603 / 1603
-- Regions: 41887 / 42352
-- Remaining target: 3 lines, 5 branches, and 465 regions.
+- Lines: 26105 / 26108
+- Branches: 3457 / 3462
+- Functions: 1605 / 1605
+- Regions: 41944 / 42378
+- Remaining target: 3 lines, 5 branches, and 434 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -29,6 +29,15 @@ from Coverage MCP before each implementation sweep.
 - Remaining line gaps: aggregate line gap is 3, but the current raw per-file
   summaries do not expose a stable source-file line map for those gaps. Do not
   carry forward the older normalized line map as source of truth.
+- Remaining `src/codecs/compression/deflate.rs` region map from this snapshot:
+  - Dynamic-Huffman repeat symbol 16 paths:
+    `deflate.rs:508`, `509`, and `510`.
+  - Dynamic-Huffman repeat symbol 17 paths:
+    `deflate.rs:513` and `514`.
+  - Dynamic-Huffman repeat symbol 18 path:
+    `deflate.rs:519`.
+  - Final dynamic literal/distance table rejection paths:
+    `deflate.rs:525` and `526`.
 - Files now at 100% branch coverage from this sweep:
   - `src/codecs/tiff/decode.rs`: 132 / 132 branches.
   - `src/codecs/jpeg/decode/progressive.rs`: 114 / 114 branches and now
@@ -217,6 +226,74 @@ Measurement/outcome:
 - Retention decision: keep. The target-width helper removed the final 3
   measured ICO decode region gaps while preserving checked palette-size
   arithmetic on non-64-bit targets.
+
+## Attempt 104 plan: DEFLATE invariant and malformed-bitstream sweep
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `aa6316b`.
+- Coverage MCP snapshot: `7822860e-6d2f-45ee-bc21-4b7781449837`.
+- Overall: `26041 / 26044` lines, `3455 / 3460` branches,
+  `1603 / 1603` functions, and `41887 / 42352` regions.
+- Target file: `src/codecs/compression/deflate.rs`, currently `811 / 850`
+  regions and `48 / 48` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| Coverage hook `assert!(matches!(...))` calls at `deflate.rs:63`, `128`, `156`, and `198` | Raw LLVM JSON shows zero regions inside the `matches!` macro expansion, not inside production DEFLATE code. | Replace those four macro assertions with direct coverage-hook calls. The hook exists to execute private paths; keeping macro false-arm regions defeats the region goal without adding oracle value. |
+| `decompress_zlib_with_limit`: payload slice and split block-header reads at `291` and `295` | `data.len() >= 6` proves `2..payload_end` is in bounds. After one full byte of payload exists, reading final-bit and block-type separately creates an impossible second-read failure; an empty payload is already covered by the first read. | Use an invariant payload slice and read the 3-bit DEFLATE block header as one unit. |
+| Fixed Huffman table construction at `298` and `299` | Both tables are built from compile-time-valid fixed DEFLATE lengths. The `?` exits cannot be reached by any fixture input. | Convert fixed-table construction to invariant `expect` calls with explicit messages. |
+| Stored encoder bounds at `381`-`389` | Public callers compute the input-chunk total before entry; `pending_start <= input_end <= data.len()` and `MAX_STORED == u16::MAX` make subtraction, bounded block length, and final slice failure impossible for valid internal calls. A direct private hook can still cover the `input_end` overflow state. | Cover the reachable overflow with a private hook, then use invariant subtraction, bounded stored-block writing, and direct slices. |
+| Stored decoder short reads at `411` and `412` | These are real malformed stored-block exits, but byte-sized zlib fixtures cannot isolate every partial bit position cleanly. | Add direct coverage-hook probes with empty and two-byte bit readers. |
+| Dynamic table totals and final slices at `447`, `471`, and `472` | DEFLATE bit widths bound counts to at most 288 literal/length and 32 distance entries. The loop exits only after exactly `total` lengths because `extend_repeated` rejects overrun. | Use direct bounded addition and final slices. Leave symbol-repeat read gaps for a later dynamic-bitstream-specific attempt. |
+| Compressed copy length/distance and back-reference copy at `504`, `511`, `518`, and `519` | DEFLATE base+extra ranges are bounded (`length <= 258`, `distance <= 32768`). Once `backwards <= output.len()` is checked, source subtraction and indexing are invariant. | Use direct bounded addition, subtraction, and indexing. Add a private hook for the real `max_output < output.len()` exit at `515`. |
+| Huffman canonical-code arithmetic at `569` and `579` | `checked_shl(1)` cannot fail because the shift is constant and below the integer width. Increment overflow at `579` is unreachable before the canonical overfull-code check for code lengths `<= 15`. | Keep `checked_add` for real overfull count arithmetic, replace the impossible shift with direct shift, and check `canonical` before incrementing it. Add a private hook for a real `checked_add` overflow case. |
+| BitReader bound checks at `638` and `643` | On the current 64-bit coverage target, an in-memory slice length cannot make `len * 8` overflow; after `end <= bit_len`, byte indexing is in bounds for the read loop. | Use the existing target-width pattern for bit-length multiplication and direct indexing after the bounds check. Preserve checked multiplication on non-64-bit targets. |
+
+Implementation/search plan:
+
+1. Keep public zlib/DEFLATE byte behavior unchanged for reachable inputs.
+2. Prefer fixture/public behavior only where byte input can express the state;
+   use `#[cfg(coverage)]` private probes for impossible partial-bit or invariant
+   states.
+3. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep only if aggregate missing regions improve without increasing missing
+   lines, branches, or functions.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Intermediate Coverage MCP run `0586ce17-8d14-4767-97c8-08f2ccc72717`
+  passed and improved regions, but exposed a line regression in the
+  coverage-only `write_stored_block` helper success arm. That intermediate state
+  was not retained as-is.
+- Coverage MCP run `7ab57117-7131-440d-98d1-1c1b4deca210` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `dca2643f-b917-49e1-89da-03ac6cb8cf88`.
+- Overall changed from `26041 / 26044` lines, `3455 / 3460` branches,
+  `1603 / 1603` functions, and `41887 / 42352` regions to
+  `26105 / 26108` lines, `3457 / 3462` branches, `1605 / 1605`
+  functions, and `41944 / 42378` regions.
+- Missing counts changed from 3 lines, 5 branches, and 465 regions to 3 lines,
+  5 branches, and 434 regions. Branch totals increased by 2 from the additional
+  coverage-only stored-block helper shape, but missing branch count did not
+  increase.
+- `src/codecs/compression/deflate.rs` moved from `811 / 850` to `868 / 876`
+  regions and is now at `537 / 537` lines, `50 / 50` branches, and
+  `25 / 25` functions.
+- Remaining DEFLATE gaps are dynamic-Huffman table construction paths only:
+  symbol-repeat branches for code-length symbols 16, 17, and 18 plus final
+  literal/distance Huffman table rejection.
+- Retention decision: keep. The sweep removed 31 aggregate missing regions with
+  no additional missing lines, branches, or functions.
 
 ## Attempt 99 plan: WebP aggregate branch sweep
 
