@@ -73,40 +73,52 @@ impl<R: BufRead> LosslessDecoder<R> {
         }
     }
 
-    /// Decodes a frame.
-    ///
-    /// In an alpha chunk the width and height are not included in the header, so they should be
-    /// provided by setting the `implicit_dimensions` argument. Otherwise that argument should be
-    /// `None` and the frame dimensions will be determined by reading the VP8L header.
+    /// Decodes a VP8L frame whose payload includes the VP8L signature and
+    /// dimension header.
     pub(crate) fn decode_frame(
         &mut self,
         width: u32,
         height: u32,
-        implicit_dimensions: bool,
         buf: &mut [u8],
     ) -> Result<(), DecodingError> {
         self.width = width as u16;
         self.height = height as u16;
-        if !implicit_dimensions {
-            let signature = self.bit_reader.read_bits::<u8>(8)?;
-            debug_assert_eq!(signature, 0x2f);
 
-            self.width = self.bit_reader.read_bits::<u16>(14)? + 1;
-            self.height = self.bit_reader.read_bits::<u16>(14)? + 1;
-            debug_assert_eq!(u32::from(self.width), width);
-            debug_assert_eq!(u32::from(self.height), height);
+        let signature = self.bit_reader.read_bits::<u8>(8)?;
+        debug_assert_eq!(signature, 0x2f);
 
-            let _alpha_used = self
-                .bit_reader
-                .read_bits::<u8>(1)
-                .expect("VP8L height read success proves the alpha bit is buffered");
-            let version_num = self
-                .bit_reader
-                .read_bits::<u8>(3)
-                .expect("VP8L height read success proves the version bits are buffered");
-            debug_assert_eq!(version_num, 0);
-        }
+        self.width = self.bit_reader.read_bits::<u16>(14)? + 1;
+        self.height = self.bit_reader.read_bits::<u16>(14)? + 1;
+        debug_assert_eq!(u32::from(self.width), width);
+        debug_assert_eq!(u32::from(self.height), height);
 
+        let _alpha_used = self
+            .bit_reader
+            .read_bits::<u8>(1)
+            .expect("VP8L height read success proves the alpha bit is buffered");
+        let version_num = self
+            .bit_reader
+            .read_bits::<u8>(3)
+            .expect("VP8L height read success proves the version bits are buffered");
+        debug_assert_eq!(version_num, 0);
+
+        self.decode_frame_body(buf)
+    }
+
+    /// Decodes an ALPH lossless payload whose dimensions are supplied by the
+    /// enclosing WebP chunk.
+    pub(crate) fn decode_frame_implicit_dimensions(
+        &mut self,
+        width: u32,
+        height: u32,
+        buf: &mut [u8],
+    ) -> Result<(), DecodingError> {
+        self.width = width as u16;
+        self.height = height as u16;
+        self.decode_frame_body(buf)
+    }
+
+    fn decode_frame_body(&mut self, buf: &mut [u8]) -> Result<(), DecodingError> {
         let transformed_width = self.read_transforms()?;
         let transformed_size = usize::from(transformed_width) * usize::from(self.height) * 4;
         self.decode_image_stream(
@@ -673,13 +685,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     let mut buf = [0u8; 4];
-    let _ = decoder.decode_frame(1, 1, true, &mut buf);
+    let _ = decoder.decode_frame_implicit_dimensions(1, 1, &mut buf);
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f]));
-    let _ = decoder.decode_frame(1, 1, false, &mut buf);
+    let _ = decoder.decode_frame(1, 1, &mut buf);
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0]));
-    let _ = decoder.decode_frame(1, 1, false, &mut buf);
+    let _ = decoder.decode_frame(1, 1, &mut buf);
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0, 0, 0]));
-    let _ = decoder.decode_frame(1, 1, false, &mut buf);
+    let _ = decoder.decode_frame(1, 1, &mut buf);
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
     let _ = reader.fill();

@@ -117,6 +117,68 @@ Outcome:
 - Reverted the manifest row, generator helper, generated matrix/json rows, and
   removed the generated fixture before continuing.
 
+## Attempt 91 plan: split VP8L explicit-header vs ALPH implicit dimensions
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `cccb78b`, code-equivalent to
+  coverage commit `0fe29a1e00b5590bbbd409938a254404e004a517`.
+- Coverage MCP snapshot: `7a803c3f-54bc-47bf-a48c-d89fa06204fb`.
+- Overall: `25853 / 25857` lines, `3442 / 3448` branches,
+  `1592 / 1592` functions, and `41625 / 42116` regions.
+- Target file: `src/codecs/webp/native/lossless.rs`, currently
+  `886 / 934` regions and `108 / 110` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `LosslessDecoder::decode_frame(..., implicit_dimensions, ...)` branch at line 90 | Direct `llvm-cov show` on the MCP profdata shows monomorphized uncovered sides around `if !implicit_dimensions`. Production callers pass constants: VP8L image/frame decode passes `false` in `decoder.rs`, while ALPH chunk decode passes `true` in `extended.rs` because ALPH chunks omit the VP8L signature/dimensions header. | Replace the runtime boolean with two entry points: explicit-header VP8L decode and implicit-dimensions ALPH decode. This removes a real dead branch instead of fabricating an impossible ALPH-with-explicit-header input. |
+
+Implementation plan:
+
+1. Refactor `LosslessDecoder::decode_frame` into:
+   - `decode_frame(width, height, buf)` for normal VP8L image data that reads
+     the VP8L signature/dimensions/version header;
+   - `decode_frame_implicit_dimensions(width, height, buf)` for ALPH chunk
+     lossless payloads where dimensions are supplied by the container.
+2. Move the shared transform/image-stream body into a private helper.
+3. Update all callers:
+   - `decoder.rs` VP8L and animated VP8L frame callers use `decode_frame`.
+   - `extended.rs::read_alpha_chunk` uses
+     `decode_frame_implicit_dimensions`.
+   - the coverage hook stops passing a boolean and exercises both public
+     internal entry points.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep and commit only if aggregate missing branches or regions fall without
+   line/function regression.
+
+Measurement:
+
+- Coverage MCP run: `1f097f5c-0660-4d00-9fce-6955ef761182`.
+- Coverage MCP snapshot: `cc1444b3-bfc3-492d-a720-ee16dee5352f`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Measured source state: dirty Attempt 91 refactor on commit metadata
+  `cccb78b376ee747dc093fc2c9da16fd536705d0a`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41637 / 42126` regions.
+- Remaining target moved from 4 lines, 6 branches, and 491 regions to
+  3 lines, 5 branches, and 489 regions.
+- Target movement: `src/codecs/webp/native/lossless.rs` moved from
+  `886 / 934` regions and `108 / 110` branches to `898 / 944` regions and
+  `107 / 108` branches.
+
+Outcome:
+
+- Retained. Splitting the two constant caller modes removed one aggregate
+  missing branch and two missing regions without introducing line/function
+  regression.
+- This is a code-structure coverage fix, not a fixture gap: public VP8L callers
+  must parse the VP8L signature/dimension header, while ALPH callers must not.
+
 ## Attempt 89 plan: WebP VP8X missing EXIF/XMP parity
 
 Baseline before editing:
