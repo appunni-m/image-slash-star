@@ -47,6 +47,76 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 90 plan: borrowed-slice WebP animated no-valid-frame branch
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `d3b969a`, with coverage measured
+  on code commit `0fe29a1e00b5590bbbd409938a254404e004a517`.
+- Coverage MCP snapshot: `7a803c3f-54bc-47bf-a48c-d89fa06204fb`.
+- Overall: `25853 / 25857` lines, `3442 / 3448` branches,
+  `1592 / 1592` functions, and `41625 / 42116` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1372 / 1420` regions and `83 / 84` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `WebPDecoder<Cursor<&[u8]>>::new()` final animated validation at line 162 | Direct read-only `llvm-cov show` on the MCP-generated profdata shows the borrowed-slice instantiation has `Branch (162:37): [True: 0, False: 91]` for `decoder.num_frames == 0` after `decoder.is_animated()` is true. This is the public `webp::decode(&[u8])` path used by manifest decode tests. | Reintroduce a public malformed WebP fixture that has `VP8X` animation metadata, an `ANIM` chunk, and one `ANMF` chunk whose nested frame FourCC is unknown (`JUNK`). This leaves an `ANMF` chunk present but increments no valid frame count, forcing the final borrowed-slice validation instead of the earlier chunk-missing predicate. |
+
+Why this is not a blind retry of Attempt 88:
+
+- Attempt 88 was measured before the EXIF/XMP metadata cleanup and did not move
+  aggregate coverage. It was correctly discarded at that point.
+- The new clean baseline has a different branch denominator and the direct
+  `llvm-cov show` display now identifies the remaining decoder branch as the
+  borrowed-slice line-162 no-valid-frame path.
+- Keep/discard is still objective: retain only if Coverage MCP moves
+  `src/codecs/webp/native/decoder.rs` from `83 / 84` to `84 / 84` branches or
+  otherwise reduces aggregate missing branches/regions without regression.
+
+Implementation plan:
+
+1. Restore a deterministic generator helper for
+   `animated_unknown_subchunk_no_frames.webp`:
+   - start from `animated.webp`;
+   - replace the first nested `VP8 ` FourCC inside the first `ANMF` with
+     `JUNK`;
+   - remove later `ANMF` chunks;
+   - fix the RIFF size.
+2. Add the asset to WebP `error_malformed_container` with `expect_error: true`.
+3. Regenerate only WebP assets and the manifest-driven reference matrix.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep and commit only if the aggregate target moves as described above.
+
+Measurement:
+
+- Coverage MCP run: `672586d8-f12a-44dd-8a5d-94a9e9a8aa90`.
+- Coverage MCP snapshot: `1d4552ad-e2b4-4561-9980-7093e4e5baec`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Measured source state: dirty Attempt 90 fixture on commit metadata
+  `d3b969a9165e829f604ab4ded554a0c4fcfaae83`.
+- Overall: `25853 / 25857` lines, `3442 / 3448` branches,
+  `1592 / 1592` functions, and `41625 / 42116` regions.
+- Target movement: `src/codecs/webp/native/decoder.rs` stayed at
+  `1372 / 1420` regions and `83 / 84` branches.
+
+Outcome:
+
+- Discarded. The fixture is a valid Pillow error input and it reduced the
+  normalized line-162 synthetic miss count from 5 to 4, but the aggregate file
+  branch count and total missing branch count did not move.
+- Finding: the remaining aggregate decoder branch is not closed by public
+  manifest fixture routing. Further attempts on this line need either a more
+  exact monomorphization proof from `llvm-cov show` or should be deprioritized
+  behind `vp8.rs` / `lossless.rs` branch targets.
+- Reverted the manifest row, generator helper, generated matrix/json rows, and
+  removed the generated fixture before continuing.
+
 ## Attempt 89 plan: WebP VP8X missing EXIF/XMP parity
 
 Baseline before editing:
