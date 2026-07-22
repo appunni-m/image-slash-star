@@ -47,6 +47,67 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 92 plan: VP8L bit-reader fill high-buffer short input branch
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `c0f0b7d`, code-equivalent to
+  coverage commit `fa9cc99522387e763b93d73aa97e6d577fd39c4c`.
+- Coverage MCP snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41637 / 42126` regions.
+- Target file: `src/codecs/webp/native/lossless.rs`, currently
+  `898 / 944` regions and `107 / 108` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `BitReader::fill()` line 839, `while !buf.is_empty() && self.nbits < 56` | Direct `llvm-cov show` on the MCP profdata shows many generic instantiations around `BitReader::fill()` with one-sided branch records. Existing coverage hooks cover the long-buffer path and the short-buffer path with `nbits == 0`; they do not cover the real short-buffer state where bytes remain but `nbits >= 56`, so the second half of the guard stops the loop. | Extend the existing `lossless::__coverage_exercise_private_branches()` hook with compact `BitReader::fill()` probes. Do not repeat Attempt 48's `read_bits()` monomorphization probe, which was measured as a no-op. |
+
+Implementation plan:
+
+1. In the coverage-only lossless hook, call `fill()` twice on a
+   `Cursor<[u8; 8]>`: the first call takes the long-buffer path and leaves one
+   source byte plus `nbits == 56`; the second call takes the short-buffer path
+   and exits the loop because `self.nbits < 56` is false while the buffer is
+   nonempty.
+2. Add one explicit short-buffer `Cursor<[u8; 1]>` probe with `nbits = 56` to
+   cover the same semantic state without relying on the long-buffer prelude.
+3. Do not alter production decoder behavior or manifest fixtures. This is a
+   private low-level helper state that public Pillow-oracle images should not
+   need to manufacture.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep and commit only if aggregate missing branches or regions fall without
+   line/function regression; otherwise discard the code and keep the measured
+   no-op documented.
+
+Measurement:
+
+- Coverage MCP run: `c602b613-bbfa-4d94-bfc5-0690a0cffa29`.
+- Coverage MCP snapshot: `c4bfd509-9e81-4bb5-be1d-e99c7a961fd9`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Measured source state: dirty Attempt 92 hook probe on commit metadata
+  `c0f0b7d25534e62610fe569a14fba8ed589fff96`.
+- Overall after probe: `25868 / 25871` lines, `3441 / 3446`
+  branches, `1594 / 1594` functions, and `41644 / 42133` regions.
+- Target movement: `src/codecs/webp/native/lossless.rs` moved from
+  `898 / 944` regions and `107 / 108` branches to `905 / 951` regions and
+  `107 / 108` branches.
+
+Outcome:
+
+- Discarded. The probe covered only the new hook statements/regions and did not
+  reduce aggregate missing branches or missing regions: totals stayed at
+  3 missing lines, 5 missing branches, and 489 missing regions.
+- Finding: as with Attempt 48, direct `BitReader` monomorphization probes can
+  make local execution counts look better without moving the aggregate target.
+  Further `lossless.rs` work should avoid additional coverage-only probes unless
+  raw LLVM JSON identifies a source-coordinate miss that survives aggregation.
+
 ## Attempt 90 plan: borrowed-slice WebP animated no-valid-frame branch
 
 Baseline before editing:
