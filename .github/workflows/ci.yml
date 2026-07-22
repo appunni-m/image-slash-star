@@ -89,7 +89,7 @@ jobs:
           echo "PILLOW_RS_AVIF_LIB_DIR=$RUNNER_TEMP/avif-oracle/lib" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/avif-oracle/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
       - run: cargo +nightly llvm-cov --all-features --branch --test coverage_matrix_tests --lcov --output-path lcov.info
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: lcov
           path: lcov.info
