@@ -178,6 +178,242 @@ Rejection:
   boolean coding state before adding hooks. Blind partition-length probes are
   not sufficient.
 
+## Batch 66 plan
+
+Goal: clear the smallest concrete remaining coverage debt after Batch 64,
+prioritizing directly reverse-mapped paths over broad hook sweeps.
+
+Reverse mapping from retained snapshot
+`eb1e5e29-2ab8-4b23-8a9f-8484af4644b2`:
+
+- Current aggregate state is lines `27001 / 27001`, functions `1630 / 1630`,
+  branches `3487 / 3488`, and regions `42737 / 42799`.
+- `encoder.rs` still has exactly one aggregate region miss, but MCP reports no
+  uncovered line, partial branch line, or uncovered function line for that file.
+  Selected lines around `WebPEncoder::encode()` and the existing writer-failure
+  hook are all hit and have `0 / 0` branches, so there is no concrete
+  line-level input to reverse-map in this file.
+- `lossless.rs` still owns the only aggregate branch miss. The retained branch
+  source maps to `BitReader::read_bits()` line 1457:
+  `if self.nbits < num { self.fill()?; }`.
+- Existing retained hooks cover:
+  - the false path where enough bits are already buffered;
+  - the true path where `fill()` returns an I/O error;
+  - direct `fill()` short and long buffer cases;
+  - direct `consume()` success and failure.
+- Missing hypothesis: `read_bits()` with `nbits < num` where `fill()` succeeds
+  but EOF leaves `nbits` still below `num`, causing the later `consume(num)?`
+  to return `DecodingError::BitStreamError`. This is a real parser state for
+  truncated VP8L payloads and is more precise than adding another malformed
+  whole-file fixture.
+
+Planned edit:
+
+- Add one narrow coverage-only call in
+  `lossless::__coverage_exercise_private_branches()`:
+  `BitReader::__coverage_new(Cursor::new(Vec::<u8>::new())).read_bits::<u8>(1)`.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain only if line/function coverage stays 100%, branch debt decreases or
+  aggregate missing regions decrease, and no WebP file regresses.
+
+Validation:
+
+- Run: `cef7cf5a-d06a-4099-b6de-fe6f4215ecaa`.
+- Snapshot: `cf5b4571-3014-45c3-8888-93068c6a458d`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27003 / 27003` (100%).
+- Functions: `1630 / 1630` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42743 / 42805` (62 missing, unchanged).
+- `lossless.rs`: remained `119 / 120` branches and 21 missing regions.
+
+Rejection:
+
+- Do not retain Batch 66. The hook only added covered coverage-hook regions and
+  did not reduce the retained absolute missing-region or missing-branch count.
+- The tested `read_bits()` fill-success/consume-error state is not the retained
+  branch gap. Next lossless work should avoid generic `BitReader` probes and
+  instead target parser-level states in `read_transforms()`,
+  `read_huffman_codes()`, `read_huffman_code_lengths()`, or
+  `decode_image_data()`.
+
+## Batch 67 plan
+
+Goal: add valid, tiny VP8L color-indexing parity fixtures that force concrete
+parser/transform branches rather than adding more malformed EOF or generic
+reader probes.
+
+Reverse mapping from retained snapshot
+`eb1e5e29-2ab8-4b23-8a9f-8484af4644b2` plus Batch 66 rejection:
+
+- Remaining retained coverage is still lines/functions at 100%, branches
+  `3487 / 3488`, and 62 missing regions.
+- Direct `BitReader::read_bits()` hooks have now been rejected in Batches 57
+  and 66, so the single lossless branch gap is not cleared by generic helper
+  state probes.
+- `lossless.rs` still reports normalized partial groups at
+  `read_transforms()` color-index table-size logic: table sizes `<= 2`,
+  `<= 4`, `<= 16`, and `> 16`.
+- Existing Pillow-generated palette fixtures may or may not force libwebp to
+  emit each exact VP8L color-indexing table-size band. A handcrafted VP8L
+  stream can force the transform while staying a public Pillow-oracle input.
+- Prototype inputs created in `/private/tmp` were accepted by Pillow 12.2.0 /
+  libwebp 1.6.0 as `RGB (1, 1)` and decoded to the expected color when:
+  - the recursive color-table image stream omits the meta-Huffman flag
+    (`read_meta=false`);
+  - the main ARGB image stream includes the no-meta flag (`read_meta=true`).
+
+Planned edit:
+
+- Add reusable VP8L bit helpers for simple no-cache/no-meta image streams in
+  `scripts/generate_test_assets.py`.
+- Generate four valid tiny fixtures:
+  - `vp8l_color_index_table2.webp`;
+  - `vp8l_color_index_table3.webp`;
+  - `vp8l_color_index_table5.webp`;
+  - `vp8l_color_index_table17.webp`.
+- Register them under the WebP lossless transform corpus, regenerate assets and
+  Pillow oracle references, run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain only if all parity tests pass and aggregate missing regions or
+  branches improve without losing 100% line/function coverage.
+
+Validation:
+
+- Run: `098758c2-d02a-4eff-a89e-29fdd0678830`.
+- Snapshot: `b8454e3b-ceb9-4e5d-97c0-01208a95863c`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27001 / 27001` (100%).
+- Functions: `1630 / 1630` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42737 / 42799` (62 missing, unchanged).
+- `lossless.rs`, `decoder.rs`, and `vp8.rs` counters were unchanged.
+
+Rejection:
+
+- Do not retain Batch 67. The handcrafted valid color-index fixtures are
+  Pillow-oracle valid, but they do not reduce any retained aggregate region or
+  branch debt.
+- Existing retained fixtures and hooks already exercise the relevant
+  color-index table-size bands for coverage purposes. Do not add these fixtures
+  unless the project later wants broader corpus coverage independent of the
+  100% coverage goal.
+
+## Batch 68 plan
+
+Goal: clear the smallest remaining file-level region: the single
+`encoder.rs` aggregate region artifact.
+
+Reverse mapping from retained snapshot
+`eb1e5e29-2ab8-4b23-8a9f-8484af4644b2`:
+
+- `encoder.rs` is `1851 / 1852` regions with 100% lines, 100% branches, and no
+  MCP line-level gaps.
+- `WebPEncoder::encode()` has four fallible write boundaries:
+  - RIFF signature;
+  - RIFF size;
+  - WEBP signature;
+  - VP8L `write_chunk(...)`.
+- The retained coverage hook currently forces writer failures at outer write
+  calls `0..=3`. That covers RIFF, RIFF size, WEBP, and the VP8L chunk-name
+  write inside `write_chunk`.
+- `write_chunk()` itself has additional fallible writes for chunk size and
+  payload. If the remaining source-region artifact belongs to the top-level
+  `write_chunk(...)?` call, failing the inner chunk-size or payload write is the
+  smallest concrete input that has not been tried.
+
+Planned edit:
+
+- Extend `encoder::__coverage_exercise_private_branches()` with
+  `FailOnWrite { fail_at: 4 }` and `FailOnWrite { fail_at: 5 }` calls through
+  `WebPEncoder::encode(...)`.
+- Do not change production behavior or fixtures.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain only if aggregate missing regions decrease or branches improve.
+
+Validation:
+
+- Run: `5b51f7aa-a9dc-429d-9f27-2c0735142715`.
+- Snapshot: `5595c329-d616-43bc-a35f-8fcc5b5f469f`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27011 / 27011` (100%).
+- Functions: `1630 / 1630` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42745 / 42807` (62 missing, unchanged).
+- `encoder.rs`: stayed one missing region (`1859 / 1860` after the temporary
+  hook lines, equivalent to retained `1851 / 1852`).
+
+Rejection:
+
+- Do not retain Batch 68. Failing the inner VP8L chunk-size and payload writes
+  only added covered hook regions; it did not clear the retained top-level
+  encoder source-region artifact.
+- Treat the remaining encoder region as non-actionable until a raw LLVM region
+  coordinate or source restructuring hypothesis identifies a concrete uncovered
+  path.
+
+## Batch 69 plan
+
+Goal: target the retained VP8 aggregate regions in the exact reader
+instantiation reported by the MCP-produced LLVM JSON.
+
+Reverse mapping from retained snapshot
+`eb1e5e29-2ab8-4b23-8a9f-8484af4644b2` and raw LLVM export produced by MCP:
+
+- MCP detailed summaries show `vp8.rs` has 8 missing regions and 13 uncovered
+  instantiations while keeping 100% lines and branches.
+- The actionable aggregate zero regions are one-character `?` propagation
+  regions in the real `Cursor<&[u8]>` instantiation:
+  - `init_partitions()` line 999;
+  - `read_frame_header()` lines 1193, 1200, 1202, and 1220;
+  - `read_residual_data()` lines 1492 and 1547;
+  - `decode_frame_()` line 1860.
+- Current coverage hooks directly exercise many equivalent raw VP8 parser
+  states with `Cursor<Vec<u8>>` and `Take<Cursor<_>>`, but the retained zero
+  coordinates remain under `Cursor<&[u8]>`.
+- Public malformed WebP fixtures also use borrowed input, but the RIFF/VP8
+  container path filters which raw VP8 payload states can be reached. A private
+  hook can replay the exact raw VP8 payloads through `Cursor<&[u8]>` without
+  changing production behavior.
+
+Planned edit:
+
+- Add a narrow `with_borrowed_decoder!` helper in
+  `vp8::__coverage_exercise_private_branches()` that constructs
+  `Vp8Decoder<Cursor<&[u8]>>`.
+- Replay the existing `take_frame_cases` through `read_frame_header()` using
+  borrowed slices.
+- Replay the existing direct `init_partitions(2)` short-size cases through
+  borrowed slices.
+- Do not add new public fixtures in this batch.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain only if aggregate missing regions decrease or branches improve.
+
+Validation:
+
+- Run: `efa0d554-947a-41b3-b669-8b8fa73bff12`.
+- Snapshot: `39fd72f9-8a0f-4942-97d6-351cfbdfa2e7`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27013 / 27013` (100%).
+- Functions: `1630 / 1630` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42746 / 42808` (62 missing, unchanged).
+- `vp8.rs`: stayed 8 missing regions after adding covered borrowed-slice hook
+  lines (`2758 / 2766`, equivalent to retained `2749 / 2757`).
+
+Rejection:
+
+- Do not retain Batch 69. Replaying the raw VP8 parser cases through
+  `Cursor<&[u8]>` only added covered hook regions and did not clear the
+  retained one-character propagation regions.
+- The remaining VP8 aggregate regions are not solved by duplicating reader
+  instantiations. Next VP8 work needs exact boolean-coder state construction for
+  the callee error itself, or source restructuring that removes impossible
+  `Cursor` error-propagation artifacts.
+
 ## Batch 59 plan
 
 Goal: make one fixture-first sweep across the remaining WebP native region debt,
