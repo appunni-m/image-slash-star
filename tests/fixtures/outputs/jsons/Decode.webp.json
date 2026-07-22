@@ -2287,6 +2287,32 @@
       ]
     },
     {
+      "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_extended_missing_exif_chunk_webp.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_extended_missing_xmp_chunk_webp.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ]
+    },
+    {
       "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
       "status": "ok",
       "error_type": null,

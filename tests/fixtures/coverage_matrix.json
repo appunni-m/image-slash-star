@@ -15836,6 +15836,42 @@
           ]
         },
         {
+          "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "extended_missing_exif_chunk.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_extended_missing_exif_chunk_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Malformed WebP structures tolerated by Pillow",
+          "asset": "extended_missing_xmp_chunk.webp",
+          "expect_error": false,
+          "status": "active",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_extended_missing_xmp_chunk_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
           "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
           "type": "decode",
           "format": "webp",
@@ -16780,12 +16816,12 @@
     }
   },
   "summary": {
-    "total_rows": 947,
-    "decode_rows": 650,
+    "total_rows": 949,
+    "decode_rows": 652,
     "encode_rows": 265,
     "formats": 8,
-    "assets_available": 643,
-    "decode_active": 644,
+    "assets_available": 645,
+    "decode_active": 646,
     "decode_planned": 6,
     "encode_not_wired": 0,
     "operation_rows": 32

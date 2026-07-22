@@ -272,13 +272,11 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                         }
                     }
                 }
-                // NOTE: We allow malformed images that have `info.icc_profile` set without a ICCP chunk,
-                // because this is relatively common.
+                // NOTE: Pillow tolerates malformed VP8X metadata flags when the
+                // corresponding ICCP/EXIF/XMP chunks are absent.
                 if info.animation
                     && (!self.chunks.contains_key(&WebPRiffChunk::ANIM)
                         || !self.chunks.contains_key(&WebPRiffChunk::ANMF))
-                    || info.exif_metadata && !self.chunks.contains_key(&WebPRiffChunk::EXIF)
-                    || info.xmp_metadata && !self.chunks.contains_key(&WebPRiffChunk::XMP)
                     || !info.animation
                         && self.chunks.contains_key(&WebPRiffChunk::VP8)
                             == self.chunks.contains_key(&WebPRiffChunk::VP8L)
@@ -736,8 +734,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 alpha: has_alpha,
                 canvas_width: width,
                 canvas_height: height,
-                exif_metadata: false,
-                xmp_metadata: false,
                 animation: true,
                 background_color: None,
                 background_color_hint: [0, 0, 0, 0],
@@ -774,8 +770,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 alpha: has_alpha,
                 canvas_width: width,
                 canvas_height: height,
-                exif_metadata: false,
-                xmp_metadata: false,
                 animation: true,
                 background_color: None,
                 background_color_hint: [0, 0, 0, 0],

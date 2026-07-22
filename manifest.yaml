@@ -1730,6 +1730,8 @@ formats:
       - animated_frame_too_large.webp
       - animated_frame_dimension_mismatch.webp
       - animated_bad_nested_chunk.webp
+      - extended_missing_exif_chunk.webp
+      - extended_missing_xmp_chunk.webp
       - vp8_missing_last_byte.webp
       - vp8l_unused_invalid_one_symbol.webp
     encode_edge_cases:

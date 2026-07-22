@@ -12,8 +12,6 @@ pub(crate) struct WebPExtendedInfo {
     pub(crate) canvas_width: u32,
     pub(crate) canvas_height: u32,
 
-    pub(crate) exif_metadata: bool,
-    pub(crate) xmp_metadata: bool,
     pub(crate) animation: bool,
 
     pub(crate) background_color: Option<[u8; 4]>,
@@ -283,8 +281,6 @@ pub(crate) fn read_extended_header<R: Read>(
     let chunk_flags = reader.read_u8()?;
 
     let alpha = chunk_flags & 0b00010000 != 0;
-    let exif_metadata = chunk_flags & 0b00001000 != 0;
-    let xmp_metadata = chunk_flags & 0b00000100 != 0;
     let animation = chunk_flags & 0b00000010 != 0;
 
     // reserved bytes are ignored
@@ -300,8 +296,6 @@ pub(crate) fn read_extended_header<R: Read>(
 
     let info = WebPExtendedInfo {
         alpha,
-        exif_metadata,
-        xmp_metadata,
         animation,
         canvas_width,
         canvas_height,

@@ -47,6 +47,128 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 89 plan: WebP VP8X missing EXIF/XMP parity
+
+Baseline before editing:
+
+- Source state: dirty Attempt 88 fixture is present but does not move aggregate
+  coverage; retained baseline is still snapshot
+  `435164c1-70d2-444b-be64-0dfe90ba8874`.
+- Coverage MCP snapshot for Attempt 88:
+  `f1b5988f-69be-42d5-bafe-c5f2b779cc14`.
+- Overall before this code change: `25863 / 25867` lines,
+  `3450 / 3456` branches, `1592 / 1592` functions, and
+  `41637 / 42128` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1378 / 1426` regions and `91 / 92` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| VP8X `EXIF` / `XMP ` flag without matching chunk | Temp oracle probes derived from `exif.webp` and `xmp.webp` by deleting the flagged metadata chunks still load successfully in Pillow 12.2.0 (`RGB`, `128x128`, 49152 bytes). Current Rust rejects them through the `ChunkMissing` predicate at lines 280-281. | Match Pillow by tolerating missing flagged EXIF/XMP chunks, just as the decoder already tolerates missing flagged ICC. Add public tolerated-malformed manifest rows for both variants. |
+| VP8X animation flag without valid frame | Attempt 88 covers a public one-`ANMF` unknown-subchunk error row but does not move aggregate coverage by itself. | Keep only if the combined parity/coverage change improves aggregate coverage; otherwise discard it with this batch. |
+
+Implementation plan:
+
+1. Update `src/codecs/webp/native/decoder.rs` so VP8X missing EXIF/XMP chunks
+   no longer cause `ChunkMissing`.
+2. Update `scripts/generate_test_assets.py` to generate
+   `extended_missing_exif_chunk.webp` and `extended_missing_xmp_chunk.webp`
+   from the existing deterministic metadata fixtures.
+3. Add both assets to the WebP `pillow_tolerated_malformed` manifest row.
+4. Regenerate only WebP assets and the manifest-driven reference matrix.
+5. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+6. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+7. Keep and commit only if aggregate branch or region missing count falls and
+   manifest parity passes, unless the sweep exposes a real Pillow parity bug
+   whose fixture proves current Rust behavior is wrong.
+
+Measurement:
+
+- Coverage MCP run: `e491f152-7d89-4438-b819-c598790d9b1b`.
+- Coverage MCP snapshot: `425d1a20-1976-4ed7-a8dc-2507a9676382`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Measured source state: dirty retained EXIF/XMP parity patch on commit
+  metadata `f786a76c0064458c74bb97f38400abb37cdfc3b5`.
+- Overall: `25853 / 25857` lines, `3442 / 3448` branches,
+  `1592 / 1592` functions, and `41625 / 42116` regions.
+- Missing counts: 4 lines, 6 branches, and 491 regions.
+- Target movement:
+  - `src/codecs/webp/native/decoder.rs`: `1372 / 1420` regions and
+    `83 / 84` branches.
+  - `src/codecs/webp/native/extended.rs`: `379 / 379` regions and
+    `36 / 36` branches.
+
+Outcome:
+
+- Retained as a parity fix, not as a coverage-gap closure.
+- Pillow 12.2.0 accepts VP8X files where the EXIF/XMP metadata flag is set but
+  the corresponding top-level metadata chunk is absent. Rust previously
+  rejected those inputs as `ChunkMissing`.
+- Added manifest-driven tolerated-malformed fixtures:
+  - `extended_missing_exif_chunk.webp`: Pillow decodes as `Rgb8`, `128x128`,
+    `49152` raw bytes.
+  - `extended_missing_xmp_chunk.webp`: Pillow decodes as `Rgb8`, `128x128`,
+    `49152` raw bytes.
+- Removed the EXIF/XMP metadata booleans from `WebPExtendedInfo` because the
+  decoder no longer needs to enforce those chunk flags.
+- Aggregate missing counts did not improve: the removed branch/region debt was
+  already covered, so both numerator and denominator fell by the same amount
+  for lines, branches, and regions.
+- Do not count this as progress toward the 6 remaining branch gaps; resume from
+  the same missing-count target after re-anchoring on the pushed commit.
+
+## Attempt 88 plan: WebP animated ANMF with unknown frame subchunk
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `f786a76`, with coverage measured
+  on the code-equivalent pushed commit `1e13e4a`.
+- Coverage MCP snapshot: `435164c1-70d2-444b-be64-0dfe90ba8874`.
+- Overall: `25863 / 25867` lines, `3450 / 3456` branches,
+  `1592 / 1592` functions, and `41637 / 42128` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently
+  `1378 / 1426` regions and `91 / 92` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `WebPDecoder<Cursor<&[u8]>>::new()` final animated validation at line 162 | Attempt 87 proved that a VP8X+ANIM container with no `ANMF` exits earlier at the extended chunk-missing predicate. The branch needs `info.animation == true`, an `ANMF` chunk present, and `num_frames == 0` after scanning. A temp oracle probe derived from `animated.webp` by keeping one `ANMF`, replacing its nested `VP8 ` subchunk with `JUNK`, and removing later `ANMF` chunks produces Pillow 12.2.0 error `could not create decoder object`. | Add this as a public WebP malformed-container fixture. It is a real Pillow-observable invalid input and should route public borrowed-slice decode to the final no-valid-frame validation. |
+
+Implementation plan:
+
+1. Update `scripts/generate_test_assets.py` to derive
+   `animated_unknown_subchunk_no_frames.webp` from `animated.webp` by replacing
+   the first nested frame subchunk FourCC with `JUNK`, deleting later `ANMF`
+   chunks, and fixing the RIFF size.
+2. Add the asset to the WebP `error_malformed_container` manifest row.
+3. Regenerate only WebP assets and the manifest-driven reference matrix.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate branch or region missing count falls.
+
+Measurement:
+
+- Coverage MCP run: `5b587555-148c-4a73-a9fe-421a0ac67bee`.
+- Coverage MCP snapshot: `f1b5988f-69be-42d5-bafe-c5f2b779cc14`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall: `25863 / 25867` lines, `3450 / 3456` branches,
+  `1592 / 1592` functions, and `41637 / 42128` regions.
+- Target movement: `src/codecs/webp/native/decoder.rs` stayed at
+  `1378 / 1426` regions and `91 / 92` branches.
+- Finding: the fixture is a valid Pillow error oracle input and touches the
+  public malformed-animation path, but aggregate missing regions and aggregate
+  missing branches did not move.
+- Outcome: discarded from the retained patch. The generated fixture,
+  manifest row, and generated matrix rows were removed before commit. Do not
+  retry this exact unknown-subchunk/no-valid-frame probe for coverage progress.
+
 ## Attempt 87 plan: WebP animated container with no frames
 
 Baseline before editing:

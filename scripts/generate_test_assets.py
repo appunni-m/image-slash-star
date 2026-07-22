@@ -2682,6 +2682,24 @@ def gen_webp():
 
     write_mutated_webp("extended_missing_image_chunk.webp", "icc.webp", remove_extended_image_chunk)
 
+    def remove_top_level_chunk(fourcc):
+        def remove(data):
+            cursor = 12
+            while cursor + 8 <= len(data):
+                chunk_size = struct.unpack_from("<I", data, cursor + 4)[0]
+                chunk_end = cursor + 8 + chunk_size + (chunk_size & 1)
+                if data[cursor : cursor + 4] == fourcc:
+                    del data[cursor:chunk_end]
+                    struct.pack_into("<I", data, 4, len(data) - 8)
+                    return
+                cursor = chunk_end
+            raise RuntimeError(f"WebP did not contain a {fourcc!r} chunk")
+
+        return remove
+
+    write_mutated_webp("extended_missing_exif_chunk.webp", "exif.webp", remove_top_level_chunk(b"EXIF"))
+    write_mutated_webp("extended_missing_xmp_chunk.webp", "xmp.webp", remove_top_level_chunk(b"XMP "))
+
     def write_extended_vp8_dimension_mismatch():
         source = (d / "lossy.webp").read_bytes()
         vp8 = source.find(b"VP8 ")

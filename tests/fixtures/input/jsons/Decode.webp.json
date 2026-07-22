@@ -1885,6 +1885,32 @@
       }
     },
     {
+      "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
+      "asset": "extended_missing_exif_chunk.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_missing_exif_chunk.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
+      "asset": "extended_missing_xmp_chunk.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_missing_xmp_chunk.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
       "asset": "vp8_missing_last_byte.webp",
       "expect_error": false,
