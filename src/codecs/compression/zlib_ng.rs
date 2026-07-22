@@ -107,14 +107,14 @@ fn tokenize_level1_position(
             let length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
             if length >= MIN_MATCH {
                 tokens.push(Token::Match { length, distance });
-                *position = position.checked_add(length)?;
+                *position += length;
                 return Some(());
             }
         }
     }
 
     tokens.push(Token::Literal(*data.get(*position)?));
-    *position = position.checked_add(1)?;
+    *position += 1;
     Some(())
 }
 

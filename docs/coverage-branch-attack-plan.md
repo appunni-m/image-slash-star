@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `ff00e9c4-9114-402b-9508-e497f7bf8b79`
-- Current measured commit metadata: `6a98afb6e251c258e05826c67a169d1e3c4cc16e`
-- Current coverage source state: pushed `main` commit `6a98afb`.
+- Current snapshot: `a6070b1a-9a86-4a62-a3e0-c6456819bebe`
+- Current measured commit metadata: `ed48a3895b151bf787614b0234dedb64eaaf53d2`
+- Current coverage source state: working tree over pushed `main` commit
+  `ed48a38`.
 - Lines: 25857 / 25861
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
-- Regions: 41672 / 42177
-- Remaining target: 4 lines, 6 branches, and 505 regions.
+- Regions: 41669 / 42172
+- Remaining target: 4 lines, 6 branches, and 503 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,55 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 80 plan: zlib-ng level-one cursor increment cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `ed48a38`; latest code-changing
+  coverage re-anchor is pushed commit `6a98afb`.
+- Coverage MCP snapshot: `ff00e9c4-9114-402b-9508-e497f7bf8b79`.
+- Overall: `25857 / 25861` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41672 / 42177` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `3414 / 3607` regions and `368 / 368` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| `tokenize_level1()` streaming loop | Keep the chunk-length `checked_add()` and private tokenizer guard. Coverage hooks deliberately exercise malformed internal positions, and chunk sums are caller-provided. |
+| `tokenize_level1_position()` initial `available.checked_sub(*position)?` | Keep it. The coverage hook passes `position = usize::MAX`, so this remains a real defensive malformed-state guard. |
+| Match cursor advance | After the initial guard succeeds, `lookahead <= available - position`; `match_length()` returns at most that lookahead. Advancing `position` by the matched length cannot overflow. |
+| Literal cursor advance | The literal path first reads `data[*position]`; after the initial guard has succeeded and a byte exists, `position += 1` cannot overflow. |
+| Candidate distance and hash-table indexing | Keep these guards. The private hooks can create malformed `head` state, and those failures are intentional coverage evidence. |
+
+Implementation plan:
+
+1. Update only `src/codecs/compression/zlib_ng.rs`.
+2. Replace only the two cursor `checked_add` increments in
+   `tokenize_level1_position()`.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `cbbf7574-6015-4aef-9466-28d58321853c`.
+- Coverage MCP snapshot: `a6070b1a-9a86-4a62-a3e0-c6456819bebe`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after zlib-ng level-one cursor cleanup:
+  `25857 / 25861` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41669 / 42172` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `3414 / 3607` regions to `3411 / 3602` regions; missing regions fell from
+  `193` to `191`, and branch coverage remained complete at `368 / 368`.
+- Net: aggregate missing regions fell from `505` to `503`. The initial
+  malformed-state `available.checked_sub(*position)?` guard remains in place;
+  only post-validation cursor increments were collapsed.
 
 ## Attempt 79 plan: JPEG encode bounded symbol conversion cleanup
 
