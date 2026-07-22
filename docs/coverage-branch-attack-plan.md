@@ -47,6 +47,53 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 84 plan: WebP native private chunk writer monomorphization cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `9f24f79`; latest code-changing
+  coverage re-anchor is pushed commit `adb6a66`.
+- Coverage MCP snapshot: `271b937f-9906-41c5-9224-7b844c7ed0d7`.
+- Overall: `25854 / 25858` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41642 / 42136` regions.
+- Target file: `src/codecs/webp/native/encoder.rs`, currently
+  `1791 / 1793` regions and `192 / 192` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| `WebPEncoder<W>` API | Leave generic. It is the encoder type exposed inside the crate, and changing its writer model is broader than a coverage cleanup. |
+| Private `write_chunk<W: Write>` helper | This helper is private and only writes four RIFF chunk fields. Generic monomorphization creates separate coverage regions for `Vec<u8>` calls where `Write` failures are impossible, even though the coverage hook already exercises the same error points with fixed-size cursors. Use `&mut dyn Write` to keep one implementation whose failure paths are reachable. |
+| Chunk size and padding behavior | Leave unchanged; output bytes must remain identical for odd and even payload lengths. |
+
+Implementation plan:
+
+1. Update only `src/codecs/webp/native/encoder.rs`.
+2. Change private `write_chunk()` to accept `&mut dyn Write`.
+3. Adjust only its local call sites and coverage hook cursor temporaries.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `763cd49c-a401-48dd-bf3c-3d662e103149`.
+- Coverage MCP snapshot: `9f8a81c7-a110-49a7-97c2-92d840ab54c2`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after private chunk writer monomorphization cleanup:
+  `25852 / 25856` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41652 / 42146` regions.
+- Target file movement: `src/codecs/webp/native/encoder.rs` moved from
+  `1791 / 1793` regions to `1801 / 1803` regions; missing regions stayed at
+  `2`.
+- Decision: discarded and reverted. The dynamic private helper changed the
+  absolute instrumentation shape but did not reduce aggregate or file-level
+  missing regions.
+
 ## Attempt 83 plan: PNG range-slicing cursor cleanup
 
 Baseline before editing:
