@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `5dcb0427-5128-4042-864b-ab7e7f43b793`
-- Current measured commit metadata: `f02e0e05950d460fb92755fdade716793afd6117`
-- Current coverage source state: pushed `main` commit `f02e0e0`.
-- Lines: 25857 / 25861
+- Current snapshot: `ac48927e-d4e8-45b4-b4ac-68aa922d1b3b`
+- Current measured commit metadata: `718453ae2a691b5705c2975247aafa21bd026558`
+- Current coverage source state: working tree over pushed `main` commit
+  `718453a`.
+- Lines: 25861 / 25865
 - Branches: 3448 / 3454
 - Functions: 1593 / 1593
-- Regions: 41669 / 42172
-- Remaining target: 4 lines, 6 branches, and 503 regions.
+- Regions: 41661 / 42159
+- Remaining target: 4 lines, 6 branches, and 498 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,55 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 81 plan: zlib-ng matcher direct cursor increment cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `718453a`; latest code-changing
+  coverage re-anchor is pushed commit `f02e0e0`.
+- Coverage MCP snapshot: `5dcb0427-5128-4042-864b-ab7e7f43b793`.
+- Overall: `25857 / 25861` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41669 / 42172` regions.
+- Target file: `src/codecs/compression/zlib_ng.rs`, currently
+  `3411 / 3602` regions and `368 / 368` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| Slow and level-nine literal cursor increments | Each process loop starts with `lookahead = available.checked_sub(position)?` and exits when no input is available. Once that guard succeeds, advancing by one after emitting a literal is infallible. |
+| Level-three process cursor advance | `length` is either one or a match length bounded by `lookahead`; after the same `available.checked_sub(position)?` guard, advancing by `length` is infallible. |
+| Lazy-match insertion ranges and previous-match advance | Leave unchanged. Their invariants involve previous lazy state and deliberately malformed coverage-hook states, so they need a separate reverse-map pass. |
+| Distance, hash, and table guards | Leave unchanged. Those remain real defensive checks for malformed internal state and input-derived windows. |
+
+Implementation plan:
+
+1. Update only `src/codecs/compression/zlib_ng.rs`.
+2. Replace direct `self.position.checked_add(1)?` increments in `SlowMatcher` and
+   `Level9Matcher`, plus the direct `Level3Matcher` `checked_add(length)?`
+   process advance.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+4. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+5. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `d9f14340-eb0b-4cc5-9693-1c4ae107cd0c`.
+- Coverage MCP snapshot: `ac48927e-d4e8-45b4-b4ac-68aa922d1b3b`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after zlib-ng matcher direct cursor cleanup:
+  `25861 / 25865` lines, `3448 / 3454` branches,
+  `1593 / 1593` functions, and `41661 / 42159` regions.
+- Target file movement: `src/codecs/compression/zlib_ng.rs` moved from
+  `3411 / 3602` regions to `3403 / 3589` regions; missing regions fell from
+  `191` to `186`, and branch coverage remained complete at `368 / 368`.
+- Net: aggregate missing regions fell from `503` to `498`. The lazy-match
+  insertion ranges and previous-match advances remain guarded for a separate
+  reverse-map pass.
 
 ## Attempt 80 plan: zlib-ng level-one cursor increment cleanup
 

@@ -1124,11 +1124,11 @@ impl SlowMatcher {
                     *self.data.get(self.position.checked_sub(1)?)?,
                 ));
                 self.previous_length = match_length;
-                self.position = self.position.checked_add(1)?;
+                self.position += 1;
             } else {
                 self.previous_length = match_length;
                 self.match_available = true;
-                self.position = self.position.checked_add(1)?;
+                self.position += 1;
             }
         }
 
@@ -1568,11 +1568,11 @@ impl Level9Matcher {
                     *self.data.get(self.position.checked_sub(1)?)?,
                 ));
                 self.previous_length = match_length;
-                self.position = self.position.checked_add(1)?;
+                self.position += 1;
             } else {
                 self.previous_length = match_length;
                 self.match_available = true;
-                self.position = self.position.checked_add(1)?;
+                self.position += 1;
             }
         }
 
@@ -1838,7 +1838,7 @@ impl<'a> Level3Matcher<'a> {
                 self.tokens
                     .push(Token::Literal(*self.data.get(self.position)?));
             }
-            self.position = self.position.checked_add(length)?;
+            self.position += length;
         }
     }
 
