@@ -12,14 +12,14 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `a076eb5f-e22d-4046-9ff3-1d8c21947342`
-- Current measured commit metadata: `a9d6c05b442070fd9b5702f943db0285155582a4`
-- Current coverage source state: pushed `main` commit `a9d6c05`.
-- Lines: 25861 / 25865
+- Current snapshot: `271b937f-9906-41c5-9224-7b844c7ed0d7`
+- Current measured commit metadata: `adb6a66e15aca3ae9e46e1182c2cb496d450dc7c`
+- Current coverage source state: pushed `main` commit `adb6a66`.
+- Lines: 25854 / 25858
 - Branches: 3448 / 3454
-- Functions: 1593 / 1593
-- Regions: 41661 / 42159
-- Remaining target: 4 lines, 6 branches, and 498 regions.
+- Functions: 1592 / 1592
+- Regions: 41642 / 42136
+- Remaining target: 4 lines, 6 branches, and 494 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 91 / 92 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -87,6 +87,9 @@ Measurement:
 - Coverage MCP run: `e6787fdb-5185-4c3b-b49b-a1c97616571c`.
 - Coverage MCP snapshot: `0da5392c-83f3-4a11-9000-2e22e5d90ccd`.
 - Result: 5 passed, 0 failed; coverage artifact ingested.
+- Pushed-commit re-anchor run: `b6e8ae09-2610-4235-a4ce-665d50467a73`,
+  snapshot `271b937f-9906-41c5-9224-7b844c7ed0d7`, commit
+  `adb6a66e15aca3ae9e46e1182c2cb496d450dc7c`; result unchanged.
 - Overall after TIFF fixed-width palette and 16-bit sample cleanup:
   `25854 / 25858` lines, `3448 / 3454` branches,
   `1592 / 1592` functions, and `41642 / 42136` regions.
