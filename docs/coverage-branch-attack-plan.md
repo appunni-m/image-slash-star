@@ -47,6 +47,50 @@ from Coverage MCP before each implementation sweep.
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
 
+## Attempt 93 plan: VP8 retained corpus fixture search
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `a243530`, code-equivalent to
+  coverage commit `fa9cc99522387e763b93d73aa97e6d577fd39c4c`.
+- Coverage MCP snapshot: `8f47d221-a7d1-4bc0-8da5-c44b12c09979`.
+- Overall: `25864 / 25867` lines, `3441 / 3446` branches,
+  `1594 / 1594` functions, and `41637 / 42126` regions.
+- Target file: `src/codecs/webp/native/vp8.rs`, currently
+  `2655 / 2675` regions and `157 / 160` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| VP8 header/filter/macroblock branches around lines 981, 1033, 1056, 1067, 1086, 1101, 1125, 1177, 1192, 1204, 1215, 1799, 1810, and 1821 | Raw LLVM JSON reports all unique source-coordinate branch sides as covered after aggregation, but the file summary remains short by three aggregate branches. Prior direct hook attempts on `calculate_filter_parameters()` and `read_macroblock_header()` were measured as no-ops or regressions. The retained gains in Attempts 40 and 41 came from real Pillow-accepted lossy WebP fixtures found in `/private/tmp/image-star-vp8-probe`. | Reuse the existing 1600-candidate corpus and search for normal public decode inputs that change these low-count states. Keep only manifest-driven fixtures that improve Coverage MCP; do not add another isolated parser hook. |
+
+Implementation/search plan:
+
+1. Add temporary `#[cfg(coverage)]` probe logging in VP8 public decode paths only
+   long enough to classify candidate files; remove all probe output before any
+   retained commit.
+2. Run a bounded local classification script over
+   `/private/tmp/image-star-vp8-probe` and select the smallest candidate(s) that
+   reach states not already represented by current retained fixtures:
+   - alternate partition count and partition size paths;
+   - segment feature combinations beyond the two retained 17×19 fixtures;
+   - loop-filter adjustment/sharpness combinations visible through full public
+     frame decode;
+   - token-probability and skip-coefficient states that were previously left as
+     VP8 bitstream generator debt.
+3. Copy only selected candidates into
+   `tests/fixtures/input/images/webp/`, add them under the existing
+   `lossy_vp8` or `lossy_vp8_filter_variants` manifest group, and generate
+   Pillow oracle refs through the manifest-driven asset/reference scripts.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep and commit only if aggregate missing branches or regions fall without
+   line/function regression; otherwise discard candidate fixtures and keep the
+   measured search result documented.
+
 ## Attempt 92 plan: VP8L bit-reader fill high-buffer short input branch
 
 Baseline before editing:
