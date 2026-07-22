@@ -1952,6 +1952,14 @@ impl IntraMode {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    struct ErrorReader;
+
+    impl std::io::Read for ErrorReader {
+        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+            Err(std::io::Error::from(std::io::ErrorKind::Other))
+        }
+    }
+
     macro_rules! with_take_decoder {
         ($bytes:expr, |$decoder:ident| $body:block) => {{
             let bytes: &[u8] = $bytes.as_ref();
@@ -1966,6 +1974,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(ChromaMode::from_i8(127), None);
     assert_eq!(IntraMode::from_i8(127), None);
     assert_eq!(init_top_macroblocks(17).len(), 2);
+
+    let mut error_reader = ErrorReader;
+    let _ = std::io::Read::read(&mut error_reader, &mut [0u8; 1]);
+    let _ = Vp8Decoder::new(ErrorReader).init_partitions(1);
 
     let frame = Frame {
         width: 1,

@@ -705,6 +705,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         consumed: bool,
     }
 
+    struct OneThenEofThenErrorReader {
+        byte: [u8; 1],
+        phase: u8,
+    }
+
     impl Read for OneThenErrorReader {
         fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
             if self.consumed {
@@ -716,6 +721,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
             buf[0] = self.byte[0];
             self.consumed = true;
             Ok(1)
+        }
+    }
+
+    impl Read for OneThenEofThenErrorReader {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            match self.phase {
+                0 if !buf.is_empty() => {
+                    buf[0] = self.byte[0];
+                    self.phase = 1;
+                    Ok(1)
+                }
+                0 => Ok(0),
+                1 => {
+                    self.phase = 2;
+                    Ok(0)
+                }
+                _ => Err(io::Error::from(io::ErrorKind::Other)),
+            }
         }
     }
 
@@ -733,12 +756,51 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }
     }
 
+    impl BufRead for OneThenEofThenErrorReader {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            match self.phase {
+                0 => Ok(&self.byte),
+                1 => {
+                    self.phase = 2;
+                    Ok(&[])
+                }
+                _ => Err(io::Error::from(io::ErrorKind::Other)),
+            }
+        }
+
+        fn consume(&mut self, amt: usize) {
+            if amt != 0 && self.phase == 0 {
+                self.phase = 1;
+            }
+        }
+    }
+
     let make_color_cache = || {
         Some(ColorCache {
             color_cache_bits: 1,
             color_cache: vec![[3, 5, 7, 255]; 2],
         })
     };
+    fn decoder_with_bits<R: BufRead>(
+        reader: R,
+        buffer: u64,
+        nbits: u8,
+        width: u16,
+        height: u16,
+    ) -> LosslessDecoder<R> {
+        LosslessDecoder {
+            bit_reader: BitReader {
+                reader,
+                buffer,
+                nbits,
+            },
+            transforms: [None, None, None, None],
+            transform_order: Vec::new(),
+            width,
+            height,
+        }
+    }
+
     let mut scratch = [0u8; 1];
     let mut error_reader = ErrorReader;
     let _ = error_reader.read(&mut scratch);
@@ -750,6 +812,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = one_then_error.read(&mut []);
     let _ = one_then_error.read(&mut scratch);
     let _ = one_then_error.read(&mut scratch);
+    let mut one_then_eof_then_error = OneThenEofThenErrorReader {
+        byte: [0xaa],
+        phase: 0,
+    };
+    one_then_eof_then_error.consume(0);
+    let _ = one_then_eof_then_error.read(&mut []);
+    let _ = one_then_eof_then_error.read(&mut scratch);
+    let _ = one_then_eof_then_error.read(&mut scratch);
+    let _ = one_then_eof_then_error.read(&mut scratch);
+    one_then_eof_then_error.consume(1);
 
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     let mut buf = [0u8; 4];
@@ -760,6 +832,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.decode_frame(1, 1, &mut buf);
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f, 0, 0, 0, 0]));
     let _ = decoder.decode_frame(1, 1, &mut buf);
+
+    let mut decoder = decoder_with_bits(ErrorReader, 0b001, 3, 1, 1);
+    let _ = decoder.read_transforms();
+    let mut decoder = decoder_with_bits(ErrorReader, 0b011, 3, 1, 1);
+    let _ = decoder.read_transforms();
+    let mut decoder = decoder_with_bits(ErrorReader, 0b1, 1, 1, 1);
+    let _ = decoder.read_transforms();
+
+    let mut decoder = decoder_with_bits(ErrorReader, 0, 0, 1, 1);
+    let _ = decoder.read_huffman_codes(true, 1, 1, None);
+    let mut decoder = decoder_with_bits(ErrorReader, 0b1, 1, 1, 1);
+    let _ = decoder.read_huffman_codes(true, 1, 1, None);
+
+    let mut code_length_code_lengths = vec![0; CODE_LENGTH_CODES];
+    code_length_code_lengths[0] = 1;
+    code_length_code_lengths[1] = 1;
+    let mut decoder = decoder_with_bits(ErrorReader, 0, 1, 1, 1);
+    let _ = decoder.read_huffman_code_lengths(code_length_code_lengths, 4);
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
     let _ = reader.fill();
@@ -841,6 +931,53 @@ pub(crate) fn __coverage_exercise_private_branches() {
         huffman_code_groups: Vec::new(),
     };
     let _ = info.get_huff_index(1, 0);
+
+    let mut decoder = decoder_with_bits(ErrorReader, 0, 0, 1, 1);
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(7),
+            HuffmanTree::build_single_node(11),
+            HuffmanTree::build_single_node(13),
+            HuffmanTree::build_two_node(255, 255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
+
+    let mut decoder = decoder_with_bits(
+        OneThenEofThenErrorReader {
+            byte: [0],
+            phase: 0,
+        },
+        0,
+        0,
+        1,
+        1,
+    );
+    let mut data = [0u8; 4];
+    let huffman_info = HuffmanInfo {
+        xsize: 1,
+        _ysize: 1,
+        color_cache: None,
+        image: vec![0],
+        bits: 0,
+        mask: 0,
+        huffman_code_groups: vec![[
+            HuffmanTree::build_single_node(7),
+            HuffmanTree::build_single_node(11),
+            HuffmanTree::build_single_node(13),
+            HuffmanTree::build_two_node(255, 255),
+            HuffmanTree::build_single_node(0),
+        ]],
+    };
+    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
     let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let mut data = [0u8; 8];

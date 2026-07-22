@@ -7,24 +7,24 @@ active checklist for getting the remaining LLVM source regions and branch to
 
 ## Current retained baseline
 
-- Coverage MCP run: `4aa00aa6-c25e-45bc-bd84-d534930dbe2b`
-- Coverage MCP snapshot: `ea55a704-d482-45ce-97e6-b3cf2db786f4`
+- Coverage MCP run: `92c1cdb4-3e1b-4ae9-9ad5-a778b673f5e4`
+- Coverage MCP snapshot: `1f3ce856-4942-4a21-aebd-253e40bf7250`
 - Command: `all-features-llvm-cov-json-nightly-branch`
 - Result: `5 passed / 0 failed`
-- Lines: `26811 / 26811` (100%)
-- Functions: `1620 / 1620` (100%)
-- Branches: `3477 / 3478` (1 missing)
-- Regions: `42511 / 42575` (64 missing)
+- Lines: `27001 / 27001` (100%)
+- Functions: `1630 / 1630` (100%)
+- Branches: `3487 / 3488` (1 missing)
+- Regions: `42736 / 42799` (63 missing)
 
 ## Remaining gap map
 
 | File | Missing regions | Missing branches | Current reason |
 | --- | ---: | ---: | --- |
 | `src/codecs/compression/zlib_ng.rs` | 0 | 0 | Complete after converting proven generated-token/matcher invariants to direct operations or invariant `expect(...)` calls. |
-| `src/codecs/webp/native/decoder.rs` | 33 | 0 | Missing-`ALPH` parity is fixed; remaining debt is exact `Seek`/`Read` propagation in VP8X/ANIM/ANMF plus normalized animation/alpha regions. |
-| `src/codecs/webp/native/lossless.rs` | 21 | 1 | Targeted VP8L byte-boundary truncation fixtures reduced public EOF/read propagation debt; the retained branch gap still maps to `BitReader::read_bits`. |
+| `src/codecs/webp/native/decoder.rs` | 32 | 0 | Batch 63 cleared all raw zero-line `Read`/`Seek` propagation entries; remaining aggregate debt currently has no raw zero-line entries in the MCP artifact. |
+| `src/codecs/webp/native/lossless.rs` | 21 | 1 | Batch 63 cleared the raw zero-line bit-reader/fill propagation entries; the retained branch gap still maps to `BitReader::read_bits`. |
 | `src/codecs/tiff/decode.rs` | 0 | 0 | Complete after coverage-only malformed header overflow fixtures. |
-| `src/codecs/webp/native/vp8.rs` | 9 | 0 | VP8 parser/loop-filter region debt, mostly malformed payload read propagation and macroblock/residual decode propagation. |
+| `src/codecs/webp/native/vp8.rs` | 9 | 0 | Batch 63 cleared `read_to_end()` propagation; remaining raw zero-line entries are VP8 parser/residual decode propagation sites. |
 | `src/codecs/webp/native/encoder.rs` | 1 | 0 | Top-level `WebPEncoder::encode()` source-region artifact remains after direct writer-failure hook coverage. |
 
 ## Batch 59 plan
@@ -359,6 +359,106 @@ Retention:
 
 - Retain Batch 62. It confirms decoder line 426 was public-byte reachable only
   through VP8X alpha metadata, not the standalone VP8L header alpha bit.
+
+## Batch 63 plan
+
+Goal: clear exact WebP native region debt that cannot be reached by committed
+bytes because the missing operation is an injected `Read` or `Seek` failure.
+
+Reverse mapping from retained snapshot
+`ea55a704-d482-45ce-97e6-b3cf2db786f4`:
+
+- Current aggregate state is lines `26811 / 26811`, functions `1620 / 1620`,
+  branches `3477 / 3478`, and regions `42511 / 42575`.
+- Remaining zero-region entries in the MCP-produced LLVM artifact:
+  - `decoder.rs`: lines 278, 305, 322, 456, 509, and 573;
+  - `lossless.rs`: lines 207, 220, 239, 315, 317, 442, 501, and 555;
+  - `vp8.rs`: lines 999, 1193, 1200, 1202, 1220, 1492, 1547, and 1860;
+  - `encoder.rs`: one source-region artifact with no zero-line entry.
+- Decoder lines 305, 322, 456, 509, and 573 are all `Seek` propagation
+  regions. Real WebP bytes can produce EOF or malformed chunk errors, but they
+  cannot make an otherwise valid reader return `io::ErrorKind::Other` from
+  `Seek`.
+- Decoder line 278 is the non-EOF VP8X chunk-scan error propagation path. The
+  public byte fixture for EOF has already been covered; non-EOF requires an
+  injected failing reader.
+- Lossless lines 207, 220, 239, 315, and 317 are bit-reader propagation sites
+  immediately after partially consumed fields. Public WebP files only truncate
+  on byte boundaries, so exact sub-byte I/O failure is coverage-hook territory.
+- Lossless lines 442, 501, and 555 are `BitReader::fill()` propagation sites.
+  EOF is not itself an error for `fill()`; an injected failing `BufRead`
+  implementation is required.
+- VP8 line 999 is `read_to_end()` propagation from the underlying reader and is
+  not byte-stream reachable. The remaining VP8 parser/residual sites may still
+  be reachable by carefully crafted VP8 bitstreams, so this batch should not add
+  broad VP8 hooks beyond the simple reader-failure case.
+
+Planned edit:
+
+- Add a coverage-only failing `Read + BufRead + Seek` cursor to
+  `decoder::__coverage_exercise_private_branches()` and use it only for exact
+  VP8X scan and animation seek/read propagation paths.
+- Add coverage-only `LosslessDecoder` states that seed the bit buffer so the
+  next operation is exactly the missing sub-byte read or `fill()` propagation.
+- Add a coverage-only VP8 reader that fails at `read_to_end()` for
+  `init_partitions(1)`.
+- Avoid new public fixtures in this batch because these targets require
+  injected I/O failures rather than malformed image bytes.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain only if line/function coverage stays 100% and aggregate missing
+  regions or branches improve.
+
+Applied edit:
+
+- Added coverage-only reader/seek failure exercises for exact WebP native I/O
+  propagation regions that cannot be reached by committed image bytes.
+- Added coverage-only lossless decoder states that seed the bit buffer before
+  the missing sub-byte read and `fill()` propagation sites.
+- Added a coverage-only VP8 reader failure for `init_partitions(1)` so
+  `read_to_end()` propagation is covered without adding a malformed fixture
+  that Pillow cannot distinguish.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `git diff --check`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+
+Coverage MCP validation:
+
+- Rejected intermediate run `e2cfaca7-6fd7-45bc-86e4-62315cc9943b` because
+  helper self-coverage regressed line and branch totals.
+- Rejected intermediate run `d0dad41f-50ce-479f-9451-089ee49e59a5` because one
+  helper branch remained uncovered.
+- Retained run: `92c1cdb4-3e1b-4ae9-9ad5-a778b673f5e4`.
+- Snapshot: `1f3ce856-4942-4a21-aebd-253e40bf7250`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27001 / 27001` (100%).
+- Functions: `1630 / 1630` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42736 / 42799` (63 missing), improved by 1.
+- `decoder.rs`: `965 / 965` lines, `90 / 90` branches,
+  `1755 / 1787` regions.
+- `lossless.rs`: `1092 / 1092` lines, `119 / 120` branches,
+  `1361 / 1382` regions.
+- `vp8.rs`: `1491 / 1491` lines, `160 / 160` branches,
+  `2748 / 2757` regions.
+- `encoder.rs`: `1851 / 1852` regions.
+
+Remaining raw zero-region entries after Batch 63:
+
+- `decoder.rs`: none in the MCP-produced LLVM artifact.
+- `lossless.rs`: none in the MCP-produced LLVM artifact.
+- `vp8.rs`: lines 1193, 1200, 1202, 1220, 1492, 1547, and 1860.
+- `encoder.rs`: one source-region artifact with no zero-line entry.
+
+Retention:
+
+- Retain Batch 63. It preserves 100% line/function coverage, keeps the
+  absolute branch miss count unchanged, clears the exact injected I/O
+  zero-line entries, and reduces global missing regions from 64 to 63.
 
 ## Batch 54 plan
 

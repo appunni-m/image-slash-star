@@ -703,14 +703,47 @@ pub(crate) fn __coverage_exercise_private_branches() {
         successful_seeks: usize,
     }
 
+    struct FailingReadCursor {
+        inner: Cursor<Vec<u8>>,
+        fail_at_position: u64,
+    }
+
     impl Read for FailingSeekCursor {
         fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
             self.inner.read(buf)
         }
     }
 
+    impl Read for FailingReadCursor {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            if self.inner.position() >= self.fail_at_position {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "coverage read failure",
+                ));
+            }
+            self.inner.read(buf)
+        }
+    }
+
     impl BufRead for FailingSeekCursor {
         fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            self.inner.fill_buf()
+        }
+
+        fn consume(&mut self, amt: usize) {
+            self.inner.consume(amt);
+        }
+    }
+
+    impl BufRead for FailingReadCursor {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            if self.inner.position() >= self.fail_at_position {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "coverage fill failure",
+                ));
+            }
             self.inner.fill_buf()
         }
 
@@ -732,10 +765,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }
     }
 
+    impl Seek for FailingReadCursor {
+        fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+            self.inner.seek(pos)
+        }
+    }
+
     fn fail_seek_after(data: Vec<u8>, successful_seeks: usize) -> FailingSeekCursor {
         FailingSeekCursor {
             inner: Cursor::new(data),
             successful_seeks,
+        }
+    }
+
+    fn fail_read_at(data: Vec<u8>, fail_at_position: u64) -> FailingReadCursor {
+        FailingReadCursor {
+            inner: Cursor::new(data),
+            fail_at_position,
         }
     }
 
@@ -839,6 +885,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut seek_reader = fail_seek_after(vec![1, 2], 1);
     let _ = seek_reader.fill_buf();
     seek_reader.consume(1);
+
+    let mut read_reader = fail_read_at(vec![1, 2], 1);
+    let mut scratch = [0u8; 1];
+    let _ = read_reader.fill_buf();
+    let _ = read_reader.read(&mut scratch);
+    let _ = read_reader.read(&mut scratch);
+    let _ = read_reader.fill_buf();
+    read_reader.consume(0);
+    let _ = read_reader.seek(io::SeekFrom::Start(0));
 
     let _ = WebPDecoder::new(Cursor::new(Vec::<u8>::new()));
     let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0WE".to_vec()));
@@ -961,6 +1016,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         riff(&[vp8x(0, 1, 1), chunk(b"EXIF", &[]), chunk(b"VP8L", &[])]),
         2,
     ));
+
+    let mut vp8x_scan_read_error = riff(&[vp8x(0, 1, 1)]);
+    vp8x_scan_read_error[4..8].copy_from_slice(&64u32.to_le_bytes());
+    let _ = WebPDecoder::new(fail_read_at(vp8x_scan_read_error, 30));
+
+    let animated_chunks_for_seek = riff(&[
+        vp8x(0b0000_0010, 1, 1),
+        chunk(b"ANIM", &[0, 0, 0, 0, 0, 0]),
+        chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
+    ]);
+    let _ = WebPDecoder::new(fail_seek_after(animated_chunks_for_seek.clone(), 5));
+    let _ = WebPDecoder::new(fail_seek_after(animated_chunks_for_seek, 6));
 
     let mut truncated = riff(&[vp8x(0, 1, 1)]);
     truncated[4..8].copy_from_slice(&64u32.to_le_bytes());
@@ -1093,8 +1160,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_frame(&mut buf);
 
     let alph_for_seek = chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"ALPH"));
+    exercise_animation_stream(fail_seek_after(alph_for_seek.clone(), 0), 1, 1, true, 1);
     exercise_animation_stream(fail_seek_after(alph_for_seek.clone(), 1), 1, 1, true, 1);
     exercise_animation_stream(fail_seek_after(alph_for_seek, 2), 1, 1, true, 1);
+
+    let mut alph_payload_for_next_seek = anmf_payload(0, 0, 0, 0, b"ALPH");
+    alph_payload_for_next_seek[20..24].copy_from_slice(&2u32.to_le_bytes());
+    alph_payload_for_next_seek[24] = 0;
+    alph_payload_for_next_seek[25] = 7;
+    alph_payload_for_next_seek.resize(34, 0);
+    exercise_animation_stream(
+        fail_seek_after(chunk(b"ANMF", &alph_payload_for_next_seek), 2),
+        1,
+        1,
+        true,
+        1,
+    );
 
     let mut vp8l_solid_64 = anmf_payload(0, 0, 63, 63, b"VP8L");
     vp8l_solid_64[20..24].copy_from_slice(&23u32.to_le_bytes());
@@ -1194,6 +1275,34 @@ pub(crate) fn __coverage_exercise_private_branches() {
         num_frames: 0,
         loop_count: LoopCount::Forever,
         chunks: HashMap::from([(WebPRiffChunk::VP8, 0..0), (WebPRiffChunk::ALPH, 0..0)]),
+    };
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_image(&mut buf);
+
+    let lossy_vp8_17x19 = vec![
+        0xd0, 0x04, 0x00, 0x9d, 0x01, 0x2a, 0x11, 0x00, 0x13, 0x00, 0x3e, 0x31, 0x16, 0x8a, 0x43,
+        0xa2, 0x21, 0x21, 0x14, 0x04, 0x00, 0x20, 0x03, 0x04, 0xb2, 0x80, 0x3b, 0x00, 0x7e, 0x00,
+        0x19, 0x1b, 0xb2, 0xf9, 0x65, 0x48, 0x2d, 0xf2, 0xd4, 0x40, 0x7a, 0xbe, 0xf1, 0xa6, 0x09,
+        0xc3, 0x00, 0x00, 0xfe, 0xf6, 0x74, 0x5f, 0xff, 0xf3, 0xd3, 0x35, 0xe6, 0x0f, 0xeb, 0xc3,
+        0xff, 0xfe, 0x41, 0x7a, 0xb7, 0xcd, 0xb1, 0xa0, 0x00, 0x00,
+    ];
+    let mut decoder = WebPDecoder {
+        r: fail_seek_after(lossy_vp8_17x19, 1),
+        width: 17,
+        height: 19,
+        extended: Some(WebPExtendedInfo {
+            alpha: true,
+            canvas_width: 17,
+            canvas_height: 19,
+            animation: false,
+            background_color: None,
+            background_color_hint: [0, 0, 0, 0],
+        }),
+        animation: AnimationState::default(),
+        has_alpha: true,
+        num_frames: 0,
+        loop_count: LoopCount::Forever,
+        chunks: HashMap::from([(WebPRiffChunk::VP8, 0..70), (WebPRiffChunk::ALPH, 70..70)]),
     };
     let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_image(&mut buf);
