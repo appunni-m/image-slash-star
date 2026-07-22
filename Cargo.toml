@@ -2,22 +2,25 @@
 name = "pillow-rs-image"
 version = "0.1.0"
 edition = "2024"
-description = "Bit-exact Rust image codecs with no external codec dependencies"
+description = "Bit-exact image codecs with Rust defaults and optional native AVIF"
 authors = ["Appunni M"]
-license = "(MIT OR Apache-2.0) AND BSD-3-Clause AND Zlib AND IJG AND MIT-CMU"
+license = "(MIT OR Apache-2.0) AND BSD-2-Clause AND BSD-3-Clause AND Zlib AND IJG AND MIT-CMU"
 repository = "https://github.com/appunni-m/image-slash-star"
 homepage = "https://github.com/appunni-m/image-slash-star"
 readme = "README.md"
 rust-version = "1.96.1"
 keywords = ["image", "codec", "pillow", "encoding", "decoding"]
 categories = ["multimedia::images", "encoding", "wasm"]
-autotests = false
-exclude = [
-    ".coverage-mcp/",
-    ".github/",
-    ".oracle-venv/",
-    "scripts/",
-    "tests/",
+include = [
+    "/src/**/*",
+    "/third_party/**/*",
+    "/build.rs",
+    "/CHANGELOG.md",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/NOTICE.md",
+    "/README.md",
+    "/scripts/build_avif_stack.sh",
 ]
 
 [lib]
@@ -40,10 +43,6 @@ avif = []
 [dev-dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
-
-[[test]]
-name = "coverage_matrix_tests"
-path = "tests/coverage_matrix_tests.rs"
 
 [lints.rust]
 future-incompatible = { level = "deny", priority = -1 }

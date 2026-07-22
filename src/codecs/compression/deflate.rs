@@ -20,6 +20,7 @@ const CODE_LENGTH_ORDER: [usize; 19] = [
 ];
 
 /// Inflate a zlib stream while enforcing an exact output-size ceiling.
+#[cfg(feature = "tiff")]
 pub(crate) fn decompress_zlib(data: &[u8], max_output: usize) -> Option<Vec<u8>> {
     decompress_zlib_with_limit(data, max_output, false)
 }
@@ -28,8 +29,7 @@ pub(crate) fn decompress_zlib(data: &[u8], max_output: usize) -> Option<Vec<u8>>
 ///
 /// Pillow's PNG decoder stops once its scanline buffer is full, so extra
 /// inflated bytes and the remainder of that zlib stream are deliberately
-/// ignored. TIFF decoding continues to use [`decompress_zlib`] and validates
-/// the complete stream.
+/// ignored. TIFF decoding uses its strict complete-stream entry point instead.
 pub(crate) fn decompress_zlib_prefix(data: &[u8], max_output: usize) -> Option<Vec<u8>> {
     decompress_zlib_with_limit(data, max_output, true)
 }

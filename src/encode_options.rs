@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
 pub struct EncodeOptions {
-    /// Quality 1-100 (JPEG, WebP lossy)
+    /// Quality 0-100 (JPEG, WebP lossy, and AVIF).
     pub quality: Option<u8>,
     /// Compression level 0-9 (PNG), 0=none, 9=max
     pub compression: Option<u8>,
@@ -21,6 +21,11 @@ pub struct EncodeOptions {
     pub method: Option<u8>,
     /// Interlaced (PNG Adam7, GIF)
     pub interlace: Option<bool>,
+    /// Ordered codec-specific AVIF encoder key/value pairs.
+    ///
+    /// The order and duplicate keys are retained because Pillow accepts both
+    /// mappings and sequences of pairs, and libavif applies them in order.
+    pub advanced: Vec<(String, String)>,
     /// Catch-all for future params
     pub extra: HashMap<String, String>,
 }

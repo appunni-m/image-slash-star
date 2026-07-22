@@ -4,7 +4,7 @@ quality_goals:
     oracle: Pillow 12.2.0
     contract: Every active manifest row must match Pillow's observable input/output behavior exactly, including decoded pixels and encoded bytes.
   coverage:
-    target: 100% line and 100% branch coverage
+    target: 100% line, function, branch, and region coverage
     method: Prefer fixture-based, manifest-driven parity rows that exercise real codec inputs and Pillow reference outputs.
     fallback: Coverage-only internal hooks may exercise private unreachable or defensive branches, but should stay behind cfg(coverage) and should not replace fixture parity coverage for codec behavior.
 operations:
@@ -2597,12 +2597,12 @@ formats:
     - 118
     - 105
     - 102
-    decoder: Rust port matching libavif 1.4.1 and dav1d 1.5.3 observable behavior
-    encoder: Rust port matching libavif 1.4.1 and libaom 3.13.2 deterministic bytes
-    status: planned
-    planned_gap_defaults:
-      decode: The pure-Rust AVIF container and AV1 decoder are not implemented yet.
-      encode: The pure-Rust AVIF container and AV1 encoder are not implemented yet.
+    decoder: Optional native bridge matching libavif 1.4.1 and dav1d 1.5.3 observable behavior
+    encoder: Optional native bridge matching libavif 1.4.1 and libaom 3.13.2 deterministic bytes
+    status: parity-active
+    encode_source:
+      format: png
+      asset: 2x3.png
     optional: true
     edge_cases:
     - id: baseline
@@ -2610,7 +2610,7 @@ formats:
       test_assets:
       - baseline.avif
     - id: high_bitdepth
-      description: 10-bit AVIF
+      description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:
       - 10bit.avif
     - id: with_alpha
@@ -2622,14 +2622,222 @@ formats:
       test_assets:
       - hdr.avif
     - id: grid
-      description: Grid AVIF (tiled image)
+      description: AVIF with a 1x2 color grid and per-cell alpha items
       test_assets:
       - grid.avif
     - id: animated
-      description: Animated AVIF (decode first frame)
+      description: Five-frame AVIF with exact frame pixels and timing
       test_assets:
       - animated.avif
-    encode_edge_cases: []
+    encode_edge_cases:
+    - id: enc_default_rgb
+      description: Pillow default AVIF settings from RGB input
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+    - id: enc_rgba
+      description: Pillow default AVIF settings from RGBA input
+      source_format: png
+      source_asset: gif_rgba_mixed.png
+      params:
+        size: [4, 2]
+        color_type: RGBA
+    - id: enc_luma
+      description: Pillow conversion from L to RGB before AVIF encoding
+      source_format: png
+      source_asset: 2bit.png
+      params:
+        size: [17, 13]
+        color_type: L
+    - id: enc_luma_alpha
+      description: Pillow conversion from LA to RGBA before AVIF encoding
+      source_format: png
+      source_asset: gray_alpha.png
+      params:
+        size: [128, 128]
+        color_type: LA
+    - id: enc_cmyk
+      description: Pillow conversion from CMYK to RGB before AVIF encoding
+      source_format: jpeg
+      source_asset: baseline_cmyk.jpg
+      params:
+        size: [128, 128]
+        color_type: cmyk
+    - id: enc_bilevel
+      description: Pillow conversion from packed mode 1 to RGB before AVIF encoding
+      source_format: png
+      source_asset: 1bit.png
+      params:
+        size: [128, 128]
+        color_type: 1bit
+    - id: enc_indexed_opaque
+      description: Pillow conversion from an opaque indexed palette to RGB
+      source_format: png
+      source_asset: indexed.png
+      params:
+        size: [128, 128]
+        color_type: P
+        max_threads: 1
+    - id: enc_indexed_alpha
+      description: Pillow conversion from an indexed transparency table to RGBA
+      source_format: png
+      source_asset: indexed_alpha.png
+      params:
+        size: [128, 128]
+        color_type: P
+        max_threads: 1
+    - id: enc_quality_100_444
+      description: Explicit lossless quantizer and 4:4:4 chroma request
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        quality: 100
+        subsampling: '4:4:4'
+        max_threads: 1
+        autotiling: false
+    - id: enc_limited_422
+      description: Limited-range 4:2:2 AVIF with the fastest encoder speed
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        range: limited
+        subsampling: '4:2:2'
+        speed: 10
+        max_threads: 1
+    - id: enc_alpha_premultiplied
+      description: RGBA AVIF with the alpha-premultiplied signal
+      source_format: png
+      source_asset: gif_rgba_mixed.png
+      params:
+        size: [4, 2]
+        color_type: RGBA
+        alpha_premultiplied: true
+        max_threads: 1
+    - id: enc_monochrome
+      description: AVIF monochrome YUV 4:0:0 output
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        subsampling: '4:0:0'
+        max_threads: 1
+    - id: enc_explicit_tiles
+      description: Explicit tile row and column settings with autotiling disabled
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        tile_rows: 1
+        tile_cols: 1
+        autotiling: false
+        max_threads: 1
+    - id: enc_metadata
+      description: ICC, EXIF, and XMP metadata copied through libavif
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        icc_hex: '70696c6c6f772d72732d696363'
+        exif_hex: '45786966000049492a000800000000000000'
+        xmp_hex: '3c783a786d706d6574612f3e'
+        max_threads: 1
+    - id: enc_orientation
+      description: EXIF orientation converted to AVIF irot/imir transform metadata
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        exif_orientation: 6
+        max_threads: 1
+    - id: enc_advanced_tune
+      description: Ordered libaom codec-specific options matching Pillow advanced
+      source_format: png
+      source_asset: 2x3.png
+      params:
+        size: [2, 3]
+        color_type: RGB
+        codec: aom
+        advanced:
+          tune: psnr
+        max_threads: 1
+    - id: enc_animation
+      description: Five AVIF frames with exact source durations and encoded bytes
+      source_format: avif
+      source_asset: animated.avif
+      params:
+        size: [150, 150]
+        color_type: RGB
+        animated: true
+        frames: 5
+        preserve_duration: true
+        sequence_time: 1
+        max_threads: 1
+    - id: enc_invalid_subsampling
+      description: Reject the same invalid subsampling string as Pillow
+      source_format: png
+      source_asset: 2x3.png
+      expect_error: true
+      params:
+        size: [2, 3]
+        color_type: RGB
+        subsampling: invalid
+    - id: enc_invalid_subsampling_alias
+      description: Reject JPEG-style 444 because Pillow AVIF requires 4:4:4
+      source_format: png
+      source_asset: 2x3.png
+      expect_error: true
+      params:
+        size: [2, 3]
+        color_type: RGB
+        subsampling: '444'
+    - id: enc_invalid_range
+      description: Reject the same invalid YUV range as Pillow
+      source_format: png
+      source_asset: 2x3.png
+      expect_error: true
+      params:
+        size: [2, 3]
+        color_type: RGB
+        range: invalid
+    - id: enc_decoder_only_codec
+      description: Reject dav1d as an AVIF encoder exactly as Pillow does
+      source_format: png
+      source_asset: 2x3.png
+      expect_error: true
+      params:
+        size: [2, 3]
+        color_type: RGB
+        codec: dav1d
+    - id: enc_invalid_quality
+      description: Reject a quality outside Pillow's inclusive 0 to 100 range
+      source_format: png
+      source_asset: 2x3.png
+      expect_error: true
+      params:
+        size: [2, 3]
+        color_type: RGB
+        quality: 101
+    - id: enc_invalid_advanced
+      description: Reject an unknown libaom codec-specific option
+      source_format: png
+      source_asset: 2x3.png
+      expect_error: true
+      params:
+        size: [2, 3]
+        color_type: RGB
+        codec: aom
+        advanced:
+          foo: bar
 cross_format:
   detect:
   - id: jpeg_as_jpeg

@@ -1,0 +1,686 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "avif"
+  },
+  "cases": [
+    {
+      "id": "enc_default_rgb",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_rgba",
+      "source_asset": "gif_rgba_mixed.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          4,
+          2
+        ],
+        "color_type": "RGBA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_mixed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_luma",
+      "source_asset": "2bit.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          17,
+          13
+        ],
+        "color_type": "L"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_luma_alpha",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          128,
+          128
+        ],
+        "color_type": "LA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_cmyk",
+      "source_asset": "baseline_cmyk.jpg",
+      "source_format": "jpeg",
+      "params": {
+        "size": [
+          128,
+          128
+        ],
+        "color_type": "cmyk"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bilevel",
+      "source_asset": "1bit.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          128,
+          128
+        ],
+        "color_type": "1bit"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_indexed_opaque",
+      "source_asset": "indexed.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          128,
+          128
+        ],
+        "color_type": "P",
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_indexed_alpha",
+      "source_asset": "indexed_alpha.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          128,
+          128
+        ],
+        "color_type": "P",
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_quality_100_444",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "quality": 100,
+        "subsampling": "4:4:4",
+        "max_threads": 1,
+        "autotiling": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "quality": 100,
+          "subsampling": "4:4:4",
+          "max_threads": 1,
+          "autotiling": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_limited_422",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "range": "limited",
+        "subsampling": "4:2:2",
+        "speed": 10,
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "subsampling": "4:2:2",
+          "speed": 10,
+          "max_threads": 1,
+          "range": "limited"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_alpha_premultiplied",
+      "source_asset": "gif_rgba_mixed.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          4,
+          2
+        ],
+        "color_type": "RGBA",
+        "alpha_premultiplied": true,
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_mixed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1,
+          "alpha_premultiplied": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_monochrome",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "subsampling": "4:0:0",
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "subsampling": "4:0:0",
+          "max_threads": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_explicit_tiles",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "tile_rows": 1,
+        "tile_cols": 1,
+        "autotiling": false,
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1,
+          "tile_rows": 1,
+          "tile_cols": 1,
+          "autotiling": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_metadata",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "icc_hex": "70696c6c6f772d72732d696363",
+        "exif_hex": "45786966000049492a000800000000000000",
+        "xmp_hex": "3c783a786d706d6574612f3e",
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1,
+          "icc_profile": {
+            "type": "bytes",
+            "hex": "70696c6c6f772d72732d696363"
+          },
+          "exif": {
+            "type": "bytes",
+            "hex": "45786966000049492a000800000000000000"
+          },
+          "xmp": {
+            "type": "bytes",
+            "hex": "3c783a786d706d6574612f3e"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_orientation",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "exif_orientation": 6,
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1,
+          "exif": {
+            "type": "Exif",
+            "tags": {
+              "274": 6
+            }
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_advanced_tune",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "codec": "aom",
+        "advanced": {
+          "tune": "psnr"
+        },
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1,
+          "codec": "aom",
+          "advanced": {
+            "tune": "psnr"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animation",
+      "source_asset": "animated.avif",
+      "source_format": "avif",
+      "params": {
+        "size": [
+          150,
+          150
+        ],
+        "color_type": "RGB",
+        "animated": true,
+        "frames": 5,
+        "preserve_duration": true,
+        "sequence_time": 1,
+        "max_threads": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated.avif",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "max_threads": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 4
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 5
+          }
+        },
+        "output_canonicalization": {
+          "boxes": [
+            "mvhd",
+            "tkhd",
+            "mdhd"
+          ],
+          "fields": [
+            "creation_time",
+            "modification_time"
+          ],
+          "unix_time": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_subsampling",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "subsampling": "invalid"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "subsampling": "invalid"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_subsampling_alias",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "subsampling": "444"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "subsampling": "444"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_range",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "range": "invalid"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "range": "invalid"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_decoder_only_codec",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "codec": "dav1d"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "codec": "dav1d"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_quality",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "quality": 101
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "quality": 101
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_advanced",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "codec": "aom",
+        "advanced": {
+          "foo": "bar"
+        }
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "codec": "aom",
+          "advanced": {
+            "foo": "bar"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    }
+  ]
+}

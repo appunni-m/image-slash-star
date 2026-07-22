@@ -8,11 +8,12 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::map_unwrap_or)]
 
-//! pillow-rs-image — zero-dependency pixel-perfect image decoders and encoders.
+//! pillow-rs-image — dependency-light pixel-perfect image decoders and encoders.
 //!
 //! Goal: produce bit-exact observable output against the pinned Pillow oracle
-//! in `manifest.yaml`. `bytemuck` is the sole runtime utility
-//! dependency, no native libraries are linked, and the crate works on WASM.
+//! in `manifest.yaml`. `bytemuck` is the sole third-party Rust runtime utility
+//! dependency. Default codecs are Rust-only and work on WASM; opt-in AVIF uses
+//! the fixed native libavif stack on supported native targets.
 //!
 //! Architecture:
 //!   &[u8] → decode() → DecodedImage { dimensions, pixels, mode, palette }
@@ -59,8 +60,11 @@ pub fn detect_format(data: &[u8]) -> Option<ImageFormat> {
     if matches!(&data[0..4], b"\x00\x00\x01\x00" | b"\x00\x00\x02\x00") {
         return Some(ImageFormat::Ico);
     }
-    if data.len() >= 12 && &data[4..12] == b"ftypavif" {
-        return Some(ImageFormat::Avif);
+    if data.len() >= 12 && &data[4..8] == b"ftyp" {
+        let brand = &data[8..12];
+        if matches!(brand, b"avif" | b"avis" | b"mif1" | b"msf1") {
+            return Some(ImageFormat::Avif);
+        }
     }
     None
 }

@@ -13,6 +13,7 @@ open source projects and remain subject to their original licenses.
 | Pillow-compatible codec and color behavior identified in source comments | Pillow 12.2.0 / libImaging | MIT-CMU; see `third_party/pillow/LICENSE` |
 | GIF RGBA FASTOCTREE quantization in `src/codecs/gif/encode.rs` | Pillow 12.2.0 `QuantOctree.c`, Oliver Tonnhofer / Omniscale | MIT; see `third_party/pillow/QUANT-OCTREE-LICENSE` |
 | GIF palette bucket ordering in `src/codecs/gif/encode.rs` | Apple Libc / FreeBSD `qsort.c`, Regents of the University of California | BSD-3-Clause; see `third_party/apple-libc/LICENSE` |
+| `third_party/libavif/include/avif/avif.h` and AVIF reference fixtures | libavif 1.4.1, Joe Drago and contributors | BSD-2-Clause; see `third_party/libavif/LICENSE` |
 
 The committed oracle fixtures are observations produced by the pinned Pillow
 binary described in `pillow-oracle.lock.yaml`; they are not linked into the

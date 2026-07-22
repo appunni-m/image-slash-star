@@ -356,6 +356,55 @@ def encode_params(fmt, params):
         hotspot = take("hotspot")
         if hotspot is not None:
             kwargs["hotspot"] = tuple(hotspot) if isinstance(hotspot, list) else hotspot
+    elif fmt == "avif":
+        for name in (
+            "quality",
+            "subsampling",
+            "speed",
+            "max_threads",
+            "codec",
+            "range",
+            "tile_rows",
+            "tile_cols",
+            "alpha_premultiplied",
+            "autotiling",
+        ):
+            value = take(name)
+            if value is not None:
+                kwargs[name] = value
+        advanced = take("advanced")
+        if advanced is not None:
+            kwargs["advanced"] = advanced
+        animated = take("animated")
+        frames = take("frames")
+        preserve_duration = take("preserve_duration")
+        sequence_time = take("sequence_time")
+        if sequence_time is not None and (
+            not isinstance(sequence_time, int) or sequence_time <= 0
+        ):
+            raise RuntimeError("AVIF sequence_time must be a positive Unix timestamp")
+        if animated is not None:
+            kwargs["_manifest_animated"] = animated
+        if frames is not None:
+            kwargs["_manifest_frames"] = frames
+        if preserve_duration is not None:
+            kwargs["_manifest_preserve_duration"] = preserve_duration
+        metadata_options = {
+            "icc_hex": "icc_profile",
+            "exif_hex": "exif",
+            "xmp_hex": "xmp",
+        }
+        for manifest_name, pillow_name in metadata_options.items():
+            value = take(manifest_name)
+            if value is not None:
+                kwargs[pillow_name] = bytes.fromhex(value)
+        exif_orientation = take("exif_orientation")
+        if exif_orientation is not None:
+            from PIL import Image
+
+            exif = Image.Exif()
+            exif[274] = exif_orientation
+            kwargs["exif"] = exif
 
     if remaining:
         names = ", ".join(sorted(remaining))
@@ -405,6 +454,7 @@ def prepare_multiframe_call(image, kwargs):
     animated = kwargs.pop("_manifest_animated", None)
     frame_count = kwargs.pop("_manifest_frames", None)
     second_frame_mode = kwargs.pop("_manifest_second_frame_mode", None)
+    preserve_duration = kwargs.pop("_manifest_preserve_duration", False)
     if animated is None:
         return image, kwargs
     if not animated:
@@ -422,7 +472,38 @@ def prepare_multiframe_call(image, kwargs):
         frames[1] = frames[1].convert(second_frame_mode)
     kwargs["save_all"] = True
     kwargs["append_images"] = frames[1:requested]
+    if preserve_duration:
+        kwargs["duration"] = [
+            frame.info.get("duration", 0) for frame in frames[:requested]
+        ]
     return frames[0], kwargs
+
+
+def canonicalize_avif_sequence_times(data, unix_time):
+    """Pin libavif's otherwise wall-clock-dependent sequence timestamps."""
+    encoded = bytearray(data)
+    bmff_time = unix_time + 2_082_844_800
+    timestamp = bmff_time.to_bytes(8, "big")
+    replaced = []
+    for box_type in (b"mvhd", b"tkhd", b"mdhd"):
+        search_from = 0
+        while True:
+            type_offset = encoded.find(box_type, search_from)
+            if type_offset < 0:
+                break
+            box_offset = type_offset - 4
+            if box_offset >= 0:
+                box_size = int.from_bytes(encoded[box_offset:type_offset], "big")
+                version_offset = type_offset + 4
+                if box_size >= 28 and encoded[version_offset] == 1:
+                    encoded[version_offset + 4 : version_offset + 12] = timestamp
+                    encoded[version_offset + 12 : version_offset + 20] = timestamp
+                    replaced.append(box_type)
+            search_from = type_offset + 4
+    if sorted(replaced) != [b"mdhd", b"mvhd", b"tkhd"]:
+        names = ", ".join(value.decode("ascii") for value in replaced)
+        raise RuntimeError(f"unexpected AVIF sequence timestamp boxes: {names}")
+    return bytes(encoded)
 
 
 def parse_png_structure(data):
@@ -721,8 +802,8 @@ def write_pixel_ref(row, image, ref_name):
 
 
 def write_sequence_ref(row, image, fmt_name, asset_name):
-    """Write every Pillow-composited WebP frame as exact oracle evidence."""
-    if fmt_name != "webp" or getattr(image, "n_frames", 1) <= 1:
+    """Write every Pillow-observable WebP or AVIF frame as exact evidence."""
+    if fmt_name not in {"webp", "avif"} or getattr(image, "n_frames", 1) <= 1:
         row.pop("sequence", None)
         return
 
@@ -816,6 +897,11 @@ def json_pillow_value(value):
             "type": type(value).__name__,
             "tags": {str(key): json_pillow_value(item) for key, item in dict(value).items()},
         }
+    if type(value).__name__ == "Exif":
+        return {
+            "type": "Exif",
+            "tags": {str(key): json_pillow_value(item) for key, item in dict(value).items()},
+        }
     return value
 
 
@@ -823,6 +909,7 @@ def describe_encode_call(fmt_name, row):
     kwargs = encode_params(fmt_name, dict(row.get("params", {})))
     animated = kwargs.pop("_manifest_animated", None)
     frame_count = kwargs.pop("_manifest_frames", None)
+    preserve_duration = kwargs.pop("_manifest_preserve_duration", False)
     if animated:
         kwargs["save_all"] = True
         kwargs["append_images"] = {
@@ -830,12 +917,23 @@ def describe_encode_call(fmt_name, row):
             "start": 1,
             "count": (frame_count or 1) - 1,
         }
+        if preserve_duration:
+            kwargs["duration"] = {
+                "type": "durations_from_source",
+                "count": frame_count or 1,
+            }
     call = {
         "open": f"tests/fixtures/input/images/{row['source_format']}/{row['source_asset']}",
         "method": "PIL.Image.Image.save",
         "format": fmt_pil(fmt_name),
         "kwargs": json_pillow_value(kwargs),
     }
+    if fmt_name == "avif" and row.get("params", {}).get("sequence_time"):
+        call["output_canonicalization"] = {
+            "boxes": ["mvhd", "tkhd", "mdhd"],
+            "fields": ["creation_time", "modification_time"],
+            "unix_time": row["params"]["sequence_time"],
+        }
     if row.get("params", {}).get("encoded_only"):
         call["roundtrip"] = None
     else:
@@ -1243,6 +1341,10 @@ def generate_encode(manifest, matrix, target_format=None):
                 buf = io.BytesIO()
                 image_to_save.save(buf, format=fmt_pil(fmt_name), **kwargs)
                 encoded = buf.getvalue()
+                if fmt_name == "avif" and params.get("sequence_time"):
+                    encoded = canonicalize_avif_sequence_times(
+                        encoded, params["sequence_time"]
+                    )
                 if row.get("expect_error"):
                     row["oracle_status"] = "ok"
                     continue
@@ -1404,6 +1506,15 @@ def verify_primary_oracle(manifest):
             raise RuntimeError(
                 f"{format_name} oracle mismatch: Pillow feature {feature} "
                 f"must be {expected}, installed build reports {actual or 'unavailable'}"
+            )
+
+    from PIL import _avif
+
+    avif_codecs = _avif.codec_versions()
+    for expected_codec in ("dav1d [dec]:1.5.3", "aom [enc]:3.13.2"):
+        if expected_codec not in avif_codecs:
+            raise RuntimeError(
+                f"AVIF oracle codec mismatch: expected {expected_codec}, found {avif_codecs}"
             )
 
 

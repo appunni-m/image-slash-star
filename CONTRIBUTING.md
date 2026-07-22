@@ -5,7 +5,9 @@ Thank you for helping make `image/*` accurate, portable, and easy to audit.
 ## Before opening a change
 
 - Discuss large API or parity changes in an issue first.
-- Keep runtime code safe Rust and free of native-library dependencies.
+- Keep default runtime code safe Rust and free of native-library dependencies.
+  AVIF changes must stay inside its opt-in bridge, preserve exact version
+  gates, and document every unsafe invariant.
 - Preserve `bytemuck` as the only runtime utility dependency unless a proposal
   explains why a new dependency is necessary.
 - Keep format-specific code under `src/codecs/<format>/` and gate it with the
@@ -19,10 +21,14 @@ Install the pinned toolchain from `rust-toolchain.toml`, then run:
 
 ```bash
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features
-cargo test --all-features --test coverage_matrix_tests
-cargo check --no-default-features
+cargo clippy --workspace --all-targets
+cargo check --all-targets --no-default-features
 ```
+
+Native all-feature checks additionally require libavif 1.4.1 built with dav1d
+1.5.3 and libaom 3.13.2. Follow the AVIF setup in the README, then run the same
+Clippy command with `--all-features` and run
+`cargo test --all-features --test coverage_matrix_tests`.
 
 The integration suite is manifest-driven. Add or update a row in
 `manifest.yaml`, generate the exact Pillow reference, and compare actual bytes

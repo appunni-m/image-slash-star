@@ -1,13 +1,16 @@
-# image/*
+# image-slash-star
 
 [![CI](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml/badge.svg)](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml)
-[![License: MIT or Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+[![License: multi-license](https://img.shields.io/badge/license-see%20NOTICE-blue.svg)](#license)
 
-Pure-Rust image codec implementation with byte-exact parity against a pinned
-Pillow oracle.
+Image codec implementation with byte-exact parity against a pinned Pillow
+oracle.
 
-**Runtime is 100% Rust: zero Pillow imports, zero native codec FFI, and zero
-runtime codec libraries.** `bytemuck` is the only runtime utility dependency.
+The default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO codecs are 100% Rust:
+zero Pillow imports and zero native codec libraries. `bytemuck` remains the
+only third-party Rust runtime dependency. The opt-in `avif` feature uses the
+exact native library stack used by the oracle because a different AV1 encoder
+cannot produce libaom-identical bytes.
 
 The crate publishes three API surfaces:
 
@@ -20,8 +23,8 @@ The crate publishes three API surfaces:
 
 Project goal: exact Pillow 12.2.0 parity across public image behavior — success
 or error, mode, dimensions, metadata, frame data, decoded pixels, and
-deterministic encoded file bytes. Pillow and its bundled C libraries are
-oracles for fixtures only; runtime code stays Rust.
+deterministic encoded file bytes. Pillow itself remains fixture-only; the
+explicitly enabled AVIF feature is the sole native runtime boundary.
 
 ## Status
 
@@ -29,22 +32,23 @@ The manifest-driven parity matrix is the source of truth.
 
 | Metric | Count |
 | --- | ---: |
-| Manifest rows | 877 |
-| Active manifest rows | 871 |
-| Active decode rows | 574 |
-| Active encode rows | 265 |
+| Manifest rows | 1,037 |
+| Active manifest rows | 1,037 |
+| Active decode rows | 709 |
+| Active encode rows | 296 |
 | Operation rows | 32 |
-| Planned decode rows | 6 |
+| Planned or skipped rows | 0 |
 | Formats tracked | 8 |
 
-All active rows compare exact decoded pixels or exact encoded files. The six
-planned decode rows are AVIF coverage gaps; AVIF is intentionally not marked
-complete.
+All rows compare exact decoded pixels, exact sequence frames, exact encoded
+files, or an exact oracle success/error outcome. AVIF contributes six decode
+rows and 23 encode rows, including five-frame animation and invalid-input
+behavior.
 
 ## Format features
 
 Default features enable JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO. AVIF is
-opt-in and incomplete.
+opt-in because it links a fixed native stack.
 
 | Feature | Default | Status | Pinned oracle implementation |
 | --- | --- | --- | --- |
@@ -55,7 +59,7 @@ opt-in and incomplete.
 | `tiff` | yes | parity rows active | libtiff 4.7.1 |
 | `webp` | yes | parity rows active | libwebp 1.6.0 |
 | `ico` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `avif` | no | planned | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 |
+| `avif` | no | parity rows active | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 |
 
 Select only the formats an application needs by disabling default features and
 enabling the relevant format features.
@@ -65,11 +69,34 @@ enabling the relevant format features.
 ```bash
 git clone git@github.com:appunni-m/image-slash-star.git
 cd image-slash-star
-cargo test --all-features --test coverage_matrix_tests
+cargo check --all-targets
 ```
 
 The repository uses the Rust 2024 edition. The required Rust release and
 components are pinned in `rust-toolchain.toml`.
+
+To enable AVIF on a native target, install libavif 1.4.1 built with dav1d
+1.5.3 and libaom 3.13.2, or point the build at its library directory:
+
+```bash
+export PILLOW_RS_AVIF_LIB_DIR=/path/to/the/exact/libavif/lib
+cargo test --all-features --test coverage_matrix_tests
+```
+
+The build also accepts an exact `pkg-config` `libavif` installation. Every
+operation checks the loaded libavif and codec versions at runtime. On macOS
+arm64, the pinned oracle environment described below supplies the same bundled
+library used to create the references. AVIF compiles on `wasm32` so feature
+unification remains safe, but its operations return unsupported there.
+
+Linux contributors can build the complete pinned stack with the same flags as
+Pillow's wheel build:
+
+```bash
+scripts/build_avif_stack.sh /tmp/image-star-avif /tmp/image-star-avif-build
+PILLOW_RS_AVIF_LIB_DIR=/tmp/image-star-avif/lib \
+  cargo test --all-features --test coverage_matrix_tests
+```
 
 ## API at a glance
 
@@ -130,6 +157,10 @@ Regenerate deterministic assets and references, then run the parity suite:
 cargo test --all-features --test coverage_matrix_tests
 ```
 
+The matrix target requires every format feature by design; partial-feature
+builds are checked independently and never reinterpret unavailable codecs as
+passing or skipped parity rows.
+
 The generator refuses to rewrite references if the Python version, platform,
 Pillow wheel hash, extension hash, or bundled codec versions differ from the
 lock file. A different wheel is a different oracle.
@@ -167,11 +198,11 @@ DecodedImage / DecodedSequence
   └─ encode*()         → exact Pillow-observable container bytes
 ```
 
-The AVIF boundary is deliberately strict. Pillow uses libavif, dav1d, and
-libaom as its oracle stack, while this crate must implement the observable
-ISOBMFF, AV1 decode, deterministic AV1 encode, color, alpha, grid, metadata,
-and sequence behavior in Rust. Substituting a different encoder cannot prove
-byte-identical libaom output.
+The AVIF boundary is deliberately strict. A small repository-owned C bridge
+uses libavif 1.4.1 for container/color behavior, dav1d 1.5.3 for decoding, and
+libaom 3.13.2 for encoding. Unsafe Rust is isolated to one ownership wrapper;
+all other code remains under the crate-wide unsafe-code denial. Substituting a
+different encoder or version is rejected rather than treated as parity.
 
 ## Fixtures
 
@@ -191,8 +222,10 @@ When adding or changing fixtures:
 
 Start with `CONTRIBUTING.md`. The short version:
 
-- Keep runtime codec execution pure Rust.
-- Keep Pillow and C codec libraries as offline oracle tooling only.
+- Keep default runtime codec execution pure Rust and AVIF confined to its
+  fixed, opt-in native boundary.
+- Keep Pillow as offline oracle tooling and native codec calls confined to
+  the AVIF feature.
 - Prefer manifest-driven fixtures over narrow implementation probes.
 - Do not weaken byte expectations, fixture metadata, or failure checks.
 - Run the parity gate before claiming correctness.
@@ -203,8 +236,9 @@ Security issues should follow `SECURITY.md`.
 
 Original project code is available under your choice of
 [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT). The crate as a combined
-distribution is also subject to BSD-3-Clause, Zlib, IJG, and MIT-CMU terms for
-ported and derived portions. `NOTICE.md` maps repository paths to exact upstream
-versions and retained license files under `third_party/`.
+distribution is also subject to BSD-2-Clause, BSD-3-Clause, Zlib, IJG, and
+MIT-CMU terms for ported, derived, and retained portions. `NOTICE.md` maps
+repository paths to exact upstream versions and retained license files under
+`third_party/`.
 
 This software is based in part on the work of the Independent JPEG Group.

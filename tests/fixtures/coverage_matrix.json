@@ -9,20 +9,94 @@
           "expect_error": false,
           "format": "avif",
           "id": "baseline",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "The pure-Rust AVIF container and AV1 decoder are not implemented yet."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_baseline_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
         },
         {
           "asset": "10bit.avif",
           "category": "high",
-          "description": "10-bit AVIF",
+          "description": "12-bit animated AVIF decoded to Pillow RGBA8 output",
           "expect_error": false,
           "format": "avif",
           "id": "high_bitdepth",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "The pure-Rust AVIF container and AV1 decoder are not implemented yet."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "sequence": {
+            "loop_count": null,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_0.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 1000
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_1.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 1000
+              },
+              {
+                "index": 2,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_2.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 1000
+              },
+              {
+                "index": 3,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_3.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 1000
+              },
+              {
+                "index": 4,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_4.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "duration_ms": 1000
+              }
+            ]
+          }
         },
         {
           "asset": "alpha.avif",
@@ -31,9 +105,16 @@
           "expect_error": false,
           "format": "avif",
           "id": "with_alpha",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "The pure-Rust AVIF container and AV1 decoder are not implemented yet."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_alpha_avif.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ]
         },
         {
           "asset": "hdr.avif",
@@ -42,34 +123,727 @@
           "expect_error": false,
           "format": "avif",
           "id": "hdr",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "The pure-Rust AVIF container and AV1 decoder are not implemented yet."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_hdr_avif.bin",
+          "ref_bytes": 120000,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            200,
+            200
+          ]
         },
         {
           "asset": "grid.avif",
           "category": "grid",
-          "description": "Grid AVIF (tiled image)",
+          "description": "AVIF with a 1x2 color grid and per-cell alpha items",
           "expect_error": false,
           "format": "avif",
           "id": "grid",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "The pure-Rust AVIF container and AV1 decoder are not implemented yet."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin",
+          "ref_bytes": 25600,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            80,
+            80
+          ]
         },
         {
           "asset": "animated.avif",
           "category": "animated",
-          "description": "Animated AVIF (decode first frame)",
+          "description": "Five-frame AVIF with exact frame pixels and timing",
           "expect_error": false,
           "format": "avif",
           "id": "animated",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
-          "gap": "The pure-Rust AVIF container and AV1 decoder are not implemented yet."
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif.bin",
+          "ref_bytes": 67500,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            150,
+            150
+          ],
+          "sequence": {
+            "loop_count": null,
+            "frames": [
+              {
+                "index": 0,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_0.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "duration_ms": 33
+              },
+              {
+                "index": 1,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_1.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "duration_ms": 33
+              },
+              {
+                "index": 2,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_2.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "duration_ms": 33
+              },
+              {
+                "index": 3,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_3.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "duration_ms": 33
+              },
+              {
+                "index": 4,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_4.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "duration_ms": 33
+              }
+            ]
+          }
         }
       ],
-      "encode": []
+      "encode": [
+        {
+          "id": "enc_default_rgb",
+          "type": "encode",
+          "format": "avif",
+          "category": "default",
+          "description": "Pillow default AVIF settings from RGB input",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_default_rgb.bin",
+          "encoded_ref_bytes": 315,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_default_rgb.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_rgba",
+          "type": "encode",
+          "format": "avif",
+          "category": "rgba",
+          "description": "Pillow default AVIF settings from RGBA input",
+          "params": {
+            "size": [
+              4,
+              2
+            ],
+            "color_type": "RGBA"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_mixed.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_rgba.bin",
+          "encoded_ref_bytes": 519,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_rgba.bin",
+          "ref_bytes": 32,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            4,
+            2
+          ]
+        },
+        {
+          "id": "enc_luma",
+          "type": "encode",
+          "format": "avif",
+          "category": "luma",
+          "description": "Pillow conversion from L to RGB before AVIF encoding",
+          "params": {
+            "size": [
+              17,
+              13
+            ],
+            "color_type": "L"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2bit.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_luma.bin",
+          "encoded_ref_bytes": 355,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_luma.bin",
+          "ref_bytes": 663,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            13
+          ]
+        },
+        {
+          "id": "enc_luma_alpha",
+          "type": "encode",
+          "format": "avif",
+          "category": "luma",
+          "description": "Pillow conversion from LA to RGBA before AVIF encoding",
+          "params": {
+            "size": [
+              128,
+              128
+            ],
+            "color_type": "LA"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray_alpha.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_luma_alpha.bin",
+          "encoded_ref_bytes": 2671,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_luma_alpha.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_cmyk",
+          "type": "encode",
+          "format": "avif",
+          "category": "cmyk",
+          "description": "Pillow conversion from CMYK to RGB before AVIF encoding",
+          "params": {
+            "size": [
+              128,
+              128
+            ],
+            "color_type": "cmyk"
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_cmyk.jpg",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_cmyk.bin",
+          "encoded_ref_bytes": 4270,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_cmyk.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_bilevel",
+          "type": "encode",
+          "format": "avif",
+          "category": "bilevel",
+          "description": "Pillow conversion from packed mode 1 to RGB before AVIF encoding",
+          "params": {
+            "size": [
+              128,
+              128
+            ],
+            "color_type": "1bit"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "1bit.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_bilevel.bin",
+          "encoded_ref_bytes": 1858,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_bilevel.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_indexed_opaque",
+          "type": "encode",
+          "format": "avif",
+          "category": "indexed",
+          "description": "Pillow conversion from an opaque indexed palette to RGB",
+          "params": {
+            "size": [
+              128,
+              128
+            ],
+            "color_type": "P",
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "indexed.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_indexed_opaque.bin",
+          "encoded_ref_bytes": 7605,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_indexed_opaque.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_indexed_alpha",
+          "type": "encode",
+          "format": "avif",
+          "category": "indexed",
+          "description": "Pillow conversion from an indexed transparency table to RGBA",
+          "params": {
+            "size": [
+              128,
+              128
+            ],
+            "color_type": "P",
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "indexed_alpha.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_indexed_alpha.bin",
+          "encoded_ref_bytes": 4096,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_indexed_alpha.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ]
+        },
+        {
+          "id": "enc_quality_100_444",
+          "type": "encode",
+          "format": "avif",
+          "category": "quality",
+          "description": "Explicit lossless quantizer and 4:4:4 chroma request",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "quality": 100,
+            "subsampling": "4:4:4",
+            "max_threads": 1,
+            "autotiling": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_quality_100_444.bin",
+          "encoded_ref_bytes": 307,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_quality_100_444.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_limited_422",
+          "type": "encode",
+          "format": "avif",
+          "category": "limited",
+          "description": "Limited-range 4:2:2 AVIF with the fastest encoder speed",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "range": "limited",
+            "subsampling": "4:2:2",
+            "speed": 10,
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_limited_422.bin",
+          "encoded_ref_bytes": 310,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_limited_422.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_alpha_premultiplied",
+          "type": "encode",
+          "format": "avif",
+          "category": "alpha",
+          "description": "RGBA AVIF with the alpha-premultiplied signal",
+          "params": {
+            "size": [
+              4,
+              2
+            ],
+            "color_type": "RGBA",
+            "alpha_premultiplied": true,
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_mixed.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_alpha_premultiplied.bin",
+          "encoded_ref_bytes": 535,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_alpha_premultiplied.bin",
+          "ref_bytes": 32,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            4,
+            2
+          ]
+        },
+        {
+          "id": "enc_monochrome",
+          "type": "encode",
+          "format": "avif",
+          "category": "monochrome",
+          "description": "AVIF monochrome YUV 4:0:0 output",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "subsampling": "4:0:0",
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_monochrome.bin",
+          "encoded_ref_bytes": 297,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_monochrome.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_explicit_tiles",
+          "type": "encode",
+          "format": "avif",
+          "category": "explicit",
+          "description": "Explicit tile row and column settings with autotiling disabled",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "tile_rows": 1,
+            "tile_cols": 1,
+            "autotiling": false,
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_explicit_tiles.bin",
+          "encoded_ref_bytes": 315,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_explicit_tiles.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_metadata",
+          "type": "encode",
+          "format": "avif",
+          "category": "metadata",
+          "description": "ICC, EXIF, and XMP metadata copied through libavif",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "icc_hex": "70696c6c6f772d72732d696363",
+            "exif_hex": "45786966000049492a000800000000000000",
+            "xmp_hex": "3c783a786d706d6574612f3e",
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_metadata.bin",
+          "encoded_ref_bytes": 512,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_metadata.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_orientation",
+          "type": "encode",
+          "format": "avif",
+          "category": "orientation",
+          "description": "EXIF orientation converted to AVIF irot/imir transform metadata",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "exif_orientation": 6,
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_orientation.bin",
+          "encoded_ref_bytes": 325,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_orientation.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_advanced_tune",
+          "type": "encode",
+          "format": "avif",
+          "category": "advanced",
+          "description": "Ordered libaom codec-specific options matching Pillow advanced",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "codec": "aom",
+            "advanced": {
+              "tune": "psnr"
+            },
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_advanced_tune.bin",
+          "encoded_ref_bytes": 308,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_advanced_tune.bin",
+          "ref_bytes": 18,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "enc_animation",
+          "type": "encode",
+          "format": "avif",
+          "category": "animation",
+          "description": "Five AVIF frames with exact source durations and encoded bytes",
+          "params": {
+            "size": [
+              150,
+              150
+            ],
+            "color_type": "RGB",
+            "animated": true,
+            "frames": 5,
+            "preserve_duration": true,
+            "sequence_time": 1,
+            "max_threads": 1
+          },
+          "status": "active",
+          "source_format": "avif",
+          "source_asset": "animated.avif",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_animation.bin",
+          "encoded_ref_bytes": 1232,
+          "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_animation.bin",
+          "ref_bytes": 67500,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            150,
+            150
+          ]
+        },
+        {
+          "id": "enc_invalid_subsampling",
+          "type": "encode",
+          "format": "avif",
+          "category": "invalid",
+          "description": "Reject the same invalid subsampling string as Pillow",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "subsampling": "invalid"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Invalid subsampling: invalid"
+        },
+        {
+          "id": "enc_invalid_subsampling_alias",
+          "type": "encode",
+          "format": "avif",
+          "category": "invalid",
+          "description": "Reject JPEG-style 444 because Pillow AVIF requires 4:4:4",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "subsampling": "444"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Invalid subsampling: 444"
+        },
+        {
+          "id": "enc_invalid_range",
+          "type": "encode",
+          "format": "avif",
+          "category": "invalid",
+          "description": "Reject the same invalid YUV range as Pillow",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "range": "invalid"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Invalid range"
+        },
+        {
+          "id": "enc_decoder_only_codec",
+          "type": "encode",
+          "format": "avif",
+          "category": "decoder",
+          "description": "Reject dav1d as an AVIF encoder exactly as Pillow does",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "codec": "dav1d"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Invalid saving codec"
+        },
+        {
+          "id": "enc_invalid_quality",
+          "type": "encode",
+          "format": "avif",
+          "category": "invalid",
+          "description": "Reject a quality outside Pillow's inclusive 0 to 100 range",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "quality": 101
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Invalid quality setting"
+        },
+        {
+          "id": "enc_invalid_advanced",
+          "type": "encode",
+          "format": "avif",
+          "category": "invalid",
+          "description": "Reject an unknown libaom codec-specific option",
+          "params": {
+            "size": [
+              2,
+              3
+            ],
+            "color_type": "RGB",
+            "codec": "aom",
+            "advanced": {
+              "foo": "bar"
+            }
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "2x3.png",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "Failed to encode image: Invalid codec-specific option"
+        }
+      ]
     },
     "bmp": {
       "decode": [
@@ -17738,13 +18512,13 @@
     }
   },
   "summary": {
-    "total_rows": 1014,
+    "total_rows": 1037,
     "decode_rows": 709,
-    "encode_rows": 273,
+    "encode_rows": 296,
     "formats": 8,
-    "assets_available": 702,
-    "decode_active": 703,
-    "decode_planned": 6,
+    "assets_available": 708,
+    "decode_active": 709,
+    "decode_planned": 0,
     "encode_not_wired": 0,
     "operation_rows": 32
   },

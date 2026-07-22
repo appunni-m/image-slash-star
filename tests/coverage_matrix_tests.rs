@@ -1,5 +1,15 @@
 // AS PER DESIGN — DO NOT REMOVE:
 // Tests may use unwrap/expect. The deny lints are for production code only.
+#![cfg(all(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif"
+))]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 #![allow(clippy::unwrap_in_result)]
@@ -178,8 +188,22 @@ fn option_text(value: &serde_json::Value) -> String {
 fn extra_encode_options(params: &HashMap<String, serde_json::Value>) -> HashMap<String, String> {
     params
         .iter()
+        .filter(|(key, _)| key.as_str() != "advanced")
         .map(|(key, value)| (key.clone(), option_text(value)))
         .collect()
+}
+
+fn advanced_encode_options(params: &HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
+    params
+        .get("advanced")
+        .and_then(serde_json::Value::as_object)
+        .map(|values| {
+            values
+                .iter()
+                .map(|(key, value)| (key.clone(), option_text(value)))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn read_le_u16(data: &[u8], offset: usize) -> Option<u16> {
@@ -774,6 +798,18 @@ fn assert_encoded_contract(
         "jpeg" => assert_jpeg_contract(params, encoded),
         "png" => assert_png_contract(params, encoded),
         "tiff" => assert_tiff_contract(params, encoded),
+        "avif" => {
+            if encoded.get(4..8) != Some(b"ftyp")
+                || !matches!(
+                    encoded.get(8..12),
+                    Some(b"avif" | b"avis" | b"mif1" | b"msf1")
+                )
+            {
+                Err("encoded AVIF has no accepted ftyp major brand".to_owned())
+            } else {
+                Ok(())
+            }
+        }
         _ => Ok(()),
     }?;
     if let Some(size) = params.get("size").and_then(serde_json::Value::as_array) {
@@ -1095,6 +1131,7 @@ fn decode_direct(data: &[u8], format: &str) -> Option<img::DecodedImage> {
         "tiff" => img::codecs::tiff::decode::decode(data),
         "webp" => img::codecs::webp::decode::decode(data),
         "ico" => img::codecs::ico::decode::decode(data),
+        "avif" => img::codecs::avif::decode::decode(data),
         _ => None,
     }
 }
@@ -1105,13 +1142,14 @@ fn encode_direct(
     options: &img::encode_options::EncodeOptions,
 ) -> Option<Vec<u8>> {
     match format {
-        img::ImageFormat::Jpeg | img::ImageFormat::Avif => None,
+        img::ImageFormat::Jpeg => None,
         img::ImageFormat::Png => img::codecs::png::encode::encode(image, options),
         img::ImageFormat::Gif => img::codecs::gif::encode::encode(image, options),
         img::ImageFormat::Bmp => img::codecs::bmp::encode::encode(image, options),
         img::ImageFormat::Tiff => img::codecs::tiff::encode::encode(image, options),
         img::ImageFormat::WebP => img::codecs::webp::encode::encode(image, options),
         img::ImageFormat::Ico => img::codecs::ico::encode::encode(image, options),
+        img::ImageFormat::Avif => img::codecs::avif::encode::encode(image, options),
     }
 }
 
@@ -1168,8 +1206,11 @@ fn test_decode_matrix() {
             let decoded = img::decode(&data);
             let direct = decode_direct(&data, fmt_name);
             if row.expect_error.unwrap_or(false) {
-                let sequence_rejected = fmt_name != "webp"
-                    || img::codecs::webp::decode::decode_sequence(&data).is_none();
+                let sequence_rejected = match fmt_name.as_str() {
+                    "webp" => img::codecs::webp::decode::decode_sequence(&data).is_none(),
+                    "avif" => img::codecs::avif::decode::decode_sequence(&data).is_none(),
+                    _ => true,
+                };
                 if decoded.is_none() && direct.is_none() && sequence_rejected {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
@@ -1393,6 +1434,7 @@ fn test_encode_matrix() {
                     .get("interlace")
                     .or_else(|| row.params.get("interlaced"))
                     .and_then(|v| v.as_bool()),
+                advanced: advanced_encode_options(&row.params),
                 extra: extra_encode_options(&row.params),
             };
 
@@ -1404,6 +1446,7 @@ fn test_encode_matrix() {
                 "tiff" => img::ImageFormat::Tiff,
                 "webp" => img::ImageFormat::WebP,
                 "ico" => img::ImageFormat::Ico,
+                "avif" => img::ImageFormat::Avif,
                 _ => {
                     eprintln!(
                         "  FAIL [{}]: active format {fmt_name} has no encoder",
@@ -2297,9 +2340,15 @@ fn exercise_type_metadata() {
         img::detect_format(b"\0\0\0\x18ftypavif\0\0\0\0"),
         Some(img::ImageFormat::Avif)
     );
+    for brand in [b"avis", b"mif1", b"msf1"] {
+        let mut header = *b"\0\0\0\x18ftyp____";
+        header[8..12].copy_from_slice(brand);
+        assert_eq!(img::detect_format(&header), Some(img::ImageFormat::Avif));
+    }
+    assert_eq!(img::detect_format(b"\0\0\0\x18ftypheic"), None);
     assert!(img::decode(b"\0\0\0\x18ftypavif\0\0\0\0").is_none());
-    assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_none());
-    assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_none());
+    assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_some());
+    assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_some());
     let zero_png = img::DecodedImage::new(0, 1, vec![], img::ColorType::L8);
     assert!(img::codecs::png::encode::encode(&zero_png, &Default::default()).is_none());
     let unsupported_tiff = img::DecodedImage::new(1, 1, vec![0; 4], img::ColorType::La16);

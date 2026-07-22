@@ -1,0 +1,292 @@
+{
+  "format_version": 3,
+  "oracle": {
+    "implementation": "Pillow",
+    "version": "12.2.0",
+    "profile": "pillow-12.2.0-cp312-macos-arm64",
+    "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421",
+    "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "operation": {
+    "module": "Encode",
+    "target": "avif"
+  },
+  "cases": [
+    {
+      "id": "enc_default_rgb",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_default_rgb.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_default_rgb.bin",
+      "encoded_ref_bytes": 315
+    },
+    {
+      "id": "enc_rgba",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_rgba.bin",
+      "ref_bytes": 32,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        4,
+        2
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_rgba.bin",
+      "encoded_ref_bytes": 519
+    },
+    {
+      "id": "enc_luma",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_luma.bin",
+      "ref_bytes": 663,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        13
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_luma.bin",
+      "encoded_ref_bytes": 355
+    },
+    {
+      "id": "enc_luma_alpha",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_luma_alpha.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_luma_alpha.bin",
+      "encoded_ref_bytes": 2671
+    },
+    {
+      "id": "enc_cmyk",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_cmyk.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_cmyk.bin",
+      "encoded_ref_bytes": 4270
+    },
+    {
+      "id": "enc_bilevel",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_bilevel.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_bilevel.bin",
+      "encoded_ref_bytes": 1858
+    },
+    {
+      "id": "enc_indexed_opaque",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_indexed_opaque.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_indexed_opaque.bin",
+      "encoded_ref_bytes": 7605
+    },
+    {
+      "id": "enc_indexed_alpha",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_indexed_alpha.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_indexed_alpha.bin",
+      "encoded_ref_bytes": 4096
+    },
+    {
+      "id": "enc_quality_100_444",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_quality_100_444.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_quality_100_444.bin",
+      "encoded_ref_bytes": 307
+    },
+    {
+      "id": "enc_limited_422",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_limited_422.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_limited_422.bin",
+      "encoded_ref_bytes": 310
+    },
+    {
+      "id": "enc_alpha_premultiplied",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_alpha_premultiplied.bin",
+      "ref_bytes": 32,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        4,
+        2
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_alpha_premultiplied.bin",
+      "encoded_ref_bytes": 535
+    },
+    {
+      "id": "enc_monochrome",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_monochrome.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_monochrome.bin",
+      "encoded_ref_bytes": 297
+    },
+    {
+      "id": "enc_explicit_tiles",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_explicit_tiles.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_explicit_tiles.bin",
+      "encoded_ref_bytes": 315
+    },
+    {
+      "id": "enc_metadata",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_metadata.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_metadata.bin",
+      "encoded_ref_bytes": 512
+    },
+    {
+      "id": "enc_orientation",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_orientation.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_orientation.bin",
+      "encoded_ref_bytes": 325
+    },
+    {
+      "id": "enc_advanced_tune",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_advanced_tune.bin",
+      "ref_bytes": 18,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        2,
+        3
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_advanced_tune.bin",
+      "encoded_ref_bytes": 308
+    },
+    {
+      "id": "enc_animation",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.avif_enc_animation.bin",
+      "ref_bytes": 67500,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        150,
+        150
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.avif_enc_animation.bin",
+      "encoded_ref_bytes": 1232
+    },
+    {
+      "id": "enc_invalid_subsampling",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid subsampling: invalid"
+    },
+    {
+      "id": "enc_invalid_subsampling_alias",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid subsampling: 444"
+    },
+    {
+      "id": "enc_invalid_range",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid range"
+    },
+    {
+      "id": "enc_decoder_only_codec",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid saving codec"
+    },
+    {
+      "id": "enc_invalid_quality",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid quality setting"
+    },
+    {
+      "id": "enc_invalid_advanced",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Failed to encode image: Invalid codec-specific option"
+    }
+  ]
+}

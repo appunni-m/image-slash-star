@@ -82,6 +82,11 @@ pub fn decode_sequence_format(data: &[u8], format: ImageFormat) -> Option<Decode
         return webp::decode::decode_sequence(data);
     }
 
+    #[cfg(feature = "avif")]
+    if format == ImageFormat::Avif {
+        return avif::decode::decode_sequence(data);
+    }
+
     decode_format(data, format).map(DecodedSequence::from_image)
 }
 
@@ -141,6 +146,11 @@ pub fn encode_sequence_format(
         return gif::encode::encode_sequence(sequence, options);
     }
 
+    #[cfg(feature = "avif")]
+    if format == ImageFormat::Avif {
+        return avif::encode::encode_sequence(sequence, options);
+    }
+
     let image = &sequence.frames[0].image;
     (sequence.frames.len() == 1).then(|| encode_format(image, format, options))?
 }
@@ -191,6 +201,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = validate_decoded_image(invalid_image);
 
     compression::__coverage_exercise_private_branches();
+    #[cfg(feature = "avif")]
+    avif::__coverage_exercise_private_branches();
     #[cfg(feature = "gif")]
     gif::__coverage_exercise_private_branches();
     #[cfg(feature = "ico")]
