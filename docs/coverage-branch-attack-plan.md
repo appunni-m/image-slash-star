@@ -12,10 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `c358deba-624c-4208-8704-1ad505337e73`
-- Current measured commit metadata: `50b8163cb2d69d43fc040f50ff936bb518a7d444`
-- Current coverage source state: dirty retained Attempt 95 fixture batch on
-  pushed `main` commit `50b8163`.
+- Current snapshot: `f6d6fea5-024d-4d7e-8c96-93a3b825ba3d`
+- Current measured commit metadata: `182c14f55324caf00536a4bd50b9c7cd54762581`
+- Current coverage source state: pushed `main` commit `182c14f`.
 - Lines: 25864 / 25867
 - Branches: 3441 / 3446
 - Functions: 1594 / 1594
@@ -165,6 +164,12 @@ Decomposition step:
   `c358deba-624c-4208-8704-1ad505337e73`, because it is the smallest measured
   set in this sweep that improves aggregate regions without line/function
   regression.
+- Clean re-anchor after committing and pushing the retained batch:
+  run `dcd3db02-6776-4049-98bf-1087c9faaf44`, snapshot
+  `f6d6fea5-024d-4d7e-8c96-93a3b825ba3d`, pushed commit
+  `182c14f55324caf00536a4bd50b9c7cd54762581`. Counts were unchanged from the
+  retained full-batch measurement: `25864 / 25867` lines, `3441 / 3446`
+  branches, `1594 / 1594` functions, and `41638 / 42126` regions.
 
 ## Attempt 93 plan: VP8 retained corpus fixture search
 
