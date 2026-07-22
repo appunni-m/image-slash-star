@@ -1874,6 +1874,126 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_container_vp8l_alpha_header_only",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_6",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_8",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_12",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_16",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_24",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_32",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_64",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_128",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_plane_distance_truncated_12",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_meta_cache_truncated_10",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8l_single_cache_truncated_18",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_container_vp8_empty_payload",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -2350,6 +2470,19 @@
       "ref_size": [
         128,
         128
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_alpha_missing_chunk",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_alpha_missing_chunk_webp.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
       ]
     },
     {

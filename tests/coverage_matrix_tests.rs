@@ -1714,14 +1714,37 @@ where
     let _ = enumerate_rows.clone().count();
 
     let pixel = *buffer.get_pixel(0, 0);
+    let one_pixel = img::ImageBuffer::from_pixel(1, 1, pixel);
+    let mut one_pixel_iter = one_pixel.pixels();
+    assert!(one_pixel_iter.next_back().is_some());
+    assert!(one_pixel_iter.next_back().is_none());
+    let mut one_row_iter = one_pixel.rows();
+    assert!(one_row_iter.next_back().is_some());
+    assert!(one_row_iter.next_back().is_none());
+    let mut one_enumerate_rows = one_pixel.enumerate_rows();
+    assert!(one_enumerate_rows.next().is_some());
+    assert!(one_enumerate_rows.next().is_none());
+
     assert!(buffer.get_pixel_checked(0, 0).is_some());
     assert!(buffer.get_pixel_checked(width, 0).is_none());
     assert!(buffer.get_pixel_checked(0, height).is_none());
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = buffer.get_pixel(width, 0);
+    }));
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = buffer.get_pixel(0, height);
+    }));
     buffer.put_pixel(0, 0, pixel);
     buffer[(0, 0)] = pixel;
     assert!(buffer.get_pixel_mut_checked(0, 0).is_some());
     assert!(buffer.get_pixel_mut_checked(width, 0).is_none());
     assert!(buffer.get_pixel_mut_checked(0, height).is_none());
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = buffer.get_pixel_mut(width, 0);
+    }));
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = buffer.get_pixel_mut(0, height);
+    }));
     let _ = buffer[(0, 0)];
     {
         let mut pixels = buffer.pixels_mut();
@@ -1751,6 +1774,24 @@ where
         let _ = rows.len();
         let _ = format!("{rows:?}");
         let _ = rows.count();
+    }
+    {
+        let mut one_pixel_mut = img::ImageBuffer::from_pixel(1, 1, pixel);
+        let mut pixels = one_pixel_mut.pixels_mut();
+        assert!(pixels.next_back().is_some());
+        assert!(pixels.next_back().is_none());
+    }
+    {
+        let mut one_row_mut = img::ImageBuffer::from_pixel(1, 1, pixel);
+        let mut rows = one_row_mut.rows_mut();
+        assert!(rows.next_back().is_some());
+        assert!(rows.next_back().is_none());
+    }
+    {
+        let mut one_enumerate_rows_mut = img::ImageBuffer::from_pixel(1, 1, pixel);
+        let mut rows = one_enumerate_rows_mut.enumerate_rows_mut();
+        assert!(rows.next().is_some());
+        assert!(rows.next().is_none());
     }
 
     assert!(GenericImageView::in_bounds(buffer, 0, 0));

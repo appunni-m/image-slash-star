@@ -1726,6 +1726,18 @@ formats:
       - animated_alpha_vp8_too_large.webp
       - alpha_invalid_preprocessing.webp
       - alpha_invalid_compression.webp
+      - vp8l_alpha_header_only.webp
+      - vp8l_truncated_6.webp
+      - vp8l_truncated_8.webp
+      - vp8l_truncated_12.webp
+      - vp8l_truncated_16.webp
+      - vp8l_truncated_24.webp
+      - vp8l_truncated_32.webp
+      - vp8l_truncated_64.webp
+      - vp8l_truncated_128.webp
+      - vp8l_plane_distance_truncated_12.webp
+      - vp8l_meta_cache_truncated_10.webp
+      - vp8l_single_cache_truncated_18.webp
       - vp8_empty_payload.webp
       - vp8_three_byte_payload.webp
       - vp8_short_header_payload.webp
@@ -1768,6 +1780,7 @@ formats:
       - animated_bad_nested_chunk.webp
       - extended_missing_exif_chunk.webp
       - extended_missing_xmp_chunk.webp
+      - alpha_missing_chunk.webp
       - vp8_missing_last_byte.webp
       - vp8l_unused_invalid_one_symbol.webp
     encode_edge_cases:
@@ -2152,10 +2165,17 @@ formats:
       - lzw_clear_only.tiff
       - lzw_end_only.tiff
       - ascii_width.tiff
+      - ascii_height.tiff
+      - ascii_bits.tiff
+      - ascii_strip_offsets.tiff
+      - ascii_compressed_strip_byte_counts.tiff
+      - compressed_descending_strip_offsets.tiff
       - uncompressed_extra_strips.tiff
       - compressed_bad_strip_counts.tiff
       - be_16bit_unsupported_photometric.tiff
       - unsupported_sample_format.tiff
+      - ascii_tile_width.tiff
+      - ascii_tile_height.tiff
       expect_error: true
     encode_edge_cases:
     - id: enc_compress_none

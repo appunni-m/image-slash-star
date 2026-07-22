@@ -66,7 +66,7 @@ pub(crate) struct OptimalTable {
 }
 
 /// Build libjpeg's length-limited optimal table from observed symbol counts.
-pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
+pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> OptimalTable {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c:947-1110
     const MAX_CODE_LENGTH: usize = 32;
     const SENTINEL_FREQUENCY: u64 = 1_000_000_001;
@@ -167,11 +167,11 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> Option<OptimalTable> {
         positions[length] = target + 1;
     }
     let derived = derive_table(&bits, &values);
-    Some(OptimalTable {
+    OptimalTable {
         bits,
         values,
         derived,
-    })
+    }
 }
 
 #[cfg(coverage)]
@@ -180,7 +180,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for (index, frequency) in frequencies.iter_mut().take(18).enumerate() {
         *frequency = 1u64 << index;
     }
-    let table = optimal_table(&frequencies).expect("pathological frequencies should build");
+    let table = optimal_table(&frequencies);
     assert!(!table.values.is_empty());
 }
 

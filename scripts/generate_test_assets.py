@@ -2437,8 +2437,8 @@ def gen_webp():
     }.items():
         write_truncated_vp8(name, keep)
 
-    def write_truncated_vp8l(name, keep):
-        source = (d / "lossless.webp").read_bytes()
+    def write_truncated_vp8l(name, keep, source_name="lossless.webp"):
+        source = (d / source_name).read_bytes()
         chunk = source.find(b"VP8L")
         length = struct.unpack_from("<I", source, chunk + 4)[0]
         payload = source[chunk + 8 : chunk + 8 + length]
@@ -2451,8 +2451,22 @@ def gen_webp():
         struct.pack_into("<I", malformed, 4, len(malformed) - 8)
         (d / name).write_bytes(malformed)
 
-    for name, keep in {"vp8l_header_only.webp": 5}.items():
-        write_truncated_vp8l(name, keep)
+    for name, keep, source_name in (
+        ("vp8l_header_only.webp", 5, "lossless.webp"),
+        ("vp8l_alpha_header_only.webp", 5, "with_alpha.webp"),
+        ("vp8l_truncated_6.webp", 6, "lossless.webp"),
+        ("vp8l_truncated_8.webp", 8, "lossless.webp"),
+        ("vp8l_truncated_12.webp", 12, "lossless.webp"),
+        ("vp8l_truncated_16.webp", 16, "lossless.webp"),
+        ("vp8l_truncated_24.webp", 24, "lossless.webp"),
+        ("vp8l_truncated_32.webp", 32, "lossless.webp"),
+        ("vp8l_truncated_64.webp", 64, "lossless.webp"),
+        ("vp8l_truncated_128.webp", 128, "lossless.webp"),
+        ("vp8l_plane_distance_truncated_12.webp", 12, "vp8l_plane_distance_clamp.webp"),
+        ("vp8l_meta_cache_truncated_10.webp", 10, "vp8l_meta_cache_fast_fill.webp"),
+        ("vp8l_single_cache_truncated_18.webp", 18, "vp8l_single_cache_peek.webp"),
+    ):
+        write_truncated_vp8l(name, keep, source_name)
 
     def write_vp8l_bits(name, bits, width=1, height=1):
         encoded = bytearray((len(bits) + 7) // 8)
@@ -2717,6 +2731,11 @@ def gen_webp():
 
     write_mutated_webp("extended_missing_exif_chunk.webp", "exif.webp", remove_top_level_chunk(b"EXIF"))
     write_mutated_webp("extended_missing_xmp_chunk.webp", "xmp.webp", remove_top_level_chunk(b"XMP "))
+    write_mutated_webp(
+        "alpha_missing_chunk.webp",
+        "alpha_lossy_horizontal.webp",
+        remove_top_level_chunk(b"ALPH"),
+    )
 
     def write_vp8x_container(name, flags=0, trailing=b""):
         vp8x_payload = bytearray([flags, 0, 0, 0])
@@ -3347,6 +3366,41 @@ def mutate_tiff_tag_type(source, destination, tag, field_type):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
+def write_descending_strip_offsets_tiff(path):
+    """Write a compressed classic TIFF with inferred descending strip offsets."""
+    entries = [
+        (256, 4, 1, 1),
+        (257, 4, 1, 2),
+        (258, 3, 1, 8),
+        (259, 3, 1, 32773),
+        (262, 3, 1, 1),
+        (273, 4, 2, "offsets"),
+        (277, 3, 1, 1),
+        (278, 4, 1, 1),
+        (279, 4, 0, 0),
+        (284, 3, 1, 1),
+    ]
+    entries.sort()
+    external_start = 8 + 2 + len(entries) * 12 + 4
+    payload = b"\x00\x07\x00\x08"
+    pixel_offset = external_start + 8
+    offsets = (pixel_offset + 2, pixel_offset)
+    out = bytearray(b"II*\0\x08\0\0\0")
+    out.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, value in entries:
+        out.extend(struct.pack("<HHI", tag, field_type, count))
+        if value == "offsets":
+            out.extend(struct.pack("<I", external_start))
+        elif field_type == 3:
+            out.extend(struct.pack("<H", value) + b"\0\0")
+        else:
+            out.extend(struct.pack("<I", value))
+    out.extend(struct.pack("<I", 0))
+    out.extend(struct.pack("<II", *offsets))
+    out.extend(payload)
+    path.write_bytes(out)
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -3486,8 +3540,15 @@ def gen_tiff():
     mutate_tiff_tag_type(d / "rgb.tiff", d / "byte_strip_offset.tiff", 273, 1)
     mutate_tiff_tag_type(d / "rgb_dpi.tiff", d / "unknown_field_type.tiff", 282, 13)
     mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_width.tiff", 256, 2)
+    mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_height.tiff", 257, 2)
+    mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_bits.tiff", 258, 2)
+    mutate_tiff_tag_type(d / "rgb.tiff", d / "ascii_strip_offsets.tiff", 273, 2)
+    mutate_tiff_tag_type(
+        d / "deflate.tiff", d / "ascii_compressed_strip_byte_counts.tiff", 279, 2
+    )
     mutate_tiff_tag_count(d / "deflate.tiff", d / "compressed_empty_strip_counts.tiff", 279, 0)
     mutate_tiff_tag_count(d / "deflate.tiff", d / "compressed_bad_strip_counts.tiff", 279, 2)
+    write_descending_strip_offsets_tiff(d / "compressed_descending_strip_offsets.tiff")
     mutate_tiff_tag_count(d / "lzw_no_eoi.tiff", d / "lzw_post_ifd_empty_count.tiff", 279, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_bad_byte_count.tiff", 279, 1)
     mutate_tiff_tag(d / "rgb.tiff", d / "uncompressed_missing_strips.tiff", 278, 1)
@@ -3512,6 +3573,8 @@ def gen_tiff():
     mutate_tiff_tag(d / "rgb.tiff", d / "oob_strip.tiff", 273, 0xFFFF_FFF0)
     mutate_tiff_tag_count(d / "rgb.tiff", d / "empty_strip_offsets.tiff", 273, 0)
     mutate_tiff_tag(d / "tiled.tiff", d / "zero_tile_width.tiff", 322, 0)
+    mutate_tiff_tag_type(d / "tiled.tiff", d / "ascii_tile_width.tiff", 322, 2)
+    mutate_tiff_tag_type(d / "tiled.tiff", d / "ascii_tile_height.tiff", 323, 2)
     mutate_tiff_tag_count(d / "tiled.tiff", d / "empty_tile_offsets.tiff", 324, 0)
     mutate_tiff_tag_count(d / "tiled.tiff", d / "empty_tile_byte_counts.tiff", 325, 0)
     mutate_tiff_tag_count(

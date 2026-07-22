@@ -1063,6 +1063,56 @@
       "ref_size": null
     },
     {
+      "id": "error_bad_ifd_ascii_height",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid dimensions",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_ascii_bits",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_ascii_strip_offsets",
+      "status": "error",
+      "error_type": "builtins.TypeError",
+      "error_message": "'str' object cannot be interpreted as an integer",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_ascii_compressed_strip_byte_counts",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_compressed_descending_strip_offsets",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "decoder error -2",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_bad_ifd_uncompressed_extra_strips",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -1097,6 +1147,26 @@
       "status": "error",
       "error_type": "PIL.UnidentifiedImageError",
       "error_message": "cannot identify image file <bytes>",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_ascii_tile_width",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid tile dimensions",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_bad_ifd_ascii_tile_height",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "Invalid tile dimensions",
       "ref_path": null,
       "ref_bytes": null,
       "ref_mode": null,

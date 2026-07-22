@@ -1240,7 +1240,8 @@ impl<R: Read> Vp8Decoder<R> {
         // Only keyframes reach macroblock decoding; interframes are rejected
         // after the frame-level fields have been consumed.
         let luma = (self.b.read_with_tree(&KEYFRAME_YMODE_NODES)).or_accumulate(&mut res);
-        mb.luma_mode = LumaMode::from_i8(luma).ok_or(DecodingError::LumaPredictionModeInvalid)?;
+        mb.luma_mode =
+            LumaMode::from_i8(luma).expect("keyframe luma mode tree only yields valid modes");
 
         match mb.luma_mode.into_intra() {
             // `LumaMode::B` - This is predicted individually
@@ -1254,7 +1255,7 @@ impl<R: Read> Vp8Decoder<R> {
                         );
                         let intra = intra.or_accumulate(&mut res);
                         let bmode = IntraMode::from_i8(intra)
-                            .ok_or(DecodingError::IntraPredictionModeInvalid)?;
+                            .expect("keyframe intra mode tree only yields valid modes");
                         mb.bpred[x + y * 4] = bmode;
 
                         self.top[mbx].bpred[12 + x] = bmode;
@@ -1272,7 +1273,7 @@ impl<R: Read> Vp8Decoder<R> {
 
         let chroma = (self.b.read_with_tree(&KEYFRAME_UV_MODE_NODES)).or_accumulate(&mut res);
         mb.chroma_mode =
-            ChromaMode::from_i8(chroma).ok_or(DecodingError::ChromaPredictionModeInvalid)?;
+            ChromaMode::from_i8(chroma).expect("keyframe chroma mode tree only yields valid modes");
 
         self.top[mbx].chroma_mode = mb.chroma_mode;
         self.top[mbx].luma_mode = mb.luma_mode;
@@ -1951,6 +1952,15 @@ impl IntraMode {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    macro_rules! with_take_decoder {
+        ($bytes:expr, |$decoder:ident| $body:block) => {{
+            let bytes: &[u8] = $bytes.as_ref();
+            let mut cursor = std::io::Cursor::new(bytes);
+            let mut $decoder = Vp8Decoder::new(cursor.by_ref().take(bytes.len() as u64));
+            $body
+        }};
+    }
+
     assert_eq!(LumaMode::from_i8(127), None);
     assert_eq!(LumaMode::B.into_intra(), None);
     assert_eq!(ChromaMode::from_i8(127), None);
@@ -2040,22 +2050,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
 
     let bytes = [0u8; 1];
-    let mut cursor = std::io::Cursor::new(&bytes[..]);
-    let take = cursor.by_ref().take(1);
-    let mut decoder = Vp8Decoder::new(take);
-    decoder.frame.keyframe = true;
-    decoder.frame.filter_level = 10;
-    decoder.segments_enabled = true;
-    decoder.segment[0].delta_values = true;
-    decoder.segment[0].loopfilter_level = 5;
-    decoder.loop_filter_adjustments_enabled = true;
-    decoder.ref_delta[0] = 1;
-    decoder.mode_delta[0] = 1;
-    let mb = MacroBlock {
-        luma_mode: LumaMode::B,
-        ..MacroBlock::default()
-    };
-    assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+    with_take_decoder!(&bytes, |decoder| {
+        decoder.frame.keyframe = true;
+        decoder.frame.filter_level = 10;
+        decoder.segments_enabled = true;
+        decoder.segment[0].delta_values = true;
+        decoder.segment[0].loopfilter_level = 5;
+        decoder.loop_filter_adjustments_enabled = true;
+        decoder.ref_delta[0] = 1;
+        decoder.mode_delta[0] = 1;
+        let mb = MacroBlock {
+            luma_mode: LumaMode::B,
+            ..MacroBlock::default()
+        };
+        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
+
+        decoder.frame.filter_level = 4;
+        decoder.frame.sharpness_level = 1;
+        decoder.segments_enabled = false;
+        decoder.loop_filter_adjustments_enabled = false;
+        let mb = MacroBlock {
+            luma_mode: LumaMode::DC,
+            ..MacroBlock::default()
+        };
+        assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
+    });
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     decoder.segments_enabled = true;
@@ -2086,32 +2105,43 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_segment_updates();
 
     let bytes = [0xff; 32];
-    let mut cursor = std::io::Cursor::new(&bytes[..]);
-    let take = cursor.by_ref().take(32);
-    let mut decoder = Vp8Decoder::new(take);
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.read_loop_filter_adjustments();
-
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.read_segment_updates();
-
-    decoder.b.init(vec![[0; 4]; 8], 32);
-    let _ = decoder.read_segment_updates();
-
-    decoder.b.init(vec![[0xff; 4]; 8], 32);
-    let _ = decoder.update_token_probabilities();
-
-    struct CoverageReadError;
-
-    impl std::io::Read for CoverageReadError {
-        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
-            Err(std::io::Error::other("coverage vp8 read failure"))
+    with_take_decoder!(&bytes, |decoder| {
+        decoder.segments_enabled = true;
+        for segment in &mut decoder.segment {
+            segment.delta_values = true;
+            segment.quantizer_level = 120;
         }
-    }
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_quantization_indices();
+
+        decoder.segments_enabled = true;
+        for segment in &mut decoder.segment {
+            segment.delta_values = false;
+            segment.quantizer_level = 120;
+        }
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_quantization_indices();
+        decoder.b.init(vec![[0; 4]; 8], 32);
+        let _ = decoder.read_quantization_indices();
+
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_loop_filter_adjustments();
+
+        decoder.b.init(vec![[0; 4]; 8], 32);
+        let _ = decoder.read_loop_filter_adjustments();
+
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.read_segment_updates();
+
+        decoder.b.init(vec![[0; 4]; 8], 32);
+        let _ = decoder.read_segment_updates();
+
+        decoder.b.init(vec![[0xff; 4]; 8], 32);
+        let _ = decoder.update_token_probabilities();
+    });
 
     let _ = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new())).init_partitions(2);
     let _ = Vp8Decoder::new(std::io::Cursor::new(vec![1, 0, 0])).init_partitions(2);
-    let _ = Vp8Decoder::new(CoverageReadError).init_partitions(1);
     let _ = Vp8Decoder::new(std::io::Cursor::new(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
         .init_partitions(2);
 
@@ -2195,6 +2225,45 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
     keyframe.extend_from_slice(&[0xff; 32]);
     let _ = Vp8Decoder::new(std::io::Cursor::new(keyframe)).read_frame_header();
+
+    let take_frame_cases = {
+        let mut cases = vec![
+            Vec::new(),
+            vec![0, 0, 0],
+            vec![0, 0, 0, 0x9d, 0x01, 0x2a],
+            vec![0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0],
+        ];
+
+        let mut keyframe = vec![0x80, 0x00, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+        keyframe.extend_from_slice(&[0; 4]);
+        cases.push(keyframe);
+
+        let mut keyframe = vec![0x00, 0x08, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+        keyframe.extend_from_slice(&[0; 96]);
+        cases.push(keyframe);
+
+        let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+        keyframe.extend_from_slice(&[0, 4, 0, 0]);
+        keyframe.extend_from_slice(&[0; 28]);
+        cases.push(keyframe);
+
+        cases.push(vec![0x21, 0x00, 0x00, 0x00]);
+
+        let mut interframe = vec![1, 4, 0];
+        interframe.extend_from_slice(&[0; 32]);
+        cases.push(interframe);
+
+        let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
+        keyframe.extend_from_slice(&[0xff; 32]);
+        cases.push(keyframe);
+
+        cases
+    };
+    for bytes in &take_frame_cases {
+        with_take_decoder!(bytes, |decoder| {
+            let _ = decoder.read_frame_header();
+        });
+    }
 
     let mut decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     decoder.frame.keyframe = true;

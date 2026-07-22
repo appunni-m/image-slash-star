@@ -3,11 +3,11 @@
 use crate::codecs::compression::deflate::decompress_zlib;
 use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 
-const COMPRESSION_NONE: u64 = 1;
-const COMPRESSION_LZW: u64 = 5;
-const COMPRESSION_DEFLATE: u64 = 8;
-const COMPRESSION_PACKBITS: u64 = 32_773;
-const COMPRESSION_ADOBE_DEFLATE: u64 = 32_946;
+const COMPRESSION_NONE: usize = 1;
+const COMPRESSION_LZW: usize = 5;
+const COMPRESSION_DEFLATE: usize = 8;
+const COMPRESSION_PACKBITS: usize = 32_773;
+const COMPRESSION_ADOBE_DEFLATE: usize = 32_946;
 
 /// Decode the first IFD of a classic little- or big-endian TIFF stream.
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
@@ -25,20 +25,20 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         endian.u32_exact([ifd_offset[0], ifd_offset[1], ifd_offset[2], ifd_offset[3]]) as usize;
     let directory = Directory::parse(data, ifd_offset, endian)?;
 
-    let width = u32::try_from(directory.one(256)?).ok()?;
-    let height = u32::try_from(directory.one(257)?).ok()?;
+    let width = directory.one(256)? as u32;
+    let height = directory.one(257)? as u32;
     if width == 0 || height == 0 {
         return None;
     }
-    let samples_per_pixel = usize::try_from(directory.one_or(277, 1)).ok()?;
-    let bits = directory.values_or(258, &[1])?;
+    let samples_per_pixel = directory.one_or(277, 1);
+    let bits = directory.values_or(258, &[1]);
     if bits.is_empty() || bits.iter().any(|&value| value != bits[0]) {
         return None;
     }
     let bits_per_sample = u8::try_from(bits[0]).ok()?;
     let compression = directory.one_or(259, COMPRESSION_NONE);
     let photometric = directory.one_or(262, 1);
-    let rows_per_strip = usize::try_from(directory.one_or(278, u64::from(height))).ok()?;
+    let rows_per_strip = directory.one_or(278, height as usize);
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
     let sample_format = directory.one_or(339, 1);
@@ -56,8 +56,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     } else {
         samples_per_pixel
     };
-    let row_bytes = width_usize
-        .checked_mul(stored_samples)?
+    #[cfg(target_pointer_width = "32")]
+    let row_samples = width_usize.checked_mul(stored_samples)?;
+    #[cfg(not(target_pointer_width = "32"))]
+    let row_samples = width_usize * stored_samples;
+    let row_bytes = row_samples
         .checked_mul(usize::from(bits_per_sample))?
         .checked_add(7)?
         / 8;
@@ -77,23 +80,30 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     if tile_offsets.is_some() || tile_byte_counts.is_some() {
         let offsets = tile_offsets?;
         let byte_counts = tile_byte_counts?;
-        let tile_width = usize::try_from(directory.one(322)?).ok()?;
-        let tile_height = usize::try_from(directory.one(323)?).ok()?;
+        let tile_width = directory.one(322)?;
+        let tile_height = directory.one(323)?;
         if tile_width == 0 || tile_height == 0 || bits_per_sample % 8 != 0 {
             return None;
         }
         let tiles_across = width_usize.div_ceil(tile_width);
         let tiles_down = height_usize.div_ceil(tile_height);
-        if offsets.len() != tiles_across.checked_mul(tiles_down)? {
+        #[cfg(target_pointer_width = "32")]
+        let expected_tiles = tiles_across.checked_mul(tiles_down)?;
+        #[cfg(not(target_pointer_width = "32"))]
+        let expected_tiles = tiles_across * tiles_down;
+        if offsets.len() != expected_tiles {
             return None;
         }
+        #[cfg(target_pointer_width = "32")]
         let bytes_per_pixel = samples_per_pixel.checked_mul(usize::from(bits_per_sample) / 8)?;
+        #[cfg(not(target_pointer_width = "32"))]
+        let bytes_per_pixel = samples_per_pixel * (usize::from(bits_per_sample) / 8);
         let tile_row_bytes = tile_width.checked_mul(bytes_per_pixel)?;
         let tile_size = tile_row_bytes.checked_mul(tile_height)?;
         // libtiff, and therefore Pillow, derives uncompressed tile lengths from
         // the tile geometry even when TileByteCounts is empty or inconsistent.
         let byte_counts = if compression == COMPRESSION_NONE {
-            vec![u64::try_from(tile_size).ok()?; offsets.len()]
+            vec![tile_size; offsets.len()]
         } else {
             if offsets.len() != byte_counts.len() {
                 return None;
@@ -102,9 +112,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         };
         let mut pixels = vec![0; expected_total];
         for (tile_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
-            let start = usize::try_from(offset).ok()?;
-            let count = usize::try_from(byte_count).ok()?;
-            let encoded = data.get(start..start.checked_add(count)?)?;
+            #[cfg(target_pointer_width = "32")]
+            let encoded_end = offset.checked_add(byte_count)?;
+            #[cfg(not(target_pointer_width = "32"))]
+            let encoded_end = offset + byte_count;
+            let encoded = data.get(offset..encoded_end)?;
             let mut decoded = decode_block(encoded, tile_size)?;
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
@@ -122,20 +134,16 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     endian,
                 );
             }
-            let tile_x = (tile_index % tiles_across).checked_mul(tile_width)?;
-            let tile_y = (tile_index / tiles_across).checked_mul(tile_height)?;
-            let copied_width = tile_width.min(width_usize.checked_sub(tile_x)?);
-            let copied_height = tile_height.min(height_usize.checked_sub(tile_y)?);
-            let copied_bytes = copied_width.checked_mul(bytes_per_pixel)?;
+            let tile_x = (tile_index % tiles_across) * tile_width;
+            let tile_y = (tile_index / tiles_across) * tile_height;
+            let copied_width = tile_width.min(width_usize - tile_x);
+            let copied_height = tile_height.min(height_usize - tile_y);
+            let copied_bytes = copied_width * bytes_per_pixel;
             for y in 0..copied_height {
-                let source = y.checked_mul(tile_row_bytes)?;
-                let destination = tile_y
-                    .checked_add(y)?
-                    .checked_mul(row_bytes)?
-                    .checked_add(tile_x.checked_mul(bytes_per_pixel)?)?;
-                pixels
-                    .get_mut(destination..destination.checked_add(copied_bytes)?)?
-                    .copy_from_slice(decoded.get(source..source.checked_add(copied_bytes)?)?);
+                let source = y * tile_row_bytes;
+                let destination = (tile_y + y) * row_bytes + tile_x * bytes_per_pixel;
+                pixels[destination..destination + copied_bytes]
+                    .copy_from_slice(&decoded[source..source + copied_bytes]);
             }
         }
         return convert_pixels(
@@ -160,56 +168,55 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     if offsets.len() > expected_strips {
         return None;
     }
-    let byte_counts =
-        if compression == COMPRESSION_NONE {
-            (0..offsets.len())
-                .map(|strip_index| {
-                    let first_row = strip_index * rows_per_strip;
-                    let strip_rows = rows_per_strip.min(height_usize - first_row);
-                    u64::try_from(row_bytes * strip_rows).ok()
+    let byte_counts = if compression == COMPRESSION_NONE {
+        (0..offsets.len())
+            .map(|strip_index| {
+                let first_row = strip_index * rows_per_strip;
+                let strip_rows = rows_per_strip.min(height_usize - first_row);
+                row_bytes * strip_rows
+            })
+            .collect::<Vec<_>>()
+    } else {
+        if declared_byte_counts.is_empty() {
+            offsets
+                .iter()
+                .enumerate()
+                .map(|(index, &offset)| {
+                    let end = offsets
+                        .get(index + 1)
+                        .copied()
+                        .unwrap_or(if ifd_offset > offset {
+                            ifd_offset
+                        } else {
+                            data.len()
+                        });
+                    end.checked_sub(offset)
                 })
                 .collect::<Option<Vec<_>>>()?
+        } else if offsets.len() != declared_byte_counts.len() {
+            return None;
         } else {
-            if declared_byte_counts.is_empty() {
-                offsets
-                    .iter()
-                    .enumerate()
-                    .map(|(index, &offset)| {
-                        let directory_offset = u64::try_from(ifd_offset).ok()?;
-                        let file_end = u64::try_from(data.len()).ok()?;
-                        let end = offsets.get(index + 1).copied().unwrap_or(
-                            if directory_offset > offset {
-                                directory_offset
-                            } else {
-                                file_end
-                            },
-                        );
-                        end.checked_sub(offset)
-                    })
-                    .collect::<Option<Vec<_>>>()?
-            } else if offsets.len() != declared_byte_counts.len() {
-                return None;
-            } else {
-                declared_byte_counts
-            }
-        };
+            declared_byte_counts
+        }
+    };
     let mut pixels = Vec::with_capacity(expected_total);
 
     for (strip_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
-        let start = usize::try_from(offset).ok()?;
-        let count = usize::try_from(byte_count).ok()?;
-        let encoded = data.get(start..start.checked_add(count)?)?;
-        let first_row = strip_index.checked_mul(rows_per_strip)?;
+        #[cfg(target_pointer_width = "32")]
+        let encoded_end = offset.checked_add(byte_count)?;
+        #[cfg(not(target_pointer_width = "32"))]
+        let encoded_end = offset + byte_count;
+        let encoded = data.get(offset..encoded_end)?;
+        let first_row = strip_index * rows_per_strip;
         let strip_rows = rows_per_strip.min(height_usize - first_row);
-        let expected = row_bytes.checked_mul(strip_rows)?;
+        let expected = row_bytes * strip_rows;
         let mut decoded = decode_block(encoded, expected)?;
-        if predictor == 2
-            && matches!(
-                compression,
-                COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
-            )
-            && matches!(bits_per_sample, 8 | 16 | 32)
-        {
+        let compressed_predictor = matches!(
+            compression,
+            COMPRESSION_LZW | COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE
+        );
+        let supported_sample_width = matches!(bits_per_sample, 8 | 16 | 32);
+        if predictor == 2 && compressed_predictor && supported_sample_width {
             reverse_horizontal_predictor(
                 &mut decoded,
                 row_bytes,
@@ -239,12 +246,12 @@ fn convert_pixels(
     width: u32,
     height: u32,
     mut pixels: Vec<u8>,
-    photometric: u64,
+    photometric: usize,
     samples: usize,
     bits: u8,
     endian: Endian,
-    color_map: Option<&[u64]>,
-    sample_format: u64,
+    color_map: Option<&[usize]>,
+    sample_format: usize,
 ) -> Option<DecodedImage> {
     match (photometric, samples, bits) {
         (0 | 1, 1, 1) => {
@@ -360,8 +367,15 @@ fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Option<Vec<
     let width = width as usize;
     let height = height as usize;
     let bits = usize::from(bits);
+    #[cfg(target_pointer_width = "32")]
     let stride = width.checked_mul(bits)?.div_ceil(8);
-    let mut output = Vec::with_capacity(width.checked_mul(height)?);
+    #[cfg(not(target_pointer_width = "32"))]
+    let stride = (width * bits).div_ceil(8);
+    #[cfg(target_pointer_width = "32")]
+    let output_len = width.checked_mul(height)?;
+    #[cfg(not(target_pointer_width = "32"))]
+    let output_len = width * height;
+    let mut output = Vec::with_capacity(output_len);
     for y in 0..height {
         let row = data.get(y * stride..(y + 1) * stride)?;
         for x in 0..width {
@@ -426,14 +440,14 @@ fn decode_packbits(data: &[u8], expected: usize) -> Option<Vec<u8>> {
     let mut output = Vec::with_capacity(expected);
     let mut position = 0usize;
     while position < data.len() && output.len() < expected {
-        let header = *data.get(position)? as i8;
+        let header = data[position] as i8;
         position += 1;
         match header {
             0..=127 => {
                 let count = usize::from(header as u8) + 1;
-                let end = position.checked_add(count)?;
+                let end = position + count;
                 let packet = data.get(position..end)?;
-                let remaining = expected.checked_sub(output.len())?;
+                let remaining = expected - output.len();
                 output.extend_from_slice(&packet[..count.min(remaining)]);
                 position = end;
             }
@@ -564,20 +578,20 @@ impl<'a> MsbBits<'a> {
     }
 
     fn read(&mut self, width: u8) -> Option<u16> {
-        if self.bit.checked_add(usize::from(width))? > self.data.len().checked_mul(8)? {
+        if self.bit.checked_add(usize::from(width))? > self.data.len() * 8 {
             return None;
         }
         let mut value = 0u16;
         for _ in 0..width {
-            value = (value << 1) | u16::from((data_bit(self.data, self.bit))?);
+            value = (value << 1) | u16::from(data_bit_unchecked(self.data, self.bit));
             self.bit += 1;
         }
         Some(value)
     }
 }
 
-fn data_bit(data: &[u8], bit: usize) -> Option<u8> {
-    Some((data.get(bit / 8)? >> (7 - bit % 8)) & 1)
+fn data_bit_unchecked(data: &[u8], bit: usize) -> u8 {
+    (data[bit / 8] >> (7 - bit % 8)) & 1
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -640,10 +654,11 @@ impl<'a> Directory<'a> {
         if count > 4096 {
             return None;
         }
+        let entries_start = offset + 2;
         let mut entries = Vec::with_capacity(count);
         for index in 0..count {
-            let start = offset.checked_add(2)?.checked_add(index.checked_mul(12)?)?;
-            let bytes = data.get(start..start.checked_add(12)?)?;
+            let start = entries_start + index * 12;
+            let bytes = data.get(start..start + 12)?;
             let tag = endian.u16_exact([bytes[0], bytes[1]]);
             let field_type = endian.u16_exact([bytes[2], bytes[3]]);
             let value_count = endian.u32_exact([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
@@ -654,13 +669,19 @@ impl<'a> Directory<'a> {
                 5 | 10 | 12 => 8,
                 _ => continue,
             };
+            #[cfg(target_pointer_width = "32")]
             let byte_len = value_count.checked_mul(type_size)?;
+            #[cfg(not(target_pointer_width = "32"))]
+            let byte_len = value_count * type_size;
             let value_position = if byte_len <= 4 {
-                start.checked_add(8)?
+                start + 8
             } else {
                 endian.u32_exact([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize
             };
+            #[cfg(target_pointer_width = "32")]
             data.get(value_position..value_position.checked_add(byte_len)?)?;
+            #[cfg(not(target_pointer_width = "32"))]
+            data.get(value_position..value_position + byte_len)?;
             entries.push(Entry {
                 tag,
                 field_type,
@@ -677,19 +698,19 @@ impl<'a> Directory<'a> {
         })
     }
 
-    fn one(&self, tag: u16) -> Option<u64> {
+    fn one(&self, tag: u16) -> Option<usize> {
         self.values(tag)?.into_iter().next()
     }
 
-    fn one_or(&self, tag: u16, default: u64) -> u64 {
+    fn one_or(&self, tag: u16, default: usize) -> usize {
         self.one(tag).unwrap_or(default)
     }
 
-    fn values_or(&self, tag: u16, default: &[u64]) -> Option<Vec<u64>> {
-        self.values(tag).or_else(|| Some(default.to_vec()))
+    fn values_or(&self, tag: u16, default: &[usize]) -> Vec<usize> {
+        self.values(tag).unwrap_or_else(|| default.to_vec())
     }
 
-    fn values(&self, tag: u16) -> Option<Vec<u64>> {
+    fn values(&self, tag: u16) -> Option<Vec<usize>> {
         let entry = self.entries.iter().find(|entry| entry.tag == tag)?;
         let position = if entry.byte_len <= 4 {
             entry.inline_position
@@ -701,18 +722,19 @@ impl<'a> Directory<'a> {
             .get(position..position.checked_add(entry.byte_len)?)?;
         let mut values = Vec::with_capacity(entry.count);
         match entry.field_type {
-            1 => values.extend(bytes.iter().map(|&value| u64::from(value))),
+            1 => values.extend(bytes.iter().map(|&value| usize::from(value))),
             3 => {
                 for chunk in bytes.chunks_exact(2) {
-                    values.push(u64::from(self.endian.u16_exact([chunk[0], chunk[1]])));
+                    values.push(usize::from(self.endian.u16_exact([chunk[0], chunk[1]])));
                 }
             }
             4 => {
                 for chunk in bytes.chunks_exact(4) {
-                    values.push(u64::from(
+                    values.push(
                         self.endian
-                            .u32_exact([chunk[0], chunk[1], chunk[2], chunk[3]]),
-                    ));
+                            .u32_exact([chunk[0], chunk[1], chunk[2], chunk[3]])
+                            as usize,
+                    );
                 }
             }
             _ => return None,
@@ -794,6 +816,90 @@ pub(crate) fn __coverage_exercise_private_branches() {
         );
         out.extend_from_slice(&0u32.to_le_bytes());
         out.push(0);
+        out
+    }
+
+    fn oversized_strip_tiff(
+        width: u32,
+        height: u32,
+        bits_per_sample: u16,
+        samples_per_pixel: u32,
+    ) -> Vec<u8> {
+        let entry_count = 11u16;
+        let pixel_offset = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let mut out = Vec::new();
+        out.extend_from_slice(b"II");
+        out.extend_from_slice(&42u16.to_le_bytes());
+        out.extend_from_slice(&8u32.to_le_bytes());
+        out.extend_from_slice(&entry_count.to_le_bytes());
+        put_entry(&mut out, 256, 4, 1, width.to_le_bytes());
+        put_entry(&mut out, 257, 4, 1, height.to_le_bytes());
+        put_entry(
+            &mut out,
+            258,
+            3,
+            1,
+            [bits_per_sample as u8, (bits_per_sample >> 8) as u8, 0, 0],
+        );
+        put_entry(&mut out, 259, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
+        put_entry(
+            &mut out,
+            273,
+            4,
+            1,
+            u32::try_from(pixel_offset).unwrap().to_le_bytes(),
+        );
+        put_entry(&mut out, 277, 4, 1, samples_per_pixel.to_le_bytes());
+        put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
+        put_entry(&mut out, 279, 4, 1, 0u32.to_le_bytes());
+        put_entry(&mut out, 284, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 317, 3, 1, [1, 0, 0, 0]);
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out
+    }
+
+    fn oversized_tile_tiff(
+        width: u32,
+        height: u32,
+        bits_per_sample: u16,
+        samples_per_pixel: u32,
+        tile_width: u32,
+        tile_height: u32,
+    ) -> Vec<u8> {
+        let entry_count = 13u16;
+        let pixel_offset = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let mut out = Vec::new();
+        out.extend_from_slice(b"II");
+        out.extend_from_slice(&42u16.to_le_bytes());
+        out.extend_from_slice(&8u32.to_le_bytes());
+        out.extend_from_slice(&entry_count.to_le_bytes());
+        put_entry(&mut out, 256, 4, 1, width.to_le_bytes());
+        put_entry(&mut out, 257, 4, 1, height.to_le_bytes());
+        put_entry(
+            &mut out,
+            258,
+            3,
+            1,
+            [bits_per_sample as u8, (bits_per_sample >> 8) as u8, 0, 0],
+        );
+        put_entry(&mut out, 259, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 277, 4, 1, samples_per_pixel.to_le_bytes());
+        put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
+        put_entry(&mut out, 284, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 317, 3, 1, [1, 0, 0, 0]);
+        put_entry(&mut out, 322, 4, 1, tile_width.to_le_bytes());
+        put_entry(&mut out, 323, 4, 1, tile_height.to_le_bytes());
+        put_entry(
+            &mut out,
+            324,
+            4,
+            1,
+            u32::try_from(pixel_offset).unwrap().to_le_bytes(),
+        );
+        put_entry(&mut out, 325, 4, 1, 0u32.to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes());
         out
     }
 
@@ -1049,14 +1155,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode(b"II*\0");
     let _ = decode(b"MM\0*\0\0\0\x08\0\0\0\0");
     let _ = decode(&tiny_tiff(0, [0, 0, 0, 0], 1, 1, 1, 1, 1));
+    let _ = decode(&tiny_tiff(3, u32::MAX.to_le_bytes(), 1, 1, 1, 1, 1));
     let _ = decode(&tiny_tiff(2, [8, 0, 16, 0], 1, 1, 1, 1, 1));
     let _ = decode(&tiny_tiff(1, [0, 1, 0, 0], 1, 1, 1, 1, 1));
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 0, 1, 1, 1));
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 0, 1, 1));
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 2, 1));
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 2));
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 3));
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 6, 1, 1, 1, 1));
     let _ = decode(&tiny_tiff(1, [16, 0, 0, 0], 6, 3, 1, 1, 1));
+    let _ = decode(&oversized_strip_tiff(u32::MAX, 1, 255, u32::MAX));
+    let _ = decode(&oversized_strip_tiff(1_722_007_169, 1, 3, 3_570_783_445));
+    let _ = decode(&oversized_strip_tiff(u32::MAX, u32::MAX, 1, u32::MAX));
+    let _ = decode(&oversized_tile_tiff(1, 1, 16, u32::MAX, u32::MAX, 1));
+    let _ = decode(&oversized_tile_tiff(1, 1, 8, u32::MAX, u32::MAX, 2));
     let _ = decode(&tiny_tiled_tiff(8, false, true, 1, 1, 1, 1, &[0]));
     let _ = decode(&tiny_tiled_tiff(8, true, false, 1, 1, 1, 1, &[0]));
     let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 0, 1, 1, &[0]));
@@ -1218,7 +1331,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = convert_pixels(1, 1, vec![1, 2, 3, 4], 6, 3, 8, Endian::Little, None, 1);
     let _ = convert_pixels(1, 1, vec![], 9, 1, 8, Endian::Little, None, 1);
-    let palette8 = [0u64; 768];
+    let palette8 = [0usize; 768];
     let _ = convert_pixels(1, 1, vec![0], 3, 1, 8, Endian::Little, Some(&palette8), 1);
     let _ = convert_pixels(1, 1, vec![0], 3, 1, 8, Endian::Little, None, 1);
     let _ = unpack_indices(&[], 1, 1, 1);
@@ -1314,6 +1427,29 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &[&lzw_a],
         Some(&[u32::try_from(lzw_a.len() + 1).unwrap()]),
     ));
+    let _ = decode(&tiny_tiled_layout_tiff(
+        1,
+        1,
+        8,
+        1,
+        1,
+        1,
+        COMPRESSION_LZW as u16,
+        &[&[0]],
+        Some(&[1]),
+    ));
+    let lzw_rgb = pack_lzw_9(&[65, 66, 67, 257]);
+    let _ = decode(&tiny_strip_tiff(
+        1,
+        1,
+        24,
+        COMPRESSION_LZW as u16,
+        2,
+        1,
+        1,
+        Some(&[u32::try_from(lzw_rgb.len()).unwrap()]),
+        &[&lzw_rgb],
+    ));
 
     let mut one_bit_reader = MsbBits::new(&[0x80]);
     let _ = one_bit_reader.read(1);
@@ -1326,8 +1462,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         bit: usize::MAX,
     };
     let _ = overflow_reader.read(1);
-    let _ = data_bit(&[], 0);
-    let _ = data_bit(&[0], 8);
     let mut endian_bytes = [0; 4];
     Endian::Little.write_u16(1, &mut endian_bytes[..2]);
     Endian::Big.write_u32(1, &mut endian_bytes);

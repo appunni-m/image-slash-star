@@ -397,6 +397,36 @@ Measurement/outcome:
   image-data and bit-reader error states without increasing missing lines,
   branches, or functions.
 
+## Attempt 107 plan: WebP decoder VP8X chunk-scan loop branch
+
+Baseline before editing:
+
+- Source state: pushed `main` at commit `85f4694`.
+- Coverage MCP snapshot: `2932bf30-2174-4ab0-8368-1be63f66249f`.
+- Overall: `26585 / 26588` lines, `3463 / 3468` branches,
+  `1615 / 1615` functions, and `42393 / 42815` regions.
+- Target file: `src/codecs/webp/native/decoder.rs`, currently `1373 / 1420`
+  regions and `83 / 84` branches.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `WebPDecoder<OtherErrorAt>::read_data` instantiation created by the existing coverage hook | Coverage MCP reports one aggregate missing decoder branch. Raw function-instantiation records from the MCP-produced LLVM artifact show the live one-sided records are not in the normal `Cursor<Vec<u8>>`/`Cursor<&[u8]>` decoder paths; they are in the artificial `OtherErrorAt` reader instantiation used only to force the line-268 non-EOF error arm. That custom reader pulls the whole generic `read_data` state machine into coverage while exercising only one path, creating avoidable branch/region debt. | Extract the line-268 chunk-scan error policy into a small non-generic helper and call it directly from the coverage hook with `UnexpectedEof` and a non-EOF error. Then remove the `OtherErrorAt` decoder probe instead of adding more impossible `WebPDecoder<OtherErrorAt>` fixtures. |
+
+Implementation/search plan:
+
+1. Keep `read_data` behavior unchanged.
+2. Avoid new generic decoder instantiations for synthetic I/O states.
+3. Replace the custom-reader full-decoder probe with direct coverage of a
+   non-generic error-policy helper.
+4. Validate with `cargo fmt --all --check`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+6. Keep only if missing branches or regions improve and missing lines/functions
+   do not regress.
+
 ## Attempt 99 plan: WebP aggregate branch sweep
 
 Baseline before editing:

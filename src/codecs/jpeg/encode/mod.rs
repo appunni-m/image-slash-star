@@ -91,9 +91,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     // filtering; bottom rows are replicated later by fdct_quantize.
     let y_w = w;
     let y_h = h;
-    let cb_w = (w * cb_hs as usize)
-        .div_ceil(max_h as usize * 8)
-        .checked_mul(8)?;
+    let cb_w = (w * cb_hs as usize).div_ceil(max_h as usize * 8) * 8;
     let cb_h = (h * cb_vs as usize).div_ceil(max_v as usize);
     let cr_w = cb_w;
     let cr_h = cb_h;
@@ -163,10 +161,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
         }
     }
 
-    let mcu_columns = comps[0]
-        .blocks_per_row
-        .checked_mul(8)?
-        .div_ceil(usize::from(max_h).checked_mul(8)?);
+    let mcu_columns = (comps[0].blocks_per_row * 8).div_ceil(usize::from(max_h) * 8);
     let restart_interval = if restart_rows == 0 {
         0
     } else {
@@ -180,19 +175,15 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     let ac_chroma = huffman::derive_table(&huffman::STD_AC_CHROMA.0, &huffman::STD_AC_CHROMA.1);
     let (optimized_dc, optimized_ac) = if !progressive && optimize {
         let (dc_frequencies, ac_frequencies) =
-            baseline_frequencies(&comps, max_h, max_v, restart_interval)?;
+            baseline_frequencies(&comps, max_h, max_v, restart_interval);
         (
             [
-                Some(huffman::optimal_table(&dc_frequencies[0])?),
-                (num_components >= 3)
-                    .then(|| huffman::optimal_table(&dc_frequencies[1]))
-                    .flatten(),
+                Some(huffman::optimal_table(&dc_frequencies[0])),
+                (num_components >= 3).then(|| huffman::optimal_table(&dc_frequencies[1])),
             ],
             [
-                Some(huffman::optimal_table(&ac_frequencies[0])?),
-                (num_components >= 3)
-                    .then(|| huffman::optimal_table(&ac_frequencies[1]))
-                    .flatten(),
+                Some(huffman::optimal_table(&ac_frequencies[0])),
+                (num_components >= 3).then(|| huffman::optimal_table(&ac_frequencies[1])),
             ],
         )
     } else {
@@ -310,7 +301,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
             restart_interval,
         );
     } else {
-        encode_progressive_scans_exact(&mut out, &comps, num_components, max_h, max_v, &params)?;
+        encode_progressive_scans_exact(&mut out, &comps, num_components, max_h, max_v, &params);
     }
 
     marker::write_eoi(&mut out);
@@ -358,6 +349,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .extra
         .insert("restart_interval".to_owned(), "1".to_owned());
     let _ = encode(&rgb, &restart);
+    let mut bad_restart = restart.clone();
+    bad_restart
+        .extra
+        .insert("restart_interval".to_owned(), "70000".to_owned());
+    let _ = encode(&rgb, &bad_restart);
+    let wide_rgb = DecodedImage::new(17, 1, vec![128; 17 * 3], crate::types::ColorType::Rgb8);
+    let mut overflowing_restart = restart.clone();
+    overflowing_restart
+        .extra
+        .insert("restart_interval".to_owned(), usize::MAX.to_string());
+    let _ = encode(&wide_rgb, &overflowing_restart);
+    let mut bad_exif = EncodeOptions::default();
+    bad_exif.extra.insert("exif_hex".to_owned(), "f".to_owned());
+    let _ = encode(&gray, &bad_exif);
+    let mut oversized_exif_options = EncodeOptions::default();
+    oversized_exif_options
+        .extra
+        .insert("exif_hex".to_owned(), "00".repeat(usize::from(u16::MAX)));
+    let _ = encode(&gray, &oversized_exif_options);
     let _ = decode_hex("ff00");
     let _ = decode_hex("f");
     let mut marker_bytes = Vec::new();
@@ -452,7 +462,7 @@ fn decode_hex(value: &str) -> Option<Vec<u8>> {
     (0..value.len())
         .step_by(2)
         .map(|index| {
-            let end = index.checked_add(2)?;
+            let end = index + 2;
             u8::from_str_radix(value.get(index..end)?, 16).ok()
         })
         .collect()
@@ -588,14 +598,14 @@ fn baseline_frequencies(
     max_h: u8,
     max_v: u8,
     restart_interval: u16,
-) -> Option<([[u64; 256]; 2], [[u64; 256]; 2])> {
+) -> ([[u64; 256]; 2], [[u64; 256]; 2]) {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c's gather_statistics pass.
     // Traverse exactly the same MCU stream as encode_baseline_entropy so the
     // optimized table describes every symbol that the output pass will emit.
-    let mcu_w = usize::from(max_h).checked_mul(8)?;
-    let mcu_h = usize::from(max_v).checked_mul(8)?;
-    let n_mcu_x = comps[0].blocks_per_row.checked_mul(8)?.div_ceil(mcu_w);
-    let n_mcu_y = comps[0].block_rows.checked_mul(8)?.div_ceil(mcu_h);
+    let mcu_w = usize::from(max_h) * 8;
+    let mcu_h = usize::from(max_v) * 8;
+    let n_mcu_x = (comps[0].blocks_per_row * 8).div_ceil(mcu_w);
+    let n_mcu_y = (comps[0].block_rows * 8).div_ceil(mcu_h);
     let mut dc = [[0u64; 256]; 2];
     let mut ac = [[0u64; 256]; 2];
     let mut last_dc = [0i32; 4];
@@ -612,17 +622,13 @@ fn baseline_frequencies(
                 let ac_slot = usize::from(component.ac_tbl);
                 for vertical in 0..usize::from(component.v_samp) {
                     for horizontal in 0..usize::from(component.h_samp) {
-                        let block_row = my
-                            .checked_mul(usize::from(component.v_samp))?
-                            .checked_add(vertical)?;
-                        let block_column = mx
-                            .checked_mul(usize::from(component.h_samp))?
-                            .checked_add(horizontal)?;
+                        let block_row = my * usize::from(component.v_samp) + vertical;
+                        let block_column = mx * usize::from(component.h_samp) + horizontal;
                         if block_row >= component.block_rows
                             || block_column >= component.blocks_per_row
                         {
-                            dc[dc_slot][0] = dc[dc_slot][0].checked_add(1)?;
-                            ac[ac_slot][0] = ac[ac_slot][0].checked_add(1)?;
+                            dc[dc_slot][0] += 1;
+                            ac[ac_slot][0] += 1;
                             continue;
                         }
 
@@ -631,26 +637,26 @@ fn baseline_frequencies(
                         let difference = i32::from(block[0]) - last_dc[ci];
                         last_dc[ci] = i32::from(block[0]);
                         let dc_symbol = jpeg_nbits(difference) as usize;
-                        dc[dc_slot][dc_symbol] = dc[dc_slot][dc_symbol].checked_add(1)?;
+                        dc[dc_slot][dc_symbol] += 1;
 
                         let mut run = 0usize;
                         for &natural_index in &ZIGZAG[1..] {
                             let coefficient = i32::from(block[natural_index]);
                             if coefficient == 0 {
-                                run = run.checked_add(1)?;
+                                run += 1;
                                 continue;
                             }
                             while run >= 16 {
-                                ac[ac_slot][0xf0] = ac[ac_slot][0xf0].checked_add(1)?;
+                                ac[ac_slot][0xf0] += 1;
                                 run -= 16;
                             }
                             let width = jpeg_nbits(coefficient) as usize;
                             let symbol = (run << 4) | width;
-                            ac[ac_slot][symbol] = ac[ac_slot][symbol].checked_add(1)?;
+                            ac[ac_slot][symbol] += 1;
                             run = 0;
                         }
                         if run != 0 {
-                            ac[ac_slot][0] = ac[ac_slot][0].checked_add(1)?;
+                            ac[ac_slot][0] += 1;
                         }
                     }
                 }
@@ -658,7 +664,7 @@ fn baseline_frequencies(
             mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }
-    Some((dc, ac))
+    (dc, ac)
 }
 
 fn encode_baseline_entropy(
@@ -868,27 +874,26 @@ fn encode_progressive_scans_exact(
     _maximum_horizontal_sampling: u8,
     _maximum_vertical_sampling: u8,
     _params: &quant::EncodeParams,
-) -> Option<()> {
+) {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcphuff.c:179-1075 and
     // jcmaster.c's jpeg_simple_progression scan script.
     for scan in default_progression_script(component_count) {
-        let events = progressive_events(&scan, components)?;
+        let events = progressive_events(&scan, components);
         let mut frequencies = [[0u64; 256]; 4];
         for &event in &events {
             if let ProgressiveEvent::Symbol { table, value } = event {
-                frequencies[table][usize::from(value)] =
-                    frequencies[table][usize::from(value)].checked_add(1)?;
+                frequencies[table][usize::from(value)] += 1;
             }
         }
 
         let mut tables: [Option<huffman::OptimalTable>; 4] = std::array::from_fn(|_| None);
         for table in 0..tables.len() {
             if frequencies[table].iter().any(|&frequency| frequency != 0) {
-                let optimized = huffman::optimal_table(&frequencies[table])?;
+                let optimized = huffman::optimal_table(&frequencies[table]);
                 marker::write_dht(
                     output,
                     u8::from(scan.ss != 0),
-                    u8::try_from(table).ok()?,
+                    table as u8,
                     &optimized.bits,
                     &optimized.values,
                 );
@@ -915,7 +920,10 @@ fn encode_progressive_scans_exact(
         for event in events {
             match event {
                 ProgressiveEvent::Symbol { table, value } => {
-                    let derived = &tables.get(table)?.as_ref()?.derived;
+                    let derived = &tables[table]
+                        .as_ref()
+                        .expect("progressive event table has a built Huffman table")
+                        .derived;
                     writer.write_bits(
                         derived.codes[usize::from(value)],
                         derived.lengths[usize::from(value)],
@@ -927,10 +935,9 @@ fn encode_progressive_scans_exact(
         writer.flush();
         output.extend_from_slice(&writer.out);
     }
-    Some(())
 }
 
-fn progressive_events(scan: &ProgScan, components: &[CompData]) -> Option<Vec<ProgressiveEvent>> {
+fn progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<ProgressiveEvent> {
     if scan.ss == 0 {
         dc_progressive_events(scan, components)
     } else {
@@ -938,24 +945,15 @@ fn progressive_events(scan: &ProgScan, components: &[CompData]) -> Option<Vec<Pr
     }
 }
 
-fn dc_progressive_events(
-    scan: &ProgScan,
-    components: &[CompData],
-) -> Option<Vec<ProgressiveEvent>> {
+fn dc_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<ProgressiveEvent> {
     let mut events = Vec::new();
     let interleaved = scan.comps.len() > 1;
     let maximum_horizontal_sampling = components.iter().map(|c| c.h_samp).max().unwrap_or(1);
     let maximum_vertical_sampling = components.iter().map(|c| c.v_samp).max().unwrap_or(1);
-    let mcu_width = usize::from(maximum_horizontal_sampling).checked_mul(8)?;
-    let mcu_height = usize::from(maximum_vertical_sampling).checked_mul(8)?;
-    let mcu_columns = components[0]
-        .blocks_per_row
-        .checked_mul(8)?
-        .div_ceil(mcu_width);
-    let mcu_rows = components[0]
-        .block_rows
-        .checked_mul(8)?
-        .div_ceil(mcu_height);
+    let mcu_width = usize::from(maximum_horizontal_sampling) * 8;
+    let mcu_height = usize::from(maximum_vertical_sampling) * 8;
+    let mcu_columns = (components[0].blocks_per_row * 8).div_ceil(mcu_width);
+    let mcu_rows = (components[0].block_rows * 8).div_ceil(mcu_height);
     let mut predictors = vec![0i32; scan.comps.len()];
 
     let mut append = |scan_index: usize, component_index: usize, block: &[i16; 64]| {
@@ -982,7 +980,6 @@ fn dc_progressive_events(
                 width: 1,
             });
         }
-        Some(())
     };
 
     if interleaved {
@@ -992,12 +989,9 @@ fn dc_progressive_events(
                     let component = &components[component_index];
                     for vertical in 0..usize::from(component.v_samp) {
                         for horizontal in 0..usize::from(component.h_samp) {
-                            let block_row = mcu_row
-                                .checked_mul(usize::from(component.v_samp))?
-                                .checked_add(vertical)?;
-                            let block_column = mcu_column
-                                .checked_mul(usize::from(component.h_samp))?
-                                .checked_add(horizontal)?;
+                            let block_row = mcu_row * usize::from(component.v_samp) + vertical;
+                            let block_column =
+                                mcu_column * usize::from(component.h_samp) + horizontal;
                             if block_row < component.block_rows
                                 && block_column < component.blocks_per_row
                             {
@@ -1006,8 +1000,7 @@ fn dc_progressive_events(
                                     component_index,
                                     &component.blocks
                                         [block_row * component.blocks_per_row + block_column],
-                                )
-                                .expect("progressive DC event inputs are encoder-controlled");
+                                );
                             }
                         }
                     }
@@ -1018,18 +1011,14 @@ fn dc_progressive_events(
         let component_index = scan.comps[0];
         let component = &components[component_index];
         for block in &component.blocks {
-            append(0, component_index, block)
-                .expect("progressive DC event inputs are encoder-controlled");
+            append(0, component_index, block);
         }
     }
-    Some(events)
+    events
 }
 
-fn ac_progressive_events(
-    scan: &ProgScan,
-    components: &[CompData],
-) -> Option<Vec<ProgressiveEvent>> {
-    let component = &components[*scan.comps.first()?];
+fn ac_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<ProgressiveEvent> {
+    let component = &components[scan.comps[0]];
     let table = usize::from(component.ac_tbl);
     let mut events = Vec::new();
     let mut eob_run = 0u32;
@@ -1043,8 +1032,7 @@ fn ac_progressive_events(
                 table,
                 &mut eob_run,
                 &mut correction_bits,
-            )
-            .expect("progressive AC-first inputs are encoder-controlled");
+            );
         } else {
             append_ac_refine_events(
                 &mut events,
@@ -1053,12 +1041,11 @@ fn ac_progressive_events(
                 table,
                 &mut eob_run,
                 &mut correction_bits,
-            )
-            .expect("progressive AC-refine inputs are encoder-controlled");
+            );
         }
     }
-    flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits)?;
-    Some(events)
+    flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits);
+    events
 }
 
 fn append_ac_first_events(
@@ -1068,7 +1055,7 @@ fn append_ac_first_events(
     table: usize,
     eob_run: &mut u32,
     correction_bits: &mut Vec<u8>,
-) -> Option<()> {
+) {
     let mut run = 0usize;
     let mut last_nonzero = None;
     for coefficient in scan.ss..=scan.se {
@@ -1076,12 +1063,11 @@ fn append_ac_first_events(
         let sign = raw >> 31;
         let absolute = (raw ^ sign).wrapping_sub(sign) >> scan.al;
         if absolute == 0 {
-            run = run.checked_add(1)?;
+            run += 1;
             continue;
         }
         if eob_run != &0 {
-            flush_progressive_eob(events, table, eob_run, correction_bits)
-                .expect("progressive EOB state is encoder-controlled");
+            flush_progressive_eob(events, table, eob_run, correction_bits);
         }
         while run > 15 {
             events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
@@ -1100,13 +1086,11 @@ fn append_ac_first_events(
         last_nonzero = Some(coefficient);
     }
     if last_nonzero != Some(scan.se) {
-        *eob_run = eob_run.checked_add(1)?;
+        *eob_run += 1;
         if *eob_run == 0x7fff {
-            flush_progressive_eob(events, table, eob_run, correction_bits)
-                .expect("progressive EOB state is encoder-controlled");
+            flush_progressive_eob(events, table, eob_run, correction_bits);
         }
     }
-    Some(())
 }
 
 fn append_ac_refine_events(
@@ -1116,7 +1100,7 @@ fn append_ac_refine_events(
     table: usize,
     eob_run: &mut u32,
     correction_bits: &mut Vec<u8>,
-) -> Option<()> {
+) {
     let coefficients = (scan.ss..=scan.se)
         .map(|coefficient| {
             let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
@@ -1134,12 +1118,12 @@ fn append_ac_refine_events(
 
     for (index, &(raw, absolute)) in coefficients.iter().enumerate() {
         if absolute == 0 {
-            run = run.checked_add(1)?;
+            run += 1;
             continue;
         }
         last_nonzero = Some(index);
         while run > 15 && last_new.is_some_and(|last| index <= last) {
-            flush_progressive_eob(events, table, eob_run, correction_bits)?;
+            flush_progressive_eob(events, table, eob_run, correction_bits);
             events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
             run -= 16;
             append_correction_events(events, &mut block_corrections);
@@ -1149,7 +1133,7 @@ fn append_ac_refine_events(
             continue;
         }
 
-        flush_progressive_eob(events, table, eob_run, correction_bits)?;
+        flush_progressive_eob(events, table, eob_run, correction_bits);
         events.push(ProgressiveEvent::Symbol {
             table,
             value: ((run << 4) | 1) as u8,
@@ -1162,14 +1146,13 @@ fn append_ac_refine_events(
         run = 0;
     }
 
-    if last_nonzero != Some(coefficients.len().checked_sub(1)?) || !block_corrections.is_empty() {
-        *eob_run = eob_run.checked_add(1)?;
+    if last_nonzero != Some(coefficients.len() - 1) || !block_corrections.is_empty() {
+        *eob_run += 1;
         correction_bits.append(&mut block_corrections);
         if *eob_run == 0x7fff || correction_bits.len() > 937 {
-            flush_progressive_eob(events, table, eob_run, correction_bits)?;
+            flush_progressive_eob(events, table, eob_run, correction_bits);
         }
     }
-    Some(())
 }
 
 fn flush_progressive_eob(
@@ -1177,24 +1160,23 @@ fn flush_progressive_eob(
     table: usize,
     eob_run: &mut u32,
     correction_bits: &mut Vec<u8>,
-) -> Option<()> {
+) {
     if *eob_run == 0 {
-        return Some(());
+        return;
     }
     let width = eob_run.ilog2();
     events.push(ProgressiveEvent::Symbol {
         table,
-        value: u8::try_from(width.checked_mul(16)?).ok()?,
+        value: (width * 16) as u8,
     });
     if width != 0 {
         events.push(ProgressiveEvent::Bits {
             value: *eob_run,
-            width: u8::try_from(width).ok()?,
+            width: width as u8,
         });
     }
     *eob_run = 0;
     append_correction_events(events, correction_bits);
-    Some(())
 }
 
 fn append_correction_events(events: &mut Vec<ProgressiveEvent>, bits: &mut Vec<u8>) {

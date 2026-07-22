@@ -754,11 +754,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut decoder = LosslessDecoder::new(std::io::Cursor::new(Vec::<u8>::new()));
     let mut buf = [0u8; 4];
     let _ = decoder.decode_frame_implicit_dimensions(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f]));
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f]));
     let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0]));
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f, 0, 0]));
     let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(std::io::Cursor::new([0x2f, 0, 0, 0, 0]));
+    let mut decoder = LosslessDecoder::new(std::io::Cursor::new(vec![0x2f, 0, 0, 0, 0]));
     let _ = decoder.decode_frame(1, 1, &mut buf);
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
@@ -779,15 +779,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = reader.consume(8);
     let _ = reader.consume(1);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let _ = decoder.read_color_cache();
-    let mut decoder = LosslessDecoder::new(Cursor::new([0xff; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0xff; 1]));
     let _ = decoder.read_color_cache();
     let mut decoder = LosslessDecoder {
         bit_reader: BitReader {
             reader: Cursor::new(Vec::<u8>::new()),
             buffer: 1,
             nbits: 1,
+        },
+        transforms: [None, None, None, None],
+        transform_order: Vec::new(),
+        width: 1,
+        height: 1,
+    };
+    let _ = decoder.read_color_cache();
+    let mut decoder = LosslessDecoder {
+        bit_reader: BitReader {
+            reader: Cursor::new(Vec::<u8>::new()),
+            buffer: 0b00011,
+            nbits: 5,
         },
         transforms: [None, None, None, None],
         transform_order: Vec::new(),
@@ -830,7 +842,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = info.get_huff_index(1, 0);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -849,7 +861,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -955,39 +967,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: OneThenErrorReader {
-                byte: [0],
-                consumed: false,
-            },
-            buffer: 0,
-            nbits: 0,
-        },
-        transforms: [None, None, None, None],
-        transform_order: Vec::new(),
-        width: 1,
-        height: 1,
-    };
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(17, 17),
-            HuffmanTree::build_single_node(19),
-            HuffmanTree::build_single_node(23),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1063,7 +1043,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0b0000_0010u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_0010u8; 1]));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1082,7 +1062,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0b0011_0000u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0011_0000u8; 1]));
     let mut data = [0u8; 32];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1101,7 +1081,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(8, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0b0000_1100u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0b0000_1100u8; 1]));
     let mut data = [0u8; 16];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1120,7 +1100,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(4, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let mut data = [0u8; 4];
     let huffman_info = HuffmanInfo {
         xsize: 1,
@@ -1139,7 +1119,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
 
-    let mut decoder = LosslessDecoder::new(Cursor::new([0u8; 1]));
+    let mut decoder = LosslessDecoder::new(Cursor::new(vec![0u8; 1]));
     let mut data = [0u8; 8];
     let huffman_info = HuffmanInfo {
         xsize: 1,

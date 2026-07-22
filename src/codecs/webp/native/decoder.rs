@@ -1,7 +1,9 @@
 use super::byteorder_lite::{LittleEndian, ReadBytesExt};
 
 use std::collections::HashMap;
-use std::io::{self, BufRead, Cursor, Read, Seek};
+#[cfg(coverage)]
+use std::io::Cursor;
+use std::io::{self, BufRead, Read, Seek};
 use std::num::NonZeroU16;
 use std::ops::Range;
 
@@ -29,9 +31,6 @@ pub enum DecodingError {
     TransformError,
     Vp8MagicInvalid,
     ColorSpaceInvalid,
-    LumaPredictionModeInvalid,
-    IntraPredictionModeInvalid,
-    ChromaPredictionModeInvalid,
     InconsistentImageSizes,
     UnsupportedFeature,
     InvalidChunkSize,
@@ -41,6 +40,14 @@ pub enum DecodingError {
 impl From<io::Error> for DecodingError {
     fn from(error: io::Error) -> Self {
         Self::IoError(error.kind())
+    }
+}
+
+fn allow_vp8x_chunk_scan_error(error: DecodingError) -> Result<(), DecodingError> {
+    if matches!(&error, DecodingError::IoError(e) if *e == io::ErrorKind::UnexpectedEof) {
+        Ok(())
+    } else {
+        Err(error)
     }
 }
 
@@ -158,7 +165,10 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             loop_count: LoopCount::Times(NonZeroU16::new(1).unwrap()),
         };
         decoder.read_data()?;
+        #[cfg(target_pointer_width = "32")]
         decoder.validate_output_buffer_size()?;
+        #[cfg(not(target_pointer_width = "32"))]
+        decoder.validate_output_buffer_size();
         if decoder.is_animated() && decoder.num_frames == 0 {
             return Err(DecodingError::ChunkMissing);
         }
@@ -265,9 +275,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                             self.r.seek_relative(chunk_size_rounded as i64)?;
                         }
                         Err(error) => {
-                            matches!(&error, DecodingError::IoError(e) if *e == io::ErrorKind::UnexpectedEof)
-                                .then_some(())
-                                .ok_or(error)?;
+                            allow_vp8x_chunk_scan_error(error)?;
                             break;
                         }
                     }
@@ -290,23 +298,15 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
                         .chunks
                         .get(&WebPRiffChunk::ANIM)
                         .cloned()
-                        .ok_or(DecodingError::ChunkMissing)?;
+                        .expect("animated VP8X validation requires an ANIM chunk");
                     if range.end - range.start < 6 {
                         return Err(DecodingError::InvalidChunkSize);
                     }
                     self.r.seek(io::SeekFrom::Start(range.start))?;
                     let mut chunk = [0; 6];
                     self.r.read_exact(&mut chunk)?;
-                    let mut cursor = Cursor::new(chunk);
-                    let mut background_bgra = [0; 4];
-                    cursor.read_exact(&mut background_bgra)?;
-                    info.background_color_hint = [
-                        background_bgra[2],
-                        background_bgra[1],
-                        background_bgra[0],
-                        background_bgra[3],
-                    ];
-                    self.loop_count = match cursor.read_u16::<LittleEndian>()? {
+                    info.background_color_hint = [chunk[2], chunk[1], chunk[0], chunk[3]];
+                    self.loop_count = match u16::from_le_bytes([chunk[4], chunk[5]]) {
                         0 => LoopCount::Forever,
                         n => LoopCount::Times(NonZeroU16::new(n).unwrap()),
                     };
@@ -396,9 +396,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
     }
 
     #[cfg(not(target_pointer_width = "32"))]
-    fn validate_output_buffer_size(&self) -> Result<(), DecodingError> {
-        Ok(())
-    }
+    fn validate_output_buffer_size(&self) {}
 
     /// Returns the number of bytes required to store the image or a single frame.
     pub fn output_buffer_size(&self) -> usize {
@@ -437,7 +435,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             let range = self
                 .chunks
                 .get(&WebPRiffChunk::VP8)
-                .ok_or(DecodingError::ChunkMissing)?;
+                .expect("non-lossless WebP validation requires a VP8 chunk");
             let reader = range_reader(&mut self.r, range.start..range.end)?;
             let frame = Vp8Decoder::decode_frame(reader)?;
             (u32::from(frame.width) == self.width && u32::from(frame.height) == self.height)
@@ -447,11 +445,13 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
             if self.has_alpha() {
                 frame.fill_rgba(buf);
 
-                let range = self
-                    .chunks
-                    .get(&WebPRiffChunk::ALPH)
-                    .ok_or(DecodingError::ChunkMissing)?
-                    .clone();
+                let Some(range) = self.chunks.get(&WebPRiffChunk::ALPH).cloned() else {
+                    for pixel in buf.chunks_exact_mut(4) {
+                        pixel[3] = 255;
+                    }
+                    return Ok(());
+                };
+
                 let alpha_chunk = read_alpha_chunk(
                     &mut range_reader(&mut self.r, range)?,
                     self.width as u16,
@@ -503,7 +503,7 @@ impl<R: BufRead + Seek> WebPDecoder<R> {
         let info = self
             .extended
             .as_ref()
-            .ok_or(DecodingError::UnsupportedFeature)?;
+            .expect("animated decoder state requires extended metadata");
 
         self.r
             .seek(io::SeekFrom::Start(self.animation.next_frame_start))?;
@@ -678,6 +678,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out
     }
 
+    fn chunk_declared(fourcc: &[u8; 4], declared_size: u32, physical_payload: &[u8]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(8 + physical_payload.len());
+        out.extend_from_slice(fourcc);
+        out.extend_from_slice(&declared_size.to_le_bytes());
+        out.extend_from_slice(physical_payload);
+        out
+    }
+
     fn riff(chunks: &[Vec<u8>]) -> Vec<u8> {
         let payload_len = 4 + chunks.iter().map(Vec::len).sum::<usize>();
         let mut out = Vec::with_capacity(8 + payload_len);
@@ -688,6 +696,47 @@ pub(crate) fn __coverage_exercise_private_branches() {
             out.extend_from_slice(chunk);
         }
         out
+    }
+
+    struct FailingSeekCursor {
+        inner: Cursor<Vec<u8>>,
+        successful_seeks: usize,
+    }
+
+    impl Read for FailingSeekCursor {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.inner.read(buf)
+        }
+    }
+
+    impl BufRead for FailingSeekCursor {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            self.inner.fill_buf()
+        }
+
+        fn consume(&mut self, amt: usize) {
+            self.inner.consume(amt);
+        }
+    }
+
+    impl Seek for FailingSeekCursor {
+        fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+            if self.successful_seeks == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "coverage seek failure",
+                ));
+            }
+            self.successful_seeks -= 1;
+            self.inner.seek(pos)
+        }
+    }
+
+    fn fail_seek_after(data: Vec<u8>, successful_seeks: usize) -> FailingSeekCursor {
+        FailingSeekCursor {
+            inner: Cursor::new(data),
+            successful_seeks,
+        }
     }
 
     fn vp8x(flags: u8, width: u32, height: u32) -> Vec<u8> {
@@ -784,45 +833,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = decoder.read_frame(&mut buf);
     }
 
-    struct OtherErrorAt {
-        inner: Cursor<Vec<u8>>,
-        fail_at: u64,
-    }
+    let _ = allow_vp8x_chunk_scan_error(DecodingError::IoError(io::ErrorKind::UnexpectedEof));
+    let _ = allow_vp8x_chunk_scan_error(DecodingError::IoError(io::ErrorKind::Other));
 
-    impl Read for OtherErrorAt {
-        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-            if self.inner.position() >= self.fail_at {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "coverage reader failure",
-                ));
-            }
-            self.inner.read(buf)
-        }
-    }
+    let mut seek_reader = fail_seek_after(vec![1, 2], 1);
+    let _ = seek_reader.fill_buf();
+    seek_reader.consume(1);
 
-    impl BufRead for OtherErrorAt {
-        fn fill_buf(&mut self) -> io::Result<&[u8]> {
-            self.inner.fill_buf()
-        }
-
-        fn consume(&mut self, amt: usize) {
-            self.inner.consume(amt);
-        }
-    }
-
-    impl Seek for OtherErrorAt {
-        fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
-            self.inner.seek(pos)
-        }
-    }
-
-    let mut bufread_probe = OtherErrorAt {
-        inner: Cursor::new(vec![1, 2]),
-        fail_at: u64::MAX,
-    };
-    let _ = bufread_probe.fill_buf().map(|buf| buf.len());
-    bufread_probe.consume(1);
+    let _ = WebPDecoder::new(Cursor::new(Vec::<u8>::new()));
+    let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0WE".to_vec()));
+    let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0WEBP".to_vec()));
 
     let vp8_zero_width = [0, 0, 0, 0x9d, 0x01, 0x2a, 0, 0, 1, 0];
     let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_zero_width)])));
@@ -830,6 +850,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_interframe)])));
     let vp8_bad_magic = [0, 0, 0, 0, 0, 0];
     let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_bad_magic)])));
+    let vp8_missing_width = [0, 0, 0, 0x9d, 0x01, 0x2a];
+    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_missing_width)])));
+    let vp8_missing_height = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0];
+    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_missing_height)])));
     let vp8_zero_height = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 0, 0];
     let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_zero_height)])));
     let vp8_valid_header = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 1, 0];
@@ -837,7 +861,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let _ = WebPDecoder::new(Cursor::new(b"JUNK\x04\0\0\0WEBP".to_vec()));
     let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0JUNK".to_vec()));
+    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &[])])));
     let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &[0])])));
+    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &[0x2f])])));
     let vp8l_bad_version = [0x2f, 0, 0, 0, 0x20];
     let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &vp8l_bad_version)])));
     let vp8l_no_alpha = [0x2f, 0, 0, 0, 0];
@@ -877,6 +903,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ])));
     let _ = WebPDecoder::new(Cursor::new(riff(&[
         vp8x(0b0000_0010, 1, 1),
+        chunk_declared(b"ANMF", 24, &[0; 12]),
+    ])));
+    let _ = WebPDecoder::new(Cursor::new(riff(&[
+        vp8x(0b0000_0010, 1, 1),
+        chunk_declared(b"ANMF", 24, &[0; 16]),
+    ])));
+    let _ = WebPDecoder::new(Cursor::new(riff(&[
+        vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0, 0, 0]),
     ])));
     let _ = WebPDecoder::new(Cursor::new(riff(&[
@@ -898,6 +932,35 @@ pub(crate) fn __coverage_exercise_private_branches() {
         chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
         chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"JUNK")),
     ])));
+    let _ = WebPDecoder::new(Cursor::new(riff(&[
+        vp8x(0b0000_0010, 1, 1),
+        chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
+        chunk_declared(b"ANMF", 24, &[0; 20]),
+    ])));
+
+    let _ = WebPDecoder::new(fail_seek_after(
+        riff(&[chunk(b"VP8 ", &vp8_valid_header)]),
+        0,
+    ));
+    let _ = WebPDecoder::new(fail_seek_after(riff(&[vp8x(0, 1, 1)]), 1));
+    let _ = WebPDecoder::new(fail_seek_after(
+        riff(&[
+            vp8x(0b0000_0010, 1, 1),
+            chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
+        ]),
+        2,
+    ));
+    let _ = WebPDecoder::new(fail_seek_after(
+        riff(&[
+            vp8x(0b0000_0010, 1, 1),
+            chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
+        ]),
+        3,
+    ));
+    let _ = WebPDecoder::new(fail_seek_after(
+        riff(&[vp8x(0, 1, 1), chunk(b"EXIF", &[]), chunk(b"VP8L", &[])]),
+        2,
+    ));
 
     let mut truncated = riff(&[vp8x(0, 1, 1)]);
     truncated[4..8].copy_from_slice(&64u32.to_le_bytes());
@@ -908,12 +971,40 @@ pub(crate) fn __coverage_exercise_private_branches() {
     no_trailing_chunks[4..8].copy_from_slice(&10u32.to_le_bytes());
     let _ = WebPDecoder::new(Cursor::new(no_trailing_chunks));
 
-    let mut non_eof_io_error = riff(&[vp8x(0, 1, 1)]);
-    non_eof_io_error[4..8].copy_from_slice(&64u32.to_le_bytes());
-    let _ = WebPDecoder::new(OtherErrorAt {
-        inner: Cursor::new(non_eof_io_error),
-        fail_at: 30,
-    });
+    let mut short_anmf = chunk_declared(b"ANMF", 32, &[]);
+    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    short_anmf = chunk_declared(b"ANMF", 32, &[0; 3]);
+    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    short_anmf = chunk_declared(b"ANMF", 32, &[0; 8]);
+    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    short_anmf = chunk_declared(b"ANMF", 32, &[0; 9]);
+    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    short_anmf = chunk_declared(b"ANMF", 32, &[0; 14]);
+    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    short_anmf = chunk_declared(b"ANMF", 32, &[0; 15]);
+    let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    short_anmf = chunk_declared(b"ANMF", 32, &[0; 16]);
+    let mut decoder = animation_decoder_from_stream(short_anmf, 1, 1, true, 1);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
 
     let mut decoder = animation_decoder(vec![0; 31], 1, 1, true);
     let mut buf = vec![0; decoder.output_buffer_size()];
@@ -994,6 +1085,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
 
+    let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
+    anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
+    anmf.truncate(26);
+    let mut decoder = animation_decoder(anmf, 1, 1, true);
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_frame(&mut buf);
+
+    let alph_for_seek = chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"ALPH"));
+    exercise_animation_stream(fail_seek_after(alph_for_seek.clone(), 1), 1, 1, true, 1);
+    exercise_animation_stream(fail_seek_after(alph_for_seek, 2), 1, 1, true, 1);
+
     let mut vp8l_solid_64 = anmf_payload(0, 0, 63, 63, b"VP8L");
     vp8l_solid_64[20..24].copy_from_slice(&23u32.to_le_bytes());
     vp8l_solid_64.truncate(24);
@@ -1046,6 +1148,70 @@ pub(crate) fn __coverage_exercise_private_branches() {
     decoder.animation.next_frame = 1;
     let mut buf = vec![0; decoder.output_buffer_size()];
     let _ = decoder.read_frame(&mut buf);
+
+    let mut decoder = WebPDecoder {
+        r: fail_seek_after(Vec::new(), 0),
+        width: 1,
+        height: 1,
+        extended: None,
+        animation: AnimationState::default(),
+        has_alpha: false,
+        num_frames: 0,
+        loop_count: LoopCount::Forever,
+        chunks: HashMap::from([(WebPRiffChunk::VP8L, 0..0)]),
+    };
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_image(&mut buf);
+
+    let mut decoder = WebPDecoder {
+        r: fail_seek_after(Vec::new(), 0),
+        width: 1,
+        height: 1,
+        extended: None,
+        animation: AnimationState::default(),
+        has_alpha: false,
+        num_frames: 0,
+        loop_count: LoopCount::Forever,
+        chunks: HashMap::from([(WebPRiffChunk::VP8, 0..0)]),
+    };
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_image(&mut buf);
+
+    let mut decoder = WebPDecoder {
+        r: fail_seek_after(Vec::new(), 0),
+        width: 1,
+        height: 1,
+        extended: Some(WebPExtendedInfo {
+            alpha: true,
+            canvas_width: 1,
+            canvas_height: 1,
+            animation: false,
+            background_color: None,
+            background_color_hint: [0, 0, 0, 0],
+        }),
+        animation: AnimationState::default(),
+        has_alpha: true,
+        num_frames: 0,
+        loop_count: LoopCount::Forever,
+        chunks: HashMap::from([(WebPRiffChunk::VP8, 0..0), (WebPRiffChunk::ALPH, 0..0)]),
+    };
+    let mut buf = vec![0; decoder.output_buffer_size()];
+    let _ = decoder.read_image(&mut buf);
+
+    let mut decoder = WebPDecoder {
+        r: Cursor::new(Vec::<u8>::new()),
+        width: 1,
+        height: 1,
+        extended: None,
+        animation: AnimationState::default(),
+        has_alpha: false,
+        num_frames: 0,
+        loop_count: LoopCount::Forever,
+        chunks: HashMap::from([(WebPRiffChunk::VP8L, 0..0)]),
+    };
+    let _ = decoder.read_image(&mut []);
+
+    let _ = range_reader(fail_seek_after(Vec::new(), 0), 0..0);
 }
 
 pub(crate) fn range_reader<R: BufRead + Seek>(

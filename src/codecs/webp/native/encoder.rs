@@ -1120,7 +1120,7 @@ const fn chunk_size(inner_bytes: usize) -> u32 {
     }
 }
 
-fn write_chunk<W: Write>(mut w: W, name: &[u8], data: &[u8]) -> io::Result<()> {
+fn write_chunk(w: &mut dyn Write, name: &[u8], data: &[u8]) -> io::Result<()> {
     debug_assert!(name.len() == 4);
 
     w.write_all(name)?;
@@ -1173,6 +1173,25 @@ impl<W: Write> WebPEncoder<W> {
 pub(crate) fn __coverage_exercise_private_branches() {
     use std::io::{Cursor, ErrorKind};
 
+    struct FailOnWrite {
+        call: usize,
+        fail_at: usize,
+    }
+
+    impl Write for FailOnWrite {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            if self.call == self.fail_at {
+                return Err(io::Error::from(ErrorKind::Other));
+            }
+            self.call += 1;
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
     backward_refs::__coverage_exercise_private_branches();
     cross_color::__coverage_exercise_private_branches();
     histogram::__coverage_exercise_private_branches();
@@ -1185,33 +1204,58 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = chunk_size(3);
     let _ = chunk_size(4);
     let _ = compressed_huffman_tokens(&[0; 300]);
+    let _ = FailOnWrite {
+        call: 0,
+        fail_at: usize::MAX,
+    }
+    .flush();
+    let rgba_pixel = [0, 0, 0, 255];
+    let _ = WebPEncoder::new(FailOnWrite {
+        call: 0,
+        fail_at: 0,
+    })
+    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
+    let _ = WebPEncoder::new(FailOnWrite {
+        call: 0,
+        fail_at: 1,
+    })
+    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
+    let _ = WebPEncoder::new(FailOnWrite {
+        call: 0,
+        fail_at: 2,
+    })
+    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
+    let _ = WebPEncoder::new(FailOnWrite {
+        call: 0,
+        fail_at: 3,
+    })
+    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
     let mut odd_chunk = Vec::new();
     write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]).unwrap();
     let mut even_chunk = Vec::new();
     write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]).unwrap();
     let mut even_fixed_buffer = [0u8; 12];
-    write_chunk(
-        Cursor::new(&mut even_fixed_buffer[..]),
-        b"EVEN",
-        &[1, 2, 3, 4],
-    )
-    .unwrap();
+    let mut even_fixed = Cursor::new(&mut even_fixed_buffer[..]);
+    write_chunk(&mut even_fixed, b"EVEN", &[1, 2, 3, 4]).unwrap();
+    let mut odd_fixed_buffer = [0u8; 12];
+    let mut odd_fixed = Cursor::new(&mut odd_fixed_buffer[..]);
+    write_chunk(&mut odd_fixed, b"ODD!", &[1, 2, 3]).unwrap();
     let mut name_error_buffer = [0u8; 0];
-    write_chunk(Cursor::new(&mut name_error_buffer[..]), b"FAIL", &[1, 2, 3])
+    let mut name_error = Cursor::new(&mut name_error_buffer[..]);
+    write_chunk(&mut name_error, b"FAIL", &[1, 2, 3])
         .expect_err("empty fixed buffer must fail on RIFF chunk name");
     let mut size_error_buffer = [0u8; 4];
-    write_chunk(Cursor::new(&mut size_error_buffer[..]), b"FAIL", &[1, 2, 3])
+    let mut size_error = Cursor::new(&mut size_error_buffer[..]);
+    write_chunk(&mut size_error, b"FAIL", &[1, 2, 3])
         .expect_err("short fixed buffer must fail on RIFF chunk size");
     let mut data_error_buffer = [0u8; 8];
-    write_chunk(Cursor::new(&mut data_error_buffer[..]), b"FAIL", &[1, 2, 3])
+    let mut data_error = Cursor::new(&mut data_error_buffer[..]);
+    write_chunk(&mut data_error, b"FAIL", &[1, 2, 3])
         .expect_err("short fixed buffer must fail on RIFF chunk data");
     let mut padding_error_buffer = [0u8; 11];
-    write_chunk(
-        Cursor::new(&mut padding_error_buffer[..]),
-        b"PAD!",
-        &[1, 2, 3],
-    )
-    .expect_err("short fixed buffer must fail on RIFF padding byte");
+    let mut padding_error = Cursor::new(&mut padding_error_buffer[..]);
+    write_chunk(&mut padding_error, b"PAD!", &[1, 2, 3])
+        .expect_err("short fixed buffer must fail on RIFF padding byte");
 
     let mut tree_bytes = Vec::new();
     let mut tree_writer = BitWriter {
@@ -1411,4 +1455,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     WebPEncoder::new(Cursor::new(&mut vp8l_chunk_error[..]))
         .encode(&rgb, 1, 1, ColorType::Rgb8)
         .expect_err("short fixed buffer must fail on VP8L chunk");
+    let mut fixed_output = [0u8; 256];
+    WebPEncoder::new(Cursor::new(&mut fixed_output[..]))
+        .encode(&rgb, 1, 1, ColorType::Rgb8)
+        .expect("fixed buffer with enough space must encode WebP");
 }

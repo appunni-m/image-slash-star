@@ -40,19 +40,23 @@ pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     for &length in input_chunks {
         input_len = input_len.checked_add(length)?;
     }
-    debug_assert_eq!(input_len, data.len());
+    if input_len != data.len() {
+        return None;
+    }
 
-    let (tokens, final_tokens) =
-        tokenize_level1(data, input_chunks).expect("validated zlib chunks should tokenize");
+    let (tokens, final_tokens) = tokenize_level1(data, input_chunks);
     let mut writer = BitWriter::default();
     // deflate_quick opens its first block only after a Z_NO_FLUSH call has
     // enough lookahead to process. On Z_FINISH it closes an opened block as
     // non-final, then emits the remaining short lookahead in a final block.
     if tokens.is_empty() {
-        emit_fixed_block(&final_tokens, true, &mut writer)?;
+        emit_fixed_block(&final_tokens, true, &mut writer)
+            .expect("level-one tokens should emit as fixed Huffman");
     } else {
-        emit_fixed_block(&tokens, false, &mut writer)?;
-        emit_fixed_block(&final_tokens, true, &mut writer)?;
+        emit_fixed_block(&tokens, false, &mut writer)
+            .expect("level-one tokens should emit as fixed Huffman");
+        emit_fixed_block(&final_tokens, true, &mut writer)
+            .expect("level-one final tokens should emit as fixed Huffman");
     }
     let mut output = vec![0x78, 0x01];
     output.extend_from_slice(&writer.finish());
@@ -60,13 +64,13 @@ pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     Some(output)
 }
 
-fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> Option<(Vec<Token>, Vec<Token>)> {
+fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Token>) {
     let mut head = vec![0usize; HASH_SIZE];
     let mut tokens = Vec::new();
     let mut position = 0usize;
     let mut available = 0usize;
     for &chunk_length in input_chunks {
-        available = available.checked_add(chunk_length)?;
+        available += chunk_length;
         debug_assert!(available <= data.len());
 
         // fill_window() re-inserts strstart - 1 whenever a new input call
@@ -76,18 +80,18 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> Option<(Vec<Token>, V
         // left at least `MIN_LOOKAHEAD - MAX_MATCH` bytes available, so
         // `position - 1` has the four bytes required by `quick_insert_level1`.
         if position >= 1 {
-            quick_insert_level1(data, position - 1, &mut head)?;
+            quick_insert_level1(data, position - 1, &mut head);
         }
-        while available.checked_sub(position)? >= MIN_LOOKAHEAD {
-            tokenize_level1_position(data, available, &mut position, &mut head, &mut tokens)?;
+        while available - position >= MIN_LOOKAHEAD {
+            tokenize_level1_position(data, available, &mut position, &mut head, &mut tokens);
         }
     }
     debug_assert_eq!(available, data.len());
     let mut final_tokens = Vec::new();
     while position < available {
-        tokenize_level1_position(data, available, &mut position, &mut head, &mut final_tokens)?;
+        tokenize_level1_position(data, available, &mut position, &mut head, &mut final_tokens);
     }
-    Some((tokens, final_tokens))
+    (tokens, final_tokens)
 }
 
 fn tokenize_level1_position(
@@ -96,14 +100,14 @@ fn tokenize_level1_position(
     position: &mut usize,
     head: &mut [usize],
     tokens: &mut Vec<Token>,
-) -> Option<()> {
-    let lookahead = available.checked_sub(*position)?;
+) {
+    let lookahead = available - *position;
     if lookahead >= MIN_MATCH {
-        let candidate = quick_insert_level1(data, *position, head)?;
-        let distance = position.checked_sub(candidate)?;
+        let candidate = quick_insert_level1(data, *position, head);
+        let distance = *position - candidate;
         if distance != 0
             && distance <= MAX_DISTANCE
-            && data.get(candidate..candidate + 2)? == data.get(*position..*position + 2)?
+            && data[candidate..candidate + 2] == data[*position..*position + 2]
         {
             let mut length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
             if length >= MIN_MATCH {
@@ -116,14 +120,13 @@ fn tokenize_level1_position(
                 }
                 tokens.push(Token::Match { length, distance });
                 *position += length;
-                return Some(());
+                return;
             }
         }
     }
 
-    tokens.push(Token::Literal(*data.get(*position)?));
+    tokens.push(Token::Literal(data[*position]));
     *position += 1;
-    Some(())
 }
 
 fn level1_window_tail_distance_one(
@@ -136,20 +139,16 @@ fn level1_window_tail_distance_one(
     // distance for repeated-byte matches that start in the pre-slide guard zone
     // after the first 64 KiB fill window. Keep this scoped to that observable
     // deflate_quick window-tail state so earlier 32 KiB matches stay byte-exact.
-    let first_slide_guard_start = WINDOW_SIZE.checked_mul(2)?.checked_sub(MIN_LOOKAHEAD)?;
-    if position < first_slide_guard_start
-        || position % WINDOW_SIZE <= MAX_DISTANCE
-        || data.get(position.checked_sub(1)?)? != data.get(position)?
-    {
+    let first_slide_guard_start = WINDOW_SIZE * 2 - MIN_LOOKAHEAD;
+    if position < first_slide_guard_start || position % WINDOW_SIZE <= MAX_DISTANCE {
+        return None;
+    }
+    let previous_position = position - 1;
+    if data[previous_position] != data[position] {
         return None;
     }
 
-    let length = match_length(
-        data,
-        position.checked_sub(1)?,
-        position,
-        lookahead.min(MAX_MATCH),
-    );
+    let length = match_length(data, previous_position, position, lookahead.min(MAX_MATCH));
     (length >= current_length && length >= MIN_MATCH).then_some(length)
 }
 
@@ -159,9 +158,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut tokens = Vec::new();
     let mut head = vec![0usize; HASH_SIZE];
     let mut position = 0usize;
-    tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens)
-        .expect("literal path should tokenize");
+    tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens);
     let _ = compress_level1(data, &[data.len()]);
+    let _ = compress_level1(data, &[data.len() - 1]);
     let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
     let _ = tokenize_level1(&level1_reinsert_data, &[MIN_LOOKAHEAD, 3]);
     let _ = tokenize_level1(
@@ -225,7 +224,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .is_none()
     );
     let _ = compress_level1(data, &[data.len(), usize::MAX]);
-    let _ = tokenize_level1(data, &[data.len(), usize::MAX]);
 
     let mut current = MediumMatch {
         match_start: 0,
@@ -376,9 +374,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut slow_underflow = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
     slow_underflow.position = usize::MAX;
     let _ = slow_underflow.process(0, true);
-    let mut slow_flush = SlowMatcher::new(b"", 16, 8, 128, 128);
-    slow_flush.match_available = true;
-    let _ = slow_flush.process(0, true);
     let mut slow_previous = SlowMatcher::new(b"aaaa", 16, 8, 128, 128);
     slow_previous.previous_length = 3;
     let _ = slow_previous.process(4, true);
@@ -406,27 +401,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = level6_process_underflow.process(0, true);
     let level6_hash_overflow = Level6Matcher::new(b"abcd", 128, 128, 16);
     let _ = level6_hash_overflow.hash(usize::MAX);
-    let mut level6_insert_overflow = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
-    let _ = level6_insert_overflow.insert_match(
-        MediumMatch {
-            match_start: 0,
-            length: usize::MAX,
-            start: 0,
-            original_start: 0,
-        },
-        usize::MAX,
-    );
-    let _ = level6_insert_overflow.insert_match(
-        MediumMatch {
-            match_start: 0,
-            length: 4,
-            start: usize::MAX,
-            original_start: 0,
-        },
-        16,
-    );
-    let _ = level6_insert_overflow.find_match(usize::MAX, 4);
-    let _ = level6_insert_overflow.longest_match(0, usize::MAX, 4);
+    let mut level6_find_overflow = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
+    let _ = level6_find_overflow.find_match(usize::MAX, 4);
     let mut level6_refill_short = Level6Matcher::new(b"abcd", 128, 128, 16);
     level6_refill_short.data.truncate(3);
     level6_refill_short.position = 1;
@@ -454,16 +430,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     level6_missing_previous.head[level6_hash] = 1;
     level6_missing_previous.previous.clear();
     let _ = level6_missing_previous.quick_insert(0);
-    let mut level6_insert_end_overflow = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
-    let _ = level6_insert_end_overflow.insert_match(
-        MediumMatch {
-            match_start: 0,
-            length: 4,
-            start: usize::MAX - 1,
-            original_start: 0,
-        },
-        16,
-    );
     let mut level6_insert_quick_fail = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
     level6_insert_quick_fail.data.truncate(4);
     let _ = level6_insert_quick_fail.insert_match(
@@ -486,10 +452,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
         10,
     );
-    let mut level6_match_short = Level6Matcher::new(b"abcdefgh", 2, 128, 16);
-    level6_match_short.data.truncate(2);
-    level6_match_short.position = 4;
-    let _ = level6_match_short.longest_match(0, 4, 4);
     let mut level6_empty_previous_chain = Level6Matcher::new(b"abcdwxyz", 2, 128, 16);
     level6_empty_previous_chain.position = 4;
     level6_empty_previous_chain.previous.clear();
@@ -531,9 +493,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut level9_underflow = Level9Matcher::new(b"abcd");
     level9_underflow.position = usize::MAX;
     let _ = level9_underflow.process(0, true);
-    let mut level9_flush = Level9Matcher::new(b"");
-    level9_flush.match_available = true;
-    let _ = level9_flush.process(0, true);
     let mut level9_previous = Level9Matcher::new(b"aaaa");
     level9_previous.previous_length = 3;
     let _ = level9_previous.process(4, true);
@@ -541,13 +500,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     level9_short_insert.data.truncate(2);
     level9_short_insert.position = 1;
     let _ = level9_short_insert.quick_insert(1);
-    let mut level9_overflow_match = Level9Matcher::new(b"abcdefghijkl");
-    level9_overflow_match.position = usize::MAX - 1;
-    level9_overflow_match.previous_length = 3;
-    let _ = level9_overflow_match.longest_match(0, 8);
-    let mut level9_refill_short = Level9Matcher::new(b"abcd");
-    level9_refill_short.data.truncate(1);
-    let _ = level9_refill_short.refill_boundary();
     let mut level9_process_short = Level9Matcher::new(b"abcd");
     level9_process_short.data.truncate(2);
     let _ = level9_process_short.process(4, true);
@@ -561,10 +513,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     level9_insert_failure.previous_length = 5;
     level9_insert_failure.data.truncate(7);
     let _ = level9_insert_failure.process(10, true);
-    let mut level9_literal_underflow = Level9Matcher::new(b"abcdefgh");
-    level9_literal_underflow.match_available = true;
-    level9_literal_underflow.previous_length = 0;
-    let _ = level9_literal_underflow.process(MIN_LOOKAHEAD, true);
     let mut level9_hash_overflow = Level9Matcher::new(b"abcd");
     let _ = level9_hash_overflow.quick_insert(usize::MAX);
     let mut level9_missing_head = Level9Matcher::new(b"abcdefgh");
@@ -578,21 +526,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     level9_missing_previous.head[level9_hash] = 1;
     level9_missing_previous.previous.clear();
     let _ = level9_missing_previous.quick_insert(0);
-    let mut level9_match_short = Level9Matcher::new(b"abcdefgh");
-    level9_match_short.position = 4;
-    level9_match_short.previous_length = 3;
-    level9_match_short.data.truncate(5);
-    let _ = level9_match_short.longest_match(0, 8);
-    let mut level9_missing_chain_head = Level9Matcher::new(b"abcdefgh");
-    level9_missing_chain_head.position = 4;
-    level9_missing_chain_head.previous_length = 3;
-    level9_missing_chain_head.head.clear();
-    let _ = level9_missing_chain_head.longest_match(0, 8);
-    let mut level9_empty_previous_chain = Level9Matcher::new(b"abcdwxyz");
-    level9_empty_previous_chain.position = 4;
-    level9_empty_previous_chain.previous.clear();
-    let _ = level9_empty_previous_chain.longest_match(0, 4);
-
     let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 4, 6, false);
     level3.position = 4;
     let _ = level3
@@ -650,27 +583,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     level3_empty_previous_chain.position = 3;
     level3_empty_previous_chain.previous.clear();
     let _ = level3_empty_previous_chain.longest_match(0, 3);
-    let mut level3_equal_match = Level3Matcher::new(b"abab", 6, 128, 6, false);
+    let mut level3_equal_match = Level3Matcher::new(b"ababxx", 6, 128, 6, false);
     level3_equal_match.position = 2;
     let _ = level3_equal_match.longest_match(0, 2);
-    let mut level3_candidate = Level3Matcher::new(b"abcdefghijkl", 6, 128, 6, false);
+    let mut level3_candidate = Level3Matcher::new(b"abcdefghijklmnop", 6, 128, 6, false);
     level3_candidate.position = 4;
-    let _ = level3_candidate.candidate_can_improve(0, 0);
     let _ = level3_candidate.candidate_can_improve(0, 4);
     let _ = level3_candidate.candidate_can_improve(0, 8);
-    let _ = level3_candidate.candidate_can_improve(usize::MAX, 2);
-    level3_candidate.position = usize::MAX;
-    let _ = level3_candidate.candidate_can_improve(0, 8);
 
-    let _ = quick_insert_level1(data, data.len(), &mut head);
-    let mut overflowing_position = usize::MAX;
-    let _ = tokenize_level1_position(
-        data,
-        data.len(),
-        &mut overflowing_position,
-        &mut head,
-        &mut tokens,
-    );
     let _ = compress_level2(data, &[data.len(), usize::MAX]);
     let _ = compress_level3(data, &[data.len(), usize::MAX]);
     let _ = compress_level4(data, &[data.len(), usize::MAX]);
@@ -680,9 +600,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = compress_level8(data, &[data.len(), usize::MAX]);
     let _ = compress_level9(data, &[data.len(), usize::MAX]);
 
-    let _ = medium_candidate_can_improve(data, 0, 1, 0);
-    let _ = medium_candidate_can_improve(data, data.len(), 0, 3);
-    let _ = medium_candidate_can_improve(data, 0, data.len(), 8);
+    let _ = medium_candidate_can_improve(b"abcdabcd", 0, 4, 2);
+    let _ = medium_candidate_can_improve(b"abcdwxyzz", 0, 4, 4);
 
     let mut short_level6 = Level6Matcher::new(b"abcd", 1, 4, 4);
     short_level6.data.truncate(3);
@@ -693,15 +612,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     short_level9.position = 1;
     let _ = short_level9.refill_boundary();
 
-    let mut short_level3 = Level3Matcher::new(b"abc", 1, 4, 4, false);
+    let mut short_level3 = Level3Matcher::new(b"abcd", 1, 4, 4, false);
     let _ = short_level3.quick_insert(0);
-    short_level3.position = usize::MAX;
-    let _ = short_level3.candidate_can_improve(0, 3);
-    let _ = short_level3.candidate_can_improve(usize::MAX, 3);
-
-    let _ = quick_insert_level1(data, usize::MAX, &mut head);
-    let mut empty_head = Vec::new();
-    let _ = quick_insert_level1(b"abcd", 0, &mut empty_head);
+    short_level3.position = 1;
+    let _ = short_level3.candidate_can_improve(0, 2);
 
     let mut slow_process_short = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
     slow_process_short.data.truncate(3);
@@ -716,11 +630,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     slow_insert_failure.previous_length = 5;
     slow_insert_failure.data.truncate(8);
     let _ = slow_insert_failure.process(10, true);
-    let mut slow_literal_underflow = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
-    slow_literal_underflow.match_available = true;
-    slow_literal_underflow.previous_length = 0;
-    let _ = slow_literal_underflow.process(MIN_LOOKAHEAD, true);
-
     let mut slow_hash_overflow = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
     let _ = slow_hash_overflow.quick_insert(usize::MAX);
     let mut slow_missing_head = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
@@ -734,10 +643,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     slow_missing_previous.previous.clear();
     let _ = slow_missing_previous.quick_insert(0);
 
-    let mut slow_match_short = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
-    slow_match_short.data.truncate(2);
-    slow_match_short.position = 4;
-    let _ = slow_match_short.longest_match(0, 4);
     let mut slow_empty_previous_chain = SlowMatcher::new(b"abcdwxyz", 16, 8, 128, 128);
     slow_empty_previous_chain.position = 4;
     slow_empty_previous_chain.previous.clear();
@@ -772,14 +677,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         distance: 0,
     }]);
     let mut writer = BitWriter::default();
-    let _ = emit_blocks(
-        &[Token::Match {
-            length: 1,
-            distance: 1,
-        }],
-        1,
-        &mut writer,
-    );
     let _ = frequencies(&[Token::Match {
         length: 0,
         distance: 1,
@@ -901,12 +798,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
 
     let _ = emit_tokens(
-        &[Token::Literal(7)],
-        &empty_tree,
-        &distance_tree,
-        &mut writer,
-    );
-    let _ = emit_tokens(
         &[Token::Match {
             length: 0,
             distance: 1,
@@ -975,28 +866,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         true,
         &mut writer,
     );
-    let invalid_length_tree = HuffmanTree {
-        nodes: vec![Node {
-            length: u16::MAX,
-            ..Node::default()
-        }],
-        max_code: 0,
-        bit_cost: 0,
-        static_cost: 0,
-    };
-    let _ = send_code(&mut writer, &empty_tree, 0);
-    let _ = send_code(&mut writer, &invalid_length_tree, 0);
 }
 
-fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> Option<usize> {
-    let bytes = data.get(position..position.checked_add(4)?)?;
+fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usize {
+    let bytes = &data[position..position + 4];
     let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     let hash = (word.wrapping_mul(2_654_435_761) >> 16) as usize;
-    let candidate = *head.get(hash)?;
+    let candidate = head[hash];
     if candidate != position {
-        *head.get_mut(hash)? = position;
+        head[hash] = position;
     }
-    Some(candidate)
+    candidate
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-three configuration.
@@ -1008,7 +888,8 @@ pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false)?;
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("level-three tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1019,7 +900,8 @@ pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true)?;
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("level-two tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1030,7 +912,8 @@ pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false)?;
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("level-four tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1041,7 +924,8 @@ pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)?;
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("level-six tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1052,7 +936,8 @@ pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16)?;
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("level-five tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1086,7 +971,8 @@ fn compress_slow_level(
     let tokens = slow(data, input_chunks, settings)?;
     let mut output = vec![0x78, header];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("slow tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1111,10 +997,14 @@ fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Option<V
     for &chunk_length in input_chunks {
         available = available.checked_add(chunk_length)?;
         debug_assert!(available <= data.len());
-        matcher.process(available, false)?;
+        matcher
+            .process(available, false)
+            .expect("slow matcher should process validated input window");
     }
     debug_assert_eq!(available, data.len());
-    matcher.process(available, true)?;
+    matcher
+        .process(available, true)
+        .expect("slow matcher should finish validated input window");
     Some(matcher.tokens)
 }
 
@@ -1176,10 +1066,12 @@ impl SlowMatcher {
             let mut match_length = 2usize;
             if candidate != 0
                 && candidate < self.position
-                && self.position.checked_sub(candidate)? <= MAX_DISTANCE
+                && self.position - candidate <= MAX_DISTANCE
                 && self.previous_length < self.max_lazy
             {
-                let found = self.longest_match(candidate, lookahead)?;
+                let found = self
+                    .longest_match(candidate, lookahead)
+                    .expect("slow matcher should find within a validated hash chain");
                 match_length = found.0;
                 if match_length > self.previous_length {
                     self.match_start = found.1;
@@ -1194,23 +1086,18 @@ impl SlowMatcher {
                     length: self.previous_length,
                     distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
                 });
-                let maximum_insert = self.position.checked_add(lookahead)?.checked_sub(3)?;
-                let move_forward = self.previous_length.checked_sub(2)?;
+                let maximum_insert = available - 3;
+                let move_forward = self.previous_length - 2;
                 let insert_count = move_forward.min(maximum_insert.saturating_sub(self.position));
-                for insert_position in
-                    self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
-                {
+                for insert_position in self.position + 1..=self.position + insert_count {
                     self.quick_insert(insert_position)?;
                 }
-                self.position = self
-                    .position
-                    .checked_add(self.previous_length.checked_sub(1)?)?;
+                self.position += self.previous_length - 1;
                 self.previous_length = 0;
                 self.match_available = false;
             } else if self.match_available {
-                self.tokens.push(Token::Literal(
-                    *self.data.get(self.position.checked_sub(1)?)?,
-                ));
+                self.tokens
+                    .push(Token::Literal(self.data[self.position - 1]));
                 self.previous_length = match_length;
                 self.position += 1;
             } else {
@@ -1224,9 +1111,8 @@ impl SlowMatcher {
             // With `finishing == true`, the loop above exits only when
             // lookahead reaches zero.
             debug_assert_eq!(self.position, available);
-            self.tokens.push(Token::Literal(
-                *self.data.get(self.position.checked_sub(1)?)?,
-            ));
+            self.tokens
+                .push(Token::Literal(self.data[self.position - 1]));
             self.match_available = false;
         }
         Some(())
@@ -1239,7 +1125,7 @@ impl SlowMatcher {
         let candidate = *self.head.get(hash)?;
         if candidate != position {
             *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
-            *self.head.get_mut(hash)? = position;
+            self.head[hash] = position;
         }
         Some(candidate)
     }
@@ -1253,7 +1139,7 @@ impl SlowMatcher {
         }
         let limit = self.position.saturating_sub(MAX_DISTANCE);
         while candidate < self.position {
-            if medium_candidate_can_improve(&self.data, candidate, self.position, best_length)? {
+            if medium_candidate_can_improve(&self.data, candidate, self.position, best_length) {
                 let length = match_length(
                     &self.data,
                     candidate,
@@ -1283,10 +1169,12 @@ impl SlowMatcher {
 
 #[cfg(feature = "tiff")]
 pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)?;
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
+        .expect("TIFF level-six tokenizer should receive validated chunks");
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 16_383, &mut writer)?;
+    emit_blocks(&tokens, 16_383, &mut writer)
+        .expect("TIFF level-six tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1306,14 +1194,20 @@ fn tokenize_lookahead_medium(
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         if available != 0 {
-            matcher.refill_boundary()?;
+            matcher
+                .refill_boundary()
+                .expect("level-six matcher should refill a validated input boundary");
         }
         available = available.checked_add(chunk_length)?;
         debug_assert!(available <= data.len());
-        matcher.process(available, false)?;
+        matcher
+            .process(available, false)
+            .expect("level-six matcher should process validated input window");
     }
     debug_assert_eq!(available, data.len());
-    matcher.process(available, true)?;
+    matcher
+        .process(available, true)
+        .expect("level-six matcher should finish validated input window");
     Some(matcher.tokens)
 }
 
@@ -1361,7 +1255,8 @@ impl Level6Matcher {
     fn refill_boundary(&mut self) -> Option<()> {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:1213-1237. fill_window()
         // re-inserts strstart-1 when new input makes a three-byte hash valid.
-        self.slide_window_if_needed()?;
+        self.slide_window_if_needed()
+            .expect("level-six matcher should slide a validated input boundary");
         if self.position >= 1 {
             self.quick_insert(self.position - 1)?;
         }
@@ -1370,7 +1265,7 @@ impl Level6Matcher {
 
     fn slide_window_if_needed(&mut self) -> Option<()> {
         if self.position.checked_sub(self.window_base)? >= 32_768 + MAX_DISTANCE {
-            self.window_base = self.window_base.checked_add(32_768)?;
+            self.window_base += 32_768;
             for position in self.head.iter_mut().chain(&mut self.previous) {
                 if *position < self.window_base {
                     *position = 0;
@@ -1402,16 +1297,16 @@ impl Level6Matcher {
             let mut current = following
                 .take()
                 .map_or_else(|| self.find_match(self.position, lookahead), Some)?;
-            self.insert_match(current, lookahead)?;
+            self.insert_match(current, lookahead)
+                .expect("level-six matcher should insert a validated match");
 
             if lookahead > MIN_LOOKAHEAD
-                && current.start.checked_add(current.length)?
-                    < self
-                        .window_base
-                        .checked_add(65_536usize.checked_sub(MIN_LOOKAHEAD)?)?
+                && current.start + current.length < self.window_base + 65_536 - MIN_LOOKAHEAD
             {
-                let future = current.start.checked_add(current.length)?;
-                let mut next = self.find_match(future, lookahead)?;
+                let future = current.start + current.length;
+                let mut next = self
+                    .find_match(future, lookahead)
+                    .expect("level-six matcher should find a validated future match");
                 if next.length >= MIN_MATCH {
                     fizzle_matches(&self.data, &mut current, &mut next);
                 }
@@ -1426,10 +1321,10 @@ impl Level6Matcher {
             } else {
                 self.tokens.push(Token::Match {
                     length: current.length,
-                    distance: current.start.checked_sub(current.match_start)?,
+                    distance: current.start - current.match_start,
                 });
             }
-            self.position = self.position.checked_add(current.length)?;
+            self.position += current.length;
         }
     }
 
@@ -1445,11 +1340,10 @@ impl Level6Matcher {
             start: position,
             original_start: position,
         };
-        if candidate != 0
-            && candidate < position
-            && position.checked_sub(candidate)? <= MAX_DISTANCE
-        {
-            let (length, match_start) = self.longest_match(candidate, position, lookahead)?;
+        if candidate != 0 && candidate < position && position - candidate <= MAX_DISTANCE {
+            let (length, match_start) = self
+                .longest_match(candidate, position, lookahead)
+                .expect("level-six matcher should find within a validated hash chain");
             if length >= MIN_MATCH {
                 // `longest_match` can only return a match start from a prior
                 // candidate accepted by the guard above.
@@ -1471,7 +1365,7 @@ impl Level6Matcher {
         let candidate = *self.head.get(hash)?;
         if candidate != position {
             *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
-            *self.head.get_mut(hash)? = position;
+            self.head[hash] = position;
         }
         Some(candidate)
     }
@@ -1480,19 +1374,19 @@ impl Level6Matcher {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94. In particular,
         // original_start prevents a left-fizzled match from reinserting old
         // positions and creating a cyclic hash chain.
-        if lookahead <= found.length.checked_add(MIN_MATCH)? || found.length < MIN_MATCH {
+        if lookahead <= found.length + MIN_MATCH || found.length < MIN_MATCH {
             return Some(());
         }
         if found.length <= 16 * self.max_insert {
-            let start = found.start.checked_add(1)?;
-            let count = found.length.checked_sub(1)?;
+            let start = found.start + 1;
+            let count = found.length - 1;
             let insertion_start = start.max(found.original_start);
-            let insertion_end = start.checked_add(count)?;
+            let insertion_end = start + count;
             for position in insertion_start..insertion_end {
                 self.quick_insert(position)?;
             }
         } else {
-            self.quick_insert(found.start.checked_add(found.length)?.checked_sub(1)?)?;
+            self.quick_insert(found.start + found.length - 1)?;
         }
         Some(())
     }
@@ -1513,7 +1407,7 @@ impl Level6Matcher {
             if candidate >= position {
                 break;
             }
-            if medium_candidate_can_improve(&self.data, candidate, position, best_length)? {
+            if medium_candidate_can_improve(&self.data, candidate, position, best_length) {
                 let length =
                     match_length(&self.data, candidate, position, lookahead.min(MAX_MATCH));
                 if length > best_length {
@@ -1524,7 +1418,7 @@ impl Level6Matcher {
                     }
                 }
             }
-            chain_length = chain_length.checked_sub(1)?;
+            chain_length -= 1;
             if chain_length == 0 {
                 break;
             }
@@ -1543,7 +1437,8 @@ pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     let tokens = tokenize_level9(data, input_chunks)?;
     let mut output = vec![0x78, 0xda];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)?;
+    emit_blocks(&tokens, 32_767, &mut writer)
+        .expect("level-nine tokenizer should emit valid DEFLATE tokens");
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
     Some(output)
@@ -1554,14 +1449,20 @@ fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         if available != 0 {
-            matcher.refill_boundary()?;
+            matcher
+                .refill_boundary()
+                .expect("level-nine matcher should refill a validated input boundary");
         }
         available = available.checked_add(chunk_length)?;
         debug_assert!(available <= data.len());
-        matcher.process(available, false)?;
+        matcher
+            .process(available, false)
+            .expect("level-nine matcher should process validated input window");
     }
     debug_assert_eq!(available, data.len());
-    matcher.process(available, true)?;
+    matcher
+        .process(available, true)
+        .expect("level-nine matcher should finish validated input window");
     Some(matcher.tokens)
 }
 
@@ -1598,8 +1499,8 @@ impl Level9Matcher {
 
     fn refill_boundary(&mut self) -> Option<()> {
         self.hash = rolling_hash(
-            usize::from(*self.data.get(self.position)?),
-            *self.data.get(self.position.checked_add(1)?)?,
+            usize::from(self.data[self.position]),
+            self.data[self.position + 1],
         );
         Some(())
     }
@@ -1620,10 +1521,12 @@ impl Level9Matcher {
             let mut match_length = 2usize;
             if candidate != 0
                 && candidate < self.position
-                && self.position.checked_sub(candidate)? <= MAX_DISTANCE
+                && self.position - candidate <= MAX_DISTANCE
                 && self.previous_length < MAX_MATCH
             {
-                let found = self.longest_match(candidate, lookahead)?;
+                let found = self
+                    .longest_match(candidate, lookahead)
+                    .expect("level-nine matcher should find within a validated hash chain");
                 match_length = found.0;
                 if match_length > self.previous_length {
                     self.match_start = found.1;
@@ -1638,23 +1541,18 @@ impl Level9Matcher {
                     length: self.previous_length,
                     distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
                 });
-                let maximum_insert = self.position.checked_add(lookahead)?.checked_sub(3)?;
-                let move_forward = self.previous_length.checked_sub(2)?;
+                let maximum_insert = available - 3;
+                let move_forward = self.previous_length - 2;
                 let insert_count = move_forward.min(maximum_insert.saturating_sub(self.position));
-                for insert_position in
-                    self.position.checked_add(1)?..=self.position.checked_add(insert_count)?
-                {
+                for insert_position in self.position + 1..=self.position + insert_count {
                     self.quick_insert(insert_position)?;
                 }
-                self.position = self
-                    .position
-                    .checked_add(self.previous_length.checked_sub(1)?)?;
+                self.position += self.previous_length - 1;
                 self.previous_length = 0;
                 self.match_available = false;
             } else if self.match_available {
-                self.tokens.push(Token::Literal(
-                    *self.data.get(self.position.checked_sub(1)?)?,
-                ));
+                self.tokens
+                    .push(Token::Literal(self.data[self.position - 1]));
                 self.previous_length = match_length;
                 self.position += 1;
             } else {
@@ -1668,9 +1566,8 @@ impl Level9Matcher {
             // With `finishing == true`, the loop above exits only when
             // lookahead reaches zero.
             debug_assert_eq!(self.position, available);
-            self.tokens.push(Token::Literal(
-                *self.data.get(self.position.checked_sub(1)?)?,
-            ));
+            self.tokens
+                .push(Token::Literal(self.data[self.position - 1]));
             self.match_available = false;
         }
         Some(())
@@ -1681,7 +1578,7 @@ impl Level9Matcher {
         let candidate = *self.head.get(self.hash)?;
         if candidate != position {
             *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
-            *self.head.get_mut(self.hash)? = position;
+            self.head[self.hash] = position;
         }
         Some(candidate)
     }
@@ -1697,26 +1594,26 @@ impl Level9Matcher {
         let base_limit = self.position.saturating_sub(MAX_DISTANCE);
         let mut match_offset = 0usize;
         if best_length >= 3 {
-            let mut hash = rolling_hash(0, *self.data.get(self.position.checked_add(1)?)?);
-            hash = rolling_hash(hash, *self.data.get(self.position.checked_add(2)?)?);
+            let mut hash = rolling_hash(0, self.data[self.position + 1]);
+            hash = rolling_hash(hash, self.data[self.position + 2]);
             for index in 3..=best_length {
-                hash = rolling_hash(hash, *self.data.get(self.position.checked_add(index)?)?);
-                let position = *self.head.get(hash)?;
+                hash = rolling_hash(hash, self.data[self.position + index]);
+                let position = self.head[hash];
                 if position < candidate {
-                    match_offset = index.checked_sub(2)?;
+                    match_offset = index - 2;
                     candidate = position;
                 }
             }
         }
-        let mut limit = base_limit.checked_add(match_offset)?;
+        let mut limit = base_limit + match_offset;
         if candidate <= limit {
             return Some((best_length.min(lookahead), best_start));
         }
         // The preceding `candidate <= limit` return also proves
         // `candidate > match_offset`, because `limit >= match_offset`.
-        while candidate < self.position.checked_add(match_offset)? {
-            let aligned = candidate.checked_sub(match_offset)?;
-            if medium_candidate_can_improve(&self.data, aligned, self.position, best_length)? {
+        while candidate < self.position + match_offset {
+            let aligned = candidate - match_offset;
+            if medium_candidate_can_improve(&self.data, aligned, self.position, best_length) {
                 let length =
                     match_length(&self.data, aligned, self.position, lookahead.min(MAX_MATCH));
                 if length > best_length {
@@ -1725,14 +1622,14 @@ impl Level9Matcher {
                     if best_length >= lookahead || best_length >= MAX_MATCH {
                         break;
                     }
-                    if best_length > 3 && best_start.checked_add(best_length)? < self.position {
-                        candidate = candidate.checked_sub(match_offset)?;
+                    if best_length > 3 && best_start + best_length < self.position {
+                        candidate -= match_offset;
                         match_offset = 0;
                         let mut next_position = candidate;
-                        for index in 0..=best_length.checked_sub(3)? {
-                            let position = *self.previous.get((candidate + index) & WINDOW_MASK)?;
+                        for index in 0..=best_length - 3 {
+                            let position = self.previous[(candidate + index) & WINDOW_MASK];
                             if position < next_position {
-                                if position <= base_limit.checked_add(index)? {
+                                if position <= base_limit + index {
                                     return Some((best_length.min(lookahead), best_start));
                                 }
                                 next_position = position;
@@ -1741,29 +1638,26 @@ impl Level9Matcher {
                         }
                         candidate = next_position;
 
-                        let hash_start = self
-                            .position
-                            .checked_add(best_length)?
-                            .checked_sub(MIN_MATCH.checked_add(1)?)?;
-                        let mut hash = rolling_hash(0, *self.data.get(hash_start)?);
-                        hash = rolling_hash(hash, *self.data.get(hash_start + 1)?);
-                        hash = rolling_hash(hash, *self.data.get(hash_start + 2)?);
-                        let position = *self.head.get(hash)?;
+                        let hash_start = self.position + best_length - (MIN_MATCH + 1);
+                        let mut hash = rolling_hash(0, self.data[hash_start]);
+                        hash = rolling_hash(hash, self.data[hash_start + 1]);
+                        hash = rolling_hash(hash, self.data[hash_start + 2]);
+                        let position = self.head[hash];
                         // Unlike zlib-ng's sliding C window, this matcher
                         // eagerly inserts every absolute position in a match.
                         // The matching tail is therefore never older than the
                         // chain candidate selected above.
                         debug_assert!(position >= candidate);
-                        limit = base_limit.checked_add(match_offset)?;
+                        limit = base_limit + match_offset;
                         continue;
                     }
                 }
             }
-            chain_length = chain_length.checked_sub(1)?;
+            chain_length -= 1;
             if chain_length == 0 {
                 break;
             }
-            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            candidate = self.previous[candidate & WINDOW_MASK];
             if candidate <= limit {
                 break;
             }
@@ -1781,12 +1675,12 @@ fn medium_candidate_can_improve(
     candidate: usize,
     position: usize,
     best_length: usize,
-) -> Option<bool> {
-    let mut offset = best_length.checked_sub(1)?;
+) -> bool {
+    let mut offset = best_length - 1;
     if best_length >= 4 {
-        offset = offset.checked_sub(2)?;
+        offset -= 2;
         if best_length >= 8 {
-            offset = offset.checked_sub(4)?;
+            offset -= 4;
         }
     }
     let width = if best_length < 4 {
@@ -1796,13 +1690,9 @@ fn medium_candidate_can_improve(
     } else {
         4
     };
-    Some(
-        data.get(candidate..candidate.checked_add(width)?)?
-            == data.get(position..position.checked_add(width)?)?
-            && data.get(candidate.checked_add(offset)?..candidate.checked_add(offset + width)?)?
-                == data
-                    .get(position.checked_add(offset)?..position.checked_add(offset + width)?)?,
-    )
+    data[candidate..candidate + width] == data[position..position + width]
+        && data[candidate + offset..candidate + offset + width]
+            == data[position + offset..position + offset + width]
 }
 
 fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch) {
@@ -1856,10 +1746,14 @@ fn tokenize_early_matcher(
     for &chunk_length in input_chunks {
         available = available.checked_add(chunk_length)?;
         debug_assert!(available <= data.len());
-        matcher.process(available, false)?;
+        matcher
+            .process(available, false)
+            .expect("level-three matcher should process validated input window");
     }
     debug_assert_eq!(available, data.len());
-    matcher.process(available, true)?;
+    matcher
+        .process(available, true)
+        .expect("level-three matcher should finish validated input window");
     Some(matcher.tokens)
 }
 
@@ -1909,7 +1803,9 @@ impl<'a> Level3Matcher<'a> {
                 let candidate = self.quick_insert(self.position)?;
                 let distance = self.position.checked_sub(candidate)?;
                 if candidate != 0 && distance <= MAX_DISTANCE {
-                    (length, match_start) = self.longest_match(candidate, lookahead)?;
+                    (length, match_start) = self
+                        .longest_match(candidate, lookahead)
+                        .expect("level-three matcher should find within a validated hash chain");
                     if length < MIN_MATCH {
                         length = 1;
                     }
@@ -1919,9 +1815,10 @@ impl<'a> Level3Matcher<'a> {
             if length >= MIN_MATCH {
                 self.tokens.push(Token::Match {
                     length,
-                    distance: self.position.checked_sub(match_start)?,
+                    distance: self.position - match_start,
                 });
-                self.insert_match(length, lookahead)?;
+                self.insert_match(length, lookahead)
+                    .expect("level-three matcher should insert a validated match");
             } else {
                 self.tokens
                     .push(Token::Literal(*self.data.get(self.position)?));
@@ -1943,7 +1840,7 @@ impl<'a> Level3Matcher<'a> {
         let candidate = *self.head.get(hash)?;
         if candidate != position {
             *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
-            *self.head.get_mut(hash)? = position;
+            self.head[hash] = position;
         }
         Some(candidate)
     }
@@ -1966,8 +1863,8 @@ impl<'a> Level3Matcher<'a> {
                 self.quick_insert(self.position.checked_add(offset)?)?;
             }
         } else {
-            let end = self.position.checked_add(length)?;
-            self.quick_insert(end.checked_sub(1)?)?;
+            let end = self.position + length;
+            self.quick_insert(end - 1)?;
         }
         Some(())
     }
@@ -1981,7 +1878,7 @@ impl<'a> Level3Matcher<'a> {
         let limit = self.position.saturating_sub(MAX_DISTANCE);
 
         loop {
-            if self.candidate_can_improve(candidate, best_length)? {
+            if self.candidate_can_improve(candidate, best_length) {
                 let length = match_length(
                     self.data,
                     candidate,
@@ -2013,12 +1910,12 @@ impl<'a> Level3Matcher<'a> {
         Some((best_length, best_start))
     }
 
-    fn candidate_can_improve(&self, candidate: usize, best_length: usize) -> Option<bool> {
-        let mut offset = best_length.checked_sub(1)?;
+    fn candidate_can_improve(&self, candidate: usize, best_length: usize) -> bool {
+        let mut offset = best_length - 1;
         if best_length >= 4 {
-            offset = offset.checked_sub(2)?;
+            offset -= 2;
             if best_length >= 8 {
-                offset = offset.checked_sub(4)?;
+                offset -= 4;
             }
         }
         let width = if best_length < 4 {
@@ -2028,18 +1925,11 @@ impl<'a> Level3Matcher<'a> {
         } else {
             4
         };
-        let candidate_end = candidate.checked_add(offset)?;
-        let scan_end = self.position.checked_add(offset)?;
-        Some(
-            self.data.get(candidate..candidate.checked_add(width)?)?
-                == self
-                    .data
-                    .get(self.position..self.position.checked_add(width)?)?
-                && self
-                    .data
-                    .get(candidate_end..candidate_end.checked_add(width)?)?
-                    == self.data.get(scan_end..scan_end.checked_add(width)?)?,
-        )
+        let candidate_end = candidate + offset;
+        let scan_end = self.position + offset;
+        self.data[candidate..candidate + width] == self.data[self.position..self.position + width]
+            && self.data[candidate_end..candidate_end + width]
+                == self.data[scan_end..scan_end + width]
     }
 }
 
@@ -2104,7 +1994,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     let mut static_cost = 0i64;
     while heap_len < 2 {
         let index = match max_code {
-            Some(current_max @ 0..=1) => current_max.checked_add(1)?,
+            Some(current_max @ 0..=1) => current_max + 1,
             Some(_) | None => 0,
         };
         max_code = Some(max_code.map_or(index, |current_max| current_max.max(index)));
@@ -2119,7 +2009,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
             .unwrap_or(0);
         static_cost -= i64::from(static_length);
     }
-    let max_code = max_code?;
+    let max_code = max_code.expect("tree construction always seeds at least two nodes");
 
     for index in (1..=heap_len / 2).rev() {
         pq_down(&mut heap, heap_len, &nodes, index);
@@ -2128,63 +2018,60 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     while heap_len >= 2 {
         let first = remove_smallest(&mut heap, &mut heap_len, &nodes);
         let second = heap[1];
-        heap_max = heap_max.checked_sub(1)?;
+        heap_max -= 1;
         heap[heap_max] = first;
-        heap_max = heap_max.checked_sub(1)?;
+        heap_max -= 1;
         heap[heap_max] = second;
 
         nodes[next_node].frequency = nodes[first]
             .frequency
             .checked_add(nodes[second].frequency)?;
-        nodes[next_node].depth = nodes[first].depth.max(nodes[second].depth).checked_add(1)?;
+        nodes[next_node].depth = nodes[first].depth.max(nodes[second].depth) + 1;
         nodes[first].parent = next_node;
         nodes[second].parent = next_node;
         heap[1] = next_node;
-        next_node = next_node.checked_add(1)?;
+        next_node += 1;
         pq_down(&mut heap, heap_len, &nodes, 1);
     }
-    heap_max = heap_max.checked_sub(1)?;
+    heap_max -= 1;
     heap[heap_max] = heap[1];
 
     let mut bit_counts = [0u16; MAX_BITS + 1];
     nodes[heap[heap_max]].length = 0;
     let mut overflow = 0i32;
-    for &index in heap.get(heap_max + 1..heap_size)? {
-        let mut bits = usize::from(nodes[nodes[index].parent].length).checked_add(1)?;
+    for &index in &heap[heap_max + 1..heap_size] {
+        let mut bits = usize::from(nodes[nodes[index].parent].length) + 1;
         if bits > spec.max_length {
             bits = spec.max_length;
             overflow += 1;
         }
-        nodes[index].length = u16::try_from(bits).ok()?;
+        nodes[index].length = bits as u16;
         if index > max_code {
             continue;
         }
-        bit_counts[bits] = bit_counts[bits].checked_add(1)?;
+        bit_counts[bits] += 1;
         let extra = index
             .checked_sub(spec.extra_base)
             .and_then(|extra_index| spec.extra_bits.get(extra_index))
             .copied()
             .unwrap_or(0);
         let frequency = i64::from(nodes[index].frequency);
-        bit_cost += frequency * i64::try_from(bits.checked_add(usize::from(extra))?).ok()?;
+        bit_cost += frequency * (bits + usize::from(extra)) as i64;
         if let Some(static_lengths) = spec.static_lengths {
-            static_cost += frequency
-                * i64::try_from(
-                    usize::from(*static_lengths.get(index)?).checked_add(usize::from(extra))?,
-                )
-                .ok()?;
+            static_cost +=
+                frequency * (usize::from(*static_lengths.get(index)?) + usize::from(extra)) as i64;
         }
     }
 
     if overflow > 0 {
         while overflow > 0 {
-            let mut bits = spec.max_length.checked_sub(1)?;
+            let mut bits = spec.max_length - 1;
             while bit_counts[bits] == 0 {
                 bits = bits.checked_sub(1)?;
             }
-            bit_counts[bits] = bit_counts[bits].checked_sub(1)?;
-            bit_counts[bits + 1] = bit_counts[bits + 1].checked_add(2)?;
-            bit_counts[spec.max_length] = bit_counts[spec.max_length].checked_sub(1)?;
+            bit_counts[bits] -= 1;
+            bit_counts[bits + 1] += 2;
+            bit_counts[spec.max_length] -= 1;
             overflow -= 2;
         }
         debug_assert_eq!(overflow, 0);
@@ -2192,7 +2079,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
         for bits in (1..=spec.max_length).rev() {
             let mut count = bit_counts[bits];
             while count != 0 {
-                sorted_index = sorted_index.checked_sub(1)?;
+                sorted_index -= 1;
                 let index = heap[sorted_index];
                 if index > max_code {
                     continue;
@@ -2200,15 +2087,15 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
                 if usize::from(nodes[index].length) != bits {
                     let old_length = i64::from(nodes[index].length);
                     let frequency = i64::from(nodes[index].frequency);
-                    bit_cost += (i64::try_from(bits).ok()? - old_length) * frequency;
-                    nodes[index].length = u16::try_from(bits).ok()?;
+                    bit_cost += (bits as i64 - old_length) * frequency;
+                    nodes[index].length = bits as u16;
                 }
-                count = count.checked_sub(1)?;
+                count -= 1;
             }
         }
     }
 
-    generate_codes(&mut nodes, max_code, &bit_counts)?;
+    generate_codes(&mut nodes, max_code, &bit_counts);
     Some(HuffmanTree {
         nodes,
         max_code,
@@ -2248,7 +2135,7 @@ fn remove_smallest(heap: &mut [usize], heap_len: &mut usize, nodes: &[Node]) -> 
     smallest
 }
 
-fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS + 1]) -> Option<()> {
+fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS + 1]) {
     let mut next_code = [0u16; MAX_BITS + 1];
     let mut code = 0u16;
     for bits in 1..=MAX_BITS {
@@ -2260,15 +2147,14 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS +
         if length == 0 {
             continue;
         }
-        node.code = reverse_bits(next_code[length], u8::try_from(length).ok()?);
+        node.code = reverse_bits(next_code[length], length as u8);
         next_code[length] += 1;
     }
-    Some(())
 }
 
 fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) -> Option<()> {
     let block_count = tokens.len().div_ceil(block_tokens);
-    let uncompressed = expand_tokens(tokens)?;
+    let uncompressed = expand_tokens(tokens).expect("generated DEFLATE tokens should expand");
     let mut uncompressed_start = 0usize;
     for (index, block) in tokens.chunks(block_tokens).enumerate() {
         let stored_length = block.iter().fold(0usize, |length, token| {
@@ -2280,7 +2166,8 @@ fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) ->
         });
         let uncompressed_end = uncompressed_start + stored_length;
         let uncompressed_block = &uncompressed[uncompressed_start..uncompressed_end];
-        write_block(block, uncompressed_block, index + 1 == block_count, writer)?;
+        write_block(block, uncompressed_block, index + 1 == block_count, writer)
+            .expect("valid expanded block tokens should emit");
         uncompressed_start = uncompressed_end;
     }
     Some(())
@@ -2319,7 +2206,8 @@ fn write_block(
         extra_base: 257,
         static_lengths: Some(&static_literal_lengths),
     };
-    let literal_tree = build_tree(&literal_frequencies, literal_spec)?;
+    let literal_tree = build_tree(&literal_frequencies, literal_spec)
+        .expect("valid literal frequencies build a tree");
     let distance_spec = TreeSpec {
         elements: DISTANCE_CODES,
         max_length: MAX_BITS,
@@ -2327,13 +2215,16 @@ fn write_block(
         extra_base: 0,
         static_lengths: Some(&static_distance_lengths),
     };
-    let distance_tree = build_tree(&distance_frequencies, distance_spec)?;
+    let distance_tree = build_tree(&distance_frequencies, distance_spec)
+        .expect("valid distance frequencies build a tree");
 
     let mut bit_frequencies = [0u32; BIT_LENGTH_CODES];
     let literal_nodes = &literal_tree.nodes;
-    scan_tree(literal_nodes, literal_tree.max_code, &mut bit_frequencies)?;
+    scan_tree(literal_nodes, literal_tree.max_code, &mut bit_frequencies)
+        .expect("valid literal tree scans into bit-length frequencies");
     let distance_nodes = &distance_tree.nodes;
-    scan_tree(distance_nodes, distance_tree.max_code, &mut bit_frequencies)?;
+    scan_tree(distance_nodes, distance_tree.max_code, &mut bit_frequencies)
+        .expect("valid distance tree scans into bit-length frequencies");
     let bit_length_spec = TreeSpec {
         elements: BIT_LENGTH_CODES,
         max_length: MAX_BIT_LENGTH_BITS,
@@ -2341,22 +2232,20 @@ fn write_block(
         extra_base: 0,
         static_lengths: None,
     };
-    let bit_length_tree = build_tree(&bit_frequencies, bit_length_spec)?;
+    let bit_length_tree = build_tree(&bit_frequencies, bit_length_spec)
+        .expect("valid bit-length frequencies build a tree");
     let max_bit_length_index = (3..BIT_LENGTH_CODES)
         .rev()
         .find(|&index| bit_length_tree.nodes[CODE_LENGTH_ORDER[index]].length != 0)
         .unwrap_or(3);
 
-    let dynamic_cost = literal_tree
-        .bit_cost
-        .checked_add(distance_tree.bit_cost)?
-        .checked_add(bit_length_tree.bit_cost)?
-        .checked_add(i64::try_from(3 * (max_bit_length_index + 1) + 14).ok()?)?;
-    let static_cost = literal_tree
-        .static_cost
-        .checked_add(distance_tree.static_cost)?;
-    let dynamic_bytes = usize::try_from((dynamic_cost + 10) >> 3).ok()?;
-    let static_bytes = usize::try_from((static_cost + 10) >> 3).ok()?;
+    let dynamic_cost = literal_tree.bit_cost
+        + distance_tree.bit_cost
+        + bit_length_tree.bit_cost
+        + (3 * (max_bit_length_index + 1) + 14) as i64;
+    let static_cost = literal_tree.static_cost + distance_tree.static_cost;
+    let dynamic_bytes = ((dynamic_cost + 10) >> 3) as usize;
+    let static_bytes = ((static_cost + 10) >> 3) as usize;
 
     let stored_cost = if uncompressed.len() <= usize::from(u16::MAX) {
         uncompressed.len() + 4
@@ -2375,13 +2264,16 @@ fn write_block(
         return Some(());
     }
     if static_bytes <= dynamic_bytes {
-        emit_fixed_block(tokens, final_block, writer)?;
+        emit_fixed_block(tokens, final_block, writer)
+            .expect("valid block tokens emit as fixed Huffman codes");
     } else {
         writer.write_bits(4 | u32::from(final_block), 3); // BTYPE=dynamic (10).
         let trees = [&literal_tree, &distance_tree, &bit_length_tree];
-        send_trees(trees, max_bit_length_index, writer)?;
-        emit_tokens(tokens, &literal_tree, &distance_tree, writer)?;
-        send_code(writer, &literal_tree, 256)?;
+        send_trees(trees, max_bit_length_index, writer)
+            .expect("valid Huffman trees emit a dynamic tree header");
+        emit_tokens(tokens, &literal_tree, &distance_tree, writer)
+            .expect("valid block tokens emit with generated Huffman trees");
+        send_code(writer, &literal_tree, 256);
     }
     Some(())
 }
@@ -2393,16 +2285,16 @@ fn frequencies(tokens: &[Token]) -> Option<([u32; LITERAL_CODES], [u32; DISTANCE
     for token in tokens {
         match token {
             Token::Literal(value) => {
-                literal[usize::from(*value)] = literal[usize::from(*value)].checked_add(1)?;
+                literal[usize::from(*value)] += 1;
             }
             Token::Match {
                 length,
                 distance: match_distance,
             } => {
                 let length_index = length_index(*length)?;
-                literal[257 + length_index] = literal[257 + length_index].checked_add(1)?;
+                literal[257 + length_index] += 1;
                 let distance_index = distance_index(*match_distance)?;
-                distance[distance_index] = distance[distance_index].checked_add(1)?;
+                distance[distance_index] += 1;
             }
         }
     }
@@ -2430,7 +2322,7 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Op
             continue;
         }
         if count < min_count {
-            frequencies[current_length] += u32::try_from(count).ok()?;
+            frequencies[current_length] += count as u32;
         } else if current_length != 0 {
             if current_length != previous_length {
                 frequencies[current_length] += 1;
@@ -2463,14 +2355,17 @@ fn send_trees(
     writer: &mut BitWriter,
 ) -> Option<()> {
     let [literal, distance, bit_length] = trees;
-    writer.write_bits(u32::try_from(literal.max_code + 1 - 257).ok()?, 5);
-    writer.write_bits(u32::try_from(distance.max_code).ok()?, 5);
-    writer.write_bits(u32::try_from(max_bit_length_index + 1 - 4).ok()?, 4);
+    writer.write_bits((literal.max_code + 1 - 257) as u32, 5);
+    writer.write_bits(distance.max_code as u32, 5);
+    writer.write_bits((max_bit_length_index + 1 - 4) as u32, 4);
     for &code in &CODE_LENGTH_ORDER[..=max_bit_length_index] {
         writer.write_bits(u32::from(bit_length.nodes[code].length), 3);
     }
-    send_tree(literal, literal.max_code, bit_length, writer)?;
+    send_tree(literal, literal.max_code, bit_length, writer)
+        .expect("generated literal tree emits with generated bit-length tree");
     send_tree(distance, distance.max_code, bit_length, writer)
+        .expect("generated distance tree emits with generated bit-length tree");
+    Some(())
 }
 
 fn send_tree(
@@ -2498,21 +2393,21 @@ fn send_tree(
         }
         if count < min_count {
             for _ in 0..count {
-                send_code(writer, bit_length, current_length)?;
+                send_code(writer, bit_length, current_length);
             }
         } else if current_length != 0 {
             if current_length != previous_length {
-                send_code(writer, bit_length, current_length)?;
+                send_code(writer, bit_length, current_length);
                 count -= 1;
             }
-            send_code(writer, bit_length, 16)?;
-            writer.write_bits(u32::try_from(count - 3).ok()?, 2);
+            send_code(writer, bit_length, 16);
+            writer.write_bits((count - 3) as u32, 2);
         } else if count <= 10 {
-            send_code(writer, bit_length, 17)?;
-            writer.write_bits(u32::try_from(count - 3).ok()?, 3);
+            send_code(writer, bit_length, 17);
+            writer.write_bits((count - 3) as u32, 3);
         } else {
-            send_code(writer, bit_length, 18)?;
-            writer.write_bits(u32::try_from(count - 11).ok()?, 7);
+            send_code(writer, bit_length, 18);
+            writer.write_bits((count - 11) as u32, 7);
         }
         count = 0;
         previous_length = current_length;
@@ -2538,16 +2433,16 @@ fn emit_tokens(
 ) -> Option<()> {
     for token in tokens {
         match token {
-            Token::Literal(value) => send_code(writer, literal_tree, usize::from(*value))?,
+            Token::Literal(value) => send_code(writer, literal_tree, usize::from(*value)),
             Token::Match { length, distance } => {
                 let length_index = length_index(*length)?;
-                send_code(writer, literal_tree, 257 + length_index)?;
+                send_code(writer, literal_tree, 257 + length_index);
                 writer.write_bits(
                     u32::try_from(length - LENGTH_BASE[length_index]).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
                 let distance_index = distance_index(*distance)?;
-                send_code(writer, distance_tree, distance_index)?;
+                send_code(writer, distance_tree, distance_index);
                 writer.write_bits(
                     u32::try_from(distance - DISTANCE_BASE[distance_index]).ok()?,
                     DISTANCE_EXTRA[distance_index],
@@ -2565,16 +2460,13 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
             Token::Literal(value) => write_fixed_symbol(writer, u16::from(*value)),
             Token::Match { length, distance } => {
                 let length_index = length_index(*length)?;
-                write_fixed_symbol(writer, u16::try_from(257 + length_index).ok()?);
+                write_fixed_symbol(writer, (257 + length_index) as u16);
                 writer.write_bits(
                     u32::try_from(length - LENGTH_BASE[length_index]).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
                 let distance_index = distance_index(*distance)?;
-                writer.write_bits(
-                    u32::from(reverse_bits(u16::try_from(distance_index).ok()?, 5)),
-                    5,
-                );
+                writer.write_bits(u32::from(reverse_bits(distance_index as u16, 5)), 5);
                 writer.write_bits(
                     u32::try_from(distance - DISTANCE_BASE[distance_index]).ok()?,
                     DISTANCE_EXTRA[distance_index],
@@ -2586,10 +2478,9 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
     Some(())
 }
 
-fn send_code(writer: &mut BitWriter, tree: &HuffmanTree, symbol: usize) -> Option<()> {
-    let node = tree.nodes.get(symbol)?;
-    writer.write_bits(u32::from(node.code), u8::try_from(node.length).ok()?);
-    Some(())
+fn send_code(writer: &mut BitWriter, tree: &HuffmanTree, symbol: usize) {
+    let node = &tree.nodes[symbol];
+    writer.write_bits(u32::from(node.code), node.length as u8);
 }
 
 fn length_index(length: usize) -> Option<usize> {

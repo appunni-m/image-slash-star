@@ -1469,6 +1469,162 @@
       }
     },
     {
+      "id": "error_malformed_container_vp8l_alpha_header_only",
+      "asset": "vp8l_alpha_header_only.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_alpha_header_only.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_6",
+      "asset": "vp8l_truncated_6.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_6.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_8",
+      "asset": "vp8l_truncated_8.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_8.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_12",
+      "asset": "vp8l_truncated_12.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_12.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_16",
+      "asset": "vp8l_truncated_16.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_16.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_24",
+      "asset": "vp8l_truncated_24.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_24.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_32",
+      "asset": "vp8l_truncated_32.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_32.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_64",
+      "asset": "vp8l_truncated_64.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_64.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_truncated_128",
+      "asset": "vp8l_truncated_128.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_truncated_128.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_plane_distance_truncated_12",
+      "asset": "vp8l_plane_distance_truncated_12.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_plane_distance_truncated_12.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_meta_cache_truncated_10",
+      "asset": "vp8l_meta_cache_truncated_10.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_meta_cache_truncated_10.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8l_single_cache_truncated_18",
+      "asset": "vp8l_single_cache_truncated_18.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8l_single_cache_truncated_18.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_vp8_empty_payload",
       "asset": "vp8_empty_payload.webp",
       "expect_error": true,
@@ -1955,6 +2111,19 @@
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_xmp_chunk.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "pillow_tolerated_malformed_alpha_missing_chunk",
+      "asset": "alpha_missing_chunk.webp",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/alpha_missing_chunk.webp",
         "operations": [
           "PIL.Image.open",
           "load",
