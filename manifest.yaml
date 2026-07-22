@@ -1783,8 +1783,25 @@ formats:
       - vp8_partition_10.webp
       - vp8_partition_11.webp
       - vp8_partition_12.webp
+      - vp8_partition_13.webp
+      - vp8_partition_14.webp
+      - vp8_partition_15.webp
       - vp8_partition_16.webp
+      - vp8_partition_17.webp
+      - vp8_partition_18.webp
+      - vp8_partition_19.webp
+      - vp8_partition_20.webp
+      - vp8_partition_21.webp
+      - vp8_partition_22.webp
+      - vp8_partition_23.webp
       - vp8_partition_24.webp
+      - vp8_partition_25.webp
+      - vp8_partition_26.webp
+      - vp8_partition_27.webp
+      - vp8_partition_28.webp
+      - vp8_partition_29.webp
+      - vp8_partition_30.webp
+      - vp8_partition_31.webp
       - vp8_partition_32.webp
       expect_error: true
     - id: pillow_tolerated_malformed

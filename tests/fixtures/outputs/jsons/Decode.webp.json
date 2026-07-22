@@ -2444,6 +2444,36 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_container_vp8_partition_13",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_14",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_15",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_container_vp8_partition_16",
       "status": "error",
       "error_type": "builtins.OSError",
@@ -2454,7 +2484,147 @@
       "ref_size": null
     },
     {
+      "id": "error_malformed_container_vp8_partition_17",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_18",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_19",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_20",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_21",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_22",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_23",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
       "id": "error_malformed_container_vp8_partition_24",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_25",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_26",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_27",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_28",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_29",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_30",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "failed to read next frame",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_31",
       "status": "error",
       "error_type": "builtins.OSError",
       "error_message": "failed to read next frame",

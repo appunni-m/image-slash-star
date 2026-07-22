@@ -2210,6 +2210,45 @@
       }
     },
     {
+      "id": "error_malformed_container_vp8_partition_13",
+      "asset": "vp8_partition_13.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_13.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_14",
+      "asset": "vp8_partition_14.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_14.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_15",
+      "asset": "vp8_partition_15.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_15.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_vp8_partition_16",
       "asset": "vp8_partition_16.webp",
       "expect_error": true,
@@ -2223,11 +2262,193 @@
       }
     },
     {
+      "id": "error_malformed_container_vp8_partition_17",
+      "asset": "vp8_partition_17.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_17.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_18",
+      "asset": "vp8_partition_18.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_18.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_19",
+      "asset": "vp8_partition_19.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_19.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_20",
+      "asset": "vp8_partition_20.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_20.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_21",
+      "asset": "vp8_partition_21.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_21.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_22",
+      "asset": "vp8_partition_22.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_22.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_23",
+      "asset": "vp8_partition_23.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_23.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "error_malformed_container_vp8_partition_24",
       "asset": "vp8_partition_24.webp",
       "expect_error": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_24.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_25",
+      "asset": "vp8_partition_25.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_25.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_26",
+      "asset": "vp8_partition_26.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_26.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_27",
+      "asset": "vp8_partition_27.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_27.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_28",
+      "asset": "vp8_partition_28.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_28.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_29",
+      "asset": "vp8_partition_29.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_29.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_30",
+      "asset": "vp8_partition_30.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_30.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "error_malformed_container_vp8_partition_31",
+      "asset": "vp8_partition_31.webp",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_partition_31.webp",
         "operations": [
           "PIL.Image.open",
           "load",

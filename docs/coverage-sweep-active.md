@@ -7,14 +7,14 @@ active checklist for getting the remaining LLVM source regions and branch to
 
 ## Current retained baseline
 
-- Coverage MCP run: `92c1cdb4-3e1b-4ae9-9ad5-a778b673f5e4`
-- Coverage MCP snapshot: `1f3ce856-4942-4a21-aebd-253e40bf7250`
+- Coverage MCP run: `059e32bb-8a4b-445e-b514-0e1bd97b58ad`
+- Coverage MCP snapshot: `eb1e5e29-2ab8-4b23-8a9f-8484af4644b2`
 - Command: `all-features-llvm-cov-json-nightly-branch`
 - Result: `5 passed / 0 failed`
 - Lines: `27001 / 27001` (100%)
 - Functions: `1630 / 1630` (100%)
 - Branches: `3487 / 3488` (1 missing)
-- Regions: `42736 / 42799` (63 missing)
+- Regions: `42737 / 42799` (62 missing)
 
 ## Remaining gap map
 
@@ -24,8 +24,159 @@ active checklist for getting the remaining LLVM source regions and branch to
 | `src/codecs/webp/native/decoder.rs` | 32 | 0 | Batch 63 cleared all raw zero-line `Read`/`Seek` propagation entries; remaining aggregate debt currently has no raw zero-line entries in the MCP artifact. |
 | `src/codecs/webp/native/lossless.rs` | 21 | 1 | Batch 63 cleared the raw zero-line bit-reader/fill propagation entries; the retained branch gap still maps to `BitReader::read_bits`. |
 | `src/codecs/tiff/decode.rs` | 0 | 0 | Complete after coverage-only malformed header overflow fixtures. |
-| `src/codecs/webp/native/vp8.rs` | 9 | 0 | Batch 63 cleared `read_to_end()` propagation; remaining raw zero-line entries are VP8 parser/residual decode propagation sites. |
+| `src/codecs/webp/native/vp8.rs` | 8 | 0 | Batch 64 first-partition fixtures cleared one more VP8 aggregate region; remaining debt is still parser/residual decode propagation. |
 | `src/codecs/webp/native/encoder.rs` | 1 | 0 | Top-level `WebPEncoder::encode()` source-region artifact remains after direct writer-failure hook coverage. |
+
+## Batch 64 plan
+
+Goal: make one fixture-first VP8 sweep before adding more private hooks.
+
+Reverse mapping from retained snapshot
+`1f3ce856-4942-4a21-aebd-253e40bf7250`:
+
+- Current aggregate state is lines `27001 / 27001`, functions `1630 / 1630`,
+  branches `3487 / 3488`, and regions `42736 / 42799`.
+- MCP still reports WebP native debt only:
+  - `decoder.rs`: 32 regions, 0 branches, with no raw zero-line entries;
+  - `lossless.rs`: 21 regions, 1 branch, with no raw zero-line entries;
+  - `vp8.rs`: 9 regions, 0 branches;
+  - `encoder.rs`: 1 region, 0 branches, with no raw zero-line entry.
+- The remaining explicit VP8 source loci are caller propagation sites in
+  `read_frame_header()` / `decode_frame_()`:
+  - line 1193: `read_loop_filter_adjustments()?`;
+  - line 1200: `init_partitions(num_partitions)?`;
+  - line 1202: `read_quantization_indices()?`;
+  - line 1220: accumulated final header bit check;
+  - line 1492: Y2 coefficient read propagation;
+  - line 1547: UV coefficient read propagation;
+  - line 1860: macroblock header propagation.
+- Existing public fixtures already mutate VP8 first-partition size for
+  `0..=12`, `16`, `24`, and `32`. A temp Pillow probe confirms the skipped
+  partition sizes `13..=15`, `17..=23`, and `25..=31` are all rejected by
+  Pillow with `OSError: failed to read next frame`, so they are valid
+  manifest-driven oracle fixtures.
+- Hypothesis: the skipped partition sizes may move malformed payload boundaries
+  through the remaining `read_frame_header()` propagation sites. If they do not
+  move the retained coverage counters, the exact caller `?` regions are likely
+  hook-only and should be handled with targeted coverage-only decoder states in
+  a later batch.
+
+Planned edit:
+
+- Expand `scripts/generate_test_assets.py` to generate the full
+  `vp8_partition_0.webp` through `vp8_partition_32.webp` fixture set.
+- Add the skipped partition fixtures to the WebP decode manifest as
+  `expect_error` Pillow-oracle cases.
+- Regenerate WebP assets and Pillow oracle references with:
+  - `.oracle-venv/bin/python scripts/generate_test_assets.py --format webp`;
+  - `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`.
+- Run local non-coverage gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain the batch only if it preserves 100% line/function coverage and reduces
+  aggregate missing regions or branches.
+
+Applied edit:
+
+- Expanded `scripts/generate_test_assets.py` to emit every
+  `vp8_partition_0.webp` through `vp8_partition_32.webp`.
+- Added the skipped partition sizes 13, 14, 15, 17 through 23, and 25 through
+  31 to `manifest.yaml` under the WebP malformed expected-error group.
+- Regenerated WebP assets and Pillow oracle references:
+  - `.oracle-venv/bin/python scripts/generate_test_assets.py --format webp`;
+  - `.oracle-venv/bin/python scripts/generate_decode_refs.py --format webp`.
+- Pillow classified each new partition fixture as
+  `builtins.OSError: failed to read next frame`.
+
+Local validation:
+
+- `cargo fmt --all --check`: passed.
+- `git diff --check`: passed.
+- `.oracle-venv/bin/python -m json.tool tests/fixtures/input/jsons/Decode.webp.json`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo check --all-features`: passed.
+
+Coverage MCP validation:
+
+- Run: `059e32bb-8a4b-445e-b514-0e1bd97b58ad`.
+- Snapshot: `eb1e5e29-2ab8-4b23-8a9f-8484af4644b2`.
+- Commit measured: `a0f65d521edad0cfc04889060d65979c369d6a2e`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27001 / 27001` (100%).
+- Functions: `1630 / 1630` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42737 / 42799` (62 missing), improved by 1.
+- `vp8.rs`: improved from `2748 / 2757` to `2749 / 2757` regions.
+
+Retention:
+
+- Retain Batch 64. It keeps line/function coverage at 100%, does not worsen
+  the single branch miss, and proves at least one remaining VP8 region was
+  reachable by public Pillow-oracle malformed first-partition bytes.
+
+## Batch 65 plan
+
+Goal: clear the smallest remaining VP8 caller-propagation regions using narrow
+coverage-only decoder states after the public partition sweep has been
+exhausted.
+
+Reverse mapping from retained snapshot
+`eb1e5e29-2ab8-4b23-8a9f-8484af4644b2`:
+
+- Current aggregate state is lines `27001 / 27001`, functions `1630 / 1630`,
+  branches `3487 / 3488`, and regions `42737 / 42799`.
+- `vp8.rs` is now `2749 / 2757` regions, so 8 aggregate regions remain.
+- Batch 64 proved that one VP8 parser region was public-fixture reachable, but
+  the remaining `coverage_query` view still shows only normalized partial
+  branch-style line groups rather than exact region records. The actionable
+  source sites remain the caller `?` boundaries in:
+  - `read_frame_header()` around loop-filter, partition initialization,
+    quantization, and final accumulated bit checks;
+  - `read_residual_data()` around Y2 and UV coefficient propagation;
+  - `decode_frame_()` around macroblock header propagation.
+- The residual propagation sites are not clean public fixture targets because
+  public malformed WebP bytes must first satisfy the container and frame header
+  parser. They can be isolated by constructing a coverage-only `Vp8Decoder`
+  with initialized macroblock borders and controlled arithmetic partition
+  lengths, then calling `read_residual_data()` directly.
+- The macroblock-header caller boundary may still be reachable through raw VP8
+  keyframe payloads, so this batch will add only coverage-only raw VP8 payload
+  probes inside the existing private hook, not new committed fixtures.
+
+Planned edit:
+
+- Add small coverage-only VP8 helpers inside
+  `vp8::__coverage_exercise_private_branches()`:
+  - one helper to construct a decoder ready for residual decoding with a
+    specified token-partition length;
+  - one helper to construct raw keyframe bytes with specified first-partition
+    content.
+- Exercise `read_residual_data()` with an empty partition for Y2 propagation and
+  with progressively larger zero partitions for UV propagation.
+- Exercise `decode_frame_()` with raw keyframe first partitions sized to pass
+  header parsing but fail during macroblock parsing/residual reads.
+- Run local gates, then Coverage MCP
+  `all-features-llvm-cov-json-nightly-branch`.
+- Retain only if line/function coverage stays 100%, branch debt does not
+  increase, and missing regions decrease.
+
+Validation:
+
+- Run: `d13fbc55-c45f-4cab-a728-484925afea16`.
+- Snapshot: `e2877547-88f3-45dd-9b68-cc79167039e4`.
+- Result: `5 passed / 0 failed`.
+- Lines: `27048 / 27048` (100%).
+- Functions: `1632 / 1632` (100%).
+- Branches: `3487 / 3488` (1 missing, unchanged).
+- Regions: `42807 / 42869` (62 missing, unchanged).
+
+Rejection:
+
+- Do not retain Batch 65. The probes only added covered coverage-hook code and
+  did not reduce the absolute missing-region count below the Batch 64 retained
+  baseline. The VP8 hook edit was removed.
+- Next VP8 work should use more precise reverse mapping against the raw VP8
+  boolean coding state before adding hooks. Blind partition-length probes are
+  not sufficient.
 
 ## Batch 59 plan
 

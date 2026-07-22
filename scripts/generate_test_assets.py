@@ -2698,7 +2698,7 @@ def gen_webp():
         malformed[payload : payload + 3] = ((tag & 0x1F) | (size << 5)).to_bytes(3, "little")
         (d / name).write_bytes(malformed)
 
-    for size in (*range(13), 16, 24, 32):
+    for size in range(33):
         write_vp8_partition_size(f"vp8_partition_{size}.webp", size)
 
     def write_mutated_webp(name, source, mutate):
