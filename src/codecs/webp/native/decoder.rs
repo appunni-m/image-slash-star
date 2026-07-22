@@ -879,6 +879,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = decoder.read_frame(&mut buf);
     }
 
+    fn exercise_new(data: Vec<u8>) {
+        let _ = WebPDecoder::new(Cursor::new(data.as_slice()));
+    }
+
     let _ = allow_vp8x_chunk_scan_error(DecodingError::IoError(io::ErrorKind::UnexpectedEof));
     let _ = allow_vp8x_chunk_scan_error(DecodingError::IoError(io::ErrorKind::Other));
 
@@ -895,103 +899,100 @@ pub(crate) fn __coverage_exercise_private_branches() {
     read_reader.consume(0);
     let _ = read_reader.seek(io::SeekFrom::Start(0));
 
-    let _ = WebPDecoder::new(Cursor::new(Vec::<u8>::new()));
-    let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0WE".to_vec()));
-    let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0WEBP".to_vec()));
+    exercise_new(Vec::new());
+    exercise_new(b"RIFF\x04\0\0\0WE".to_vec());
+    exercise_new(b"RIFF\x04\0\0\0WEBP".to_vec());
 
     let vp8_zero_width = [0, 0, 0, 0x9d, 0x01, 0x2a, 0, 0, 1, 0];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_zero_width)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_zero_width)]));
     let vp8_interframe = [1, 0, 0];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_interframe)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_interframe)]));
     let vp8_bad_magic = [0, 0, 0, 0, 0, 0];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_bad_magic)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_bad_magic)]));
     let vp8_missing_width = [0, 0, 0, 0x9d, 0x01, 0x2a];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_missing_width)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_missing_width)]));
     let vp8_missing_height = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_missing_height)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_missing_height)]));
     let vp8_zero_height = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 0, 0];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_zero_height)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_zero_height)]));
     let vp8_valid_header = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 1, 0];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8 ", &vp8_valid_header)])));
+    exercise_new(riff(&[chunk(b"VP8 ", &vp8_valid_header)]));
 
-    let _ = WebPDecoder::new(Cursor::new(b"JUNK\x04\0\0\0WEBP".to_vec()));
-    let _ = WebPDecoder::new(Cursor::new(b"RIFF\x04\0\0\0JUNK".to_vec()));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &[])])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &[0])])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &[0x2f])])));
+    exercise_new(b"JUNK\x04\0\0\0WEBP".to_vec());
+    exercise_new(b"RIFF\x04\0\0\0JUNK".to_vec());
+    exercise_new(riff(&[chunk(b"VP8L", &[])]));
+    exercise_new(riff(&[chunk(b"VP8L", &[0])]));
+    exercise_new(riff(&[chunk(b"VP8L", &[0x2f])]));
     let vp8l_bad_version = [0x2f, 0, 0, 0, 0x20];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &vp8l_bad_version)])));
+    exercise_new(riff(&[chunk(b"VP8L", &vp8l_bad_version)]));
     let vp8l_no_alpha = [0x2f, 0, 0, 0, 0];
     let vp8l_alpha = [0x2f, 0, 0, 0, 0x10];
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &vp8l_no_alpha)])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[chunk(b"VP8L", &vp8l_alpha)])));
+    exercise_new(riff(&[chunk(b"VP8L", &vp8l_no_alpha)]));
+    exercise_new(riff(&[chunk(b"VP8L", &vp8l_alpha)]));
 
-    let _ = WebPDecoder::new(Cursor::new(riff(&[vp8x(0, 1, 1)])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    exercise_new(riff(&[vp8x(0, 1, 1)]));
+    exercise_new(riff(&[
         vp8x(0, 1, 1),
         chunk(b"VP8 ", &[]),
         chunk(b"VP8L", &[]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[vp8x(0, 1, 1), chunk(b"VP8L", &[])])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[vp8x(0, 1, 1), chunk(b"VP8 ", &[])])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[vp8x(0, 1, 1), chunk(b"VP8L", &[])]));
+    exercise_new(riff(&[vp8x(0, 1, 1), chunk(b"VP8 ", &[])]));
+    exercise_new(riff(&[
         vp8x(0b0000_1100, 1, 1),
         chunk(b"EXIF", &[]),
         chunk(b"XMP ", &[]),
         chunk(b"VP8L", &[]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_1100, 1, 1),
         chunk(b"EXIF", &[]),
         chunk(b"VP8L", &[]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0, 1, 1),
         chunk(b"zzzz", &[]),
         chunk(b"VP8L", &[]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[vp8x(0b0000_1000, 1, 1)])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[vp8x(0b0000_0100, 1, 1)])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANMF", &[0; 8]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[vp8x(0b0000_1000, 1, 1)]));
+    exercise_new(riff(&[vp8x(0b0000_0100, 1, 1)]));
+    exercise_new(riff(&[vp8x(0b0000_0010, 1, 1), chunk(b"ANMF", &[0; 8])]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk_declared(b"ANMF", 24, &[0; 12]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk_declared(b"ANMF", 24, &[0; 16]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0, 0, 0]),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0, 0, 0]),
         chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0]),
         chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
         chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"JUNK")),
-    ])));
-    let _ = WebPDecoder::new(Cursor::new(riff(&[
+    ]));
+    exercise_new(riff(&[
         vp8x(0b0000_0010, 1, 1),
         chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
         chunk_declared(b"ANMF", 24, &[0; 20]),
-    ])));
+    ]));
 
     let _ = WebPDecoder::new(fail_seek_after(
         riff(&[chunk(b"VP8 ", &vp8_valid_header)]),
@@ -1032,11 +1033,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut truncated = riff(&[vp8x(0, 1, 1)]);
     truncated[4..8].copy_from_slice(&64u32.to_le_bytes());
     truncated.extend_from_slice(b"VP");
-    let _ = WebPDecoder::new(Cursor::new(truncated));
+    exercise_new(truncated);
 
     let mut no_trailing_chunks = riff(&[vp8x(0, 1, 1)]);
     no_trailing_chunks[4..8].copy_from_slice(&10u32.to_le_bytes());
-    let _ = WebPDecoder::new(Cursor::new(no_trailing_chunks));
+    exercise_new(no_trailing_chunks);
 
     let mut short_anmf = chunk_declared(b"ANMF", 32, &[]);
     let mut decoder = animation_decoder_from_stream(short_anmf.clone(), 1, 1, true, 1);
