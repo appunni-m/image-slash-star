@@ -12,9 +12,9 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `271b937f-9906-41c5-9224-7b844c7ed0d7`
-- Current measured commit metadata: `adb6a66e15aca3ae9e46e1182c2cb496d450dc7c`
-- Current coverage source state: pushed `main` commit `adb6a66`.
+- Current snapshot: `07cdf563-07b9-4f00-b1fa-d237b7abfed3`
+- Current measured commit metadata: `00924ef1db1432766b643e6f2a8a279463e511dc`
+- Current coverage source state: pushed `main` commit `00924ef`.
 - Lines: 25854 / 25858
 - Branches: 3448 / 3454
 - Functions: 1592 / 1592
@@ -46,6 +46,54 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 85 plan: TIFF packed-index post-validation arithmetic cleanup
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `00924ef`.
+- Coverage MCP snapshot: `07cdf563-07b9-4f00-b1fa-d237b7abfed3`.
+- Re-anchor run: `317689b4-e12b-462e-be28-d4dd25700c7b`.
+- Overall: `25854 / 25858` lines, `3448 / 3454` branches,
+  `1592 / 1592` functions, and `41642 / 42136` regions.
+- Target file: `src/codecs/tiff/decode.rs`, currently
+  `1934 / 2000` regions and `130 / 130` branches.
+
+Reverse map:
+
+| Source cluster | Decision |
+| --- | --- |
+| `unpack_indices()` bit width contract | Production callers reach `unpack_indices()` only for packed TIFF samples with `bits` in `{1, 2, 4}`; the `bits == 8` fast path remains separately handled. Add an explicit unsupported-bit guard so coverage hooks for malformed private calls still return `None`. |
+| Packed bit offset | Once `width.checked_mul(bits_usize)?` succeeds for the stride, every loop value `x < width` makes `x * bits_usize` infallible. Replace the per-pixel checked multiplication with direct arithmetic. |
+| Packed shift calculation | For `bits ∈ {1,2,4}`, `bit % 8 <= 8 - bits`, so `8 - bits - bit % 8` cannot underflow. Replace the checked subtraction chain with direct arithmetic after the explicit guard. |
+| Palette construction | The TIFF palette branch builds exactly `entries * 3` RGB bytes where `entries ∈ {2,4,16,256}` and uses an empty alpha table. `ImagePalette::new()` is therefore structurally infallible; construct the public palette struct directly while keeping malformed color-map bounds and value narrowing checks. |
+
+Implementation plan:
+
+1. Update only `src/codecs/tiff/decode.rs`.
+2. Add an explicit unsupported-bit return in `unpack_indices()`, then use direct
+   post-validation bit offset and shift arithmetic.
+3. Replace the structurally infallible TIFF palette constructor call with a
+   direct `ImagePalette` value.
+4. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features`.
+5. Run the approved Coverage MCP
+   `all-features-llvm-cov-json-nightly-branch` command.
+6. Keep and commit only if aggregate missing regions fall without branch/line
+   regression.
+
+Measurement:
+
+- Coverage MCP run: `0b31334e-cb30-4672-8a44-2a24ade49812`.
+- Coverage MCP snapshot: `97763b9d-aff7-40b4-b9f2-57f33abdba7a`.
+- Result: 5 passed, 0 failed; coverage artifact ingested.
+- Overall after cleanup: `25863 / 25867` lines, `3450 / 3456`
+  branches, `1592 / 1592` functions, and `41637 / 42128` regions.
+- Target movement: `src/codecs/tiff/decode.rs` moved from
+  `1934 / 2000` to `1929 / 1992` regions; missing regions fell from 66
+  to 63. Branch coverage remained complete at `132 / 132`.
+- Net: aggregate missing regions improved from 494 to 491. Line gap stayed at
+  4 and branch gap stayed at 6. Keep the cleanup.
 
 ## Attempt 84 plan: WebP native private chunk writer monomorphization cleanup
 

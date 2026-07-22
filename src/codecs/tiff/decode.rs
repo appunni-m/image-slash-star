@@ -330,8 +330,12 @@ fn convert_pixels(
                 rgb.push(u8::try_from(map[entries * 2 + index] >> 8).ok()?);
             }
             Some(
-                DecodedImage::with_mode(width, height, indices, ImageMode::P8)
-                    .with_palette(ImagePalette::new(rgb, Vec::new()).ok()?),
+                DecodedImage::with_mode(width, height, indices, ImageMode::P8).with_palette(
+                    ImagePalette {
+                        rgb,
+                        alpha: Vec::new(),
+                    },
+                ),
             )
         }
         (5, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Cmyk8)),
@@ -350,17 +354,19 @@ fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Option<Vec<
     if bits == 8 {
         return Some(data.to_vec());
     }
+    if !matches!(bits, 1 | 2 | 4) {
+        return None;
+    }
     let width = width as usize;
     let height = height as usize;
-    let stride = width.checked_mul(usize::from(bits))?.div_ceil(8);
+    let bits = usize::from(bits);
+    let stride = width.checked_mul(bits)?.div_ceil(8);
     let mut output = Vec::with_capacity(width.checked_mul(height)?);
     for y in 0..height {
         let row = data.get(y * stride..(y + 1) * stride)?;
         for x in 0..width {
-            let bit = x.checked_mul(usize::from(bits))?;
-            let shift = 8usize
-                .checked_sub(usize::from(bits))?
-                .checked_sub(bit % 8)?;
+            let bit = x * bits;
+            let shift = 8usize - bits - bit % 8;
             output.push((row[bit / 8] >> shift) & ((1u8 << bits) - 1));
         }
     }
