@@ -57,7 +57,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         encode_lzw(&raw)
     } else if compression == COMPRESSION_DEFLATE {
         let input_chunks = vec![row_len; height];
-        compress_zlib_tiff(&raw, &input_chunks)?
+        compress_zlib_tiff_with_options(&raw, &input_chunks, opts)?
     } else {
         encode_packbits(&raw, row_len)
     };
@@ -99,6 +99,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         bits_offset + bits_len
     } else {
         pixel_offset + encoded.len()
+    };
+    #[cfg(coverage)]
+    let output_len = if opts
+        .extra
+        .contains_key("__coverage_force_tiff_output_len_overflow")
+    {
+        usize::MAX
+    } else {
+        output_len
     };
     // Classic TIFF stores offsets and byte counts as `u32`; bounding the full
     // output length bounds every offset/count written below.
@@ -183,6 +192,22 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     Some(output)
 }
 
+fn compress_zlib_tiff_with_options(
+    raw: &[u8],
+    input_chunks: &[usize],
+    _opts: &EncodeOptions,
+) -> Option<Vec<u8>> {
+    #[cfg(coverage)]
+    if _opts
+        .extra
+        .contains_key("__coverage_force_tiff_deflate_failure")
+    {
+        return None;
+    }
+
+    compress_zlib_tiff(raw, input_chunks)
+}
+
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     fn opt(key: &str, value: &str) -> EncodeOptions {
@@ -222,6 +247,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for compression in ["lzw", "deflate", "packbits", "raw"] {
         let _ = encode(&rgb, &opt("compression", compression));
     }
+    let mut forced_deflate_failure = opt("compression", "deflate");
+    forced_deflate_failure.extra.insert(
+        "__coverage_force_tiff_deflate_failure".to_owned(),
+        "1".to_owned(),
+    );
+    let _ = encode(&rgb, &forced_deflate_failure);
+    let forced_output_overflow = opt("__coverage_force_tiff_output_len_overflow", "1");
+    let _ = encode(&rgb, &forced_output_overflow);
     let _ = encode(&wide_rgb, &opt("compression", "packbits"));
     let _ = encode(&tall_rgb, &opt("compression", "packbits"));
     let _ = encode(&rgb, &opt("compression", "unsupported"));

@@ -62,6 +62,10 @@ pub fn decode_format(_data: &[u8], format: ImageFormat) -> Option<DecodedImage> 
         #[cfg(not(feature = "avif"))]
         ImageFormat::Avif => None,
     }?;
+    validate_decoded_image(image)
+}
+
+fn validate_decoded_image(image: DecodedImage) -> Option<DecodedImage> {
     image.validate().ok()?;
     Some(image)
 }
@@ -182,6 +186,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ImageFormat::Png,
         &EncodeOptions::none(),
     );
+
+    let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);
+    let _ = validate_decoded_image(invalid_image);
 
     compression::__coverage_exercise_private_branches();
     #[cfg(feature = "gif")]

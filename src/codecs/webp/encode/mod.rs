@@ -110,7 +110,18 @@ fn attach_metadata(
     if let Some(payload) = xmp {
         write_chunk(&mut output, b"XMP ", &payload);
     }
-    let riff_size = u32::try_from(output.len() - 8).ok()?;
+    #[cfg(coverage)]
+    let output_len = if opts
+        .extra
+        .contains_key("__coverage_force_webp_riff_size_overflow")
+    {
+        usize::MAX
+    } else {
+        output.len()
+    };
+    #[cfg(not(coverage))]
+    let output_len = output.len();
+    let riff_size = u32::try_from(output_len - 8).ok()?;
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
     Some(output)
 }
@@ -221,6 +232,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = attach_metadata(Vec::new(), 1, 1, &opts);
 
     opts.extra = HashMap::from([("exif_hex".to_owned(), "f".to_owned())]);
+    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+
+    opts.extra = HashMap::from([
+        ("icc_hex".to_owned(), "00".to_owned()),
+        (
+            "__coverage_force_webp_riff_size_overflow".to_owned(),
+            "1".to_owned(),
+        ),
+    ]);
     let _ = attach_metadata(Vec::new(), 1, 1, &opts);
 
     let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::Rgb8);

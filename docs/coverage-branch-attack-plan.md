@@ -12,14 +12,15 @@ from Coverage MCP before each implementation sweep.
 - Test command: `all-features-llvm-cov-json-nightly-branch`
 - Command: `cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast`
 - Result: 5 passed, 0 failed
-- Current snapshot: `f6d6fea5-024d-4d7e-8c96-93a3b825ba3d`
-- Current measured commit metadata: `182c14f55324caf00536a4bd50b9c7cd54762581`
-- Current coverage source state: pushed `main` commit `182c14f`.
-- Lines: 25864 / 25867
-- Branches: 3441 / 3446
-- Functions: 1594 / 1594
-- Regions: 41638 / 42126
-- Remaining target: 3 lines, 5 branches, and 488 regions.
+- Current snapshot: `507ae3a0-ec7e-43b1-8ec7-aafdefa51c85`
+- Current measured commit metadata: `bf8a25ad1baf567bd5c0e19c0ed27c444e237507`
+- Current coverage source state: working tree based on pushed `main` commit
+  `bf8a25a`, with Attempt 98 changes applied.
+- Lines: 25995 / 25998
+- Branches: 3457 / 3462
+- Functions: 1598 / 1598
+- Regions: 41800 / 42290
+- Remaining target: 3 lines, 5 branches, and 490 regions.
 - Remaining branch map from this snapshot:
   - `src/codecs/webp/native/decoder.rs`: 83 / 84 branches, 1 missing.
   - `src/codecs/webp/native/vp8.rs`: 157 / 160 branches, 3 missing.
@@ -46,6 +47,67 @@ from Coverage MCP before each implementation sweep.
 - Note: LLVM JSON line segments are lossy. File aggregate branch totals are the
   source of truth; normalized partial-line lists can show many more synthetic
   branch misses than the aggregate file summary.
+
+## Attempt 98 plan: smallest defensive-region sweep
+
+Baseline before editing:
+
+- Source state: clean pushed `main` at commit `bf8a25a`.
+- Coverage MCP snapshot: `d3a67c77-dda0-452f-a097-268008b33891`.
+- Overall: `25937 / 25940` lines, `3451 / 3456` branches,
+  `1595 / 1595` functions, and `41711 / 42205` regions.
+
+Reverse map:
+
+| Source cluster | Evidence | Decision |
+| --- | --- | --- |
+| `src/codecs/tiff/encode.rs:60`, deflate compressor `?` failure | Raw LLVM JSON shows a zero-hit region at the `compress_zlib_tiff(&raw, &input_chunks)?` guard. Public TIFF encode validates the image before compression; making the zlib compressor return `None` through a normal fixture would require impossible allocation/overflow inputs or invalid dimensions rejected earlier. | Add a `#[cfg(coverage)]` injection key in the existing coverage hook to force this defensive guard through the `None` side without changing production behavior. |
+| `src/codecs/tiff/encode.rs:105`, classic TIFF `u32` output-size bound | Raw LLVM JSON shows a zero-hit region at `u32::try_from(output_len).ok()?`. A public fixture would require a >4 GiB classic TIFF output and is not practical for repository fixtures. | Add a `#[cfg(coverage)]` injection key that forces only the local `output_len` bound path to `usize::MAX` in the coverage build. |
+| `src/codecs/webp/encode/mod.rs:113`, RIFF output-size bound | Raw LLVM JSON shows a zero-hit region at `u32::try_from(output.len() - 8).ok()?`. The branch is a defensive RIFF size check and cannot be reached with fixture-sized encoded output. | Add a `#[cfg(coverage)]` injection key that forces only the local output length used by the RIFF-size guard to `usize::MAX`. |
+| `src/codecs/mod.rs:65`, post-decoder validation | Raw LLVM JSON shows a zero-hit region at `image.validate().ok()?`. Enabled decoders either return `None` or a valid `DecodedImage`, so a manifest fixture cannot make the dispatcher receive an invalid image without changing a decoder. | Extract the post-decode validation into a helper and call its invalid-image side from the top-level coverage hook. |
+| `src/types/buffer.rs`, iterator/index/overflow short-circuit lines | Coverage MCP reports region-only deficits with synthetic partial-branch lines at rows/rows_mut malformed buffers, enumerate wrap, pixel-index bounds, and `ImageBuffer::new` overflow. Existing hooks cover several but not all sides. | Extend the existing buffer coverage hook with targeted public-API calls and panic catches for the missing short-circuit/overflow shapes. |
+| `src/codecs/webp/native/encoder.rs:1129`, native RIFF chunk writer | Coverage MCP line projection reports partial branches, but raw LLVM JSON shows file aggregate branch coverage is complete and the only missing regions are a generic instantiation artifact. Existing hook already covers odd/even chunks and fixed-buffer write failures. | Do not add redundant probes in this attempt; revisit only if aggregate region count remains unchanged after the smaller concrete targets. |
+
+Implementation/search plan:
+
+1. Keep all production behavior unchanged outside `#[cfg(coverage)]` or pure
+   helper extraction.
+2. Add hook-driven probes only for defensive paths that cannot be represented
+   as practical exact-byte Pillow manifest fixtures.
+3. Run `cargo fmt --all`, `cargo check --all-features`, and
+   `RUSTFLAGS='--cfg coverage' cargo check --all-features` locally.
+4. Run the approved Coverage MCP command
+   `all-features-llvm-cov-json-nightly-branch`.
+5. Keep the sweep only if aggregate missing regions improve without line,
+   branch, or function regression; otherwise discard and record the result.
+
+Measurement/outcome:
+
+- Local validation passed:
+  - `cargo fmt --all --check`
+  - `cargo check --all-features`
+  - `RUSTFLAGS='--cfg coverage' cargo check --all-features`
+- Coverage MCP run `0c531255-ebd4-408e-a338-3dc25db02e63` passed with
+  `5 passed / 0 failed` and ingested snapshot
+  `507ae3a0-ec7e-43b1-8ec7-aafdefa51c85`.
+- Overall changed from `25937 / 25940` lines, `3451 / 3456` branches,
+  `1595 / 1595` functions, and `41711 / 42205` regions to
+  `25995 / 25998` lines, `3457 / 3462` branches, `1598 / 1598`
+  functions, and `41800 / 42290` regions.
+- Missing counts changed from 3 lines, 5 branches, and 494 regions to 3 lines,
+  5 branches, and 490 regions. Branch, line, and function missing counts did
+  not regress.
+- Files closed to 100% regions by this sweep:
+  - `src/codecs/tiff/encode.rs`: `793 / 793` regions.
+  - `src/codecs/webp/encode/mod.rs`: `361 / 361` regions.
+  - `src/codecs/mod.rs`: `129 / 129` regions.
+- `src/types/buffer.rs` moved to `688 / 690` regions after adding direct
+  public-API probes, but still has 2 missing regions. The remaining deficit is
+  consistent with generic-instantiation artifacts rather than an uncovered
+  source line or branch.
+- Retention decision: keep. Aggregate missing regions improved by 4 without
+  adding missing lines, branches, or functions; the changed runtime behavior is
+  restricted to `#[cfg(coverage)]` hidden probe keys and private hook calls.
 
 ## Attempt 97 plan: PNG zlib-ng encode source-shape region sweep
 
