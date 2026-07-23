@@ -1,6 +1,34 @@
+//! Integer inverse transforms used by the internal VP8 decoder.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+#![warn(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 static CONST1: i64 = 20091;
 static CONST2: i64 = 35468;
 
+// VP8 supplies bounded transform coefficients. The i64 intermediates prevent
+// overflow, while the final narrowing reproduces the reference transform's
+// signed 32-bit storage exactly.
+#[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
 pub(crate) fn idct4x4(block: &mut [i32]) {
     // The intermediate results may overflow the types, so we stretch the type.
     fn fetch(block: &[i32], idx: usize) -> i64 {
@@ -48,6 +76,10 @@ pub(crate) fn idct4x4(block: &mut [i32]) {
 }
 
 // 14.3
+// VP8 coefficient bounds make these signed additions and subtractions
+// representable; retaining the reference expressions keeps the transform
+// directly auditable against the specification.
+#[allow(clippy::arithmetic_side_effects)]
 pub(crate) fn iwht4x4(block: &mut [i32]) {
     // Perform one length check up front to avoid subsequent bounds checks in this function
     assert!(block.len() >= 16);

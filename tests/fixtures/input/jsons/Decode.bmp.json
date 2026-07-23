@@ -23,7 +23,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_4",
@@ -36,7 +40,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8",
@@ -49,7 +57,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8_gray",
@@ -62,7 +74,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8_palette_blue_mismatch",
@@ -75,7 +91,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8_palette_green_mismatch",
@@ -88,7 +108,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8_palette_red_mismatch",
@@ -101,7 +125,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8_8bit_implicit_palette",
@@ -114,7 +142,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_16",
@@ -127,7 +159,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_24",
@@ -140,7 +176,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_32",
@@ -153,7 +193,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_none",
@@ -166,7 +210,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle8",
@@ -179,7 +227,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle8_rle8_mixed",
@@ -192,7 +244,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle8_rle8_top_down",
@@ -205,7 +261,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle8_rle8_delta",
@@ -218,7 +278,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle8_rle8_absolute_odd",
@@ -231,7 +295,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle4",
@@ -244,7 +312,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_rle4_rle4_mixed",
@@ -257,7 +329,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_bitfields",
@@ -270,7 +346,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_bitfields_bitfields_v2_32_no_alpha",
@@ -283,7 +363,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_bitfields_v4header16",
@@ -296,7 +380,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down",
@@ -309,7 +397,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down_top_down_1",
@@ -322,7 +414,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down_top_down_1_canonical",
@@ -335,7 +431,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down_top_down_4",
@@ -348,7 +448,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down_top_down_8",
@@ -361,7 +465,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down_top_down_16",
@@ -374,7 +482,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "top_down_top_down_32",
@@ -387,7 +499,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "bottom_up",
@@ -400,7 +516,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "bottom_up_bottom_up_1_palette",
@@ -413,7 +533,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "os2_v1",
@@ -426,7 +550,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "v4_header",
@@ -439,7 +567,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "v5_header",
@@ -452,7 +584,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_1x1",
@@ -465,7 +601,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd",
@@ -478,7 +618,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_width2",
@@ -491,7 +635,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_width3",
@@ -504,7 +652,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_width31",
@@ -517,7 +669,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "planes_nonstandard",
@@ -530,7 +686,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "data_offset_before_header",
@@ -543,7 +703,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_not_bmp",
@@ -556,7 +720,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed",
@@ -569,7 +737,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_core_zero_width",
@@ -582,7 +754,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_4bit_gray",
@@ -595,7 +771,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_invalid_width",
@@ -608,7 +788,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_invalid_height",
@@ -621,7 +805,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_oversized_width",
@@ -634,7 +822,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_oversized_height",
@@ -647,7 +839,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_invalid_depth",
@@ -660,7 +856,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_2bit",
@@ -673,7 +873,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_2bit_gray",
@@ -686,7 +890,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_magic",
@@ -699,7 +907,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_file_size",
@@ -712,7 +924,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_data_offset",
@@ -725,7 +941,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_dib_header_size",
@@ -738,7 +958,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_core_header_truncated_width",
@@ -751,7 +975,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_core_header_truncated_height",
@@ -764,7 +992,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_core_header_truncated_planes",
@@ -777,7 +1009,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_core_header_truncated_depth",
@@ -790,7 +1026,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_height",
@@ -803,7 +1043,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_planes",
@@ -816,7 +1060,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_depth",
@@ -829,7 +1077,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_compression",
@@ -842,7 +1094,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_image_size",
@@ -855,7 +1111,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_x_pels",
@@ -868,7 +1128,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_y_pels",
@@ -881,7 +1145,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_colors_used",
@@ -894,7 +1162,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_info_header_truncated_colors_important",
@@ -907,7 +1179,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_bitfields_truncated_masks",
@@ -920,7 +1196,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_bitfields_truncated_green_mask",
@@ -933,7 +1213,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_bitfields_truncated_blue_mask",
@@ -946,7 +1230,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_v4_bitfields_truncated_masks",
@@ -959,7 +1247,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_v4_bitfields_truncated_green_mask",
@@ -972,7 +1264,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_v4_bitfields_truncated_blue_mask",
@@ -985,7 +1281,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_empty_stream",
@@ -998,7 +1298,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_short_pair",
@@ -1011,7 +1315,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_delta_missing_payload",
@@ -1024,7 +1332,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_header",
@@ -1037,7 +1349,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_pixels",
@@ -1050,7 +1366,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_truncated_palette",
@@ -1063,7 +1383,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_invalid_depth",
@@ -1076,7 +1400,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle4_invalid_depth",
@@ -1089,7 +1417,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_early_eob",
@@ -1102,7 +1434,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle4_early_eob",
@@ -1115,7 +1451,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_delta_truncated",
@@ -1128,7 +1468,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle8_absolute_truncated",
@@ -1141,7 +1485,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle4_delta_truncated",
@@ -1154,7 +1502,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_rle4_absolute_truncated",
@@ -1167,7 +1519,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_bitfields_zero_mask",
@@ -1180,7 +1536,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_bitfields_zero_red_mask",
@@ -1193,7 +1553,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_bitfields_zero_blue_mask",
@@ -1206,7 +1570,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     }
   ]
 }

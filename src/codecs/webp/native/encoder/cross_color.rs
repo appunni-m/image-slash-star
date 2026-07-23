@@ -4,6 +4,31 @@
 //! `VP8LColorSpaceTransform` pipeline (`src/enc/predictor_enc.c:844-1111`)
 //! and its scalar color kernels (`src/dsp/lossless_enc.c:471-541`).
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// This module is the signed-byte VP8L cross-color reference kernel. Narrowing
+// and wrapping are the encoded transform itself, and tile arithmetic is bounded
+// by validated image geometry. Keep these three exceptions local to the kernel.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 #[derive(Clone, Copy, Default)]
 struct Multipliers {
     green_to_red: u8,
@@ -147,6 +172,7 @@ fn collect_blue(
     histogram
 }
 
+#[allow(clippy::too_many_arguments)]
 fn red_cost(
     argb: &[u32],
     stride: usize,
@@ -172,6 +198,7 @@ fn red_cost(
     cost
 }
 
+#[allow(clippy::too_many_arguments)]
 fn best_green_to_red(
     argb: &[u32],
     stride: usize,

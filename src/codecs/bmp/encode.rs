@@ -11,7 +11,10 @@ const BI_RGB: u32 = 0;
 const DEFAULT_PIXELS_PER_METER: i32 = 3_780;
 
 fn row_size(bits_per_pixel: usize, width: usize) -> usize {
-    (bits_per_pixel * width).div_ceil(32) * 4
+    bits_per_pixel
+        .saturating_mul(width)
+        .div_ceil(32)
+        .saturating_mul(4)
 }
 
 /// Encode a `DecodedImage` as BMP bytes.
@@ -53,13 +56,17 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
         ImageMode::Rgba8 => (32, 0),
         _ => return true,
     };
-    let row_bytes = (u128::from(depth) * u128::from(img.width)).div_ceil(32) * 4;
-    let pixel_bytes = row_bytes * u128::from(img.height);
-    let pixel_offset =
-        FILE_HEADER_SIZE as u128 + u128::from(INFO_HEADER_SIZE) + (colors as u128) * 4;
+    let row_bytes = u128::from(depth)
+        .saturating_mul(u128::from(img.width))
+        .div_ceil(32)
+        .saturating_mul(4);
+    let pixel_bytes = row_bytes.saturating_mul(u128::from(img.height));
+    let pixel_offset = (FILE_HEADER_SIZE as u128)
+        .saturating_add(u128::from(INFO_HEADER_SIZE))
+        .saturating_add((colors as u128).saturating_mul(4));
     img.width <= 2_147_483_647
         && img.height <= 2_147_483_647
-        && pixel_offset + pixel_bytes <= u128::from(u32::MAX)
+        && pixel_offset.saturating_add(pixel_bytes) <= u128::from(u32::MAX)
 }
 
 fn encode_1bit(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
@@ -69,9 +76,11 @@ fn encode_1bit(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     let height = height as usize;
     let packed_width = width.div_ceil(8);
     let stride = row_size(1, width);
-    let pixel_bytes = stride * height;
+    let pixel_bytes = stride.saturating_mul(height);
     let palette_bytes = 8usize;
-    let pixel_offset = FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize + palette_bytes;
+    let pixel_offset = FILE_HEADER_SIZE
+        .saturating_add(INFO_HEADER_SIZE as usize)
+        .saturating_add(palette_bytes);
     let mut output = bmp_headers(
         encoded_width,
         encoded_height,
@@ -83,15 +92,20 @@ fn encode_1bit(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     output.extend_from_slice(&[0, 0, 0, 0, 255, 255, 255, 0]);
     for output_row in 0..height {
         let source_row = source_row(output_row, height);
-        let row_start = source_row * packed_width;
-        output.extend_from_slice(&pixels[row_start..row_start + packed_width]);
-        output.resize(output.len() + stride - packed_width, 0);
+        let row_start = source_row.saturating_mul(packed_width);
+        output.extend_from_slice(&pixels[row_start..row_start.saturating_add(packed_width)]);
+        output.resize(
+            output
+                .len()
+                .saturating_add(stride.saturating_sub(packed_width)),
+            0,
+        );
     }
     output
 }
 
 fn source_row(output_row: usize, height: usize) -> usize {
-    height - output_row - 1
+    height.saturating_sub(output_row).saturating_sub(1)
 }
 
 fn encode_l8(width: u32, height: u32, pixels: &[u8], palette: Option<&ImagePalette>) -> Vec<u8> {
@@ -102,14 +116,16 @@ fn encode_l8(width: u32, height: u32, pixels: &[u8], palette: Option<&ImagePalet
     // palette length and writes it as BGRX. Ordinary L mode gets 256 gray
     // entries instead.
     let color_count = palette.map_or(256, ImagePalette::len);
-    let palette_bytes = color_count * 4;
-    let pixel_bytes = stride * height_usize;
-    let pixel_offset = FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize + palette_bytes;
+    let palette_bytes = color_count.saturating_mul(4);
+    let pixel_bytes = stride.saturating_mul(height_usize);
+    let pixel_offset = FILE_HEADER_SIZE
+        .saturating_add(INFO_HEADER_SIZE as usize)
+        .saturating_add(palette_bytes);
     let mut output = bmp_headers(
         width,
         height,
         8,
-        color_count as u32,
+        u32::try_from(color_count).unwrap_or(u32::MAX),
         pixel_offset,
         pixel_bytes,
     );
@@ -140,8 +156,8 @@ fn encode_rgb24(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     let width_usize = width as usize;
     let height_usize = height as usize;
     let stride = row_size(24, width_usize);
-    let pixel_bytes = stride * height_usize;
-    let pixel_offset = FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize;
+    let pixel_bytes = stride.saturating_mul(height_usize);
+    let pixel_offset = FILE_HEADER_SIZE.saturating_add(INFO_HEADER_SIZE as usize);
     let mut output = bmp_headers(width, height, 24, 0, pixel_offset, pixel_bytes);
     write_rows(
         &mut output,
@@ -161,8 +177,8 @@ fn encode_rgb32(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     let width_usize = width as usize;
     let height_usize = height as usize;
     let stride = row_size(32, width_usize);
-    let pixel_bytes = stride * height_usize;
-    let pixel_offset = FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize;
+    let pixel_bytes = stride.saturating_mul(height_usize);
+    let pixel_offset = FILE_HEADER_SIZE.saturating_add(INFO_HEADER_SIZE as usize);
     let mut output = bmp_headers(width, height, 32, 0, pixel_offset, pixel_bytes);
     write_rows(
         &mut output,
@@ -187,7 +203,7 @@ fn bmp_headers(
     pixel_offset: usize,
     pixel_bytes: usize,
 ) -> Vec<u8> {
-    let file_size = pixel_offset + pixel_bytes;
+    let file_size = pixel_offset.saturating_add(pixel_bytes);
     let mut output = Vec::with_capacity(file_size);
     output.extend_from_slice(b"BM");
     output.extend_from_slice(&(file_size as u64).to_le_bytes()[..4]);
@@ -204,7 +220,10 @@ fn bmp_headers(
     output.extend_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
     output.extend_from_slice(&colors.to_le_bytes());
     output.extend_from_slice(&colors.to_le_bytes());
-    output.resize(FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize, 0);
+    output.resize(
+        FILE_HEADER_SIZE.saturating_add(INFO_HEADER_SIZE as usize),
+        0,
+    );
     output
 }
 
@@ -218,15 +237,20 @@ fn write_rows(
     stride: usize,
     mut write_pixel: impl FnMut(&[u8], &mut Vec<u8>),
 ) {
-    let source_stride = width * channels;
-    let encoded_row = width * channels;
+    let source_stride = width.saturating_mul(channels);
+    let encoded_row = width.saturating_mul(channels);
     for output_row in 0..height {
         let source_row = source_row(output_row, height);
-        let start = source_row * source_stride;
-        let row = &pixels[start..start + source_stride];
+        let start = source_row.saturating_mul(source_stride);
+        let row = &pixels[start..start.saturating_add(source_stride)];
         for pixel in row.chunks_exact(channels) {
             write_pixel(pixel, output);
         }
-        output.resize(output.len() + stride - encoded_row, 0);
+        output.resize(
+            output
+                .len()
+                .saturating_add(stride.saturating_sub(encoded_row)),
+            0,
+        );
     }
 }

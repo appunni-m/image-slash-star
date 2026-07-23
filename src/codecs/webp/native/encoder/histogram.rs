@@ -1,5 +1,30 @@
-// Spatial Huffman histogram clustering, ported from libwebp 1.6.0
-// `src/enc/histogram_enc.c` and `src/dsp/lossless_enc.c`.
+//! Spatial Huffman histogram clustering, ported from libwebp 1.6.0
+//! `src/enc/histogram_enc.c` and `src/dsp/lossless_enc.c`.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// Fixed-point entropy costs, deterministic PRNG clustering, and packed symbol
+// indices are the libwebp histogram algorithm. Image geometry and alphabet
+// sizes bound the operations; keep these exceptions inside this reference port.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 
 use super::backward_refs::{self, Token};
 use super::{channels, length_to_symbol};
@@ -179,7 +204,7 @@ fn refined_entropy(entropy: &BitEntropy) -> u64 {
 }
 
 fn final_huffman_cost(stats: &Streaks) -> u64 {
-    let initial = (19_u64 * 3 << PRECISION) - div_round(91 << PRECISION, 10);
+    let initial = ((19_u64 * 3) << PRECISION) - div_round(91 << PRECISION, 10);
     let extra = stats.counts[0] * 1600
         + 240 * stats.streaks[0][1]
         + stats.counts[1] * 2640

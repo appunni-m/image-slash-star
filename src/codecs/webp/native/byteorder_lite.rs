@@ -1,5 +1,27 @@
 //! Minimal little-endian reader API used by the internal WebP implementation.
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+#![warn(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use std::io::{self, Read};
 
 pub(super) struct LittleEndian;

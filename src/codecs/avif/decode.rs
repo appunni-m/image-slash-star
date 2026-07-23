@@ -102,16 +102,15 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
 
 #[cfg(not(target_arch = "wasm32"))]
 fn duration_ms(duration: u64, timescale: std::num::NonZeroU64) -> Option<u32> {
-    let numerator = u128::from(duration) * 1_000;
+    let numerator = u128::from(duration).saturating_mul(1_000);
     let denominator = u128::from(timescale.get());
-    let quotient = numerator / denominator;
-    let remainder = numerator % denominator;
-    let doubled_remainder = remainder * 2;
-    let rounded = quotient
-        + u128::from(
-            doubled_remainder > denominator
-                || (doubled_remainder == denominator && !quotient.is_multiple_of(2)),
-        );
+    let quotient = numerator.div_euclid(denominator);
+    let remainder = numerator.rem_euclid(denominator);
+    let doubled_remainder = remainder.saturating_mul(2);
+    let rounded = quotient.saturating_add(u128::from(
+        doubled_remainder > denominator
+            || (doubled_remainder == denominator && !quotient.is_multiple_of(2)),
+    ));
     u32::try_from(rounded).ok()
 }
 

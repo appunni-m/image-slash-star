@@ -1,8 +1,8 @@
 # Image Backend Migration Completion Audit
 
-Status: accepted for the native backend migration and lazy-loading correctness
-slice. The later JS/WASM core-extra packaging and binding runtime matrices are
-separate follow-on work.
+Status: accepted for the native backend migration, lazy-loading correctness,
+and manifest-driven JS/WASM core-extra codec packaging slices. Broader binding
+operation matrices remain separate work.
 
 This audit maps every requirement in the migration goal to current,
 authoritative evidence. A requirement is complete only when its listed
@@ -20,7 +20,7 @@ runtime parity evidence.
 | AVIF still and sequence behavior survives the Result migration | AVIF manifest rows and the all-feature coverage suite exercise decode, sequence decode, encode, and sequence encode | complete |
 | Encoding keeps target format explicit | `encode`, `encode_sequence`, and `encode_default` all require `ImageFormat`; no ambiguous same-source convenience was added | complete |
 | Internal callers and manifests verify detected format, exact mode/pixels, successful output, and structured failures | `tests/coverage_matrix_tests.rs` and `tests/fixtures/coverage_matrix.json` | complete upstream |
-| Formatting and 100% line/branch/function/region coverage | Coverage MCP run `dbd8a9cf-1e51-49aa-94b5-476235da7f3a`, snapshot `bc41e67e-4be2-4eac-9444-abe318a0a151`: 28,702/28,702 lines, 3,824/3,824 branches, 1,751/1,751 functions, 45,458/45,458 regions | complete upstream |
+| Formatting and 100% line/branch/function/region coverage | Coverage MCP run `5b0f1ca0-0ecf-433b-a159-722387249757`, snapshot `2a9e4148-d559-44db-8368-57df58bf21fc`: 30,616/30,616 lines, 3,924/3,924 branches, 1,837/1,837 functions, 51,578/51,578 regions | complete upstream |
 | `ImageInfo` has a stable metadata contract | `src/types/mod.rs::ImageInfo` records format, dimensions, mode, bit depth, palette, animation, and frame count | complete |
 | Inspection is feature-gated for PNG, JPEG, GIF, BMP, WebP, TIFF, ICO, and AVIF | each codec owns `inspect.rs`; dispatch and feature failures are centralized in `src/codecs/mod.rs` | complete |
 | Every inspection slice has exact Pillow-oracle manifest coverage and 100% Coverage MCP results | all eight formats participate in the manifest-driven inspect loop; upstream snapshot above is exact 100% | complete upstream |
@@ -28,6 +28,8 @@ runtime parity evidence.
 | PNG uses the generic backend and the direct PNG dependency is removed | downstream direct decoder is removed, lockfile no longer carries it, and indexed PNG fixtures retain exact RGB palette plus alpha | complete downstream |
 | Metadata access is cached, `verify` is non-mutating, and `load` persists materialization while retaining mode/format | canonical `EncodedImage`, downstream shared source/pipeline caches, and lifecycle fixtures cover repeated, cloned, concurrent, and path-replacement access | complete downstream |
 | Palette-safe operations are permitted only after individual Pillow proof | all 19 downstream operation rows match exact mode, dimensions, indices, palette, alpha, and PNG bytes before/after load; two `putpixel` rows prove copy-on-write isolation | complete downstream |
+| JS/WASM is split into a PNG core and opt-in Rust-codec extra package | downstream `pillow-rs-js` feature forwarding, package exports, manifest codec matrix, CI lane, and `docs/wasm-core-extra-packaging.md` | complete downstream |
+| Release WASM sizes are measured for both feature sets | downstream `npm run size` records raw WASM, gzip, Brotli, JS glue, declarations, and full generated-directory bytes | complete downstream |
 
 ## Palette Acceptance Matrix
 
@@ -62,13 +64,14 @@ there and is validated through its maintained manual targets:
 ```text
 make image-backend-test
 make image-backend-feature-test
+make test-wasm
 make fmt
 make repo-map-check
 ```
 
-The migration and reduced-feature targets pass. The Python and JavaScript
-binding crates also compile against the new API. A full `make pillow-rs-test`
-run passes the core and image suites but still reports three pre-existing
-FreeType scalar `getlength` parity mismatches; its 7,632-case pixel matrix has
-zero failures. Those font-only mismatches are outside this image migration and
-are not hidden as image failures.
+The migration, reduced-feature, and core-extra WASM manifest targets pass. The
+Python and JavaScript binding crates also compile against the new API. A full
+`make pillow-rs-test` run passes the core and image suites but still reports
+three pre-existing FreeType scalar `getlength` parity mismatches; its
+7,632-case pixel matrix has zero failures. Those font-only mismatches are
+outside this image migration and are not hidden as image failures.

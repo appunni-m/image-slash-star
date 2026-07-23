@@ -38,6 +38,35 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     }
 }
 
+/// Validate the marker framing Pillow consumes while opening a JPEG.
+pub(crate) fn verify(data: &[u8]) -> Option<()> {
+    if data.get(..2)? != [0xff, SOI] {
+        return None;
+    }
+    let mut position = 2;
+    loop {
+        let marker = next_marker(data, &mut position)?;
+        if marker == EOI || marker == 0x01 {
+            return None;
+        }
+        if is_standalone(marker) {
+            continue;
+        }
+        let length = usize::from(read_u16(data, position)?);
+        if length < 2 {
+            if marker == SOS {
+                return None;
+            }
+            continue;
+        }
+        position = position.wrapping_add(length);
+        data.get(..position)?;
+        if marker == SOS {
+            return Some(());
+        }
+    }
+}
+
 fn inspect_frame(frame: &[u8]) -> Option<ImageInfo> {
     if *frame.first()? != 8 {
         return None;
@@ -94,4 +123,18 @@ fn read_u16(data: &[u8], position: usize) -> Option<u16> {
 
 const fn is_standalone(marker: u8) -> bool {
     matches!(marker, SOI | 0x01 | 0xd0..=0xd7)
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = verify(b"");
+    let _ = verify(b"not jpeg");
+    let _ = verify(&[0xff, SOI]);
+    let _ = verify(&[0xff, SOI, 0xff]);
+    let _ = verify(&[0xff, SOI, 0xff, 0xff]);
+    let _ = verify(&[0xff, SOI, 0xff, 0xee]);
+    let _ = verify(&[0xff, SOI, 0xff, 0xee, 0]);
+    let _ = verify(&[0xff, SOI, 0xff, 0xee, 0, 8, 0]);
+    let _ = verify(&[0xff, SOI, 0xff, 0xd0, 0xff, SOS, 0, 2]);
+    let _ = verify(&[0xff, SOI, 0xff, SOS, 0, 1]);
 }

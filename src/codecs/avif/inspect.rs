@@ -1,6 +1,8 @@
 //! AVIF container inspection through the pinned libavif parser.
 
-use crate::types::{ImageFormat, ImageInfo, ImageMode};
+use crate::types::ImageInfo;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::types::{ImageFormat, ImageMode};
 
 /// Inspect AVIF dimensions, output mode, and presentation frame count.
 #[cfg(not(target_arch = "wasm32"))]

@@ -854,6 +854,21 @@ def clear_pixel_ref(row):
     row.pop("sequence", None)
 
 
+def write_verify_ref(row, image_path):
+    """Record the pinned Pillow plugin's exact Image.verify outcome."""
+    try:
+        with pillow_open_asset(image_path) as image:
+            image.verify()
+    except Exception as error:
+        row["verify_status"] = "error"
+        row["verify_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
+        row["verify_error_message"] = stable_error_message(error)
+    else:
+        row["verify_status"] = "ok"
+        row.pop("verify_error_type", None)
+        row.pop("verify_error_message", None)
+
+
 def clear_encoded_ref(row):
     row.pop("encoded_ref_path", None)
     row.pop("encoded_ref_bytes", None)
@@ -1062,6 +1077,13 @@ def generate_operations(manifest, matrix):
 
     output_dir = OUTPUT_RAWS.parent / "operations"
     output_dir.mkdir(parents=True, exist_ok=True)
+    expected_references = {
+        output_dir / f"{specification['id']}.bin"
+        for specification in manifest.get("operations", [])
+    }
+    for path in output_dir.glob("*.bin"):
+        if path not in expected_references:
+            path.unlink()
     rows = []
     transpose = {
         "fliph": Image.Transpose.FLIP_LEFT_RIGHT,
@@ -1122,6 +1144,10 @@ def validate_generated_outputs(matrix):
                 if row.get("ref_path"):
                     failures.append(f"{case_name}: planned decode row retains a reference")
                 continue
+            if row.get("verify_status") not in {"ok", "error"}:
+                failures.append(f"{case_name}: active decode row lacks Pillow verify evidence")
+            if row.get("verify_status") == "error" and not row.get("verify_error_type"):
+                failures.append(f"{case_name}: verify error lacks Pillow exception evidence")
             if row.get("expect_error"):
                 if row.get("oracle_status") != "error" or not row.get("oracle_error_type"):
                     failures.append(f"{case_name}: error row lacks Pillow exception evidence")
@@ -1230,10 +1256,14 @@ def generate_decode(manifest, matrix, target_format=None):
                 if fmt_data.get("status") == "planned" or case.get("status") == "planned":
                     row["status"] = "planned"
                     clear_pixel_ref(row)
+                    row.pop("verify_status", None)
+                    row.pop("verify_error_type", None)
+                    row.pop("verify_error_message", None)
                     continue
                 img_path = ASSETS_DIR / fmt_name / asset_name
                 if not img_path.exists():
                     continue
+                write_verify_ref(row, img_path)
                 if row.get("expect_error"):
                     clear_pixel_ref(row)
                     try:
@@ -1275,6 +1305,7 @@ def generate_decode(manifest, matrix, target_format=None):
                     "open": f"tests/fixtures/input/images/{fmt_name}/{r['asset']}",
                     "operations": ["PIL.Image.open", "load", "tobytes"],
                 },
+                "pillow_verify_call": ["PIL.Image.open", "verify"],
             }
             for r in dec_cases
         ]
@@ -1293,6 +1324,9 @@ def generate_decode(manifest, matrix, target_format=None):
                 "status": r.get("oracle_status"),
                 "error_type": r.get("oracle_error_type"),
                 "error_message": r.get("oracle_error_message"),
+                "verify_status": r.get("verify_status"),
+                "verify_error_type": r.get("verify_error_type"),
+                "verify_error_message": r.get("verify_error_message"),
                 "ref_path": r.get("ref_path"),
                 "ref_bytes": r.get("ref_bytes"),
                 "ref_mode": r.get("ref_mode"),

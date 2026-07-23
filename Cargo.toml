@@ -21,10 +21,16 @@ include = [
     "/NOTICE.md",
     "/README.md",
     "/scripts/build_avif_stack.sh",
+    "/scripts/test_feature_matrix.sh",
 ]
 
 [lib]
 test = false
+
+[[test]]
+name = "coverage_matrix_tests"
+path = "tests/coverage_matrix_tests.rs"
+required-features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
 
 [dependencies]
 bytemuck = { version = "1", features = ["derive"] }

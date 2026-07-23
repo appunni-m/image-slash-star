@@ -1,8 +1,9 @@
 # Correct Lazy Loading Proposal
 
 Status: implemented native correctness contract for the `image-slash-star`
-integration in `pillow-rs`. Binding crates compile against the contract;
-binding-specific runtime and WASM size work remain separate follow-on slices.
+integration in `pillow-rs`. Binding crates compile against the contract, and
+the manifest-driven JS/WASM core-extra codec split is implemented and measured.
+Broader binding operation parity remains a separate project concern.
 
 ## Decision
 
@@ -60,9 +61,9 @@ The accepted implementation follows this contract at both ownership layers:
   backend and through downstream feature forwarding.
 
 The backend acceptance run is Coverage MCP run
-`dbd8a9cf-1e51-49aa-94b5-476235da7f3a`, immutable snapshot
-`bc41e67e-4be2-4eac-9444-abe318a0a151`: 28,702/28,702 lines,
-3,824/3,824 branches, 1,751/1,751 functions, and 45,458/45,458 regions.
+`5b0f1ca0-0ecf-433b-a159-722387249757`, immutable snapshot
+`2a9e4148-d559-44db-8368-57df58bf21fc`: 30,616/30,616 lines,
+3,924/3,924 branches, 1,837/1,837 functions, and 51,578/51,578 regions.
 The downstream integration is deliberately validated with its maintained
 Makefile targets rather than Coverage MCP.
 
@@ -131,6 +132,32 @@ depend on later external filesystem state. Holding an open file descriptor is
 also insufficient because in-place writes remain observable and platform file
 replacement behavior differs. A byte snapshot gives one image object one
 stable encoded identity.
+
+## Path Security Boundary
+
+Accepted implementation:
+
+- `image-slash-star` remains a byte-oriented codec crate and performs no
+  filesystem reads;
+- `ImageFormat::from_path()` only infers a format from the final extension. It
+  does not resolve, canonicalize, authorize, or open the supplied path;
+- traversal-looking components therefore have no special meaning to
+  `from_path()`. A nonexistent path such as
+  `../../definitely-not-present/IMAGE.PNG` must still infer PNG without
+  touching the filesystem;
+- downstream `Image::open()` remains an unrestricted filesystem operation,
+  matching Pillow. Rejecting `..` inside that general API would break valid
+  paths without establishing a security boundary;
+- callers accepting untrusted names must enforce their allowed-root and
+  symlink policy at the I/O boundary, or acquire trusted bytes themselves and
+  call `open_bytes()`;
+- a future constrained-path API, if required, must be distinct and
+  capability-based around a trusted directory handle. Lexical prefix checks or
+  `canonicalize()` followed by an ordinary path reopen are not accepted
+  because they do not provide a race-safe containment guarantee.
+
+This keeps format inference, filesystem authority, and application sandbox
+policy separate and testable.
 
 ## Materialized Storage
 
@@ -233,13 +260,248 @@ by `load()`, `getpixel()`, `tobytes()`, saving, or pipeline execution.
 
 `verify(&self)` is deliberately separate:
 
-- it fully validates the immutable encoded snapshot;
+- it applies the pinned Pillow oracle's format-specific verification contract
+  to the immutable encoded snapshot;
 - it does not change observable load state;
 - it does not populate the ordinary materialization cache;
 - it may perform work again when pixels are later requested.
 
 This is the sole documented exception to the at-most-once work rule. Verification
 is a validation operation, not a request for usable decoded pixels.
+
+### Accepted Format-Specific Verification Implementation
+
+The generic statement “fully validates the snapshot” is not the contract.
+Pillow verification is plugin-specific, and a single-image decode does not
+necessarily consume later AVIF/WebP frames or TIFF image directories. The
+accepted contract is therefore:
+
+> `EncodedImage::verify()` accepts and rejects the same immutable encoded input
+> as `Image.verify()` in the Pillow version pinned by the oracle manifest for
+> the detected format.
+
+The implementation remains owned by `image-slash-star`. It must use the
+already-detected `ImageFormat` to dispatch to a codec-specific verification
+path. A codec verifier may reuse primary-image decode, sequence decode, or a
+structural/checksum parser only when Pillow-oracle fixtures prove that behavior
+for that format. It must not assume one universal definition of complete
+container validation.
+
+Verification must preserve all source lifecycle invariants:
+
+- operate only on the immutable byte snapshot held by `EncodedImage`;
+- never reread a filesystem path;
+- never call the cached `EncodedImage::decode()` path;
+- leave `is_decoded()` false after both successful and failed verification;
+- leave every clone's ordinary decode cache uninitialized;
+- return structured `ImageError` values, including exact format and feature
+  information where applicable;
+- return the same deterministic result on repeated verification calls.
+
+The manifest must contain success and error cases for every enabled codec. At a
+minimum, each format needs:
+
+- a valid single-image input;
+- a truncated or malformed header;
+- a corrupt primary pixel payload;
+- valid input with trailing bytes;
+- for multi-image formats, a valid primary image with corrupt later image data;
+- corrupt frame-directory, timing, disposal, or image-directory metadata when
+  the container supports it.
+
+Every row is generated or classified by the pinned Pillow oracle. Rust tests
+must compare success versus failure and the exact structured error category,
+then assert the non-mutating cache state before and after verification on both
+the original source and a clone. Failing parity rows may remain explicit while
+being debugged; they must not be silently skipped or replaced by size-only
+assertions.
+
+Acceptance requires all verification manifest rows to match Pillow, all codec
+feature configurations used by those rows to report exact structured errors,
+and Coverage MCP to return 100% line, branch, and region coverage for the
+upstream crate. This decision adds no duplicate `try_*` API and does not expand
+the codec or downstream operation scope.
+
+### Accepted Codec Feature And Target Capability Matrix
+
+The crate's per-codec Cargo features are a supported packaging contract, not
+only compilation switches. Each feature must independently enable its intended
+inspection, decode, sequence, and encode paths without accidentally enabling an
+unrelated codec. Target availability is a second dimension of the same
+contract: an enabled feature must not cause a valid image to be reported as
+malformed merely because its implementation is unavailable on that target.
+The accepted matrix is:
+
+| Requested configuration | Expected capability |
+|---|---|
+| no features | none |
+| `jpeg` | JPEG |
+| `png` | PNG |
+| `gif` | GIF |
+| `bmp` | BMP |
+| `tiff` | TIFF |
+| `webp` | WebP |
+| `ico` | ICO, PNG, and BMP |
+| `avif` on a supported native target | AVIF inspection, decode, sequence, and encode |
+| no `avif` on `wasm32` | recognizable AVIF returns exact `FeatureDisabled` |
+| `avif` on core `wasm32` | recognizable AVIF returns exact target `Unsupported` |
+| default features | JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO |
+| all features on a supported native target | every format |
+
+ICO intentionally activates PNG and BMP because ICO entries may use either
+representation. Tests must prove this transitive relationship rather than
+treating it as accidental feature leakage.
+
+The current AVIF implementation uses pinned native libavif/libaom libraries,
+and `build.rs` intentionally does not compile or link that native stack for
+`wasm32`. The `avif` Cargo feature may still be present in a core WASM dependency
+graph, so the crate must compile but report capability accurately. On core
+WASM, every AVIF entry point must return:
+
+```rust
+ImageError::Unsupported {
+    format: Some(ImageFormat::Avif),
+    message: "AVIF is unavailable on wasm32 without an AVIF-capable extra module".to_owned(),
+}
+```
+
+It must not return `UnknownFormat`, `FeatureDisabled`, or `Malformed` when the
+feature is enabled and the target implementation is unavailable. When the
+feature is disabled, the existing exact `FeatureDisabled` result remains
+authoritative. On a supported native target with the feature enabled, malformed
+bytes continue to return `Malformed` and valid oracle inputs continue to match
+the pinned native implementation.
+
+A shared target-capability check must run in inspection, still decode, sequence
+decode, still encode, sequence encode, `EncodedImage::new()` through inspection,
+and format-specific verification. Target unavailability must be decided before
+an AVIF `None` result is converted into a payload or option rejection. This
+keeps every public entry point consistent and leaves room for a future
+AVIF-capable WASM extra module to replace the unavailable capability.
+
+Every configuration must run the same manifest-driven feature test. For each
+effective enabled format, the test must use a successful Pillow-oracle fixture
+and prove:
+
+- signature detection returns the exact `ImageFormat`;
+- inspection succeeds with exact format, dimensions, mode, and retained
+  metadata;
+- `EncodedImage::new()` succeeds and retains the exact source format;
+- decode and supported sequence/encode entry points follow their manifest
+  result.
+
+For every disabled format in that same build, its recognizable oracle fixture
+must prove:
+
+- detection still identifies the container format;
+- inspection, decode, sequence, encode, and `EncodedImage::new()` return their
+  exact structured manifest error where the entry point applies;
+- the error is `ImageError::FeatureDisabled` with the exact `ImageFormat` and
+  Cargo feature name, rather than `UnknownFormat` or `Malformed`.
+
+For a feature-enabled but target-unavailable format, the same fixture must
+prove:
+
+- signature detection still returns the exact `ImageFormat`;
+- all applicable codec/source entry points return the exact `Unsupported`
+  capability error;
+- the input is never mislabeled as disabled, unknown, or malformed;
+- unrelated enabled codecs continue to work in the same target build.
+
+Enabled rows must not be skipped. All-feature testing alone is insufficient
+because it masks incorrect feature wiring, while no-feature testing proves only
+the negative paths. Cargo must compile and execute each requested configuration
+as a separate lane because features are compile-time state.
+
+The matrix must remain fixture-based and use the pinned Pillow inputs already
+owned by the manifest. Synthetic magic prefixes are insufficient proof of
+inspection and decoding behavior. Failing rows may be tracked explicitly but
+must not be silently skipped.
+
+Acceptance requires every native and WASM matrix lane to compile and pass, and
+Coverage MCP to account for the enabled, disabled, and target-unavailable
+implementations with 100% line, branch, and region coverage in the supported
+upstream coverage configurations. The maintained goal/test command must run the
+complete matrix; a developer should not have to invoke each feature/target
+combination manually. This decision does not change the default feature set,
+add a dependency, or add AVIF bytes to the core WASM package.
+
+Implementation evidence (July 2026):
+
+- `scripts/test_feature_matrix.sh` runs no features, each individual codec,
+  default features, all features, core WASM without AVIF, and core WASM with
+  AVIF;
+- every lane uses `tests/feature_gate_tests.rs` and successful inputs selected
+  from `coverage_matrix.json`, rather than synthetic signatures;
+- the test covers detection, inspection metadata, lazy source construction,
+  verification, still/sequence decode, and still/sequence encode;
+- a shared availability check distinguishes exact feature-disabled errors from
+  the exact AVIF core-WASM target error before validation or codec dispatch;
+- both WASM configurations compile as test executables, while all native
+  configurations execute the same test successfully.
+
+### Accepted Strict Clippy Implementation
+
+Strict Clippy is an implementation requirement, not deferred lint debt. The
+authoritative gate is:
+
+```bash
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+```
+
+The command must exit successfully with zero diagnostics before an
+implementation slice is accepted. A non-strict invocation that leaves warnings
+in the output is not sufficient, and a warning baseline must not be used to
+declare the migration complete.
+
+Each supported compilation-target/feature lane must also run the equivalent
+strict command with its own `--target`, `--no-default-features`, and `--features`
+arguments. Cargo's `--all-targets` covers library, test, example, and benchmark
+targets; it does not replace native/WASM compilation-target lanes.
+
+Every diagnostic must be resolved according to its semantics:
+
+- use checked arithmetic for values derived from encoded input or caller-controlled
+  dimensions;
+- use explicit wrapping only when the image format or reference algorithm
+  requires modular arithmetic;
+- replace lossy casts with checked conversions, or prove the value range before
+  conversion without changing the algorithm;
+- make precedence and control flow explicit where Clippy identifies ambiguity;
+- refactor test and production code to satisfy denied API/style lints rather
+  than suppressing them.
+
+Do not add crate-wide, module-wide, or function-wide `allow` attributes merely
+to make the gate pass. A narrowly scoped allowance is acceptable only for a
+demonstrable false positive that cannot be expressed more clearly in stable
+Rust; it must state the exact invariant immediately beside the allowance and
+must not hide a malformed-input path. Existing broad allowances are technical
+debt, not precedent for new code.
+
+Lint fixes must preserve the project's parity contract. Any change that can
+alter valid pixels, encoded bytes, error classification, overflow behavior, or
+malformed-input handling requires the relevant Pillow-oracle manifest row
+before it is accepted. Mechanical style-only changes still run the full exact
+manifest suite.
+
+Acceptance requires formatting, strict Clippy, all manifest/feature/target
+lanes, and Coverage MCP with 100% line, branch, and region coverage. Strict
+Clippy applies to integration tests and coverage hooks as separate crates; an
+allowance in `src/lib.rs` does not exempt them.
+
+Implementation evidence (July 2026):
+
+- the authoritative all-target/all-feature command passes with warnings
+  denied;
+- `src/lib.rs`, `tests/coverage_matrix_tests.rs`, and
+  `tests/feature_gate_tests.rs` no longer use blanket `unwrap`/`expect`
+  suppressions;
+- Coverage MCP run `adaeffb3-8de6-4481-99c3-770b056df56e`, snapshot
+  `e4631526-ec4d-4e47-a77d-2ceffcafc037`, passes six test targets at 100%:
+  30,616 lines, 3,924 branches, 1,837 functions, and 51,578 regions;
+- the inherited `src/codecs/webp/native/mod.rs` blanket allowance is removed.
+  Every native WebP child owns a strict file policy with only adjacent,
+  invariant-backed reference-kernel exceptions.
 
 ## Metadata And Provenance
 
@@ -344,8 +606,20 @@ structured error and never retries a deterministic malformed source.
 
 ## Implementation Slices
 
-Each slice must format, pass its manifest rows, and preserve full line, branch,
-function, and region coverage before the next slice begins.
+Each slice must format, pass strict Clippy with `-D warnings`, pass its manifest
+rows, and preserve full line, branch, function, and region coverage before the
+next slice begins.
+
+### Slice 0: Strict Clippy Gate
+
+- fix every current production and integration-test diagnostic;
+- remove broad allowances when their underlying diagnostics are resolved;
+- use checked, wrapping, or proven-bounded arithmetic according to codec
+  semantics rather than mechanical substitutions;
+- add Pillow-oracle error fixtures for any lint fix that changes malformed-input
+  behavior;
+- require the authoritative strict command to pass before continuing with the
+  remaining implementation slices.
 
 ### Slice 1: Stable Encoded Source
 
@@ -419,6 +693,8 @@ The lazy-loading migration is complete only when:
 - palette operations still match exact Pillow pixels and encoded bytes;
 - native migration and feature-forwarding tests pass, and binding crates
   compile against the changed API;
+- strict Clippy passes for all Cargo targets/features and every supported
+  native/WASM compilation-target lane with warnings denied;
 - Coverage MCP reports 100% lines, branches, functions, and regions for the
   `image-slash-star` scope; `pillow-rs` uses its maintained manual targets per
   the agreed repository scope;

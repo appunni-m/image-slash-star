@@ -2,6 +2,30 @@
 //!
 //! [Lossless spec](https://developers.google.com/speed/webp/docs/webp_lossless_bitstream_specification)
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// VP8L prefix codes, bit-buffer shifts, distance mapping, and decoded geometry
+// are bounded by the format's bit widths and validated image dimensions.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use std::io::BufRead;
 
 use super::decoder::DecodingError;
@@ -74,6 +98,9 @@ impl<'a> LosslessDecoder<'a> {
 
     /// Decodes a VP8L frame whose payload includes the VP8L signature and
     /// dimension header.
+    // Reading the preceding 14-bit height leaves the following four header
+    // bits buffered by the reader contract.
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     pub(crate) fn decode_frame(
         &mut self,
         width: u32,
@@ -117,6 +144,8 @@ impl<'a> LosslessDecoder<'a> {
         self.decode_frame_body(buf)
     }
 
+    // `transform_order` only records slots populated by `read_transforms`.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
     fn decode_frame_body(&mut self, buf: &mut [u8]) -> Result<(), DecodingError> {
         let transformed_width = self.read_transforms()?;
         let transformed_size = usize::from(transformed_width) * usize::from(self.height) * 4;
@@ -340,10 +369,10 @@ impl<'a> LosslessDecoder<'a> {
             let mut group: HuffmanCodeGroup = Default::default();
             for j in 0..HUFFMAN_CODES_PER_META_CODE {
                 let mut alphabet_size = ALPHABET_SIZE[j];
-                if j == 0 {
-                    if let Some(color_cache) = color_cache.as_ref() {
-                        alphabet_size += 1 << color_cache.color_cache_bits;
-                    }
+                if j == 0
+                    && let Some(color_cache) = color_cache.as_ref()
+                {
+                    alphabet_size += 1 << color_cache.color_cache_bits;
                 }
 
                 let tree = self.read_huffman_code(alphabet_size)?;
@@ -482,6 +511,9 @@ impl<'a> LosslessDecoder<'a> {
     }
 
     /// Decodes the image data using the huffman trees and either of the 3 methods of decoding
+    // All converted pixel slices are exact four-byte chunks established by
+    // validated copy bounds.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
     fn decode_image_data(
         &mut self,
         width: u16,
@@ -518,27 +550,26 @@ impl<'a> LosslessDecoder<'a> {
                     tree[RED].single_symbol(),
                     tree[BLUE].single_symbol(),
                     tree[ALPHA].single_symbol(),
-                ) {
-                    if code < 256 {
-                        let n = if huffman_info.bits == 0 {
-                            num_values
-                        } else {
-                            next_block_start - index
-                        };
+                ) && code < 256
+                {
+                    let n = if huffman_info.bits == 0 {
+                        num_values
+                    } else {
+                        next_block_start - index
+                    };
 
-                        let value = [red as u8, code as u8, blue as u8, alpha as u8];
+                    let value = [red as u8, code as u8, blue as u8, alpha as u8];
 
-                        for i in 0..n {
-                            data[index * 4 + i * 4..][..4].copy_from_slice(&value);
-                        }
-
-                        if let Some(color_cache) = huffman_info.color_cache.as_mut() {
-                            color_cache.insert(value);
-                        }
-
-                        index += n;
-                        continue;
+                    for i in 0..n {
+                        data[index * 4 + i * 4..][..4].copy_from_slice(&value);
                     }
+
+                    if let Some(color_cache) = huffman_info.color_cache.as_mut() {
+                        color_cache.insert(value);
+                    }
+
+                    index += n;
+                    continue;
                 }
             }
 
@@ -615,15 +646,14 @@ impl<'a> LosslessDecoder<'a> {
                 data[index * 4..][..4].copy_from_slice(&color);
                 index += 1;
 
-                if index < next_block_start {
-                    if let Some((bits, code)) = tree[GREEN].peek_symbol(&self.bit_reader) {
-                        if code >= 280 {
-                            self.bit_reader.consume(bits)?;
-                            data[index * 4..][..4]
-                                .copy_from_slice(&color_cache.lookup((code - 280).into()));
-                            index += 1;
-                        }
-                    }
+                if index < next_block_start
+                    && let Some((bits, code)) = tree[GREEN].peek_symbol(&self.bit_reader)
+                    && code >= 280
+                {
+                    self.bit_reader.consume(bits)?;
+                    data[index * 4..][..4]
+                        .copy_from_slice(&color_cache.lookup((code - 280).into()));
+                    index += 1;
                 }
             }
         }
@@ -647,6 +677,8 @@ impl<'a> LosslessDecoder<'a> {
     }
 
     /// Gets the copy distance from the prefix code and bitstream.
+    // VP8L prefix symbols bound the derived extra-bit count to `u8`.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
     fn get_copy_distance(
         bit_reader: &mut BitReader<Box<dyn BufRead + 'a>>,
         prefix_code: u16,
@@ -664,6 +696,9 @@ impl<'a> LosslessDecoder<'a> {
     }
 
     /// Gets distance to pixel.
+    // The negative/zero case returns above, so the retained distance is
+    // representable as `usize` on every supported target.
+    #[allow(clippy::unwrap_used)]
     fn plane_code_to_distance(xsize: u16, plane_code: usize) -> usize {
         if plane_code > 120 {
             plane_code - 120
@@ -1404,6 +1439,8 @@ pub(crate) struct BitReader<R> {
     nbits: u8,
 }
 
+// This branch is entered only when `fill_buf()` exposes at least eight bytes.
+#[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
 fn fill_bit_buffer(
     reader: &mut dyn BufRead,
     buffer: &mut u64,

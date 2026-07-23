@@ -43,8 +43,8 @@ struct CompData {
 }
 
 pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let w = img.width as usize;
-    let h = img.height as usize;
+    let w = bounded_usize(img.width);
+    let h = bounded_usize(img.height);
     debug_assert!(w > 0 && h > 0);
     let pixels = img.as_bytes();
 
@@ -63,14 +63,14 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(0);
 
-    let params = quant::build_params(quality, subsampling, num_components as usize);
+    let params = quant::build_params(quality, subsampling, usize::from(num_components));
 
     // RGB → YCbCr (jccolor.c) or grayscale pass-through.
     let (y_plane, cb_plane, cr_plane) = if num_components == 1 {
-        let mut y = vec![0u8; w * h];
-        for i in 0..(w * h).min(pixels.len()) {
-            y[i] = pixels[i];
-        }
+        let pixel_count = w.saturating_mul(h);
+        let mut y = vec![0u8; pixel_count];
+        let copied = pixel_count.min(pixels.len());
+        y[..copied].copy_from_slice(&pixels[..copied]);
         (y, Vec::new(), Vec::new())
     } else {
         rgb_to_ycbcr(pixels, w, h)
@@ -91,8 +91,13 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     // filtering; bottom rows are replicated later by fdct_quantize.
     let y_w = w;
     let y_h = h;
-    let cb_w = (w * cb_hs as usize).div_ceil(max_h as usize * 8) * 8;
-    let cb_h = (h * cb_vs as usize).div_ceil(max_v as usize);
+    let cb_w = w
+        .saturating_mul(usize::from(cb_hs))
+        .div_ceil(usize::from(max_h).saturating_mul(8))
+        .saturating_mul(8);
+    let cb_h = h
+        .saturating_mul(usize::from(cb_vs))
+        .div_ceil(usize::from(max_v));
     let cr_w = cb_w;
     let cr_h = cb_h;
 
@@ -104,8 +109,8 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
             h,
             cb_w,
             cb_h,
-            max_h as usize / cb_hs as usize,
-            max_v as usize / cb_vs as usize,
+            usize::from(max_h).div_euclid(usize::from(cb_hs)),
+            usize::from(max_v).div_euclid(usize::from(cb_vs)),
         )
     } else {
         Vec::new()
@@ -117,15 +122,15 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
             h,
             cr_w,
             cr_h,
-            max_h as usize / cr_hs as usize,
-            max_v as usize / cr_vs as usize,
+            usize::from(max_h).div_euclid(usize::from(cr_hs)),
+            usize::from(max_v).div_euclid(usize::from(cr_vs)),
         )
     } else {
         Vec::new()
     };
 
     // Prepare per-component quantized coefficient blocks (natural order).
-    let mut comps: Vec<CompData> = Vec::with_capacity(num_components as usize);
+    let mut comps: Vec<CompData> = Vec::with_capacity(usize::from(num_components));
 
     // Y
     let y_blocks = fdct_quantize(&y_plane, y_w, y_h, &params.quant_tables[0]);
@@ -161,7 +166,10 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
         }
     }
 
-    let mcu_columns = (comps[0].blocks_per_row * 8).div_ceil(usize::from(max_h) * 8);
+    let mcu_columns = comps[0]
+        .blocks_per_row
+        .saturating_mul(8)
+        .div_ceil(usize::from(max_h).saturating_mul(8));
     let restart_interval = if restart_rows == 0 {
         0
     } else {
@@ -217,7 +225,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     // Write DQT tables (one per unique quant slot).
     let mut emitted = [false; 4];
     for c in &comps {
-        let slot = c.quant_slot as usize;
+        let slot = usize::from(c.quant_slot);
         if !emitted[slot] {
             marker::write_dqt(&mut out, c.quant_slot, &params.quant_tables[slot]);
             emitted[slot] = true;
@@ -230,7 +238,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
         .iter()
         .map(|c| (c.id, c.h_samp, c.v_samp, c.quant_slot))
         .collect();
-    marker::write_sof(&mut out, sof_marker, w as u16, h as u16, &sof_comps);
+    marker::write_sof(&mut out, sof_marker, low_u16(w), low_u16(h), &sof_comps);
 
     // DHT tables. Baseline: all 4 standard tables up front. Progressive: DHT
     // is emitted per-scan with only the tables that scan uses.
@@ -462,31 +470,72 @@ fn decode_hex(value: &str) -> Option<Vec<u8>> {
     (0..value.len())
         .step_by(2)
         .map(|index| {
-            let end = index + 2;
+            let end = index.saturating_add(2);
             u8::from_str_radix(value.get(index..end)?, 16).ok()
         })
         .collect()
 }
 
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn low_u16(value: usize) -> u16 {
+    let [a, b, ..] = value.to_le_bytes();
+    u16::from_le_bytes([a, b])
+}
+
+fn low_u32(value: usize) -> u32 {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d, ..] = value.to_le_bytes();
+        u32::from_le_bytes([a, b, c, d])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        u32::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn rgb_fixed(terms: &[(i32, i32)], bias: i32) -> u8 {
+    terms
+        .iter()
+        .fold(bias, |sum, &(weight, sample)| {
+            sum.saturating_add(weight.saturating_mul(sample))
+        })
+        .wrapping_shr(16)
+        .to_le_bytes()[0]
+}
+
 // ── Color conversion (jccolor.c) ─────────────────────────────────────────
 
 fn rgb_to_ycbcr(pixels: &[u8], w: usize, h: usize) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
-    let n = w * h;
+    let n = w.saturating_mul(h);
     let mut y = vec![0u8; n];
     let mut cb = vec![0u8; n];
     let mut cr = vec![0u8; n];
-    let npix = n.min(pixels.len() / 3);
+    let npix = n.min(pixels.len().div_euclid(3));
     for i in 0..npix {
-        let r = pixels[i * 3] as i32;
-        let g = pixels[i * 3 + 1] as i32;
-        let b = pixels[i * 3 + 2] as i32;
+        let source = i.saturating_mul(3);
+        let r = i32::from(pixels[source]);
+        let g = i32::from(pixels[source.saturating_add(1)]);
+        let b = i32::from(pixels[source.saturating_add(2)]);
         // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jccolor.c:214-243 and
         // jccolext.c:37-73. Chroma includes CENTERJSAMPLE before descaling;
         // the prior port accidentally added 128 before, rather than after,
         // the 16-bit fixed-point scale.
-        y[i] = ((19595 * r + 38470 * g + 7471 * b + 32768) >> 16) as u8;
-        cb[i] = ((-11059 * r - 21709 * g + 32768 * b + (128 << 16) + 32767) >> 16) as u8;
-        cr[i] = ((32768 * r - 27439 * g - 5329 * b + (128 << 16) + 32767) >> 16) as u8;
+        y[i] = rgb_fixed(&[(19_595, r), (38_470, g), (7_471, b)], 32_768);
+        let chroma_bias = 128i32.wrapping_shl(16).saturating_add(32_767);
+        cb[i] = rgb_fixed(&[(-11_059, r), (-21_709, g), (32_768, b)], chroma_bias);
+        cr[i] = rgb_fixed(&[(32_768, r), (-27_439, g), (-5_329, b)], chroma_bias);
     }
     (y, cb, cr)
 }
@@ -505,14 +554,17 @@ fn downsample(
     hr: usize,
     vr: usize,
 ) -> Vec<u8> {
-    let mut out = vec![0u8; dw * dh];
+    let mut out = vec![0u8; dw.saturating_mul(dh)];
     if hr == 1 && vr == 1 {
         // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:99-113,145-174.
         // Full-size components duplicate their right and bottom edge samples
         // through the padded DCT extent.
         for y in 0..dh {
             for x in 0..dw {
-                out[y * dw + x] = plane[y.min(sh - 1) * sw + x.min(sw - 1)];
+                let source_y = y.min(sh.saturating_sub(1));
+                let source_x = x.min(sw.saturating_sub(1));
+                out[y.saturating_mul(dw).saturating_add(x)] =
+                    plane[source_y.saturating_mul(sw).saturating_add(source_x)];
             }
         }
         return out;
@@ -522,17 +574,26 @@ fn downsample(
             let mut sum = 0u32;
             for vy in 0..vr {
                 for vx in 0..hr {
-                    let sy = (y * vr + vy).min(sh - 1);
-                    let sx = (x * hr + vx).min(sw - 1);
-                    sum += plane[sy * sw + sx] as u32;
+                    let sy = y
+                        .saturating_mul(vr)
+                        .saturating_add(vy)
+                        .min(sh.saturating_sub(1));
+                    let sx = x
+                        .saturating_mul(hr)
+                        .saturating_add(vx)
+                        .min(sw.saturating_sub(1));
+                    sum = sum
+                        .saturating_add(u32::from(plane[sy.saturating_mul(sw).saturating_add(sx)]));
                 }
             }
             // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:227-299.
             // h2v1 alternates 0/1; h2v2 alternates 1/2 for each output row.
             debug_assert_eq!(hr, 2);
             debug_assert!(vr == 1 || vr == 2);
-            let bias = (x & 1) as u32 + u32::from(vr == 2);
-            out[y * dw + x] = ((sum + bias) / (hr * vr) as u32) as u8;
+            let bias = u32::from(x.to_le_bytes()[0] & 1).saturating_add(u32::from(vr == 2));
+            let divisor = low_u32(hr.saturating_mul(vr));
+            out[y.saturating_mul(dw).saturating_add(x)] =
+                sum.saturating_add(bias).div_euclid(divisor).to_le_bytes()[0];
         }
     }
     out
@@ -549,43 +610,50 @@ fn fdct_quantize(
     h: usize,
     qtable: &[u16; 64],
 ) -> (Vec<[i16; 64]>, usize, usize) {
-    let blocks_per_row = (w + 7) / 8;
-    let block_rows = (h + 7) / 8;
-    let mut blocks = vec![[0i16; 64]; blocks_per_row * block_rows];
+    let blocks_per_row = w.div_ceil(8);
+    let block_rows = h.div_ceil(8);
+    let mut blocks = vec![[0i16; 64]; blocks_per_row.saturating_mul(block_rows)];
 
     for by in 0..block_rows {
         for bx in 0..blocks_per_row {
             let mut samples = [0i32; 64];
-            for row in 0..8 {
-                for col in 0..8 {
-                    let py = by * 8 + row;
-                    let px = bx * 8 + col;
+            for row in 0usize..8 {
+                for col in 0usize..8 {
+                    let py = by.saturating_mul(8).saturating_add(row);
+                    let px = bx.saturating_mul(8).saturating_add(col);
                     let val = if py < h && px < w {
-                        plane[py * w + px] as i32 - 128
+                        i32::from(plane[py.saturating_mul(w).saturating_add(px)])
+                            .saturating_sub(128)
                     } else {
                         // Edge replication (jccolext / edge extension).
                         let cpy = py.min(h.saturating_sub(1));
                         let cpx = px.min(w.saturating_sub(1));
-                        plane[cpy * w + cpx] as i32 - 128
+                        i32::from(plane[cpy.saturating_mul(w).saturating_add(cpx)])
+                            .saturating_sub(128)
                     };
-                    samples[row * 8 + col] = val;
+                    samples[row.saturating_mul(8).saturating_add(col)] = val;
                 }
             }
             fdct::fdct_islow(&mut samples);
             // Quantize in natural order: divisor = quantval[i] << 3.
             let mut q = [0i16; 64];
             for i in 0..64 {
-                let divisor = (qtable[i] as i32) << 3;
+                let divisor = i32::from(qtable[i]).wrapping_shl(3);
                 let coef = samples[i];
                 // Round-to-nearest, away from zero on .5 (matches reciprocal path).
+                let rounded_magnitude = coef
+                    .saturating_abs()
+                    .saturating_add(divisor.wrapping_shr(1))
+                    .div_euclid(divisor);
                 let qval = if coef < 0 {
-                    -((-coef + (divisor >> 1)) / divisor)
+                    rounded_magnitude.saturating_neg()
                 } else {
-                    (coef + (divisor >> 1)) / divisor
+                    rounded_magnitude
                 };
-                q[i] = qval as i16;
+                let [a, b, ..] = qval.to_le_bytes();
+                q[i] = i16::from_le_bytes([a, b]);
             }
-            blocks[by * blocks_per_row + bx] = q;
+            blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = q;
         }
     }
     (blocks, blocks_per_row, block_rows)
@@ -602,10 +670,10 @@ fn baseline_frequencies(
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c's gather_statistics pass.
     // Traverse exactly the same MCU stream as encode_baseline_entropy so the
     // optimized table describes every symbol that the output pass will emit.
-    let mcu_w = usize::from(max_h) * 8;
-    let mcu_h = usize::from(max_v) * 8;
-    let n_mcu_x = (comps[0].blocks_per_row * 8).div_ceil(mcu_w);
-    let n_mcu_y = (comps[0].block_rows * 8).div_ceil(mcu_h);
+    let mcu_w = usize::from(max_h).saturating_mul(8);
+    let mcu_h = usize::from(max_v).saturating_mul(8);
+    let n_mcu_x = comps[0].blocks_per_row.saturating_mul(8).div_ceil(mcu_w);
+    let n_mcu_y = comps[0].block_rows.saturating_mul(8).div_ceil(mcu_h);
     let mut dc = [[0u64; 256]; 2];
     let mut ac = [[0u64; 256]; 2];
     let mut last_dc = [0i32; 4];
@@ -622,41 +690,46 @@ fn baseline_frequencies(
                 let ac_slot = usize::from(component.ac_tbl);
                 for vertical in 0..usize::from(component.v_samp) {
                     for horizontal in 0..usize::from(component.h_samp) {
-                        let block_row = my * usize::from(component.v_samp) + vertical;
-                        let block_column = mx * usize::from(component.h_samp) + horizontal;
+                        let block_row = my
+                            .saturating_mul(usize::from(component.v_samp))
+                            .saturating_add(vertical);
+                        let block_column = mx
+                            .saturating_mul(usize::from(component.h_samp))
+                            .saturating_add(horizontal);
                         if block_row >= component.block_rows
                             || block_column >= component.blocks_per_row
                         {
-                            dc[dc_slot][0] += 1;
-                            ac[ac_slot][0] += 1;
+                            dc[dc_slot][0] = dc[dc_slot][0].saturating_add(1);
+                            ac[ac_slot][0] = ac[ac_slot][0].saturating_add(1);
                             continue;
                         }
 
-                        let block =
-                            &component.blocks[block_row * component.blocks_per_row + block_column];
-                        let difference = i32::from(block[0]) - last_dc[ci];
+                        let block = &component.blocks[block_row
+                            .saturating_mul(component.blocks_per_row)
+                            .saturating_add(block_column)];
+                        let difference = i32::from(block[0]).saturating_sub(last_dc[ci]);
                         last_dc[ci] = i32::from(block[0]);
-                        let dc_symbol = jpeg_nbits(difference) as usize;
-                        dc[dc_slot][dc_symbol] += 1;
+                        let dc_symbol = bounded_usize(jpeg_nbits(difference));
+                        dc[dc_slot][dc_symbol] = dc[dc_slot][dc_symbol].saturating_add(1);
 
                         let mut run = 0usize;
                         for &natural_index in &ZIGZAG[1..] {
                             let coefficient = i32::from(block[natural_index]);
                             if coefficient == 0 {
-                                run += 1;
+                                run = run.saturating_add(1);
                                 continue;
                             }
                             while run >= 16 {
-                                ac[ac_slot][0xf0] += 1;
-                                run -= 16;
+                                ac[ac_slot][0xf0] = ac[ac_slot][0xf0].saturating_add(1);
+                                run = run.saturating_sub(16);
                             }
-                            let width = jpeg_nbits(coefficient) as usize;
-                            let symbol = (run << 4) | width;
-                            ac[ac_slot][symbol] += 1;
+                            let width = bounded_usize(jpeg_nbits(coefficient));
+                            let symbol = run.wrapping_shl(4) | width;
+                            ac[ac_slot][symbol] = ac[ac_slot][symbol].saturating_add(1);
                             run = 0;
                         }
                         if run != 0 {
-                            ac[ac_slot][0] += 1;
+                            ac[ac_slot][0] = ac[ac_slot][0].saturating_add(1);
                         }
                     }
                 }
@@ -676,10 +749,10 @@ fn encode_baseline_entropy(
     ac_tables: &[&huffman::DerivedTable; 2],
     restart_interval: u16,
 ) {
-    let mcu_w = max_h as usize * 8;
-    let mcu_h = max_v as usize * 8;
-    let n_mcu_x = (comps[0].blocks_per_row * 8 + mcu_w - 1) / mcu_w;
-    let n_mcu_y = (comps[0].block_rows * 8 + mcu_h - 1) / mcu_h;
+    let mcu_w = usize::from(max_h).saturating_mul(8);
+    let mcu_h = usize::from(max_v).saturating_mul(8);
+    let n_mcu_x = comps[0].blocks_per_row.saturating_mul(8).div_ceil(mcu_w);
+    let n_mcu_y = comps[0].block_rows.saturating_mul(8).div_ceil(mcu_h);
 
     let mut bw = huffman::BitWriter::new();
     let mut last_dc = [0i32; 4];
@@ -692,20 +765,20 @@ fn encode_baseline_entropy(
                 bw.flush();
                 out.append(&mut bw.out);
                 marker::write_rst(out, next_restart);
-                next_restart = (next_restart + 1) & 7;
+                next_restart = next_restart.saturating_add(1) & 7;
                 last_dc.fill(0);
                 mcus_until_restart = usize::from(restart_interval);
             }
             for (ci, c) in comps.iter().enumerate() {
-                let hs = c.h_samp as usize;
-                let vs = c.v_samp as usize;
+                let hs = usize::from(c.h_samp);
+                let vs = usize::from(c.v_samp);
                 let bpr = c.blocks_per_row;
-                let dc_tbl = dc_tables[c.dc_tbl as usize];
-                let ac_tbl = ac_tables[c.ac_tbl as usize];
+                let dc_tbl = dc_tables[usize::from(c.dc_tbl)];
+                let ac_tbl = ac_tables[usize::from(c.ac_tbl)];
                 for vy in 0..vs {
                     for vx in 0..hs {
-                        let brow = my * vs + vy;
-                        let bcol = mx * hs + vx;
+                        let brow = my.saturating_mul(vs).saturating_add(vy);
+                        let bcol = mx.saturating_mul(hs).saturating_add(vx);
                         if brow >= c.block_rows || bcol >= bpr {
                             // ✅ VERIFIED: libjpeg-turbo 3.1.4.1
                             // jccoefct.c:174-199. Edge dummy blocks copy the
@@ -715,7 +788,7 @@ fn encode_baseline_entropy(
                             bw.write_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
                             continue;
                         }
-                        let blk = &c.blocks[brow * bpr + bcol];
+                        let blk = &c.blocks[brow.saturating_mul(bpr).saturating_add(bcol)];
                         encode_one_block(&mut bw, blk, &mut last_dc[ci], dc_tbl, ac_tbl);
                     }
                 }
@@ -736,33 +809,34 @@ fn encode_one_block(
     ac_tbl: &huffman::DerivedTable,
 ) {
     // DC coefficient difference (natural-order index 0).
-    let dc = block[0] as i32;
-    let diff = dc - *last_dc;
+    let dc = i32::from(block[0]);
+    let diff = dc.saturating_sub(*last_dc);
     *last_dc = dc;
     let nbits = jpeg_nbits(diff);
     // DC Huffman symbol = nbits, followed by nbits magnitude bits.
-    bw.write_bits(dc_tbl.codes[nbits as usize], dc_tbl.lengths[nbits as usize]);
+    let nbits_index = bounded_usize(nbits);
+    bw.write_bits(dc_tbl.codes[nbits_index], dc_tbl.lengths[nbits_index]);
     if nbits > 0 {
-        bw.write_bits(mag_bits(diff, nbits), nbits as u8);
+        bw.write_bits(mag_bits(diff, nbits), nbits.to_le_bytes()[0]);
     }
 
     // AC coefficients in zigzag order (k=1..63).
     let mut r = 0u32; // run length of zeros
     for k in 1..64 {
-        let coef = block[ZIGZAG[k]] as i32;
+        let coef = i32::from(block[ZIGZAG[k]]);
         if coef == 0 {
-            r += 1;
+            r = r.saturating_add(1);
             continue;
         }
         // Emit ZRL (0xF0) for each full 16-zero run.
         while r >= 16 {
             bw.write_bits(ac_tbl.codes[0xF0], ac_tbl.lengths[0xF0]);
-            r -= 16;
+            r = r.saturating_sub(16);
         }
         let nbits = jpeg_nbits(coef);
-        let sym = ((r << 4) | nbits) as usize;
+        let sym = bounded_usize(r.wrapping_shl(4) | nbits);
         bw.write_bits(ac_tbl.codes[sym], ac_tbl.lengths[sym]);
-        bw.write_bits(mag_bits(coef, nbits), nbits as u8);
+        bw.write_bits(mag_bits(coef, nbits), nbits.to_le_bytes()[0]);
         r = 0;
     }
     // If trailing zeros, emit EOB (symbol 0x00).
@@ -773,11 +847,11 @@ fn encode_one_block(
 
 /// Number of bits needed to represent |v| (JPEG_NBITS).  nbits(0)=0.
 fn jpeg_nbits(v: i32) -> u32 {
-    let mut a = if v < 0 { -v } else { v };
+    let mut a = v.unsigned_abs();
     let mut n = 0u32;
     while a > 0 {
-        n += 1;
-        a >>= 1;
+        n = n.saturating_add(1);
+        a = a.wrapping_shr(1);
     }
     n
 }
@@ -786,8 +860,8 @@ fn jpeg_nbits(v: i32) -> u32 {
 /// convention): positive → the value's nbits LSBs; negative → (value-1)'s
 /// nbits LSBs (= bitwise complement of the absolute magnitude).
 fn mag_bits(v: i32, nbits: u32) -> u32 {
-    let emit = if v < 0 { v - 1 } else { v };
-    (emit as u32) & ((1u32 << nbits) - 1)
+    let emit = if v < 0 { v.saturating_sub(1) } else { v };
+    emit.cast_unsigned() & 1u32.wrapping_shl(nbits).saturating_sub(1)
 }
 
 // ── Progressive entropy coding (jcphuff.c + jcmaster.c scan script) ──────
@@ -882,7 +956,8 @@ fn encode_progressive_scans_exact(
         let mut frequencies = [[0u64; 256]; 4];
         for &event in &events {
             if let ProgressiveEvent::Symbol { table, value } = event {
-                frequencies[table][usize::from(value)] += 1;
+                frequencies[table][usize::from(value)] =
+                    frequencies[table][usize::from(value)].saturating_add(1);
             }
         }
 
@@ -893,7 +968,7 @@ fn encode_progressive_scans_exact(
                 marker::write_dht(
                     output,
                     u8::from(scan.ss != 0),
-                    table as u8,
+                    table.to_le_bytes()[0],
                     &optimized.bits,
                     &optimized.values,
                 );
@@ -920,10 +995,12 @@ fn encode_progressive_scans_exact(
         for event in events {
             match event {
                 ProgressiveEvent::Symbol { table, value } => {
-                    let derived = &tables[table]
+                    // The preceding frequency pass builds every referenced table.
+                    #[allow(clippy::expect_used)]
+                    let table = tables[table]
                         .as_ref()
-                        .expect("progressive event table has a built Huffman table")
-                        .derived;
+                        .expect("progressive event table has a built Huffman table");
+                    let derived = &table.derived;
                     writer.write_bits(
                         derived.codes[usize::from(value)],
                         derived.lengths[usize::from(value)],
@@ -950,33 +1027,39 @@ fn dc_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<Progre
     let interleaved = scan.comps.len() > 1;
     let maximum_horizontal_sampling = components.iter().map(|c| c.h_samp).max().unwrap_or(1);
     let maximum_vertical_sampling = components.iter().map(|c| c.v_samp).max().unwrap_or(1);
-    let mcu_width = usize::from(maximum_horizontal_sampling) * 8;
-    let mcu_height = usize::from(maximum_vertical_sampling) * 8;
-    let mcu_columns = (components[0].blocks_per_row * 8).div_ceil(mcu_width);
-    let mcu_rows = (components[0].block_rows * 8).div_ceil(mcu_height);
+    let mcu_width = usize::from(maximum_horizontal_sampling).saturating_mul(8);
+    let mcu_height = usize::from(maximum_vertical_sampling).saturating_mul(8);
+    let mcu_columns = components[0]
+        .blocks_per_row
+        .saturating_mul(8)
+        .div_ceil(mcu_width);
+    let mcu_rows = components[0]
+        .block_rows
+        .saturating_mul(8)
+        .div_ceil(mcu_height);
     let mut predictors = vec![0i32; scan.comps.len()];
 
     let mut append = |scan_index: usize, component_index: usize, block: &[i16; 64]| {
         let component = &components[component_index];
         let raw = i32::from(block[0]);
         if scan.ah == 0 {
-            let transformed = raw >> scan.al;
-            let difference = transformed - predictors[scan_index];
+            let transformed = raw.wrapping_shr(u32::from(scan.al));
+            let difference = transformed.saturating_sub(predictors[scan_index]);
             predictors[scan_index] = transformed;
             let width = jpeg_nbits(difference);
             events.push(ProgressiveEvent::Symbol {
                 table: usize::from(component.dc_tbl),
-                value: width as u8,
+                value: width.to_le_bytes()[0],
             });
             if width != 0 {
                 events.push(ProgressiveEvent::Bits {
                     value: mag_bits(difference, width),
-                    width: width as u8,
+                    width: width.to_le_bytes()[0],
                 });
             }
         } else {
             events.push(ProgressiveEvent::Bits {
-                value: ((raw >> scan.al) & 1) as u32,
+                value: (raw.wrapping_shr(u32::from(scan.al)) & 1).cast_unsigned(),
                 width: 1,
             });
         }
@@ -989,17 +1072,21 @@ fn dc_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<Progre
                     let component = &components[component_index];
                     for vertical in 0..usize::from(component.v_samp) {
                         for horizontal in 0..usize::from(component.h_samp) {
-                            let block_row = mcu_row * usize::from(component.v_samp) + vertical;
-                            let block_column =
-                                mcu_column * usize::from(component.h_samp) + horizontal;
+                            let block_row = mcu_row
+                                .saturating_mul(usize::from(component.v_samp))
+                                .saturating_add(vertical);
+                            let block_column = mcu_column
+                                .saturating_mul(usize::from(component.h_samp))
+                                .saturating_add(horizontal);
                             if block_row < component.block_rows
                                 && block_column < component.blocks_per_row
                             {
                                 append(
                                     scan_index,
                                     component_index,
-                                    &component.blocks
-                                        [block_row * component.blocks_per_row + block_column],
+                                    &component.blocks[block_row
+                                        .saturating_mul(component.blocks_per_row)
+                                        .saturating_add(block_column)],
                                 );
                             }
                         }
@@ -1061,9 +1148,11 @@ fn append_ac_first_events(
     for coefficient in scan.ss..=scan.se {
         let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
         let sign = raw >> 31;
-        let absolute = (raw ^ sign).wrapping_sub(sign) >> scan.al;
+        let absolute = (raw ^ sign)
+            .wrapping_sub(sign)
+            .wrapping_shr(u32::from(scan.al));
         if absolute == 0 {
-            run += 1;
+            run = run.saturating_add(1);
             continue;
         }
         if eob_run != &0 {
@@ -1071,22 +1160,32 @@ fn append_ac_first_events(
         }
         while run > 15 {
             events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
-            run -= 16;
+            run = run.saturating_sub(16);
         }
         let width = jpeg_nbits(absolute);
         events.push(ProgressiveEvent::Symbol {
             table,
-            value: ((run << 4) + width as usize) as u8,
+            value: run
+                .wrapping_shl(4)
+                .saturating_add(bounded_usize(width))
+                .to_le_bytes()[0],
         });
         events.push(ProgressiveEvent::Bits {
-            value: mag_bits(if sign == 0 { absolute } else { -absolute }, width),
-            width: width as u8,
+            value: mag_bits(
+                if sign == 0 {
+                    absolute
+                } else {
+                    absolute.saturating_neg()
+                },
+                width,
+            ),
+            width: width.to_le_bytes()[0],
         });
         run = 0;
         last_nonzero = Some(coefficient);
     }
     if last_nonzero != Some(scan.se) {
-        *eob_run += 1;
+        *eob_run = eob_run.saturating_add(1);
         if *eob_run == 0x7fff {
             flush_progressive_eob(events, table, eob_run, correction_bits);
         }
@@ -1105,8 +1204,10 @@ fn append_ac_refine_events(
         .map(|coefficient| {
             let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
             let sign = raw >> 31;
-            let absolute = (raw ^ sign).wrapping_sub(sign) >> scan.al;
-            (raw, absolute as u32)
+            let absolute = (raw ^ sign)
+                .wrapping_sub(sign)
+                .wrapping_shr(u32::from(scan.al));
+            (raw, absolute.cast_unsigned())
         })
         .collect::<Vec<_>>();
     let last_new = coefficients
@@ -1118,25 +1219,25 @@ fn append_ac_refine_events(
 
     for (index, &(raw, absolute)) in coefficients.iter().enumerate() {
         if absolute == 0 {
-            run += 1;
+            run = run.saturating_add(1);
             continue;
         }
         last_nonzero = Some(index);
         while run > 15 && last_new.is_some_and(|last| index <= last) {
             flush_progressive_eob(events, table, eob_run, correction_bits);
             events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
-            run -= 16;
+            run = run.saturating_sub(16);
             append_correction_events(events, &mut block_corrections);
         }
         if absolute > 1 {
-            block_corrections.push((absolute & 1) as u8);
+            block_corrections.push((absolute & 1).to_le_bytes()[0]);
             continue;
         }
 
         flush_progressive_eob(events, table, eob_run, correction_bits);
         events.push(ProgressiveEvent::Symbol {
             table,
-            value: ((run << 4) | 1) as u8,
+            value: (run.wrapping_shl(4) | 1).to_le_bytes()[0],
         });
         events.push(ProgressiveEvent::Bits {
             value: u32::from(raw >= 0),
@@ -1146,8 +1247,8 @@ fn append_ac_refine_events(
         run = 0;
     }
 
-    if last_nonzero != Some(coefficients.len() - 1) || !block_corrections.is_empty() {
-        *eob_run += 1;
+    if last_nonzero != Some(coefficients.len().saturating_sub(1)) || !block_corrections.is_empty() {
+        *eob_run = eob_run.saturating_add(1);
         correction_bits.append(&mut block_corrections);
         if *eob_run == 0x7fff || correction_bits.len() > 937 {
             flush_progressive_eob(events, table, eob_run, correction_bits);
@@ -1167,12 +1268,12 @@ fn flush_progressive_eob(
     let width = eob_run.ilog2();
     events.push(ProgressiveEvent::Symbol {
         table,
-        value: (width * 16) as u8,
+        value: width.saturating_mul(16).to_le_bytes()[0],
     });
     if width != 0 {
         events.push(ProgressiveEvent::Bits {
             value: *eob_run,
-            width: width as u8,
+            width: width.to_le_bytes()[0],
         });
     }
     *eob_run = 0;

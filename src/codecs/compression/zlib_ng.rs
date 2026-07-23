@@ -11,6 +11,7 @@ const LITERAL_CODES: usize = 286;
 const DISTANCE_CODES: usize = 30;
 const BIT_LENGTH_CODES: usize = 19;
 const MAX_BITS: usize = 15;
+const BIT_COUNT_SIZE: usize = 16;
 const MAX_BIT_LENGTH_BITS: usize = 7;
 const MIN_LOOKAHEAD: usize = 262;
 const MAX_DISTANCE: usize = 32_768 - MIN_LOOKAHEAD;
@@ -25,6 +26,27 @@ const CODE_LENGTH_ORDER: [usize; BIT_LENGTH_CODES] = [
 const EXTRA_BIT_LENGTH_BITS: [u8; BIT_LENGTH_CODES] =
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7];
 
+fn low_u16(value: usize) -> u16 {
+    let bytes = value.to_le_bytes();
+    u16::from_le_bytes([bytes[0], bytes[1]])
+}
+
+fn low_u32(value: usize) -> u32 {
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+#[cfg(target_pointer_width = "64")]
+fn low_usize_i64(value: i64) -> usize {
+    usize::from_le_bytes(value.to_le_bytes())
+}
+
+#[cfg(target_pointer_width = "32")]
+fn low_usize_i64(value: i64) -> usize {
+    let bytes = value.to_le_bytes();
+    usize::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
 enum Token {
     Literal(u8),
     Match { length: usize, distance: usize },
@@ -35,6 +57,7 @@ enum Token {
 /// `deflate_quick` retains only the newest four-byte hash candidate, emits
 /// fixed Huffman codes directly, and deliberately does not insert positions
 /// skipped by a match.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let mut input_len = 0usize;
     for &length in input_chunks {
@@ -70,7 +93,7 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Toke
     let mut position = 0usize;
     let mut available = 0usize;
     for &chunk_length in input_chunks {
-        available += chunk_length;
+        available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
 
         // fill_window() re-inserts strstart - 1 whenever a new input call
@@ -80,9 +103,9 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Toke
         // left at least `MIN_LOOKAHEAD - MAX_MATCH` bytes available, so
         // `position - 1` has the four bytes required by `quick_insert_level1`.
         if position >= 1 {
-            quick_insert_level1(data, position - 1, &mut head);
+            quick_insert_level1(data, position.wrapping_sub(1), &mut head);
         }
-        while available - position >= MIN_LOOKAHEAD {
+        while available.wrapping_sub(position) >= MIN_LOOKAHEAD {
             tokenize_level1_position(data, available, &mut position, &mut head, &mut tokens);
         }
     }
@@ -101,13 +124,14 @@ fn tokenize_level1_position(
     head: &mut [usize],
     tokens: &mut Vec<Token>,
 ) {
-    let lookahead = available - *position;
+    let lookahead = available.wrapping_sub(*position);
     if lookahead >= MIN_MATCH {
         let candidate = quick_insert_level1(data, *position, head);
-        let distance = *position - candidate;
+        let distance = position.wrapping_sub(candidate);
         if distance != 0
             && distance <= MAX_DISTANCE
-            && data[candidate..candidate + 2] == data[*position..*position + 2]
+            && data[candidate..candidate.saturating_add(2)]
+                == data[*position..position.saturating_add(2)]
         {
             let mut length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
             if length >= MIN_MATCH {
@@ -119,14 +143,14 @@ fn tokenize_level1_position(
                     distance = 1;
                 }
                 tokens.push(Token::Match { length, distance });
-                *position += length;
+                *position = position.wrapping_add(length);
                 return;
             }
         }
     }
 
     tokens.push(Token::Literal(data[*position]));
-    *position += 1;
+    *position = position.wrapping_add(1);
 }
 
 fn level1_window_tail_distance_one(
@@ -139,11 +163,11 @@ fn level1_window_tail_distance_one(
     // distance for repeated-byte matches that start in the pre-slide guard zone
     // after the first 64 KiB fill window. Keep this scoped to that observable
     // deflate_quick window-tail state so earlier 32 KiB matches stay byte-exact.
-    let first_slide_guard_start = WINDOW_SIZE * 2 - MIN_LOOKAHEAD;
+    let first_slide_guard_start = WINDOW_SIZE.wrapping_mul(2).wrapping_sub(MIN_LOOKAHEAD);
     if position < first_slide_guard_start || position % WINDOW_SIZE <= MAX_DISTANCE {
         return None;
     }
-    let previous_position = position - 1;
+    let previous_position = position.wrapping_sub(1);
     if data[previous_position] != data[position] {
         return None;
     }
@@ -153,6 +177,9 @@ fn level1_window_tail_distance_one(
 }
 
 #[cfg(coverage)]
+// This coverage-only state explorer uses `expect` as an assertion that its
+// hand-constructed private states satisfy the preconditions being exercised.
+#[allow(clippy::expect_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let data = b"abcdef";
     let mut tokens = Vec::new();
@@ -869,7 +896,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usize {
-    let bytes = &data[position..position + 4];
+    let bytes = &data[position..position.saturating_add(4)];
     let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     let hash = (word.wrapping_mul(2_654_435_761) >> 16) as usize;
     let candidate = head[hash];
@@ -884,6 +911,7 @@ fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usiz
 /// Pillow's `ZipEncode.c` selects `Z_FILTERED`, a 32 KiB window, and
 /// `memLevel=9`. zlib-ng maps level three to `deflate_medium` with the
 /// `{ good: 4, lazy: 6, nice: 16, chain: 6 }` configuration.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false)?;
     let mut output = vec![0x78, 0x5e];
@@ -896,6 +924,7 @@ pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-two fast strategy.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true)?;
     let mut output = vec![0x78, 0x5e];
@@ -908,6 +937,7 @@ pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Option<Vec
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-four medium strategy.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false)?;
     let mut output = vec![0x78, 0x5e];
@@ -920,6 +950,7 @@ pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Option<Vec
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-six configuration.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)?;
     let mut output = vec![0x78, 0x9c];
@@ -932,6 +963,7 @@ pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-five medium strategy.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16)?;
     let mut output = vec![0x78, 0x5e];
@@ -953,6 +985,7 @@ pub(super) fn compress_level8(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     compress_slow_level(data, input_chunks, 128, 32, 258, 1024, 0xda)
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn compress_slow_level(
     data: &[u8],
     input_chunks: &[usize],
@@ -985,6 +1018,7 @@ struct SlowSettings {
     max_chain: usize,
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Option<Vec<Token>> {
     let mut matcher = SlowMatcher::new(
         data,
@@ -1037,7 +1071,7 @@ impl SlowMatcher {
         Self {
             data: window,
             head: vec![0; HASH_SIZE],
-            previous: vec![0; WINDOW_MASK + 1],
+            previous: vec![0; WINDOW_SIZE],
             position: 0,
             previous_length: 2,
             match_start: 0,
@@ -1050,6 +1084,7 @@ impl SlowMatcher {
         }
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
         loop {
             let lookahead = available.checked_sub(self.position)?;
@@ -1066,7 +1101,7 @@ impl SlowMatcher {
             let mut match_length = 2usize;
             if candidate != 0
                 && candidate < self.position
-                && self.position - candidate <= MAX_DISTANCE
+                && self.position.wrapping_sub(candidate) <= MAX_DISTANCE
                 && self.previous_length < self.max_lazy
             {
                 let found = self
@@ -1086,24 +1121,28 @@ impl SlowMatcher {
                     length: self.previous_length,
                     distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
                 });
-                let maximum_insert = available - 3;
-                let move_forward = self.previous_length - 2;
+                let maximum_insert = available.wrapping_sub(3);
+                let move_forward = self.previous_length.wrapping_sub(2);
                 let insert_count = move_forward.min(maximum_insert.saturating_sub(self.position));
-                for insert_position in self.position + 1..=self.position + insert_count {
+                for insert_position in
+                    self.position.wrapping_add(1)..=self.position.wrapping_add(insert_count)
+                {
                     self.quick_insert(insert_position)?;
                 }
-                self.position += self.previous_length - 1;
+                self.position = self
+                    .position
+                    .wrapping_add(self.previous_length.wrapping_sub(1));
                 self.previous_length = 0;
                 self.match_available = false;
             } else if self.match_available {
                 self.tokens
-                    .push(Token::Literal(self.data[self.position - 1]));
+                    .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
                 self.previous_length = match_length;
-                self.position += 1;
+                self.position = self.position.wrapping_add(1);
             } else {
                 self.previous_length = match_length;
                 self.match_available = true;
-                self.position += 1;
+                self.position = self.position.wrapping_add(1);
             }
         }
 
@@ -1112,7 +1151,7 @@ impl SlowMatcher {
             // lookahead reaches zero.
             debug_assert_eq!(self.position, available);
             self.tokens
-                .push(Token::Literal(self.data[self.position - 1]));
+                .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
             self.match_available = false;
         }
         Some(())
@@ -1168,6 +1207,7 @@ impl SlowMatcher {
 }
 
 #[cfg(feature = "tiff")]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
         .expect("TIFF level-six tokenizer should receive validated chunks");
@@ -1180,6 +1220,7 @@ pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Optio
     Some(output)
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn tokenize_lookahead_medium(
     data: &[u8],
     input_chunks: &[usize],
@@ -1242,7 +1283,7 @@ impl Level6Matcher {
         Self {
             data: window,
             head: vec![0; HASH_SIZE],
-            previous: vec![0; WINDOW_MASK + 1],
+            previous: vec![0; WINDOW_SIZE],
             position: 0,
             window_base: 0,
             tokens: Vec::new(),
@@ -1252,20 +1293,21 @@ impl Level6Matcher {
         }
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn refill_boundary(&mut self) -> Option<()> {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:1213-1237. fill_window()
         // re-inserts strstart-1 when new input makes a three-byte hash valid.
         self.slide_window_if_needed()
             .expect("level-six matcher should slide a validated input boundary");
         if self.position >= 1 {
-            self.quick_insert(self.position - 1)?;
+            self.quick_insert(self.position.wrapping_sub(1))?;
         }
         Some(())
     }
 
     fn slide_window_if_needed(&mut self) -> Option<()> {
-        if self.position.checked_sub(self.window_base)? >= 32_768 + MAX_DISTANCE {
-            self.window_base += 32_768;
+        if self.position.checked_sub(self.window_base)? >= 32_768_usize.wrapping_add(MAX_DISTANCE) {
+            self.window_base = self.window_base.wrapping_add(32_768);
             for position in self.head.iter_mut().chain(&mut self.previous) {
                 if *position < self.window_base {
                     *position = 0;
@@ -1275,6 +1317,7 @@ impl Level6Matcher {
         Some(())
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
         let mut following = None::<MediumMatch>;
         loop {
@@ -1301,9 +1344,13 @@ impl Level6Matcher {
                 .expect("level-six matcher should insert a validated match");
 
             if lookahead > MIN_LOOKAHEAD
-                && current.start + current.length < self.window_base + 65_536 - MIN_LOOKAHEAD
+                && current.start.wrapping_add(current.length)
+                    < self
+                        .window_base
+                        .wrapping_add(65_536)
+                        .wrapping_sub(MIN_LOOKAHEAD)
             {
-                let future = current.start + current.length;
+                let future = current.start.wrapping_add(current.length);
                 let mut next = self
                     .find_match(future, lookahead)
                     .expect("level-six matcher should find a validated future match");
@@ -1315,19 +1362,21 @@ impl Level6Matcher {
 
             if current.length < MIN_MATCH {
                 for offset in 0..current.length {
-                    self.tokens
-                        .push(Token::Literal(*self.data.get(current.start + offset)?));
+                    self.tokens.push(Token::Literal(
+                        *self.data.get(current.start.wrapping_add(offset))?,
+                    ));
                 }
             } else {
                 self.tokens.push(Token::Match {
                     length: current.length,
-                    distance: current.start - current.match_start,
+                    distance: current.start.wrapping_sub(current.match_start),
                 });
             }
-            self.position += current.length;
+            self.position = self.position.wrapping_add(current.length);
         }
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn find_match(&mut self, position: usize, lookahead: usize) -> Option<MediumMatch> {
         let candidate = if lookahead >= MIN_MATCH {
             self.quick_insert(position)?
@@ -1340,7 +1389,10 @@ impl Level6Matcher {
             start: position,
             original_start: position,
         };
-        if candidate != 0 && candidate < position && position - candidate <= MAX_DISTANCE {
+        if candidate != 0
+            && candidate < position
+            && position.wrapping_sub(candidate) <= MAX_DISTANCE
+        {
             let (length, match_start) = self
                 .longest_match(candidate, position, lookahead)
                 .expect("level-six matcher should find within a validated hash chain");
@@ -1374,19 +1426,19 @@ impl Level6Matcher {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94. In particular,
         // original_start prevents a left-fizzled match from reinserting old
         // positions and creating a cyclic hash chain.
-        if lookahead <= found.length + MIN_MATCH || found.length < MIN_MATCH {
+        if lookahead <= found.length.wrapping_add(MIN_MATCH) || found.length < MIN_MATCH {
             return Some(());
         }
-        if found.length <= 16 * self.max_insert {
-            let start = found.start + 1;
-            let count = found.length - 1;
+        if found.length <= 16_usize.wrapping_mul(self.max_insert) {
+            let start = found.start.wrapping_add(1);
+            let count = found.length.wrapping_sub(1);
             let insertion_start = start.max(found.original_start);
-            let insertion_end = start + count;
+            let insertion_end = start.wrapping_add(count);
             for position in insertion_start..insertion_end {
                 self.quick_insert(position)?;
             }
         } else {
-            self.quick_insert(found.start + found.length - 1)?;
+            self.quick_insert(found.start.wrapping_add(found.length).wrapping_sub(1))?;
         }
         Some(())
     }
@@ -1418,7 +1470,7 @@ impl Level6Matcher {
                     }
                 }
             }
-            chain_length -= 1;
+            chain_length = chain_length.wrapping_sub(1);
             if chain_length == 0 {
                 break;
             }
@@ -1433,6 +1485,7 @@ impl Level6Matcher {
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-nine `Z_FILTERED`
 /// configuration.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     let tokens = tokenize_level9(data, input_chunks)?;
     let mut output = vec![0x78, 0xda];
@@ -1444,6 +1497,7 @@ pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec
     Some(output)
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
     let mut matcher = Level9Matcher::new(data);
     let mut available = 0usize;
@@ -1487,7 +1541,7 @@ impl Level9Matcher {
         Self {
             data: window,
             head: vec![0; 32_768],
-            previous: vec![0; WINDOW_MASK + 1],
+            previous: vec![0; WINDOW_SIZE],
             hash,
             position: 0,
             previous_length: 2,
@@ -1500,11 +1554,12 @@ impl Level9Matcher {
     fn refill_boundary(&mut self) -> Option<()> {
         self.hash = rolling_hash(
             usize::from(self.data[self.position]),
-            self.data[self.position + 1],
+            self.data[self.position.wrapping_add(1)],
         );
         Some(())
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
         loop {
             let lookahead = available.checked_sub(self.position)?;
@@ -1521,7 +1576,7 @@ impl Level9Matcher {
             let mut match_length = 2usize;
             if candidate != 0
                 && candidate < self.position
-                && self.position - candidate <= MAX_DISTANCE
+                && self.position.wrapping_sub(candidate) <= MAX_DISTANCE
                 && self.previous_length < MAX_MATCH
             {
                 let found = self
@@ -1541,24 +1596,28 @@ impl Level9Matcher {
                     length: self.previous_length,
                     distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
                 });
-                let maximum_insert = available - 3;
-                let move_forward = self.previous_length - 2;
+                let maximum_insert = available.wrapping_sub(3);
+                let move_forward = self.previous_length.wrapping_sub(2);
                 let insert_count = move_forward.min(maximum_insert.saturating_sub(self.position));
-                for insert_position in self.position + 1..=self.position + insert_count {
+                for insert_position in
+                    self.position.wrapping_add(1)..=self.position.wrapping_add(insert_count)
+                {
                     self.quick_insert(insert_position)?;
                 }
-                self.position += self.previous_length - 1;
+                self.position = self
+                    .position
+                    .wrapping_add(self.previous_length.wrapping_sub(1));
                 self.previous_length = 0;
                 self.match_available = false;
             } else if self.match_available {
                 self.tokens
-                    .push(Token::Literal(self.data[self.position - 1]));
+                    .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
                 self.previous_length = match_length;
-                self.position += 1;
+                self.position = self.position.wrapping_add(1);
             } else {
                 self.previous_length = match_length;
                 self.match_available = true;
-                self.position += 1;
+                self.position = self.position.wrapping_add(1);
             }
         }
 
@@ -1567,7 +1626,7 @@ impl Level9Matcher {
             // lookahead reaches zero.
             debug_assert_eq!(self.position, available);
             self.tokens
-                .push(Token::Literal(self.data[self.position - 1]));
+                .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
             self.match_available = false;
         }
         Some(())
@@ -1594,25 +1653,25 @@ impl Level9Matcher {
         let base_limit = self.position.saturating_sub(MAX_DISTANCE);
         let mut match_offset = 0usize;
         if best_length >= 3 {
-            let mut hash = rolling_hash(0, self.data[self.position + 1]);
-            hash = rolling_hash(hash, self.data[self.position + 2]);
+            let mut hash = rolling_hash(0, self.data[self.position.wrapping_add(1)]);
+            hash = rolling_hash(hash, self.data[self.position.wrapping_add(2)]);
             for index in 3..=best_length {
-                hash = rolling_hash(hash, self.data[self.position + index]);
+                hash = rolling_hash(hash, self.data[self.position.wrapping_add(index)]);
                 let position = self.head[hash];
                 if position < candidate {
-                    match_offset = index - 2;
+                    match_offset = index.wrapping_sub(2);
                     candidate = position;
                 }
             }
         }
-        let mut limit = base_limit + match_offset;
+        let mut limit = base_limit.wrapping_add(match_offset);
         if candidate <= limit {
             return Some((best_length.min(lookahead), best_start));
         }
         // The preceding `candidate <= limit` return also proves
         // `candidate > match_offset`, because `limit >= match_offset`.
-        while candidate < self.position + match_offset {
-            let aligned = candidate - match_offset;
+        while candidate < self.position.wrapping_add(match_offset) {
+            let aligned = candidate.wrapping_sub(match_offset);
             if medium_candidate_can_improve(&self.data, aligned, self.position, best_length) {
                 let length =
                     match_length(&self.data, aligned, self.position, lookahead.min(MAX_MATCH));
@@ -1622,14 +1681,15 @@ impl Level9Matcher {
                     if best_length >= lookahead || best_length >= MAX_MATCH {
                         break;
                     }
-                    if best_length > 3 && best_start + best_length < self.position {
-                        candidate -= match_offset;
+                    if best_length > 3 && best_start.wrapping_add(best_length) < self.position {
+                        candidate = candidate.wrapping_sub(match_offset);
                         match_offset = 0;
                         let mut next_position = candidate;
-                        for index in 0..=best_length - 3 {
-                            let position = self.previous[(candidate + index) & WINDOW_MASK];
+                        for index in 0..=best_length.wrapping_sub(3) {
+                            let position =
+                                self.previous[candidate.wrapping_add(index) & WINDOW_MASK];
                             if position < next_position {
-                                if position <= base_limit + index {
+                                if position <= base_limit.wrapping_add(index) {
                                     return Some((best_length.min(lookahead), best_start));
                                 }
                                 next_position = position;
@@ -1638,22 +1698,25 @@ impl Level9Matcher {
                         }
                         candidate = next_position;
 
-                        let hash_start = self.position + best_length - (MIN_MATCH + 1);
+                        let hash_start = self
+                            .position
+                            .wrapping_add(best_length)
+                            .wrapping_sub(MIN_MATCH.wrapping_add(1));
                         let mut hash = rolling_hash(0, self.data[hash_start]);
-                        hash = rolling_hash(hash, self.data[hash_start + 1]);
-                        hash = rolling_hash(hash, self.data[hash_start + 2]);
+                        hash = rolling_hash(hash, self.data[hash_start.wrapping_add(1)]);
+                        hash = rolling_hash(hash, self.data[hash_start.wrapping_add(2)]);
                         let position = self.head[hash];
                         // Unlike zlib-ng's sliding C window, this matcher
                         // eagerly inserts every absolute position in a match.
                         // The matching tail is therefore never older than the
                         // chain candidate selected above.
                         debug_assert!(position >= candidate);
-                        limit = base_limit + match_offset;
+                        limit = base_limit.wrapping_add(match_offset);
                         continue;
                     }
                 }
             }
-            chain_length -= 1;
+            chain_length = chain_length.wrapping_sub(1);
             if chain_length == 0 {
                 break;
             }
@@ -1667,7 +1730,7 @@ impl Level9Matcher {
 }
 
 fn rolling_hash(hash: usize, value: u8) -> usize {
-    ((hash << 5) ^ usize::from(value)) & 32_767
+    (hash.wrapping_shl(5) ^ usize::from(value)) & 32_767
 }
 
 fn medium_candidate_can_improve(
@@ -1676,11 +1739,11 @@ fn medium_candidate_can_improve(
     position: usize,
     best_length: usize,
 ) -> bool {
-    let mut offset = best_length - 1;
+    let mut offset = best_length.wrapping_sub(1);
     if best_length >= 4 {
-        offset -= 2;
+        offset = offset.wrapping_sub(2);
         if best_length >= 8 {
-            offset -= 4;
+            offset = offset.wrapping_sub(4);
         }
     }
     let width = if best_length < 4 {
@@ -1690,9 +1753,12 @@ fn medium_candidate_can_improve(
     } else {
         4
     };
-    data[candidate..candidate + width] == data[position..position + width]
-        && data[candidate + offset..candidate + offset + width]
-            == data[position + offset..position + offset + width]
+    data[candidate..candidate.saturating_add(width)]
+        == data[position..position.saturating_add(width)]
+        && data
+            [candidate.wrapping_add(offset)..candidate.wrapping_add(offset).saturating_add(width)]
+            == data
+                [position.wrapping_add(offset)..position.wrapping_add(offset).saturating_add(width)]
 }
 
 fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch) {
@@ -1703,8 +1769,11 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
     {
         return;
     }
-    let quick_match = next.match_start + 1 - current.length;
-    let quick_original = next.start + 1 - current.length;
+    let quick_match = next
+        .match_start
+        .wrapping_add(1)
+        .wrapping_sub(current.length);
+    let quick_original = next.start.wrapping_add(1).wrapping_sub(current.length);
     if data.get(quick_match) != data.get(quick_original) {
         return;
     }
@@ -1715,21 +1784,23 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
     while adjusted_current.length > 0
         && adjusted_next.length < 256
         && adjusted_next.match_start > 1
-        && data.get(adjusted_next.match_start - 1) == data.get(adjusted_next.start - 1)
+        && data.get(adjusted_next.match_start.wrapping_sub(1))
+            == data.get(adjusted_next.start.wrapping_sub(1))
     {
-        adjusted_next.start -= 1;
-        adjusted_next.match_start -= 1;
-        adjusted_next.length += 1;
-        adjusted_current.length -= 1;
+        adjusted_next.start = adjusted_next.start.wrapping_sub(1);
+        adjusted_next.match_start = adjusted_next.match_start.wrapping_sub(1);
+        adjusted_next.length = adjusted_next.length.wrapping_add(1);
+        adjusted_current.length = adjusted_current.length.wrapping_sub(1);
         changed = true;
     }
     if changed && adjusted_current.length <= 1 && adjusted_next.length != 2 {
-        adjusted_next.original_start += 1;
+        adjusted_next.original_start = adjusted_next.original_start.wrapping_add(1);
         *current = adjusted_current;
         *next = adjusted_next;
     }
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn tokenize_early_matcher(
     data: &[u8],
     input_chunks: &[usize],
@@ -1780,7 +1851,7 @@ impl<'a> Level3Matcher<'a> {
         Self {
             data,
             head: vec![0; HASH_SIZE],
-            previous: vec![0; WINDOW_MASK + 1],
+            previous: vec![0; WINDOW_SIZE],
             position: 0,
             tokens: Vec::new(),
             max_chain,
@@ -1790,6 +1861,7 @@ impl<'a> Level3Matcher<'a> {
         }
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
         loop {
             let lookahead = available.checked_sub(self.position)?;
@@ -1815,7 +1887,7 @@ impl<'a> Level3Matcher<'a> {
             if length >= MIN_MATCH {
                 self.tokens.push(Token::Match {
                     length,
-                    distance: self.position - match_start,
+                    distance: self.position.wrapping_sub(match_start),
                 });
                 self.insert_match(length, lookahead)
                     .expect("level-three matcher should insert a validated match");
@@ -1823,7 +1895,7 @@ impl<'a> Level3Matcher<'a> {
                 self.tokens
                     .push(Token::Literal(*self.data.get(self.position)?));
             }
-            self.position += length;
+            self.position = self.position.wrapping_add(length);
         }
     }
 
@@ -1856,15 +1928,15 @@ impl<'a> Level3Matcher<'a> {
             if lookahead <= length.checked_add(MIN_MATCH)? {
                 return Some(());
             }
-            16 * self.max_insert
+            16_usize.wrapping_mul(self.max_insert)
         };
         if length <= insert_limit {
             for offset in 1..length {
                 self.quick_insert(self.position.checked_add(offset)?)?;
             }
         } else {
-            let end = self.position + length;
-            self.quick_insert(end - 1)?;
+            let end = self.position.wrapping_add(length);
+            self.quick_insert(end.wrapping_sub(1))?;
         }
         Some(())
     }
@@ -1911,11 +1983,11 @@ impl<'a> Level3Matcher<'a> {
     }
 
     fn candidate_can_improve(&self, candidate: usize, best_length: usize) -> bool {
-        let mut offset = best_length - 1;
+        let mut offset = best_length.wrapping_sub(1);
         if best_length >= 4 {
-            offset -= 2;
+            offset = offset.wrapping_sub(2);
             if best_length >= 8 {
-                offset -= 4;
+                offset = offset.wrapping_sub(4);
             }
         }
         let width = if best_length < 4 {
@@ -1925,11 +1997,12 @@ impl<'a> Level3Matcher<'a> {
         } else {
             4
         };
-        let candidate_end = candidate + offset;
-        let scan_end = self.position + offset;
-        self.data[candidate..candidate + width] == self.data[self.position..self.position + width]
-            && self.data[candidate_end..candidate_end + width]
-                == self.data[scan_end..scan_end + width]
+        let candidate_end = candidate.wrapping_add(offset);
+        let scan_end = self.position.wrapping_add(offset);
+        self.data[candidate..candidate.saturating_add(width)]
+            == self.data[self.position..self.position.saturating_add(width)]
+            && self.data[candidate_end..candidate_end.saturating_add(width)]
+                == self.data[scan_end..scan_end.saturating_add(width)]
     }
 }
 
@@ -1937,11 +2010,11 @@ fn match_length(data: &[u8], left: usize, right: usize, maximum: usize) -> usize
     let mut length = 0usize;
     while length < maximum
         && data
-            .get(left + length)
-            .zip(data.get(right + length))
+            .get(left.wrapping_add(length))
+            .zip(data.get(right.wrapping_add(length)))
             .is_some_and(|(left_byte, right_byte)| left_byte == right_byte)
     {
-        length += 1;
+        length = length.wrapping_add(1);
     }
     length
 }
@@ -1970,10 +2043,11 @@ struct TreeSpec<'a> {
     static_lengths: Option<&'a [u8]>,
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:122-345 (heap construction,
     // depth tie-breaking, length overflow repair, and canonical codes).
-    let heap_size = spec.elements * 2 + 1;
+    let heap_size = spec.elements.wrapping_mul(2).wrapping_add(1);
     let mut nodes = vec![Node::default(); heap_size];
     for (node, &frequency) in nodes.iter_mut().zip(frequencies) {
         node.frequency = frequency;
@@ -1984,7 +2058,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     let mut max_code = None;
     for (index, node) in nodes.iter().take(spec.elements).enumerate() {
         if node.frequency != 0 {
-            heap_len += 1;
+            heap_len = heap_len.wrapping_add(1);
             heap[heap_len] = index;
             max_code = Some(index);
         }
@@ -1994,20 +2068,20 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     let mut static_cost = 0i64;
     while heap_len < 2 {
         let index = match max_code {
-            Some(current_max @ 0..=1) => current_max + 1,
+            Some(current_max @ 0..=1) => current_max.wrapping_add(1),
             Some(_) | None => 0,
         };
         max_code = Some(max_code.map_or(index, |current_max| current_max.max(index)));
-        heap_len += 1;
+        heap_len = heap_len.wrapping_add(1);
         heap[heap_len] = index;
         nodes[index].frequency = 1;
-        bit_cost -= 1;
+        bit_cost = bit_cost.wrapping_sub(1);
         let static_length = spec
             .static_lengths
             .and_then(|lengths| lengths.get(index))
             .copied()
             .unwrap_or(0);
-        static_cost -= i64::from(static_length);
+        static_cost = static_cost.wrapping_sub(i64::from(static_length));
     }
     let max_code = max_code.expect("tree construction always seeds at least two nodes");
 
@@ -2018,68 +2092,72 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     while heap_len >= 2 {
         let first = remove_smallest(&mut heap, &mut heap_len, &nodes);
         let second = heap[1];
-        heap_max -= 1;
+        heap_max = heap_max.wrapping_sub(1);
         heap[heap_max] = first;
-        heap_max -= 1;
+        heap_max = heap_max.wrapping_sub(1);
         heap[heap_max] = second;
 
         nodes[next_node].frequency = nodes[first]
             .frequency
             .checked_add(nodes[second].frequency)?;
-        nodes[next_node].depth = nodes[first].depth.max(nodes[second].depth) + 1;
+        nodes[next_node].depth = nodes[first].depth.max(nodes[second].depth).wrapping_add(1);
         nodes[first].parent = next_node;
         nodes[second].parent = next_node;
         heap[1] = next_node;
-        next_node += 1;
+        next_node = next_node.wrapping_add(1);
         pq_down(&mut heap, heap_len, &nodes, 1);
     }
-    heap_max -= 1;
+    heap_max = heap_max.wrapping_sub(1);
     heap[heap_max] = heap[1];
 
-    let mut bit_counts = [0u16; MAX_BITS + 1];
+    let mut bit_counts = [0u16; BIT_COUNT_SIZE];
     nodes[heap[heap_max]].length = 0;
     let mut overflow = 0i32;
-    for &index in &heap[heap_max + 1..heap_size] {
-        let mut bits = usize::from(nodes[nodes[index].parent].length) + 1;
+    for &index in &heap[heap_max.wrapping_add(1)..heap_size] {
+        let mut bits = usize::from(nodes[nodes[index].parent].length).wrapping_add(1);
         if bits > spec.max_length {
             bits = spec.max_length;
-            overflow += 1;
+            overflow = overflow.wrapping_add(1);
         }
-        nodes[index].length = bits as u16;
+        nodes[index].length = low_u16(bits);
         if index > max_code {
             continue;
         }
-        bit_counts[bits] += 1;
+        bit_counts[bits] = bit_counts[bits].wrapping_add(1);
         let extra = index
             .checked_sub(spec.extra_base)
             .and_then(|extra_index| spec.extra_bits.get(extra_index))
             .copied()
             .unwrap_or(0);
         let frequency = i64::from(nodes[index].frequency);
-        bit_cost += frequency * (bits + usize::from(extra)) as i64;
+        bit_cost = bit_cost.wrapping_add(
+            frequency.wrapping_mul(i64::from(low_u16(bits.wrapping_add(usize::from(extra))))),
+        );
         if let Some(static_lengths) = spec.static_lengths {
-            static_cost +=
-                frequency * (usize::from(*static_lengths.get(index)?) + usize::from(extra)) as i64;
+            static_cost = static_cost.wrapping_add(frequency.wrapping_mul(i64::from(low_u16(
+                usize::from(*static_lengths.get(index)?).wrapping_add(usize::from(extra)),
+            ))));
         }
     }
 
     if overflow > 0 {
         while overflow > 0 {
-            let mut bits = spec.max_length - 1;
+            let mut bits = spec.max_length.wrapping_sub(1);
             while bit_counts[bits] == 0 {
                 bits = bits.checked_sub(1)?;
             }
-            bit_counts[bits] -= 1;
-            bit_counts[bits + 1] += 2;
-            bit_counts[spec.max_length] -= 1;
-            overflow -= 2;
+            bit_counts[bits] = bit_counts[bits].wrapping_sub(1);
+            let next_bits = bits.wrapping_add(1);
+            bit_counts[next_bits] = bit_counts[next_bits].wrapping_add(2);
+            bit_counts[spec.max_length] = bit_counts[spec.max_length].wrapping_sub(1);
+            overflow = overflow.wrapping_sub(2);
         }
         debug_assert_eq!(overflow, 0);
         let mut sorted_index = heap_size;
         for bits in (1..=spec.max_length).rev() {
             let mut count = bit_counts[bits];
             while count != 0 {
-                sorted_index -= 1;
+                sorted_index = sorted_index.wrapping_sub(1);
                 let index = heap[sorted_index];
                 if index > max_code {
                     continue;
@@ -2087,10 +2165,14 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
                 if usize::from(nodes[index].length) != bits {
                     let old_length = i64::from(nodes[index].length);
                     let frequency = i64::from(nodes[index].frequency);
-                    bit_cost += (bits as i64 - old_length) * frequency;
-                    nodes[index].length = bits as u16;
+                    bit_cost = bit_cost.wrapping_add(
+                        i64::from(low_u16(bits))
+                            .wrapping_sub(old_length)
+                            .wrapping_mul(frequency),
+                    );
+                    nodes[index].length = low_u16(bits);
                 }
-                count -= 1;
+                count = count.wrapping_sub(1);
             }
         }
     }
@@ -2112,17 +2194,17 @@ fn smaller(nodes: &[Node], left: usize, right: usize) -> bool {
 
 fn pq_down(heap: &mut [usize], heap_len: usize, nodes: &[Node], mut root: usize) {
     let value = heap[root];
-    let mut child = root * 2;
+    let mut child = root.wrapping_mul(2);
     while child <= heap_len {
-        if child < heap_len && smaller(nodes, heap[child + 1], heap[child]) {
-            child += 1;
+        if child < heap_len && smaller(nodes, heap[child.wrapping_add(1)], heap[child]) {
+            child = child.wrapping_add(1);
         }
         if smaller(nodes, value, heap[child]) {
             break;
         }
         heap[root] = heap[child];
         root = child;
-        child *= 2;
+        child = child.wrapping_mul(2);
     }
     heap[root] = value;
 }
@@ -2130,44 +2212,51 @@ fn pq_down(heap: &mut [usize], heap_len: usize, nodes: &[Node], mut root: usize)
 fn remove_smallest(heap: &mut [usize], heap_len: &mut usize, nodes: &[Node]) -> usize {
     let smallest = heap[1];
     heap[1] = heap[*heap_len];
-    *heap_len -= 1;
+    *heap_len = heap_len.wrapping_sub(1);
     pq_down(heap, *heap_len, nodes, 1);
     smallest
 }
 
-fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; MAX_BITS + 1]) {
-    let mut next_code = [0u16; MAX_BITS + 1];
+fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; BIT_COUNT_SIZE]) {
+    let mut next_code = [0u16; BIT_COUNT_SIZE];
     let mut code = 0u16;
     for bits in 1..=MAX_BITS {
-        code = (code + counts[bits - 1]) << 1;
+        code = code
+            .wrapping_add(counts[bits.wrapping_sub(1)])
+            .wrapping_shl(1);
         next_code[bits] = code;
     }
-    for node in nodes.iter_mut().take(max_code + 1) {
+    for node in nodes.iter_mut().take(max_code.wrapping_add(1)) {
         let length = usize::from(node.length);
         if length == 0 {
             continue;
         }
-        node.code = reverse_bits(next_code[length], length as u8);
-        next_code[length] += 1;
+        node.code = reverse_bits(next_code[length], low_u16(length).to_le_bytes()[0]);
+        next_code[length] = next_code[length].wrapping_add(1);
     }
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) -> Option<()> {
     let block_count = tokens.len().div_ceil(block_tokens);
     let uncompressed = expand_tokens(tokens).expect("generated DEFLATE tokens should expand");
     let mut uncompressed_start = 0usize;
     for (index, block) in tokens.chunks(block_tokens).enumerate() {
         let stored_length = block.iter().fold(0usize, |length, token| {
-            length
-                + match token {
-                    Token::Literal(_) => 1,
-                    Token::Match { length, .. } => *length,
-                }
+            length.wrapping_add(match token {
+                Token::Literal(_) => 1,
+                Token::Match { length, .. } => *length,
+            })
         });
-        let uncompressed_end = uncompressed_start + stored_length;
+        let uncompressed_end = uncompressed_start.wrapping_add(stored_length);
         let uncompressed_block = &uncompressed[uncompressed_start..uncompressed_end];
-        write_block(block, uncompressed_block, index + 1 == block_count, writer)
-            .expect("valid expanded block tokens should emit");
+        write_block(
+            block,
+            uncompressed_block,
+            index.wrapping_add(1) == block_count,
+            writer,
+        )
+        .expect("valid expanded block tokens should emit");
         uncompressed_start = uncompressed_end;
     }
     Some(())
@@ -2189,6 +2278,7 @@ fn expand_tokens(tokens: &[Token]) -> Option<Vec<u8>> {
     Some(output)
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn write_block(
     tokens: &[Token],
     uncompressed: &[u8],
@@ -2239,16 +2329,22 @@ fn write_block(
         .find(|&index| bit_length_tree.nodes[CODE_LENGTH_ORDER[index]].length != 0)
         .unwrap_or(3);
 
-    let dynamic_cost = literal_tree.bit_cost
-        + distance_tree.bit_cost
-        + bit_length_tree.bit_cost
-        + (3 * (max_bit_length_index + 1) + 14) as i64;
-    let static_cost = literal_tree.static_cost + distance_tree.static_cost;
-    let dynamic_bytes = ((dynamic_cost + 10) >> 3) as usize;
-    let static_bytes = ((static_cost + 10) >> 3) as usize;
+    let tree_header_cost = 3_usize
+        .wrapping_mul(max_bit_length_index.wrapping_add(1))
+        .wrapping_add(14);
+    let dynamic_cost = literal_tree
+        .bit_cost
+        .wrapping_add(distance_tree.bit_cost)
+        .wrapping_add(bit_length_tree.bit_cost)
+        .wrapping_add(i64::from(low_u16(tree_header_cost)));
+    let static_cost = literal_tree
+        .static_cost
+        .wrapping_add(distance_tree.static_cost);
+    let dynamic_bytes = low_usize_i64(dynamic_cost.wrapping_add(10) >> 3);
+    let static_bytes = low_usize_i64(static_cost.wrapping_add(10) >> 3);
 
     let stored_cost = if uncompressed.len() <= usize::from(u16::MAX) {
-        uncompressed.len() + 4
+        uncompressed.len().wrapping_add(4)
     } else {
         usize::MAX
     };
@@ -2285,16 +2381,18 @@ fn frequencies(tokens: &[Token]) -> Option<([u32; LITERAL_CODES], [u32; DISTANCE
     for token in tokens {
         match token {
             Token::Literal(value) => {
-                literal[usize::from(*value)] += 1;
+                let index = usize::from(*value);
+                literal[index] = literal[index].wrapping_add(1);
             }
             Token::Match {
                 length,
                 distance: match_distance,
             } => {
                 let length_index = length_index(*length)?;
-                literal[257 + length_index] += 1;
+                let literal_index = 257_usize.wrapping_add(length_index);
+                literal[literal_index] = literal[literal_index].wrapping_add(1);
                 let distance_index = distance_index(*match_distance)?;
-                distance[distance_index] += 1;
+                distance[distance_index] = distance[distance_index].wrapping_add(1);
             }
         }
     }
@@ -2315,23 +2413,23 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Op
         next_length = if index == max_code {
             u16::MAX.into()
         } else {
-            usize::from(nodes[index + 1].length)
+            usize::from(nodes[index.wrapping_add(1)].length)
         };
-        count += 1;
+        count = count.wrapping_add(1);
         if count < max_count && current_length == next_length {
             continue;
         }
         if count < min_count {
-            frequencies[current_length] += count as u32;
+            frequencies[current_length] = frequencies[current_length].wrapping_add(low_u32(count));
         } else if current_length != 0 {
             if current_length != previous_length {
-                frequencies[current_length] += 1;
+                frequencies[current_length] = frequencies[current_length].wrapping_add(1);
             }
-            frequencies[16] += 1;
+            frequencies[16] = frequencies[16].wrapping_add(1);
         } else if count <= 10 {
-            frequencies[17] += 1;
+            frequencies[17] = frequencies[17].wrapping_add(1);
         } else {
-            frequencies[18] += 1;
+            frequencies[18] = frequencies[18].wrapping_add(1);
         }
         count = 0;
         previous_length = current_length;
@@ -2349,15 +2447,22 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Op
     Some(())
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn send_trees(
     trees: [&HuffmanTree; 3],
     max_bit_length_index: usize,
     writer: &mut BitWriter,
 ) -> Option<()> {
     let [literal, distance, bit_length] = trees;
-    writer.write_bits((literal.max_code + 1 - 257) as u32, 5);
-    writer.write_bits(distance.max_code as u32, 5);
-    writer.write_bits((max_bit_length_index + 1 - 4) as u32, 4);
+    writer.write_bits(
+        low_u32(literal.max_code.wrapping_add(1).wrapping_sub(257)),
+        5,
+    );
+    writer.write_bits(low_u32(distance.max_code), 5);
+    writer.write_bits(
+        low_u32(max_bit_length_index.wrapping_add(1).wrapping_sub(4)),
+        4,
+    );
     for &code in &CODE_LENGTH_ORDER[..=max_bit_length_index] {
         writer.write_bits(u32::from(bit_length.nodes[code].length), 3);
     }
@@ -2385,9 +2490,9 @@ fn send_tree(
         next_length = if index == max_code {
             u16::MAX.into()
         } else {
-            usize::from(tree.nodes[index + 1].length)
+            usize::from(tree.nodes[index.wrapping_add(1)].length)
         };
-        count += 1;
+        count = count.wrapping_add(1);
         if count < max_count && current_length == next_length {
             continue;
         }
@@ -2398,16 +2503,16 @@ fn send_tree(
         } else if current_length != 0 {
             if current_length != previous_length {
                 send_code(writer, bit_length, current_length);
-                count -= 1;
+                count = count.wrapping_sub(1);
             }
             send_code(writer, bit_length, 16);
-            writer.write_bits((count - 3) as u32, 2);
+            writer.write_bits(low_u32(count.wrapping_sub(3)), 2);
         } else if count <= 10 {
             send_code(writer, bit_length, 17);
-            writer.write_bits((count - 3) as u32, 3);
+            writer.write_bits(low_u32(count.wrapping_sub(3)), 3);
         } else {
             send_code(writer, bit_length, 18);
-            writer.write_bits((count - 11) as u32, 7);
+            writer.write_bits(low_u32(count.wrapping_sub(11)), 7);
         }
         count = 0;
         previous_length = current_length;
@@ -2436,15 +2541,15 @@ fn emit_tokens(
             Token::Literal(value) => send_code(writer, literal_tree, usize::from(*value)),
             Token::Match { length, distance } => {
                 let length_index = length_index(*length)?;
-                send_code(writer, literal_tree, 257 + length_index);
+                send_code(writer, literal_tree, 257_usize.wrapping_add(length_index));
                 writer.write_bits(
-                    u32::try_from(length - LENGTH_BASE[length_index]).ok()?,
+                    u32::try_from(length.wrapping_sub(LENGTH_BASE[length_index])).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
                 let distance_index = distance_index(*distance)?;
                 send_code(writer, distance_tree, distance_index);
                 writer.write_bits(
-                    u32::try_from(distance - DISTANCE_BASE[distance_index]).ok()?,
+                    u32::try_from(distance.wrapping_sub(DISTANCE_BASE[distance_index])).ok()?,
                     DISTANCE_EXTRA[distance_index],
                 );
             }
@@ -2460,15 +2565,15 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
             Token::Literal(value) => write_fixed_symbol(writer, u16::from(*value)),
             Token::Match { length, distance } => {
                 let length_index = length_index(*length)?;
-                write_fixed_symbol(writer, (257 + length_index) as u16);
+                write_fixed_symbol(writer, low_u16(257_usize.wrapping_add(length_index)));
                 writer.write_bits(
-                    u32::try_from(length - LENGTH_BASE[length_index]).ok()?,
+                    u32::try_from(length.wrapping_sub(LENGTH_BASE[length_index])).ok()?,
                     LENGTH_EXTRA[length_index],
                 );
                 let distance_index = distance_index(*distance)?;
-                writer.write_bits(u32::from(reverse_bits(distance_index as u16, 5)), 5);
+                writer.write_bits(u32::from(reverse_bits(low_u16(distance_index), 5)), 5);
                 writer.write_bits(
-                    u32::try_from(distance - DISTANCE_BASE[distance_index]).ok()?,
+                    u32::try_from(distance.wrapping_sub(DISTANCE_BASE[distance_index])).ok()?,
                     DISTANCE_EXTRA[distance_index],
                 );
             }
@@ -2480,7 +2585,7 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
 
 fn send_code(writer: &mut BitWriter, tree: &HuffmanTree, symbol: usize) {
     let node = &tree.nodes[symbol];
-    writer.write_bits(u32::from(node.code), node.length as u8);
+    writer.write_bits(u32::from(node.code), node.length.to_le_bytes()[0]);
 }
 
 fn length_index(length: usize) -> Option<usize> {
@@ -2510,14 +2615,14 @@ fn static_literal_lengths() -> [u8; LITERAL_CODES] {
 
 fn write_fixed_symbol(writer: &mut BitWriter, symbol: u16) {
     let (canonical, width) = if symbol <= 143 {
-        (0x30 + symbol, 8)
+        (0x30_u16.wrapping_add(symbol), 8)
     } else if symbol <= 255 {
-        (0x190 + symbol - 144, 9)
+        (0x190_u16.wrapping_add(symbol).wrapping_sub(144), 9)
     } else if symbol <= 279 {
-        (symbol - 256, 7)
+        (symbol.wrapping_sub(256), 7)
     } else {
         debug_assert!(symbol <= 287);
-        (0xc0 + symbol - 280, 8)
+        (0xc0_u16.wrapping_add(symbol).wrapping_sub(280), 8)
     };
     writer.write_bits(u32::from(reverse_bits(canonical, width)), width);
 }
@@ -2525,7 +2630,7 @@ fn write_fixed_symbol(writer: &mut BitWriter, symbol: u16) {
 fn reverse_bits(mut value: u16, width: u8) -> u16 {
     let mut reversed = 0u16;
     for _ in 0..width {
-        reversed = (reversed << 1) | (value & 1);
+        reversed = reversed.wrapping_shl(1) | (value & 1);
         value >>= 1;
     }
     reversed
@@ -2541,8 +2646,9 @@ struct BitWriter {
 impl BitWriter {
     fn write_bits(&mut self, value: u32, width: u8) {
         for bit in 0..width {
-            self.current |= ((value >> bit) as u8 & 1) << self.used;
-            self.used += 1;
+            self.current |=
+                ((value >> bit).to_le_bytes()[0] & 1).wrapping_shl(u32::from(self.used));
+            self.used = self.used.wrapping_add(1);
             if self.used == 8 {
                 self.bytes.push(self.current);
                 self.current = 0;
@@ -2579,11 +2685,11 @@ fn adler32(data: &[u8]) -> u32 {
     let mut second = 0u32;
     for chunk in data.chunks(5_552) {
         for &byte in chunk {
-            first += u32::from(byte);
-            second += first;
+            first = first.wrapping_add(u32::from(byte));
+            second = second.wrapping_add(first);
         }
         first %= MODULUS;
         second %= MODULUS;
     }
-    (second << 16) | first
+    second.wrapping_shl(16) | first
 }

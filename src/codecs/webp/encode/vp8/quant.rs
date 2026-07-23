@@ -85,10 +85,16 @@ fn expand_matrix(dc: u16, ac: u16, kind: usize) -> (QuantMatrix, i32) {
     };
     matrix.q[0] = dc;
     for index in 0..2 {
-        matrix.reciprocal[index] = ((1_u32 << 17) / u32::from(matrix.q[index])) as u16;
+        let reciprocal = 131_072_u32
+            .checked_div(u32::from(matrix.q[index]))
+            .unwrap_or_default();
+        matrix.reciprocal[index] =
+            u16::from_le_bytes([reciprocal.to_le_bytes()[0], reciprocal.to_le_bytes()[1]]);
         matrix.bias[index] = BIASES[kind][usize::from(index > 0)] << 9;
-        matrix.zero_threshold[index] =
-            ((1_u32 << 17) - 1 - matrix.bias[index]) / u32::from(matrix.reciprocal[index]);
+        matrix.zero_threshold[index] = 131_071_u32
+            .wrapping_sub(matrix.bias[index])
+            .checked_div(u32::from(matrix.reciprocal[index]))
+            .unwrap_or_default();
     }
     for index in 2..16 {
         matrix.reciprocal[index] = matrix.reciprocal[1];
@@ -97,10 +103,15 @@ fn expand_matrix(dc: u16, ac: u16, kind: usize) -> (QuantMatrix, i32) {
     }
     if kind == 0 {
         for (index, sharpen) in matrix.sharpen.iter_mut().enumerate() {
-            *sharpen = SHARPENING[index] * matrix.q[index] >> 11;
+            *sharpen = SHARPENING[index].wrapping_mul(matrix.q[index]) >> 11;
         }
     }
-    let average = (matrix.q.iter().map(|&value| i32::from(value)).sum::<i32>() + 8) >> 4;
+    let average = matrix
+        .q
+        .iter()
+        .fold(0_i32, |sum, &value| sum.wrapping_add(i32::from(value)))
+        .wrapping_add(8)
+        >> 4;
     (matrix, average)
 }
 
@@ -111,21 +122,44 @@ pub(super) fn libwebp_segment_matrices(
 ) -> SegmentMatrices {
     let quantizer = usize::from(quantizer);
     let (y1, q_i4) = expand_matrix(Y_DC_QUANT[quantizer], Y_AC_QUANT[quantizer], 0);
-    let (y2, q_i16) = expand_matrix(Y_DC_QUANT[quantizer] * 2, Y2_AC_QUANT[quantizer], 1);
-    let uv_dc_index = (quantizer as i32 + i32::from(chroma_dc_delta)).clamp(0, 117) as usize;
-    let uv_ac_index = (quantizer as i32 + i32::from(chroma_ac_delta)).clamp(0, 127) as usize;
+    let (y2, q_i16) = expand_matrix(
+        Y_DC_QUANT[quantizer].wrapping_mul(2),
+        Y2_AC_QUANT[quantizer],
+        1,
+    );
+    let quantizer_i32 = i32::from(quantizer.to_le_bytes()[0]);
+    let uv_dc_value = quantizer_i32
+        .wrapping_add(i32::from(chroma_dc_delta))
+        .clamp(0, 117);
+    let uv_ac_value = quantizer_i32
+        .wrapping_add(i32::from(chroma_ac_delta))
+        .clamp(0, 127);
+    let uv_dc_index = usize::from(uv_dc_value.to_le_bytes()[0]);
+    let uv_ac_index = usize::from(uv_ac_value.to_le_bytes()[0]);
     let (uv, q_uv) = expand_matrix(Y_DC_QUANT[uv_dc_index], Y_AC_QUANT[uv_ac_index], 2);
     SegmentMatrices {
         y1,
         y2,
         uv,
-        lambda_i4: ((3 * q_i4 * q_i4) >> 7).max(1),
-        lambda_i16: (3 * q_i16 * q_i16).max(1),
-        lambda_uv: ((3 * q_uv * q_uv) >> 6).max(1),
-        lambda_mode: ((q_i4 * q_i4) >> 7).max(1),
-        texture_lambda: ((50 * q_i4) >> 5).max(1),
-        lambda_trellis_i4: ((7 * q_i4 * q_i4) >> 3).max(1),
-        lambda_trellis_i16: ((q_i16 * q_i16) >> 2).max(1),
+        lambda_i4: 3_i32
+            .wrapping_mul(q_i4)
+            .wrapping_mul(q_i4)
+            .wrapping_shr(7)
+            .max(1),
+        lambda_i16: 3_i32.wrapping_mul(q_i16).wrapping_mul(q_i16).max(1),
+        lambda_uv: 3_i32
+            .wrapping_mul(q_uv)
+            .wrapping_mul(q_uv)
+            .wrapping_shr(6)
+            .max(1),
+        lambda_mode: q_i4.wrapping_mul(q_i4).wrapping_shr(7).max(1),
+        texture_lambda: 50_i32.wrapping_mul(q_i4).wrapping_shr(5).max(1),
+        lambda_trellis_i4: 7_i32
+            .wrapping_mul(q_i4)
+            .wrapping_mul(q_i4)
+            .wrapping_shr(3)
+            .max(1),
+        lambda_trellis_i16: q_i16.wrapping_mul(q_i16).wrapping_shr(2).max(1),
     }
 }
 
@@ -156,7 +190,7 @@ pub(super) fn trellis_quantize_block(
     let mut last = first.wrapping_sub(1);
     for position in (first..16).rev() {
         let coefficient = i32::from(coefficients[ZIGZAG[position]]);
-        if coefficient * coefficient > threshold {
+        if coefficient.wrapping_mul(coefficient) > threshold {
             last = position;
             break;
         }
@@ -164,12 +198,12 @@ pub(super) fn trellis_quantize_block(
     if last == usize::MAX {
         last = first;
     } else if last < 15 {
-        last += 1;
+        last = last.wrapping_add(1);
     }
 
     let initial =
         &probabilities[coefficient_type][usize::from(COEFF_BANDS[first])][initial_context];
-    let mut best_score = i64::from(lambda) * i64::from(bit_cost(false, initial[0]));
+    let mut best_score = i64::from(lambda).wrapping_mul(i64::from(bit_cost(false, initial[0])));
     let mut best_path: Option<(usize, usize, usize)> = None;
     let mut nodes = [[TrellisNode {
         previous: 0,
@@ -177,7 +211,7 @@ pub(super) fn trellis_quantize_block(
         level: 0,
     }; 2]; 16];
     let entry_score = if initial_context == 0 {
-        i64::from(lambda) * i64::from(bit_cost(true, initial[0]))
+        i64::from(lambda).wrapping_mul(i64::from(bit_cost(true, initial[0])))
     } else {
         0
     };
@@ -188,56 +222,71 @@ pub(super) fn trellis_quantize_block(
         let coefficient_index = ZIGZAG[position];
         let signed = i32::from(coefficients[coefficient_index]);
         let negative = signed < 0;
-        let coefficient = signed.unsigned_abs() + u32::from(matrix.sharpen[coefficient_index]);
+        let coefficient = signed
+            .unsigned_abs()
+            .wrapping_add(u32::from(matrix.sharpen[coefficient_index]));
         let reciprocal = u32::from(matrix.reciprocal[coefficient_index]);
-        let level0 = ((coefficient * reciprocal) >> 17).min(MAX_LEVEL);
-        let threshold_level = ((coefficient * reciprocal + (0x80 << 9)) >> 17).min(MAX_LEVEL);
+        let product = coefficient.wrapping_mul(reciprocal);
+        let level0 = product.wrapping_shr(17).min(MAX_LEVEL);
+        let threshold_level = product
+            .wrapping_add(0x80_u32.wrapping_shl(9))
+            .wrapping_shr(17)
+            .min(MAX_LEVEL);
         let mut current_scores = [MAX_SCORE; 2];
         let mut current_contexts = [0; 2];
-        for delta in 0..2 {
-            let level = level0 + delta as u32;
+        for delta in 0_usize..2 {
+            let level = level0.wrapping_add(delta.to_le_bytes()[0].into());
             if level > threshold_level {
                 continue;
             }
-            let quantized_error =
-                i64::from(coefficient) - i64::from(level) * i64::from(matrix.q[coefficient_index]);
+            let quantized_error = i64::from(coefficient).wrapping_sub(
+                i64::from(level).wrapping_mul(i64::from(matrix.q[coefficient_index])),
+            );
             let original_error = i64::from(coefficient);
-            let distortion_delta = WEIGHTS[coefficient_index]
-                * (quantized_error * quantized_error - original_error * original_error);
+            let distortion_delta = WEIGHTS[coefficient_index].wrapping_mul(
+                quantized_error
+                    .wrapping_mul(quantized_error)
+                    .wrapping_sub(original_error.wrapping_mul(original_error)),
+            );
             let mut selected_score = MAX_SCORE;
             let mut selected_previous = 0;
             for previous in 0..2 {
                 let probs = &probabilities[coefficient_type][usize::from(COEFF_BANDS[position])]
                     [previous_contexts[previous]];
-                let score = previous_scores[previous]
-                    + i64::from(lambda)
-                        * i64::from(level_cost(
-                            level as usize,
-                            probs,
-                            previous_contexts[previous],
-                        ));
+                let score = previous_scores[previous].wrapping_add(i64::from(lambda).wrapping_mul(
+                    i64::from(level_cost(
+                        level as usize,
+                        probs,
+                        previous_contexts[previous],
+                    )),
+                ));
                 if score < selected_score {
                     selected_score = score;
                     selected_previous = previous;
                 }
             }
-            selected_score += 256 * distortion_delta;
+            selected_score = selected_score.wrapping_add(256_i64.wrapping_mul(distortion_delta));
             nodes[position][delta] = TrellisNode {
-                previous: selected_previous as u8,
+                previous: selected_previous.to_le_bytes()[0],
                 negative,
-                level: level as i16,
+                level: i16::from_le_bytes([level.to_le_bytes()[0], level.to_le_bytes()[1]]),
             };
             current_scores[delta] = selected_score;
-            current_contexts[delta] = (level > 2).then_some(2).unwrap_or(level as usize);
+            current_contexts[delta] = if level > 2 {
+                2
+            } else {
+                usize::from(level.to_le_bytes()[0])
+            };
             if level != 0 && selected_score < best_score {
                 let terminal = if position < 15 {
                     let probs = &probabilities[coefficient_type]
-                        [usize::from(COEFF_BANDS[position + 1])][current_contexts[delta]];
-                    i64::from(lambda) * i64::from(bit_cost(false, probs[0]))
+                        [usize::from(COEFF_BANDS[position.wrapping_add(1)])]
+                        [current_contexts[delta]];
+                    i64::from(lambda).wrapping_mul(i64::from(bit_cost(false, probs[0])))
                 } else {
                     0
                 };
-                let score = selected_score + terminal;
+                let score = selected_score.wrapping_add(terminal);
                 if score < best_score {
                     best_score = score;
                     best_path = Some((position, delta, selected_previous));
@@ -256,21 +305,23 @@ pub(super) fn trellis_quantize_block(
     let Some((mut position, mut node, terminal_previous)) = best_path else {
         return false;
     };
-    nodes[position][node].previous = terminal_previous as u8;
+    nodes[position][node].previous = terminal_previous.to_le_bytes()[0];
     loop {
         let selected = nodes[position][node];
         let signed_level = if selected.negative {
-            -selected.level
+            selected.level.wrapping_neg()
         } else {
             selected.level
         };
         levels[position] = signed_level;
-        coefficients[ZIGZAG[position]] = signed_level * matrix.q[ZIGZAG[position]] as i16;
+        let q = matrix.q[ZIGZAG[position]];
+        coefficients[ZIGZAG[position]] =
+            signed_level.wrapping_mul(i16::from_le_bytes(q.to_le_bytes()));
         node = usize::from(selected.previous);
         if position == first {
             break;
         }
-        position -= 1;
+        position = position.wrapping_sub(1);
     }
     true
 }
@@ -290,19 +341,26 @@ pub(super) fn quantize_block(
     for (zigzag_index, &coefficient_index) in ZIGZAG.iter().enumerate() {
         let signed_coefficient = i32::from(coefficients[coefficient_index]);
         let negative = signed_coefficient < 0;
-        let coefficient =
-            signed_coefficient.unsigned_abs() + u32::from(matrix.sharpen[coefficient_index]);
+        let coefficient = signed_coefficient
+            .unsigned_abs()
+            .wrapping_add(u32::from(matrix.sharpen[coefficient_index]));
         if coefficient > matrix.zero_threshold[coefficient_index] {
-            let mut level = ((coefficient * u32::from(matrix.reciprocal[coefficient_index])
-                + matrix.bias[coefficient_index])
-                >> 17)
-                .min(MAX_LEVEL) as i32;
+            let level_u32 = coefficient
+                .wrapping_mul(u32::from(matrix.reciprocal[coefficient_index]))
+                .wrapping_add(matrix.bias[coefficient_index])
+                .wrapping_shr(17)
+                .min(MAX_LEVEL);
+            let mut level = i32::from_le_bytes(level_u32.to_le_bytes());
             if negative {
-                level = -level;
+                level = level.wrapping_neg();
             }
-            coefficients[coefficient_index] =
-                (level * i32::from(matrix.q[coefficient_index])) as i16;
-            levels[zigzag_index] = level as i16;
+            let reconstructed = level.wrapping_mul(i32::from(matrix.q[coefficient_index]));
+            coefficients[coefficient_index] = i16::from_le_bytes([
+                reconstructed.to_le_bytes()[0],
+                reconstructed.to_le_bytes()[1],
+            ]);
+            levels[zigzag_index] =
+                i16::from_le_bytes([level.to_le_bytes()[0], level.to_le_bytes()[1]]);
             nonzero |= level != 0;
         } else {
             coefficients[coefficient_index] = 0;
@@ -318,8 +376,9 @@ pub(super) fn quantize_reconstruct_block(
     prediction: &[u8; 16],
     matrix: &QuantMatrix,
 ) -> (bool, [i16; 16], [u8; 16]) {
-    let residual =
-        std::array::from_fn(|index| i16::from(source[index]) - i16::from(prediction[index]));
+    let residual = std::array::from_fn(|index| {
+        i16::from(source[index]).wrapping_sub(i16::from(prediction[index]))
+    });
     let mut coefficients = vp8_fdct_4x4(&residual);
     let mut levels = [0; 16];
     let nonzero = quantize_block(&mut coefficients, &mut levels, matrix);

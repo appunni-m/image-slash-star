@@ -85,7 +85,7 @@ impl<I: GenericImageView> Iterator for Pixels<'_, I> {
     fn next(&mut self) -> Option<(u32, u32, I::Pixel)> {
         if self.x >= self.width {
             self.x = 0;
-            self.y += 1;
+            self.y = self.y.saturating_add(1);
         }
 
         if self.y >= self.height {
@@ -93,7 +93,7 @@ impl<I: GenericImageView> Iterator for Pixels<'_, I> {
         } else {
             let pixel = self.image.get_pixel(self.x, self.y);
             let p = (self.x, self.y, pixel);
-            self.x += 1;
+            self.x = self.x.saturating_add(1);
             Some(p)
         }
     }
@@ -234,14 +234,18 @@ pub trait GenericImage: GenericImageView {
         let (width, height) = other.dimensions();
 
         // Check bounds
-        if x + width > self.width() || y + height > self.height() {
+        if x.checked_add(width)
+            .is_none_or(|right| right > self.width())
+            || y.checked_add(height)
+                .is_none_or(|bottom| bottom > self.height())
+        {
             return Err(crate::types::error::ImageError::Dimensions);
         }
 
         for k in 0..height {
             for i in 0..width {
                 let p = other.get_pixel(i, k);
-                self.put_pixel(i + x, k + y, p);
+                self.put_pixel(i.saturating_add(x), k.saturating_add(y), p);
             }
         }
 
@@ -259,18 +263,20 @@ pub trait GenericImage: GenericImageView {
         if sy >= self.height() || dy >= self.height() {
             return false;
         }
-        if self.width() - dx.max(sx) < width || self.height() - dy.max(sy) < height {
+        if self.width().saturating_sub(dx.max(sx)) < width
+            || self.height().saturating_sub(dy.max(sy)) < height
+        {
             return false;
         }
 
         match (sx < dx, sy < dy) {
             (true, true) => {
                 for y in (0..height).rev() {
-                    let sy = sy + y;
-                    let dy = dy + y;
+                    let sy = sy.saturating_add(y);
+                    let dy = dy.saturating_add(y);
                     for x in (0..width).rev() {
-                        let sx = sx + x;
-                        let dx = dx + x;
+                        let sx = sx.saturating_add(x);
+                        let dx = dx.saturating_add(x);
                         let pixel = self.get_pixel(sx, sy);
                         self.put_pixel(dx, dy, pixel);
                     }
@@ -278,11 +284,11 @@ pub trait GenericImage: GenericImageView {
             }
             (true, false) => {
                 for y in 0..height {
-                    let sy = sy + y;
-                    let dy = dy + y;
+                    let sy = sy.saturating_add(y);
+                    let dy = dy.saturating_add(y);
                     for x in (0..width).rev() {
-                        let sx = sx + x;
-                        let dx = dx + x;
+                        let sx = sx.saturating_add(x);
+                        let dx = dx.saturating_add(x);
                         let pixel = self.get_pixel(sx, sy);
                         self.put_pixel(dx, dy, pixel);
                     }
@@ -290,11 +296,11 @@ pub trait GenericImage: GenericImageView {
             }
             (false, true) => {
                 for y in (0..height).rev() {
-                    let sy = sy + y;
-                    let dy = dy + y;
+                    let sy = sy.saturating_add(y);
+                    let dy = dy.saturating_add(y);
                     for x in 0..width {
-                        let sx = sx + x;
-                        let dx = dx + x;
+                        let sx = sx.saturating_add(x);
+                        let dx = dx.saturating_add(x);
                         let pixel = self.get_pixel(sx, sy);
                         self.put_pixel(dx, dy, pixel);
                     }
@@ -302,11 +308,11 @@ pub trait GenericImage: GenericImageView {
             }
             (false, false) => {
                 for y in 0..height {
-                    let sy = sy + y;
-                    let dy = dy + y;
+                    let sy = sy.saturating_add(y);
+                    let dy = dy.saturating_add(y);
                     for x in 0..width {
-                        let sx = sx + x;
-                        let dx = dx + x;
+                        let sx = sx.saturating_add(x);
+                        let dx = dx.saturating_add(x);
                         let pixel = self.get_pixel(sx, sy);
                         self.put_pixel(dx, dy, pixel);
                     }

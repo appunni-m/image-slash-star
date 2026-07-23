@@ -4,6 +4,7 @@
 //! - `L8`: raw palette indices with a grayscale palette
 //! - `Rgb8`: quantized to a 256-color palette
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
+
 use crate::encode_options::EncodeOptions;
 use crate::types::{
     AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
@@ -28,6 +29,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 }
 
 #[cfg(coverage)]
+#[allow(clippy::expect_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let identical = [0u8, 0, 0, 255];
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -505,6 +507,9 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Opti
     write_gif(sequence, &frames, settings)
 }
 
+// Frame coalescing validates output history and palette shape immediately
+// before asserting these internal invariants.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn coalesce_identical_frames(
     sequence: &DecodedSequence,
     requested_frames: usize,
@@ -520,10 +525,9 @@ fn coalesce_identical_frames(
     let width = usize::try_from(sequence.width).ok()?;
     #[cfg(not(target_pointer_width = "64"))]
     let height = usize::try_from(sequence.height).ok()?;
-    #[cfg(target_pointer_width = "64")]
-    let canvas_bytes = (width * height).checked_mul(4)?;
-    #[cfg(not(target_pointer_width = "64"))]
-    let canvas_bytes = width.checked_mul(height)?.checked_mul(4)?;
+    // Two u32 dimensions always multiply without overflowing a 64-bit usize.
+    // The RGBA byte multiplier can still overflow and remains fallible.
+    let canvas_bytes = width.saturating_mul(height).checked_mul(4)?;
     let mut canvas = vec![0u8; canvas_bytes];
     let mut previous_frame = None::<&crate::types::DecodedFrame>;
     let mut previous_render = None::<Vec<u8>>;
@@ -555,8 +559,8 @@ fn coalesce_identical_frames(
                     .expect("non-first GIF frame must have a previous canvas render");
                 let (left, top, right, bottom) =
                     rgba_difference_bounds(previous, &canvas, width, height);
-                let frame_width = right - left;
-                let frame_height = bottom - top;
+                let frame_width = right.saturating_sub(left);
+                let frame_height = bottom.saturating_sub(top);
                 let full_image = if frame.image.mode == ImageMode::Rgba8 {
                     DecodedImage::new(
                         sequence.width,
@@ -573,26 +577,26 @@ fn coalesce_identical_frames(
                 };
                 let mut prepared =
                     prepare_image(&full_image).expect("coalesced full GIF canvas is RGB/RGBA");
-                if prepared.transparent.is_none() && prepared.palette.len() / 3 < 256 {
-                    let transparent = (prepared.palette.len() / 3) as u8;
+                if prepared.transparent.is_none() && prepared.palette.len().div_euclid(3) < 256 {
+                    let transparent = palette_index(prepared.palette.len().div_euclid(3));
                     prepared.palette.extend_from_slice(&[0, 0, 0]);
                     prepared.transparent = Some(transparent);
                 }
-                let mut cropped = Vec::with_capacity(frame_width * frame_height);
+                let mut cropped = Vec::with_capacity(frame_width.saturating_mul(frame_height));
                 for y in top..bottom {
-                    let start = y * width + left;
-                    let end = start + frame_width;
+                    let start = y.saturating_mul(width).saturating_add(left);
+                    let end = start.saturating_add(frame_width);
                     cropped.extend_from_slice(&prepared.indices[start..end]);
                 }
-                output_frame.left = left as u32;
-                output_frame.top = top as u32;
-                let mut alpha = vec![255; prepared.palette.len() / 3];
+                output_frame.left = bounded_u32(left);
+                output_frame.top = bounded_u32(top);
+                let mut alpha = vec![255; prepared.palette.len().div_euclid(3)];
                 if let Some(transparent) = prepared.transparent {
                     alpha[usize::from(transparent)] = 0;
                 }
                 output_frame.image = DecodedImage::with_mode(
-                    frame_width as u32,
-                    frame_height as u32,
+                    bounded_u32(frame_width),
+                    bounded_u32(frame_height),
                     cropped,
                     ImageMode::P8,
                 )
@@ -616,7 +620,10 @@ fn rgba_difference_bounds(
     height: usize,
 ) -> (usize, usize, usize, usize) {
     debug_assert_eq!(previous.len(), current.len());
-    debug_assert_eq!(current.len(), width * height * 4);
+    debug_assert_eq!(
+        current.len(),
+        width.saturating_mul(height).saturating_mul(4)
+    );
     let mut left = width;
     let mut top = height;
     let mut right = 0usize;
@@ -627,12 +634,12 @@ fn rgba_difference_bounds(
         .enumerate()
     {
         if before != after {
-            let x = index % width;
-            let y = index / width;
+            let x = index.rem_euclid(width);
+            let y = index.div_euclid(width);
             left = left.min(x);
             top = top.min(y);
-            right = right.max(x + 1);
-            bottom = bottom.max(y + 1);
+            right = right.max(x.saturating_add(1));
+            bottom = bottom.max(y.saturating_add(1));
         }
     }
     (left, top, right, bottom)
@@ -644,12 +651,18 @@ fn clear_frame_rect(canvas: &mut [u8], canvas_width: usize, frame: &crate::types
     let width = frame.image.width as usize;
     let height = frame.image.height as usize;
     for y in 0..height {
-        let start = ((top + y) * canvas_width + left) * 4;
-        let end = start + width * 4;
+        let start = top
+            .saturating_add(y)
+            .saturating_mul(canvas_width)
+            .saturating_add(left)
+            .saturating_mul(4);
+        let end = start.saturating_add(width.saturating_mul(4));
         canvas[start..end].fill(0);
     }
 }
 
+// Sequence validation guarantees that an indexed frame carries its palette.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn composite_frame(
     canvas: &mut [u8],
     canvas_width: usize,
@@ -662,7 +675,7 @@ fn composite_frame(
     let height = image.height as usize;
     for y in 0..height {
         for x in 0..width {
-            let source = y * width + x;
+            let source = y.saturating_mul(width).saturating_add(x);
             let rgba = match image.mode {
                 ImageMode::P8 => {
                     let palette = image
@@ -670,8 +683,8 @@ fn composite_frame(
                         .as_ref()
                         .expect("validated P8 GIF frame carries a palette");
                     let index = usize::from(image.pixels[source]);
-                    let palette_offset = index * 3;
-                    let rgb = &palette.rgb[palette_offset..palette_offset + 3];
+                    let palette_offset = index.saturating_mul(3);
+                    let rgb = &palette.rgb[palette_offset..palette_offset.saturating_add(3)];
                     [
                         rgb[0],
                         rgb[1],
@@ -684,21 +697,21 @@ fn composite_frame(
                     [value, value, value, 255]
                 }
                 ImageMode::Rgb8 => {
-                    let offset = source * 3;
+                    let offset = source.saturating_mul(3);
                     [
                         image.pixels[offset],
-                        image.pixels[offset + 1],
-                        image.pixels[offset + 2],
+                        image.pixels[offset.saturating_add(1)],
+                        image.pixels[offset.saturating_add(2)],
                         255,
                     ]
                 }
                 ImageMode::Rgba8 => {
-                    let offset = source * 4;
+                    let offset = source.saturating_mul(4);
                     [
                         image.pixels[offset],
-                        image.pixels[offset + 1],
-                        image.pixels[offset + 2],
-                        image.pixels[offset + 3],
+                        image.pixels[offset.saturating_add(1)],
+                        image.pixels[offset.saturating_add(2)],
+                        image.pixels[offset.saturating_add(3)],
                     ]
                 }
                 _ => return None,
@@ -706,8 +719,13 @@ fn composite_frame(
             if rgba[3] == 0 && image.mode == ImageMode::P8 {
                 continue;
             }
-            let destination = ((top + y) * canvas_width + left + x) * 4;
-            canvas[destination..destination + 4].copy_from_slice(&rgba);
+            let destination = top
+                .saturating_add(y)
+                .saturating_mul(canvas_width)
+                .saturating_add(left)
+                .saturating_add(x)
+                .saturating_mul(4);
+            canvas[destination..destination.saturating_add(4)].copy_from_slice(&rgba);
         }
     }
     Some(())
@@ -721,16 +739,14 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             (
                 palette.rgb.clone(),
                 img.pixels.clone(),
-                transparent.and_then(|index| u8::try_from(index).ok()),
+                transparent.map(palette_index),
             )
         }
         (ImageMode::L8, ColorType::L8) => {
             #[cfg(target_pointer_width = "64")]
-            let pixel_count = img.width as usize * img.height as usize;
+            let pixel_count = (img.width as usize).saturating_mul(img.height as usize);
             #[cfg(not(target_pointer_width = "64"))]
-            let pixel_count = usize::try_from(img.width)
-                .ok()?
-                .checked_mul(usize::try_from(img.height).ok()?)?;
+            let pixel_count = (img.width as usize).checked_mul(img.height as usize)?;
             debug_assert_eq!(img.pixels.len(), pixel_count);
             // Pillow converts L input to a compact P palette containing only
             // the used grayscale values, ordered by their original index.
@@ -742,9 +758,9 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             let mut remap = [0u8; 256];
             for (value, is_used) in used.into_iter().enumerate() {
                 if is_used {
-                    let index = (palette.len() / 3) as u8;
+                    let index = palette_index(palette.len().div_euclid(3));
                     remap[value] = index;
-                    let value = value as u8;
+                    let value = palette_index(value);
                     palette.extend_from_slice(&[value, value, value]);
                 }
             }
@@ -766,11 +782,9 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
         _ => return None,
     };
     #[cfg(target_pointer_width = "64")]
-    let pixel_count = img.width as usize * img.height as usize;
+    let pixel_count = (img.width as usize).saturating_mul(img.height as usize);
     #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = usize::try_from(img.width)
-        .ok()?
-        .checked_mul(usize::try_from(img.height).ok()?)?;
+    let pixel_count = (img.width as usize).checked_mul(img.height as usize)?;
     debug_assert_eq!(indices.len(), pixel_count);
     Some(PreparedImage {
         palette,
@@ -793,6 +807,25 @@ struct PreparedImage {
     palette: Vec<u8>,
     indices: Vec<u8>,
     transparent: Option<u8>,
+}
+
+fn palette_index(value: usize) -> u8 {
+    value.to_le_bytes()[0]
+}
+
+fn palette_index_u32(value: u32) -> u8 {
+    value.to_le_bytes()[0]
+}
+
+fn channel_average(value: u64) -> u8 {
+    value.to_le_bytes()[0]
+}
+
+fn bounded_u32(value: usize) -> u32 {
+    #[cfg(target_pointer_width = "64")]
+    let value = value.min(u32::MAX as usize);
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
 
 fn option_bool(opts: &EncodeOptions, key: &str) -> Option<Option<bool>> {
@@ -830,12 +863,14 @@ fn parse_loop_count(opts: &EncodeOptions) -> Option<Option<u16>> {
 fn table_parameters(palette: &[u8]) -> (usize, u8, u8) {
     debug_assert!(!palette.is_empty());
     debug_assert!(palette.len().is_multiple_of(3));
-    debug_assert!(palette.len() <= 256 * 3);
+    debug_assert!(palette.len() <= 256usize.saturating_mul(3));
     // Pillow's GIF writer normalizes even a one-color image to a four-entry
     // table while retaining the GIF-mandated minimum LZW code width of two.
-    let color_count = (palette.len() / 3).max(4).next_power_of_two();
-    let table_bits = usize::BITS - color_count.leading_zeros() - 1;
-    let size_field = (table_bits - 1) as u8;
+    let color_count = palette.len().div_euclid(3).max(4).next_power_of_two();
+    let table_bits = usize::BITS
+        .saturating_sub(color_count.leading_zeros())
+        .saturating_sub(1);
+    let size_field = palette_index_u32(table_bits.saturating_sub(1));
     // Pillow's P-mode GIF encoder uses an eight-bit LZW root alphabet even
     // when the emitted color table contains fewer entries.
     let minimum_code_size = 8;
@@ -999,14 +1034,14 @@ fn prepare_background(
             if source_mode != ImageMode::Rgba8 {
                 for (index, color) in first.palette.chunks_exact(3).enumerate() {
                     if color == [red, green, blue] {
-                        return index as u8;
+                        return palette_index(index);
                     }
                 }
             }
-            if first.palette.len() / 3 >= 256 {
+            if first.palette.len().div_euclid(3) >= 256 {
                 return 0;
             }
-            let index = (first.palette.len() / 3) as u8;
+            let index = palette_index(first.palette.len().div_euclid(3));
             first.palette.extend_from_slice(&[red, green, blue]);
             index
         }
@@ -1015,26 +1050,26 @@ fn prepare_background(
 
 fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) {
     output.extend_from_slice(palette);
-    let padding = color_count * 3 - palette.len();
-    output.resize(output.len() + padding, 0);
+    let padding = color_count.saturating_mul(3).saturating_sub(palette.len());
+    output.resize(output.len().saturating_add(padding), 0);
 }
 
 fn indexed_rgb(indices: &[u8], palette: &[u8]) -> Vec<u8> {
-    let mut rgb = Vec::with_capacity(indices.len() * 3);
+    let mut rgb = Vec::with_capacity(indices.len().saturating_mul(3));
     for &index in indices {
-        let offset = usize::from(index) * 3;
-        rgb.extend_from_slice(&palette[offset..offset + 3]);
+        let offset = usize::from(index).saturating_mul(3);
+        rgb.extend_from_slice(&palette[offset..offset.saturating_add(3)]);
     }
     rgb
 }
 
 fn interlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
-    debug_assert_eq!(indices.len(), width * height);
+    debug_assert_eq!(indices.len(), width.saturating_mul(height));
     let mut output = Vec::with_capacity(indices.len());
     for (start, step) in [(0, 8), (4, 8), (2, 4), (1, 2)] {
         for y in (start..height).step_by(step) {
-            let row_start = y * width;
-            output.extend_from_slice(&indices[row_start..row_start + width]);
+            let row_start = y.saturating_mul(width);
+            output.extend_from_slice(&indices[row_start..row_start.saturating_add(width)]);
         }
     }
     output
@@ -1046,13 +1081,13 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
     debug_assert!((2..=8).contains(&minimum_code_size));
 
     let clear_code = 1u16 << minimum_code_size;
-    let end_code = clear_code + 1;
+    let end_code = clear_code.saturating_add(1);
     debug_assert!(indices.iter().all(|&index| u16::from(index) < clear_code));
 
     let mut writer = BitWriter::new();
     let mut dictionary = HashMap::<(u16, u8), u16>::new();
-    let mut code_size = minimum_code_size + 1;
-    let mut next_code = end_code + 1;
+    let mut code_size = minimum_code_size.saturating_add(1);
+    let mut next_code = end_code.saturating_add(1);
     writer.write(clear_code, code_size);
 
     let mut prefix = u16::from(indices[0]);
@@ -1065,17 +1100,17 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
         writer.write(prefix, code_size);
         if next_code <= MAX_LZW_CODE {
             dictionary.insert((prefix, suffix), next_code);
-            next_code += 1;
+            next_code = next_code.saturating_add(1);
             // The encoder's dictionary is one entry ahead of the decoder. Delay
             // the width transition by one code so both sides switch together.
             if code_size < 12 && next_code > (1u16 << code_size) {
-                code_size += 1;
+                code_size = code_size.saturating_add(1);
             }
         } else {
             writer.write(clear_code, code_size);
             dictionary.clear();
-            code_size = minimum_code_size + 1;
-            next_code = end_code + 1;
+            code_size = minimum_code_size.saturating_add(1);
+            next_code = end_code.saturating_add(1);
         }
         prefix = u16::from(suffix);
     }
@@ -1087,7 +1122,7 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
 
 fn write_sub_blocks(output: &mut Vec<u8>, data: &[u8]) {
     for block in data.chunks(255) {
-        output.push(block.len() as u8);
+        output.push(palette_index(block.len()));
         output.extend_from_slice(block);
     }
     output.push(0);
@@ -1112,7 +1147,7 @@ impl BitWriter {
         for shift in 0..width {
             let bit = ((code >> shift) & 1) as u8;
             self.current |= bit << self.used;
-            self.used += 1;
+            self.used = self.used.saturating_add(1);
             if self.used == 8 {
                 self.bytes.push(self.current);
                 self.current = 0;
@@ -1139,7 +1174,7 @@ fn quantize_rgb(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
     for chunk in pixels.chunks_exact(3) {
         let color = [chunk[0], chunk[1], chunk[2]];
         match find_color(&palette, &color) {
-            Some(idx) => counts[idx] += 1,
+            Some(idx) => counts[idx] = counts[idx].saturating_add(1),
             None => {
                 if palette.len() < 256 {
                     palette.push(color);
@@ -1158,15 +1193,17 @@ fn quantize_rgb(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
     // adaptive-palette path in GifImagePlugin._normalize_mode.
     let order = pillow_median_cut_order(&palette, &counts);
     let mut remap = vec![0u8; palette.len()];
-    let mut flat = Vec::with_capacity(palette.len() * 3);
+    let mut flat = Vec::with_capacity(palette.len().saturating_mul(3));
     for (new_index, &old_index) in order.iter().enumerate() {
-        remap[old_index] = new_index as u8;
+        remap[old_index] = palette_index(new_index);
         flat.extend_from_slice(&palette[old_index]);
     }
     let indices = pixels
         .chunks_exact(3)
         .map(|chunk| {
             let color = [chunk[0], chunk[1], chunk[2]];
+            // `palette` was constructed from these exact source pixels.
+            #[allow(clippy::expect_used)]
             let index =
                 find_color(&palette, &color).expect("RGB GIF palette was built from source pixels");
             remap[index]
@@ -1183,7 +1220,7 @@ fn quantize_rgb_nearest(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let color = [chunk[0], chunk[1], chunk[2]];
         let hash = pillow_pixel_hash(color);
         if let Some(&index) = color_indices.get(&hash) {
-            counts[index] += 1;
+            counts[index] = counts[index].saturating_add(1);
         } else {
             let index = colors.len();
             colors.push(color);
@@ -1199,14 +1236,20 @@ fn quantize_rgb_nearest(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let mut count = 0u64;
         for &color_index in leaf {
             let color_count = u64::from(counts[color_index]);
-            count += color_count;
+            count = count.saturating_add(color_count);
             for channel in 0..3 {
-                sums[channel] += u64::from(colors[color_index][channel]) * color_count;
+                sums[channel] = sums[channel].saturating_add(
+                    u64::from(colors[color_index][channel]).saturating_mul(color_count),
+                );
             }
             initial_palette[color_index] = palette_index;
         }
         palette.push(std::array::from_fn(|channel| {
-            u8::try_from((sums[channel] + count / 2) / count).unwrap_or(0)
+            channel_average(
+                sums[channel]
+                    .saturating_add(count.div_euclid(2))
+                    .div_euclid(count),
+            )
         }));
     }
     let mapped = colors
@@ -1231,7 +1274,7 @@ fn quantize_rgb_nearest(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
         .map(|chunk| {
             let color = [chunk[0], chunk[1], chunk[2]];
             let index = color_indices[&pillow_pixel_hash(color)];
-            remap[mapped[index]] as u8
+            palette_index(remap[mapped[index]])
         })
         .collect();
     (optimized.into_iter().flatten().collect(), indices)
@@ -1311,11 +1354,11 @@ fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
         false, false,
     ];
     let mut length = 11u32;
-    for count in 1..=colors.len() as u32 {
-        if length.saturating_mul(3) < count {
+    for count in 1..=colors.len() {
+        if length.saturating_mul(3) < bounded_u32(count) {
             let mut candidate = length.saturating_mul(2).saturating_add(1);
             while !ACCEPTED_RESIDUES[(candidate & 15) as usize] {
-                candidate += 1;
+                candidate = candidate.saturating_add(1);
             }
             length = candidate;
         }
@@ -1323,7 +1366,7 @@ fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
     let mut iteration = (0..colors.len()).collect::<Vec<_>>();
     iteration.sort_by_key(|&index| {
         let hash = pillow_pixel_hash(colors[index]);
-        (hash % length, hash)
+        (hash.rem_euclid(length), hash)
     });
     let mut rank = vec![0usize; colors.len()];
     for (position, index) in iteration.into_iter().enumerate() {
@@ -1342,9 +1385,10 @@ fn box_volume(node: &MedianBox, colors: &[[u8; 3]]) -> u32 {
     (0..3)
         .map(|axis| {
             let entries = &node.axes[axis];
-            u32::from(colors[entries[0]][axis] - colors[*entries.last().unwrap()][axis]) + 1
+            let last = entries[entries.len().saturating_sub(1)];
+            u32::from(colors[entries[0]][axis].saturating_sub(colors[last][axis])).saturating_add(1)
         })
-        .product()
+        .fold(1, u32::saturating_mul)
 }
 
 fn split_median_box(
@@ -1354,8 +1398,9 @@ fn split_median_box(
 ) -> (MedianBox, MedianBox) {
     let ranges: [u32; 3] = std::array::from_fn(|axis| {
         let entries = &node.axes[axis];
-        u32::from(colors[entries[0]][axis] - colors[*entries.last().unwrap()][axis])
-            * [77, 150, 29][axis]
+        let last = entries[entries.len().saturating_sub(1)];
+        u32::from(colors[entries[0]][axis].saturating_sub(colors[last][axis]))
+            .saturating_mul([77, 150, 29][axis])
     });
     let axis = (1..3).fold(0, |best, candidate| {
         if ranges[candidate] > ranges[best] {
@@ -1368,24 +1413,24 @@ fn split_median_box(
     let mut left_count = 0u32;
     let mut split = 0usize;
     while split < sorted.len() {
-        left_count += counts[sorted[split]];
-        split += 1;
+        left_count = left_count.saturating_add(counts[sorted[split]]);
+        split = split.saturating_add(1);
         if left_count.saturating_mul(2) > node.pixel_count {
             break;
         }
     }
     if split < sorted.len() {
-        let value = colors[sorted[split - 1]][axis];
+        let value = colors[sorted[split.saturating_sub(1)]][axis];
         while split < sorted.len() && colors[sorted[split]][axis] == value {
-            left_count += counts[sorted[split]];
-            split += 1;
+            left_count = left_count.saturating_add(counts[sorted[split]]);
+            split = split.saturating_add(1);
         }
     }
     if split == sorted.len() {
-        let value = colors[*sorted.last().expect("median-cut box axis is non-empty")][axis];
-        while split > 0 && colors[sorted[split - 1]][axis] == value {
-            split -= 1;
-            left_count -= counts[sorted[split]];
+        let value = colors[sorted[sorted.len().saturating_sub(1)]][axis];
+        while split > 0 && colors[sorted[split.saturating_sub(1)]][axis] == value {
+            split = split.saturating_sub(1);
+            left_count = left_count.saturating_sub(counts[sorted[split]]);
         }
     }
     let is_left = sorted[..split]
@@ -1414,7 +1459,7 @@ fn split_median_box(
         },
         MedianBox {
             axes: right_axes,
-            pixel_count: node.pixel_count - left_count,
+            pixel_count: node.pixel_count.saturating_sub(left_count),
             children: None,
         },
     )
@@ -1426,9 +1471,9 @@ struct PillowBoxHeap(Vec<usize>);
 impl PillowBoxHeap {
     fn add(&mut self, value: usize, boxes: &[MedianBox]) {
         self.0.push(value);
-        let mut child = self.0.len() - 1;
+        let mut child = self.0.len().saturating_sub(1);
         while child > 0 {
-            let parent = (child - 1) / 2;
+            let parent = child.saturating_sub(1).div_euclid(2);
             if boxes[value].pixel_count <= boxes[self.0[parent]].pixel_count {
                 break;
             }
@@ -1440,6 +1485,8 @@ impl PillowBoxHeap {
 
     fn remove(&mut self, boxes: &[MedianBox]) -> usize {
         let result = self.0[0];
+        // Indexing `self.0[0]` above proves the heap is non-empty.
+        #[allow(clippy::expect_used)]
         let value = self
             .0
             .pop()
@@ -1448,12 +1495,13 @@ impl PillowBoxHeap {
             return result;
         }
         let mut parent = 0usize;
-        while parent * 2 + 1 < self.0.len() {
-            let mut child = parent * 2 + 1;
-            if child + 1 < self.0.len()
-                && boxes[self.0[child]].pixel_count < boxes[self.0[child + 1]].pixel_count
+        while parent.saturating_mul(2).saturating_add(1) < self.0.len() {
+            let mut child = parent.saturating_mul(2).saturating_add(1);
+            if child.saturating_add(1) < self.0.len()
+                && boxes[self.0[child]].pixel_count
+                    < boxes[self.0[child.saturating_add(1)]].pixel_count
             {
-                child += 1;
+                child = child.saturating_add(1);
             }
             if boxes[value].pixel_count > boxes[self.0[child]].pixel_count {
                 break;
@@ -1490,7 +1538,7 @@ fn quantize_rgba(pixels: &[u8]) -> (Vec<u8>, Vec<u8>, Option<u8>) {
         .any(|color| color[3] == 0)
         .then(|| rgba_palette.iter().position(|color| color[3] == 0))
         .flatten()
-        .map(|index| index as u8);
+        .and_then(|index| u8::try_from(index).ok());
 
     compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent);
     let palette = rgba_palette
@@ -1519,11 +1567,11 @@ fn compact_rgba_palette(
     let has_holes = used_indices
         .last()
         .is_some_and(|&maximum| maximum >= used_indices.len());
-    if has_holes || used_indices.len() <= rgba_palette.len() / 2 {
+    if has_holes || used_indices.len() <= rgba_palette.len().div_euclid(2) {
         let mut remap = vec![0u8; rgba_palette.len()];
         let mut compact = Vec::with_capacity(used_indices.len());
         for (new_index, &old_index) in used_indices.iter().enumerate() {
-            remap[old_index] = new_index as u8;
+            remap[old_index] = palette_index(new_index);
             compact.push(rgba_palette[old_index]);
         }
         for index in indices.iter_mut() {
@@ -1565,7 +1613,7 @@ impl OctreeBucket {
             return [0; 4];
         }
         std::array::from_fn(|channel| {
-            ((self.sums[channel] as f32) / (self.count as f32)).clamp(0.0, 255.0) as u8
+            channel_average(self.sums[channel].div_euclid(u64::from(self.count)))
         })
     }
 }
@@ -1580,10 +1628,15 @@ struct OctreeCube {
 impl OctreeCube {
     fn new(bits: [u32; 4]) -> Self {
         debug_assert!(bits.iter().all(|&value| value < usize::BITS));
-        debug_assert!(bits.iter().sum::<u32>() < usize::BITS);
+        debug_assert!(bits.iter().copied().fold(0, u32::saturating_add) < usize::BITS);
         let widths = bits.map(|value| 1usize << value);
-        let offsets = [bits[1] + bits[2] + bits[3], bits[2] + bits[3], bits[3], 0];
-        let size = widths.into_iter().product();
+        let offsets = [
+            bits[1].saturating_add(bits[2]).saturating_add(bits[3]),
+            bits[2].saturating_add(bits[3]),
+            bits[3],
+            0,
+        ];
+        let size = widths.into_iter().fold(1, usize::saturating_mul);
         Self {
             bits,
             widths,
@@ -1601,7 +1654,8 @@ impl OctreeCube {
 
     fn offset(&self, color: [u8; 4]) -> usize {
         let values = std::array::from_fn(|channel| {
-            (usize::from(color[channel]) >> (8 - self.bits[channel])) & (self.widths[channel] - 1)
+            (usize::from(color[channel]) >> 8u32.saturating_sub(self.bits[channel]))
+                & self.widths[channel].saturating_sub(1)
         });
         self.offset_position(values)
     }
@@ -1625,10 +1679,10 @@ fn copy_octree_cube(cube: &OctreeCube, bits: [u32; 4]) -> OctreeCube {
     let mut destination_reduce = [0u32; 4];
     let widths: [usize; 4] = std::array::from_fn(|channel| {
         if cube.bits[channel] > bits[channel] {
-            destination_reduce[channel] = cube.bits[channel] - bits[channel];
+            destination_reduce[channel] = cube.bits[channel].saturating_sub(bits[channel]);
             cube.widths[channel]
         } else {
-            source_reduce[channel] = bits[channel] - cube.bits[channel];
+            source_reduce[channel] = bits[channel].saturating_sub(cube.bits[channel]);
             result.widths[channel]
         }
     });
@@ -1677,13 +1731,14 @@ fn insertion_sort_buckets(values: &mut [OctreeBucket], swap_limit: Option<usize>
     let mut swaps = 0usize;
     for right in 1..values.len() {
         let mut cursor = right;
-        while cursor > 0 && bucket_order(&values[cursor - 1], &values[cursor]).is_gt() {
-            values.swap(cursor, cursor - 1);
-            swaps += 1;
+        while cursor > 0 && bucket_order(&values[cursor.saturating_sub(1)], &values[cursor]).is_gt()
+        {
+            values.swap(cursor, cursor.saturating_sub(1));
+            swaps = swaps.saturating_add(1);
             if swap_limit.is_some_and(|limit| swaps > limit) {
                 return false;
             }
-            cursor -= 1;
+            cursor = cursor.saturating_sub(1);
         }
     }
     true
@@ -1691,7 +1746,7 @@ fn insertion_sort_buckets(values: &mut [OctreeBucket], swap_limit: Option<usize>
 
 fn swap_bucket_ranges(values: &mut [OctreeBucket], left: usize, right: usize, length: usize) {
     for offset in 0..length {
-        values.swap(left + offset, right + offset);
+        values.swap(left.saturating_add(offset), right.saturating_add(offset));
     }
 }
 
@@ -1700,23 +1755,38 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket]) {
     let mut length = values.len();
     loop {
         if length <= 7 {
-            insertion_sort_buckets(&mut values[start..start + length], None);
+            insertion_sort_buckets(&mut values[start..start.saturating_add(length)], None);
             return;
         }
         let mut low = start;
-        let mut middle = start + length / 2;
-        let mut high = start + length - 1;
+        let mut middle = start.saturating_add(length.div_euclid(2));
+        let mut high = start.saturating_add(length).saturating_sub(1);
         if length > 40 {
-            let distance = length / 8;
-            low = median_of_three(values, low, low + distance, low + 2 * distance);
-            middle = median_of_three(values, middle - distance, middle, middle + distance);
-            high = median_of_three(values, high - 2 * distance, high - distance, high);
+            let distance = length.div_euclid(8);
+            low = median_of_three(
+                values,
+                low,
+                low.saturating_add(distance),
+                low.saturating_add(distance.saturating_mul(2)),
+            );
+            middle = median_of_three(
+                values,
+                middle.saturating_sub(distance),
+                middle,
+                middle.saturating_add(distance),
+            );
+            high = median_of_three(
+                values,
+                high.saturating_sub(distance.saturating_mul(2)),
+                high.saturating_sub(distance),
+                high,
+            );
         }
         middle = median_of_three(values, low, middle, high);
         values.swap(start, middle);
-        let mut equal_left = start + 1;
-        let mut scan_left = start + 1;
-        let mut scan_right = start + length - 1;
+        let mut equal_left = start.saturating_add(1);
+        let mut scan_left = start.saturating_add(1);
+        let mut scan_right = start.saturating_add(length).saturating_sub(1);
         let mut equal_right = scan_right;
         let mut swapped = false;
         loop {
@@ -1727,10 +1797,10 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket]) {
                 }
                 if ordering.is_eq() {
                     values.swap(equal_left, scan_left);
-                    equal_left += 1;
+                    equal_left = equal_left.saturating_add(1);
                     swapped = true;
                 }
-                scan_left += 1;
+                scan_left = scan_left.saturating_add(1);
             }
             while scan_left <= scan_right {
                 let ordering = bucket_order(&values[scan_right], &values[start]);
@@ -1749,34 +1819,48 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket]) {
             }
             values.swap(scan_left, scan_right);
             swapped = true;
-            scan_left += 1;
+            scan_left = scan_left.saturating_add(1);
             scan_right = scan_right.saturating_sub(1);
         }
-        let end = start + length;
-        let left_equal = (equal_left - start).min(scan_left - equal_left);
-        swap_bucket_ranges(values, start, scan_left - left_equal, left_equal);
-        let right_equal = (equal_right - scan_right).min(end - equal_right - 1);
-        swap_bucket_ranges(values, scan_left, end - right_equal, right_equal);
+        let end = start.saturating_add(length);
+        let left_equal = equal_left
+            .saturating_sub(start)
+            .min(scan_left.saturating_sub(equal_left));
+        swap_bucket_ranges(
+            values,
+            start,
+            scan_left.saturating_sub(left_equal),
+            left_equal,
+        );
+        let right_equal = equal_right
+            .saturating_sub(scan_right)
+            .min(end.saturating_sub(equal_right).saturating_sub(1));
+        swap_bucket_ranges(
+            values,
+            scan_left,
+            end.saturating_sub(right_equal),
+            right_equal,
+        );
         if !swapped {
-            let limit = 1 + length / 4;
+            let limit = 1usize.saturating_add(length.div_euclid(4));
             if insertion_sort_buckets(&mut values[start..end], Some(limit)) {
                 return;
             }
         }
-        let left_length = scan_left - equal_left;
-        let right_length = equal_right - scan_right;
+        let left_length = scan_left.saturating_sub(equal_left);
+        let right_length = equal_right.saturating_sub(scan_right);
         if left_length <= right_length {
             if left_length > 1 {
-                apple_qsort_buckets(&mut values[start..start + left_length]);
+                apple_qsort_buckets(&mut values[start..start.saturating_add(left_length)]);
             }
             if right_length <= 1 {
                 return;
             }
-            start = end - right_length;
+            start = end.saturating_sub(right_length);
             length = right_length;
         } else {
             if right_length > 1 {
-                apple_qsort_buckets(&mut values[end - right_length..end]);
+                apple_qsort_buckets(&mut values[end.saturating_sub(right_length)..end]);
             }
             if left_length <= 1 {
                 return;
@@ -1796,9 +1880,9 @@ fn subtract_octree_buckets(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
     for bucket in buckets.iter().filter(|bucket| bucket.count > 0) {
         let offset = cube.offset(bucket.average());
         let destination = &mut cube.buckets[offset];
-        destination.count -= bucket.count;
+        destination.count = destination.count.saturating_sub(bucket.count);
         for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
-            *sum -= value;
+            *sum = sum.saturating_sub(value);
         }
     }
 }
@@ -1807,7 +1891,7 @@ fn add_octree_lookup(cube: &mut OctreeCube, palette: &[OctreeBucket], offset: us
     for index in (offset..palette.len()).rev() {
         let bucket = &palette[index];
         let position = cube.offset(bucket.average());
-        cube.buckets[position].count = index as u32;
+        cube.buckets[position].count = bounded_u32(index);
     }
 }
 
@@ -1820,13 +1904,13 @@ fn pillow_fast_octree(colors: &[[u8; 4]], target: usize) -> (Vec<[u8; 4]>, Vec<u
     }
     let mut coarse = copy_octree_cube(&fine, coarse_bits);
     let mut coarse_count = coarse.used().min(target);
-    let mut fine_count = target - coarse_count;
+    let mut fine_count = target.saturating_sub(coarse_count);
     let fine_palette = sorted_octree_buckets(&fine);
     subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count]);
     while coarse_count > coarse.used() {
         let already_subtracted = fine_count;
         coarse_count = coarse.used();
-        fine_count = target - coarse_count;
+        fine_count = target.saturating_sub(coarse_count);
         subtract_octree_buckets(&mut coarse, &fine_palette[already_subtracted..fine_count]);
     }
     let coarse_palette = sorted_octree_buckets(&coarse);
@@ -1838,7 +1922,7 @@ fn pillow_fast_octree(colors: &[[u8; 4]], target: usize) -> (Vec<[u8; 4]>, Vec<u
     add_octree_lookup(&mut lookup, &buckets, coarse_count);
     let indices = colors
         .iter()
-        .map(|&color| lookup.buckets[lookup.offset(color)].count as u8)
+        .map(|&color| palette_index_u32(lookup.buckets[lookup.offset(color)].count))
         .collect();
     let palette = buckets.iter().map(OctreeBucket::average).collect();
     (palette, indices)
@@ -1868,8 +1952,10 @@ fn find_nearest_from(palette: &[[u8; 3]], color: &[u8; 3], initial: usize) -> us
 }
 
 fn color_distance(left: [u8; 3], right: [u8; 3]) -> u32 {
-    let dr = i32::from(left[0]) - i32::from(right[0]);
-    let dg = i32::from(left[1]) - i32::from(right[1]);
-    let db = i32::from(left[2]) - i32::from(right[2]);
-    u32::try_from(dr * dr + dg * dg + db * db).unwrap_or(u32::MAX)
+    let dr = u32::from(left[0].abs_diff(right[0]));
+    let dg = u32::from(left[1].abs_diff(right[1]));
+    let db = u32::from(left[2].abs_diff(right[2]));
+    dr.saturating_mul(dr)
+        .saturating_add(dg.saturating_mul(dg))
+        .saturating_add(db.saturating_mul(db))
 }

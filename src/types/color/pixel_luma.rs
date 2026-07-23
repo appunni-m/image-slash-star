@@ -39,20 +39,26 @@ impl<T: Primitive> Pixel for Luma<T> {
     }
 
     fn from_slice(slice: &[T]) -> &Luma<T> {
-        bytemuck::cast_ref(<&[T; 1]>::try_from(slice).expect("Luma expects 1 channel"))
+        // Pixel's slice contract requires exactly the statically known channel count.
+        #[allow(clippy::expect_used)]
+        let channels = <&[T; 1]>::try_from(slice).expect("Luma expects 1 channel");
+        bytemuck::cast_ref(channels)
     }
     fn from_slice_mut(slice: &mut [T]) -> &mut Luma<T> {
-        bytemuck::cast_mut(<&mut [T; 1]>::try_from(slice).expect("Luma expects 1 channel"))
+        // Pixel's slice contract requires exactly the statically known channel count.
+        #[allow(clippy::expect_used)]
+        let channels = <&mut [T; 1]>::try_from(slice).expect("Luma expects 1 channel");
+        bytemuck::cast_mut(channels)
     }
 
     fn to_rgb(&self) -> Rgb<T> {
         let mut pix = Rgb([T::DEFAULT_MIN_VALUE; 3]);
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
     fn to_rgba(&self) -> Rgba<T> {
         let mut pix = Rgba([T::DEFAULT_MIN_VALUE; 4]);
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
     fn to_luma(&self) -> Luma<T> {
@@ -60,7 +66,7 @@ impl<T: Primitive> Pixel for Luma<T> {
     }
     fn to_luma_alpha(&self) -> LumaA<T> {
         let mut pix = LumaA([T::DEFAULT_MIN_VALUE, T::DEFAULT_MIN_VALUE]);
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
     fn map<F>(&self, f: F) -> Luma<T>
@@ -145,25 +151,31 @@ impl<T: Primitive> Pixel for LumaA<T> {
     }
 
     fn from_slice(slice: &[T]) -> &LumaA<T> {
-        bytemuck::cast_ref(<&[T; 2]>::try_from(slice).expect("LumaA expects 2 channels"))
+        // Pixel's slice contract requires exactly the statically known channel count.
+        #[allow(clippy::expect_used)]
+        let channels = <&[T; 2]>::try_from(slice).expect("LumaA expects 2 channels");
+        bytemuck::cast_ref(channels)
     }
     fn from_slice_mut(slice: &mut [T]) -> &mut LumaA<T> {
-        bytemuck::cast_mut(<&mut [T; 2]>::try_from(slice).expect("LumaA expects 2 channels"))
+        // Pixel's slice contract requires exactly the statically known channel count.
+        #[allow(clippy::expect_used)]
+        let channels = <&mut [T; 2]>::try_from(slice).expect("LumaA expects 2 channels");
+        bytemuck::cast_mut(channels)
     }
 
     fn to_rgb(&self) -> Rgb<T> {
         let mut pix = Rgb([T::DEFAULT_MIN_VALUE; 3]);
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
     fn to_rgba(&self) -> Rgba<T> {
         let mut pix = Rgba([T::DEFAULT_MIN_VALUE; 4]);
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
     fn to_luma(&self) -> Luma<T> {
         let mut pix = Luma([T::DEFAULT_MIN_VALUE]);
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
     fn to_luma_alpha(&self) -> LumaA<T> {

@@ -16,9 +16,9 @@ pub(super) struct AdaptedProbabilities {
 
 fn record_event(statistic: &mut u32, bit: bool) {
     if *statistic >= 0xfffe_0000 {
-        *statistic = ((*statistic + 1) >> 1) & 0x7fff_7fff;
+        *statistic = statistic.wrapping_add(1).wrapping_shr(1) & 0x7fff_7fff;
     }
-    *statistic += 0x0001_0000 + u32::from(bit);
+    *statistic = statistic.wrapping_add(0x0001_0000u32.saturating_add(u32::from(bit)));
 }
 
 #[cfg(coverage)]
@@ -51,13 +51,13 @@ fn record_block(
         record_event(&mut statistics[coefficient_type][band][context][0], true);
         while levels[position] == 0 {
             record_event(&mut statistics[coefficient_type][band][context][1], false);
-            position += 1;
+            position = position.saturating_add(1);
             band = usize::from(COEFF_BANDS[position]);
             context = 0;
         }
 
         let magnitude = levels[position].unsigned_abs();
-        position += 1;
+        position = position.saturating_add(1);
         record_event(&mut statistics[coefficient_type][band][context][1], true);
         let greater_than_one = magnitude > 1;
         record_event(
@@ -150,55 +150,62 @@ fn collect_statistics(
                         &luma.y2_levels,
                         0,
                         1,
-                        usize::from(top_y2[x] + left_y2),
+                        usize::from(top_y2[x].saturating_add(left_y2)),
                         token_buffer,
                     );
                     top_y2[x] = nonzero;
                     left_y2 = nonzero;
-                    for block_y in 0..4 {
-                        for block_x in 0..4 {
-                            let context = usize::from(top_y[x][block_x] + left_y[block_y]);
+                    let top_row = &mut top_y[x];
+                    for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
+                        for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
+                            let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
                             let nonzero = record_block(
                                 &mut statistics,
-                                &luma.y1_levels[block_y * 4 + block_x],
+                                &luma.y1_levels[block_y.saturating_mul(4).saturating_add(block_x)],
                                 1,
                                 0,
                                 context,
                                 token_buffer,
                             );
-                            top_y[x][block_x] = nonzero;
-                            left_y[block_y] = nonzero;
+                            *top_nonzero = nonzero;
+                            *left_nonzero = nonzero;
                         }
                     }
                 }
                 LumaDecision::Intra4(luma) => {
-                    for block_y in 0..4 {
-                        for block_x in 0..4 {
-                            let context = usize::from(top_y[x][block_x] + left_y[block_y]);
+                    let top_row = &mut top_y[x];
+                    for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
+                        for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
+                            let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
                             let nonzero = record_block(
                                 &mut statistics,
-                                &luma.levels[block_y * 4 + block_x],
+                                &luma.levels[block_y.saturating_mul(4).saturating_add(block_x)],
                                 0,
                                 3,
                                 context,
                                 token_buffer,
                             );
-                            top_y[x][block_x] = nonzero;
-                            left_y[block_y] = nonzero;
+                            *top_nonzero = nonzero;
+                            *left_nonzero = nonzero;
                         }
                     }
                 }
             }
 
-            for plane in 0..2 {
-                for block_y in 0..2 {
-                    for block_x in 0..2 {
-                        let context_index = plane * 2 + block_x;
-                        let left_index = plane * 2 + block_y;
-                        let context = usize::from(top_uv[x][context_index] + left_uv[left_index]);
+            for plane in 0usize..2 {
+                for block_y in 0usize..2 {
+                    for block_x in 0usize..2 {
+                        let context_index = plane.saturating_mul(2).saturating_add(block_x);
+                        let left_index = plane.saturating_mul(2).saturating_add(block_y);
+                        let context = usize::from(
+                            top_uv[x][context_index].saturating_add(left_uv[left_index]),
+                        );
                         let nonzero = record_block(
                             &mut statistics,
-                            &decision.chroma.levels[plane * 4 + block_y * 2 + block_x],
+                            &decision.chroma.levels[plane
+                                .saturating_mul(4)
+                                .saturating_add(block_y.saturating_mul(2))
+                                .saturating_add(block_x)],
                             0,
                             2,
                             context,
@@ -232,20 +239,26 @@ pub(super) fn adapt_coefficients(
                     let new_probability = if ones == 0 {
                         255
                     } else {
-                        (255 - ones * 255 / total) as u8
+                        255u32
+                            .saturating_sub(ones.saturating_mul(255).div_euclid(total))
+                            .to_le_bytes()[0]
                     };
                     let old_probability = COEFF_PROBS[coefficient_type][band][context][node];
                     let update_probability =
                         coefficient_update_probability(coefficient_type, band, context, node);
                     let branch_cost = |probability: u8| {
-                        u64::from(ones) * u64::from(bit_cost(true, probability))
-                            + u64::from(total - ones) * u64::from(bit_cost(false, probability))
+                        u64::from(ones)
+                            .saturating_mul(u64::from(bit_cost(true, probability)))
+                            .saturating_add(
+                                u64::from(total.saturating_sub(ones))
+                                    .saturating_mul(u64::from(bit_cost(false, probability))),
+                            )
                     };
                     let old_cost = branch_cost(old_probability)
-                        + u64::from(bit_cost(false, update_probability));
+                        .saturating_add(u64::from(bit_cost(false, update_probability)));
                     let new_cost = branch_cost(new_probability)
-                        + u64::from(bit_cost(true, update_probability))
-                        + 8 * 256;
+                        .saturating_add(u64::from(bit_cost(true, update_probability)))
+                        .saturating_add(2048);
                     if old_cost > new_cost {
                         coefficients[coefficient_type][band][context][node] = new_probability;
                         updates[coefficient_type][band][context][node] = true;

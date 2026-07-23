@@ -63,23 +63,24 @@ impl BoolEncoder {
     ///   0 means `false` is impossible; 255 means `false` is nearly certain.
     /// * `value` — `false` (0) or `true` (1) to encode.
     pub fn encode_bool(&mut self, prob: u8, value: bool) {
-        let split = (self.range * i32::from(prob)) >> 8;
+        let split = self.range.wrapping_mul(i32::from(prob)).wrapping_shr(8);
 
         if value {
-            self.value += split + 1;
-            self.range -= split + 1;
+            let upper_interval = split.saturating_add(1);
+            self.value = self.value.wrapping_add(upper_interval);
+            self.range = self.range.wrapping_sub(upper_interval);
         } else {
             self.range = split;
         }
 
         if self.range < 127 {
-            let mut shift = 0;
+            let mut shift = 0i32;
             while self.range < 127 {
-                self.range = ((self.range + 1) << 1) - 1;
-                shift += 1;
+                self.range = self.range.wrapping_add(1).wrapping_shl(1).wrapping_sub(1);
+                shift = shift.saturating_add(1);
             }
-            self.value <<= shift;
-            self.nb_bits += shift;
+            self.value = self.value.wrapping_shl(shift.cast_unsigned());
+            self.nb_bits = self.nb_bits.saturating_add(shift);
             if self.nb_bits > 0 {
                 self.flush();
             }
@@ -87,23 +88,25 @@ impl BoolEncoder {
     }
 
     fn flush(&mut self) {
-        let shift = 8 + self.nb_bits;
-        let bits = self.value >> shift;
-        self.value -= bits << shift;
-        self.nb_bits -= 8;
+        let shift = self.nb_bits.saturating_add(8);
+        let bits = self.value.wrapping_shr(shift.cast_unsigned());
+        self.value = self
+            .value
+            .wrapping_sub(bits.wrapping_shl(shift.cast_unsigned()));
+        self.nb_bits = self.nb_bits.saturating_sub(8);
         if bits & 0xff == 0xff {
-            self.run += 1;
+            self.run = self.run.saturating_add(1);
             return;
         }
-        if bits & 0x100 != 0 {
-            if let Some(previous) = self.output.last_mut() {
-                *previous = previous.wrapping_add(1);
-            }
+        if bits & 0x100 != 0
+            && let Some(previous) = self.output.last_mut()
+        {
+            *previous = previous.wrapping_add(1);
         }
         let delayed = if bits & 0x100 != 0 { 0x00 } else { 0xff };
         self.output.extend(std::iter::repeat_n(delayed, self.run));
         self.run = 0;
-        self.output.push((bits & 0xff) as u8);
+        self.output.push(bits.to_le_bytes()[0]);
     }
 
     /// Flush remaining state and return the encoded byte stream.
@@ -115,7 +118,7 @@ impl BoolEncoder {
     ///
     /// The encoded byte vector (the caller takes ownership).
     pub fn finish(mut self) -> Vec<u8> {
-        self.encode_literal(0, (9 - self.nb_bits) as u8);
+        self.encode_literal(0, 9i32.saturating_sub(self.nb_bits).to_le_bytes()[0]);
         self.nb_bits = 0;
         self.flush();
         self.output
@@ -139,7 +142,7 @@ impl BoolEncoder {
         debug_assert!(bits <= 32, "encode_literal: bits must be ≤ 32");
         let n = bits.min(32);
         for i in (0..n).rev() {
-            let bit = ((value >> i) & 1) != 0;
+            let bit = (value.wrapping_shr(u32::from(i)) & 1) != 0;
             self.encode_bool(128, bit);
         }
     }

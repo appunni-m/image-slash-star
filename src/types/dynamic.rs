@@ -209,7 +209,7 @@ impl DynamicImage {
     pub fn to_rgb8(&self) -> RgbImage {
         match self {
             DynamicImage::ImageRgb8(x) => x.clone(),
-            _x => self.to_generic::<Rgb<u8>, Vec<u8>>(),
+            _x => self.to_generic::<Rgb<u8>>(),
         }
     }
 
@@ -218,7 +218,7 @@ impl DynamicImage {
     pub fn to_rgba8(&self) -> RgbaImage {
         match self {
             DynamicImage::ImageRgba8(x) => x.clone(),
-            _x => self.to_generic::<Rgba<u8>, Vec<u8>>(),
+            _x => self.to_generic::<Rgba<u8>>(),
         }
     }
 
@@ -227,7 +227,7 @@ impl DynamicImage {
     pub fn to_luma8(&self) -> GrayImage {
         match self {
             DynamicImage::ImageLuma8(x) => x.clone(),
-            _x => self.to_generic::<Luma<u8>, Vec<u8>>(),
+            _x => self.to_generic::<Luma<u8>>(),
         }
     }
 
@@ -236,7 +236,7 @@ impl DynamicImage {
     pub fn to_luma_alpha8(&self) -> GrayAlphaImage {
         match self {
             DynamicImage::ImageLumaA8(x) => x.clone(),
-            _x => self.to_generic::<LumaA<u8>, Vec<u8>>(),
+            _x => self.to_generic::<LumaA<u8>>(),
         }
     }
 
@@ -245,7 +245,7 @@ impl DynamicImage {
     pub fn to_rgb16(&self) -> ImageBuffer<Rgb<u16>, Vec<u16>> {
         match self {
             DynamicImage::ImageRgb16(x) => x.clone(),
-            _x => self.to_generic::<Rgb<u16>, Vec<u16>>(),
+            _x => self.to_generic::<Rgb<u16>>(),
         }
     }
 
@@ -254,7 +254,7 @@ impl DynamicImage {
     pub fn to_rgba16(&self) -> ImageBuffer<Rgba<u16>, Vec<u16>> {
         match self {
             DynamicImage::ImageRgba16(x) => x.clone(),
-            _x => self.to_generic::<Rgba<u16>, Vec<u16>>(),
+            _x => self.to_generic::<Rgba<u16>>(),
         }
     }
 
@@ -263,7 +263,7 @@ impl DynamicImage {
     pub fn to_luma16(&self) -> ImageBuffer<Luma<u16>, Vec<u16>> {
         match self {
             DynamicImage::ImageLuma16(x) => x.clone(),
-            _x => self.to_generic::<Luma<u16>, Vec<u16>>(),
+            _x => self.to_generic::<Luma<u16>>(),
         }
     }
 
@@ -272,7 +272,7 @@ impl DynamicImage {
     pub fn to_luma_alpha16(&self) -> ImageBuffer<LumaA<u16>, Vec<u16>> {
         match self {
             DynamicImage::ImageLumaA16(x) => x.clone(),
-            _x => self.to_generic::<LumaA<u16>, Vec<u16>>(),
+            _x => self.to_generic::<LumaA<u16>>(),
         }
     }
 
@@ -281,7 +281,7 @@ impl DynamicImage {
     pub fn to_rgb32f(&self) -> Rgb32FImage {
         match self {
             DynamicImage::ImageRgb32F(x) => x.clone(),
-            _x => self.to_generic::<Rgb<f32>, Vec<f32>>(),
+            _x => self.to_generic::<Rgb<f32>>(),
         }
     }
 
@@ -290,14 +290,15 @@ impl DynamicImage {
     pub fn to_rgba32f(&self) -> Rgba32FImage {
         match self {
             DynamicImage::ImageRgba32F(x) => x.clone(),
-            _x => self.to_generic::<Rgba<f32>, Vec<f32>>(),
+            _x => self.to_generic::<Rgba<f32>>(),
         }
     }
 
     /// Internal helper: convert to a generic pixel type using pixel conversion.
-    fn to_generic<Px: Pixel, C>(&self) -> ImageBuffer<Px, Vec<<Px as Pixel>::Subpixel>>
+    fn to_generic<Px>(&self) -> ImageBuffer<Px, Vec<<Px as Pixel>::Subpixel>>
     where
-        Px: FromColor<color::Rgb<u8>>
+        Px: Pixel
+            + FromColor<color::Rgb<u8>>
             + FromColor<color::Rgba<u8>>
             + FromColor<color::Luma<u8>>
             + FromColor<color::LumaA<u8>>
@@ -661,30 +662,32 @@ impl DynamicImage {
             DynamicImage::ImageLuma8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLuma8(GrayImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, y)
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(x), y)
                 }))
             }
             DynamicImage::ImageLumaA8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLumaA8(GrayAlphaImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, y)
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(x), y)
                 }))
             }
             DynamicImage::ImageRgb8(p) => {
                 let (w, h) = p.dimensions();
-                DynamicImage::ImageRgb8(RgbImage::from_fn(w, h, |x, y| *p.get_pixel(w - 1 - x, y)))
+                DynamicImage::ImageRgb8(RgbImage::from_fn(w, h, |x, y| {
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(x), y)
+                }))
             }
             DynamicImage::ImageRgba8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, y)
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(x), y)
                 }))
             }
             _ => {
                 let rgba = self.to_rgba8();
                 let (w, h) = rgba.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(w, h, |x, y| {
-                    *rgba.get_pixel(w - 1 - x, y)
+                    *rgba.get_pixel(w.saturating_sub(1).saturating_sub(x), y)
                 }))
             }
         }
@@ -697,30 +700,32 @@ impl DynamicImage {
             DynamicImage::ImageLuma8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLuma8(GrayImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(x, h - 1 - y)
+                    *p.get_pixel(x, h.saturating_sub(1).saturating_sub(y))
                 }))
             }
             DynamicImage::ImageLumaA8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLumaA8(GrayAlphaImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(x, h - 1 - y)
+                    *p.get_pixel(x, h.saturating_sub(1).saturating_sub(y))
                 }))
             }
             DynamicImage::ImageRgb8(p) => {
                 let (w, h) = p.dimensions();
-                DynamicImage::ImageRgb8(RgbImage::from_fn(w, h, |x, y| *p.get_pixel(x, h - 1 - y)))
+                DynamicImage::ImageRgb8(RgbImage::from_fn(w, h, |x, y| {
+                    *p.get_pixel(x, h.saturating_sub(1).saturating_sub(y))
+                }))
             }
             DynamicImage::ImageRgba8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(x, h - 1 - y)
+                    *p.get_pixel(x, h.saturating_sub(1).saturating_sub(y))
                 }))
             }
             _ => {
                 let rgba = self.to_rgba8();
                 let (w, h) = rgba.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(w, h, |x, y| {
-                    *rgba.get_pixel(x, h - 1 - y)
+                    *rgba.get_pixel(x, h.saturating_sub(1).saturating_sub(y))
                 }))
             }
         }
@@ -733,30 +738,32 @@ impl DynamicImage {
             DynamicImage::ImageLuma8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLuma8(GrayImage::from_fn(h, w, |x, y| {
-                    *p.get_pixel(y, h - 1 - x)
+                    *p.get_pixel(y, h.saturating_sub(1).saturating_sub(x))
                 }))
             }
             DynamicImage::ImageLumaA8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLumaA8(GrayAlphaImage::from_fn(h, w, |x, y| {
-                    *p.get_pixel(y, h - 1 - x)
+                    *p.get_pixel(y, h.saturating_sub(1).saturating_sub(x))
                 }))
             }
             DynamicImage::ImageRgb8(p) => {
                 let (w, h) = p.dimensions();
-                DynamicImage::ImageRgb8(RgbImage::from_fn(h, w, |x, y| *p.get_pixel(y, h - 1 - x)))
+                DynamicImage::ImageRgb8(RgbImage::from_fn(h, w, |x, y| {
+                    *p.get_pixel(y, h.saturating_sub(1).saturating_sub(x))
+                }))
             }
             DynamicImage::ImageRgba8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(h, w, |x, y| {
-                    *p.get_pixel(y, h - 1 - x)
+                    *p.get_pixel(y, h.saturating_sub(1).saturating_sub(x))
                 }))
             }
             _ => {
                 let rgba = self.to_rgba8();
                 let (w, h) = rgba.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(h, w, |x, y| {
-                    *rgba.get_pixel(y, h - 1 - x)
+                    *rgba.get_pixel(y, h.saturating_sub(1).saturating_sub(x))
                 }))
             }
         }
@@ -769,32 +776,47 @@ impl DynamicImage {
             DynamicImage::ImageLuma8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLuma8(GrayImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, h - 1 - y)
+                    *p.get_pixel(
+                        w.saturating_sub(1).saturating_sub(x),
+                        h.saturating_sub(1).saturating_sub(y),
+                    )
                 }))
             }
             DynamicImage::ImageLumaA8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLumaA8(GrayAlphaImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, h - 1 - y)
+                    *p.get_pixel(
+                        w.saturating_sub(1).saturating_sub(x),
+                        h.saturating_sub(1).saturating_sub(y),
+                    )
                 }))
             }
             DynamicImage::ImageRgb8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageRgb8(RgbImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, h - 1 - y)
+                    *p.get_pixel(
+                        w.saturating_sub(1).saturating_sub(x),
+                        h.saturating_sub(1).saturating_sub(y),
+                    )
                 }))
             }
             DynamicImage::ImageRgba8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(w, h, |x, y| {
-                    *p.get_pixel(w - 1 - x, h - 1 - y)
+                    *p.get_pixel(
+                        w.saturating_sub(1).saturating_sub(x),
+                        h.saturating_sub(1).saturating_sub(y),
+                    )
                 }))
             }
             _ => {
                 let rgba = self.to_rgba8();
                 let (w, h) = rgba.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(w, h, |x, y| {
-                    *rgba.get_pixel(w - 1 - x, h - 1 - y)
+                    *rgba.get_pixel(
+                        w.saturating_sub(1).saturating_sub(x),
+                        h.saturating_sub(1).saturating_sub(y),
+                    )
                 }))
             }
         }
@@ -807,30 +829,32 @@ impl DynamicImage {
             DynamicImage::ImageLuma8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLuma8(GrayImage::from_fn(h, w, |x, y| {
-                    *p.get_pixel(w - 1 - y, x)
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(y), x)
                 }))
             }
             DynamicImage::ImageLumaA8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageLumaA8(GrayAlphaImage::from_fn(h, w, |x, y| {
-                    *p.get_pixel(w - 1 - y, x)
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(y), x)
                 }))
             }
             DynamicImage::ImageRgb8(p) => {
                 let (w, h) = p.dimensions();
-                DynamicImage::ImageRgb8(RgbImage::from_fn(h, w, |x, y| *p.get_pixel(w - 1 - y, x)))
+                DynamicImage::ImageRgb8(RgbImage::from_fn(h, w, |x, y| {
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(y), x)
+                }))
             }
             DynamicImage::ImageRgba8(p) => {
                 let (w, h) = p.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(h, w, |x, y| {
-                    *p.get_pixel(w - 1 - y, x)
+                    *p.get_pixel(w.saturating_sub(1).saturating_sub(y), x)
                 }))
             }
             _ => {
                 let rgba = self.to_rgba8();
                 let (w, h) = rgba.dimensions();
                 DynamicImage::ImageRgba8(RgbaImage::from_fn(h, w, |x, y| {
-                    *rgba.get_pixel(w - 1 - y, x)
+                    *rgba.get_pixel(w.saturating_sub(1).saturating_sub(y), x)
                 }))
             }
         }
@@ -844,7 +868,7 @@ impl DynamicImage {
                 let mut buf = GrayImage::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -854,7 +878,7 @@ impl DynamicImage {
                 let mut buf = GrayAlphaImage::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -864,7 +888,7 @@ impl DynamicImage {
                 let mut buf = RgbImage::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -874,7 +898,7 @@ impl DynamicImage {
                 let mut buf = RgbaImage::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -884,7 +908,7 @@ impl DynamicImage {
                 let mut buf = ImageBuffer::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -894,7 +918,7 @@ impl DynamicImage {
                 let mut buf = ImageBuffer::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -904,7 +928,7 @@ impl DynamicImage {
                 let mut buf = ImageBuffer::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -914,7 +938,7 @@ impl DynamicImage {
                 let mut buf = ImageBuffer::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -924,7 +948,7 @@ impl DynamicImage {
                 let mut buf = ImageBuffer::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -934,7 +958,7 @@ impl DynamicImage {
                 let mut buf = ImageBuffer::new(width, height);
                 for dy in 0..height {
                     for dx in 0..width {
-                        let px = *p.get_pixel(x + dx, y + dy);
+                        let px = *p.get_pixel(x.saturating_add(dx), y.saturating_add(dy));
                         buf.put_pixel(dx, dy, px);
                     }
                 }
@@ -1087,7 +1111,7 @@ impl From<GrayAlphaImage> for DynamicImage {
 
 // Helper sealed trait for color conversion
 trait IntoColor<Other> {
-    fn into_color(&self) -> Other;
+    fn to_color(&self) -> Other;
 }
 
 impl<O, S> IntoColor<O> for S
@@ -1095,14 +1119,14 @@ where
     O: Pixel + FromColor<S>,
 {
     #[allow(deprecated)]
-    fn into_color(&self) -> O {
+    fn to_color(&self) -> O {
         let mut pix = O::from_channels(
             O::Subpixel::DEFAULT_MIN_VALUE,
             O::Subpixel::DEFAULT_MIN_VALUE,
             O::Subpixel::DEFAULT_MIN_VALUE,
             O::Subpixel::DEFAULT_MIN_VALUE,
         );
-        pix.from_color(self);
+        pix.copy_from_color(self);
         pix
     }
 }
@@ -1115,16 +1139,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = img.to_rgba32f();
     let luma8 = DynamicImage::new_luma8(1, 1);
     let _: ImageBuffer<Luma<u8>, Vec<u8>> = luma8.to();
-    let _ = luma8.to_generic::<Luma<u8>, Vec<u8>>();
-    let _ = DynamicImage::new_luma_a8(1, 1).to_generic::<LumaA<u8>, Vec<u8>>();
-    let _ = DynamicImage::new_rgb8(1, 1).to_generic::<Rgb<u8>, Vec<u8>>();
-    let _ = DynamicImage::new_rgba8(1, 1).to_generic::<Rgba<u8>, Vec<u8>>();
-    let _ = DynamicImage::new_luma16(1, 1).to_generic::<Luma<u16>, Vec<u16>>();
-    let _ = DynamicImage::new_luma_a16(1, 1).to_generic::<LumaA<u16>, Vec<u16>>();
-    let _ = DynamicImage::new_rgb16(1, 1).to_generic::<Rgb<u16>, Vec<u16>>();
-    let _ = DynamicImage::new_rgba16(1, 1).to_generic::<Rgba<u16>, Vec<u16>>();
-    let _ = DynamicImage::new_rgb32f(1, 1).to_generic::<Rgb<f32>, Vec<f32>>();
-    let _ = DynamicImage::new_rgba32f(1, 1).to_generic::<Rgba<f32>, Vec<f32>>();
+    let _ = luma8.to_generic::<Luma<u8>>();
+    let _ = DynamicImage::new_luma_a8(1, 1).to_generic::<LumaA<u8>>();
+    let _ = DynamicImage::new_rgb8(1, 1).to_generic::<Rgb<u8>>();
+    let _ = DynamicImage::new_rgba8(1, 1).to_generic::<Rgba<u8>>();
+    let _ = DynamicImage::new_luma16(1, 1).to_generic::<Luma<u16>>();
+    let _ = DynamicImage::new_luma_a16(1, 1).to_generic::<LumaA<u16>>();
+    let _ = DynamicImage::new_rgb16(1, 1).to_generic::<Rgb<u16>>();
+    let _ = DynamicImage::new_rgba16(1, 1).to_generic::<Rgba<u16>>();
+    let _ = DynamicImage::new_rgb32f(1, 1).to_generic::<Rgb<f32>>();
+    let _ = DynamicImage::new_rgba32f(1, 1).to_generic::<Rgba<f32>>();
     let images = [
         DynamicImage::new_luma8(1, 1),
         DynamicImage::new_luma_a8(1, 1),
@@ -1182,7 +1206,7 @@ impl GenericImageView for DynamicImage {
     }
 
     fn get_pixel(&self, x: u32, y: u32) -> Rgba<u8> {
-        dynamic_map!(*self, ref p, p.get_pixel(x, y).to_rgba().into_color())
+        dynamic_map!(*self, ref p, p.get_pixel(x, y).to_rgba().to_color())
     }
 }
 
@@ -1217,29 +1241,32 @@ impl GenericImageTrait for DynamicImage {
             }
             DynamicImage::ImageLuma16(img) => {
                 let p = pixel.to_luma();
-                let p16 = Luma([(p[0] as u16 * 257)]);
+                let p16 = Luma([u16::from(p[0]).saturating_mul(257)]);
                 img.put_pixel(x, y, p16);
             }
             DynamicImage::ImageLumaA16(img) => {
                 let p = pixel.to_luma_alpha();
-                let pa16 = LumaA([(p[0] as u16 * 257), (p[1] as u16 * 257)]);
+                let pa16 = LumaA([
+                    u16::from(p[0]).saturating_mul(257),
+                    u16::from(p[1]).saturating_mul(257),
+                ]);
                 img.put_pixel(x, y, pa16);
             }
             DynamicImage::ImageRgb16(img) => {
                 let p = pixel.to_rgb();
                 let pr16 = Rgb([
-                    (p[0] as u16 * 257),
-                    (p[1] as u16 * 257),
-                    (p[2] as u16 * 257),
+                    u16::from(p[0]).saturating_mul(257),
+                    u16::from(p[1]).saturating_mul(257),
+                    u16::from(p[2]).saturating_mul(257),
                 ]);
                 img.put_pixel(x, y, pr16);
             }
             DynamicImage::ImageRgba16(img) => {
                 let p16 = Rgba([
-                    (pixel[0] as u16 * 257),
-                    (pixel[1] as u16 * 257),
-                    (pixel[2] as u16 * 257),
-                    (pixel[3] as u16 * 257),
+                    u16::from(pixel[0]).saturating_mul(257),
+                    u16::from(pixel[1]).saturating_mul(257),
+                    u16::from(pixel[2]).saturating_mul(257),
+                    u16::from(pixel[3]).saturating_mul(257),
                 ]);
                 img.put_pixel(x, y, p16);
             }
@@ -1268,13 +1295,20 @@ impl GenericImageTrait for DynamicImage {
     fn blend_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
         // Simple alpha blend using the current pixel
         let current = self.get_pixel(x, y);
-        let a = pixel[3] as f32 / 255.0;
-        let inv_a = 1.0 - a;
+        let alpha = pixel[3];
+        let inverse_alpha = u8::MAX.saturating_sub(alpha);
+        let blend_channel = |source: u8, destination: u8| {
+            let weighted = u32::from(source)
+                .saturating_mul(u32::from(alpha))
+                .saturating_add(u32::from(destination).saturating_mul(u32::from(inverse_alpha)));
+            let blended = weighted.checked_div(u32::from(u8::MAX)).unwrap_or_default();
+            u8::try_from(blended).unwrap_or(u8::MAX)
+        };
         let blended = Rgba([
-            (pixel[0] as f32 * a + current[0] as f32 * inv_a) as u8,
-            (pixel[1] as f32 * a + current[1] as f32 * inv_a) as u8,
-            (pixel[2] as f32 * a + current[2] as f32 * inv_a) as u8,
-            (pixel[3] as f32 * a + current[3] as f32 * inv_a) as u8,
+            blend_channel(pixel[0], current[0]),
+            blend_channel(pixel[1], current[1]),
+            blend_channel(pixel[2], current[2]),
+            blend_channel(pixel[3], current[3]),
         ]);
         self.put_pixel(x, y, blended);
     }

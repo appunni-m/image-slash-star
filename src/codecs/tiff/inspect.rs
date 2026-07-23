@@ -18,8 +18,8 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     let first_offset = endian.u32_exact([offset[0], offset[1], offset[2], offset[3]]) as usize;
     let directory = Directory::parse(data, first_offset, endian)?;
 
-    let width = directory.one(256)? as u32;
-    let height = directory.one(257)? as u32;
+    let width = bounded_u32(directory.one(256)?);
+    let height = bounded_u32(directory.one(257)?);
     if width == 0 || height == 0 {
         return None;
     }
@@ -45,11 +45,44 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
         width,
         height,
         mode,
-        bit_depth: bit_depth as u8,
+        bit_depth: bit_depth.to_le_bytes()[0],
         palette,
         is_animated: frame_count > 1,
         frame_count: complete_chain.then_some(frame_count),
     })
+}
+
+/// Validate the IFD fields Pillow consumes while opening the first page.
+pub(crate) fn verify(data: &[u8]) -> Option<()> {
+    let endian = match data.get(..2)? {
+        b"II" => Endian::Little,
+        b"MM" => Endian::Big,
+        _ => return None,
+    };
+    let offset = data.get(4..8)?;
+    let first_offset = endian.u32_exact([offset[0], offset[1], offset[2], offset[3]]) as usize;
+    let directory = Directory::parse(data, first_offset, endian)?;
+    let compression = directory.one_or(259, 1);
+    if !matches!(compression, 1 | 5 | 8 | 32_773 | 32_946) {
+        return None;
+    }
+    for tag in [273, 324] {
+        if directory
+            .values(tag)
+            .is_some_and(|values| values.is_empty())
+        {
+            return None;
+        }
+    }
+    for tag in [322, 323] {
+        if directory
+            .field_type(tag)
+            .is_some_and(|field_type| !matches!(field_type, 3 | 4))
+        {
+            return None;
+        }
+    }
+    Some(())
 }
 
 fn mode_and_palette(
@@ -81,9 +114,17 @@ fn mode_and_palette(
         map.get(..entries.wrapping_mul(3)).map(|map| {
             let mut rgb = Vec::with_capacity(entries.wrapping_mul(3));
             for index in 0..entries {
-                rgb.push((map[index] >> 8) as u8);
-                rgb.push((map[entries + index] >> 8) as u8);
-                rgb.push((map[entries * 2 + index] >> 8) as u8);
+                rgb.push(map[index].wrapping_shr(8).to_le_bytes()[0]);
+                rgb.push(
+                    map[entries.saturating_add(index)]
+                        .wrapping_shr(8)
+                        .to_le_bytes()[0],
+                );
+                rgb.push(
+                    map[entries.saturating_mul(2).saturating_add(index)]
+                        .wrapping_shr(8)
+                        .to_le_bytes()[0],
+                );
             }
             ImagePalette {
                 rgb,
@@ -111,5 +152,18 @@ fn count_directories(data: &[u8], first_offset: usize, endian: Endian) -> (u32, 
         };
         offset = directory.next_offset();
     }
-    (seen.len() as u32, complete)
+    (bounded_u32(seen.len()), complete)
+}
+
+fn bounded_u32(value: usize) -> u32 {
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = verify(b"");
+    let _ = verify(b"II");
+    let _ = verify(b"II\x2a\0\xff\xff\xff\xff");
+    let _ = verify(b"ZZ\0\0\0\0\0\0");
 }

@@ -14,7 +14,8 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     if reserved != 0 || !matches!(kind, 1 | 2) || count == 0 || count > 255 {
         return None;
     }
-    let directory = data.get(HEADER_SIZE..HEADER_SIZE + count * ENTRY_SIZE)?;
+    let directory =
+        data.get(HEADER_SIZE..HEADER_SIZE.saturating_add(count.saturating_mul(ENTRY_SIZE)))?;
     let mut best = &directory[..ENTRY_SIZE];
     let mut best_score = 0;
     for entry in directory.chunks_exact(ENTRY_SIZE) {
@@ -108,21 +109,35 @@ fn inspect_icon_dib(data: &[u8]) -> Option<ImageInfo> {
         1 => (width as usize).div_ceil(8),
         4 => (width as usize).div_ceil(2),
         8 => width as usize,
-        24 => width as usize * 3,
-        32 => width as usize * 4,
+        24 => bounded_usize(width).saturating_mul(3),
+        32 => bounded_usize(width).saturating_mul(4),
         _ => return None,
     };
-    let padded_row = (row_bytes + 3) & !3;
-    let required = 40 + palette_entries * 4 + padded_row * height as usize;
+    let padded_row = row_bytes.saturating_add(3) & !3;
+    let required = 40usize
+        .saturating_add(palette_entries.saturating_mul(4))
+        .saturating_add(padded_row.saturating_mul(bounded_usize(height)));
     data.get(..required)?;
     Some(ImageInfo {
         format: ImageFormat::Ico,
         width,
         height,
         mode: ImageMode::Rgba8,
-        bit_depth: bits as u8,
+        bit_depth: bits.to_le_bytes()[0],
         palette: None,
         is_animated: false,
         frame_count: Some(1),
     })
+}
+
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
 }

@@ -23,7 +23,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "subsampling_422",
@@ -36,7 +40,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "subsampling_420",
@@ -49,7 +57,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "subsampling_411",
@@ -62,7 +74,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "subsampling_gray",
@@ -75,7 +91,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_ycbcr",
@@ -88,7 +108,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_rgb",
@@ -101,7 +125,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_cmyk",
@@ -114,7 +142,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_cmyk_raw",
@@ -127,7 +159,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "huffman_default",
@@ -140,7 +176,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "huffman_optimized",
@@ -153,7 +193,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "huffman_progressive",
@@ -166,7 +210,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_100",
@@ -179,7 +227,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_100_q90",
@@ -192,7 +244,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_100_q75",
@@ -205,7 +261,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_50",
@@ -218,7 +278,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_50_q25",
@@ -231,7 +295,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_10",
@@ -244,7 +312,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "quality_1",
@@ -257,7 +329,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_minimal",
@@ -270,7 +346,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd",
@@ -283,7 +363,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_33x33",
@@ -296,7 +380,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_large",
@@ -309,7 +397,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_1x1",
@@ -322,7 +414,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "narrow_422",
@@ -335,7 +431,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "unusual_sampling",
@@ -348,7 +448,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "unusual_sampling_sampling_1x3",
@@ -361,7 +465,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "restart_none",
@@ -374,7 +482,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "restart_interval",
@@ -387,7 +499,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "exif_orientation",
@@ -400,7 +516,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "exif_thumbnail",
@@ -413,7 +533,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "no_exif",
@@ -426,7 +550,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "trailing_data",
@@ -439,7 +567,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "multiple_eoi",
@@ -452,7 +584,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "zero_length",
@@ -465,7 +601,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "truncated",
@@ -478,7 +618,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "corrupt_header",
@@ -491,7 +635,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers",
@@ -504,7 +652,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_fill_marker_only",
@@ -517,7 +669,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_markerless_tail",
@@ -530,7 +686,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_length",
@@ -543,7 +703,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_precision",
@@ -556,7 +720,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_height",
@@ -569,7 +737,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_width",
@@ -582,7 +754,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_components",
@@ -595,7 +771,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_comp_id",
@@ -608,7 +788,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_sampling",
@@ -621,7 +805,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_no_quant",
@@ -634,7 +822,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_precision_12",
@@ -647,7 +839,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_two_components",
@@ -660,7 +856,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_zero_sampling",
@@ -673,7 +873,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_high_h_sampling",
@@ -686,7 +890,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_zero_v_sampling",
@@ -699,7 +907,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_high_v_sampling",
@@ -712,7 +924,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_bad_quant_table",
@@ -725,7 +941,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_missing_quant_table",
@@ -738,7 +958,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_sparse_quant_table",
@@ -751,7 +975,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dqt_bad_table",
@@ -764,7 +992,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dqt_no_length",
@@ -777,7 +1009,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dqt_no_info",
@@ -790,7 +1026,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dqt_truncated_8bit_value",
@@ -803,7 +1043,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dqt_truncated_16bit_value",
@@ -816,7 +1060,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dht_bad_table",
@@ -829,7 +1077,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dht_no_length",
@@ -842,7 +1094,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dht_no_info",
@@ -855,7 +1111,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dht_truncated_counts",
@@ -868,7 +1128,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dht_truncated_values",
@@ -881,7 +1145,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dht_oversubscribed",
@@ -894,7 +1162,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_length",
@@ -907,7 +1179,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_component_count",
@@ -920,7 +1196,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_comp_id",
@@ -933,7 +1213,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_table",
@@ -946,7 +1230,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_ss",
@@ -959,7 +1247,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_se",
@@ -972,7 +1264,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_no_ahal",
@@ -985,7 +1281,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_unknown_component",
@@ -998,7 +1298,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_zero_components",
@@ -1011,7 +1315,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_bad_dc_table",
@@ -1024,7 +1332,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_bad_ac_table",
@@ -1037,7 +1349,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_missing_dc_table",
@@ -1050,7 +1366,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_missing_ac_table",
@@ -1063,7 +1383,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_sparse_dc_table",
@@ -1076,7 +1400,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_sparse_ac_table",
@@ -1089,7 +1417,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_duplicate_sof",
@@ -1102,7 +1434,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sos_before_sof",
@@ -1115,7 +1451,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_eoi_without_sos",
@@ -1128,7 +1468,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_wrong_soi",
@@ -1141,7 +1485,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_truncated_sof_payload",
@@ -1154,7 +1502,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_short_height",
@@ -1167,7 +1519,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_partial_height",
@@ -1180,7 +1536,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_short_width",
@@ -1193,7 +1553,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_short_components",
@@ -1206,7 +1570,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_short_component_table",
@@ -1219,7 +1587,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_fill_marker_truncated",
@@ -1232,7 +1604,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dri_no_length",
@@ -1245,7 +1621,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_dri_no_value",
@@ -1258,7 +1638,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_app14_no_length",
@@ -1271,7 +1655,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_app14_declared_too_long",
@@ -1284,7 +1672,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_app14_truncated_payload",
@@ -1297,7 +1689,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_app14_adobe_short_transform",
@@ -1310,7 +1706,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_tem_marker",
@@ -1323,7 +1723,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_unknown_no_length",
@@ -1336,7 +1740,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_zero_width",
@@ -1349,7 +1757,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_sof_zero_height",
@@ -1362,7 +1774,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_restart_before_scan",
@@ -1375,7 +1791,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "malformed_markers_entropy_unexpected_marker",
@@ -1388,7 +1808,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed",
@@ -1401,7 +1825,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_unknown_short_length",
@@ -1414,7 +1842,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_app14_non_adobe",
@@ -1427,7 +1859,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_prefixed_stuffed_marker",
@@ -1440,7 +1876,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_entropy_eoi_padding",
@@ -1453,7 +1893,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_entropy_empty_scan",
@@ -1466,7 +1910,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
@@ -1479,7 +1927,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
@@ -1492,7 +1944,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
@@ -1505,7 +1961,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
@@ -1518,7 +1978,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_progressive_scan0_empty",
@@ -1531,7 +1995,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "dqt_16bit",
@@ -1544,7 +2012,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "missing_eoi",
@@ -1557,7 +2029,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "baseline_standard",
@@ -1570,7 +2046,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "progressive_spectral",
@@ -1583,7 +2063,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "progressive_modes",
@@ -1596,7 +2080,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "progressive_modes_progressive_cmyk",
@@ -1609,7 +2097,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "progressive_restart",
@@ -1622,7 +2114,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     }
   ]
 }

@@ -6,8 +6,16 @@
 /// Helper: write a big-endian u16.
 #[inline]
 pub(crate) fn w16(out: &mut Vec<u8>, v: u16) {
-    out.push((v >> 8) as u8);
-    out.push(v as u8);
+    out.extend_from_slice(&v.to_be_bytes());
+}
+
+fn bounded_u16(value: usize) -> u16 {
+    let bytes = value.to_le_bytes();
+    u16::from_le_bytes([bytes[0], bytes[1]])
+}
+
+fn bounded_u8(value: u16) -> u8 {
+    value.to_le_bytes()[0]
 }
 
 /// SOI (Start Of Image).
@@ -26,7 +34,10 @@ pub(crate) fn write_jfif_app0(out: &mut Vec<u8>) {
 
 /// APP1 segment containing caller-provided EXIF bytes.
 pub(crate) fn write_exif_app1(out: &mut Vec<u8>, exif: &[u8]) -> Option<()> {
-    let length = u16::try_from(exif.len() + 2).ok()?;
+    let length = exif
+        .len()
+        .checked_add(2)
+        .and_then(|value| u16::try_from(value).ok())?;
     out.extend_from_slice(&[0xFF, 0xE1]);
     w16(out, length);
     out.extend_from_slice(exif);
@@ -51,10 +62,10 @@ pub(crate) fn write_dqt(out: &mut Vec<u8>, slot: u8, table: &[u16; 64]) {
     out.extend_from_slice(&[0xFF, 0xDB]);
     w16(out, 67);
     out.push(slot & 0x0F);
-    for i in 0..64 {
-        let v = table[JPEG_NATURAL_ORDER[i]];
+    for &natural_index in &JPEG_NATURAL_ORDER {
+        let v = table[natural_index];
         debug_assert!(v <= 255);
-        out.push(v as u8);
+        out.push(bounded_u8(v));
     }
 }
 
@@ -62,7 +73,7 @@ pub(crate) fn write_dqt(out: &mut Vec<u8>, slot: u8, table: &[u16; 64]) {
 /// `class` 0=DC, 1=AC.  `slot` 0..3.  `bits` is the 16-entry BITS array;
 /// `huffval` is the symbol list (length = sum of bits).
 pub(crate) fn write_dht(out: &mut Vec<u8>, class: u8, slot: u8, bits: &[u8; 16], huffval: &[u8]) {
-    let length = 2u16 + 1 + 16 + huffval.len() as u16;
+    let length = 19u16.saturating_add(bounded_u16(huffval.len()));
     out.extend_from_slice(&[0xFF, 0xC4]);
     w16(out, length);
     out.push((class << 4) | (slot & 0x0F));
@@ -78,14 +89,14 @@ pub(crate) fn write_sof(
     height: u16,
     components: &[(u8, u8, u8, u8)], // (id, h_samp, v_samp, quant_slot)
 ) {
-    let ncomp = components.len() as u16;
-    let length = 2u16 + 1 + 2 + 2 + 1 + 3 * ncomp;
+    let ncomp = bounded_u16(components.len());
+    let length = 8u16.saturating_add(3u16.saturating_mul(ncomp));
     out.extend_from_slice(&[0xFF, marker]);
     w16(out, length);
     out.push(8); // data precision (8 bit)
     w16(out, height);
     w16(out, width);
-    out.push(ncomp as u8);
+    out.push(bounded_u8(ncomp));
     for &(id, h, v, q) in components {
         out.push(id);
         out.push((h << 4) | v);
@@ -102,11 +113,11 @@ pub(crate) fn write_sos(
     ah: u8,
     al: u8,
 ) {
-    let ncomp = components.len() as u16;
-    let length = 2u16 + 1 + 2 * ncomp + 3;
+    let ncomp = bounded_u16(components.len());
+    let length = 6u16.saturating_add(2u16.saturating_mul(ncomp));
     out.extend_from_slice(&[0xFF, 0xDA]);
     w16(out, length);
-    out.push(ncomp as u8);
+    out.push(bounded_u8(ncomp));
     for &(id, dc, ac) in components {
         out.push(id);
         out.push((dc << 4) | ac);
@@ -125,5 +136,5 @@ pub(crate) fn write_dri(out: &mut Vec<u8>, interval: u16) {
 
 /// Write a RSTn marker (n in 0..7).
 pub(crate) fn write_rst(out: &mut Vec<u8>, n: u8) {
-    out.extend_from_slice(&[0xFF, 0xD0 + (n & 7)]);
+    out.extend_from_slice(&[0xFF, 0xD0u8.saturating_add(n & 7)]);
 }

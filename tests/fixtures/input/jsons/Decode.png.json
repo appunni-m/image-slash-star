@@ -23,7 +23,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_gray_alpha",
@@ -36,7 +40,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_rgb",
@@ -49,7 +57,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_rgba",
@@ -62,7 +74,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_rgba_alpha_checker",
@@ -75,7 +91,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_rgba_alpha_partial",
@@ -88,7 +108,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed",
@@ -101,7 +125,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed_palette_2color",
@@ -114,7 +142,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed_palette_256color",
@@ -127,7 +159,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed_palette_2bit",
@@ -140,7 +176,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed_palette_4bit",
@@ -153,7 +193,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed_alpha",
@@ -166,7 +210,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "color_indexed_alpha_palette_trns_opaque",
@@ -179,7 +227,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_1",
@@ -192,7 +244,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_2",
@@ -205,7 +261,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_4",
@@ -218,7 +278,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_8",
@@ -231,7 +295,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_16",
@@ -244,7 +312,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_16_rgb16",
@@ -257,7 +329,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_16_la16",
@@ -270,7 +346,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "depth_16_rgba16",
@@ -283,7 +363,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "no_interlace",
@@ -296,7 +380,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "interlace_adam7",
@@ -309,7 +397,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "interlace_adam7_adam7_1x1",
@@ -322,7 +414,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "interlace_adam7_adam7_2x3",
@@ -335,7 +431,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "filter_none",
@@ -348,7 +448,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "filter_sub",
@@ -361,7 +465,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "filter_up",
@@ -374,7 +482,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "filter_average",
@@ -387,7 +499,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "filter_paeth",
@@ -400,7 +516,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "filter_mixed",
@@ -413,7 +533,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compress_default",
@@ -426,7 +550,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compress_default_compress_fast",
@@ -439,7 +567,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compress_default_compress_mid",
@@ -452,7 +584,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compress_none",
@@ -465,7 +601,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compress_max",
@@ -478,7 +618,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_gama",
@@ -491,7 +635,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_srgb",
@@ -504,7 +652,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_iccp",
@@ -517,7 +669,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_text",
@@ -530,7 +686,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_time",
@@ -543,7 +703,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_background",
@@ -556,7 +720,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "chunk_phys",
@@ -569,7 +737,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_1x1",
@@ -582,7 +754,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_small",
@@ -595,7 +771,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_large",
@@ -608,7 +788,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd",
@@ -621,7 +805,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_2x3",
@@ -634,7 +822,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_1x255",
@@ -647,7 +839,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd_255x1",
@@ -660,7 +856,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_truncated",
@@ -673,7 +873,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_truncated_short_signature",
@@ -686,7 +890,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_corrupt_crc",
@@ -699,7 +907,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_wrong_magic",
@@ -712,7 +924,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure",
@@ -725,7 +941,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_short_ihdr",
@@ -738,7 +958,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_short_chunk_kind",
@@ -751,7 +975,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zero_width",
@@ -764,7 +992,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zero_height",
@@ -777,7 +1009,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_invalid_filter_method",
@@ -790,7 +1026,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_invalid_interlace",
@@ -803,7 +1043,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_invalid_color_type",
@@ -816,7 +1060,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_invalid_color_depth",
@@ -829,7 +1077,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_empty_idat",
@@ -842,7 +1094,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_invalid_scanline_filter",
@@ -855,7 +1111,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_short_inflated_scanline",
@@ -868,7 +1128,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_short_header",
@@ -881,7 +1145,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_invalid_header",
@@ -894,7 +1162,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_reserved_block",
@@ -907,7 +1179,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_bad_stored_complement",
@@ -920,7 +1196,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_bad_adler",
@@ -933,7 +1213,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_backreference_before_output",
@@ -946,7 +1230,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_reserved_distance_symbol",
@@ -959,7 +1247,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_reserved_literal_symbol",
@@ -972,7 +1264,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_truncated_fixed_block",
@@ -985,7 +1281,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_empty_code_length_tree",
@@ -998,7 +1298,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_oversubscribed_code_length_tree",
@@ -1011,7 +1315,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_dynamic_repeat_overflow",
@@ -1024,7 +1332,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_undecodable_code_length",
@@ -1037,7 +1349,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_zlib_dynamic_backreference_before_output",
@@ -1050,7 +1366,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_adam7_invalid_scanline_filter",
@@ -1063,7 +1383,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_adam7_giant_dimensions",
@@ -1076,7 +1400,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_palette_overlong_plte",
@@ -1089,7 +1417,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
@@ -1102,7 +1434,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_ihdr_only",
@@ -1115,7 +1451,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_ihdr_trailing_byte",
@@ -1128,7 +1468,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_truncated_ancillary_chunk",
@@ -1141,7 +1485,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_structure_actl_short",
@@ -1154,7 +1502,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed",
@@ -1167,7 +1519,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_missing_iend",
@@ -1180,7 +1536,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_palette_trns_too_long",
@@ -1193,7 +1553,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_palette_missing_plte",
@@ -1206,7 +1570,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_palette_empty_plte",
@@ -1219,7 +1587,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_palette_short_plte",
@@ -1232,7 +1604,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_palette_partial_plte",
@@ -1245,7 +1621,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_palette_trns_without_plte",
@@ -1258,7 +1638,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_duplicate_plte",
@@ -1271,7 +1655,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_duplicate_trns",
@@ -1284,7 +1672,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_actl_zero_frames",
@@ -1297,7 +1689,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
@@ -1310,7 +1706,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
@@ -1323,7 +1723,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
@@ -1336,7 +1740,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "compression_dynamic_manual",
@@ -1349,7 +1757,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "transparency_rgb",
@@ -1362,7 +1774,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "apng_static",
@@ -1375,7 +1791,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "apng_animated",
@@ -1388,7 +1808,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     }
   ]
 }

@@ -18,7 +18,11 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     let height = u32::from_be_bytes([header[4], header[5], header[6], header[7]]);
     let bit_depth = header[8];
     let color_type = header[9];
-    if width == 0 || height == 0 || header[11] != 0 || header[12] > 1 {
+    if width == 0
+        || height == 0
+        || u64::from(width).saturating_mul(u64::from(height)) > 178_956_970
+        || header[11] != 0
+    {
         return None;
     }
     let mode = png_mode(color_type, bit_depth)?;

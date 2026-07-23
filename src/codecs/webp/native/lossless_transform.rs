@@ -1,3 +1,29 @@
+//! Inverse VP8L predictor, color, subtract-green, and palette transforms.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// These inverse kernels deliberately use modular byte arithmetic, packed-index
+// narrowing, and geometry established by the VP8L frame header.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use std::ops::Range;
 
 #[derive(Debug, Clone)]
@@ -118,6 +144,8 @@ pub fn apply_predictor_transform_4(image_data: &mut [u8], range: Range<usize>, w
         i += 1;
     }
 }
+// The four-byte predecessor slice is exact by the pixel-aligned range contract.
+#[allow(clippy::unwrap_used)]
 pub fn apply_predictor_transform_5(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
 
@@ -148,6 +176,8 @@ pub fn apply_predictor_transform_6(image_data: &mut [u8], range: Range<usize>, w
         i += 1;
     }
 }
+// The four-byte predecessor slice is exact by the pixel-aligned range contract.
+#[allow(clippy::unwrap_used)]
 pub fn apply_predictor_transform_7(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
 
@@ -204,6 +234,8 @@ pub fn apply_predictor_transform_9(image_data: &mut [u8], range: Range<usize>, w
         i += 1;
     }
 }
+// The four-byte predecessor slice is exact by the pixel-aligned range contract.
+#[allow(clippy::unwrap_used)]
 pub fn apply_predictor_transform_10(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
     let mut prev: [u8; 4] = old[range.start - 4..][..4].try_into().unwrap();
@@ -285,6 +317,8 @@ pub fn apply_predictor_transform_11(image_data: &mut [u8], range: Range<usize>, 
         ];
     }
 }
+// The four-byte predecessor slice is exact by the pixel-aligned range contract.
+#[allow(clippy::unwrap_used)]
 pub fn apply_predictor_transform_12(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
     let mut prev: [u8; 4] = old[range.start - 4..][..4].try_into().unwrap();
@@ -322,6 +356,8 @@ pub fn apply_predictor_transform_12(image_data: &mut [u8], range: Range<usize>, 
         chunk.copy_from_slice(&prev);
     }
 }
+// The four-byte predecessor slice is exact by the pixel-aligned range contract.
+#[allow(clippy::unwrap_used)]
 pub fn apply_predictor_transform_13(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
     let mut prev: [u8; 4] = old[range.start - 4..][..4].try_into().unwrap();
@@ -404,6 +440,9 @@ pub(crate) fn apply_subtract_green_transform(image_data: &mut [u8]) {
     }
 }
 
+// `chunks_exact(4)` and the explicit 256-entry padding make every array
+// conversion in this dispatch exact.
+#[allow(clippy::unwrap_used)]
 pub(crate) fn apply_color_indexing_transform(
     image_data: &mut [u8],
     width: u16,
@@ -465,6 +504,9 @@ pub(crate) fn apply_color_indexing_transform(
 }
 
 // Helper function with const generics for W_BITS and EXP_ENTRY_SIZE
+// Const-generic entry sizes and four-byte pixel chunks make all array
+// conversions exact; out-of-range palette entries intentionally map to zero.
+#[allow(clippy::unwrap_used)]
 fn apply_color_indexing_transform_small_table<const W_BITS: u8, const EXP_ENTRY_SIZE: usize>(
     image_data: &mut [u8],
     width: u16,

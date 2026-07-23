@@ -215,10 +215,11 @@ fn checked_decode_info(info: FfiDecodeInfo) -> Option<DecodeInfo> {
     };
     let timescale = NonZeroU64::new(info.timescale)?;
     let channels = if has_alpha { 4 } else { 3 };
+    let product = u64::from(width).saturating_mul(u64::from(height));
     #[cfg(target_pointer_width = "64")]
-    let pixel_count = (u64::from(width) * u64::from(height)) as usize;
+    let pixel_count = usize::from_ne_bytes(product.to_ne_bytes());
     #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = usize::try_from(u64::from(width) * u64::from(height)).ok()?;
+    let pixel_count = usize::try_from(product).ok()?;
     let pixel_len = pixel_count.checked_mul(channels)?;
     Some(DecodeInfo {
         width,
@@ -408,7 +409,7 @@ fn normalize_max_threads(available: Option<NonZeroUsize>) -> i32 {
         Some(value) => value.get(),
         None => 1,
     };
-    threads.min(i32::MAX as usize) as i32
+    i32::try_from(threads).unwrap_or(i32::MAX)
 }
 
 #[cfg(coverage)]

@@ -1,6 +1,28 @@
 //! Rudimentary utility for reading Canonical Huffman Codes.
 //! Based off <https://github.com/webmproject/libwebp/blob/7f8472a610b61ec780ef0a8873cd954ac512a505/src/utils/huffman.c>
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+#![warn(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use std::io::BufRead;
 
 use super::decoder::DecodingError;
@@ -39,6 +61,15 @@ impl Default for HuffmanTree {
 
 impl HuffmanTree {
     /// Builds a tree implicitly, just from code lengths
+    ///
+    /// Canonical WebP code lengths are at most 15 bits and symbol alphabets fit
+    /// in `u16`. Table arithmetic and packed-field narrowing below are bounded
+    /// by those format invariants.
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     pub(crate) fn build_implicit(code_lengths: Vec<u16>) -> Result<Self, DecodingError> {
         // Count symbols and build histogram
         let mut num_symbols = 0;
@@ -190,6 +221,9 @@ impl HuffmanTree {
     }
 
     #[inline(never)]
+    // Tree offsets and depth increments were constructed by `build_implicit`
+    // and cannot escape their backing table.
+    #[allow(clippy::arithmetic_side_effects)]
     fn read_symbol_slowpath<R: BufRead>(
         tree: &[HuffmanTreeNode],
         mut v: usize,
@@ -218,6 +252,9 @@ impl HuffmanTree {
     ///
     /// You must call call `bit_reader.fill()` before calling this function or it may erroroneosly
     /// detect the end of the stream and return a bitstream error.
+    // The primary entry packs a <=15-bit length above a u16 symbol. The reader
+    // intentionally selects only the low 16 bits of its lookahead.
+    #[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
     pub(crate) fn read_symbol<R: BufRead>(
         &self,
         bit_reader: &mut BitReader<R>,
@@ -250,6 +287,8 @@ impl HuffmanTree {
     ///
     /// Returns a tuple of the codelength and symbol value. This function may return wrong
     /// information if there aren't enough bits in the bit reader to read the next symbol.
+    // Packed table fields have the same bounded representation as `read_symbol`.
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn peek_symbol<R: BufRead>(&self, bit_reader: &BitReader<R>) -> Option<(u8, u16)> {
         match &self.0 {
             HuffmanTreeInner::Tree {

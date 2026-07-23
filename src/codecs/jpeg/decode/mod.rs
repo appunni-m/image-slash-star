@@ -15,20 +15,21 @@
 //!            ISO/IEC 10918-1 / ITU-T T.81 (JPEG Standard)
 
 pub(crate) mod bit_reader;
-pub(crate) mod decode;
 pub(crate) mod huffman;
 pub(crate) mod idct;
+#[path = "decode.rs"]
+pub(crate) mod implementation;
 pub(crate) mod parser;
 pub(crate) mod progressive;
 pub(crate) mod upsample;
 
 // Re-export the public entry point so `crate::decode::jpeg::decode` still works.
-pub use decode::decode;
+pub use implementation::decode;
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     bit_reader::__coverage_exercise_private_branches();
-    decode::__coverage_exercise_private_branches();
+    implementation::__coverage_exercise_private_branches();
     huffman::__coverage_exercise_private_branches();
     progressive::__coverage_exercise_private_branches();
 }

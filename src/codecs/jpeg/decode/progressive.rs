@@ -15,8 +15,8 @@
 // (0,0), (0,1), (1,0), (1,1).
 
 use super::bit_reader::BitReader;
-use super::decode::extract_entropy_segments;
 use super::idct::{JPEG_NATURAL_ORDER, YccColorConverter, extend, jpeg_idct_islow};
+use super::implementation::extract_entropy_segments;
 use super::parser::JpegInfo;
 use super::upsample::{crop_component, fancy_upsample};
 use crate::types::{ColorType, DecodedImage};
@@ -42,6 +42,7 @@ impl ProgressiveState {
 }
 
 /// Process one DC-first block (decode_mcu_DC_first).
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn dc_first_block(
     br: &mut BitReader,
     dc_table: &super::huffman::HuffTable,
@@ -54,11 +55,11 @@ fn dc_first_block(
             return None;
         }
         let bits = br
-            .read_bits(dc_cat as u32)
+            .read_bits(u32::from(dc_cat))
             .expect("progressive DC coefficient bits are zero-padded");
-        *dc_pred += extend(bits, dc_cat);
+        *dc_pred = dc_pred.saturating_add(extend(bits, dc_cat));
     }
-    Some(*dc_pred << al)
+    Some(dc_pred.wrapping_shl(u32::from(al)))
 }
 
 /// Process one DC-refinement block (decode_mcu_DC_refine).
@@ -69,6 +70,7 @@ fn dc_refine_block(coeff: &mut i32, p1: i32) {
 
 /// Process one AC-first block (decode_mcu_AC_first).
 /// Updates eobrun.  Returns the number of coefficients decoded (for debugging).
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn ac_first_block(
     br: &mut BitReader,
     ac_table: &super::huffman::HuffTable,
@@ -79,49 +81,52 @@ fn ac_first_block(
     eobrun: &mut u32,
 ) -> Option<usize> {
     if *eobrun > 0 {
-        *eobrun -= 1;
+        *eobrun = eobrun.saturating_sub(1);
         return Some(0); // entire block zero in this band
     }
-    let ss = ss as usize;
-    let se = se as usize;
+    let ss = usize::from(ss);
+    let se = usize::from(se);
     let mut k = ss;
-    let mut ncoeffs = 0;
+    let mut ncoeffs = 0usize;
     while k <= se && k < 64 {
         let sym = ac_table.decode(br)?;
-        let run = (sym >> 4) as usize;
+        let run = usize::from(sym >> 4);
+        let run_bits = u32::from(sym >> 4);
         let size = sym & 0x0F;
         if size == 0 {
             if run == 15 {
-                k += 16; // ZRL
+                k = k.saturating_add(16); // ZRL
                 continue;
             }
             // EOB: EOBRUN = (1<<run) + extra_bits
-            *eobrun = 1u32 << run;
+            *eobrun = 1u32.wrapping_shl(run_bits);
             if run > 0 {
-                *eobrun += br
-                    .read_bits(run as u32)
-                    .expect("progressive AC EOBRUN bits are zero-padded");
+                *eobrun = eobrun.saturating_add(
+                    br.read_bits(run_bits)
+                        .expect("progressive AC EOBRUN bits are zero-padded"),
+                );
             }
-            *eobrun -= 1; // this block consumes one from the run
+            *eobrun = eobrun.saturating_sub(1); // this block consumes one from the run
             break;
         }
         // Coefficient at position k + run
-        k += run;
+        k = k.saturating_add(run);
         if k > se || k >= 64 {
             break;
         }
         let bits = br
-            .read_bits(size as u32)
+            .read_bits(u32::from(size))
             .expect("progressive AC coefficient bits are zero-padded");
-        coeffs[k] = extend(bits, size) << al;
-        ncoeffs += 1;
-        k += 1;
+        coeffs[k] = extend(bits, size).wrapping_shl(u32::from(al));
+        ncoeffs = ncoeffs.saturating_add(1);
+        k = k.saturating_add(1);
     }
     Some(ncoeffs)
 }
 
 /// Process one AC-refinement block (decode_mcu_AC_refine).
 /// Updates eobrun.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn ac_refine_block(
     br: &mut BitReader,
     ac_table: &super::huffman::HuffTable,
@@ -131,17 +136,17 @@ fn ac_refine_block(
     coeffs: &mut [i32; 64],
     eobrun: &mut u32,
 ) -> Option<()> {
-    let p1 = 1i32 << al;
-    let m1 = (-1i32) << al;
-    let ss = ss as usize;
-    let se = se as usize;
+    let p1 = 1i32.wrapping_shl(u32::from(al));
+    let m1 = (-1i32).wrapping_shl(u32::from(al));
+    let ss = usize::from(ss);
+    let se = usize::from(se);
     let mut k = ss;
 
     // Phase 1: Huffman decode when EOBRUN == 0
     if *eobrun == 0 {
         while k <= se && k < 64 {
             let sym = ac_table.decode(br)?;
-            let mut r = (sym >> 4) as i32;
+            let mut r = i32::from(sym >> 4);
             let size = sym & 0x0F;
 
             // New coefficient value
@@ -152,11 +157,12 @@ fn ac_refine_block(
                 Some(if bit != 0 { p1 } else { m1 })
             } else {
                 if r != 15 {
-                    *eobrun = 1u32 << r;
+                    *eobrun = 1u32.wrapping_shl(r.cast_unsigned());
                     if r > 0 {
-                        *eobrun += br
-                            .read_bits(r as u32)
-                            .expect("progressive AC refinement EOBRUN bits are zero-padded");
+                        *eobrun = eobrun.saturating_add(
+                            br.read_bits(r.cast_unsigned())
+                                .expect("progressive AC refinement EOBRUN bits are zero-padded"),
+                        );
                     }
                     break; // → Phase 2
                 }
@@ -172,26 +178,25 @@ fn ac_refine_block(
                     let bit = br
                         .read_bits(1)
                         .expect("progressive AC refinement bits are zero-padded");
-                    if bit != 0 {
-                        if (coeffs[k] & p1) == 0 {
-                            coeffs[k] += if coeffs[k] >= 0 { p1 } else { m1 };
-                        }
+                    if bit != 0 && (coeffs[k] & p1) == 0 {
+                        coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
                     }
                 } else {
-                    r -= 1;
+                    r = r.saturating_sub(1);
                     if r < 0 {
                         break;
                     }
                 }
-                k += 1;
+                k = k.saturating_add(1);
             }
 
-            if let Some(val) = new_val {
-                if k <= se && k < 64 {
-                    coeffs[k] = val;
-                }
+            if let Some(val) = new_val
+                && k <= se
+                && k < 64
+            {
+                coeffs[k] = val;
             }
-            k += 1;
+            k = k.saturating_add(1);
         }
     }
 
@@ -202,15 +207,13 @@ fn ac_refine_block(
                 let bit = br
                     .read_bits(1)
                     .expect("progressive AC refinement bits are zero-padded");
-                if bit != 0 {
-                    if (coeffs[k] & p1) == 0 {
-                        coeffs[k] += if coeffs[k] >= 0 { p1 } else { m1 };
-                    }
+                if bit != 0 && (coeffs[k] & p1) == 0 {
+                    coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
                 }
             }
-            k += 1;
+            k = k.saturating_add(1);
         }
-        *eobrun -= 1;
+        *eobrun = eobrun.saturating_sub(1);
     }
 
     Some(())
@@ -220,23 +223,57 @@ fn smooth_pred(num: i64, quant: i64, al: i32) -> i32 {
     if quant == 0 {
         return 0;
     }
-    let denom = quant << 8;
-    let round = quant << 7;
+    let denom = quant.saturating_mul(256);
+    let round = quant.saturating_mul(128);
     let mut pred = if num >= 0 {
-        ((round + num) / denom) as i32
+        low_i32(round.saturating_add(num).div_euclid(denom))
     } else {
-        -(((round - num) / denom) as i32)
+        low_i32(round.saturating_sub(num).div_euclid(denom)).saturating_neg()
     };
-    if al > 0 && pred >= (1 << al) {
-        pred = (1 << al) - 1;
+    if al > 0 {
+        let limit = 1i32.wrapping_shl(al.cast_unsigned());
+        if pred >= limit {
+            pred = limit.saturating_sub(1);
+        }
     }
     pred
 }
 
+fn low_i32(value: i64) -> i32 {
+    let [a, b, c, d, ..] = value.to_le_bytes();
+    i32::from_le_bytes([a, b, c, d])
+}
+
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn bounded_isize(value: usize) -> isize {
+    isize::from_le_bytes(value.to_le_bytes())
+}
+
+fn weighted_dc(terms: &[(i32, i32)]) -> i64 {
+    terms.iter().fold(0i64, |sum, &(weight, dc)| {
+        sum.saturating_add(i64::from(weight).saturating_mul(i64::from(dc)))
+    })
+}
+
 fn dc_at(blocks: &[[i32; 64]], blocks_x: usize, blocks_y: usize, x: isize, y: isize) -> i32 {
-    let clamped_x = x.clamp(0, blocks_x.saturating_sub(1) as isize) as usize;
-    let clamped_y = y.clamp(0, blocks_y.saturating_sub(1) as isize) as usize;
-    blocks[clamped_y * blocks_x + clamped_x][0]
+    let clamped_x = x
+        .clamp(0, bounded_isize(blocks_x.saturating_sub(1)))
+        .cast_unsigned();
+    let clamped_y = y
+        .clamp(0, bounded_isize(blocks_y.saturating_sub(1)))
+        .cast_unsigned();
+    blocks[clamped_y.saturating_mul(blocks_x).saturating_add(clamped_x)][0]
 }
 
 fn smooth_dc_only_block(
@@ -248,34 +285,130 @@ fn smooth_dc_only_block(
     workspace: &mut [i32; 64],
 ) {
     workspace.fill(0);
-    let x = (block_idx % blocks_x) as isize;
-    let y = (block_idx / blocks_x) as isize;
+    let x = bounded_isize(block_idx.rem_euclid(blocks_x));
+    let y = bounded_isize(block_idx.div_euclid(blocks_x));
 
-    let dc01 = dc_at(blocks, blocks_x, blocks_y, x - 2, y - 2);
-    let dc02 = dc_at(blocks, blocks_x, blocks_y, x - 1, y - 2);
-    let dc03 = dc_at(blocks, blocks_x, blocks_y, x, y - 2);
-    let dc04 = dc_at(blocks, blocks_x, blocks_y, x + 1, y - 2);
-    let dc05 = dc_at(blocks, blocks_x, blocks_y, x + 2, y - 2);
-    let dc06 = dc_at(blocks, blocks_x, blocks_y, x - 2, y - 1);
-    let dc07 = dc_at(blocks, blocks_x, blocks_y, x - 1, y - 1);
-    let dc08 = dc_at(blocks, blocks_x, blocks_y, x, y - 1);
-    let dc09 = dc_at(blocks, blocks_x, blocks_y, x + 1, y - 1);
-    let dc10 = dc_at(blocks, blocks_x, blocks_y, x + 2, y - 1);
-    let dc11 = dc_at(blocks, blocks_x, blocks_y, x - 2, y);
-    let dc12 = dc_at(blocks, blocks_x, blocks_y, x - 1, y);
+    let dc01 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(2),
+        y.saturating_sub(2),
+    );
+    let dc02 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(1),
+        y.saturating_sub(2),
+    );
+    let dc03 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_sub(2));
+    let dc04 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(1),
+        y.saturating_sub(2),
+    );
+    let dc05 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(2),
+        y.saturating_sub(2),
+    );
+    let dc06 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(2),
+        y.saturating_sub(1),
+    );
+    let dc07 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(1),
+        y.saturating_sub(1),
+    );
+    let dc08 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_sub(1));
+    let dc09 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(1),
+        y.saturating_sub(1),
+    );
+    let dc10 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(2),
+        y.saturating_sub(1),
+    );
+    let dc11 = dc_at(blocks, blocks_x, blocks_y, x.saturating_sub(2), y);
+    let dc12 = dc_at(blocks, blocks_x, blocks_y, x.saturating_sub(1), y);
     let dc13 = dc_at(blocks, blocks_x, blocks_y, x, y);
-    let dc14 = dc_at(blocks, blocks_x, blocks_y, x + 1, y);
-    let dc15 = dc_at(blocks, blocks_x, blocks_y, x + 2, y);
-    let dc16 = dc_at(blocks, blocks_x, blocks_y, x - 2, y + 1);
-    let dc17 = dc_at(blocks, blocks_x, blocks_y, x - 1, y + 1);
-    let dc18 = dc_at(blocks, blocks_x, blocks_y, x, y + 1);
-    let dc19 = dc_at(blocks, blocks_x, blocks_y, x + 1, y + 1);
-    let dc20 = dc_at(blocks, blocks_x, blocks_y, x + 2, y + 1);
-    let dc21 = dc_at(blocks, blocks_x, blocks_y, x - 2, y + 2);
-    let dc22 = dc_at(blocks, blocks_x, blocks_y, x - 1, y + 2);
-    let dc23 = dc_at(blocks, blocks_x, blocks_y, x, y + 2);
-    let dc24 = dc_at(blocks, blocks_x, blocks_y, x + 1, y + 2);
-    let dc25 = dc_at(blocks, blocks_x, blocks_y, x + 2, y + 2);
+    let dc14 = dc_at(blocks, blocks_x, blocks_y, x.saturating_add(1), y);
+    let dc15 = dc_at(blocks, blocks_x, blocks_y, x.saturating_add(2), y);
+    let dc16 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(2),
+        y.saturating_add(1),
+    );
+    let dc17 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(1),
+        y.saturating_add(1),
+    );
+    let dc18 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_add(1));
+    let dc19 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(1),
+        y.saturating_add(1),
+    );
+    let dc20 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(2),
+        y.saturating_add(1),
+    );
+    let dc21 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(2),
+        y.saturating_add(2),
+    );
+    let dc22 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_sub(1),
+        y.saturating_add(2),
+    );
+    let dc23 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_add(2));
+    let dc24 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(1),
+        y.saturating_add(2),
+    );
+    let dc25 = dc_at(
+        blocks,
+        blocks_x,
+        blocks_y,
+        x.saturating_add(2),
+        y.saturating_add(2),
+    );
 
     let q00 = i64::from(quant_natural[0]);
     let q01 = i64::from(quant_natural[1]);
@@ -287,141 +420,223 @@ fn smooth_dc_only_block(
     let q12 = i64::from(quant_natural[10]);
     let q21 = i64::from(quant_natural[17]);
     let q30 = i64::from(quant_natural[24]);
-    let d = |value: i32| i64::from(value);
-
     workspace[1] = smooth_pred(
-        q00 * d(
-            -dc01 - dc02 + dc04 + dc05 - 3 * dc06 + 13 * dc07 - 13 * dc09 + 3 * dc10 - 3 * dc11
-                + 38 * dc12
-                - 38 * dc14
-                + 3 * dc15
-                - 3 * dc16
-                + 13 * dc17
-                - 13 * dc19
-                + 3 * dc20
-                - dc21
-                - dc22
-                + dc24
-                + dc25,
-        ),
+        q00.saturating_mul(weighted_dc(&[
+            (-1, dc01),
+            (-1, dc02),
+            (1, dc04),
+            (1, dc05),
+            (-3, dc06),
+            (13, dc07),
+            (-13, dc09),
+            (3, dc10),
+            (-3, dc11),
+            (38, dc12),
+            (-38, dc14),
+            (3, dc15),
+            (-3, dc16),
+            (13, dc17),
+            (-13, dc19),
+            (3, dc20),
+            (-1, dc21),
+            (-1, dc22),
+            (1, dc24),
+            (1, dc25),
+        ])),
         q01,
         -1,
     );
     workspace[8] = smooth_pred(
-        q00 * d(-dc01 - 3 * dc02 - 3 * dc03 - 3 * dc04 - dc05 - dc06
-            + 13 * dc07
-            + 38 * dc08
-            + 13 * dc09
-            - dc10
-            + dc16
-            - 13 * dc17
-            - 38 * dc18
-            - 13 * dc19
-            + dc20
-            + dc21
-            + 3 * dc22
-            + 3 * dc23
-            + 3 * dc24
-            + dc25),
+        q00.saturating_mul(weighted_dc(&[
+            (-1, dc01),
+            (-3, dc02),
+            (-3, dc03),
+            (-3, dc04),
+            (-1, dc05),
+            (-1, dc06),
+            (13, dc07),
+            (38, dc08),
+            (13, dc09),
+            (-1, dc10),
+            (1, dc16),
+            (-13, dc17),
+            (-38, dc18),
+            (-13, dc19),
+            (1, dc20),
+            (1, dc21),
+            (3, dc22),
+            (3, dc23),
+            (3, dc24),
+            (1, dc25),
+        ])),
         q10,
         -1,
     );
     workspace[16] = smooth_pred(
-        q00 * d(
-            dc03 + 2 * dc07 + 7 * dc08 + 2 * dc09 - 5 * dc12 - 14 * dc13 - 5 * dc14
-                + 2 * dc17
-                + 7 * dc18
-                + 2 * dc19
-                + dc23,
-        ),
+        q00.saturating_mul(weighted_dc(&[
+            (1, dc03),
+            (2, dc07),
+            (7, dc08),
+            (2, dc09),
+            (-5, dc12),
+            (-14, dc13),
+            (-5, dc14),
+            (2, dc17),
+            (7, dc18),
+            (2, dc19),
+            (1, dc23),
+        ])),
         q20,
         -1,
     );
     workspace[9] = smooth_pred(
-        q00 * d(-dc01 + dc05 + 9 * dc07 - 9 * dc09 - 9 * dc17 + 9 * dc19 + dc21 - dc25),
+        q00.saturating_mul(weighted_dc(&[
+            (-1, dc01),
+            (1, dc05),
+            (9, dc07),
+            (-9, dc09),
+            (-9, dc17),
+            (9, dc19),
+            (1, dc21),
+            (-1, dc25),
+        ])),
         q11,
         -1,
     );
     workspace[2] = smooth_pred(
-        q00 * d(2 * dc07 - 5 * dc08 + 2 * dc09 + dc11 + 7 * dc12 - 14 * dc13
-            + 7 * dc14
-            + dc15
-            + 2 * dc17
-            - 5 * dc18
-            + 2 * dc19),
+        q00.saturating_mul(weighted_dc(&[
+            (2, dc07),
+            (-5, dc08),
+            (2, dc09),
+            (1, dc11),
+            (7, dc12),
+            (-14, dc13),
+            (7, dc14),
+            (1, dc15),
+            (2, dc17),
+            (-5, dc18),
+            (2, dc19),
+        ])),
         q02,
         -1,
     );
     workspace[3] = smooth_pred(
-        q00 * d(dc07 - dc09 + 2 * dc12 - 2 * dc14 + dc17 - dc19),
+        q00.saturating_mul(weighted_dc(&[
+            (1, dc07),
+            (-1, dc09),
+            (2, dc12),
+            (-2, dc14),
+            (1, dc17),
+            (-1, dc19),
+        ])),
         q03,
         -1,
     );
     workspace[10] = smooth_pred(
-        q00 * d(dc07 - 3 * dc08 + dc09 - dc17 + 3 * dc18 - dc19),
+        q00.saturating_mul(weighted_dc(&[
+            (1, dc07),
+            (-3, dc08),
+            (1, dc09),
+            (-1, dc17),
+            (3, dc18),
+            (-1, dc19),
+        ])),
         q12,
         -1,
     );
     workspace[17] = smooth_pred(
-        q00 * d(dc07 - dc09 - 3 * dc12 + 3 * dc14 + dc17 - dc19),
+        q00.saturating_mul(weighted_dc(&[
+            (1, dc07),
+            (-1, dc09),
+            (-3, dc12),
+            (3, dc14),
+            (1, dc17),
+            (-1, dc19),
+        ])),
         q21,
         -1,
     );
     workspace[24] = smooth_pred(
-        q00 * d(dc07 + 2 * dc08 + dc09 - dc17 - 2 * dc18 - dc19),
+        q00.saturating_mul(weighted_dc(&[
+            (1, dc07),
+            (2, dc08),
+            (1, dc09),
+            (-1, dc17),
+            (-2, dc18),
+            (-1, dc19),
+        ])),
         q30,
         -1,
     );
     workspace[0] = smooth_pred(
-        q00 * d(
-            -2 * dc01 - 6 * dc02 - 8 * dc03 - 6 * dc04 - 2 * dc05 - 6 * dc06
-                + 6 * dc07
-                + 42 * dc08
-                + 6 * dc09
-                - 6 * dc10
-                - 8 * dc11
-                + 42 * dc12
-                + 152 * dc13
-                + 42 * dc14
-                - 8 * dc15
-                - 6 * dc16
-                + 6 * dc17
-                + 42 * dc18
-                + 6 * dc19
-                - 6 * dc20
-                - 2 * dc21
-                - 6 * dc22
-                - 8 * dc23
-                - 6 * dc24
-                - 2 * dc25,
-        ),
+        q00.saturating_mul(weighted_dc(&[
+            (-2, dc01),
+            (-6, dc02),
+            (-8, dc03),
+            (-6, dc04),
+            (-2, dc05),
+            (-6, dc06),
+            (6, dc07),
+            (42, dc08),
+            (6, dc09),
+            (-6, dc10),
+            (-8, dc11),
+            (42, dc12),
+            (152, dc13),
+            (42, dc14),
+            (-8, dc15),
+            (-6, dc16),
+            (6, dc17),
+            (42, dc18),
+            (6, dc19),
+            (-6, dc20),
+            (-2, dc21),
+            (-6, dc22),
+            (-8, dc23),
+            (-6, dc24),
+            (-2, dc25),
+        ])),
         q00,
         0,
     );
 }
 
+// Progressive scan parsing validates tables and uses a zero-padding bit reader.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<DecodedImage> {
-    let mcu_width = (info.max_h_samp as u32) * 8;
-    let mcu_height = (info.max_v_samp as u32) * 8;
-    let num_mcus_x = ((info.width as u32) + mcu_width - 1) / mcu_width;
-    let num_mcus_y = ((info.height as u32) + mcu_height - 1) / mcu_height;
+    let mcu_width = u32::from(info.max_h_samp).saturating_mul(8);
+    let mcu_height = u32::from(info.max_v_samp).saturating_mul(8);
+    let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
+    let num_mcus_y = u32::from(info.height).div_ceil(mcu_height);
 
     // Component buffer dimensions
     let comp_buf_width: Vec<usize> = info
         .components
         .iter()
-        .map(|c| num_mcus_x as usize * c.h_samp as usize * 8)
+        .map(|c| {
+            bounded_usize(num_mcus_x)
+                .saturating_mul(usize::from(c.h_samp))
+                .saturating_mul(8)
+        })
         .collect();
     let comp_buf_height: Vec<usize> = info
         .components
         .iter()
-        .map(|c| num_mcus_y as usize * c.v_samp as usize * 8)
+        .map(|c| {
+            bounded_usize(num_mcus_y)
+                .saturating_mul(usize::from(c.v_samp))
+                .saturating_mul(8)
+        })
         .collect();
     let comp_num_blocks: Vec<usize> = info
         .components
         .iter()
         .enumerate()
-        .map(|(i, _)| (comp_buf_width[i] / 8) * (comp_buf_height[i] / 8))
+        .map(|(i, _)| {
+            comp_buf_width[i]
+                .div_euclid(8)
+                .saturating_mul(comp_buf_height[i].div_euclid(8))
+        })
         .collect();
 
     // Coefficient storage: [component][block_idx][64] in zigzag order
@@ -435,7 +650,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
         .components
         .iter()
         .enumerate()
-        .map(|(i, _)| vec![128u8; comp_buf_width[i] * comp_buf_height[i]])
+        .map(|(i, _)| vec![128u8; comp_buf_width[i].saturating_mul(comp_buf_height[i])])
         .collect();
 
     // ── Process scans ────────────────────────────────────────────────────
@@ -461,67 +676,77 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
         // For non-interleaved scans, the "MCU" is a single block of the one
         // component, iterated over that component's block grid.
         let (scan_mcus_x, scan_mcus_y): (usize, usize) = if interleaved {
-            (num_mcus_x as usize, num_mcus_y as usize)
+            (bounded_usize(num_mcus_x), bounded_usize(num_mcus_y))
         } else {
             let ci = scan.components[0].comp_index;
-            (comp_buf_width[ci] / 8, comp_buf_height[ci] / 8)
+            (
+                comp_buf_width[ci].div_euclid(8),
+                comp_buf_height[ci].div_euclid(8),
+            )
         };
-        let scan_total_mcus = scan_mcus_x * scan_mcus_y;
+        let scan_total_mcus = scan_mcus_x.saturating_mul(scan_mcus_y);
 
         let mcus_per_seg = if scan.restart_interval > 0 {
-            scan.restart_interval as usize
+            usize::from(scan.restart_interval)
         } else {
             scan_total_mcus
         };
 
         // State persists across segments but resets at each restart
-        let mut state = ProgressiveState::new(info.num_components as usize);
+        let mut state = ProgressiveState::new(usize::from(info.num_components));
 
-        for seg_idx in 0..segs.segments.len() {
-            let (seg_start, seg_end) = segs.segments[seg_idx];
+        for (seg_idx, &(seg_start, seg_end)) in segs.segments.iter().enumerate() {
             let mut br = BitReader::new(data, seg_start, seg_end);
-            let mcu_offset = seg_idx * mcus_per_seg;
+            let mcu_offset = seg_idx.saturating_mul(mcus_per_seg);
 
             // Reset state at restart boundary (IJG process_restart)
             state.reset();
 
             for mcu_idx in 0..mcus_per_seg {
-                let absolute_mcu = mcu_offset + mcu_idx;
+                let absolute_mcu = mcu_offset.saturating_add(mcu_idx);
                 if absolute_mcu >= scan_total_mcus {
                     break;
                 }
-                let mcu_y = absolute_mcu / scan_mcus_x;
-                let mcu_x = absolute_mcu % scan_mcus_x;
+                let mcu_y = absolute_mcu.div_euclid(scan_mcus_x);
+                let mcu_x = absolute_mcu.rem_euclid(scan_mcus_x);
 
                 for scan_comp in &scan.components {
                     let comp_idx = scan_comp.comp_index;
                     let comp = &info.components[comp_idx];
-                    let blocks_per_row = comp_buf_width[comp_idx] / 8;
+                    let blocks_per_row = comp_buf_width[comp_idx].div_euclid(8);
 
                     // Compute the list of block indices this MCU covers.
                     // Interleaved: h_samp × v_samp blocks offset by the MCU's
                     //   top-left block (mcu_x*h_samp, mcu_y*v_samp).
                     // Non-interleaved: a single block at (mcu_x, mcu_y).
                     let block_list: Vec<usize> = if interleaved {
-                        let mut v =
-                            Vec::with_capacity((comp.h_samp as usize) * (comp.v_samp as usize));
-                        for by in 0..comp.v_samp as usize {
-                            for bx in 0..comp.h_samp as usize {
+                        let mut v = Vec::with_capacity(
+                            usize::from(comp.h_samp).saturating_mul(usize::from(comp.v_samp)),
+                        );
+                        for by in 0..usize::from(comp.v_samp) {
+                            for bx in 0..usize::from(comp.h_samp) {
                                 v.push(
-                                    (mcu_y * comp.v_samp as usize + by) * blocks_per_row
-                                        + (mcu_x * comp.h_samp as usize + bx),
+                                    mcu_y
+                                        .saturating_mul(usize::from(comp.v_samp))
+                                        .saturating_add(by)
+                                        .saturating_mul(blocks_per_row)
+                                        .saturating_add(
+                                            mcu_x
+                                                .saturating_mul(usize::from(comp.h_samp))
+                                                .saturating_add(bx),
+                                        ),
                                 );
                             }
                         }
                         v
                     } else {
-                        vec![mcu_y * blocks_per_row + mcu_x]
+                        vec![mcu_y.saturating_mul(blocks_per_row).saturating_add(mcu_x)]
                     };
 
                     if is_dc_first {
                         let dc_table = scan
                             .dc_huff_tables
-                            .get(scan_comp.dc_tbl as usize)
+                            .get(usize::from(scan_comp.dc_tbl))
                             .and_then(Option::as_ref)?;
                         for &block_idx in &block_list {
                             coeff_storage[comp_idx][block_idx][0] = dc_first_block(
@@ -532,7 +757,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                             )?;
                         }
                     } else if is_dc_refine {
-                        let p1 = 1i32 << scan.al;
+                        let p1 = 1i32.wrapping_shl(u32::from(scan.al));
                         for &block_idx in &block_list {
                             // DC refine: read 1 bit, OR into coefficient
                             let bit = br
@@ -545,7 +770,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                     } else if is_ac_first {
                         let ac_table = scan
                             .ac_huff_tables
-                            .get(scan_comp.ac_tbl as usize)
+                            .get(usize::from(scan_comp.ac_tbl))
                             .and_then(Option::as_ref)?;
                         for &block_idx in &block_list {
                             ac_first_block(
@@ -561,7 +786,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                     } else {
                         let ac_table = scan
                             .ac_huff_tables
-                            .get(scan_comp.ac_tbl as usize)
+                            .get(usize::from(scan_comp.ac_tbl))
                             .and_then(Option::as_ref)?;
                         for &block_idx in &block_list {
                             ac_refine_block(
@@ -588,12 +813,12 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
     let smooth_dc_only = info.scans.iter().all(|scan| scan.ss == 0 && scan.se == 0);
     let mut block_natural = [0i32; 64];
     let mut workspace = [0i32; 64];
-    for comp_idx in 0..info.num_components as usize {
+    for comp_idx in 0..usize::from(info.num_components) {
         let comp = &info.components[comp_idx];
         let buf_w = comp_buf_width[comp_idx];
-        let blocks_x = buf_w / 8;
-        let blocks_y = comp_buf_height[comp_idx] / 8;
-        let quant_table = info.quant_tables[comp.quant_tbl as usize]
+        let blocks_x = buf_w.div_euclid(8);
+        let blocks_y = comp_buf_height[comp_idx].div_euclid(8);
+        let quant_table = info.quant_tables[usize::from(comp.quant_tbl)]
             .as_ref()
             .expect("component quantization table validated before progressive reconstruction");
         let mut quant_natural = [0u16; 64];
@@ -611,20 +836,25 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                     &mut block_natural,
                 );
                 for i in 0..64 {
-                    block_natural[i] *= i32::from(quant_natural[i]);
+                    block_natural[i] = block_natural[i].saturating_mul(i32::from(quant_natural[i]));
                 }
             } else {
                 for i in 0..64 {
-                    block_natural[JPEG_NATURAL_ORDER[i]] = coeffs[i] * i32::from(quant_table[i]);
+                    block_natural[JPEG_NATURAL_ORDER[i]] =
+                        coeffs[i].saturating_mul(i32::from(quant_table[i]));
                 }
             }
             jpeg_idct_islow(&mut block_natural, &mut workspace);
-            let block_y = (block_idx / blocks_x) * 8;
-            let block_x = (block_idx % blocks_x) * 8;
-            for row in 0..8 {
-                for col in 0..8 {
-                    let px = block_natural[row * 8 + col].clamp(0, 255) as u8;
-                    let bi = (block_y + row) * buf_w + (block_x + col);
+            let block_y = block_idx.div_euclid(blocks_x).saturating_mul(8);
+            let block_x = block_idx.rem_euclid(blocks_x).saturating_mul(8);
+            for row in 0usize..8 {
+                for col in 0usize..8 {
+                    let natural_index = row.saturating_mul(8).saturating_add(col);
+                    let px = block_natural[natural_index].clamp(0, 255).to_le_bytes()[0];
+                    let bi = block_y
+                        .saturating_add(row)
+                        .saturating_mul(buf_w)
+                        .saturating_add(block_x.saturating_add(col));
                     comp_buffers[comp_idx][bi] = px;
                 }
             }
@@ -632,31 +862,31 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
     }
 
     // ── Assemble output ──────────────────────────────────────────────────
-    let w = info.width as usize;
-    let h = info.height as usize;
+    let w = usize::from(info.width);
+    let h = usize::from(info.height);
     let converter = YccColorConverter::new();
     if info.num_components == 1 {
         let y_buf = &comp_buffers[0];
         let y_w = comp_buf_width[0];
-        let mut pixels = Vec::with_capacity(w * h);
+        let mut pixels = Vec::with_capacity(w.saturating_mul(h));
         for y in 0..h {
             for x in 0..w {
-                pixels.push(y_buf[y * y_w + x]);
+                pixels.push(y_buf[y.saturating_mul(y_w).saturating_add(x)]);
             }
         }
         Some(DecodedImage::new(
-            info.width as u32,
-            info.height as u32,
+            u32::from(info.width),
+            u32::from(info.height),
             pixels,
             ColorType::L8,
         ))
     } else if info.num_components == 3 {
         let y_buf = &comp_buffers[0];
         let y_w = comp_buf_width[0];
-        let h_ratio = (info.max_h_samp / info.components[1].h_samp) as usize;
-        let v_ratio = (info.max_v_samp / info.components[1].v_samp) as usize;
-        let chroma_src_w = (w + h_ratio - 1) / h_ratio;
-        let chroma_src_h = (h + v_ratio - 1) / v_ratio;
+        let h_ratio = usize::from(info.max_h_samp.div_euclid(info.components[1].h_samp));
+        let v_ratio = usize::from(info.max_v_samp.div_euclid(info.components[1].v_samp));
+        let chroma_src_w = w.div_ceil(h_ratio);
+        let chroma_src_h = h.div_ceil(v_ratio);
         let cb_cropped = crop_component(
             &comp_buffers[1],
             comp_buf_width[1],
@@ -689,14 +919,14 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
             w,
             h,
         );
-        let chroma_stride = chroma_src_w * h_ratio;
-        let mut pixels = Vec::with_capacity(w * h * 3);
+        let chroma_stride = chroma_src_w.saturating_mul(h_ratio);
+        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(3));
         for y in 0..h {
             for x in 0..w {
                 let (r, g, b) = converter.ycc_to_rgb(
-                    y_buf[y * y_w + x],
-                    cb_up[y * chroma_stride + x],
-                    cr_up[y * chroma_stride + x],
+                    y_buf[y.saturating_mul(y_w).saturating_add(x)],
+                    cb_up[y.saturating_mul(chroma_stride).saturating_add(x)],
+                    cr_up[y.saturating_mul(chroma_stride).saturating_add(x)],
                 );
                 pixels.push(r);
                 pixels.push(g);
@@ -704,33 +934,42 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
             }
         }
         Some(DecodedImage::new(
-            info.width as u32,
-            info.height as u32,
+            u32::from(info.width),
+            u32::from(info.height),
             pixels,
             ColorType::Rgb8,
         ))
     } else {
         debug_assert_eq!(info.num_components, 4);
         let inverted = info.adobe_transform.is_some();
-        let mut pixels = Vec::with_capacity(w * h * 4);
+        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(4));
         for y in 0..h {
             for x in 0..w {
                 for component in 0..4 {
-                    let horizontal_ratio =
-                        usize::from(info.max_h_samp / info.components[component].h_samp);
-                    let vertical_ratio =
-                        usize::from(info.max_v_samp / info.components[component].v_samp);
-                    let source_x = x / horizontal_ratio;
-                    let source_y = y / vertical_ratio;
-                    let sample =
-                        comp_buffers[component][source_y * comp_buf_width[component] + source_x];
-                    pixels.push(if inverted { 255 - sample } else { sample });
+                    let horizontal_ratio = usize::from(
+                        info.max_h_samp
+                            .div_euclid(info.components[component].h_samp),
+                    );
+                    let vertical_ratio = usize::from(
+                        info.max_v_samp
+                            .div_euclid(info.components[component].v_samp),
+                    );
+                    let source_x = x.div_euclid(horizontal_ratio);
+                    let source_y = y.div_euclid(vertical_ratio);
+                    let sample = comp_buffers[component][source_y
+                        .saturating_mul(comp_buf_width[component])
+                        .saturating_add(source_x)];
+                    pixels.push(if inverted {
+                        255u8.saturating_sub(sample)
+                    } else {
+                        sample
+                    });
                 }
             }
         }
         Some(DecodedImage::new(
-            info.width as u32,
-            info.height as u32,
+            u32::from(info.width),
+            u32::from(info.height),
             pixels,
             ColorType::Cmyk8,
         ))

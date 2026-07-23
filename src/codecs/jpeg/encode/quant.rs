@@ -38,23 +38,35 @@ pub(crate) struct EncodeParams {
 /// jpeg_add_quant_table.  Tables are kept in natural order (the order the
 /// std tables are defined in and the order quantval[] is filled in).
 pub(crate) fn build_params(quality: u8, subsampling: &str, num_components: usize) -> EncodeParams {
-    let q = quality.clamp(1, 100) as i32;
+    let q = i32::from(quality.clamp(1, 100));
 
     // IJG: if quality < 50, scale = 5000/quality; else scale = 200 - 2*quality.
-    let scale_factor: i32 = if q < 50 { 5000 / q } else { 200 - 2 * q };
+    let scale_factor: i32 = if q < 50 {
+        5000i32.div_euclid(q)
+    } else {
+        200i32.saturating_sub(2i32.saturating_mul(q))
+    };
 
     // jpeg_add_quant_table: temp = (base * scale_factor + 50) / 100, clamped
     // 1..255 (force_baseline for 8-bit baseline).
     let scale = |base: u8| -> u16 {
-        let v = ((base as i32) * scale_factor + 50) / 100;
-        v.clamp(1, 255) as u16
+        let v = i32::from(base)
+            .saturating_mul(scale_factor)
+            .saturating_add(50)
+            .div_euclid(100)
+            .clamp(1, 255);
+        u16::from(v.to_le_bytes()[0])
     };
 
     let mut luma = [0u16; 64];
     let mut chroma = [0u16; 64];
-    for i in 0..64 {
-        luma[i] = scale(STD_LUMA_QT[i]);
-        chroma[i] = scale(STD_CHROMA_QT[i]);
+    for ((luma_value, chroma_value), (luma_base, chroma_base)) in luma
+        .iter_mut()
+        .zip(chroma.iter_mut())
+        .zip(STD_LUMA_QT.into_iter().zip(STD_CHROMA_QT))
+    {
+        *luma_value = scale(luma_base);
+        *chroma_value = scale(chroma_base);
     }
 
     let mut quant_tables = vec![luma];

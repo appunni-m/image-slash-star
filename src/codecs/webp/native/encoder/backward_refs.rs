@@ -1,5 +1,30 @@
-// Lossless WebP backward references, ported from libwebp 1.6.0
-// `src/enc/backward_references_enc.c`.
+//! Lossless WebP backward references, ported from libwebp 1.6.0
+//! `src/enc/backward_references_enc.c`.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// Hash-chain positions, fixed-point entropy costs, and LZ77 interval arithmetic
+// are the libwebp reference algorithm. Valid image geometry, bounded window
+// sizes, and codec alphabets constrain these operations inside this module.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 
 const MIN_LENGTH: usize = 4;
 const MAX_LENGTH: usize = (1 << 12) - 1;
@@ -162,8 +187,10 @@ fn lz77(pixels: &[u32], width: usize, chain: &[(usize, usize)]) -> Vec<Token> {
             let mut maximum_reach = 0;
             let maximum_check = (position + length).min(pixels.len() - 1);
             last_check = last_check.max(position as isize);
-            for next in (last_check as usize + 1)..=maximum_check {
-                let next_length = chain[next].1;
+            let check_start = last_check as usize + 1;
+            for (offset, &(_, next_length)) in chain[check_start..=maximum_check].iter().enumerate()
+            {
+                let next = check_start + offset;
                 let reach = next
                     + if next_length >= MIN_LENGTH {
                         next_length
@@ -475,6 +502,9 @@ fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
             Token::Cache(index) => green[280 + index] += 1,
         }
     }
+    // Each population cost is bounded by the VP8L alphabet and fixed-point
+    // scale, so the reference representation is guaranteed to fit `i32`.
+    #[allow(clippy::unwrap_used)]
     CostModel {
         green: population_cost(&green),
         red: population_cost(&red).try_into().unwrap(),
@@ -820,6 +850,8 @@ pub(super) fn candidates(
     let candidates: Vec<_> = [(refs, true), (refs_rle, false)]
         .into_iter()
         .map(|(source, is_standard)| {
+            // The inclusive range always contains cache-bit value zero.
+            #[allow(clippy::unwrap_used)]
             (0..=max_cache_bits)
                 .map(|bits| {
                     let cached = with_cache(pixels, &source, bits);

@@ -26,9 +26,17 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     let mut frame_count = 0u32;
     let mut fallback_width = 0u32;
     let mut fallback_height = 0u32;
+    let mut complete = true;
 
     loop {
-        match input.u8()? {
+        let Some(block) = input.u8() else {
+            if first_mode.is_some() {
+                complete = false;
+                break;
+            }
+            return None;
+        };
+        match block {
             EXTENSION_INTRODUCER => {
                 let label = input.u8()?;
                 if label == 0xf9 {
@@ -49,9 +57,6 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
                 let top = u32::from(input.u16()?);
                 let width = u32::from(input.u16()?);
                 let height = u32::from(input.u16()?);
-                if width == 0 || height == 0 {
-                    return None;
-                }
                 let image_packed = input.u8()?;
                 let local_palette = read_color_table(&mut input, image_packed)?;
                 if first_mode.is_none() {
@@ -70,12 +75,15 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
                     });
                     first_palette = palette.map(|rgb| palette_with_alpha(rgb, transparent_index));
                 }
-                input.skip(1)?;
-                input.skip_sub_blocks()?;
                 frame_count = frame_count.wrapping_add(1);
                 fallback_width = fallback_width.max(left.wrapping_add(width));
                 fallback_height = fallback_height.max(top.wrapping_add(height));
                 transparent_index = None;
+                input.skip(1)?;
+                if input.skip_sub_blocks().is_none() {
+                    complete = false;
+                    break;
+                }
             }
             TRAILER => break,
             _ => return None,
@@ -90,7 +98,7 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
         bit_depth: first_bit_depth,
         palette: first_palette,
         is_animated: frame_count > 1,
-        frame_count: Some(frame_count),
+        frame_count: complete.then_some(frame_count),
     })
 }
 
@@ -158,4 +166,12 @@ impl<'a> Input<'a> {
             self.skip(length)?;
         }
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut image = b"GIF89a\x01\0\x01\0\0\0\0,\0\0\0\0\x01\0\x01\0\0\x02\0".to_vec();
+    assert!(inspect(&image).is_some());
+    image.truncate(13);
+    let _ = inspect(&image);
 }

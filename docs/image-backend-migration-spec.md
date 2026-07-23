@@ -955,8 +955,22 @@ Suggested maintained targets:
 
 ```bash
 make build-wasm-release
-make size-wasm
+cd pillow-rs-js && npm run size
 ```
+
+Implementation resolution:
+
+- the default `pillow-rs` package export is the PNG-only `wasm-core` artifact;
+- `pillow-rs/extra` adds JPEG, GIF, BMP, TIFF, WebP, and ICO;
+- AVIF remains unavailable in both browser artifacts because no AVIF-capable
+  WASM implementation exists;
+- the committed image-backend manifest verifies exact mode, dimensions, pixel
+  bytes, and feature-disabled errors in both variants;
+- release builds disable debug hooks, so logging does not enter either measured
+  artifact;
+- `npm run size` records raw WASM, gzip, Brotli, JS glue, declarations, and
+  complete generated-directory sizes in downstream
+  `docs/wasm-core-extra-packaging.md`.
 
 ### Phase 8: Animated Images
 
@@ -988,6 +1002,8 @@ Do not block still-image migration on this.
 
 ### Codec Backend
 
+- Strict Clippy passes across all Cargo targets/features and every supported
+  native/WASM compilation-target lane with `-D warnings`.
 - `image-slash-star` exposes `Result` APIs.
 - automatic decoding retains both source `ImageFormat` and exact pixel mode
 - encoding requires an explicit target format
@@ -1066,13 +1082,15 @@ make clippy
 
 ## Recommended Implementation Order
 
-1. Add `image-slash-star` `Result` APIs and errors.
-2. Add `DecodedImage` validation and paletted normalization.
-3. Add `pillow-rs` feature forwarding.
-4. Add generic `DecodedImage -> Image` conversion in `pillow-rs`.
-5. Remove direct PNG-specific palette decode from `pillow-rs`.
-6. Add `ImageInfo` and `inspect` to `image-slash-star`.
-7. Use `ImageInfo` in `pillow-rs`.
-8. Make `load(&mut self)` persistent.
-9. Measure WASM size for codec feature sets and logging variants.
-10. Add animated image support separately.
+1. Make the strict all-Cargo-target/all-feature and native/WASM Clippy lanes
+   pass with warnings denied.
+2. Add `image-slash-star` `Result` APIs and errors.
+3. Add `DecodedImage` validation and paletted normalization.
+4. Add `pillow-rs` feature forwarding.
+5. Add generic `DecodedImage -> Image` conversion in `pillow-rs`.
+6. Remove direct PNG-specific palette decode from `pillow-rs`.
+7. Add `ImageInfo` and `inspect` to `image-slash-star`.
+8. Use `ImageInfo` in `pillow-rs`.
+9. Make `load(&mut self)` persistent.
+10. Measure WASM size for codec feature sets and logging variants.
+11. Add animated image support separately.

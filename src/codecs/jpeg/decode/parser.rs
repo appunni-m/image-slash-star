@@ -67,11 +67,11 @@ pub(super) struct JpegInfo {
 // ── JPEG Parser ───────────────────────────────────────────────────────────
 
 pub(super) fn read_u16(data: &[u8], pos: &mut usize) -> Option<u16> {
-    if *pos + 1 >= data.len() {
+    if pos.saturating_add(1) >= data.len() {
         return None;
     }
-    let val = (data[*pos] as u16) << 8 | data[*pos + 1] as u16;
-    *pos += 2;
+    let val = u16::from_be_bytes([data[*pos], data[pos.saturating_add(1)]]);
+    *pos = pos.saturating_add(2);
     Some(val)
 }
 
@@ -80,57 +80,55 @@ pub(super) fn read_u8(data: &[u8], pos: &mut usize) -> Option<u8> {
         return None;
     }
     let val = data[*pos];
-    *pos += 1;
+    *pos = pos.saturating_add(1);
     Some(val)
 }
 
 pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> Option<u16> {
     while *pos < data.len() {
         while *pos < data.len() && data[*pos] != 0xFF {
-            *pos += 1;
+            *pos = pos.saturating_add(1);
         }
         if *pos >= data.len() {
             return None;
         }
-        if *pos + 1 >= data.len() {
+        if pos.saturating_add(1) >= data.len() {
             return None;
         }
-        let marker_byte = data[*pos + 1];
+        let marker_byte = data[pos.saturating_add(1)];
         if marker_byte == 0x00 || marker_byte == 0xFF {
-            *pos += 1;
+            *pos = pos.saturating_add(1);
             continue;
         }
-        let marker = 0xFF00u16 | marker_byte as u16;
-        *pos += 2;
+        let marker = 0xFF00u16 | u16::from(marker_byte);
+        *pos = pos.saturating_add(2);
         return Some(marker);
     }
     None
 }
 
 pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> usize {
-    while pos + 1 < data.len() {
+    while pos.saturating_add(1) < data.len() {
         if data[pos] == 0xFF {
-            let next = data[pos + 1];
-            if next == 0x00 {
-                pos += 2;
-            } else if next >= 0xD0 && next <= 0xD7 {
-                pos += 2;
+            let next = data[pos.saturating_add(1)];
+            if next == 0x00 || (0xD0..=0xD7).contains(&next) {
+                pos = pos.saturating_add(2);
             } else {
                 return pos;
             }
         } else {
-            pos += 1;
+            pos = pos.saturating_add(1);
         }
     }
     data.len()
 }
 
 pub(super) fn find_eoi(data: &[u8], mut pos: usize) -> Option<usize> {
-    while pos + 1 < data.len() {
-        if data[pos] == 0xFF && data[pos + 1] == 0xD9 {
+    while pos.saturating_add(1) < data.len() {
+        if data[pos] == 0xFF && data[pos.saturating_add(1)] == 0xD9 {
             return Some(pos);
         }
-        pos += 1;
+        pos = pos.saturating_add(1);
     }
     None
 }
@@ -164,7 +162,7 @@ pub(super) fn parse_sof0(
         let h_samp = sampling >> 4;
         let v_samp = sampling & 0x0F;
         let quant_tbl = read_u8(data, pos)?;
-        if h_samp < 1 || h_samp > 4 || v_samp < 1 || v_samp > 4 {
+        if !(1..=4).contains(&h_samp) || !(1..=4).contains(&v_samp) {
             return None;
         }
         if quant_tbl > 3 {
@@ -188,13 +186,13 @@ pub(super) fn parse_dqt(
     pos: &mut usize,
     quant_tables: &mut Vec<Option<[u16; 64]>>,
 ) -> Option<()> {
-    let length = read_u16(data, pos)? as usize;
-    let end = *pos + length - 2;
+    let length = usize::from(read_u16(data, pos)?);
+    let end = pos.saturating_add(length.saturating_sub(2));
 
     while *pos < end {
         let info = read_u8(data, pos)?;
-        let precision = (info >> 4) as usize;
-        let table_id = (info & 0x0F) as usize;
+        let precision = usize::from(info >> 4);
+        let table_id = usize::from(info & 0x0F);
         if table_id >= 4 {
             return None;
         }
@@ -202,7 +200,7 @@ pub(super) fn parse_dqt(
         let mut table_zigzag = [0u16; 64];
         for entry in &mut table_zigzag {
             *entry = if precision == 0 {
-                read_u8(data, pos)? as u16
+                u16::from(read_u8(data, pos)?)
             } else {
                 read_u16(data, pos)?
             };
@@ -221,13 +219,13 @@ pub(super) fn parse_dht(
     dc_tables: &mut Vec<Option<HuffTable>>,
     ac_tables: &mut Vec<Option<HuffTable>>,
 ) -> Option<()> {
-    let length = read_u16(data, pos)? as usize;
-    let end = *pos + length - 2;
+    let length = usize::from(read_u16(data, pos)?);
+    let end = pos.saturating_add(length.saturating_sub(2));
 
     while *pos < end {
         let info = read_u8(data, pos)?;
         let table_class = info >> 4;
-        let table_id = (info & 0x0F) as usize;
+        let table_id = usize::from(info & 0x0F);
         if table_id >= 4 {
             return None;
         }
@@ -236,7 +234,7 @@ pub(super) fn parse_dht(
         let mut total_values = 0usize;
         for entry in &mut counts {
             *entry = read_u8(data, pos)?;
-            total_values += *entry as usize;
+            total_values = total_values.saturating_add(usize::from(*entry));
         }
 
         let mut values = Vec::with_capacity(total_values);
@@ -345,7 +343,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 components = result.2;
                 max_h_samp = result.3;
                 max_v_samp = result.4;
-                num_components = components.len() as u8;
+                num_components = components.len().to_le_bytes()[0];
                 saw_sof = true;
             }
             M_DQT => {
@@ -405,27 +403,27 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 if length < 2 {
                     continue;
                 }
-                let payload_len = length - 2;
+                let payload_len = length.saturating_sub(2);
                 if payload_len > data.len().saturating_sub(pos) {
                     return None;
                 }
-                let payload_end = pos + payload_len;
-                if data.get(pos..pos + 5) == Some(b"Adobe") && length >= 14 {
-                    adobe_transform = data.get(pos + 11).copied();
+                let payload_end = pos.saturating_add(payload_len);
+                if data.get(pos..pos.saturating_add(5)) == Some(b"Adobe") && length >= 14 {
+                    adobe_transform = data.get(pos.saturating_add(11)).copied();
                 }
                 pos = payload_end;
             }
             M_EOI => {
-                break pos - 2;
+                break pos.saturating_sub(2);
             }
             0xFFD0..=0xFFD7 => {}
             0xFF01 => return None,
             _ => {
-                let length = read_u16(data, &mut pos)? as usize;
+                let length = usize::from(read_u16(data, &mut pos)?);
                 if length < 2 {
                     continue;
                 }
-                pos += length - 2;
+                pos = pos.saturating_add(length.saturating_sub(2));
             }
         }
     };

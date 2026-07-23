@@ -33,19 +33,28 @@ fn predict(
     match mode {
         Intra16Mode::Dc => {
             let dc = match (has_top, has_left) {
-                (true, true) => {
-                    (top.iter()
-                        .chain(left)
-                        .map(|&value| u32::from(value))
-                        .sum::<u32>()
-                        + 16)
-                        >> 5
-                }
-                (true, false) => (top.iter().map(|&value| u32::from(value)).sum::<u32>() + 8) >> 4,
-                (false, true) => (left.iter().map(|&value| u32::from(value)).sum::<u32>() + 8) >> 4,
+                (true, true) => (top
+                    .iter()
+                    .chain(left)
+                    .map(|&value| u32::from(value))
+                    .sum::<u32>()
+                    .saturating_add(16))
+                .wrapping_shr(5),
+                (true, false) => top
+                    .iter()
+                    .map(|&value| u32::from(value))
+                    .sum::<u32>()
+                    .saturating_add(8)
+                    .wrapping_shr(4),
+                (false, true) => left
+                    .iter()
+                    .map(|&value| u32::from(value))
+                    .sum::<u32>()
+                    .saturating_add(8)
+                    .wrapping_shr(4),
                 (false, false) => 128,
             };
-            output.fill(dc as u8);
+            output.fill(dc.to_le_bytes()[0]);
         }
         Intra16Mode::Vertical => {
             for row in output.chunks_exact_mut(16) {
@@ -58,11 +67,13 @@ fn predict(
             }
         }
         Intra16Mode::TrueMotion => {
-            for row in 0..16 {
-                for column in 0..16 {
-                    output[row * 16 + column] = (i16::from(top[column]) + i16::from(left[row])
-                        - i16::from(top_left))
-                    .clamp(0, 255) as u8;
+            for row in 0usize..16 {
+                for column in 0usize..16 {
+                    output[row.saturating_mul(16).saturating_add(column)] = i16::from(top[column])
+                        .saturating_add(i16::from(left[row]))
+                        .saturating_sub(i16::from(top_left))
+                        .clamp(0, 255)
+                        .to_le_bytes()[0];
                 }
             }
         }
@@ -104,15 +115,20 @@ fn evaluate(
 ) -> Intra16Candidate {
     let prediction = predict(mode, top, left, top_left, has_top, has_left);
     let mut coefficients = [[0i16; 16]; 16];
-    for block_y in 0..4 {
-        for block_x in 0..4 {
-            let block = block_y * 4 + block_x;
+    for block_y in 0usize..4 {
+        for block_x in 0usize..4 {
+            let block = block_y.saturating_mul(4).saturating_add(block_x);
             let mut residual = [0i16; 16];
-            for row in 0..4 {
-                for column in 0..4 {
-                    let index = (block_y * 4 + row) * 16 + block_x * 4 + column;
-                    residual[row * 4 + column] =
-                        i16::from(source[index]) - i16::from(prediction[index]);
+            for row in 0usize..4 {
+                for column in 0usize..4 {
+                    let index = block_y
+                        .saturating_mul(4)
+                        .saturating_add(row)
+                        .saturating_mul(16)
+                        .saturating_add(block_x.saturating_mul(4))
+                        .saturating_add(column);
+                    residual[row.saturating_mul(4).saturating_add(column)] =
+                        i16::from(source[index]).saturating_sub(i16::from(prediction[index]));
                 }
             }
             coefficients[block] = vp8_fdct_4x4(&residual);
@@ -125,14 +141,14 @@ fn evaluate(
     let y2_nonzero = quantize_block(&mut transformed_dc, &mut y2_levels, &matrices.y2);
 
     let mut y1_levels = [[0; 16]; 16];
-    let mut nonzero = u32::from(y2_nonzero) << 24;
+    let mut nonzero = u32::from(y2_nonzero).wrapping_shl(24);
     let mut trellis_top = top_nonzero;
     let mut trellis_left = left_nonzero;
     for block in 0..16 {
         coefficients[block][0] = 0;
         let block_x = block % 4;
         let block_y = block / 4;
-        let context = usize::from(trellis_top[block_x] + trellis_left[block_y]);
+        let context = usize::from(trellis_top[block_x].saturating_add(trellis_left[block_y]));
         let block_nonzero = if trellis {
             trellis_quantize_block(
                 &mut coefficients[block],
@@ -151,7 +167,7 @@ fn evaluate(
             )
         };
         if block_nonzero {
-            nonzero |= 1 << block;
+            nonzero |= 1u32.wrapping_shl(block.to_le_bytes()[0].into());
         }
         trellis_top[block_x] = u8::from(block_nonzero);
         trellis_left[block_y] = u8::from(block_nonzero);
@@ -162,19 +178,30 @@ fn evaluate(
     }
 
     let mut reconstructed = [0; 256];
-    for block_y in 0..4 {
-        for block_x in 0..4 {
-            let block = block_y * 4 + block_x;
+    for block_y in 0usize..4 {
+        for block_x in 0usize..4 {
+            let block = block_y.saturating_mul(4).saturating_add(block_x);
             let mut prediction_block = [0; 16];
-            for row in 0..4 {
-                let offset = (block_y * 4 + row) * 16 + block_x * 4;
-                prediction_block[row * 4..row * 4 + 4]
-                    .copy_from_slice(&prediction[offset..offset + 4]);
+            for row in 0usize..4 {
+                let offset = block_y
+                    .saturating_mul(4)
+                    .saturating_add(row)
+                    .saturating_mul(16)
+                    .saturating_add(block_x.saturating_mul(4));
+                let row_start = row.saturating_mul(4);
+                prediction_block[row_start..row_start.saturating_add(4)]
+                    .copy_from_slice(&prediction[offset..offset.saturating_add(4)]);
             }
             let output = vp8_idct_add_4x4(&prediction_block, &coefficients[block]);
-            for row in 0..4 {
-                let offset = (block_y * 4 + row) * 16 + block_x * 4;
-                reconstructed[offset..offset + 4].copy_from_slice(&output[row * 4..row * 4 + 4]);
+            for row in 0usize..4 {
+                let offset = block_y
+                    .saturating_mul(4)
+                    .saturating_add(row)
+                    .saturating_mul(16)
+                    .saturating_add(block_x.saturating_mul(4));
+                let row_start = row.saturating_mul(4);
+                reconstructed[offset..offset.saturating_add(4)]
+                    .copy_from_slice(&output[row_start..row_start.saturating_add(4)]);
             }
         }
     }
@@ -182,21 +209,35 @@ fn evaluate(
     let mut rate = residual_cost(&y2_levels, 0, 1, y2_context, coefficient_probabilities);
     let mut top_context = top_nonzero;
     let mut left_context = left_nonzero;
-    for block_y in 0..4 {
-        for block_x in 0..4 {
-            let block = block_y * 4 + block_x;
-            let context = usize::from(top_context[block_x] + left_context[block_y]);
-            rate += residual_cost(&y1_levels[block], 1, 0, context, coefficient_probabilities);
+    for (block_y, left_nonzero) in left_context.iter_mut().enumerate() {
+        for (block_x, top_nonzero) in top_context.iter_mut().enumerate() {
+            let block = block_y.saturating_mul(4).saturating_add(block_x);
+            let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
+            rate = rate.saturating_add(residual_cost(
+                &y1_levels[block],
+                1,
+                0,
+                context,
+                coefficient_probabilities,
+            ));
             let block_nonzero = u8::from(y1_levels[block][1..].iter().any(|&level| level != 0));
-            top_context[block_x] = block_nonzero;
-            left_context[block_y] = block_nonzero;
+            *top_nonzero = block_nonzero;
+            *left_nonzero = block_nonzero;
         }
     }
     let distortion = squared_error_16x16(source, &reconstructed);
     let texture = spectral_distortion_16x16(source, &reconstructed);
-    let spectral_distortion = (texture_lambda * texture + 128) >> 8;
+    let spectral_distortion = texture_lambda
+        .saturating_mul(texture)
+        .saturating_add(128)
+        .wrapping_shr(8);
     let header = FIXED_MODE_COSTS[mode as usize];
-    let score = rd_score(rate, header, distortion + spectral_distortion, lambda_i16);
+    let score = rd_score(
+        rate,
+        header,
+        distortion.saturating_add(spectral_distortion),
+        lambda_i16,
+    );
     Intra16Candidate {
         mode,
         y2_levels,
@@ -231,15 +272,20 @@ pub(super) fn select(
     trellis: bool,
 ) -> Intra16Candidate {
     let selected_mode = distortion_only.then(|| {
+        // The complete intra16 mode set is statically non-empty.
+        #[allow(clippy::expect_used)]
         Intra16Mode::ALL
             .into_iter()
             .min_by_key(|&mode| {
                 let prediction = predict(mode, top, left, top_left, has_top, has_left);
-                256 * squared_error_16x16(source, &prediction)
-                    + 106 * FIXED_MODE_COSTS[mode as usize]
+                256u32
+                    .saturating_mul(squared_error_16x16(source, &prediction))
+                    .saturating_add(106u32.saturating_mul(FIXED_MODE_COSTS[mode as usize]))
             })
             .expect("VP8 always has intra16 candidates")
     });
+    // `fixed_mode`, when present, is itself a member of this non-empty enum set.
+    #[allow(clippy::expect_used)]
     Intra16Mode::ALL
         .into_iter()
         .filter(|&mode| {

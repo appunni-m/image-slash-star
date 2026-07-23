@@ -2,11 +2,6 @@
 // documentation and legacy algorithm ports are brought under the workspace
 // lint policy.
 #![allow(missing_docs)]
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::unwrap_in_result)]
-#![allow(clippy::needless_range_loop)]
-#![allow(clippy::map_unwrap_or)]
 
 //! image-slash-star — dependency-light pixel-perfect image decoders and encoders.
 //!
@@ -16,8 +11,8 @@
 //! the fixed native libavif stack on supported native targets.
 //!
 //! Architecture:
-//!   &[u8] → decode() → Decoded<DecodedImage> { format, content }
-//!   &[u8] → decode_sequence() → Decoded<DecodedSequence> { format, content }
+//!   &[u8] → decode() → `Decoded<DecodedImage>` { format, content }
+//!   &[u8] → decode_sequence() → `Decoded<DecodedSequence>` { format, content }
 //!   pillow-rs wraps DecodedImage into DynamicImage/Image::Loaded.
 
 // Integration-test-only dependencies are still visible while Cargo builds the

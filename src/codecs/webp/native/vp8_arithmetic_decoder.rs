@@ -1,3 +1,30 @@
+//! VP8 boolean arithmetic decoder with speculative fast-path reads.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// Range renormalization, packed lookahead narrowing, and signed token extraction
+// are the VP8 arithmetic coding algorithm. State invariants bound every shift
+// and subtraction; keep these exceptions inside this decoder kernel.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use super::decoder::DecodingError;
 
 use super::vp8::TreeNode;
@@ -75,6 +102,8 @@ impl ArithmeticDecoder {
         }
     }
 
+    // A non-multiple-of-four length is created with one padded final chunk.
+    #[allow(clippy::expect_used)]
     pub(crate) fn init(&mut self, mut buf: Vec<[u8; 4]>, len: usize) {
         let mut final_bytes = [0; 3];
         let final_bytes_remaining = if len == 4 * buf.len() {

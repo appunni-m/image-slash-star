@@ -23,7 +23,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_lossy_q10",
@@ -36,7 +40,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_lossy_q50",
@@ -49,7 +57,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_lossy_q90",
@@ -62,7 +74,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_lossy_q100",
@@ -75,7 +91,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
@@ -88,7 +108,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_lossy_checker_17x19_q1_m0",
@@ -101,7 +125,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_filter_variants",
@@ -114,7 +142,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
@@ -127,7 +159,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_filter_off",
@@ -140,7 +176,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_segment_one",
@@ -153,7 +193,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
@@ -166,7 +210,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_vp8l",
@@ -179,7 +227,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants",
@@ -192,7 +244,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_horizontal",
@@ -205,7 +261,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_vertical",
@@ -218,7 +278,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_diagonal",
@@ -231,7 +295,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_checker2",
@@ -244,7 +312,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_palette4",
@@ -257,7 +329,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_palette16",
@@ -270,7 +346,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_palette17",
@@ -283,7 +363,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_palette32",
@@ -296,7 +380,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_palette64",
@@ -309,7 +397,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_palette256",
@@ -322,7 +414,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_noise",
@@ -335,7 +431,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode0",
@@ -348,7 +448,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
@@ -361,7 +465,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_diag_reverse",
@@ -374,7 +482,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_xor",
@@ -387,7 +499,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_product",
@@ -400,7 +516,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_radial",
@@ -413,7 +533,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_diamond",
@@ -426,7 +550,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_bilinear",
@@ -439,7 +567,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_stripes",
@@ -452,7 +584,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_steps",
@@ -465,7 +601,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_saw",
@@ -478,7 +618,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_quadrants",
@@ -491,7 +635,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_random_walk",
@@ -504,7 +652,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode5",
@@ -517,7 +669,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode6",
@@ -530,7 +686,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode7",
@@ -543,7 +703,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode8",
@@ -556,7 +720,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode9",
@@ -569,7 +737,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode10",
@@ -582,7 +754,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_mode13",
@@ -595,7 +771,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_lossless_predictor_sparse",
@@ -608,7 +788,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
@@ -621,7 +805,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -634,7 +822,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "lossless_transform_variants_vp8l_single_cache_peek",
@@ -647,7 +839,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "extended",
@@ -660,7 +856,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "no_alpha",
@@ -673,7 +873,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "with_alpha",
@@ -686,7 +890,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "with_alpha_alpha_lossy",
@@ -699,7 +907,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless",
@@ -712,7 +924,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_lossy_horizontal",
@@ -725,7 +941,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_lossy_vertical",
@@ -738,7 +958,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_lossy_gradient",
@@ -751,7 +975,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_lossy_noise",
@@ -764,7 +992,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_lossy_vertical_filter",
@@ -777,7 +1009,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_lossy_gradient_filter",
@@ -790,7 +1026,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_uncompressed",
@@ -803,7 +1043,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "alpha_lossless_alpha_preprocessing",
@@ -816,7 +1060,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated",
@@ -829,7 +1077,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha",
@@ -842,7 +1094,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_holes_partial_background",
@@ -855,7 +1111,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_holes_opaque_background",
@@ -868,7 +1128,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_rgb_opaque_background",
@@ -881,7 +1145,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_rgb_palette_background",
@@ -894,7 +1162,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_rgb_full_delta",
@@ -907,7 +1179,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_lossy",
@@ -920,7 +1196,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_overlap",
@@ -933,7 +1213,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_holes",
@@ -946,7 +1230,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_loop_twice",
@@ -959,7 +1247,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_blend",
@@ -972,7 +1264,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_full",
@@ -985,7 +1281,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_full_dispose",
@@ -998,7 +1298,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_alpha_full_blend_after_dispose",
@@ -1011,7 +1315,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_dispose",
@@ -1024,7 +1332,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_rgb_full_dispose",
@@ -1037,7 +1349,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "animated_animated_rgb_partial_dispose",
@@ -1050,7 +1366,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_small",
@@ -1063,7 +1383,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "size_odd",
@@ -1076,7 +1400,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "icc_profile",
@@ -1089,7 +1417,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "xmp_metadata",
@@ -1102,7 +1434,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "exif_metadata",
@@ -1115,7 +1451,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_truncated",
@@ -1128,7 +1468,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_vp8_magic",
@@ -1141,7 +1485,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_animated_vp8_magic",
@@ -1154,7 +1502,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container",
@@ -1167,7 +1519,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_bad_webp_signature",
@@ -1180,7 +1536,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_short_riff",
@@ -1193,7 +1553,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_interframe",
@@ -1206,7 +1570,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_zero_width",
@@ -1219,7 +1587,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_zero_height",
@@ -1232,7 +1604,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_bad_vp8l_signature",
@@ -1245,7 +1621,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_bad_vp8l_version",
@@ -1258,7 +1638,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_bad_initial_chunk",
@@ -1271,7 +1655,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_extended_vp8l_alpha_header_only",
@@ -1284,7 +1672,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_extended_missing_image_chunk",
@@ -1297,7 +1689,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_extended_vp8x_no_chunks",
@@ -1310,7 +1706,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_extended_vp8x_truncated_chunk_header",
@@ -1323,7 +1723,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8x_short_header",
@@ -1336,7 +1740,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_short_anmf_header",
@@ -1349,7 +1757,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_missing_anim",
@@ -1362,7 +1774,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_missing_anmf",
@@ -1375,7 +1791,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_anim_payload_eof_after_anmf",
@@ -1388,7 +1808,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_alpha_missing_nested_vp8_header",
@@ -1401,7 +1825,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_extended_vp8_dimension_mismatch",
@@ -1414,7 +1842,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_extended_canvas_too_large",
@@ -1427,7 +1859,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_bad_anmf_scan_size",
@@ -1440,7 +1876,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_bad_anmf_decode_size",
@@ -1453,7 +1893,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_anim_chunk_too_small",
@@ -1466,7 +1910,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_frame_outside",
@@ -1479,7 +1927,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_nested_chunk_too_large",
@@ -1492,7 +1944,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_alpha_chunk_too_large",
@@ -1505,7 +1961,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_animated_alpha_vp8_too_large",
@@ -1518,7 +1978,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_alpha_invalid_preprocessing",
@@ -1531,7 +1995,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_alpha_invalid_compression",
@@ -1544,7 +2012,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_alpha_header_only",
@@ -1557,7 +2029,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_short_header",
@@ -1570,7 +2046,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_6",
@@ -1583,7 +2063,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_8",
@@ -1596,7 +2080,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_12",
@@ -1609,7 +2097,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_16",
@@ -1622,7 +2114,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_24",
@@ -1635,7 +2131,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_32",
@@ -1648,7 +2148,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_64",
@@ -1661,7 +2165,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_truncated_128",
@@ -1674,7 +2182,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_plane_distance_truncated_12",
@@ -1687,7 +2199,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_meta_cache_truncated_10",
@@ -1700,7 +2216,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_single_cache_truncated_18",
@@ -1713,7 +2233,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_empty_payload",
@@ -1726,7 +2250,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_three_byte_payload",
@@ -1739,7 +2267,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_short_header_payload",
@@ -1752,7 +2284,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_short_partition_payload",
@@ -1765,7 +2301,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_half_payload",
@@ -1778,7 +2318,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_tail_truncated",
@@ -1791,7 +2335,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_header_only",
@@ -1804,7 +2352,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_duplicate_transform",
@@ -1817,7 +2369,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_invalid_color_cache",
@@ -1830,7 +2386,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_invalid_zero_symbol",
@@ -1843,7 +2403,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_empty_code_length_tree",
@@ -1856,7 +2420,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
@@ -1869,7 +2437,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_invalid_max_symbol",
@@ -1882,7 +2454,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_color_index_size_truncated",
@@ -1895,7 +2471,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_predictor_transform_stream_truncated",
@@ -1908,7 +2488,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_color_transform_stream_truncated",
@@ -1921,7 +2505,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_meta_huffman_stream_truncated",
@@ -1934,7 +2522,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_two_symbol_truncated_one_symbol",
@@ -1947,7 +2539,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_code_lengths_max_symbol_flag_truncated",
@@ -1960,7 +2556,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_code_lengths_length_nbits_truncated",
@@ -1973,7 +2573,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_code_lengths_max_value_truncated",
@@ -1986,7 +2590,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_color_index_stream_truncated",
@@ -1999,7 +2607,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_zero_symbol_truncated",
@@ -2012,7 +2624,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_code_length_alphabet_truncated",
@@ -2025,7 +2641,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_repeat_code17_extra_truncated",
@@ -2038,7 +2658,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_repeat_code18_extra_truncated",
@@ -2051,7 +2675,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_repeat_overflow",
@@ -2064,7 +2692,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_single_backref",
@@ -2077,7 +2709,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8l_backref_before_output",
@@ -2090,7 +2726,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_0",
@@ -2103,7 +2743,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_1",
@@ -2116,7 +2760,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_2",
@@ -2129,7 +2777,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_3",
@@ -2142,7 +2794,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_4",
@@ -2155,7 +2811,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_5",
@@ -2168,7 +2828,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_6",
@@ -2181,7 +2845,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_7",
@@ -2194,7 +2862,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_8",
@@ -2207,7 +2879,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_9",
@@ -2220,7 +2896,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_10",
@@ -2233,7 +2913,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_11",
@@ -2246,7 +2930,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_12",
@@ -2259,7 +2947,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_13",
@@ -2272,7 +2964,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_14",
@@ -2285,7 +2981,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_15",
@@ -2298,7 +2998,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_16",
@@ -2311,7 +3015,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_17",
@@ -2324,7 +3032,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_18",
@@ -2337,7 +3049,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_19",
@@ -2350,7 +3066,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_20",
@@ -2363,7 +3083,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_21",
@@ -2376,7 +3100,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_22",
@@ -2389,7 +3117,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_23",
@@ -2402,7 +3134,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_24",
@@ -2415,7 +3151,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_25",
@@ -2428,7 +3168,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_26",
@@ -2441,7 +3185,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_27",
@@ -2454,7 +3202,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_28",
@@ -2467,7 +3219,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_29",
@@ -2480,7 +3236,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_30",
@@ -2493,7 +3253,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_31",
@@ -2506,7 +3270,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "error_malformed_container_vp8_partition_32",
@@ -2519,7 +3287,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed",
@@ -2532,7 +3304,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_animated_frame_too_large",
@@ -2545,7 +3321,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_animated_frame_dimension_mismatch",
@@ -2558,7 +3338,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_animated_bad_nested_chunk",
@@ -2571,7 +3355,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
@@ -2584,7 +3372,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
@@ -2597,7 +3389,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_alpha_missing_chunk",
@@ -2610,7 +3406,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
@@ -2623,7 +3423,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     },
     {
       "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
@@ -2636,7 +3440,11 @@
           "load",
           "tobytes"
         ]
-      }
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     }
   ]
 }

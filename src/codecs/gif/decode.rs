@@ -57,11 +57,9 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
                     let identifier = input.read_bytes(identifier_len)?;
                     let payload = input.read_sub_blocks()?;
                     let is_loop_extension = matches!(identifier, b"NETSCAPE2.0" | b"ANIMEXTS1.0");
-                    if is_loop_extension && payload.first() == Some(&1) {
-                        if payload.len() >= 3 {
-                            let bytes = [payload[1], payload[2]];
-                            loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
-                        }
+                    if is_loop_extension && payload.first() == Some(&1) && payload.len() >= 3 {
+                        let bytes = [payload[1], payload[2]];
+                        loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
                     }
                 } else {
                     input.skip_sub_blocks()?;
@@ -77,7 +75,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
                     image,
                     left: u32::from(left),
                     top: u32::from(top),
-                    duration_ms: u32::from(graphic_control.delay_cs) * 10,
+                    duration_ms: u32::from(graphic_control.delay_cs).saturating_mul(10),
                     disposal: graphic_control.disposal,
                     interlaced,
                 });
@@ -89,11 +87,11 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     }
 
     let first_frame = frames.first()?;
-    let mut fallback_width = first_frame.left + first_frame.image.width;
-    let mut fallback_height = first_frame.top + first_frame.image.height;
+    let mut fallback_width = first_frame.left.saturating_add(first_frame.image.width);
+    let mut fallback_height = first_frame.top.saturating_add(first_frame.image.height);
     for frame in &frames[1..] {
-        fallback_width = fallback_width.max(frame.left + frame.image.width);
-        fallback_height = fallback_height.max(frame.top + frame.image.height);
+        fallback_width = fallback_width.max(frame.left.saturating_add(frame.image.width));
+        fallback_height = fallback_height.max(frame.top.saturating_add(frame.image.height));
     }
     let logical_width = u32::from(logical_width);
     let logical_height = u32::from(logical_height);
@@ -170,7 +168,7 @@ fn decode_image(
 
     let minimum_code_size = input.read_u8()?;
     let compressed = input.read_sub_blocks()?;
-    let pixel_count = usize::from(width) * usize::from(height);
+    let pixel_count = usize::from(width).saturating_mul(usize::from(height));
     let mut indices = decode_lzw(&compressed, minimum_code_size, pixel_count)?;
 
     if interlaced {
@@ -178,22 +176,22 @@ fn decode_image(
     }
 
     let image = if let Some(palette_rgb) = palette_rgb {
-        let entries = palette_rgb.len() / 3;
+        let entries = palette_rgb.len().div_euclid(3);
         let required_entries = indices
             .iter()
             .copied()
             .map(usize::from)
             .max()
-            .map_or(0, |index| index + 1);
+            .map_or(0, |index| index.saturating_add(1));
         let padded_entries = entries.max(required_entries);
         let mut rgb = palette_rgb.to_vec();
-        rgb.resize(padded_entries * 3, 0);
+        rgb.resize(padded_entries.saturating_mul(3), 0);
         let mut alpha = Vec::new();
-        if let Some(index) = transparent_index {
-            if usize::from(index) < padded_entries {
-                alpha = vec![255; padded_entries];
-                alpha[usize::from(index)] = 0;
-            }
+        if let Some(index) = transparent_index
+            && usize::from(index) < padded_entries
+        {
+            alpha = vec![255; padded_entries];
+            alpha[usize::from(index)] = 0;
         }
         let palette = ImagePalette { rgb, alpha };
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
@@ -205,7 +203,7 @@ fn decode_image(
 }
 
 fn color_table_len(packed: u8) -> usize {
-    (1usize << ((packed & 0x07) + 1)) * 3
+    (1usize << (packed & 0x07).saturating_add(1)).saturating_mul(3)
 }
 
 /// Decode GIF's variable-width, least-significant-bit-first LZW stream.
@@ -218,9 +216,9 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
     }
 
     let clear_code = 1u16 << minimum_code_size;
-    let end_code = clear_code + 1;
-    let first_free_code = end_code + 1;
-    let mut code_size = minimum_code_size + 1;
+    let end_code = clear_code.saturating_add(1);
+    let first_free_code = end_code.saturating_add(1);
+    let mut code_size = minimum_code_size.saturating_add(1);
     let mut next_code = first_free_code;
     let mut previous_code = None;
     let mut prefixes = [0u16; MAX_LZW_CODE];
@@ -230,12 +228,12 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
     let mut output = Vec::with_capacity(expected_len);
 
     for value in 0..clear_code {
-        suffixes[usize::from(value)] = value as u8;
+        suffixes[usize::from(value)] = value.to_le_bytes()[0];
     }
 
     while let Some(code) = bits.read(code_size) {
         if code == clear_code {
-            code_size = minimum_code_size + 1;
+            code_size = minimum_code_size.saturating_add(1);
             next_code = first_free_code;
             previous_code = None;
             continue;
@@ -248,7 +246,7 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
             if code >= clear_code || output.len() >= expected_len {
                 return None;
             }
-            output.push(code as u8);
+            output.push(code.to_le_bytes()[0]);
             if output.len() == expected_len {
                 return Some(output);
             }
@@ -291,10 +289,10 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
         if usize::from(next_code) < MAX_LZW_CODE {
             prefixes[usize::from(next_code)] = previous;
             suffixes[usize::from(next_code)] = first;
-            next_code += 1;
+            next_code = next_code.saturating_add(1);
 
             if code_size < 12 && next_code == (1u16 << code_size) {
-                code_size += 1;
+                code_size = code_size.saturating_add(1);
             }
         }
 
@@ -317,16 +315,16 @@ fn append_code(
     let mut len = 0usize;
     while code >= clear_code {
         stack[len] = suffixes[usize::from(code)];
-        len += 1;
+        len = len.saturating_add(1);
         code = prefixes[usize::from(code)];
     }
 
-    let first = code as u8;
+    let first = code.to_le_bytes()[0];
     debug_assert!(len < MAX_LZW_CODE);
     stack[len] = first;
-    len += 1;
+    len = len.saturating_add(1);
 
-    let remaining = expected_len - output.len();
+    let remaining = expected_len.saturating_sub(output.len());
     output.extend(stack[..len].iter().rev().take(remaining));
     first
 }
@@ -337,17 +335,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 fn deinterlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
-    debug_assert_eq!(indices.len(), width * height);
+    debug_assert_eq!(indices.len(), width.saturating_mul(height));
 
     let mut output = vec![0; indices.len()];
     let mut source_row = 0usize;
     for (start, step) in [(0usize, 8usize), (4, 8), (2, 4), (1, 2)] {
         for destination_row in (start..height).step_by(step) {
-            let source_start = source_row * width;
-            let destination_start = destination_row * width;
-            output[destination_start..destination_start + width]
-                .copy_from_slice(&indices[source_start..source_start + width]);
-            source_row += 1;
+            let source_start = source_row.saturating_mul(width);
+            let destination_start = destination_row.saturating_mul(width);
+            output[destination_start..destination_start.saturating_add(width)]
+                .copy_from_slice(&indices[source_start..source_start.saturating_add(width)]);
+            source_row = source_row.saturating_add(1);
         }
     }
     debug_assert_eq!(source_row, height);
@@ -366,7 +364,7 @@ impl<'a> Input<'a> {
 
     fn read_u8(&mut self) -> Option<u8> {
         let value = *self.data.get(self.position)?;
-        self.position += 1;
+        self.position = self.position.saturating_add(1);
         Some(value)
     }
 
@@ -379,7 +377,7 @@ impl<'a> Input<'a> {
         if len > self.data.len().saturating_sub(self.position) {
             return None;
         }
-        let end = self.position + len;
+        let end = self.position.saturating_add(len);
         let bytes = &self.data[self.position..end];
         self.position = end;
         Some(bytes)
@@ -425,17 +423,17 @@ impl<'a> BitReader<'a> {
     }
 
     fn read(&mut self, width: u8) -> Option<u16> {
-        let end = self.bit_position + usize::from(width);
-        if end > self.data.len() * 8 {
+        let end = self.bit_position.saturating_add(usize::from(width));
+        if end > self.data.len().saturating_mul(8) {
             return None;
         }
 
         let mut value = 0u16;
         for shift in 0..width {
-            let byte = self.data[self.bit_position / 8];
-            let bit = (byte >> (self.bit_position % 8)) & 1;
+            let byte = self.data[self.bit_position.div_euclid(8)];
+            let bit = (byte >> self.bit_position.rem_euclid(8)) & 1;
             value |= u16::from(bit) << shift;
-            self.bit_position += 1;
+            self.bit_position = self.bit_position.saturating_add(1);
         }
         Some(value)
     }

@@ -279,17 +279,27 @@ impl ImageFormat {
         }
     }
 
-    /// Attempt to detect the image format from a file path extension.
+    /// Detects the image format from the final file-name extension.
+    ///
+    /// This function performs no filesystem access: it does not open,
+    /// canonicalize, resolve, or validate `path`. Parent-directory components
+    /// therefore have no special meaning here. A caller that subsequently
+    /// reads an untrusted path must enforce its own allowed-root and symlink
+    /// policy at that I/O boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Unsupported`] when the path has no recognized
+    /// Unicode extension.
     pub fn from_path<P: AsRef<std::path::Path>>(path: P) -> Result<ImageFormat, ImageError> {
         let ext = path
             .as_ref()
             .extension()
             .and_then(|e| e.to_str())
-            .map(|e| e.to_lowercase())
             .unwrap_or_default();
-        Self::from_name(&ext).map_err(|_| ImageError::Unsupported {
+        Self::from_name(ext).map_err(|_| ImageError::Unsupported {
             format: None,
-            message: format!("unknown extension: {ext}"),
+            message: format!("unknown extension: {}", ext.to_ascii_lowercase()),
         })
     }
 }
@@ -400,7 +410,7 @@ impl ImageMode {
             return width.div_ceil(8).checked_mul(height);
         }
         #[cfg(target_pointer_width = "64")]
-        let pixels = width * height;
+        let pixels = width.saturating_mul(height);
         #[cfg(not(target_pointer_width = "64"))]
         let pixels = width.checked_mul(height)?;
         pixels.checked_mul(usize::from(self.color_type().bytes_per_pixel()))

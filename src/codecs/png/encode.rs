@@ -13,8 +13,8 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     img.validate().ok()?;
 
-    let width = img.width as usize;
-    let height = img.height as usize;
+    let width = bounded_usize(img.width);
+    let height = bounded_usize(img.height);
     let (png_color, depth, row_bytes, filter_bytes, pixels) = match img.mode {
         ImageMode::L1 => {
             let row_bytes = width.div_ceil(8);
@@ -27,7 +27,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 big_endian
                     .extend_from_slice(&u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes());
             }
-            (0, 16, width * 2, 2, big_endian)
+            (0, 16, width.saturating_mul(2), 2, big_endian)
         }
         _ => {
             let (png_color, channels) = match img.color {
@@ -37,7 +37,13 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 ColorType::Rgba8 => (6, 4),
                 _ => return None,
             };
-            (png_color, 8, width * channels, channels, img.pixels.clone())
+            (
+                png_color,
+                8,
+                width.saturating_mul(channels),
+                channels,
+                img.pixels.clone(),
+            )
         }
     };
 
@@ -170,7 +176,7 @@ fn plain_rows(
     filter: Filter,
     optimize: bool,
 ) -> (Vec<u8>, Vec<usize>) {
-    let row_len = stride + 1;
+    let row_len = stride.saturating_add(1);
     let mut output = Vec::with_capacity(row_len.saturating_mul(height));
     let input_chunks = vec![row_len; height];
     let mut previous = None;
@@ -219,7 +225,10 @@ fn append_filtered_row(
             Filter::None | Filter::Adaptive => 0,
             Filter::Sub => left,
             Filter::Up => above,
-            Filter::Average => ((u16::from(left) + u16::from(above)) / 2) as u8,
+            Filter::Average => u16::from(left)
+                .saturating_add(u16::from(above))
+                .div_euclid(2)
+                .to_le_bytes()[0],
             Filter::Paeth => paeth(left, above, upper_left),
         };
         output.push(value.wrapping_sub(prediction));
@@ -273,7 +282,10 @@ fn filter_score(
                 Filter::None | Filter::Adaptive => 0,
                 Filter::Sub => left,
                 Filter::Up => above,
-                Filter::Average => ((u16::from(left) + u16::from(above)) / 2) as u8,
+                Filter::Average => u16::from(left)
+                    .saturating_add(u16::from(above))
+                    .div_euclid(2)
+                    .to_le_bytes()[0],
                 Filter::Paeth => paeth(left, above, upper_left),
             };
             u64::from((value.wrapping_sub(prediction) as i8).unsigned_abs())
@@ -295,16 +307,16 @@ fn paeth(left: u8, above: u8, upper_left: u8) -> u8 {
     let left = i32::from(left);
     let above = i32::from(above);
     let upper_left = i32::from(upper_left);
-    let estimate = left + above - upper_left;
-    let left_distance = (estimate - left).abs();
-    let above_distance = (estimate - above).abs();
-    let diagonal_distance = (estimate - upper_left).abs();
+    let estimate = left.saturating_add(above).saturating_sub(upper_left);
+    let left_distance = estimate.saturating_sub(left).saturating_abs();
+    let above_distance = estimate.saturating_sub(above).saturating_abs();
+    let diagonal_distance = estimate.saturating_sub(upper_left).saturating_abs();
     if left_distance <= above_distance && left_distance <= diagonal_distance {
-        left as u8
+        left.to_le_bytes()[0]
     } else if above_distance <= diagonal_distance {
-        above as u8
+        above.to_le_bytes()[0]
     } else {
-        upper_left as u8
+        upper_left.to_le_bytes()[0]
     }
 }
 
@@ -338,17 +350,17 @@ fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &EncodeOptions) 
 }
 
 fn write_idat_chunks(output: &mut Vec<u8>, payload: &[u8]) {
-    const MAX_CHUNK_LEN: usize = u32::MAX as usize;
+    let max_chunk_len = bounded_usize(u32::MAX);
 
-    for chunk in payload.chunks(MAX_CHUNK_LEN) {
-        append_chunk(output, *b"IDAT", chunk, chunk.len() as u32);
+    for chunk in payload.chunks(max_chunk_len) {
+        append_chunk(output, *b"IDAT", chunk, low_u32(chunk.len()));
     }
 }
 
 fn write_bounded_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {
     // Callers pass fixed metadata chunks or palettes already bounded by
     // DecodedImage::validate().
-    append_chunk(output, kind, payload, payload.len() as u32);
+    append_chunk(output, kind, payload, low_u32(payload.len()));
 }
 
 fn append_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8], length: u32) {
@@ -367,4 +379,28 @@ fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
         }
     }
     !crc
+}
+
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn low_u32(value: usize) -> u32 {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d, ..] = value.to_le_bytes();
+        u32::from_le_bytes([a, b, c, d])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        u32::from_le_bytes(value.to_le_bytes())
+    }
 }

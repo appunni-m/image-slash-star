@@ -30,17 +30,20 @@ mod compression;
 
 /// Dispatch decoding to the enabled format implementation.
 pub fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<DecodedImage> {
-    #[cfg(not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    )))]
-    ensure_enabled(format)?;
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
     let image = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::decode::decode(_data),
@@ -86,17 +89,20 @@ fn validate_decoded_image(image: DecodedImage) -> ImageResult<DecodedImage> {
 
 /// Dispatch header inspection to the enabled format implementation.
 pub fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInfo> {
-    #[cfg(not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    )))]
-    ensure_enabled(format)?;
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
 
     #[cfg(feature = "png")]
     if format == ImageFormat::Png {
@@ -175,19 +181,81 @@ pub fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInf
     })
 }
 
+/// Apply the pinned Pillow oracle's codec-specific verification contract.
+pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()> {
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
+
+    #[cfg(feature = "png")]
+    if format == ImageFormat::Png {
+        return decoded_or_malformed(
+            png::decode::verify(_data),
+            format,
+            "codec rejected image structure",
+        );
+    }
+
+    #[cfg(feature = "webp")]
+    if format == ImageFormat::WebP {
+        return decoded_or_malformed(
+            webp::decode::verify(_data),
+            format,
+            "codec rejected image structure",
+        );
+    }
+
+    #[cfg(feature = "jpeg")]
+    if format == ImageFormat::Jpeg {
+        return decoded_or_malformed(
+            jpeg::inspect::verify(_data),
+            format,
+            "codec rejected image structure",
+        );
+    }
+
+    #[cfg(feature = "tiff")]
+    if format == ImageFormat::Tiff {
+        return decoded_or_malformed(
+            tiff::inspect::verify(_data),
+            format,
+            "codec rejected image structure",
+        );
+    }
+
+    // Formats without a manifest-proven structural verifier retain Pillow's
+    // metadata-open verification behavior. EncodedImage construction has
+    // already performed that metadata inspection.
+    Ok(())
+}
+
 /// Dispatch decoding while retaining every frame and its presentation data.
 pub fn decode_sequence_format(data: &[u8], format: ImageFormat) -> ImageResult<DecodedSequence> {
-    #[cfg(not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    )))]
-    ensure_enabled(format)?;
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
         return decoded_or_malformed(
@@ -224,18 +292,21 @@ pub fn encode_format(
     format: ImageFormat,
     _options: &EncodeOptions,
 ) -> ImageResult<Vec<u8>> {
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
     _image.validate()?;
-    #[cfg(not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    )))]
-    ensure_enabled(format)?;
     let encoded = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::encode::encode(_image, _options),
@@ -279,18 +350,21 @@ pub fn encode_sequence_format(
     format: ImageFormat,
     options: &EncodeOptions,
 ) -> ImageResult<Vec<u8>> {
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
     sequence.validate()?;
-    #[cfg(not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    )))]
-    ensure_enabled(format)?;
 
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
@@ -345,6 +419,77 @@ fn encoded_or_unsupported(
             message: message.to_owned(),
         }),
     }
+}
+
+#[cfg(any(
+    coverage,
+    target_arch = "wasm32",
+    not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    ))
+))]
+const AVIF_WASM_UNAVAILABLE: &str =
+    "AVIF is unavailable on wasm32 without an AVIF-capable extra module";
+
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif"
+))]
+fn ensure_available(format: ImageFormat) -> ImageResult<()> {
+    ensure_target_available(format, true)
+}
+
+#[cfg(not(all(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif"
+)))]
+fn ensure_available(format: ImageFormat) -> ImageResult<()> {
+    ensure_enabled(format)?;
+    ensure_target_available(format, cfg!(all(target_arch = "wasm32", feature = "avif")))
+}
+
+#[cfg(any(
+    coverage,
+    target_arch = "wasm32",
+    not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    ))
+))]
+fn ensure_target_available(format: ImageFormat, avif_unavailable: bool) -> ImageResult<()> {
+    if avif_unavailable && format == ImageFormat::Avif {
+        return Err(ImageError::Unsupported {
+            format: Some(format),
+            message: AVIF_WASM_UNAVAILABLE.to_owned(),
+        });
+    }
+    Ok(())
 }
 
 #[cfg(not(all(
@@ -419,6 +564,10 @@ fn ensure_enabled(format: ImageFormat) -> ImageResult<()> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = ensure_target_available(ImageFormat::Avif, true);
+    let _ = ensure_target_available(ImageFormat::Avif, false);
+    let _ = ensure_target_available(ImageFormat::Png, true);
+
     let invalid_sequence = DecodedSequence {
         width: 0,
         height: 1,

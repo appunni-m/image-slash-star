@@ -203,68 +203,93 @@ pub(super) fn select_macroblock(
         spectral_distortion: 0,
         header_cost: 211,
         rate_cost: 0,
-        score: u64::from(211 * lambda_mode),
+        score: u64::from(211_u32.wrapping_mul(lambda_mode)),
         nonzero: 0,
     };
 
-    for block_y in 0..4 {
-        for block_x in 0..4 {
-            let block_index = block_y * 4 + block_x;
+    for block_y in 0_usize..4 {
+        for block_x in 0_usize..4 {
+            let block_index = block_y.wrapping_mul(4).wrapping_add(block_x);
             let mut block_source = [0; 16];
-            for row in 0..4 {
-                let source_offset = (block_y * 4 + row) * 16 + block_x * 4;
-                block_source[row * 4..row * 4 + 4]
-                    .copy_from_slice(&source[source_offset..source_offset + 4]);
+            for row in 0_usize..4 {
+                let source_offset = block_y
+                    .wrapping_mul(4)
+                    .wrapping_add(row)
+                    .wrapping_mul(16)
+                    .wrapping_add(block_x.wrapping_mul(4));
+                let block_offset = row.wrapping_mul(4);
+                block_source[block_offset..block_offset.wrapping_add(4)]
+                    .copy_from_slice(&source[source_offset..source_offset.wrapping_add(4)]);
             }
 
             let mut top = [0; 8];
             for (offset, sample) in top.iter_mut().enumerate() {
-                let column = block_x * 4 + offset;
+                let column = block_x.wrapping_mul(4).wrapping_add(offset);
                 *sample = if block_y == 0 {
                     top_boundary[column]
                 } else if column < 16 {
-                    result.reconstructed[(block_y * 4 - 1) * 16 + column]
+                    result.reconstructed[block_y
+                        .wrapping_mul(4)
+                        .wrapping_sub(1)
+                        .wrapping_mul(16)
+                        .wrapping_add(column)]
                 } else {
                     top_boundary[column]
                 };
             }
             let left = std::array::from_fn(|offset| {
-                let row = block_y * 4 + offset;
+                let row = block_y.wrapping_mul(4).wrapping_add(offset);
                 if block_x == 0 {
                     left_boundary[row]
                 } else {
-                    result.reconstructed[row * 16 + block_x * 4 - 1]
+                    result.reconstructed[row
+                        .wrapping_mul(16)
+                        .wrapping_add(block_x.wrapping_mul(4))
+                        .wrapping_sub(1)]
                 }
             });
             let block_top_left = match (block_x, block_y) {
                 (0, 0) => top_left,
-                (_, 0) => top_boundary[block_x * 4 - 1],
-                (0, _) => left_boundary[block_y * 4 - 1],
-                _ => result.reconstructed[(block_y * 4 - 1) * 16 + block_x * 4 - 1],
+                (_, 0) => top_boundary[block_x.wrapping_mul(4).wrapping_sub(1)],
+                (0, _) => left_boundary[block_y.wrapping_mul(4).wrapping_sub(1)],
+                _ => {
+                    result.reconstructed[block_y
+                        .wrapping_mul(4)
+                        .wrapping_sub(1)
+                        .wrapping_mul(16)
+                        .wrapping_add(block_x.wrapping_mul(4))
+                        .wrapping_sub(1)]
+                }
             };
             let top_mode = if block_y == 0 {
                 top_modes[block_x]
             } else {
-                result.modes[block_index - 4]
+                result.modes[block_index.wrapping_sub(4)]
             };
             let left_mode = if block_x == 0 {
                 left_modes[block_y]
             } else {
-                result.modes[block_index - 1]
+                result.modes[block_index.wrapping_sub(1)]
             };
-            let context = usize::from(top_nonzero[block_x] + left_nonzero[block_y]);
+            let context = usize::from(top_nonzero[block_x].wrapping_add(left_nonzero[block_y]));
             let selected_mode = distortion_only.then(|| {
+                // The complete intra4 mode set is statically non-empty.
+                #[allow(clippy::expect_used)]
                 Intra4Mode::ALL
                     .into_iter()
                     .min_by_key(|&mode| {
                         let prediction = predict(mode, &top, &left, block_top_left);
-                        256 * squared_error_4x4(&block_source, &prediction)
-                            + 11 * u32::from(fixed_mode_cost(top_mode, left_mode, mode))
+                        256_u32
+                            .wrapping_mul(squared_error_4x4(&block_source, &prediction))
+                            .wrapping_add(11_u32.wrapping_mul(u32::from(fixed_mode_cost(
+                                top_mode, left_mode, mode,
+                            ))))
                     })
                     .expect("VP8 always has intra4 candidates")
             });
 
-            let mut best: Option<(u64, Intra4Mode, [i16; 16], [u8; 16], u32, u32, u32, u32)> = None;
+            type Candidate = (u64, Intra4Mode, [i16; 16], [u8; 16], u32, u32, u32, u32);
+            let mut best: Option<Candidate> = None;
             for mode in Intra4Mode::ALL
                 .into_iter()
                 .filter(|&mode| selected_mode.is_none_or(|selected| selected == mode))
@@ -272,7 +297,7 @@ pub(super) fn select_macroblock(
                 let prediction = predict(mode, &top, &left, block_top_left);
                 let (nonzero, levels, reconstructed) = if trellis {
                     let residual = std::array::from_fn(|index| {
-                        i16::from(block_source[index]) - i16::from(prediction[index])
+                        i16::from(block_source[index]).wrapping_sub(i16::from(prediction[index]))
                     });
                     let mut coefficients = vp8_fdct_4x4(&residual);
                     let mut levels = [0; 16];
@@ -292,7 +317,10 @@ pub(super) fn select_macroblock(
                 };
                 let distortion = squared_error_4x4(&block_source, &reconstructed);
                 let texture = spectral_distortion_4x4(&block_source, &reconstructed);
-                let spectral = (texture_lambda * texture + 128) >> 8;
+                let spectral = texture_lambda
+                    .wrapping_mul(texture)
+                    .wrapping_add(128)
+                    .wrapping_shr(8);
                 let header = u32::from(fixed_mode_cost(top_mode, left_mode, mode));
                 let flat_penalty = if mode != Intra4Mode::Dc
                     && levels[1..].iter().filter(|&&level| level != 0).count() <= 3
@@ -301,8 +329,12 @@ pub(super) fn select_macroblock(
                 } else {
                     0
                 };
-                let preliminary_score =
-                    rd_score(flat_penalty, header, distortion + spectral, lambda_i4);
+                let preliminary_score = rd_score(
+                    flat_penalty,
+                    header,
+                    distortion.wrapping_add(spectral),
+                    lambda_i4,
+                );
                 if !distortion_only
                     && best
                         .as_ref()
@@ -310,9 +342,14 @@ pub(super) fn select_macroblock(
                 {
                     continue;
                 }
-                let rate =
-                    flat_penalty + residual_cost(&levels, 0, 3, context, coefficient_probabilities);
-                let score = rd_score(rate, header, distortion + spectral, lambda_i4);
+                let rate = flat_penalty.wrapping_add(residual_cost(
+                    &levels,
+                    0,
+                    3,
+                    context,
+                    coefficient_probabilities,
+                ));
+                let score = rd_score(rate, header, distortion.wrapping_add(spectral), lambda_i4);
                 if distortion_only || best.as_ref().is_none_or(|best| score < best.0) {
                     best = Some((
                         score,
@@ -327,25 +364,37 @@ pub(super) fn select_macroblock(
                 }
                 let _ = nonzero;
             }
+            // The selected mode is always evaluated by the loop above.
+            #[allow(clippy::expect_used)]
             let (_, mode, levels, reconstructed, distortion, spectral, header, rate) =
                 best.expect("VP8 always has intra4 candidates");
             let nonzero = levels.iter().any(|&level| level != 0);
             result.modes[block_index] = mode;
             result.levels[block_index] = levels;
-            result.distortion += distortion;
-            result.spectral_distortion += spectral;
-            result.header_cost += header;
-            result.rate_cost += rate;
-            result.score += rd_score(rate, header, distortion + spectral, lambda_mode);
+            result.distortion = result.distortion.wrapping_add(distortion);
+            result.spectral_distortion = result.spectral_distortion.wrapping_add(spectral);
+            result.header_cost = result.header_cost.wrapping_add(header);
+            result.rate_cost = result.rate_cost.wrapping_add(rate);
+            result.score = result.score.wrapping_add(rd_score(
+                rate,
+                header,
+                distortion.wrapping_add(spectral),
+                lambda_mode,
+            ));
             if nonzero {
-                result.nonzero |= 1 << block_index;
+                result.nonzero |= 1_u32.wrapping_shl(block_index.to_le_bytes()[0].into());
             }
             top_nonzero[block_x] = u8::from(nonzero);
             left_nonzero[block_y] = u8::from(nonzero);
-            for row in 0..4 {
-                let destination_offset = (block_y * 4 + row) * 16 + block_x * 4;
-                result.reconstructed[destination_offset..destination_offset + 4]
-                    .copy_from_slice(&reconstructed[row * 4..row * 4 + 4]);
+            for row in 0_usize..4 {
+                let destination_offset = block_y
+                    .wrapping_mul(4)
+                    .wrapping_add(row)
+                    .wrapping_mul(16)
+                    .wrapping_add(block_x.wrapping_mul(4));
+                let source_offset = row.wrapping_mul(4);
+                result.reconstructed[destination_offset..destination_offset.wrapping_add(4)]
+                    .copy_from_slice(&reconstructed[source_offset..source_offset.wrapping_add(4)]);
             }
         }
     }
@@ -353,15 +402,24 @@ pub(super) fn select_macroblock(
 }
 
 fn average_two(a: u8, b: u8) -> u8 {
-    ((u16::from(a) + u16::from(b) + 1) >> 1) as u8
+    u16::from(a)
+        .wrapping_add(u16::from(b))
+        .wrapping_add(1)
+        .wrapping_shr(1)
+        .to_le_bytes()[0]
 }
 
 fn average_three(a: u8, b: u8, c: u8) -> u8 {
-    ((u16::from(a) + 2 * u16::from(b) + u16::from(c) + 2) >> 2) as u8
+    u16::from(a)
+        .wrapping_add(2_u16.wrapping_mul(u16::from(b)))
+        .wrapping_add(u16::from(c))
+        .wrapping_add(2)
+        .wrapping_shr(2)
+        .to_le_bytes()[0]
 }
 
 fn set(output: &mut [u8; 16], column: usize, row: usize, value: u8) {
-    output[row * 4 + column] = value;
+    output[row.wrapping_mul(4).wrapping_add(column)] = value;
 }
 
 pub(super) fn predict(mode: Intra4Mode, top: &[u8; 8], left: &[u8; 4], top_left: u8) -> [u8; 16] {
@@ -372,21 +430,25 @@ pub(super) fn predict(mode: Intra4Mode, top: &[u8; 8], left: &[u8; 4], top_left:
 
     match mode {
         Intra4Mode::Dc => {
-            let dc = (4
-                + top[..4].iter().map(|&value| u32::from(value)).sum::<u32>()
-                + left.iter().map(|&value| u32::from(value)).sum::<u32>())
-                >> 3;
-            output.fill(dc as u8);
+            let dc = top[..4]
+                .iter()
+                .chain(left)
+                .fold(4_u32, |sum, &value| sum.wrapping_add(u32::from(value)))
+                .wrapping_shr(3);
+            output.fill(dc.to_le_bytes()[0]);
         }
         Intra4Mode::TrueMotion => {
-            for row in 0..4 {
-                for column in 0..4 {
+            for (row, &left_value) in left.iter().enumerate() {
+                for (column, &top_value) in top.iter().take(4).enumerate() {
                     set(
                         &mut output,
                         column,
                         row,
-                        (i16::from(top[column]) + i16::from(left[row]) - i16::from(x)).clamp(0, 255)
-                            as u8,
+                        i16::from(top_value)
+                            .wrapping_add(i16::from(left_value))
+                            .wrapping_sub(i16::from(x))
+                            .clamp(0, 255)
+                            .to_le_bytes()[0],
                     );
                 }
             }
@@ -398,8 +460,9 @@ pub(super) fn predict(mode: Intra4Mode, top: &[u8; 8], left: &[u8; 4], top_left:
                 average_three(b, c, d),
                 average_three(c, d, e),
             ];
-            for row_index in 0..4 {
-                output[row_index * 4..row_index * 4 + 4].copy_from_slice(&row);
+            for row_index in 0_usize..4 {
+                let row_start = row_index.wrapping_mul(4);
+                output[row_start..row_start.wrapping_add(4)].copy_from_slice(&row);
             }
         }
         Intra4Mode::Horizontal => {
@@ -410,22 +473,23 @@ pub(super) fn predict(mode: Intra4Mode, top: &[u8; 8], left: &[u8; 4], top_left:
                 average_three(k, l, l),
             ];
             for (row, value) in rows.into_iter().enumerate() {
-                output[row * 4..row * 4 + 4].fill(value);
+                let row_start = row.wrapping_mul(4);
+                output[row_start..row_start.wrapping_add(4)].fill(value);
             }
         }
         Intra4Mode::DownRight => {
             let references = [l, k, j, i, x, a, b, c, d];
-            for row in 0..4 {
-                for column in 0..4 {
-                    let center = 4 + column as isize - row as isize;
+            for row in 0_usize..4 {
+                for column in 0_usize..4 {
+                    let center = 4_usize.wrapping_add(column).wrapping_sub(row);
                     set(
                         &mut output,
                         column,
                         row,
                         average_three(
-                            references[(center - 1) as usize],
-                            references[center as usize],
-                            references[(center + 1) as usize],
+                            references[center.wrapping_sub(1)],
+                            references[center],
+                            references[center.wrapping_add(1)],
                         ),
                     );
                 }
@@ -453,17 +517,17 @@ pub(super) fn predict(mode: Intra4Mode, top: &[u8; 8], left: &[u8; 4], top_left:
         }
         Intra4Mode::DownLeft => {
             let references = [a, b, c, d, e, f, g, h, h];
-            for row in 0..4 {
-                for column in 0..4 {
-                    let index = row + column;
+            for row in 0_usize..4 {
+                for column in 0_usize..4 {
+                    let index = row.wrapping_add(column);
                     set(
                         &mut output,
                         column,
                         row,
                         average_three(
                             references[index],
-                            references[index + 1],
-                            references[index + 2],
+                            references[index.wrapping_add(1)],
+                            references[index.wrapping_add(2)],
                         ),
                     );
                 }

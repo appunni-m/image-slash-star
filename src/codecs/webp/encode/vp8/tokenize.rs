@@ -117,7 +117,13 @@ pub const fn coefficient_update_probability(
     context: usize,
     node: usize,
 ) -> u8 {
-    COEFF_UPDATE_PROBS[(((coefficient_type * 8 + band) * 3 + context) * 11) + node]
+    COEFF_UPDATE_PROBS[coefficient_type
+        .saturating_mul(8)
+        .saturating_add(band)
+        .saturating_mul(3)
+        .saturating_add(context)
+        .saturating_mul(11)
+        .saturating_add(node)]
 }
 
 // ── Token Probability Tables ──

@@ -1,5 +1,6 @@
 //! `FromPrimitive` trait + implementations + luminance helpers.
 
+use crate::types::traits::primitive::saturating_trunc_f32_to_u128;
 use crate::types::traits::{Enlargeable, Primitive};
 
 pub trait FromPrimitive<Component> {
@@ -15,20 +16,30 @@ impl<T: Primitive> FromPrimitive<T> for T {
 // From f32:
 impl FromPrimitive<f32> for u8 {
     fn from_primitive(float: f32) -> Self {
-        normalize_float(float, u8::MAX as f32) as u8
+        u8::try_from(saturating_trunc_f32_to_u128(normalize_float(
+            float,
+            f32::from(u8::MAX),
+        )))
+        .unwrap_or(u8::MAX)
     }
 }
 
 impl FromPrimitive<f32> for u16 {
     fn from_primitive(float: f32) -> Self {
-        normalize_float(float, u16::MAX as f32) as u16
+        u16::try_from(saturating_trunc_f32_to_u128(normalize_float(
+            float,
+            f32::from(u16::MAX),
+        )))
+        .unwrap_or(u16::MAX)
     }
 }
 
 // From u16:
 impl FromPrimitive<u16> for u8 {
     fn from_primitive(c16: u16) -> Self {
-        ((c16 as u32 + 128) / 257) as u8
+        let rounded = u32::from(c16).saturating_add(128);
+        let scaled = rounded.checked_div(257).unwrap_or_default();
+        u8::try_from(scaled).unwrap_or(u8::MAX)
     }
 }
 
@@ -47,15 +58,18 @@ impl FromPrimitive<u8> for f32 {
 
 impl FromPrimitive<u8> for u16 {
     fn from_primitive(c8: u8) -> Self {
-        let x = c8 as u64;
-        ((x << 8) | x) as u16
+        u16::from(c8).saturating_mul(257)
     }
 }
 
 #[inline]
 pub(super) fn normalize_float(float: f32, max: f32) -> f32 {
-    let clamped = if !(float < 1.0) { 1.0 } else { float.max(0.0) };
-    (clamped * max).round()
+    let clamped = if matches!(float.partial_cmp(&1.0), Some(std::cmp::Ordering::Less)) {
+        float.max(0.0)
+    } else {
+        1.0
+    };
+    clamped.mul_add(max, 0.0).round()
 }
 
 // ---------------------------------------------------------------------------

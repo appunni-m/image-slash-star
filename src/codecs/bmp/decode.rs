@@ -35,7 +35,14 @@ fn read_i32_le<R: Read>(r: &mut R) -> Option<i32> {
 
 /// Row size in bytes (padded to 4‑byte boundary).
 fn row_size(bits_per_pixel: u16, width: u32) -> usize {
-    (((bits_per_pixel as u64) * (width as u64)).div_ceil(32) * 4) as usize
+    let bytes = u64::from(bits_per_pixel)
+        .saturating_mul(u64::from(width))
+        .div_ceil(32)
+        .saturating_mul(4);
+    #[cfg(target_pointer_width = "64")]
+    return usize::from_ne_bytes(bytes.to_ne_bytes());
+    #[cfg(not(target_pointer_width = "64"))]
+    usize::try_from(bytes).unwrap_or(usize::MAX)
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -102,10 +109,13 @@ fn extract_channel(pixel: u32, mask: u32) -> u8 {
     let width = (mask >> shift).count_ones();
     let value = (pixel & mask) >> shift;
     if width >= 8 {
-        (value >> (width - 8)) as u8
+        (value >> width.saturating_sub(8)).to_le_bytes()[0]
     } else {
-        let max_val = (1u32 << width) - 1;
-        ((value * 255) / max_val) as u8
+        let max_val = (1u32 << width).saturating_sub(1);
+        value
+            .saturating_mul(u32::from(u8::MAX))
+            .div_euclid(max_val)
+            .to_le_bytes()[0]
     }
 }
 
@@ -124,15 +134,15 @@ fn decode_rle(
     // particular, its RLE4 absolute mode reads floor(pixel_count / 2) bytes,
     // so an unpaired final nibble is deliberately omitted and later row
     // padding supplies a zero. Preserve that observable behavior exactly.
-    let destination_length = width * height;
+    let destination_length = width.saturating_mul(height);
     let mut output = Vec::with_capacity(destination_length);
     let mut x = 0usize;
     let mut position = 0usize;
 
     while output.len() < destination_length {
         let count = usize::from(*data.get(position)?);
-        let value = *data.get(position + 1)?;
-        position += 2;
+        let value = *data.get(position.saturating_add(1))?;
+        position = position.saturating_add(2);
 
         if count != 0 {
             let pixel_count = count.min(width.saturating_sub(x));
@@ -147,17 +157,20 @@ fn decode_rle(
                     }
                 }));
             } else {
-                output.resize(output.len() + pixel_count, value);
+                output.resize(output.len().saturating_add(pixel_count), value);
             }
-            x += pixel_count;
+            x = x.saturating_add(pixel_count);
             continue;
         }
 
         match value {
             0 => {
-                let remainder = output.len() % width;
+                let remainder = output.len().rem_euclid(width);
                 if remainder != 0 {
-                    output.resize(output.len() + width - remainder, 0);
+                    output.resize(
+                        output.len().saturating_add(width.saturating_sub(remainder)),
+                        0,
+                    );
                 }
                 x = 0;
             }
@@ -167,19 +180,19 @@ fn decode_rle(
             1 => return None,
             2 => {
                 let right = usize::from(*data.get(position)?);
-                let up = usize::from(*data.get(position + 1)?);
-                position += 2;
-                let skipped = up * width + right;
-                output.resize(output.len() + skipped, 0);
-                x = output.len() % width;
+                let up = usize::from(*data.get(position.saturating_add(1))?);
+                position = position.saturating_add(2);
+                let skipped = up.saturating_mul(width).saturating_add(right);
+                output.resize(output.len().saturating_add(skipped), 0);
+                x = output.len().rem_euclid(width);
             }
             absolute_pixels => {
                 let byte_count = if rle4 {
-                    usize::from(absolute_pixels) / 2
+                    usize::from(absolute_pixels).div_euclid(2)
                 } else {
                     usize::from(absolute_pixels)
                 };
-                let end = position + byte_count;
+                let end = position.saturating_add(byte_count);
                 let literal = data.get(position..end)?;
                 if rle4 {
                     for &byte in literal {
@@ -189,10 +202,10 @@ fn decode_rle(
                     output.extend_from_slice(literal);
                 }
                 position = end;
-                x += usize::from(absolute_pixels);
+                x = x.saturating_add(usize::from(absolute_pixels));
 
-                if (stream_offset + position) % 2 != 0 {
-                    position += 1;
+                if !stream_offset.saturating_add(position).is_multiple_of(2) {
+                    position = position.saturating_add(1);
                 }
             }
         }
@@ -207,6 +220,8 @@ fn decode_rle(
 // Main decoder
 // ---------------------------------------------------------------------------
 
+// Palette bytes are constructed below in complete RGB triples.
+#[allow(clippy::expect_used)]
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let mut r = Cursor::new(data);
 
@@ -217,8 +232,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         return None;
     }
     let _file_size = read_u32_le(&mut r)?; // bytes 2-5
-    r.set_position(r.position() + 4); // bytes 6-9 (reserved)
-    let data_offset = read_u32_le(&mut r)? as u64; // bytes 10-13
+    r.set_position(r.position().saturating_add(4)); // bytes 6-9 (reserved)
+    let data_offset = read_u32_le(&mut r)?; // bytes 10-13
 
     // --- DIB header ---
     let header_size = read_u32_le(&mut r)?;
@@ -256,7 +271,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     if width <= 0 {
         return None;
     }
-    let w = width as u32;
+    let w = width.cast_unsigned();
     if h == 0 || w > 16_384 || h > 16_384 {
         return None;
     }
@@ -307,7 +322,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
-    let dib_end = 14u64 + header_size as u64;
+    let dib_end = 14u64.saturating_add(u64::from(header_size));
     if r.position() < dib_end {
         r.set_position(dib_end);
     }
@@ -331,7 +346,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             let expected = if palette.len() == 2 {
                 if index == 0 { 0 } else { 255 }
             } else {
-                index as u8
+                index.to_le_bytes()[0]
             };
             entry[0] == expected && entry[1] == expected && entry[2] == expected
         });
@@ -342,8 +357,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     }
 
     // --- Seek to pixel data ---
-    if r.position() != data_offset {
-        r.set_position(data_offset);
+    if r.position() != u64::from(data_offset) {
+        r.set_position(u64::from(data_offset));
     }
 
     // ------------------------------------------------------------------
@@ -354,7 +369,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     let pixels: Vec<u8> = if compression == 1 {
         // BI_RLE8 — return raw palette indices
-        let start = (r.position() as usize).min(data.len());
+        let start = usize::try_from(r.position())
+            .unwrap_or(usize::MAX)
+            .min(data.len());
         let remaining = data[start..].to_vec();
         orient_index_rows(
             decode_rle(
@@ -369,7 +386,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         )
     } else if compression == 2 {
         // BI_RLE4 — return raw palette indices
-        let start = (r.position() as usize).min(data.len());
+        let start = usize::try_from(r.position())
+            .unwrap_or(usize::MAX)
+            .min(data.len());
         let remaining = data[start..].to_vec();
         orient_index_rows(
             decode_rle(
@@ -385,7 +404,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     } else {
         // BI_RGB or BI_BITFIELDS — uncompressed scanlines
         let stride = row_size(bit_depth.bits_per_pixel(), w);
-        let mut raw = vec![0u8; stride * height_usize];
+        let mut raw = vec![0u8; stride.saturating_mul(height_usize)];
         r.read_exact(&mut raw).ok()?;
 
         match bit_depth {
@@ -394,30 +413,32 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     // Pillow retains packed bytes only for its canonical
                     // black/white palette and exposes mode `1`.
                     let packed_per_row = width_usize.div_ceil(8);
-                    let mut out = Vec::with_capacity(packed_per_row * height_usize);
+                    let mut out = Vec::with_capacity(packed_per_row.saturating_mul(height_usize));
                     for row in 0..height_usize {
                         let src_row = if top_down {
                             row
                         } else {
-                            height_usize - 1 - row
+                            height_usize.saturating_sub(1).saturating_sub(row)
                         };
-                        let offset = src_row * stride;
-                        out.extend_from_slice(&raw[offset..offset + packed_per_row]);
+                        let offset = src_row.saturating_mul(stride);
+                        out.extend_from_slice(&raw[offset..offset.saturating_add(packed_per_row)]);
                     }
                     out
                 } else {
                     // A noncanonical two-color palette remains mode `P`, so
                     // Pillow expands each packed bit to one palette index.
-                    let mut out = Vec::with_capacity(width_usize * height_usize);
+                    let mut out = Vec::with_capacity(width_usize.saturating_mul(height_usize));
                     for row in 0..height_usize {
                         let src_row = if top_down {
                             row
                         } else {
-                            height_usize - 1 - row
+                            height_usize.saturating_sub(1).saturating_sub(row)
                         };
-                        let offset = src_row * stride;
+                        let offset = src_row.saturating_mul(stride);
                         for col in 0..width_usize {
-                            out.push((raw[offset + col / 8] >> (7 - col % 8)) & 1);
+                            let byte_index = offset.saturating_add(col.div_euclid(8));
+                            let bit = 7usize.saturating_sub(col.rem_euclid(8));
+                            out.push((raw[byte_index] >> bit) & 1);
                         }
                     }
                     out
@@ -425,17 +446,17 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             }
             BmpBitDepth::Four => {
                 // 4 bpp — expand nibbles to full-byte indices
-                let mut out = Vec::with_capacity(width_usize * height_usize);
+                let mut out = Vec::with_capacity(width_usize.saturating_mul(height_usize));
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
                     } else {
-                        height_usize - 1 - row
+                        height_usize.saturating_sub(1).saturating_sub(row)
                     };
-                    let offset = src_row * stride;
+                    let offset = src_row.saturating_mul(stride);
                     for col in 0..width_usize {
-                        let byte = raw[offset + col / 2];
-                        let idx = if col % 2 == 0 {
+                        let byte = raw[offset.saturating_add(col.div_euclid(2))];
+                        let idx = if col.rem_euclid(2) == 0 {
                             (byte >> 4) & 0x0F
                         } else {
                             byte & 0x0F
@@ -447,31 +468,33 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             }
             BmpBitDepth::Eight => {
                 // 8 bpp — raw palette indices, skip stride padding (PIL mode 'P' parity)
-                let mut out = Vec::with_capacity(width_usize * height_usize);
+                let mut out = Vec::with_capacity(width_usize.saturating_mul(height_usize));
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
                     } else {
-                        height_usize - 1 - row
+                        height_usize.saturating_sub(1).saturating_sub(row)
                     };
-                    let offset = src_row * stride;
-                    out.extend_from_slice(&raw[offset..offset + width_usize]);
+                    let offset = src_row.saturating_mul(stride);
+                    out.extend_from_slice(&raw[offset..offset.saturating_add(width_usize)]);
                 }
                 out
             }
             BmpBitDepth::Sixteen => {
                 // 16 bpp — RGB555 or BI_BITFIELDS
-                let mut out = Vec::with_capacity(width_usize * height_usize * 3);
+                let mut out =
+                    Vec::with_capacity(width_usize.saturating_mul(height_usize).saturating_mul(3));
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
                     } else {
-                        height_usize - 1 - row
+                        height_usize.saturating_sub(1).saturating_sub(row)
                     };
-                    let offset = src_row * stride;
+                    let offset = src_row.saturating_mul(stride);
                     for col in 0..width_usize {
-                        let lo = raw[offset + col * 2] as u32;
-                        let hi = raw[offset + col * 2 + 1] as u32;
+                        let pixel_offset = offset.saturating_add(col.saturating_mul(2));
+                        let lo = u32::from(raw[pixel_offset]);
+                        let hi = u32::from(raw[pixel_offset.saturating_add(1)]);
                         let pixel = lo | (hi << 8);
                         let rv = extract_channel(pixel, rm);
                         let gv = extract_channel(pixel, gm);
@@ -483,18 +506,20 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             }
             BmpBitDepth::TwentyFour => {
                 // 24 bpp — BGR order
-                let mut out = Vec::with_capacity(width_usize * height_usize * 3);
+                let mut out =
+                    Vec::with_capacity(width_usize.saturating_mul(height_usize).saturating_mul(3));
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
                     } else {
-                        height_usize - 1 - row
+                        height_usize.saturating_sub(1).saturating_sub(row)
                     };
-                    let offset = src_row * stride;
+                    let offset = src_row.saturating_mul(stride);
                     for col in 0..width_usize {
-                        let b = raw[offset + col * 3];
-                        let g = raw[offset + col * 3 + 1];
-                        let r = raw[offset + col * 3 + 2];
+                        let pixel_offset = offset.saturating_add(col.saturating_mul(3));
+                        let b = raw[pixel_offset];
+                        let g = raw[pixel_offset.saturating_add(1)];
+                        let r = raw[pixel_offset.saturating_add(2)];
                         out.extend_from_slice(&[r, g, b]);
                     }
                 }
@@ -504,22 +529,26 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 // BI_RGB treats byte four as padding. V4/V5 BI_BITFIELDS files
                 // with an alpha mask expose that channel as Pillow RGBA.
                 let channels = if compression == 3 && am != 0 { 4 } else { 3 };
-                let mut out = Vec::with_capacity(width_usize * height_usize * channels);
+                let mut out = Vec::with_capacity(
+                    width_usize
+                        .saturating_mul(height_usize)
+                        .saturating_mul(channels),
+                );
                 for row in 0..height_usize {
                     let src_row = if top_down {
                         row
                     } else {
-                        height_usize - 1 - row
+                        height_usize.saturating_sub(1).saturating_sub(row)
                     };
-                    let offset = src_row * stride;
+                    let offset = src_row.saturating_mul(stride);
                     for col in 0..width_usize {
-                        let start = offset + col * 4;
+                        let start = offset.saturating_add(col.saturating_mul(4));
                         if compression == 3 {
                             let pixel = u32::from_le_bytes([
                                 raw[start],
-                                raw[start + 1],
-                                raw[start + 2],
-                                raw[start + 3],
+                                raw[start.saturating_add(1)],
+                                raw[start.saturating_add(2)],
+                                raw[start.saturating_add(3)],
                             ]);
                             out.extend_from_slice(&[
                                 extract_channel(pixel, rm),
@@ -530,7 +559,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                                 out.push(extract_channel(pixel, am));
                             }
                         } else {
-                            out.extend_from_slice(&[raw[start + 2], raw[start + 1], raw[start]]);
+                            out.extend_from_slice(&[
+                                raw[start.saturating_add(2)],
+                                raw[start.saturating_add(1)],
+                                raw[start],
+                            ]);
                         }
                     }
                 }
@@ -567,7 +600,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     };
     let mut image = DecodedImage::with_mode(w, h, pixels, mode);
     if mode == ImageMode::P8 {
-        let mut rgb = Vec::with_capacity(palette.len() * 3);
+        let mut rgb = Vec::with_capacity(palette.len().saturating_mul(3));
         for entry in palette {
             rgb.extend_from_slice(&[entry[2], entry[1], entry[0]]);
         }
@@ -584,11 +617,14 @@ fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u
     }
     debug_assert_ne!(width, 0);
     debug_assert!(pixels.len().is_multiple_of(width));
-    let height = pixels.len() / width;
-    for top in 0..height / 2 {
-        let bottom = height - top - 1;
+    let height = pixels.len().div_euclid(width);
+    for top in 0..height.div_euclid(2) {
+        let bottom = height.saturating_sub(top).saturating_sub(1);
         for x in 0..width {
-            pixels.swap(top * width + x, bottom * width + x);
+            pixels.swap(
+                top.saturating_mul(width).saturating_add(x),
+                bottom.saturating_mul(width).saturating_add(x),
+            );
         }
     }
     pixels

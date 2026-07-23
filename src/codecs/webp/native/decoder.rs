@@ -1,3 +1,30 @@
+//! WebP RIFF container and frame decoder.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// RIFF offsets, VP8X 24-bit fields, and decoded-image geometry follow the WebP
+// container specification. Header validation bounds these calculations before
+// allocation or slice access.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use super::byteorder_lite::{LittleEndian, ReadBytesExt};
 
 use std::collections::HashMap;
@@ -152,7 +179,7 @@ impl<'a> WebPDecoder<'a> {
             chunks: HashMap::new(),
             animation: Default::default(),
             has_alpha: false,
-            loop_count: LoopCount::Times(NonZeroU16::new(1).unwrap()),
+            loop_count: LoopCount::Times(NonZeroU16::MIN),
         };
         decoder.read_data()?;
         #[cfg(target_pointer_width = "32")]
@@ -165,6 +192,9 @@ impl<'a> WebPDecoder<'a> {
         Ok(decoder)
     }
 
+    // The VP8X validation predicate establishes the ANIM/ANMF map entries, and
+    // the nonzero match arm establishes `NonZeroU16::new(n)`.
+    #[allow(clippy::expect_used, clippy::unwrap_used)]
     fn read_data(&mut self) -> Result<(), DecodingError> {
         let (WebPRiffChunk::RIFF, riff_size, _) = read_chunk_header(&mut self.r)? else {
             return Err(DecodingError::ChunkHeaderInvalid);
@@ -396,6 +426,9 @@ impl<'a> WebPDecoder<'a> {
     /// Returns the raw bytes of the image. For animated images, this is the first frame.
     ///
     /// Fails with `ImageTooLarge` if `buf` has length different than `output_buffer_size()`
+    // Construction guarantees ANMF for animation and exactly one VP8/VP8L
+    // payload for still images.
+    #[allow(clippy::expect_used, clippy::unwrap_used)]
     pub fn read_image(&mut self, buf: &mut [u8]) -> Result<(), DecodingError> {
         (buf.len() == self.output_buffer_size())
             .then_some(())
@@ -482,6 +515,9 @@ impl<'a> WebPDecoder<'a> {
     /// # Panics
     ///
     /// Panics if the image is not animated.
+    // The public precondition and constructor validation guarantee extended
+    // metadata; the local initialization guarantees a canvas before use.
+    #[allow(clippy::expect_used, clippy::unwrap_used)]
     pub fn read_frame(&mut self, buf: &mut [u8]) -> Result<u32, DecodingError> {
         assert!(self.is_animated());
         assert_eq!(buf.len(), self.output_buffer_size());
@@ -1052,8 +1088,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.read_image(&mut []);
 }
 
-pub(crate) fn range_reader<'data, 'reader>(
-    r: &'reader mut Cursor<&'data [u8]>,
+pub(crate) fn range_reader<'reader>(
+    r: &'reader mut Cursor<&[u8]>,
     range: Range<u64>,
 ) -> impl BufRead + 'reader {
     r.set_position(range.start);

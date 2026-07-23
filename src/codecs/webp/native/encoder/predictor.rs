@@ -5,6 +5,28 @@
 //! profile has one initial sampling (`bits = 3`), reducing the general routine
 //! to per-tile mode selection plus uniform-map sampling optimization.
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+#![warn(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use super::cross_color::{combined_shannon_entropy, optimize_sampling, prediction_bias};
 
 const ARGB_BLACK: u32 = 0xff00_0000;
@@ -28,7 +50,7 @@ fn average4(a: u32, b: u32, c: u32, d: u32) -> u32 {
 
 #[inline]
 fn clip(value: i32) -> u8 {
-    value.clamp(0, 255) as u8
+    value.clamp(0, 255).to_le_bytes()[0]
 }
 
 fn clamped_add_subtract_full(left: u32, top: u32, top_left: u32) -> u32 {
@@ -36,7 +58,11 @@ fn clamped_add_subtract_full(left: u32, top: u32, top_left: u32) -> u32 {
     let top = top.to_le_bytes();
     let top_left = top_left.to_le_bytes();
     u32::from_le_bytes(core::array::from_fn(|index| {
-        clip(i32::from(left[index]) + i32::from(top[index]) - i32::from(top_left[index]))
+        clip(
+            i32::from(left[index])
+                .wrapping_add(i32::from(top[index]))
+                .wrapping_sub(i32::from(top_left[index])),
+        )
     }))
 }
 
@@ -45,7 +71,13 @@ fn clamped_add_subtract_half(left: u32, top: u32, top_left: u32) -> u32 {
     let top_left = top_left.to_le_bytes();
     u32::from_le_bytes(core::array::from_fn(|index| {
         let average = i32::from(average[index]);
-        clip(average + (average - i32::from(top_left[index])) / 2)
+        clip(
+            average.wrapping_add(
+                average
+                    .wrapping_sub(i32::from(top_left[index]))
+                    .wrapping_div(2),
+            ),
+        )
     }))
 }
 
@@ -55,8 +87,9 @@ fn select(top: u32, left: u32, top_left: u32) -> u32 {
     let top_left_bytes = top_left.to_le_bytes();
     let score = (0..4).fold(0_i32, |score, index| {
         let center = i32::from(top_left_bytes[index]);
-        score + (i32::from(left_bytes[index]) - center).abs()
-            - (i32::from(top_bytes[index]) - center).abs()
+        score
+            .wrapping_add(i32::from(left_bytes[index]).wrapping_sub(center).abs())
+            .wrapping_sub(i32::from(top_bytes[index]).wrapping_sub(center).abs())
     });
     if score <= 0 { top } else { left }
 }
@@ -92,12 +125,16 @@ fn subtract_pixels(pixel: u32, prediction: u32) -> u32 {
 
 #[inline]
 fn update_histogram(histogram: &mut [u32; HISTOGRAM_SIZE], pixel: u32) {
-    histogram[(pixel >> 24) as usize] += 1;
-    histogram[256 + ((pixel >> 16) & 0xff) as usize] += 1;
-    histogram[512 + ((pixel >> 8) & 0xff) as usize] += 1;
-    histogram[768 + (pixel & 0xff) as usize] += 1;
+    let bytes = pixel.to_le_bytes();
+    for (plane, byte) in bytes.into_iter().rev().enumerate() {
+        let index = plane.wrapping_mul(256).wrapping_add(usize::from(byte));
+        histogram[index] = histogram[index].wrapping_add(1);
+    }
 }
 
+// Dimensions and tile origins come from validated encoder geometry. Keeping
+// direct index arithmetic here mirrors libwebp's tile traversal.
+#[allow(clippy::arithmetic_side_effects)]
 #[allow(clippy::too_many_arguments)]
 fn tile_histogram(
     source: &[u32],
@@ -149,6 +186,9 @@ fn tile_histogram(
     histogram
 }
 
+// Both inputs are fixed 4×256 arrays, so every plane conversion is exact.
+// Cost arithmetic is intentionally signed and bounded by four histograms.
+#[allow(clippy::arithmetic_side_effects, clippy::unwrap_used)]
 fn spatial_cost(
     accumulated: &[u32; HISTOGRAM_SIZE],
     tile: &[u32; HISTOGRAM_SIZE],
@@ -174,6 +214,9 @@ fn spatial_cost(
     cost
 }
 
+// The caller validates `width * height == source.len()` and constructs the
+// matching mode grid before entering this reference traversal.
+#[allow(clippy::arithmetic_side_effects)]
 fn apply_modes(source: &mut [u32], width: usize, height: usize, bits: u8, modes: &[u32]) {
     let tiles_per_row = (width + (1_usize << bits) - 1) >> bits;
     let original = source.to_vec();
@@ -212,6 +255,9 @@ fn apply_modes(source: &mut [u32], width: usize, height: usize, bits: u8, modes:
 /// Selects and applies libwebp's predictor transform for Pillow's method-four
 /// lossless profile.
 #[allow(dead_code)]
+// Geometry is validated by the lossless encoder; selected modes are in 0..14,
+// so the stored u32 mode byte is representable.
+#[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
 pub(crate) fn select_and_apply(
     source: &mut [u32],
     width: usize,
@@ -264,6 +310,9 @@ pub(crate) fn select_and_apply(
     (modes, best_bits)
 }
 
+// Encoder geometry and the caller-selected predictor mode satisfy the same
+// invariants as `select_and_apply`.
+#[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
 pub(crate) fn apply_fixed(
     source: &mut [u32],
     width: usize,

@@ -1,4 +1,31 @@
 //! Encoding of WebP images.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// VP8L bit packing, fixed-point costs, Huffman construction, and image
+// geometry are reference-codec arithmetic. Validated dimensions and bounded
+// alphabets constrain the operations in this module.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+
 use std::io::{self, Write};
 
 mod backward_refs;
@@ -54,7 +81,7 @@ impl BitWriter<'_> {
     }
 
     fn flush(&mut self) {
-        if self.nbits % 8 != 0 {
+        if !self.nbits.is_multiple_of(8) {
             self.write_bits(0, 8 - self.nbits % 8);
         }
         if self.nbits > 0 {
@@ -66,6 +93,8 @@ impl BitWriter<'_> {
     }
 }
 
+// Every pop occurs while at least two nodes remain.
+#[allow(clippy::unwrap_used)]
 fn build_huffman_tree(
     frequencies: &[u32],
     lengths: &mut [u8],
@@ -452,6 +481,8 @@ fn write_image_stream(
     write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 80, 11)
 }
 
+// `backward_refs::candidates` always returns the standard and RLE candidates.
+#[allow(clippy::unwrap_used)]
 fn write_image_stream_configured(
     w: &mut BitWriter<'_>,
     pixels: &[u32],
@@ -614,7 +645,9 @@ fn palette_color_distance(color: u32, previous: u32) -> u32 {
     9 * rgb + component_distance(difference >> 24)
 }
 
-fn minimize_palette_deltas(palette: &mut Vec<u32>) {
+// Each searched suffix starts at an index strictly below `sortable_length`.
+#[allow(clippy::unwrap_used)]
+fn minimize_palette_deltas(palette: &mut [u32]) {
     let mut signs = 0_u8;
     let mut previous = 0_u32;
     for &color in palette.iter() {
@@ -657,6 +690,8 @@ enum EntropyMode {
     Palette,
 }
 
+// The direct entropy mode makes the mode table non-empty.
+#[allow(clippy::unwrap_used)]
 fn analyze_entropy(
     pixels: &[u32],
     width: usize,
@@ -801,6 +836,8 @@ fn subtract_green(pixels: &mut [u32]) {
     }
 }
 
+// The palette is constructed from the same pixel set being packed.
+#[allow(clippy::unwrap_used)]
 fn apply_palette(
     w: &mut BitWriter<'_>,
     pixels: &[u32],
@@ -1012,6 +1049,8 @@ fn encode_frame(
     Ok(frame)
 }
 
+// Every sorted palette suffix is non-empty by construction.
+#[allow(clippy::unwrap_used)]
 pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     assert_eq!(alpha.len(), width as usize * height as usize);
 
@@ -1170,6 +1209,7 @@ impl<W: Write> WebPEncoder<W> {
 }
 
 #[cfg(coverage)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
     use std::io::{Cursor, ErrorKind};
 

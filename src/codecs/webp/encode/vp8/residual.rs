@@ -20,8 +20,8 @@ fn write_category_bits(
 ) {
     for bit in (0..bit_count).rev() {
         writer.encode_bool(
-            probabilities[bit_count - 1 - bit],
-            residue & (1 << bit) != 0,
+            probabilities[bit_count.saturating_sub(1).saturating_sub(bit)],
+            residue & 1u16.wrapping_shl(bit.to_le_bytes()[0].into()) != 0,
         );
     }
 }
@@ -53,7 +53,7 @@ fn write_block(
 
     loop {
         let coefficient = levels[position];
-        position += 1;
+        position = position.saturating_add(1);
         let magnitude = coefficient.unsigned_abs();
         let node_probabilities = probabilities.coefficients[coefficient_type][band][context];
 
@@ -94,19 +94,39 @@ fn write_block(
                 if magnitude < 19 {
                     writer.encode_bool(node_probabilities[8], false);
                     writer.encode_bool(node_probabilities[9], false);
-                    write_category_bits(writer, magnitude - 11, 3, &CAT3_PROBABILITIES);
+                    write_category_bits(
+                        writer,
+                        magnitude.saturating_sub(11),
+                        3,
+                        &CAT3_PROBABILITIES,
+                    );
                 } else if magnitude < 35 {
                     writer.encode_bool(node_probabilities[8], false);
                     writer.encode_bool(node_probabilities[9], true);
-                    write_category_bits(writer, magnitude - 19, 4, &CAT4_PROBABILITIES);
+                    write_category_bits(
+                        writer,
+                        magnitude.saturating_sub(19),
+                        4,
+                        &CAT4_PROBABILITIES,
+                    );
                 } else if magnitude < 67 {
                     writer.encode_bool(node_probabilities[8], true);
                     writer.encode_bool(node_probabilities[10], false);
-                    write_category_bits(writer, magnitude - 35, 5, &CAT5_PROBABILITIES);
+                    write_category_bits(
+                        writer,
+                        magnitude.saturating_sub(35),
+                        5,
+                        &CAT5_PROBABILITIES,
+                    );
                 } else {
                     writer.encode_bool(node_probabilities[8], true);
                     writer.encode_bool(node_probabilities[10], true);
-                    write_category_bits(writer, magnitude - 67, 11, &CAT6_PROBABILITIES);
+                    write_category_bits(
+                        writer,
+                        magnitude.saturating_sub(67),
+                        11,
+                        &CAT6_PROBABILITIES,
+                    );
                 }
             }
             context = 2;
@@ -152,55 +172,60 @@ pub(super) fn encode_coefficients(
                         &luma.y2_levels,
                         0,
                         1,
-                        usize::from(top_y2[x] + left_y2),
+                        usize::from(top_y2[x].saturating_add(left_y2)),
                     );
                     top_y2[x] = nonzero;
                     left_y2 = nonzero;
-                    for block_y in 0..4 {
-                        for block_x in 0..4 {
+                    let top_row = &mut top_y[x];
+                    for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
+                        for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
                             let nonzero = write_block(
                                 &mut writer,
                                 probabilities,
-                                &luma.y1_levels[block_y * 4 + block_x],
+                                &luma.y1_levels[block_y.saturating_mul(4).saturating_add(block_x)],
                                 1,
                                 0,
-                                usize::from(top_y[x][block_x] + left_y[block_y]),
+                                usize::from(top_nonzero.saturating_add(*left_nonzero)),
                             );
-                            top_y[x][block_x] = nonzero;
-                            left_y[block_y] = nonzero;
+                            *top_nonzero = nonzero;
+                            *left_nonzero = nonzero;
                         }
                     }
                 }
                 LumaDecision::Intra4(luma) => {
-                    for block_y in 0..4 {
-                        for block_x in 0..4 {
+                    let top_row = &mut top_y[x];
+                    for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
+                        for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
                             let nonzero = write_block(
                                 &mut writer,
                                 probabilities,
-                                &luma.levels[block_y * 4 + block_x],
+                                &luma.levels[block_y.saturating_mul(4).saturating_add(block_x)],
                                 0,
                                 3,
-                                usize::from(top_y[x][block_x] + left_y[block_y]),
+                                usize::from(top_nonzero.saturating_add(*left_nonzero)),
                             );
-                            top_y[x][block_x] = nonzero;
-                            left_y[block_y] = nonzero;
+                            *top_nonzero = nonzero;
+                            *left_nonzero = nonzero;
                         }
                     }
                 }
             }
 
-            for plane in 0..2 {
-                for block_y in 0..2 {
-                    for block_x in 0..2 {
-                        let top_index = plane * 2 + block_x;
-                        let left_index = plane * 2 + block_y;
+            for plane in 0usize..2 {
+                for block_y in 0usize..2 {
+                    for block_x in 0usize..2 {
+                        let top_index = plane.saturating_mul(2).saturating_add(block_x);
+                        let left_index = plane.saturating_mul(2).saturating_add(block_y);
                         let nonzero = write_block(
                             &mut writer,
                             probabilities,
-                            &decision.chroma.levels[plane * 4 + block_y * 2 + block_x],
+                            &decision.chroma.levels[plane
+                                .saturating_mul(4)
+                                .saturating_add(block_y.saturating_mul(2))
+                                .saturating_add(block_x)],
                             0,
                             2,
-                            usize::from(top_uv[x][top_index] + left_uv[left_index]),
+                            usize::from(top_uv[x][top_index].saturating_add(left_uv[left_index])),
                         );
                         top_uv[x][top_index] = nonzero;
                         left_uv[left_index] = nonzero;

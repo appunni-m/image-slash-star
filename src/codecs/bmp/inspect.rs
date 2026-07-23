@@ -5,8 +5,6 @@ use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
 const FILE_HEADER_SIZE: usize = 14;
 const CORE_HEADER_SIZE: u32 = 12;
 const INFO_HEADER_SIZE: u32 = 40;
-const BI_RLE8: u32 = 1;
-const BI_RLE4: u32 = 2;
 const BI_BITFIELDS: u32 = 3;
 
 /// Inspect BMP dimensions, encoded depth, output mode, and indexed palette.
@@ -17,10 +15,7 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
 
     let _data_offset = le_u32(data, 10)?;
     let header_size = le_u32(data, FILE_HEADER_SIZE)?;
-    #[cfg(target_pointer_width = "64")]
-    let header_end = FILE_HEADER_SIZE + header_size as usize;
-    #[cfg(not(target_pointer_width = "64"))]
-    let header_end = FILE_HEADER_SIZE.checked_add(header_size as usize)?;
+    let header_end = FILE_HEADER_SIZE.saturating_add(header_size as usize);
     let (width, height, bit_depth, compression, colors_used, palette_entry_size) =
         if header_size == CORE_HEADER_SIZE {
             (
@@ -37,7 +32,7 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
                 return None;
             }
             (
-                width as u32,
+                width.cast_unsigned(),
                 le_i32(data, 22)?.unsigned_abs(),
                 le_u16(data, 28)?,
                 le_u32(data, 30)?,
@@ -48,23 +43,17 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
             return None;
         };
 
-    if width == 0 || height == 0 || width > 16_384 || height > 16_384 {
+    if width == 0 || height == 0 {
         return None;
     }
     let indexed = matches!(bit_depth, 1 | 4 | 8);
-    if !matches!(bit_depth, 1 | 4 | 8 | 16 | 24 | 32)
-        || matches!(compression, BI_RLE8 | BI_RLE4) && !indexed
-    {
+    if !matches!(bit_depth, 1 | 4 | 8 | 16 | 24 | 32) {
         return None;
     }
 
     let alpha_mask = bitfield_alpha(data, header_size, bit_depth, compression)?;
     let palette_start = if header_size == INFO_HEADER_SIZE && compression == BI_BITFIELDS {
-        #[cfg(target_pointer_width = "64")]
-        let start = header_end + 12;
-        #[cfg(not(target_pointer_width = "64"))]
-        let start = header_end.checked_add(12)?;
-        start
+        header_end.saturating_add(12)
     } else {
         header_end
     };
@@ -81,7 +70,7 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
             let expected = if palette.len() == 2 {
                 if index == 0 { 0 } else { 255 }
             } else {
-                index as u8
+                index.to_le_bytes()[0]
             };
             entry[0] == expected && entry[1] == expected && entry[2] == expected
         });
@@ -120,7 +109,7 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
         width,
         height,
         mode,
-        bit_depth: bit_depth as u8,
+        bit_depth: bit_depth.to_le_bytes()[0],
         palette,
         is_animated: false,
         frame_count: Some(1),
@@ -148,10 +137,8 @@ fn read_palette(
     entry_size: usize,
 ) -> Option<Vec<[u8; 4]>> {
     let available = data.get(start..)?;
-    if count > available.len() / entry_size {
-        return None;
-    }
-    let byte_len = count * entry_size;
+    let count = count.min(available.len().div_euclid(entry_size));
+    let byte_len = count.saturating_mul(entry_size);
     let bytes = &available[..byte_len];
     let mut palette = Vec::with_capacity(count);
     for entry in bytes.chunks_exact(entry_size) {

@@ -1,20 +1,3 @@
-// AS PER DESIGN — DO NOT REMOVE:
-// Tests may use unwrap/expect. The deny lints are for production code only.
-#![cfg(all(
-    feature = "jpeg",
-    feature = "png",
-    feature = "gif",
-    feature = "bmp",
-    feature = "tiff",
-    feature = "webp",
-    feature = "ico",
-    feature = "avif"
-))]
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::unwrap_in_result)]
-#![allow(unused_crate_dependencies)]
-
 //! Coverage matrix tests — driven by tests/fixtures/coverage_matrix.json
 //! Each row in the matrix is one test assertion.
 //! Decode: load asset → decode → compare pixel bytes with PIL reference bytes.
@@ -26,9 +9,26 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
+use bytemuck as _;
 use image_slash_star as img;
 
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
+
+#[track_caller]
+fn require_some<T>(value: Option<T>, context: &str) -> T {
+    match value {
+        Some(value) => value,
+        None => panic!("{context}"),
+    }
+}
+
+#[track_caller]
+fn require_ok<T, E: std::fmt::Debug>(value: Result<T, E>, context: &str) -> T {
+    match value {
+        Ok(value) => value,
+        Err(error) => panic!("{context}: {error:?}"),
+    }
+}
 
 fn coverage_matrix() -> Option<&'static CoverageMatrix> {
     COVERAGE_MATRIX
@@ -43,7 +43,14 @@ fn coverage_matrix() -> Option<&'static CoverageMatrix> {
                 return None;
             }
 
-            Some(serde_json::from_str(&fs::read_to_string(&matrix_path).unwrap()).unwrap())
+            let contents = require_ok(
+                fs::read_to_string(&matrix_path),
+                "coverage matrix must be readable",
+            );
+            Some(require_ok(
+                serde_json::from_str(&contents),
+                "coverage matrix must be valid JSON",
+            ))
         })
         .as_ref()
 }
@@ -93,6 +100,9 @@ struct DecodeRow {
     oracle_status: Option<String>,
     oracle_error_type: Option<String>,
     oracle_error_message: Option<String>,
+    verify_status: String,
+    verify_error_type: Option<String>,
+    verify_error_message: Option<String>,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
     #[serde(default)]
@@ -252,12 +262,12 @@ fn assert_png_contract(
     let color_type = ihdr[17];
     let interlace = ihdr[20];
 
-    if let Some(expected) = params.get("bit_depth").and_then(serde_json::Value::as_u64) {
-        if u64::from(bit_depth) != expected {
-            return Err(format!(
-                "PNG depth mismatch: encoded {bit_depth}, requested {expected}"
-            ));
-        }
+    if let Some(expected) = params.get("bit_depth").and_then(serde_json::Value::as_u64)
+        && u64::from(bit_depth) != expected
+    {
+        return Err(format!(
+            "PNG depth mismatch: encoded {bit_depth}, requested {expected}"
+        ));
     }
     let color_request = params
         .get("color_type")
@@ -297,8 +307,10 @@ fn assert_png_contract(
         let length =
             usize::try_from(read_be_u32(encoded, offset).ok_or("truncated PNG chunk length")?)
                 .map_err(|_| "PNG chunk is too large")?;
+        let kind_start = offset.checked_add(4).ok_or("PNG chunk offset overflow")?;
+        let kind_end = offset.checked_add(8).ok_or("PNG chunk offset overflow")?;
         let kind = encoded
-            .get(offset + 4..offset + 8)
+            .get(kind_start..kind_end)
             .ok_or("truncated PNG chunk type")?;
         chunks.push(kind);
         offset = offset
@@ -359,11 +371,12 @@ fn assert_gif_contract(
         match *encoded.get(offset).ok_or("truncated GIF block stream")? {
             0x3b => break,
             0x2c => {
-                let image_packed = *encoded.get(offset + 9).ok_or("truncated GIF image")?;
-                frames += 1;
+                let packed_offset = offset.checked_add(9).ok_or("GIF image overflow")?;
+                let image_packed = *encoded.get(packed_offset).ok_or("truncated GIF image")?;
+                frames = frames.wrapping_add(1);
                 image_local.push(image_packed & 0x80 != 0);
                 image_interlace.push(image_packed & 0x40 != 0);
-                offset += 10;
+                offset = offset.checked_add(10).ok_or("GIF image overflow")?;
                 if image_packed & 0x80 != 0 {
                     offset = offset
                         .checked_add(3usize << (usize::from(image_packed & 7) + 1))
@@ -373,21 +386,29 @@ fn assert_gif_contract(
                 offset = skip_gif_sub_blocks(encoded, offset).ok_or("truncated GIF image data")?;
             }
             0x21 => {
-                let label = *encoded.get(offset + 1).ok_or("truncated GIF extension")?;
+                let label_offset = offset.checked_add(1).ok_or("GIF extension overflow")?;
+                let label = *encoded.get(label_offset).ok_or("truncated GIF extension")?;
                 if label == 0xf9 {
-                    if *encoded.get(offset + 2).ok_or("truncated GIF GCE")? != 4 {
+                    let size_offset = offset.checked_add(2).ok_or("GIF GCE overflow")?;
+                    if *encoded.get(size_offset).ok_or("truncated GIF GCE")? != 4 {
                         return Err("invalid GIF GCE size".to_owned());
                     }
-                    let gce_packed = *encoded.get(offset + 3).ok_or("truncated GIF GCE")?;
+                    let packed_offset = offset.checked_add(3).ok_or("GIF GCE overflow")?;
+                    let gce_packed = *encoded.get(packed_offset).ok_or("truncated GIF GCE")?;
                     gce_disposals.push((gce_packed >> 2) & 7);
                     gce_transparency.push(gce_packed & 1 != 0);
                     offset = offset.checked_add(8).ok_or("GIF GCE overflow")?;
                 } else {
-                    if label == 0xff && encoded.get(offset + 3..offset + 14) == Some(b"NETSCAPE2.0")
+                    let application_start =
+                        offset.checked_add(3).ok_or("GIF extension overflow")?;
+                    let application_end = offset.checked_add(14).ok_or("GIF extension overflow")?;
+                    if label == 0xff
+                        && encoded.get(application_start..application_end) == Some(b"NETSCAPE2.0")
                     {
                         has_loop = true;
                     }
-                    offset = skip_gif_sub_blocks(encoded, offset + 2)
+                    let blocks_offset = offset.checked_add(2).ok_or("GIF extension overflow")?;
+                    offset = skip_gif_sub_blocks(encoded, blocks_offset)
                         .ok_or("truncated GIF extension data")?;
                 }
             }
@@ -433,14 +454,12 @@ fn assert_gif_contract(
     if let Some(expected) = params
         .get("transparency")
         .and_then(serde_json::Value::as_bool)
+        && (gce_transparency.iter().any(|&value| value != expected)
+            || expected && gce_transparency.is_empty())
     {
-        if gce_transparency.iter().any(|&value| value != expected)
-            || expected && gce_transparency.is_empty()
-        {
-            return Err(format!(
-                "GIF transparency setting does not match {expected}"
-            ));
-        }
+        return Err(format!(
+            "GIF transparency setting does not match {expected}"
+        ));
     }
     Ok(())
 }
@@ -468,26 +487,20 @@ fn assert_bmp_contract(
             ));
         }
     }
-    if params.get("header").is_some() {
-        if header_size != 40 {
-            return Err(format!(
-                "BMP header mismatch: Pillow always emits V3 but encoded {header_size}"
-            ));
-        }
+    if params.get("header").is_some() && header_size != 40 {
+        return Err(format!(
+            "BMP header mismatch: Pillow always emits V3 but encoded {header_size}"
+        ));
     }
-    if params.get("top_down").is_some() {
-        if height.is_negative() {
-            return Err(format!(
-                "BMP row direction mismatch: Pillow always emits bottom-up height {height}"
-            ));
-        }
+    if params.get("top_down").is_some() && height.is_negative() {
+        return Err(format!(
+            "BMP row direction mismatch: Pillow always emits bottom-up height {height}"
+        ));
     }
-    if params.get("compression").is_some() {
-        if compression != 0 {
-            return Err(format!(
-                "BMP compression mismatch: Pillow always emits BI_RGB but encoded {compression}"
-            ));
-        }
+    if params.get("compression").is_some() && compression != 0 {
+        return Err(format!(
+            "BMP compression mismatch: Pillow always emits BI_RGB but encoded {compression}"
+        ));
     }
     Ok(())
 }
@@ -528,12 +541,12 @@ fn assert_tiff_contract(
     if endian.read_u16(encoded, 2) != Some(42) {
         return Err("encoded TIFF has an invalid magic value".to_owned());
     }
-    if let Some(request) = params.get("byte_order").and_then(serde_json::Value::as_str) {
-        if !matches!(endian, TiffEndian::Little) {
-            return Err(format!(
-                "TIFF byte order mismatch: Pillow ignores {request} and emits little-endian"
-            ));
-        }
+    if let Some(request) = params.get("byte_order").and_then(serde_json::Value::as_str)
+        && !matches!(endian, TiffEndian::Little)
+    {
+        return Err(format!(
+            "TIFF byte order mismatch: Pillow ignores {request} and emits little-endian"
+        ));
     }
     let ifd = usize::try_from(endian.read_u32(encoded, 4).ok_or("truncated TIFF header")?)
         .map_err(|_| "TIFF IFD offset is too large")?;
@@ -548,21 +561,21 @@ fn assert_tiff_contract(
             .read_u16(encoded, offset)
             .ok_or("truncated TIFF entry")?;
         let field_type = endian
-            .read_u16(encoded, offset + 2)
+            .read_u16(encoded, offset.checked_add(2).ok_or("TIFF entry overflow")?)
             .ok_or("truncated TIFF entry type")?;
         let item_count = endian
-            .read_u32(encoded, offset + 4)
+            .read_u32(encoded, offset.checked_add(4).ok_or("TIFF entry overflow")?)
             .ok_or("truncated TIFF entry count")?;
         if item_count == 1 && matches!(field_type, 3 | 4) {
             let value = if field_type == 3 {
                 u32::from(
                     endian
-                        .read_u16(encoded, offset + 8)
+                        .read_u16(encoded, offset.checked_add(8).ok_or("TIFF entry overflow")?)
                         .ok_or("truncated TIFF SHORT value")?,
                 )
             } else {
                 endian
-                    .read_u32(encoded, offset + 8)
+                    .read_u32(encoded, offset.checked_add(8).ok_or("TIFF entry overflow")?)
                     .ok_or("truncated TIFF LONG value")?
             };
             tags.insert(tag, value);
@@ -603,7 +616,12 @@ fn assert_tiff_contract(
     }
     if let Some(request) = params.get("pages").and_then(serde_json::Value::as_u64) {
         let next_ifd_offset = ifd
-            .checked_add(2 + count * 12)
+            .checked_add(
+                count
+                    .checked_mul(12)
+                    .and_then(|size| size.checked_add(2))
+                    .ok_or("TIFF next-IFD size overflow")?,
+            )
             .ok_or("TIFF next-IFD offset overflow")?;
         if endian.read_u32(encoded, next_ifd_offset) != Some(0) {
             return Err(format!(
@@ -627,16 +645,21 @@ fn assert_jpeg_contract(
     let mut has_restart_interval = false;
     while offset < encoded.len() {
         while encoded.get(offset) == Some(&0xff) {
-            offset += 1;
+            offset = offset.checked_add(1).ok_or("JPEG marker overflow")?;
         }
         let marker = *encoded.get(offset).ok_or("truncated JPEG marker")?;
-        offset += 1;
+        offset = offset.checked_add(1).ok_or("JPEG marker overflow")?;
         if matches!(marker, 0xd8 | 0xd9 | 0x01 | 0xd0..=0xd7) {
             continue;
         }
         let length = usize::from(u16::from_be_bytes(
             encoded
-                .get(offset..offset + 2)
+                .get(
+                    offset
+                        ..offset
+                            .checked_add(2)
+                            .ok_or("JPEG segment length overflow")?,
+                )
                 .ok_or("truncated JPEG segment length")?
                 .try_into()
                 .map_err(|_| "invalid JPEG segment length")?,
@@ -644,8 +667,14 @@ fn assert_jpeg_contract(
         if length < 2 {
             return Err("invalid JPEG segment length".to_owned());
         }
+        let payload_start = offset
+            .checked_add(2)
+            .ok_or("JPEG segment payload overflow")?;
+        let payload_end = offset
+            .checked_add(length)
+            .ok_or("JPEG segment payload overflow")?;
         let payload = encoded
-            .get(offset + 2..offset + length)
+            .get(payload_start..payload_end)
             .ok_or("truncated JPEG segment")?;
         if marker == 0xe1 && payload.starts_with(b"Exif\0\0") {
             has_exif = true;
@@ -656,7 +685,9 @@ fn assert_jpeg_contract(
         if matches!(marker, 0xc0 | 0xc2) {
             sof = Some((marker, payload));
         }
-        offset += length;
+        offset = offset
+            .checked_add(length)
+            .ok_or("JPEG segment offset overflow")?;
         if marker == 0xda {
             break;
         }
@@ -722,25 +753,47 @@ fn assert_ico_contract(
             .then_some(())
             .ok_or_else(|| "zero-entry ICO has trailing data".to_owned());
     }
-    if encoded.len() < 6 + count * 16 {
+    let directory_end = count
+        .checked_mul(16)
+        .and_then(|size| size.checked_add(6))
+        .ok_or("ICO directory size overflow")?;
+    if encoded.len() < directory_end {
         return Err("encoded ICO has an invalid image directory".to_owned());
     }
 
     let expect_bmp = params.get("entry_type").and_then(serde_json::Value::as_str) == Some("bmp");
     for index in 0..count {
-        let entry = 6 + index * 16;
+        let entry = index
+            .checked_mul(16)
+            .and_then(|value| value.checked_add(6))
+            .ok_or("ICO directory offset overflow")?;
+        let depth_offset = entry
+            .checked_add(6)
+            .ok_or("ICO directory offset overflow")?;
         let directory_depth =
-            read_le_u16(encoded, entry + 6).ok_or("truncated ICO directory entry")?;
+            read_le_u16(encoded, depth_offset).ok_or("truncated ICO directory entry")?;
         if !expect_bmp && directory_depth != 32 {
             return Err("ICO PNG directory entry is not 32-bit".to_owned());
         }
 
         let data_size = usize::try_from(
-            read_le_u32(encoded, entry + 8).ok_or("truncated ICO directory entry")?,
+            read_le_u32(
+                encoded,
+                entry
+                    .checked_add(8)
+                    .ok_or("ICO directory offset overflow")?,
+            )
+            .ok_or("truncated ICO directory entry")?,
         )
         .map_err(|_| "ICO data size is too large")?;
         let data_offset = usize::try_from(
-            read_le_u32(encoded, entry + 12).ok_or("truncated ICO directory entry")?,
+            read_le_u32(
+                encoded,
+                entry
+                    .checked_add(12)
+                    .ok_or("ICO directory offset overflow")?,
+            )
+            .ok_or("truncated ICO directory entry")?,
         )
         .map_err(|_| "ICO data offset is too large")?;
         if data_offset
@@ -752,7 +805,14 @@ fn assert_ico_contract(
         if expect_bmp && read_le_u32(encoded, data_offset) != Some(40) {
             return Err("ICO BMP entry request did not emit a BITMAPINFOHEADER".to_owned());
         }
-        if expect_bmp && read_le_u16(encoded, data_offset + 14) != Some(directory_depth) {
+        if expect_bmp
+            && read_le_u16(
+                encoded,
+                data_offset
+                    .checked_add(14)
+                    .ok_or("ICO payload offset overflow")?,
+            ) != Some(directory_depth)
+        {
             return Err("ICO BMP directory and payload bit depths disagree".to_owned());
         }
     }
@@ -787,10 +847,16 @@ fn encoded_dimensions(format: &str, encoded: &[u8]) -> Option<(u32, u32)> {
                 .position(|pair| matches!(pair, [0xff, 0xc0] | [0xff, 0xc2]))?;
             Some((
                 u32::from(u16::from_be_bytes(
-                    encoded.get(marker + 7..marker + 9)?.try_into().ok()?,
+                    encoded
+                        .get(marker.checked_add(7)?..marker.checked_add(9)?)?
+                        .try_into()
+                        .ok()?,
                 )),
                 u32::from(u16::from_be_bytes(
-                    encoded.get(marker + 5..marker + 7)?.try_into().ok()?,
+                    encoded
+                        .get(marker.checked_add(5)?..marker.checked_add(7)?)?
+                        .try_into()
+                        .ok()?,
                 )),
             ))
         }
@@ -858,9 +924,9 @@ fn load_pixel_reference(
     module: &str,
     format: &str,
     asset: &str,
-    ref_size: Option<&[u32]>,
-    ref_mode: Option<&str>,
+    reference: (Option<&[u32]>, Option<&str>),
 ) -> Option<PixelParityRef> {
+    let (ref_size, ref_mode) = reference;
     let raw_path = ref_path.map_or_else(
         || {
             manifest_dir
@@ -940,16 +1006,17 @@ fn first_pixel_mismatches(
                     if expected == actual {
                         return None;
                     }
-                    let byte_index = chunk_index * 64 + offset;
-                    let pixel_index = byte_index / bytes_per_pixel;
-                    let x = (pixel_index as u32) % width;
-                    let y = (pixel_index as u32) / width;
+                    let byte_index = chunk_index.wrapping_mul(64).wrapping_add(offset);
+                    let pixel_index = byte_index.checked_div(bytes_per_pixel)?;
+                    let pixel_index_u32 = u32::try_from(pixel_index).ok()?;
+                    let x = pixel_index_u32.checked_rem(width)?;
+                    let y = pixel_index_u32.checked_div(width)?;
                     Some(PixelMismatch {
                         byte_index,
                         pixel_index,
                         x,
                         y,
-                        channel: byte_index % bytes_per_pixel,
+                        channel: byte_index.checked_rem(bytes_per_pixel)?,
                         expected,
                         actual,
                     })
@@ -1006,21 +1073,21 @@ fn assert_pixel_parity(
             actual.mode, expected_mode
         ));
     }
-    if let Some(width) = expected.width {
-        if actual.width != width {
-            return Err(format!(
-                "width mismatch: actual {}, expected {}",
-                actual.width, width
-            ));
-        }
+    if let Some(width) = expected.width
+        && actual.width != width
+    {
+        return Err(format!(
+            "width mismatch: actual {}, expected {}",
+            actual.width, width
+        ));
     }
-    if let Some(height) = expected.height {
-        if actual.height != height {
-            return Err(format!(
-                "height mismatch: actual {}, expected {}",
-                actual.height, height
-            ));
-        }
+    if let Some(height) = expected.height
+        && actual.height != height
+    {
+        return Err(format!(
+            "height mismatch: actual {}, expected {}",
+            actual.height, height
+        ));
     }
 
     let actual_bytes = actual.as_bytes();
@@ -1189,7 +1256,8 @@ fn encode_direct(
 #[test]
 fn test_decode_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let matrix = coverage_matrix().expect(
+    let matrix = require_some(
+        coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
     );
 
@@ -1240,6 +1308,34 @@ fn test_decode_matrix() {
             let decoded = img::decode(&data);
             let direct = decode_direct(&data, fmt_name);
             let direct_info = inspect_direct(&data, fmt_name);
+            let verify_result =
+                img::EncodedImage::new(Arc::<[u8]>::from(data.clone())).and_then(|source| {
+                    let result = source.verify();
+                    assert!(
+                        !source.is_decoded(),
+                        "verify must not populate decode cache"
+                    );
+                    result
+                });
+            let verify_matches_oracle = match row.verify_status.as_str() {
+                "ok" => verify_result.is_ok(),
+                "error" => {
+                    row.verify_error_type
+                        .as_deref()
+                        .is_some_and(|kind| !kind.is_empty())
+                        && row.verify_error_message.as_deref().is_some()
+                        && verify_result.is_err()
+                }
+                _ => false,
+            };
+            if !verify_matches_oracle {
+                eprintln!(
+                    "  FAIL [{}]: verify result does not match Pillow ({:?} versus {})",
+                    row.id, verify_result, row.verify_status
+                );
+                failed += 1;
+                continue;
+            }
             if row.expect_error.unwrap_or(false) {
                 if row.oracle_status.as_deref() != Some("error")
                     || row.oracle_error_type.as_deref().is_none_or(str::is_empty)
@@ -1270,7 +1366,10 @@ fn test_decode_matrix() {
                     },
                     _ => true,
                 };
-                let expected_format = format_from_name(fmt_name).unwrap();
+                let expected_format = require_some(
+                    format_from_name(fmt_name),
+                    "manifest format must be supported",
+                );
                 let structured_error = match img::detect_format(&data) {
                     Err(img::ImageError::UnknownFormat) => {
                         matches!(decoded, Err(img::ImageError::UnknownFormat))
@@ -1295,7 +1394,12 @@ fn test_decode_matrix() {
                             let verified = source.verify();
                             let first = source.decode();
                             let second = clone.decode();
-                            verified.is_err()
+                            let verify_is_expected = match row.verify_status.as_str() {
+                                "ok" => verified.is_ok(),
+                                "error" => verified.is_err(),
+                                _ => false,
+                            };
+                            verify_is_expected
                                 && first.is_err()
                                 && first == second
                                 && !source.is_decoded()
@@ -1330,7 +1434,10 @@ fn test_decode_matrix() {
                     continue;
                 }
             };
-            let expected_format = format_from_name(fmt_name).unwrap();
+            let expected_format = require_some(
+                format_from_name(fmt_name),
+                "manifest format must be supported",
+            );
             if source_lifecycle_formats.insert(fmt_name.as_str()) {
                 let source = match img::EncodedImage::new(Arc::<[u8]>::from(data.clone())) {
                     Ok(source) => source,
@@ -1369,24 +1476,30 @@ fn test_decode_matrix() {
                     failed += 1;
                     continue;
                 }
-                let concurrent_addresses = std::thread::scope(|scope| {
-                    (0..4)
-                        .map(|_| {
-                            let source = source.clone();
-                            scope.spawn(move || {
-                                source
-                                    .decode()
-                                    .map(|decoded| std::ptr::from_ref(decoded) as usize)
+                let concurrent_addresses = require_ok(
+                    std::thread::scope(|scope| {
+                        (0..4)
+                            .map(|_| {
+                                let source = source.clone();
+                                scope.spawn(move || {
+                                    source
+                                        .decode()
+                                        .map(|decoded| std::ptr::from_ref(decoded) as usize)
+                                })
                             })
-                        })
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .map(|handle| handle.join().unwrap())
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .unwrap();
-                let cached = source.decode().unwrap();
-                let cached_from_clone = source_clone.decode().unwrap();
+                            .collect::<Vec<_>>()
+                            .into_iter()
+                            .map(|handle| match handle.join() {
+                                Ok(result) => result,
+                                Err(_) => panic!("concurrent decode worker panicked"),
+                            })
+                            .collect::<Result<Vec<_>, _>>()
+                    }),
+                    "concurrent source decode must succeed",
+                );
+                let cached = require_ok(source.decode(), "cached source decode must succeed");
+                let cached_from_clone =
+                    require_ok(source_clone.decode(), "clone decode must succeed");
                 if !std::ptr::eq(cached, cached_from_clone)
                     || !source.is_decoded()
                     || cached != &decoded
@@ -1499,8 +1612,7 @@ fn test_decode_matrix() {
                 "Decode",
                 fmt_name,
                 asset_name,
-                row.ref_size.as_deref(),
-                row.ref_mode.as_deref(),
+                (row.ref_size.as_deref(), row.ref_mode.as_deref()),
             ) else {
                 eprintln!(
                     "  FAIL [{}]: active row has no readable pixel reference",
@@ -1543,7 +1655,8 @@ fn test_decode_matrix() {
 #[test]
 fn test_encode_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let matrix = coverage_matrix().expect(
+    let matrix = require_some(
+        coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
     );
 
@@ -1592,7 +1705,11 @@ fn test_encode_matrix() {
                         .find(|r| r.status == "active" && r.asset.is_some());
                     match source_row {
                         Some(src) => {
-                            let path = assets_dir.join(fmt_name).join(src.asset.as_ref().unwrap());
+                            let asset = require_some(
+                                src.asset.as_ref(),
+                                "active fallback decode row must have an asset",
+                            );
+                            let path = assets_dir.join(fmt_name).join(asset);
                             if path.exists() {
                                 path
                             } else {
@@ -1610,11 +1727,17 @@ fn test_encode_matrix() {
                 };
 
             if let Entry::Vacant(entry) = asset_cache.entry(asset_path.clone()) {
-                entry.insert(fs::read(&asset_path).unwrap());
+                entry.insert(require_ok(
+                    fs::read(&asset_path),
+                    "encode source asset must be readable",
+                ));
             }
 
             if let Entry::Vacant(entry) = decoded_cache.entry(asset_path.clone()) {
-                let asset_data = asset_cache.get(&asset_path).unwrap();
+                let asset_data = require_some(
+                    asset_cache.get(&asset_path),
+                    "source asset must be cached before decode",
+                );
                 match img::decode_sequence(asset_data) {
                     Ok(decoded) => {
                         entry.insert(decoded.content);
@@ -1626,7 +1749,10 @@ fn test_encode_matrix() {
                     }
                 }
             }
-            let cached_decoded = decoded_cache.get(&asset_path).unwrap();
+            let cached_decoded = require_some(
+                decoded_cache.get(&asset_path),
+                "decoded source must be cached before encode",
+            );
             let mut decoded_owned = row
                 .params
                 .contains_key("second_frame_mode")
@@ -1638,9 +1764,19 @@ fn test_encode_matrix() {
                     .and_then(|value| value.as_str())
                     == Some("CMYK")
             {
-                let frame = decoded.frames.get_mut(1).unwrap();
-                let pixel_count = usize::try_from(frame.image.width).unwrap()
-                    * usize::try_from(frame.image.height).unwrap();
+                let frame = require_some(
+                    decoded.frames.get_mut(1),
+                    "second-frame operation requires a second source frame",
+                );
+                let width = require_ok(
+                    usize::try_from(frame.image.width),
+                    "frame width must fit usize",
+                );
+                let height = require_ok(
+                    usize::try_from(frame.image.height),
+                    "frame height must fit usize",
+                );
+                let pixel_count = width.saturating_mul(height);
                 frame.image.pixels = vec![0; pixel_count * 4];
                 frame.image.color = img::ColorType::Cmyk8;
                 frame.image.mode = img::ImageMode::Cmyk8;
@@ -1702,19 +1838,36 @@ fn test_encode_matrix() {
                 .get("truncate_pixels")
                 .is_some_and(|v| v.as_bool().unwrap_or(false))
             {
-                let mut malformed = decoded.first().unwrap().clone();
+                let mut malformed =
+                    require_some(decoded.first(), "encoded sequence must have a first frame")
+                        .clone();
                 malformed.pixels.pop();
                 encode_direct(&malformed, format, &opts)
-                    .map(Ok)
-                    .unwrap_or_else(|| img::encode(&malformed, format, &opts))
+                    .map_or_else(|| img::encode(&malformed, format, &opts), Ok)
             } else if let Some(dimensions) = row.params.get("source_dimensions") {
-                let dimensions = dimensions.as_array().unwrap();
-                let mut malformed = decoded.first().unwrap().clone();
-                malformed.width = u32::try_from(dimensions[0].as_u64().unwrap()).unwrap();
-                malformed.height = u32::try_from(dimensions[1].as_u64().unwrap()).unwrap();
+                let dimensions = require_some(
+                    dimensions.as_array(),
+                    "source_dimensions must be a JSON array",
+                );
+                let mut malformed =
+                    require_some(decoded.first(), "encoded sequence must have a first frame")
+                        .clone();
+                malformed.width = require_ok(
+                    u32::try_from(require_some(
+                        dimensions[0].as_u64(),
+                        "source width must be an unsigned integer",
+                    )),
+                    "source width must fit u32",
+                );
+                malformed.height = require_ok(
+                    u32::try_from(require_some(
+                        dimensions[1].as_u64(),
+                        "source height must be an unsigned integer",
+                    )),
+                    "source height must fit u32",
+                );
                 encode_direct(&malformed, format, &opts)
-                    .map(Ok)
-                    .unwrap_or_else(|| img::encode(&malformed, format, &opts))
+                    .map_or_else(|| img::encode(&malformed, format, &opts), Ok)
             } else {
                 img::encode_sequence(decoded, format, &opts)
             };
@@ -1748,7 +1901,11 @@ fn test_encode_matrix() {
                 }
             };
             if decoded.frames.len() == 1 {
-                match img::encode(decoded.first().unwrap(), format, &opts) {
+                match img::encode(
+                    require_some(decoded.first(), "encoded sequence must have a first frame"),
+                    format,
+                    &opts,
+                ) {
                     Ok(still) if still == encoded => {}
                     Ok(_) => {
                         eprintln!(
@@ -1831,8 +1988,7 @@ fn test_encode_matrix() {
                             "Encode",
                             fmt_name,
                             row.source_asset.as_deref().unwrap_or(""),
-                            row.ref_size.as_deref(),
-                            row.ref_mode.as_deref(),
+                            (row.ref_size.as_deref(), row.ref_mode.as_deref()),
                         )
                     }) {
                         match assert_pixel_parity(&expected, &redecoded)
@@ -1879,7 +2035,7 @@ fn test_encode_matrix() {
 #[test]
 fn test_operation_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let matrix = coverage_matrix().expect("coverage_matrix.json is required");
+    let matrix = require_some(coverage_matrix(), "coverage_matrix.json is required");
     let mut failed = Vec::new();
     let mut exercised_variants = HashSet::new();
     exercise_type_metadata();
@@ -1889,9 +2045,12 @@ fn test_operation_matrix() {
             .join("tests/fixtures/input/images")
             .join(&row.source_format)
             .join(&row.source_asset);
-        let source = fs::read(source_path).unwrap();
-        let decoded = img::decode(&source).unwrap();
-        let mut dynamic = img::DynamicImage::from_decoded(&decoded.content).unwrap();
+        let source = require_ok(fs::read(source_path), "operation source must be readable");
+        let decoded = require_ok(img::decode(&source), "operation source must decode");
+        let mut dynamic = require_some(
+            img::DynamicImage::from_decoded(&decoded.content),
+            "decoded operation source must have a dynamic representation",
+        );
         dynamic = match row
             .params
             .get("intermediate")
@@ -1918,10 +2077,10 @@ fn test_operation_matrix() {
             "rotate180" => dynamic.rotate180(),
             "rotate270" => dynamic.rotate270(),
             "crop" => dynamic.crop_imm(
-                row.params["x"].as_u64().unwrap() as u32,
-                row.params["y"].as_u64().unwrap() as u32,
-                row.params["width"].as_u64().unwrap() as u32,
-                row.params["height"].as_u64().unwrap() as u32,
+                operation_u32(row, "x"),
+                operation_u32(row, "y"),
+                operation_u32(row, "width"),
+                operation_u32(row, "height"),
             ),
             action => panic!("unknown operation {action}"),
         };
@@ -1932,7 +2091,10 @@ fn test_operation_matrix() {
             "RGBA" => result.to_rgba8().into_raw(),
             mode => panic!("unsupported oracle operation mode {mode}"),
         };
-        let expected = fs::read(manifest_dir.join(&row.ref_path)).unwrap();
+        let expected = require_ok(
+            fs::read(manifest_dir.join(&row.ref_path)),
+            "operation reference must be readable",
+        );
         if actual != expected
             || actual.len() != row.ref_bytes
             || vec![result.width(), result.height()] != row.ref_size
@@ -1967,6 +2129,14 @@ fn test_operation_matrix() {
     );
 }
 
+fn operation_u32(row: &OperationRow, name: &str) -> u32 {
+    let value = require_some(
+        row.params.get(name).and_then(serde_json::Value::as_u64),
+        "operation parameter must be an unsigned integer",
+    );
+    require_ok(u32::try_from(value), "operation parameter must fit u32")
+}
+
 #[cfg(coverage)]
 #[test]
 fn test_internal_coverage_hooks() {
@@ -1988,8 +2158,13 @@ where
     clone.clone_from(buffer);
 
     let mut pixels = buffer.pixels();
-    assert_eq!(pixels.size_hint().0, (width * height) as usize);
-    assert_eq!(pixels.len(), (width * height) as usize);
+    let area = require_some(
+        width.checked_mul(height),
+        "image-buffer dimensions must have a representable area",
+    );
+    let pixel_count = require_ok(usize::try_from(area), "image-buffer area must fit usize");
+    assert_eq!(pixels.size_hint().0, pixel_count);
+    assert_eq!(pixels.len(), pixel_count);
     let _ = format!("{pixels:?}");
     let _ = pixels.clone().next();
     let _ = pixels.next_back();
@@ -2099,7 +2274,10 @@ where
     assert!(view_pixels.next().is_none());
     let _ = GenericImageView::buffer_like(buffer);
     let _ = GenericImageView::buffer_with_dimensions(buffer, 1, 1);
-    GenericImage::copy_from(buffer, &clone, 0, 0).unwrap();
+    require_ok(
+        GenericImage::copy_from(buffer, &clone, 0, 0),
+        "same-size image-buffer copy must succeed",
+    );
     let _ = GenericImage::get_pixel_mut(buffer, 0, 0);
     #[allow(deprecated)]
     GenericImage::blend_pixel(buffer, 0, 0, pixel);
@@ -2263,7 +2441,10 @@ fn exercise_dynamic_api(image: &img::DynamicImage) {
     assert_eq!(image.color().has_alpha(), image.has_alpha());
 
     let decoded = image.clone().into_decoded();
-    let roundtrip = img::DynamicImage::from_decoded(&decoded).unwrap();
+    let roundtrip = require_some(
+        img::DynamicImage::from_decoded(&decoded),
+        "dynamic image must roundtrip through its decoded representation",
+    );
     assert_eq!(roundtrip.as_bytes(), image.as_bytes());
     let _ = image.crop_imm(0, 0, 1, 1);
     assert_eq!(GenericImageView::dimensions(image), (width, height));
@@ -2441,7 +2622,10 @@ fn exercise_type_metadata() {
             self.0 = [f(self.0[0], other.0[0]), f(self.0[1], other.0[1])];
         }
         fn invert(&mut self) {
-            self.0 = [255 - self.0[0], 255 - self.0[1]];
+            self.0 = [
+                255_u8.wrapping_sub(self.0[0]),
+                255_u8.wrapping_sub(self.0[1]),
+            ];
         }
         fn blend(&mut self, other: &Self) {
             *self = *other;
@@ -2548,7 +2732,10 @@ fn exercise_type_metadata() {
     ] {
         assert!(img::ImagePalette::new(rgb, alpha).is_err());
     }
-    let palette = img::ImagePalette::new(vec![0, 0, 0], vec![255]).unwrap();
+    let palette = require_ok(
+        img::ImagePalette::new(vec![0, 0, 0], vec![255]),
+        "one-entry RGB palette must be valid",
+    );
     let invalid_images = [
         img::DecodedImage::new(0, 1, vec![], img::ColorType::L8),
         img::DecodedImage {
@@ -2612,8 +2799,10 @@ fn exercise_type_metadata() {
         .extra
         .insert("xmp_hex".to_owned(), "f".to_owned());
     assert!(img::codecs::webp::encode::encode(&valid, &bad_webp_metadata).is_none());
-    let mut lossless_webp = img::encode_options::EncodeOptions::default();
-    lossless_webp.lossless = Some(true);
+    let lossless_webp = img::encode_options::EncodeOptions {
+        lossless: Some(true),
+        ..Default::default()
+    };
     assert!(img::codecs::webp::encode::encode(&unsupported_webp, &lossless_webp).is_none());
 
     exercise_primitive(1u8);
@@ -2630,6 +2819,16 @@ fn exercise_type_metadata() {
     exercise_enlargeable(1u64);
     exercise_enlargeable(1usize);
     exercise_enlargeable(0.5f32);
+    assert_eq!(<u8 as img::Primitive>::from_f32(255.0), u8::MAX);
+    assert_eq!(<u8 as img::Primitive>::from_f32(f32::NAN), 0);
+    assert_eq!(<u128 as img::Primitive>::from_f32(f32::INFINITY), u128::MAX);
+    assert_eq!(<f64 as img::Primitive>::to_f32(0.5), 0.5);
+    assert_eq!(
+        <f64 as img::Primitive>::to_f32(f64::INFINITY),
+        f32::INFINITY
+    );
+    assert_eq!(<f64 as img::Primitive>::to_u64(f64::NAN), 0);
+    assert_eq!(<f64 as img::Primitive>::to_u64(f64::INFINITY), u64::MAX);
     let _ = <u8 as img::FromPrimitive<f32>>::from_primitive(0.5);
     let _ = <u16 as img::FromPrimitive<f32>>::from_primitive(0.5);
     let _ = <u8 as img::FromPrimitive<u16>>::from_primitive(257);
@@ -2641,7 +2840,15 @@ fn exercise_type_metadata() {
     let _ = [0.25f32, 0.5].as_slice().as_bytes();
 
     let paths = [
-        "a.jpg", "a.png", "a.gif", "a.bmp", "a.webp", "a.tif", "a.ico", "a.avif",
+        "a.jpg",
+        "a.PNG",
+        "a.gif",
+        "a.bmp",
+        "a.webp",
+        "a.tif",
+        "a.ico",
+        "a.avif",
+        "../../definitely-not-present/IMAGE.PNG",
     ];
     for path in paths {
         assert!(img::ImageFormat::from_path(path).is_ok());
@@ -2661,7 +2868,20 @@ fn exercise_type_metadata() {
         assert_eq!(format.to_string(), name);
         assert_eq!(name.parse::<img::ImageFormat>(), Ok(format));
     }
-    assert!(img::ImageFormat::from_path("a.unknown").is_err());
+    assert_eq!(
+        img::ImageFormat::from_path("a.UNKNOWN"),
+        Err(img::ImageError::Unsupported {
+            format: None,
+            message: "unknown extension: unknown".to_owned(),
+        })
+    );
+    assert_eq!(
+        img::ImageFormat::from_path("no-extension"),
+        Err(img::ImageError::Unsupported {
+            format: None,
+            message: "unknown extension: ".to_owned(),
+        })
+    );
     let errors = [
         img::ImageError::Dimensions,
         img::ImageError::UnknownFormat,
@@ -2695,7 +2915,8 @@ fn exercise_type_metadata() {
 
 #[test]
 fn test_coverage_matrix() {
-    let matrix = coverage_matrix().expect(
+    let matrix = require_some(
+        coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
     );
 

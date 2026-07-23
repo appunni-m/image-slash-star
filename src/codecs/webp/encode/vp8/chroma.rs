@@ -33,26 +33,37 @@ fn predict(
     match mode {
         ChromaMode::Dc => {
             let dc = match (has_top, has_left) {
-                (true, true) => {
-                    (top.iter()
-                        .chain(left)
-                        .map(|&value| u32::from(value))
-                        .sum::<u32>()
-                        + 8)
-                        >> 4
-                }
-                (true, false) => (top.iter().map(|&value| u32::from(value)).sum::<u32>() + 4) >> 3,
-                (false, true) => (left.iter().map(|&value| u32::from(value)).sum::<u32>() + 4) >> 3,
+                (true, true) => (top
+                    .iter()
+                    .chain(left)
+                    .map(|&value| u32::from(value))
+                    .sum::<u32>()
+                    .saturating_add(8))
+                .wrapping_shr(4),
+                (true, false) => top
+                    .iter()
+                    .map(|&value| u32::from(value))
+                    .sum::<u32>()
+                    .saturating_add(4)
+                    .wrapping_shr(3),
+                (false, true) => left
+                    .iter()
+                    .map(|&value| u32::from(value))
+                    .sum::<u32>()
+                    .saturating_add(4)
+                    .wrapping_shr(3),
                 (false, false) => 128,
             };
-            output.fill(dc as u8);
+            output.fill(dc.to_le_bytes()[0]);
         }
         ChromaMode::TrueMotion => {
-            for row in 0..8 {
-                for column in 0..8 {
-                    output[row * 8 + column] = (i16::from(top[column]) + i16::from(left[row])
-                        - i16::from(top_left))
-                    .clamp(0, 255) as u8;
+            for row in 0usize..8 {
+                for column in 0usize..8 {
+                    output[row.saturating_mul(8).saturating_add(column)] = i16::from(top[column])
+                        .saturating_add(i16::from(left[row]))
+                        .saturating_sub(i16::from(top_left))
+                        .clamp(0, 255)
+                        .to_le_bytes()[0];
                 }
             }
         }
@@ -75,22 +86,36 @@ fn quantize_single(value: &mut i16, matrix: &QuantMatrix) -> i8 {
     let negative = signed < 0;
     let magnitude = signed.unsigned_abs();
     if magnitude > matrix.zero_threshold[0] {
-        let quantized = ((magnitude * u32::from(matrix.reciprocal[0]) + matrix.bias[0]) >> 17)
-            * u32::from(matrix.q[0]);
-        let error = magnitude as i32 - quantized as i32;
+        let quantized = magnitude
+            .saturating_mul(u32::from(matrix.reciprocal[0]))
+            .saturating_add(matrix.bias[0])
+            .wrapping_shr(17)
+            .saturating_mul(u32::from(matrix.q[0]));
+        let quantized_i32 = i32::from_le_bytes(quantized.to_le_bytes());
+        let error = i32::from_le_bytes(magnitude.to_le_bytes()).saturating_sub(quantized_i32);
+        let [a, b, ..] = quantized.to_le_bytes();
+        let quantized_i16 = i16::from_le_bytes([a, b]);
         *value = if negative {
-            -(quantized as i16)
+            quantized_i16.saturating_neg()
         } else {
-            quantized as i16
+            quantized_i16
         };
-        (if negative { -error } else { error } >> 1) as i8
+        let error = if negative {
+            error.saturating_neg()
+        } else {
+            error
+        }
+        .wrapping_shr(1);
+        i8::from_le_bytes([error.to_le_bytes()[0]])
     } else {
         *value = 0;
-        (if negative {
-            -(magnitude as i32)
+        let error = if negative {
+            i32::from_le_bytes(magnitude.to_le_bytes()).saturating_neg()
         } else {
-            magnitude as i32
-        } >> 1) as i8
+            i32::from_le_bytes(magnitude.to_le_bytes())
+        }
+        .wrapping_shr(1);
+        i8::from_le_bytes([error.to_le_bytes()[0]])
     }
 }
 
@@ -100,13 +125,29 @@ fn correct_dc(
     top_errors: [i8; 2],
     left_errors: [i8; 2],
 ) -> [i8; 3] {
-    coefficients[0][0] += (7 * i16::from(top_errors[0]) + 8 * i16::from(left_errors[0])) >> 3;
+    coefficients[0][0] = coefficients[0][0].saturating_add(
+        7i16.saturating_mul(i16::from(top_errors[0]))
+            .saturating_add(8i16.saturating_mul(i16::from(left_errors[0])))
+            .wrapping_shr(3),
+    );
     let error0 = quantize_single(&mut coefficients[0][0], matrix);
-    coefficients[1][0] += (7 * i16::from(top_errors[1]) + 8 * i16::from(error0)) >> 3;
+    coefficients[1][0] = coefficients[1][0].saturating_add(
+        7i16.saturating_mul(i16::from(top_errors[1]))
+            .saturating_add(8i16.saturating_mul(i16::from(error0)))
+            .wrapping_shr(3),
+    );
     let error1 = quantize_single(&mut coefficients[1][0], matrix);
-    coefficients[2][0] += (7 * i16::from(error0) + 8 * i16::from(left_errors[1])) >> 3;
+    coefficients[2][0] = coefficients[2][0].saturating_add(
+        7i16.saturating_mul(i16::from(error0))
+            .saturating_add(8i16.saturating_mul(i16::from(left_errors[1])))
+            .wrapping_shr(3),
+    );
     let error2 = quantize_single(&mut coefficients[2][0], matrix);
-    coefficients[3][0] += (7 * i16::from(error1) + 8 * i16::from(error2)) >> 3;
+    coefficients[3][0] = coefficients[3][0].saturating_add(
+        7i16.saturating_mul(i16::from(error1))
+            .saturating_add(8i16.saturating_mul(i16::from(error2)))
+            .wrapping_shr(3),
+    );
     let error3 = quantize_single(&mut coefficients[3][0], matrix);
     [error1, error2, error3]
 }
@@ -157,17 +198,23 @@ fn evaluate(
     let mut errors = [[0; 3]; 2];
     let mut nonzero = 0u32;
 
-    for plane in 0..2 {
+    for plane in 0usize..2 {
         let mut coefficients = [[0i16; 16]; 4];
-        for block_y in 0..2 {
-            for block_x in 0..2 {
-                let block = block_y * 2 + block_x;
+        for block_y in 0usize..2 {
+            for block_x in 0usize..2 {
+                let block = block_y.saturating_mul(2).saturating_add(block_x);
                 let mut residual = [0i16; 16];
-                for row in 0..4 {
-                    for column in 0..4 {
-                        let index = (block_y * 4 + row) * 8 + block_x * 4 + column;
-                        residual[row * 4 + column] =
-                            i16::from(sources[plane][index]) - i16::from(predictions[plane][index]);
+                for row in 0usize..4 {
+                    for column in 0usize..4 {
+                        let index = block_y
+                            .saturating_mul(4)
+                            .saturating_add(row)
+                            .saturating_mul(8)
+                            .saturating_add(block_x.saturating_mul(4))
+                            .saturating_add(column);
+                        residual[row.saturating_mul(4).saturating_add(column)] =
+                            i16::from(sources[plane][index])
+                                .saturating_sub(i16::from(predictions[plane][index]));
                     }
                 }
                 coefficients[block] = vp8_fdct_4x4(&residual);
@@ -181,28 +228,39 @@ fn evaluate(
                 left_errors[plane],
             );
         }
-        for block_y in 0..2 {
-            for block_x in 0..2 {
-                let block = block_y * 2 + block_x;
-                let level_index = plane * 4 + block;
+        for block_y in 0usize..2 {
+            for block_x in 0usize..2 {
+                let block = block_y.saturating_mul(2).saturating_add(block_x);
+                let level_index = plane.saturating_mul(4).saturating_add(block);
                 if quantize_block(
                     &mut coefficients[block],
                     &mut levels[level_index],
                     &matrices.uv,
                 ) {
-                    nonzero |= 1 << (16 + level_index);
+                    nonzero |= 1u32
+                        .wrapping_shl(16usize.saturating_add(level_index).to_le_bytes()[0].into());
                 }
                 let mut prediction_block = [0; 16];
-                for row in 0..4 {
-                    let offset = (block_y * 4 + row) * 8 + block_x * 4;
-                    prediction_block[row * 4..row * 4 + 4]
-                        .copy_from_slice(&predictions[plane][offset..offset + 4]);
+                for row in 0usize..4 {
+                    let offset = block_y
+                        .saturating_mul(4)
+                        .saturating_add(row)
+                        .saturating_mul(8)
+                        .saturating_add(block_x.saturating_mul(4));
+                    let row_start = row.saturating_mul(4);
+                    prediction_block[row_start..row_start.saturating_add(4)]
+                        .copy_from_slice(&predictions[plane][offset..offset.saturating_add(4)]);
                 }
                 let output = vp8_idct_add_4x4(&prediction_block, &coefficients[block]);
-                for row in 0..4 {
-                    let offset = (block_y * 4 + row) * 8 + block_x * 4;
-                    reconstructed[plane][offset..offset + 4]
-                        .copy_from_slice(&output[row * 4..row * 4 + 4]);
+                for row in 0usize..4 {
+                    let offset = block_y
+                        .saturating_mul(4)
+                        .saturating_add(row)
+                        .saturating_mul(8)
+                        .saturating_add(block_x.saturating_mul(4));
+                    let row_start = row.saturating_mul(4);
+                    reconstructed[plane][offset..offset.saturating_add(4)]
+                        .copy_from_slice(&output[row_start..row_start.saturating_add(4)]);
                 }
             }
         }
@@ -210,24 +268,29 @@ fn evaluate(
 
     let mut top_context = top_nonzero;
     let mut left_context = left_nonzero;
-    let mut rate = 0;
-    for plane in 0..2 {
-        for block_y in 0..2 {
-            for block_x in 0..2 {
-                let level_index = plane * 4 + block_y * 2 + block_x;
-                let context_index = plane * 2 + block_x;
-                let context =
-                    usize::from(top_context[context_index] + left_context[plane * 2 + block_y]);
-                rate += residual_cost(
+    let mut rate = 0u32;
+    for plane in 0usize..2 {
+        for block_y in 0usize..2 {
+            for block_x in 0usize..2 {
+                let level_index = plane
+                    .saturating_mul(4)
+                    .saturating_add(block_y.saturating_mul(2))
+                    .saturating_add(block_x);
+                let context_index = plane.saturating_mul(2).saturating_add(block_x);
+                let left_index = plane.saturating_mul(2).saturating_add(block_y);
+                let context = usize::from(
+                    top_context[context_index].saturating_add(left_context[left_index]),
+                );
+                rate = rate.saturating_add(residual_cost(
                     &levels[level_index],
                     0,
                     2,
                     context,
                     coefficient_probabilities,
-                );
+                ));
                 let block_nonzero = u8::from(levels[level_index].iter().any(|&level| level != 0));
                 top_context[context_index] = block_nonzero;
-                left_context[plane * 2 + block_y] = block_nonzero;
+                left_context[left_index] = block_nonzero;
             }
         }
     }
@@ -239,7 +302,7 @@ fn evaluate(
             .count()
             <= 2
     {
-        rate += 1_120;
+        rate = rate.saturating_add(1_120);
     }
     let distortion = sources
         .iter()
@@ -249,8 +312,8 @@ fn evaluate(
                 .iter()
                 .zip(output)
                 .map(|(&source, &output)| {
-                    let difference = i32::from(source) - i32::from(output);
-                    (difference * difference) as u32
+                    let difference = i32::from(source).saturating_sub(i32::from(output));
+                    difference.saturating_mul(difference).cast_unsigned()
                 })
                 .sum::<u32>()
         })
@@ -293,6 +356,8 @@ pub(super) fn select(
     fixed_mode: Option<ChromaMode>,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> ChromaCandidate {
+    // `fixed_mode`, when present, is itself a member of this non-empty enum set.
+    #[allow(clippy::expect_used)]
     ChromaMode::ALL
         .into_iter()
         .filter(|&mode| fixed_mode.is_none_or(|fixed| fixed == mode))

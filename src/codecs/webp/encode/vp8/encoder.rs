@@ -52,8 +52,8 @@ fn encode_vp8_planes(
     quality: u8,
     method: u8,
 ) -> Vec<u8> {
-    let padded_width = width.div_ceil(16) * 16;
-    let padded_height = height.div_ceil(16) * 16;
+    let padded_width = width.div_ceil(16).wrapping_mul(16);
+    let padded_height = height.div_ceil(16).wrapping_mul(16);
     let chroma_width = width.div_ceil(2);
     let chroma_height = height.div_ceil(2);
     let padded_chroma_width = padded_width / 2;
@@ -90,11 +90,8 @@ fn encode_vp8_planes(
     );
     let mut params = segment_params(&analysis, f64::from(quality));
     let mut decisions = select_frame(
-        &y_plane,
-        &u_plane,
-        &v_plane,
-        padded_width as usize,
-        padded_height as usize,
+        [&y_plane, &u_plane, &v_plane],
+        (padded_width as usize, padded_height as usize),
         f64::from(quality),
         method,
         &COEFF_PROBS,
@@ -117,11 +114,8 @@ fn encode_vp8_planes(
     );
     if method >= 6 {
         decisions = select_frame(
-            &y_plane,
-            &u_plane,
-            &v_plane,
-            padded_width as usize,
-            padded_height as usize,
+            [&y_plane, &u_plane, &v_plane],
+            (padded_width as usize, padded_height as usize),
             f64::from(quality),
             method,
             &COEFF_PROBS,
@@ -140,7 +134,7 @@ fn encode_vp8_planes(
         method >= 3,
     );
     let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities);
-    let frame_header = build_frame_header(width, height, header_data.len() as u32);
+    let frame_header = build_frame_header(width, height, low_u32(header_data.len()));
 
     let mut vp8_data = frame_header;
     vp8_data.extend_from_slice(&header_data);
@@ -151,27 +145,27 @@ fn encode_vp8_planes(
 
 fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {
     let mut map = [0, 1, 2, 3];
-    let mut final_segments = 1;
+    let mut final_segments = 1_usize;
 
-    for source in 1..params.num_segments {
-        let mut destination = 0;
+    for (source, map_entry) in map.iter_mut().enumerate().take(params.num_segments).skip(1) {
+        let mut destination = 0_usize;
         while destination < final_segments
             && params.segments[source] != params.segments[destination]
         {
-            destination += 1;
+            destination = destination.wrapping_add(1);
         }
-        map[source] = destination as u8;
+        *map_entry = destination.to_le_bytes()[0];
         if destination == final_segments {
             if destination != source {
                 params.segments[destination] = params.segments[source];
             }
-            final_segments += 1;
+            final_segments = final_segments.wrapping_add(1);
         }
     }
 
     params.num_segments = final_segments;
     for segment in final_segments..params.segments.len() {
-        params.segments[segment] = params.segments[final_segments - 1];
+        params.segments[segment] = params.segments[final_segments.wrapping_sub(1)];
     }
     map
 }
@@ -207,11 +201,13 @@ fn pad_plane(
     padded_width: usize,
     padded_height: usize,
 ) -> Vec<u8> {
-    let mut output = vec![0; padded_width * padded_height];
+    let mut output = vec![0; padded_width.wrapping_mul(padded_height)];
     for y in 0..padded_height {
-        let source_y = y.min(height - 1);
+        let source_y = y.min(height.saturating_sub(1));
         for x in 0..padded_width {
-            output[y * padded_width + x] = input[source_y * width + x.min(width - 1)];
+            output[y.wrapping_mul(padded_width).wrapping_add(x)] = input[source_y
+                .wrapping_mul(width)
+                .wrapping_add(x.min(width.saturating_sub(1)))];
         }
     }
     output
@@ -227,22 +223,64 @@ const GAMMA_FIX: i32 = 12;
 const GAMMA_TAB_FIX: i32 = 7;
 const GAMMA_TAB_SIZE: usize = 1 << (GAMMA_FIX - GAMMA_TAB_FIX);
 
+fn low_u32(value: usize) -> u32 {
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+fn pixel_offset(row: usize, width: usize, column: usize, channels: usize) -> usize {
+    row.wrapping_mul(width)
+        .wrapping_add(column)
+        .wrapping_mul(channels)
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn rounded_gamma_u16(value: f64) -> u16 {
+    value as u16
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn rounded_gamma_i32(value: f64) -> i32 {
+    value as i32
+}
+
 fn rgb_to_y(r: i32, g: i32, b: i32) -> u8 {
-    let luma = 16_839 * r + 33_059 * g + 6_420 * b;
-    ((luma + YUV_HALF + (16 << YUV_FIX)) >> YUV_FIX) as u8
+    let luma = 16_839_i32
+        .wrapping_mul(r)
+        .wrapping_add(33_059_i32.wrapping_mul(g))
+        .wrapping_add(6_420_i32.wrapping_mul(b));
+    luma.wrapping_add(YUV_HALF)
+        .wrapping_add(16_i32.wrapping_shl(YUV_FIX.cast_unsigned()))
+        .wrapping_shr(YUV_FIX.cast_unsigned())
+        .to_le_bytes()[0]
 }
 
 fn clip_uv(value: i32) -> u8 {
-    let value = (value + (YUV_HALF << 2) + (128 << (YUV_FIX + 2))) >> (YUV_FIX + 2);
-    value.clamp(0, 255) as u8
+    let shift = YUV_FIX.wrapping_add(2).cast_unsigned();
+    value
+        .wrapping_add(YUV_HALF.wrapping_shl(2))
+        .wrapping_add(128_i32.wrapping_shl(shift))
+        .wrapping_shr(shift)
+        .clamp(0, 255)
+        .to_le_bytes()[0]
 }
 
 fn rgb_to_u(r: i32, g: i32, b: i32) -> u8 {
-    clip_uv(-9_719 * r - 19_081 * g + 28_800 * b)
+    clip_uv(
+        (-9_719_i32)
+            .wrapping_mul(r)
+            .wrapping_sub(19_081_i32.wrapping_mul(g))
+            .wrapping_add(28_800_i32.wrapping_mul(b)),
+    )
 }
 
 fn rgb_to_v(r: i32, g: i32, b: i32) -> u8 {
-    clip_uv(28_800 * r - 24_116 * g - 4_684 * b)
+    clip_uv(
+        28_800_i32
+            .wrapping_mul(r)
+            .wrapping_sub(24_116_i32.wrapping_mul(g))
+            .wrapping_sub(4_684_i32.wrapping_mul(b)),
+    )
 }
 
 fn gamma_tables() -> &'static ([u16; 256], [i32; GAMMA_TAB_SIZE + 1]) {
@@ -252,13 +290,15 @@ fn gamma_tables() -> &'static ([u16; 256], [i32; GAMMA_TAB_SIZE + 1]) {
     TABLES.get_or_init(|| {
         let mut gamma_to_linear = [0u16; 256];
         for (value, result) in gamma_to_linear.iter_mut().enumerate() {
-            *result = (((value as f64 / 255.0).powf(0.80) * 4_095.0) + 0.5) as u16;
+            *result = rounded_gamma_u16(
+                ((f64::from(value.to_le_bytes()[0]) / 255.0).powf(0.80) * 4_095.0) + 0.5,
+            );
         }
 
         let mut linear_to_gamma = [0i32; GAMMA_TAB_SIZE + 1];
         for (value, result) in linear_to_gamma.iter_mut().enumerate() {
-            let scaled = (128.0 * value as f64) / 4_095.0;
-            *result = (255.0 * scaled.powf(1.0 / 0.80) + 0.5) as i32;
+            let scaled = (128.0 * f64::from(value.to_le_bytes()[0])) / 4_095.0;
+            *result = rounded_gamma_i32(255.0 * scaled.powf(1.0 / 0.80) + 0.5);
         }
         (gamma_to_linear, linear_to_gamma)
     })
@@ -268,10 +308,13 @@ fn linear_to_gamma(base_value: u32) -> i32 {
     let (_, linear_to_gamma) = gamma_tables();
     let tab_position = (base_value >> (GAMMA_TAB_FIX + 2)) as usize;
     let fraction = (base_value & ((1 << (GAMMA_TAB_FIX + 2)) - 1)) as i32;
-    let span = 1 << (GAMMA_TAB_FIX + 2);
-    let interpolated = linear_to_gamma[tab_position] * (span - fraction)
-        + linear_to_gamma[tab_position + 1] * fraction;
-    (interpolated + (1 << (GAMMA_TAB_FIX - 1))) >> GAMMA_TAB_FIX
+    let span: i32 = 1_i32.wrapping_shl(GAMMA_TAB_FIX.wrapping_add(2).cast_unsigned());
+    let interpolated = linear_to_gamma[tab_position]
+        .wrapping_mul(span.wrapping_sub(fraction))
+        .wrapping_add(linear_to_gamma[tab_position.wrapping_add(1)].wrapping_mul(fraction));
+    interpolated
+        .wrapping_add(1_i32.wrapping_shl(GAMMA_TAB_FIX.wrapping_sub(1).cast_unsigned()))
+        .wrapping_shr(GAMMA_TAB_FIX.cast_unsigned())
 }
 
 /// Convert RGB bytes to the YUV420 planes produced by libwebp's regular import path.
@@ -282,46 +325,52 @@ pub(super) fn rgb_to_yuv_planes_internal(
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let w = width as usize;
     let h = height as usize;
-    let mut y_plane = vec![0u8; w * h];
-    let uv_w = (w + 1) / 2;
-    let uv_h = (h + 1) / 2;
-    let mut u_plane = vec![0u8; uv_w * uv_h];
-    let mut v_plane = vec![0u8; uv_w * uv_h];
+    let mut y_plane = vec![0u8; w.wrapping_mul(h)];
+    let uv_w = w.div_ceil(2);
+    let uv_h = h.div_ceil(2);
+    let mut u_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
+    let mut v_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
 
     for row in 0..h {
         for col in 0..w {
-            let idx = (row * w + col) * 3;
-            y_plane[row * w + col] = rgb_to_y(
+            let idx = pixel_offset(row, w, col, 3);
+            y_plane[row.wrapping_mul(w).wrapping_add(col)] = rgb_to_y(
                 i32::from(rgb[idx]),
-                i32::from(rgb[idx + 1]),
-                i32::from(rgb[idx + 2]),
+                i32::from(rgb[idx.wrapping_add(1)]),
+                i32::from(rgb[idx.wrapping_add(2)]),
             );
         }
     }
 
     for row in 0..uv_h {
         for col in 0..uv_w {
-            let r0 = row * 2;
-            let c0 = col * 2;
-            let r1 = (r0 + 1).min(h - 1);
-            let c1 = (c0 + 1).min(w - 1);
+            let r0 = row.wrapping_mul(2);
+            let c0 = col.wrapping_mul(2);
+            let r1 = r0.wrapping_add(1).min(h.saturating_sub(1));
+            let c1 = c0.wrapping_add(1).min(w.saturating_sub(1));
 
-            let p00 = (r0 * w + c0) * 3;
-            let p01 = (r0 * w + c1) * 3;
-            let p10 = (r1 * w + c0) * 3;
-            let p11 = (r1 * w + c1) * 3;
+            let p00 = pixel_offset(r0, w, c0, 3);
+            let p01 = pixel_offset(r0, w, c1, 3);
+            let p10 = pixel_offset(r1, w, c0, 3);
+            let p11 = pixel_offset(r1, w, c1, 3);
 
             let (gamma_to_linear, _) = gamma_tables();
             let gamma_sum = |channel: usize| {
-                u32::from(gamma_to_linear[rgb[p00 + channel] as usize])
-                    + u32::from(gamma_to_linear[rgb[p01 + channel] as usize])
-                    + u32::from(gamma_to_linear[rgb[p10 + channel] as usize])
-                    + u32::from(gamma_to_linear[rgb[p11 + channel] as usize])
+                u32::from(gamma_to_linear[usize::from(rgb[p00.wrapping_add(channel)])])
+                    .wrapping_add(u32::from(
+                        gamma_to_linear[usize::from(rgb[p01.wrapping_add(channel)])],
+                    ))
+                    .wrapping_add(u32::from(
+                        gamma_to_linear[usize::from(rgb[p10.wrapping_add(channel)])],
+                    ))
+                    .wrapping_add(u32::from(
+                        gamma_to_linear[usize::from(rgb[p11.wrapping_add(channel)])],
+                    ))
             };
             let r = linear_to_gamma(gamma_sum(0));
             let g = linear_to_gamma(gamma_sum(1));
             let b = linear_to_gamma(gamma_sum(2));
-            let uv_idx = row * uv_w + col;
+            let uv_idx = row.wrapping_mul(uv_w).wrapping_add(col);
             u_plane[uv_idx] = rgb_to_u(r, g, b);
             v_plane[uv_idx] = rgb_to_v(r, g, b);
         }
@@ -341,20 +390,24 @@ fn smoothen_transparent_luma(
 ) -> bool {
     let mut sum = 0usize;
     let mut count = 0usize;
-    for y in origin_y..origin_y + height {
-        for x in origin_x..origin_x + width {
-            if rgba[(y * image_width + x) * 4 + 3] != 0 {
-                count += 1;
-                sum += usize::from(y_plane[y * image_width + x]);
+    for y in origin_y..origin_y.saturating_add(height) {
+        for x in origin_x..origin_x.saturating_add(width) {
+            let rgba_offset = pixel_offset(y, image_width, x, 4);
+            let plane_offset = y.wrapping_mul(image_width).wrapping_add(x);
+            if rgba[rgba_offset.wrapping_add(3)] != 0 {
+                count = count.wrapping_add(1);
+                sum = sum.wrapping_add(usize::from(y_plane[plane_offset]));
             }
         }
     }
-    if count > 0 && count < width * height {
-        let average = (sum / count) as u8;
-        for y in origin_y..origin_y + height {
-            for x in origin_x..origin_x + width {
-                if rgba[(y * image_width + x) * 4 + 3] == 0 {
-                    y_plane[y * image_width + x] = average;
+    if count > 0 && count < width.wrapping_mul(height) {
+        let average = sum.checked_div(count).unwrap_or_default().to_le_bytes()[0];
+        for y in origin_y..origin_y.saturating_add(height) {
+            for x in origin_x..origin_x.saturating_add(width) {
+                let rgba_offset = pixel_offset(y, image_width, x, 4);
+                let plane_offset = y.wrapping_mul(image_width).wrapping_add(x);
+                if rgba[rgba_offset.wrapping_add(3)] == 0 {
+                    y_plane[plane_offset] = average;
                 }
             }
         }
@@ -370,8 +423,10 @@ fn fill_block(
     size: usize,
     value: u8,
 ) {
-    for y in origin_y..origin_y + size {
-        plane[y * stride + origin_x..y * stride + origin_x + size].fill(value);
+    for y in origin_y..origin_y.saturating_add(size) {
+        let start = y.wrapping_mul(stride).wrapping_add(origin_x);
+        let end = start.saturating_add(size);
+        plane[start..end].fill(value);
     }
 }
 
@@ -385,8 +440,8 @@ fn cleanup_transparent_area(
 ) {
     const BLOCK: usize = 8;
     let uv_width = width.div_ceil(2);
-    let full_width = width / BLOCK * BLOCK;
-    let full_height = height / BLOCK * BLOCK;
+    let full_width = width.wrapping_div(BLOCK).wrapping_mul(BLOCK);
+    let full_height = height.wrapping_div(BLOCK).wrapping_mul(BLOCK);
 
     for origin_y in (0..full_height).step_by(BLOCK) {
         let mut flattened_values = None;
@@ -394,9 +449,13 @@ fn cleanup_transparent_area(
             if smoothen_transparent_luma(rgba, width, y_plane, origin_x, origin_y, BLOCK, BLOCK) {
                 let values = *flattened_values.get_or_insert_with(|| {
                     [
-                        y_plane[origin_y * width + origin_x],
-                        u_plane[(origin_y / 2) * uv_width + origin_x / 2],
-                        v_plane[(origin_y / 2) * uv_width + origin_x / 2],
+                        y_plane[origin_y.wrapping_mul(width).wrapping_add(origin_x)],
+                        u_plane[(origin_y / 2)
+                            .wrapping_mul(uv_width)
+                            .wrapping_add(origin_x / 2)],
+                        v_plane[(origin_y / 2)
+                            .wrapping_mul(uv_width)
+                            .wrapping_add(origin_x / 2)],
                     ]
                 });
                 fill_block(y_plane, width, origin_x, origin_y, BLOCK, values[0]);
@@ -427,7 +486,7 @@ fn cleanup_transparent_area(
                 y_plane,
                 full_width,
                 origin_y,
-                width - full_width,
+                width.saturating_sub(full_width),
                 BLOCK,
             );
         }
@@ -441,7 +500,7 @@ fn cleanup_transparent_area(
                 origin_x,
                 full_height,
                 BLOCK,
-                height - full_height,
+                height.saturating_sub(full_height),
             );
         }
         if full_width < width {
@@ -451,8 +510,8 @@ fn cleanup_transparent_area(
                 y_plane,
                 full_width,
                 full_height,
-                width - full_width,
-                height - full_height,
+                width.saturating_sub(full_width),
+                height.saturating_sub(full_height),
             );
         }
     }
@@ -465,19 +524,19 @@ fn rgba_to_yuv_planes_internal(
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     let w = width as usize;
     let h = height as usize;
-    let mut y_plane = vec![0u8; w * h];
+    let mut y_plane = vec![0u8; w.wrapping_mul(h)];
     let uv_w = w.div_ceil(2);
     let uv_h = h.div_ceil(2);
-    let mut u_plane = vec![0u8; uv_w * uv_h];
-    let mut v_plane = vec![0u8; uv_w * uv_h];
+    let mut u_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
+    let mut v_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
 
     for row in 0..h {
         for col in 0..w {
-            let index = (row * w + col) * 4;
-            y_plane[row * w + col] = rgb_to_y(
+            let index = pixel_offset(row, w, col, 4);
+            y_plane[row.wrapping_mul(w).wrapping_add(col)] = rgb_to_y(
                 i32::from(rgba[index]),
-                i32::from(rgba[index + 1]),
-                i32::from(rgba[index + 2]),
+                i32::from(rgba[index.wrapping_add(1)]),
+                i32::from(rgba[index.wrapping_add(2)]),
             );
         }
     }
@@ -485,41 +544,43 @@ fn rgba_to_yuv_planes_internal(
     let (gamma_to_linear, _) = gamma_tables();
     for row in 0..uv_h {
         for col in 0..uv_w {
-            let y0 = row * 2;
-            let x0 = col * 2;
-            let y1 = (y0 + 1).min(h - 1);
-            let x1 = (x0 + 1).min(w - 1);
+            let y0 = row.wrapping_mul(2);
+            let x0 = col.wrapping_mul(2);
+            let y1 = y0.wrapping_add(1).min(h.saturating_sub(1));
+            let x1 = x0.wrapping_add(1).min(w.saturating_sub(1));
             let indices = [
-                (y0 * w + x0) * 4,
-                (y0 * w + x1) * 4,
-                (y1 * w + x0) * 4,
-                (y1 * w + x1) * 4,
+                pixel_offset(y0, w, x0, 4),
+                pixel_offset(y0, w, x1, 4),
+                pixel_offset(y1, w, x0, 4),
+                pixel_offset(y1, w, x1, 4),
             ];
-            let total_alpha = indices
-                .iter()
-                .map(|&index| u32::from(rgba[index + 3]))
-                .sum::<u32>();
+            let total_alpha = indices.iter().fold(0_u32, |sum, &index| {
+                sum.wrapping_add(u32::from(rgba[index.wrapping_add(3)]))
+            });
             let channel_sum = |channel: usize| {
                 if matches!(total_alpha, 0 | 1020) {
-                    indices
-                        .iter()
-                        .map(|&index| u32::from(gamma_to_linear[rgba[index + channel] as usize]))
-                        .sum()
+                    indices.iter().fold(0_u32, |sum, &index| {
+                        sum.wrapping_add(u32::from(
+                            gamma_to_linear[usize::from(rgba[index.wrapping_add(channel)])],
+                        ))
+                    })
                 } else {
-                    let weighted = indices
-                        .iter()
-                        .map(|&index| {
-                            u32::from(rgba[index + 3])
-                                * u32::from(gamma_to_linear[rgba[index + channel] as usize])
-                        })
-                        .sum::<u32>();
-                    weighted * ((1 << 19) / total_alpha) >> 17
+                    let weighted = indices.iter().fold(0_u32, |sum, &index| {
+                        sum.wrapping_add(u32::from(rgba[index.wrapping_add(3)]).wrapping_mul(
+                            u32::from(
+                                gamma_to_linear[usize::from(rgba[index.wrapping_add(channel)])],
+                            ),
+                        ))
+                    });
+                    weighted
+                        .wrapping_mul(524_288_u32.wrapping_div(total_alpha))
+                        .wrapping_shr(17)
                 }
             };
             let r = linear_to_gamma(channel_sum(0));
             let g = linear_to_gamma(channel_sum(1));
             let b = linear_to_gamma(channel_sum(2));
-            let uv_index = row * uv_w + col;
+            let uv_index = row.wrapping_mul(uv_w).wrapping_add(col);
             u_plane[uv_index] = rgb_to_u(r, g, b);
             v_plane[uv_index] = rgb_to_v(r, g, b);
         }
@@ -564,10 +625,10 @@ fn build_frame_header(width: u32, height: u32, partition0_size: u32) -> Vec<u8> 
 
 /// Build RIFF/WEBP/VP8 container.
 fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
-    let vp8_chunk_size = (vp8_data.len() + (vp8_data.len() & 1)) as u32;
-    let riff_size: u32 = 4 + 4 + 4 + vp8_chunk_size;
+    let vp8_chunk_size = low_u32(vp8_data.len().wrapping_add(vp8_data.len() & 1));
+    let riff_size = 12_u32.wrapping_add(vp8_chunk_size);
 
-    let mut out = Vec::with_capacity(12 + 8 + vp8_data.len() + 1);
+    let mut out = Vec::with_capacity(21_usize.saturating_add(vp8_data.len()));
 
     // RIFF header
     out.extend_from_slice(b"RIFF");
@@ -591,7 +652,7 @@ fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
 
 fn append_chunk(output: &mut Vec<u8>, name: &[u8; 4], data: &[u8]) {
     output.extend_from_slice(name);
-    output.extend_from_slice(&(data.len() as u32).to_le_bytes());
+    output.extend_from_slice(&low_u32(data.len()).to_le_bytes());
     output.extend_from_slice(data);
     if data.len() & 1 != 0 {
         output.push(0);
@@ -611,13 +672,13 @@ fn build_extended_webp_container(
 
     let mut vp8x = Vec::with_capacity(10);
     vp8x.extend_from_slice(&[0x10, 0, 0, 0]);
-    vp8x.extend_from_slice(&(width - 1).to_le_bytes()[..3]);
-    vp8x.extend_from_slice(&(height - 1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&width.wrapping_sub(1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&height.wrapping_sub(1).to_le_bytes()[..3]);
     append_chunk(&mut output, b"VP8X", &vp8x);
     append_chunk(&mut output, b"ALPH", alpha_chunk);
     append_chunk(&mut output, b"VP8 ", vp8_data);
 
-    let riff_size = (output.len() - 8) as u32;
+    let riff_size = low_u32(output.len().saturating_sub(8));
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
     output
 }

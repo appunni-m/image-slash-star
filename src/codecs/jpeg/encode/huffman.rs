@@ -109,62 +109,64 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> OptimalTable {
             break;
         };
 
-        working[first] += working[second];
+        working[first] = working[first].saturating_add(working[second]);
         working[second] = SENTINEL_FREQUENCY;
-        code_size[first] += 1;
+        code_size[first] = code_size[first].saturating_add(1);
         while let Some(next) = others[first] {
             first = next;
-            code_size[first] += 1;
+            code_size[first] = code_size[first].saturating_add(1);
         }
         others[first] = Some(second);
-        code_size[second] += 1;
+        code_size[second] = code_size[second].saturating_add(1);
         while let Some(next) = others[second] {
             second = next;
-            code_size[second] += 1;
+            code_size[second] = code_size[second].saturating_add(1);
         }
     }
 
     let mut length_counts = [0u16; MAX_CODE_LENGTH + 2];
     for &length in &code_size {
-        length_counts[length] += 1;
+        length_counts[length] = length_counts[length].saturating_add(1);
     }
     let mut positions = [0usize; MAX_CODE_LENGTH + 1];
     let mut position = 0usize;
     for length in 1..=MAX_CODE_LENGTH {
         positions[length] = position;
-        position += usize::from(length_counts[length]);
+        position = position.saturating_add(usize::from(length_counts[length]));
     }
 
     for length in (17..=MAX_CODE_LENGTH).rev() {
         while length_counts[length] != 0 {
-            let mut prefix = length - 2;
+            let mut prefix = length.saturating_sub(2);
             while length_counts[prefix] == 0 {
-                prefix -= 1;
+                prefix = prefix.saturating_sub(1);
             }
-            length_counts[length] -= 2;
-            length_counts[length - 1] += 1;
-            length_counts[prefix + 1] += 2;
-            length_counts[prefix] -= 1;
+            length_counts[length] = length_counts[length].saturating_sub(2);
+            let shorter = length.saturating_sub(1);
+            length_counts[shorter] = length_counts[shorter].saturating_add(1);
+            let longer_prefix = prefix.saturating_add(1);
+            length_counts[longer_prefix] = length_counts[longer_prefix].saturating_add(2);
+            length_counts[prefix] = length_counts[prefix].saturating_sub(1);
         }
     }
 
     let mut longest = 16usize;
     while length_counts[longest] == 0 {
-        longest -= 1;
+        longest = longest.saturating_sub(1);
     }
-    length_counts[longest] -= 1;
+    length_counts[longest] = length_counts[longest].saturating_sub(1);
 
     let mut bits = [0u8; 16];
     for (target, &value) in bits.iter_mut().zip(&length_counts[1..=16]) {
-        *target = value as u8;
+        *target = value.to_le_bytes()[0];
     }
     let value_count: usize = bits.iter().map(|&value| usize::from(value)).sum();
     let mut values = vec![0u8; value_count];
-    for index in 0..count - 1 {
+    for index in 0..count.saturating_sub(1) {
         let length = code_size[index];
         let target = positions[length];
-        values[target] = nonzero_symbols[index] as u8;
-        positions[length] = target + 1;
+        values[target] = nonzero_symbols[index].to_le_bytes()[0];
+        positions[length] = target.saturating_add(1);
     }
     let derived = derive_table(&bits, &values);
     OptimalTable {
@@ -194,15 +196,15 @@ pub(crate) fn derive_table(bits: &[u8; 16], huffval: &[u8]) -> DerivedTable {
     let mut code: u32 = 0;
     let mut idx = 0usize;
     for l in 1..=16usize {
-        for _ in 0..bits[l - 1] as usize {
+        for _ in 0..usize::from(bits[l.saturating_sub(1)]) {
             debug_assert!(idx < huffval.len());
-            let sym = huffval[idx] as usize;
+            let sym = usize::from(huffval[idx]);
             codes[sym] = code;
-            lengths[sym] = l as u8;
-            code += 1;
-            idx += 1;
+            lengths[sym] = l.to_le_bytes()[0];
+            code = code.saturating_add(1);
+            idx = idx.saturating_add(1);
         }
-        code <<= 1;
+        code = code.wrapping_shl(1);
     }
 
     DerivedTable { codes, lengths }
@@ -228,11 +230,13 @@ impl BitWriter {
     pub(crate) fn write_bits(&mut self, code: u32, len: u8) {
         debug_assert!(len > 0);
         // Accumulate into a 32-bit buffer; flush bytes when ≥ 8 bits available.
-        self.buf = (self.buf << len) | (code & ((1u32 << len) - 1));
-        self.bits += len as u32;
+        let length = u32::from(len);
+        let mask = 1u32.wrapping_shl(length).saturating_sub(1);
+        self.buf = self.buf.wrapping_shl(length) | (code & mask);
+        self.bits = self.bits.saturating_add(length);
         while self.bits >= 8 {
-            self.bits -= 8;
-            let byte = ((self.buf >> self.bits) & 0xFF) as u8;
+            self.bits = self.bits.saturating_sub(8);
+            let byte = self.buf.wrapping_shr(self.bits).to_le_bytes()[0];
             self.out.push(byte);
             if byte == 0xFF {
                 self.out.push(0x00); // byte stuffing
@@ -243,8 +247,11 @@ impl BitWriter {
     /// Flush remaining bits, padding with 1s (IJG: pad with 1 bits to byte boundary).
     pub(crate) fn flush(&mut self) {
         if self.bits > 0 {
-            let pad = 8 - self.bits;
-            self.write_bits((1u32 << pad) - 1, pad as u8);
+            let pad = 8u32.saturating_sub(self.bits);
+            self.write_bits(
+                1u32.wrapping_shl(pad).saturating_sub(1),
+                pad.to_le_bytes()[0],
+            );
         }
     }
 }

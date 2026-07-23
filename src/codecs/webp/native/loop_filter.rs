@@ -1,5 +1,28 @@
 //! Does loop filtering on webp lossy images
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+#![warn(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// This module is the RFC 6386 loop-filter integer kernel. Every operand is a
+// converted byte or a clamped intermediate, and callers provide validated edge
+// coordinates. Retaining the reference expressions keeps the tap equations
+// auditable and byte-exact.
+#![allow(clippy::arithmetic_side_effects)]
+
 #[inline]
 fn c(val: i32) -> i32 {
     val.clamp(-128, 127)
@@ -14,7 +37,7 @@ fn u2s(val: u8) -> i32 {
 //signed to unsigned
 #[inline]
 fn s2u(val: i32) -> u8 {
-    (c(val) + 128) as u8
+    c(val).wrapping_add(128).to_le_bytes()[0]
 }
 
 #[inline]

@@ -12,6 +12,8 @@ use super::upsample::{crop_component, fancy_upsample};
 
 // ── Entropy Decoding ──────────────────────────────────────────────────────
 
+// The entropy reader zero-pads coefficient bits to libjpeg's minimum width.
+#[allow(clippy::expect_used)]
 pub(super) fn decode_block(
     br: &mut BitReader,
     dc_table: &HuffTable,
@@ -28,11 +30,11 @@ pub(super) fn decode_block(
         None => return false,
     };
     if dc_cat > 0 {
-        let bits = match br.read_bits(dc_cat as u32) {
+        let bits = match br.read_bits(u32::from(dc_cat)) {
             Some(b) => b,
             None => return false,
         };
-        *last_dc += extend(bits, dc_cat);
+        *last_dc = last_dc.saturating_add(extend(bits, dc_cat));
     }
     block_zigzag[0] = *last_dc;
 
@@ -45,14 +47,14 @@ pub(super) fn decode_block(
         if sym == 0x00 {
             break;
         }
-        let run = (sym >> 4) as usize;
+        let run = usize::from(sym >> 4);
         let size = sym & 0x0F;
         if size == 0 && run == 15 {
-            k += 16;
+            k = k.saturating_add(16);
             continue;
         }
         if size > 0 {
-            k += run;
+            k = k.saturating_add(run);
             if k >= 64 {
                 break;
             }
@@ -60,10 +62,10 @@ pub(super) fn decode_block(
             // reader matches libjpeg by zero-padding exhausted entropy data to
             // MIN_GET_BITS, so this read cannot fail on the AC path.
             let bits = br
-                .read_bits(size as u32)
+                .read_bits(u32::from(size))
                 .expect("AC coefficient bit reads are zero-padded");
             block_zigzag[k] = extend(bits, size);
-            k += 1;
+            k = k.saturating_add(1);
         } else {
             return false;
         }
@@ -73,31 +75,41 @@ pub(super) fn decode_block(
 
 // ── Image Reconstruction (baseline) ───────────────────────────────────────
 
+// Parsing validates every referenced Huffman and quantization table.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedImage> {
-    let mcu_width = (info.max_h_samp as u32) * 8;
-    let mcu_height = (info.max_v_samp as u32) * 8;
-    let num_mcus_x = ((info.width as u32) + mcu_width - 1) / mcu_width;
-    let num_mcus_y = ((info.height as u32) + mcu_height - 1) / mcu_height;
+    let mcu_width = u32::from(info.max_h_samp).saturating_mul(8);
+    let mcu_height = u32::from(info.max_v_samp).saturating_mul(8);
+    let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
+    let num_mcus_y = u32::from(info.height).div_ceil(mcu_height);
 
     let comp_buf_width: Vec<usize> = info
         .components
         .iter()
-        .map(|c| num_mcus_x as usize * c.h_samp as usize * 8)
+        .map(|c| {
+            bounded_usize(num_mcus_x)
+                .saturating_mul(usize::from(c.h_samp))
+                .saturating_mul(8)
+        })
         .collect();
     let comp_buf_height: Vec<usize> = info
         .components
         .iter()
-        .map(|c| num_mcus_y as usize * c.v_samp as usize * 8)
+        .map(|c| {
+            bounded_usize(num_mcus_y)
+                .saturating_mul(usize::from(c.v_samp))
+                .saturating_mul(8)
+        })
         .collect();
 
     let mut comp_buffers: Vec<Vec<u8>> = info
         .components
         .iter()
         .enumerate()
-        .map(|(i, _)| vec![128u8; comp_buf_width[i] * comp_buf_height[i]])
+        .map(|(i, _)| vec![128u8; comp_buf_width[i].saturating_mul(comp_buf_height[i])])
         .collect();
 
-    let mut dc_predictors: Vec<i32> = vec![0; info.num_components as usize];
+    let mut dc_predictors: Vec<i32> = vec![0; usize::from(info.num_components)];
     let mut block_zigzag = [0i32; 64];
     let mut block_natural = [0i32; 64];
     let mut workspace = [0i32; 64];
@@ -109,41 +121,42 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
         return None;
     }
 
-    let total_mcus = (num_mcus_x * num_mcus_y) as usize;
+    let total_mcus = bounded_usize(num_mcus_x.saturating_mul(num_mcus_y));
     let mut segment_iter = entropy_segments.segments.iter().peekable();
-    let mut seg_idx = 0;
+    let mut seg_idx = 0usize;
     let mcus_per_seg = if info.restart_interval > 0 {
-        info.restart_interval as usize
+        usize::from(info.restart_interval)
     } else {
         total_mcus
     };
 
     while let Some(&(seg_start, seg_end)) = segment_iter.next() {
         let mut br = BitReader::new(data, seg_start, seg_end);
-        let mcu_offset = seg_idx * mcus_per_seg;
+        let mcu_offset = seg_idx.saturating_mul(mcus_per_seg);
 
         for mcu_idx in 0..mcus_per_seg {
-            let absolute_mcu = mcu_offset + mcu_idx;
+            let absolute_mcu = mcu_offset.saturating_add(mcu_idx);
             if absolute_mcu >= total_mcus {
                 break;
             }
-            let mcu_y = absolute_mcu / num_mcus_x as usize;
-            let mcu_x = absolute_mcu % num_mcus_x as usize;
+            let mcu_width = bounded_usize(num_mcus_x);
+            let mcu_y = absolute_mcu.div_euclid(mcu_width);
+            let mcu_x = absolute_mcu.rem_euclid(mcu_width);
 
             for scan_comp in &info.scan_components {
                 let comp = &info.components[scan_comp.comp_index];
-                let dc_table = info.dc_huff_tables[scan_comp.dc_tbl as usize]
+                let dc_table = info.dc_huff_tables[usize::from(scan_comp.dc_tbl)]
                     .as_ref()
                     .expect("baseline DC Huffman table validated before reconstruction");
-                let ac_table = info.ac_huff_tables[scan_comp.ac_tbl as usize]
+                let ac_table = info.ac_huff_tables[usize::from(scan_comp.ac_tbl)]
                     .as_ref()
                     .expect("baseline AC Huffman table validated before reconstruction");
-                let quant_table = info.quant_tables[comp.quant_tbl as usize]
+                let quant_table = info.quant_tables[usize::from(comp.quant_tbl)]
                     .as_ref()
                     .expect("component quantization table validated before reconstruction");
 
-                for by in 0..comp.v_samp as usize {
-                    for bx in 0..comp.h_samp as usize {
+                for by in 0..usize::from(comp.v_samp) {
+                    for bx in 0..usize::from(comp.h_samp) {
                         if !decode_block(
                             &mut br,
                             dc_table,
@@ -154,8 +167,8 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                             return None;
                         }
                         // Dequantize and IDCT
-                        for i in 0..64 {
-                            block_zigzag[i] *= quant_table[i] as i32;
+                        for (coefficient, &quantizer) in block_zigzag.iter_mut().zip(quant_table) {
+                            *coefficient = coefficient.saturating_mul(i32::from(quantizer));
                         }
                         for i in 0..64 {
                             block_natural[idct::JPEG_NATURAL_ORDER[i]] = block_zigzag[i];
@@ -163,12 +176,23 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                         jpeg_idct_islow(&mut block_natural, &mut workspace);
 
                         let buf_w = comp_buf_width[scan_comp.comp_index];
-                        let block_x = (mcu_x * comp.h_samp as usize + bx) * 8;
-                        let block_y = (mcu_y * comp.v_samp as usize + by) * 8;
-                        for row in 0..8 {
-                            for col in 0..8 {
-                                let px = block_natural[row * 8 + col].clamp(0, 255) as u8;
-                                let bi = (block_y + row) * buf_w + (block_x + col);
+                        let block_x = mcu_x
+                            .saturating_mul(usize::from(comp.h_samp))
+                            .saturating_add(bx)
+                            .saturating_mul(8);
+                        let block_y = mcu_y
+                            .saturating_mul(usize::from(comp.v_samp))
+                            .saturating_add(by)
+                            .saturating_mul(8);
+                        for row in 0usize..8 {
+                            for col in 0usize..8 {
+                                let natural_index = row.saturating_mul(8).saturating_add(col);
+                                let px =
+                                    block_natural[natural_index].clamp(0, 255).to_le_bytes()[0];
+                                let bi = block_y
+                                    .saturating_add(row)
+                                    .saturating_mul(buf_w)
+                                    .saturating_add(block_x.saturating_add(col));
                                 comp_buffers[scan_comp.comp_index][bi] = px;
                             }
                         }
@@ -177,11 +201,11 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
             }
 
             // Handle RST at segment boundaries (except the last segment)
-            if mcu_idx + 1 >= mcus_per_seg && segment_iter.peek().is_some() {
+            if mcu_idx.saturating_add(1) >= mcus_per_seg && segment_iter.peek().is_some() {
                 for pred in dc_predictors.iter_mut() {
                     *pred = 0;
                 }
-                seg_idx += 1;
+                seg_idx = seg_idx.saturating_add(1);
             }
 
             // ✅ FIX: Match libjpeg-turbo's `insufficient_data` handling.
@@ -197,35 +221,35 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
     }
 
     // ── Assemble output image ──
-    let w = info.width as usize;
-    let h = info.height as usize;
+    let w = usize::from(info.width);
+    let h = usize::from(info.height);
 
     if info.num_components == 1 {
         let y_buf = &comp_buffers[0];
         let y_w = comp_buf_width[0];
-        let mut pixels = Vec::with_capacity(w * h);
+        let mut pixels = Vec::with_capacity(w.saturating_mul(h));
         for y in 0..h {
             for x in 0..w {
-                pixels.push(y_buf[y * y_w + x]);
+                pixels.push(y_buf[y.saturating_mul(y_w).saturating_add(x)]);
             }
         }
         Some(DecodedImage::new(
-            info.width as u32,
-            info.height as u32,
+            u32::from(info.width),
+            u32::from(info.height),
             pixels,
             ColorType::L8,
         ))
     } else if info.num_components == 3 {
         let y_buf = &comp_buffers[0];
         let y_w = comp_buf_width[0];
-        let h_ratio = info.max_h_samp / info.components[1].h_samp;
-        let v_ratio = info.max_v_samp / info.components[1].v_samp;
-        let h_ratio_us = h_ratio as usize;
-        let v_ratio_us = v_ratio as usize;
+        let h_ratio = info.max_h_samp.div_euclid(info.components[1].h_samp);
+        let v_ratio = info.max_v_samp.div_euclid(info.components[1].v_samp);
+        let h_ratio_us = usize::from(h_ratio);
+        let v_ratio_us = usize::from(v_ratio);
 
         // Image-derived chroma dimensions (not MCU-padded)
-        let chroma_src_w = (w + h_ratio_us - 1) / h_ratio_us;
-        let chroma_src_h = (h + v_ratio_us - 1) / v_ratio_us;
+        let chroma_src_w = w.div_ceil(h_ratio_us);
+        let chroma_src_h = h.div_ceil(v_ratio_us);
 
         // Crop then upsample
         let cb_cropped = crop_component(
@@ -261,14 +285,14 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
             h,
         );
 
-        let chroma_stride = chroma_src_w * h_ratio_us;
-        let mut pixels = Vec::with_capacity(w * h * 3);
+        let chroma_stride = chroma_src_w.saturating_mul(h_ratio_us);
+        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(3));
         for y in 0..h {
             for x in 0..w {
                 let (r, g, b) = converter.ycc_to_rgb(
-                    y_buf[y * y_w + x],
-                    cb_upsampled[y * chroma_stride + x],
-                    cr_upsampled[y * chroma_stride + x],
+                    y_buf[y.saturating_mul(y_w).saturating_add(x)],
+                    cb_upsampled[y.saturating_mul(chroma_stride).saturating_add(x)],
+                    cr_upsampled[y.saturating_mul(chroma_stride).saturating_add(x)],
                 );
                 pixels.push(r);
                 pixels.push(g);
@@ -276,8 +300,8 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
             }
         }
         Some(DecodedImage::new(
-            info.width as u32,
-            info.height as u32,
+            u32::from(info.width),
+            u32::from(info.height),
             pixels,
             ColorType::Rgb8,
         ))
@@ -287,28 +311,45 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
         // convention even when the Adobe APP14 marker is absent. The
         // no-APP14 CMYK fixture keeps this tied to the oracle instead of the
         // marker alone.
-        let mut pixels = Vec::with_capacity(w * h * 4);
+        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(4));
         for y in 0..h {
             for x in 0..w {
                 for component in 0..4 {
-                    let horizontal_ratio =
-                        usize::from(info.max_h_samp / info.components[component].h_samp);
-                    let vertical_ratio =
-                        usize::from(info.max_v_samp / info.components[component].v_samp);
-                    let source_x = x / horizontal_ratio;
-                    let source_y = y / vertical_ratio;
-                    let sample =
-                        comp_buffers[component][source_y * comp_buf_width[component] + source_x];
-                    pixels.push(255 - sample);
+                    let horizontal_ratio = usize::from(
+                        info.max_h_samp
+                            .div_euclid(info.components[component].h_samp),
+                    );
+                    let vertical_ratio = usize::from(
+                        info.max_v_samp
+                            .div_euclid(info.components[component].v_samp),
+                    );
+                    let source_x = x.div_euclid(horizontal_ratio);
+                    let source_y = y.div_euclid(vertical_ratio);
+                    let sample = comp_buffers[component][source_y
+                        .saturating_mul(comp_buf_width[component])
+                        .saturating_add(source_x)];
+                    pixels.push(255u8.saturating_sub(sample));
                 }
             }
         }
         Some(DecodedImage::new(
-            info.width as u32,
-            info.height as u32,
+            u32::from(info.width),
+            u32::from(info.height),
             pixels,
             ColorType::Cmyk8,
         ))
+    }
+}
+
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
     }
 }
 
@@ -339,20 +380,20 @@ pub(super) fn extract_entropy_segments(
     while pos < end_hint {
         if data[pos] == 0xFF {
             let marker_start = pos;
-            pos += 1;
+            pos = pos.saturating_add(1);
             while pos < end_hint && data[pos] == 0xFF {
-                pos += 1;
+                pos = pos.saturating_add(1);
             }
             if pos >= end_hint {
                 break;
             }
             match data[pos] {
                 0x00 => {
-                    pos += 1;
+                    pos = pos.saturating_add(1);
                 }
                 0xD0..=0xD7 => {
                     segments.push((seg_start, marker_start));
-                    pos += 1;
+                    pos = pos.saturating_add(1);
                     seg_start = pos;
                 }
                 0xD9 => {
@@ -368,7 +409,7 @@ pub(super) fn extract_entropy_segments(
                 }
             }
         } else {
-            pos += 1;
+            pos = pos.saturating_add(1);
         }
     }
 
@@ -402,8 +443,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     debug_assert!(!info.scan_components.is_empty());
 
     for comp in &info.components {
-        if info.quant_tables.len() <= comp.quant_tbl as usize
-            || info.quant_tables[comp.quant_tbl as usize].is_none()
+        if info.quant_tables.len() <= usize::from(comp.quant_tbl)
+            || info.quant_tables[usize::from(comp.quant_tbl)].is_none()
         {
             return None;
         }
@@ -413,13 +454,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         progressive_reconstruct(&info, data)
     } else {
         for scan_comp in &info.scan_components {
-            if info.dc_huff_tables.len() <= scan_comp.dc_tbl as usize
-                || info.dc_huff_tables[scan_comp.dc_tbl as usize].is_none()
+            if info.dc_huff_tables.len() <= usize::from(scan_comp.dc_tbl)
+                || info.dc_huff_tables[usize::from(scan_comp.dc_tbl)].is_none()
             {
                 return None;
             }
-            if info.ac_huff_tables.len() <= scan_comp.ac_tbl as usize
-                || info.ac_huff_tables[scan_comp.ac_tbl as usize].is_none()
+            if info.ac_huff_tables.len() <= usize::from(scan_comp.ac_tbl)
+                || info.ac_huff_tables[usize::from(scan_comp.ac_tbl)].is_none()
             {
                 return None;
             }

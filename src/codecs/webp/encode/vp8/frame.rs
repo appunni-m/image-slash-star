@@ -48,22 +48,45 @@ pub(super) struct MacroblockDecision {
 }
 
 fn bit(value: u32, index: usize) -> u8 {
-    ((value >> index) & 1) as u8
+    value
+        .wrapping_shr(index.to_le_bytes()[0].into())
+        .to_le_bytes()[0]
+        & 1
+}
+
+/// Converts the public quality input with Rust's saturating float-to-integer
+/// semantics. Callers normally supply Pillow's bounded 0–100 quality domain.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn quality_byte(value: f64) -> u8 {
+    value as u8
 }
 
 fn extract_16(plane: &[u8], stride: usize, x: usize, y: usize) -> [u8; 256] {
     let mut block = [0; 256];
-    for row in 0..16 {
-        block[row * 16..row * 16 + 16]
-            .copy_from_slice(&plane[(y * 16 + row) * stride + x * 16..][..16]);
+    for row in 0_usize..16 {
+        let destination_start = row.wrapping_mul(16);
+        let source_start = y
+            .wrapping_mul(16)
+            .wrapping_add(row)
+            .wrapping_mul(stride)
+            .wrapping_add(x.wrapping_mul(16));
+        block[destination_start..destination_start.wrapping_add(16)]
+            .copy_from_slice(&plane[source_start..][..16]);
     }
     block
 }
 
 fn extract_8(plane: &[u8], stride: usize, x: usize, y: usize) -> [u8; 64] {
     let mut block = [0; 64];
-    for row in 0..8 {
-        block[row * 8..row * 8 + 8].copy_from_slice(&plane[(y * 8 + row) * stride + x * 8..][..8]);
+    for row in 0_usize..8 {
+        let destination_start = row.wrapping_mul(8);
+        let source_start = y
+            .wrapping_mul(8)
+            .wrapping_add(row)
+            .wrapping_mul(stride)
+            .wrapping_add(x.wrapping_mul(8));
+        block[destination_start..destination_start.wrapping_add(8)]
+            .copy_from_slice(&plane[source_start..][..8]);
     }
     block
 }
@@ -81,24 +104,26 @@ fn store_diffusion_errors(errors: [[i8; 3]; 2], top: &mut [[i8; 2]; 2]) -> [[i8;
     let mut left = [[0; 2]; 2];
     for plane in 0..2 {
         left[plane][0] = errors[plane][0];
-        left[plane][1] = (3 * i16::from(errors[plane][2]) >> 2) as i8;
+        let weighted = 3_i16
+            .wrapping_mul(i16::from(errors[plane][2]))
+            .wrapping_shr(2);
+        left[plane][1] = i8::from_le_bytes([weighted.to_le_bytes()[0]]);
         top[plane][0] = errors[plane][1];
-        top[plane][1] = errors[plane][2] - left[plane][1];
+        top[plane][1] = errors[plane][2].wrapping_sub(left[plane][1]);
     }
     left
 }
 
 pub(super) fn select_frame(
-    y_plane: &[u8],
-    u_plane: &[u8],
-    v_plane: &[u8],
-    width: usize,
-    height: usize,
+    planes: [&[u8]; 3],
+    dimensions: (usize, usize),
     quality: f64,
     method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 ) -> Vec<MacroblockDecision> {
+    let [y_plane, u_plane, v_plane] = planes;
+    let (width, height) = dimensions;
     assert_eq!(width % 16, 0);
     assert_eq!(height % 16, 0);
     let macroblock_width = width / 16;
@@ -110,7 +135,7 @@ pub(super) fn select_frame(
         v_plane,
         width,
         height,
-        quality as u8,
+        quality_byte(quality),
         method,
     );
     let params = segment_params(&analysis, quality);
@@ -125,10 +150,11 @@ pub(super) fn select_frame(
     let mut u_top = vec![127; width / 2];
     let mut v_top = vec![127; width / 2];
     let mut packed_nonzero = vec![0u32; macroblock_width];
-    let mode_stride = macroblock_width * 4;
-    let mut mode_grid = vec![Intra4Mode::Dc; mode_stride * macroblock_height * 4];
+    let mode_stride = macroblock_width.wrapping_mul(4);
+    let mut mode_grid =
+        vec![Intra4Mode::Dc; mode_stride.wrapping_mul(macroblock_height).wrapping_mul(4)];
     let mut top_errors = vec![[[0i8; 2]; 2]; macroblock_width];
-    let mut decisions = Vec::with_capacity(macroblock_width * macroblock_height);
+    let mut decisions = Vec::with_capacity(macroblock_width.wrapping_mul(macroblock_height));
 
     for macroblock_y in 0..macroblock_height {
         let mut y_left = [129; 16];
@@ -142,19 +168,22 @@ pub(super) fn select_frame(
         let mut left_errors = [[0i8; 2]; 2];
 
         for macroblock_x in 0..macroblock_width {
-            let block_index = macroblock_y * macroblock_width + macroblock_x;
+            let block_index = macroblock_y
+                .wrapping_mul(macroblock_width)
+                .wrapping_add(macroblock_x);
             let segment = analysis.macroblocks[block_index].segment;
             let matrix = &matrices[usize::from(segment)];
             let source_y = extract_16(y_plane, width, macroblock_x, macroblock_y);
             let source_u = extract_8(u_plane, chroma_stride, macroblock_x, macroblock_y);
             let source_v = extract_8(v_plane, chroma_stride, macroblock_x, macroblock_y);
-            let y_offset = macroblock_x * 16;
-            let uv_offset = macroblock_x * 8;
-            let top_y: [u8; 16] = y_top[y_offset..y_offset + 16].try_into().unwrap();
-            let top_u: [u8; 8] = u_top[uv_offset..uv_offset + 8].try_into().unwrap();
-            let top_v: [u8; 8] = v_top[uv_offset..uv_offset + 8].try_into().unwrap();
-            let top_y_i4: [u8; 20] =
-                std::array::from_fn(|index| y_top[(y_offset + index).min(width - 1)]);
+            let y_offset = macroblock_x.wrapping_mul(16);
+            let uv_offset = macroblock_x.wrapping_mul(8);
+            let top_y = std::array::from_fn(|index| y_top[y_offset.wrapping_add(index)]);
+            let top_u = std::array::from_fn(|index| u_top[uv_offset.wrapping_add(index)]);
+            let top_v = std::array::from_fn(|index| v_top[uv_offset.wrapping_add(index)]);
+            let top_y_i4: [u8; 20] = std::array::from_fn(|index| {
+                y_top[y_offset.wrapping_add(index).min(width.saturating_sub(1))]
+            });
             let top_packed = packed_nonzero[macroblock_x];
             let top_y_nonzero = [
                 bit(top_packed, 12),
@@ -184,14 +213,22 @@ pub(super) fn select_frame(
                 if macroblock_y == 0 {
                     Intra4Mode::Dc
                 } else {
-                    mode_grid[(macroblock_y * 4 - 1) * mode_stride + macroblock_x * 4 + block_x]
+                    let row = macroblock_y.wrapping_mul(4).wrapping_sub(1);
+                    mode_grid[row
+                        .wrapping_mul(mode_stride)
+                        .wrapping_add(macroblock_x.wrapping_mul(4))
+                        .wrapping_add(block_x)]
                 }
             });
             let neighboring_left_modes = std::array::from_fn(|block_y| {
                 if macroblock_x == 0 {
                     Intra4Mode::Dc
                 } else {
-                    mode_grid[(macroblock_y * 4 + block_y) * mode_stride + macroblock_x * 4 - 1]
+                    let row = macroblock_y.wrapping_mul(4).wrapping_add(block_y);
+                    mode_grid[row
+                        .wrapping_mul(mode_stride)
+                        .wrapping_add(macroblock_x.wrapping_mul(4))
+                        .wrapping_sub(1)]
                 }
             });
 
@@ -204,10 +241,10 @@ pub(super) fn select_frame(
                 macroblock_x != 0,
                 top_y_nonzero,
                 left_y_nonzero,
-                usize::from(bit(top_packed, 24) + left_y2_nonzero),
+                usize::from(bit(top_packed, 24).wrapping_add(left_y2_nonzero)),
                 matrix,
-                matrix.lambda_i16 as u32,
-                matrix.texture_lambda as u32,
+                matrix.lambda_i16.cast_unsigned(),
+                matrix.texture_lambda.cast_unsigned(),
                 None,
                 method <= 1,
                 coefficient_probabilities,
@@ -216,8 +253,8 @@ pub(super) fn select_frame(
             let intra16_mode_score = rd_score(
                 intra16.rate_cost,
                 intra16.header_cost,
-                intra16.distortion + intra16.spectral_distortion,
-                matrix.lambda_mode as u32,
+                intra16.distortion.wrapping_add(intra16.spectral_distortion),
+                matrix.lambda_mode.cast_unsigned(),
             );
             let intra16_mode = intra16.mode;
             let intra4 = intra4::select_macroblock(
@@ -230,9 +267,9 @@ pub(super) fn select_frame(
                 top_y_nonzero,
                 left_y_nonzero,
                 matrix,
-                matrix.lambda_i4 as u32,
-                matrix.lambda_mode as u32,
-                matrix.texture_lambda as u32,
+                matrix.lambda_i4.cast_unsigned(),
+                matrix.lambda_mode.cast_unsigned(),
+                matrix.texture_lambda.cast_unsigned(),
                 method <= 1,
                 coefficient_probabilities,
                 trellis,
@@ -286,7 +323,7 @@ pub(super) fn select_frame(
                 left_errors,
                 quality < 98.0,
                 matrix,
-                matrix.lambda_uv as u32,
+                matrix.lambda_uv.cast_unsigned(),
                 (method == 0).then(|| {
                     let mode = analysis.macroblocks[block_index].chroma_mode;
                     debug_assert!(mode <= 1);
@@ -305,42 +342,49 @@ pub(super) fn select_frame(
                 segment,
                 intra16_mode,
                 luma,
-                distortion: luma_d + chroma.distortion,
+                distortion: luma_d.wrapping_add(chroma.distortion),
                 spectral_distortion: luma_sd,
-                header_cost: luma_h + chroma.header_cost,
-                rate_cost: luma_r + chroma.rate_cost,
-                score: luma_score + chroma.score,
+                header_cost: luma_h.wrapping_add(chroma.header_cost),
+                rate_cost: luma_r.wrapping_add(chroma.rate_cost),
+                score: luma_score.wrapping_add(chroma.score),
                 nonzero,
                 chroma,
             });
 
-            let decision = decisions.last().unwrap();
+            let decision = &decisions[decisions.len().saturating_sub(1)];
             for block_y in 0..4 {
                 for block_x in 0..4 {
-                    mode_grid
-                        [(macroblock_y * 4 + block_y) * mode_stride + macroblock_x * 4 + block_x] =
-                        match &decision.luma {
-                            LumaDecision::Intra4(result) => result.modes[block_y * 4 + block_x],
-                            LumaDecision::Intra16(result) => intra16_to_intra4(result.mode),
-                        };
+                    let mode_index = macroblock_y
+                        .wrapping_mul(4)
+                        .wrapping_add(block_y)
+                        .wrapping_mul(mode_stride)
+                        .wrapping_add(macroblock_x.wrapping_mul(4))
+                        .wrapping_add(block_x);
+                    mode_grid[mode_index] = match &decision.luma {
+                        LumaDecision::Intra4(result) => {
+                            result.modes[block_y.wrapping_mul(4).wrapping_add(block_x)]
+                        }
+                        LumaDecision::Intra16(result) => intra16_to_intra4(result.mode),
+                    };
                 }
             }
 
-            let next_y_top_left = y_top[y_offset + 15];
-            let next_u_top_left = u_top[uv_offset + 7];
-            let next_v_top_left = v_top[uv_offset + 7];
-            for row in 0..16 {
-                y_left[row] = reconstructed_y[row * 16 + 15];
+            let next_y_top_left = y_top[y_offset.wrapping_add(15)];
+            let next_u_top_left = u_top[uv_offset.wrapping_add(7)];
+            let next_v_top_left = v_top[uv_offset.wrapping_add(7)];
+            for row in 0_usize..16 {
+                y_left[row] = reconstructed_y[row.wrapping_mul(16).wrapping_add(15)];
             }
-            for row in 0..8 {
-                u_left[row] = decision.chroma.reconstructed_u[row * 8 + 7];
-                v_left[row] = decision.chroma.reconstructed_v[row * 8 + 7];
+            for row in 0_usize..8 {
+                let right_index = row.wrapping_mul(8).wrapping_add(7);
+                u_left[row] = decision.chroma.reconstructed_u[right_index];
+                v_left[row] = decision.chroma.reconstructed_v[right_index];
             }
-            y_top[y_offset..y_offset + 16].copy_from_slice(&reconstructed_y[15 * 16..16 * 16]);
-            u_top[uv_offset..uv_offset + 8]
-                .copy_from_slice(&decision.chroma.reconstructed_u[7 * 8..8 * 8]);
-            v_top[uv_offset..uv_offset + 8]
-                .copy_from_slice(&decision.chroma.reconstructed_v[7 * 8..8 * 8]);
+            y_top[y_offset..y_offset.wrapping_add(16)].copy_from_slice(&reconstructed_y[240..256]);
+            u_top[uv_offset..uv_offset.wrapping_add(8)]
+                .copy_from_slice(&decision.chroma.reconstructed_u[56..64]);
+            v_top[uv_offset..uv_offset.wrapping_add(8)]
+                .copy_from_slice(&decision.chroma.reconstructed_v[56..64]);
             y_top_left = next_y_top_left;
             u_top_left = next_u_top_left;
             v_top_left = next_v_top_left;

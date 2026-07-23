@@ -45,26 +45,26 @@ impl HuffTable {
         let mut code: i32 = 0;
         let mut p = 0usize;
 
-        for l in 1..=16 {
-            let cnt = counts[l - 1] as usize;
+        for l in 1usize..=16 {
+            let cnt = usize::from(counts[l.saturating_sub(1)]);
             for _ in 0..cnt {
                 huffcode[p] = code;
-                code += 1;
-                p += 1;
+                code = code.saturating_add(1);
+                p = p.saturating_add(1);
             }
-            code <<= 1;
+            code = code.wrapping_shl(1);
         }
 
         // Validate codes: each code < 2^length
         p = 0;
-        for l in 1..=16 {
-            let cnt = counts[l - 1] as usize;
+        for l in 1usize..=16 {
+            let cnt = usize::from(counts[l.saturating_sub(1)]);
             for _ in 0..cnt {
-                if huffcode[p] as i64 >= (1i64 << l) {
+                if i64::from(huffcode[p]) >= 1i64.wrapping_shl(u32::from(l.to_le_bytes()[0])) {
                     // Bad table — return a minimal valid table
                     return HuffTable::empty();
                 }
-                p += 1;
+                p = p.saturating_add(1);
             }
         }
 
@@ -72,11 +72,11 @@ impl HuffTable {
         let mut maxcode = [-1i32; 18];
         let mut valoffset = [0i32; 18];
         p = 0;
-        for l in 1..=16 {
-            if counts[l - 1] > 0 {
-                valoffset[l] = p as i32 - huffcode[p];
-                p += counts[l - 1] as usize;
-                maxcode[l] = huffcode[p - 1];
+        for l in 1usize..=16 {
+            if counts[l.saturating_sub(1)] > 0 {
+                valoffset[l] = bounded_i32(p).saturating_sub(huffcode[p]);
+                p = p.saturating_add(usize::from(counts[l.saturating_sub(1)]));
+                maxcode[l] = huffcode[p.saturating_sub(1)];
             }
             // else: maxcode[l] stays -1 (no codes of this length)
         }
@@ -89,17 +89,21 @@ impl HuffTable {
 
         p = 0;
         for l in 1..=HUFF_LOOKAHEAD {
-            let cnt = counts[(l - 1) as usize] as usize;
+            let count_index = usize::from(l.saturating_sub(1).to_le_bytes()[0]);
+            let cnt = usize::from(counts[count_index]);
             for _ in 0..cnt {
                 // Left-justify the code followed by all possible bit sequences
-                let lookbits = (huffcode[p] << (HUFF_LOOKAHEAD - l)) as usize;
-                let entry: u16 = ((l as u16) << 8) | values[p] as u16;
-                let fill_count = 1usize << (HUFF_LOOKAHEAD - l);
+                let lookbits = usize::from(bounded_u16(
+                    huffcode[p].wrapping_shl(HUFF_LOOKAHEAD.saturating_sub(l)),
+                ));
+                let entry: u16 =
+                    u16::from(l.to_le_bytes()[0]).wrapping_shl(8) | u16::from(values[p]);
+                let fill_count = 1usize.wrapping_shl(HUFF_LOOKAHEAD.saturating_sub(l));
                 for ctr in 0..fill_count {
-                    let idx = lookbits + ctr;
+                    let idx = lookbits.saturating_add(ctr);
                     lookup[idx] = entry;
                 }
-                p += 1;
+                p = p.saturating_add(1);
             }
         }
 
@@ -145,14 +149,14 @@ impl HuffTable {
             return self.decode_slow(br, 1);
         }
 
-        let look = br.peek_bits(HUFF_LOOKAHEAD) as usize;
+        let look = usize::from(bounded_u16(br.peek_bits(HUFF_LOOKAHEAD).cast_signed()));
         let entry = self.lookup[look];
-        let nb = (entry >> 8) as u32; // code length, or HUFF_LOOKAHEAD+1 if too long
+        let nb = u32::from(entry >> 8); // code length, or HUFF_LOOKAHEAD+1 if too long
 
         if nb <= HUFF_LOOKAHEAD {
             // Fast path: code fits in lookahead
             br.drop_bits(nb);
-            Some((entry & 0xFF) as u8)
+            Some(entry.to_le_bytes()[0])
         } else {
             // Slow path: code is > HUFF_LOOKAHEAD bits. IJG passes the
             // lookup-table sentinel (HUFF_LOOKAHEAD + 1), so the first slow
@@ -172,15 +176,15 @@ impl HuffTable {
         if !br.ensure(min) {
             return None;
         }
-        let mut code = br.get_bits(min) as i32;
-        let mut l = min as usize;
+        let mut code = br.get_bits(min).cast_signed();
+        let mut l = usize::from(min.to_le_bytes()[0]);
 
         // IJG: while (code > htbl->maxcode[l]) {
         //        code <<= 1; CHECK_BIT_BUFFER(1); code |= GET_BITS(1); l++; }
         while code > self.maxcode[l] {
             br.ensure(1);
-            code = (code << 1) | (br.get_bits(1) as i32);
-            l += 1;
+            code = code.wrapping_shl(1) | br.get_bits(1).cast_signed();
+            l = l.saturating_add(1);
         }
 
         if l > 16 {
@@ -197,12 +201,33 @@ impl HuffTable {
         }
 
         // IJG: return htbl->pub->huffval[code + htbl->valoffset[l]];
-        let idx = (code + self.valoffset[l]) as usize;
+        let idx = wrapping_usize(code.saturating_add(self.valoffset[l]));
         if idx < self.values.len() {
             Some(self.values[idx])
         } else {
             None
         }
+    }
+}
+
+fn bounded_i32(value: usize) -> i32 {
+    let bytes = value.to_le_bytes();
+    i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+fn bounded_u16(value: i32) -> u16 {
+    let bytes = value.to_le_bytes();
+    u16::from_le_bytes([bytes[0], bytes[1]])
+}
+
+fn wrapping_usize(value: i32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        usize::from_le_bytes(i64::from(value).to_le_bytes())
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
     }
 }
 

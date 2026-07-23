@@ -9,6 +9,11 @@ const COMPRESSION_DEFLATE: usize = 8;
 const COMPRESSION_PACKBITS: usize = 32_773;
 const COMPRESSION_ADOBE_DEFLATE: usize = 32_946;
 
+fn classic_u32(value: usize) -> u32 {
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
 /// Decode the first IFD of a classic little- or big-endian TIFF stream.
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let endian = match data.get(..2)? {
@@ -25,8 +30,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         endian.u32_exact([ifd_offset[0], ifd_offset[1], ifd_offset[2], ifd_offset[3]]) as usize;
     let directory = Directory::parse(data, ifd_offset, endian)?;
 
-    let width = directory.one(256)? as u32;
-    let height = directory.one(257)? as u32;
+    let width = classic_u32(directory.one(256)?);
+    let height = classic_u32(directory.one(257)?);
     if width == 0 || height == 0 {
         return None;
     }
@@ -59,7 +64,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     #[cfg(target_pointer_width = "32")]
     let row_samples = width_usize.checked_mul(stored_samples)?;
     #[cfg(not(target_pointer_width = "32"))]
-    let row_samples = width_usize * stored_samples;
+    let row_samples = width_usize.wrapping_mul(stored_samples);
     let row_bytes = row_samples
         .checked_mul(usize::from(bits_per_sample))?
         .checked_add(7)?
@@ -90,14 +95,14 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         #[cfg(target_pointer_width = "32")]
         let expected_tiles = tiles_across.checked_mul(tiles_down)?;
         #[cfg(not(target_pointer_width = "32"))]
-        let expected_tiles = tiles_across * tiles_down;
+        let expected_tiles = tiles_across.wrapping_mul(tiles_down);
         if offsets.len() != expected_tiles {
             return None;
         }
         #[cfg(target_pointer_width = "32")]
         let bytes_per_pixel = samples_per_pixel.checked_mul(usize::from(bits_per_sample) / 8)?;
         #[cfg(not(target_pointer_width = "32"))]
-        let bytes_per_pixel = samples_per_pixel * (usize::from(bits_per_sample) / 8);
+        let bytes_per_pixel = samples_per_pixel.wrapping_mul(usize::from(bits_per_sample) / 8);
         let tile_row_bytes = tile_width.checked_mul(bytes_per_pixel)?;
         let tile_size = tile_row_bytes.checked_mul(tile_height)?;
         // libtiff, and therefore Pillow, derives uncompressed tile lengths from
@@ -115,7 +120,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             #[cfg(target_pointer_width = "32")]
             let encoded_end = offset.checked_add(byte_count)?;
             #[cfg(not(target_pointer_width = "32"))]
-            let encoded_end = offset + byte_count;
+            let encoded_end = offset.saturating_add(byte_count);
             let encoded = data.get(offset..encoded_end)?;
             let mut decoded = decode_block(encoded, tile_size)?;
             // Every compressed decoder returns exactly the requested size, and
@@ -134,25 +139,27 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                     endian,
                 );
             }
-            let tile_x = (tile_index % tiles_across) * tile_width;
-            let tile_y = (tile_index / tiles_across) * tile_height;
-            let copied_width = tile_width.min(width_usize - tile_x);
-            let copied_height = tile_height.min(height_usize - tile_y);
-            let copied_bytes = copied_width * bytes_per_pixel;
+            let tile_column = tile_index.checked_rem(tiles_across).unwrap_or_default();
+            let tile_row = tile_index.checked_div(tiles_across).unwrap_or_default();
+            let tile_x = tile_column.wrapping_mul(tile_width);
+            let tile_y = tile_row.wrapping_mul(tile_height);
+            let copied_width = tile_width.min(width_usize.saturating_sub(tile_x));
+            let copied_height = tile_height.min(height_usize.saturating_sub(tile_y));
+            let copied_bytes = copied_width.wrapping_mul(bytes_per_pixel);
             for y in 0..copied_height {
-                let source = y * tile_row_bytes;
-                let destination = (tile_y + y) * row_bytes + tile_x * bytes_per_pixel;
-                pixels[destination..destination + copied_bytes]
-                    .copy_from_slice(&decoded[source..source + copied_bytes]);
+                let source = y.wrapping_mul(tile_row_bytes);
+                let destination = tile_y
+                    .wrapping_add(y)
+                    .wrapping_mul(row_bytes)
+                    .wrapping_add(tile_x.wrapping_mul(bytes_per_pixel));
+                pixels[destination..destination.wrapping_add(copied_bytes)]
+                    .copy_from_slice(&decoded[source..source.wrapping_add(copied_bytes)]);
             }
         }
         return convert_pixels(
-            width,
-            height,
+            (width, height),
             pixels,
-            photometric,
-            samples_per_pixel,
-            bits_per_sample,
+            (photometric, samples_per_pixel, bits_per_sample),
             endian,
             color_map.as_deref(),
             sample_format,
@@ -171,9 +178,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let byte_counts = if compression == COMPRESSION_NONE {
         (0..offsets.len())
             .map(|strip_index| {
-                let first_row = strip_index * rows_per_strip;
-                let strip_rows = rows_per_strip.min(height_usize - first_row);
-                row_bytes * strip_rows
+                let first_row = strip_index.wrapping_mul(rows_per_strip);
+                let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
+                row_bytes.wrapping_mul(strip_rows)
             })
             .collect::<Vec<_>>()
     } else {
@@ -182,14 +189,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 .iter()
                 .enumerate()
                 .map(|(index, &offset)| {
-                    let end = offsets
-                        .get(index + 1)
-                        .copied()
-                        .unwrap_or(if ifd_offset > offset {
+                    let end = offsets.get(index.wrapping_add(1)).copied().unwrap_or(
+                        if ifd_offset > offset {
                             ifd_offset
                         } else {
                             data.len()
-                        });
+                        },
+                    );
                     end.checked_sub(offset)
                 })
                 .collect::<Option<Vec<_>>>()?
@@ -205,11 +211,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         #[cfg(target_pointer_width = "32")]
         let encoded_end = offset.checked_add(byte_count)?;
         #[cfg(not(target_pointer_width = "32"))]
-        let encoded_end = offset + byte_count;
+        let encoded_end = offset.saturating_add(byte_count);
         let encoded = data.get(offset..encoded_end)?;
-        let first_row = strip_index * rows_per_strip;
-        let strip_rows = rows_per_strip.min(height_usize - first_row);
-        let expected = row_bytes * strip_rows;
+        let first_row = strip_index.wrapping_mul(rows_per_strip);
+        let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
+        let expected = row_bytes.wrapping_mul(strip_rows);
         let mut decoded = decode_block(encoded, expected)?;
         let compressed_predictor = matches!(
             compression,
@@ -230,12 +236,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     pixels.resize(expected_total, 0);
 
     convert_pixels(
-        width,
-        height,
+        (width, height),
         pixels,
-        photometric,
-        samples_per_pixel,
-        bits_per_sample,
+        (photometric, samples_per_pixel, bits_per_sample),
         endian,
         color_map.as_deref(),
         sample_format,
@@ -243,16 +246,15 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 }
 
 fn convert_pixels(
-    width: u32,
-    height: u32,
+    dimensions: (u32, u32),
     mut pixels: Vec<u8>,
-    photometric: usize,
-    samples: usize,
-    bits: u8,
+    layout: (usize, usize, u8),
     endian: Endian,
     color_map: Option<&[usize]>,
     sample_format: usize,
 ) -> Option<DecodedImage> {
+    let (width, height) = dimensions;
+    let (photometric, samples, bits) = layout;
     match (photometric, samples, bits) {
         (0 | 1, 1, 1) => {
             if photometric == 0 {
@@ -260,8 +262,10 @@ fn convert_pixels(
                 let row_bytes = width.div_ceil(8);
                 for row in pixels.chunks_exact_mut(row_bytes) {
                     row.iter_mut().for_each(|byte| *byte = !*byte);
-                    if width % 8 != 0 {
-                        row[row_bytes - 1] &= u8::MAX << (8 - width % 8);
+                    if !width.is_multiple_of(8) {
+                        let last = row_bytes.wrapping_sub(1);
+                        let shift = 8_usize.saturating_sub(width % 8);
+                        row[last] &= u8::MAX.wrapping_shl(shift.to_le_bytes()[0].into());
                     }
                 }
             }
@@ -285,15 +289,19 @@ fn convert_pixels(
             ImageMode::La8,
         )),
         (0 | 1, 1, bits @ (2 | 4)) => {
-            let maximum = (1u16 << bits) - 1;
+            let maximum = 1_u16.wrapping_shl(bits.into()).wrapping_sub(1);
             let output = unpack_indices(&pixels, width, height, bits)?
                 .into_iter()
                 .map(|sample| {
-                    let value = u16::from(sample) * 255 / maximum;
+                    let value = u16::from(sample)
+                        .wrapping_mul(255)
+                        .checked_div(maximum)
+                        .unwrap_or_default()
+                        .to_le_bytes()[0];
                     if photometric == 0 {
-                        255 - value as u8
+                        255_u8.wrapping_sub(value)
                     } else {
-                        value as u8
+                        value
                     }
                 })
                 .collect();
@@ -328,7 +336,7 @@ fn convert_pixels(
         (3, 1, 1 | 2 | 4 | 8) => {
             let indices = unpack_indices(&pixels, width, height, bits)?;
             let entries = 1usize << usize::from(bits);
-            let map_len = entries * 3;
+            let map_len = entries.wrapping_mul(3);
             let image = DecodedImage::with_mode(width, height, indices, ImageMode::P8);
             let map = color_map?;
             let Some(map) = map.get(..map_len) else {
@@ -337,8 +345,8 @@ fn convert_pixels(
             let mut rgb = Vec::with_capacity(map_len);
             for index in 0..entries {
                 rgb.push(u8::try_from(map[index] >> 8).ok()?);
-                rgb.push(u8::try_from(map[entries + index] >> 8).ok()?);
-                rgb.push(u8::try_from(map[entries * 2 + index] >> 8).ok()?);
+                rgb.push(u8::try_from(map[entries.wrapping_add(index)] >> 8).ok()?);
+                rgb.push(u8::try_from(map[entries.wrapping_mul(2).wrapping_add(index)] >> 8).ok()?);
             }
             Some(image.with_palette(ImagePalette {
                 rgb,
@@ -347,7 +355,7 @@ fn convert_pixels(
         }
         (5, 4, 8) => Some(DecodedImage::new(width, height, pixels, ColorType::Cmyk8)),
         (6, 3, 8) => {
-            let mut rgb = Vec::with_capacity(pixels.len() / 4 * 3);
+            let mut rgb = Vec::with_capacity((pixels.len() / 4).wrapping_mul(3));
             for pixel in pixels.chunks_exact(4) {
                 rgb.extend_from_slice(&pixel[..3]);
             }
@@ -370,18 +378,22 @@ fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Option<Vec<
     #[cfg(target_pointer_width = "32")]
     let stride = width.checked_mul(bits)?.div_ceil(8);
     #[cfg(not(target_pointer_width = "32"))]
-    let stride = (width * bits).div_ceil(8);
+    let stride = width.wrapping_mul(bits).div_ceil(8);
     #[cfg(target_pointer_width = "32")]
     let output_len = width.checked_mul(height)?;
     #[cfg(not(target_pointer_width = "32"))]
-    let output_len = width * height;
+    let output_len = width.wrapping_mul(height);
     let mut output = Vec::with_capacity(output_len);
     for y in 0..height {
-        let row = data.get(y * stride..(y + 1) * stride)?;
+        let row_start = y.wrapping_mul(stride);
+        let row = data.get(row_start..row_start.wrapping_add(stride))?;
         for x in 0..width {
-            let bit = x * bits;
-            let shift = 8usize - bits - bit % 8;
-            output.push((row[bit / 8] >> shift) & ((1u8 << bits) - 1));
+            let bit = x.wrapping_mul(bits);
+            let shift = 8_usize.saturating_sub(bits).saturating_sub(bit % 8);
+            let mask = 1_u8
+                .wrapping_shl(bits.to_le_bytes()[0].into())
+                .wrapping_sub(1);
+            output.push(row[bit / 8].wrapping_shr(shift.to_le_bytes()[0].into()) & mask);
         }
     }
     Some(output)
@@ -398,38 +410,46 @@ fn reverse_horizontal_predictor(
         8 => {
             for row in data.chunks_exact_mut(row_bytes) {
                 for index in samples..row.len() {
-                    row[index] = row[index].wrapping_add(row[index - samples]);
+                    row[index] = row[index].wrapping_add(row[index.wrapping_sub(samples)]);
                 }
             }
         }
         16 => {
-            let sample_stride = samples * 2;
+            let sample_stride = samples.wrapping_mul(2);
             for row in data.chunks_exact_mut(row_bytes) {
                 for offset in (sample_stride..row.len()).step_by(2) {
+                    let previous_offset = offset.wrapping_sub(sample_stride);
                     let previous = endian
-                        .u16_exact([row[offset - sample_stride], row[offset - sample_stride + 1]]);
-                    let current = endian.u16_exact([row[offset], row[offset + 1]]);
-                    endian.write_u16(current.wrapping_add(previous), &mut row[offset..offset + 2]);
+                        .u16_exact([row[previous_offset], row[previous_offset.wrapping_add(1)]]);
+                    let current = endian.u16_exact([row[offset], row[offset.wrapping_add(1)]]);
+                    endian.write_u16(
+                        current.wrapping_add(previous),
+                        &mut row[offset..offset.wrapping_add(2)],
+                    );
                 }
             }
         }
         _ => {
-            let sample_stride = samples * 4;
+            let sample_stride = samples.wrapping_mul(4);
             for row in data.chunks_exact_mut(row_bytes) {
                 for offset in (sample_stride..row.len()).step_by(4) {
+                    let previous_offset = offset.wrapping_sub(sample_stride);
                     let previous = endian.u32_exact([
-                        row[offset - sample_stride],
-                        row[offset - sample_stride + 1],
-                        row[offset - sample_stride + 2],
-                        row[offset - sample_stride + 3],
+                        row[previous_offset],
+                        row[previous_offset.wrapping_add(1)],
+                        row[previous_offset.wrapping_add(2)],
+                        row[previous_offset.wrapping_add(3)],
                     ]);
                     let current = endian.u32_exact([
                         row[offset],
-                        row[offset + 1],
-                        row[offset + 2],
-                        row[offset + 3],
+                        row[offset.wrapping_add(1)],
+                        row[offset.wrapping_add(2)],
+                        row[offset.wrapping_add(3)],
                     ]);
-                    endian.write_u32(current.wrapping_add(previous), &mut row[offset..offset + 4]);
+                    endian.write_u32(
+                        current.wrapping_add(previous),
+                        &mut row[offset..offset.wrapping_add(4)],
+                    );
                 }
             }
         }
@@ -441,21 +461,26 @@ fn decode_packbits(data: &[u8], expected: usize) -> Option<Vec<u8>> {
     let mut position = 0usize;
     while position < data.len() && output.len() < expected {
         let header = data[position] as i8;
-        position += 1;
+        position = position.wrapping_add(1);
         match header {
             0..=127 => {
-                let count = usize::from(header as u8) + 1;
-                let end = position + count;
+                let count = usize::from(header.cast_unsigned()).wrapping_add(1);
+                let end = position.saturating_add(count);
                 let packet = data.get(position..end)?;
-                let remaining = expected - output.len();
+                let remaining = expected.saturating_sub(output.len());
                 output.extend_from_slice(&packet[..count.min(remaining)]);
                 position = end;
             }
             -127..=-1 => {
-                let count = usize::from((1i16 - i16::from(header)) as u16);
+                let count = usize::from(1_i16.wrapping_sub(i16::from(header)).cast_unsigned());
                 let value = *data.get(position)?;
-                position += 1;
-                output.resize(output.len() + count.min(expected - output.len()), value);
+                position = position.wrapping_add(1);
+                output.resize(
+                    output
+                        .len()
+                        .wrapping_add(count.min(expected.saturating_sub(output.len()))),
+                    value,
+                );
             }
             -128 => {}
         }
@@ -470,7 +495,7 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
     let mut prefixes = [0u16; LIMIT];
     let mut suffixes = [0u8; LIMIT];
     for value in 0..256u16 {
-        suffixes[usize::from(value)] = value as u8;
+        suffixes[usize::from(value)] = value.to_le_bytes()[0];
     }
     let mut stack = [0u8; LIMIT];
     let mut reader = MsbBits::new(data);
@@ -493,7 +518,7 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
             if code >= CLEAR || output.len() >= expected {
                 return None;
             }
-            output.push(code as u8);
+            output.push(code.to_le_bytes()[0]);
             if output.len() == expected {
                 return Some(output);
             }
@@ -535,9 +560,9 @@ fn decode_lzw(data: &[u8], expected: usize) -> Option<Vec<u8>> {
         if usize::from(next_code) < LIMIT {
             prefixes[usize::from(next_code)] = old_code;
             suffixes[usize::from(next_code)] = first;
-            next_code += 1;
-            if width < 12 && next_code == (1u16 << width) - 1 {
-                width += 1;
+            next_code = next_code.wrapping_add(1);
+            if width < 12 && next_code == 1_u16.wrapping_shl(width.into()).wrapping_sub(1) {
+                width = width.wrapping_add(1);
             }
         }
         previous = Some(code);
@@ -556,13 +581,13 @@ fn append_lzw(
     let mut count = 0usize;
     while code >= 256 {
         stack[count] = suffixes[usize::from(code)];
-        count += 1;
+        count = count.wrapping_add(1);
         code = prefixes[usize::from(code)];
     }
-    let first = code as u8;
+    let first = code.to_le_bytes()[0];
     stack[count] = first;
-    count += 1;
-    let remaining = expected - output.len();
+    count = count.wrapping_add(1);
+    let remaining = expected.saturating_sub(output.len());
     output.extend(stack[..count].iter().rev().take(remaining));
     first
 }
@@ -578,20 +603,20 @@ impl<'a> MsbBits<'a> {
     }
 
     fn read(&mut self, width: u8) -> Option<u16> {
-        if self.bit.checked_add(usize::from(width))? > self.data.len() * 8 {
+        if self.bit.checked_add(usize::from(width))? > self.data.len().saturating_mul(8) {
             return None;
         }
         let mut value = 0u16;
         for _ in 0..width {
-            value = (value << 1) | u16::from(data_bit_unchecked(self.data, self.bit));
-            self.bit += 1;
+            value = value.wrapping_shl(1) | u16::from(data_bit_unchecked(self.data, self.bit));
+            self.bit = self.bit.wrapping_add(1);
         }
         Some(value)
     }
 }
 
 fn data_bit_unchecked(data: &[u8], bit: usize) -> u8 {
-    (data[bit / 8] >> (7 - bit % 8)) & 1
+    data[bit / 8].wrapping_shr(7_usize.saturating_sub(bit % 8).to_le_bytes()[0].into()) & 1
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -655,11 +680,11 @@ impl<'a> Directory<'a> {
         if count > 4096 {
             return None;
         }
-        let entries_start = offset + 2;
+        let entries_start = offset.saturating_add(2);
         let mut entries = Vec::with_capacity(count);
         for index in 0..count {
-            let start = entries_start + index * 12;
-            let bytes = data.get(start..start + 12)?;
+            let start = entries_start.saturating_add(index.saturating_mul(12));
+            let bytes = data.get(start..start.saturating_add(12))?;
             let tag = endian.u16_exact([bytes[0], bytes[1]]);
             let field_type = endian.u16_exact([bytes[2], bytes[3]]);
             let value_count = endian.u32_exact([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
@@ -673,27 +698,27 @@ impl<'a> Directory<'a> {
             #[cfg(target_pointer_width = "32")]
             let byte_len = value_count.checked_mul(type_size)?;
             #[cfg(not(target_pointer_width = "32"))]
-            let byte_len = value_count * type_size;
+            let byte_len = value_count.wrapping_mul(type_size);
             let value_position = if byte_len <= 4 {
-                start + 8
+                start.saturating_add(8)
             } else {
                 endian.u32_exact([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize
             };
             #[cfg(target_pointer_width = "32")]
             data.get(value_position..value_position.checked_add(byte_len)?)?;
             #[cfg(not(target_pointer_width = "32"))]
-            data.get(value_position..value_position + byte_len)?;
+            data.get(value_position..value_position.saturating_add(byte_len))?;
             entries.push(Entry {
                 tag,
                 field_type,
                 count: value_count,
                 value_position,
-                inline_position: start + 8,
+                inline_position: start.saturating_add(8),
                 byte_len,
             });
         }
-        let next_position = entries_start + count * 12;
-        let next = data.get(next_position..next_position + 4)?;
+        let next_position = entries_start.saturating_add(count.saturating_mul(12));
+        let next = data.get(next_position..next_position.saturating_add(4))?;
         Some(Self {
             data,
             endian,
@@ -748,6 +773,13 @@ impl<'a> Directory<'a> {
             _ => return None,
         }
         Some(values)
+    }
+
+    pub(super) fn field_type(&self, tag: u16) -> Option<u16> {
+        self.entries
+            .iter()
+            .find(|entry| entry.tag == tag)
+            .map(|entry| entry.field_type)
     }
 }
 
@@ -1264,84 +1296,90 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
     ));
 
-    let _ = convert_pixels(3, 1, vec![0b1010_0000], 0, 1, 1, Endian::Little, None, 1);
-    let _ = convert_pixels(8, 1, vec![0], 0, 1, 1, Endian::Little, None, 1);
-    let _ = convert_pixels(1, 1, vec![0], 1, 1, 2, Endian::Little, None, 1);
-    let _ = convert_pixels(9, 1, vec![0], 1, 1, 2, Endian::Little, None, 1);
-    let _ = convert_pixels(1, 1, vec![0x34, 0x12], 0, 1, 16, Endian::Little, None, 1);
-    let _ = convert_pixels(1, 1, vec![0x12, 0x34], 1, 1, 16, Endian::Big, None, 1);
-    let _ = convert_pixels(1, 1, vec![0], 1, 1, 16, Endian::Little, None, 1);
-    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 1);
-    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 2);
-    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 3);
-    let _ = convert_pixels(1, 1, vec![0; 4], 1, 1, 32, Endian::Little, None, 4);
+    let _ = convert_pixels(
+        (3, 1),
+        vec![0b1010_0000],
+        (0, 1, 1),
+        Endian::Little,
+        None,
+        1,
+    );
+    let _ = convert_pixels((8, 1), vec![0], (0, 1, 1), Endian::Little, None, 1);
+    let _ = convert_pixels((1, 1), vec![0], (1, 1, 2), Endian::Little, None, 1);
+    let _ = convert_pixels((9, 1), vec![0], (1, 1, 2), Endian::Little, None, 1);
+    let _ = convert_pixels(
+        (1, 1),
+        vec![0x34, 0x12],
+        (0, 1, 16),
+        Endian::Little,
+        None,
+        1,
+    );
+    let _ = convert_pixels((1, 1), vec![0x12, 0x34], (1, 1, 16), Endian::Big, None, 1);
+    let _ = convert_pixels((1, 1), vec![0], (1, 1, 16), Endian::Little, None, 1);
+    let _ = convert_pixels((1, 1), vec![0; 4], (1, 1, 32), Endian::Little, None, 1);
+    let _ = convert_pixels((1, 1), vec![0; 4], (1, 1, 32), Endian::Little, None, 2);
+    let _ = convert_pixels((1, 1), vec![0; 4], (1, 1, 32), Endian::Little, None, 3);
+    let _ = convert_pixels((1, 1), vec![0; 4], (1, 1, 32), Endian::Little, None, 4);
     let palette = [0, 0xffff, 0, 0, 0xffff, 0, 0, 0xffff, 0];
     let _ = convert_pixels(
-        2,
-        1,
+        (2, 1),
         vec![0b0100_0000],
-        3,
-        1,
-        2,
+        (3, 1, 2),
         Endian::Little,
         Some(&palette),
         1,
     );
     let short_palette = [0, 0, 0];
-    let _ = convert_pixels(1, 1, vec![], 3, 1, 1, Endian::Little, Some(&palette), 1);
-    let _ = convert_pixels(1, 1, vec![0], 3, 1, 1, Endian::Little, None, 1);
+    let _ = convert_pixels((1, 1), vec![], (3, 1, 1), Endian::Little, Some(&palette), 1);
+    let _ = convert_pixels((1, 1), vec![0], (3, 1, 1), Endian::Little, None, 1);
     let _ = convert_pixels(
-        1,
-        1,
+        (1, 1),
         vec![0],
-        3,
-        1,
-        1,
+        (3, 1, 1),
         Endian::Little,
         Some(&short_palette),
         1,
     );
     let bad_red_palette = [0x1_0000, 0, 0, 0, 0, 0];
     let _ = convert_pixels(
-        1,
-        1,
+        (1, 1),
         vec![0],
-        3,
-        1,
-        1,
+        (3, 1, 1),
         Endian::Little,
         Some(&bad_red_palette),
         1,
     );
     let bad_green_palette = [0, 0, 0x1_0000, 0, 0, 0];
     let _ = convert_pixels(
-        1,
-        1,
+        (1, 1),
         vec![0],
-        3,
-        1,
-        1,
+        (3, 1, 1),
         Endian::Little,
         Some(&bad_green_palette),
         1,
     );
     let bad_blue_palette = [0, 0, 0, 0, 0x1_0000, 0];
     let _ = convert_pixels(
-        1,
-        1,
+        (1, 1),
         vec![0],
-        3,
-        1,
-        1,
+        (3, 1, 1),
         Endian::Little,
         Some(&bad_blue_palette),
         1,
     );
-    let _ = convert_pixels(1, 1, vec![1, 2, 3, 4], 6, 3, 8, Endian::Little, None, 1);
-    let _ = convert_pixels(1, 1, vec![], 9, 1, 8, Endian::Little, None, 1);
+    let _ = convert_pixels((1, 1), vec![1, 2, 3, 4], (6, 3, 8), Endian::Little, None, 1);
+    let _ = convert_pixels((1, 1), vec![], (9, 1, 8), Endian::Little, None, 1);
     let palette8 = [0usize; 768];
-    let _ = convert_pixels(1, 1, vec![0], 3, 1, 8, Endian::Little, Some(&palette8), 1);
-    let _ = convert_pixels(1, 1, vec![0], 3, 1, 8, Endian::Little, None, 1);
+    let _ = convert_pixels(
+        (1, 1),
+        vec![0],
+        (3, 1, 8),
+        Endian::Little,
+        Some(&palette8),
+        1,
+    );
+    let _ = convert_pixels((1, 1), vec![0], (3, 1, 8), Endian::Little, None, 1);
     let _ = unpack_indices(&[], 1, 1, 1);
     let _ = unpack_indices(&[0], 9, 1, 1);
     let _ = unpack_indices(&[0], 1, 1, 9);

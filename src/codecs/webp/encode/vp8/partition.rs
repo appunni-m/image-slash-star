@@ -16,27 +16,34 @@ use super::{
 fn write_signed(writer: &mut BoolEncoder, value: i32, magnitude_bits: u8) {
     writer.encode_bool(128, value != 0);
     if value != 0 {
-        let magnitude_and_sign = (value.unsigned_abs() << 1) | u32::from(value < 0);
-        writer.encode_literal(magnitude_and_sign, magnitude_bits + 1);
+        let magnitude_and_sign = value.unsigned_abs().wrapping_shl(1) | u32::from(value < 0);
+        writer.encode_literal(magnitude_and_sign, magnitude_bits.saturating_add(1));
     }
 }
 
 fn segment_probability(zero: usize, one: usize) -> u8 {
-    let total = zero + one;
-    if total == 0 {
-        255
-    } else {
-        ((255 * zero + total / 2) / total) as u8
-    }
+    let total = zero.saturating_add(one);
+    let Some(total) = std::num::NonZeroUsize::new(total) else {
+        return 255;
+    };
+    255usize
+        .saturating_mul(zero)
+        .saturating_add(total.get().div_euclid(2))
+        .div_euclid(total.get())
+        .to_le_bytes()[0]
 }
 
 fn segment_probabilities(decisions: &[MacroblockDecision]) -> [u8; 3] {
     let mut counts = [0usize; 4];
     for decision in decisions {
-        counts[usize::from(decision.segment)] += 1;
+        counts[usize::from(decision.segment)] =
+            counts[usize::from(decision.segment)].saturating_add(1);
     }
     [
-        segment_probability(counts[0] + counts[1], counts[2] + counts[3]),
+        segment_probability(
+            counts[0].saturating_add(counts[1]),
+            counts[2].saturating_add(counts[3]),
+        ),
         segment_probability(counts[0], counts[1]),
         segment_probability(counts[2], counts[3]),
     ]
@@ -68,26 +75,27 @@ fn adjusted_frame_params(
             params.chroma_ac_delta,
         );
         let only_y2_nonzero = luma.nonzero & 0x0100_ffff == 0x0100_0000;
-        let minimum_distortion = 20 * u32::from(matrices.y1.q[0]);
+        let minimum_distortion = 20u32.saturating_mul(u32::from(matrices.y1.q[0]));
         if only_y2_nonzero && luma.distortion > minimum_distortion {
-            let edge = [luma.y2_levels[1], luma.y2_levels[2], luma.y2_levels[4]]
-                .into_iter()
-                .map(i16::unsigned_abs)
-                .max()
-                .unwrap();
+            let edge = luma.y2_levels[1]
+                .unsigned_abs()
+                .max(luma.y2_levels[2].unsigned_abs())
+                .max(luma.y2_levels[4].unsigned_abs());
             maximum_edges[segment] = maximum_edges[segment].max(edge);
         }
     }
-    for segment in 0..4 {
+    for (segment, &maximum_edge) in maximum_edges.iter().enumerate() {
         let matrices = libwebp_segment_matrices(
             params.segments[segment].quantizer,
             params.chroma_dc_delta,
             params.chroma_ac_delta,
         );
-        let delta = (u32::from(maximum_edges[segment]) * u32::from(matrices.y2.q[1])) >> 3;
+        let delta = u32::from(maximum_edge)
+            .saturating_mul(u32::from(matrices.y2.q[1]))
+            .wrapping_shr(3);
         adjusted.segments[segment].filter_strength = adjusted.segments[segment]
             .filter_strength
-            .max(delta.min(63) as u8);
+            .max(delta.min(63).to_le_bytes()[0]);
     }
     adjusted
 }
@@ -208,9 +216,14 @@ fn write_modes(
     segment_probabilities: [u8; 3],
     segmentation_enabled: bool,
 ) {
-    let mode_stride = macroblock_width * 4;
-    let macroblock_height = decisions.len() / macroblock_width;
-    let mut modes = vec![Intra4Mode::Dc; mode_stride * macroblock_height * 4];
+    let mode_stride = macroblock_width.saturating_mul(4);
+    let macroblock_height = decisions.len().div_euclid(macroblock_width);
+    let mut modes = vec![
+        Intra4Mode::Dc;
+        mode_stride
+            .saturating_mul(macroblock_height)
+            .saturating_mul(4)
+    ];
     for decision in decisions {
         if segmentation_enabled {
             write_segment(writer, decision.segment, segment_probabilities);
@@ -222,25 +235,31 @@ fn write_modes(
             LumaDecision::Intra4(luma) => {
                 for block_y in 0..4 {
                     for block_x in 0..4 {
-                        let grid_x = decision.x * 4 + block_x;
-                        let grid_y = decision.y * 4 + block_y;
+                        let grid_x = decision.x.saturating_mul(4).saturating_add(block_x);
+                        let grid_y = decision.y.saturating_mul(4).saturating_add(block_y);
                         let top = if grid_y == 0 {
                             Intra4Mode::Dc
                         } else {
-                            modes[(grid_y - 1) * mode_stride + grid_x]
+                            modes[grid_y
+                                .saturating_sub(1)
+                                .saturating_mul(mode_stride)
+                                .saturating_add(grid_x)]
                         };
                         let left = if grid_x == 0 {
                             Intra4Mode::Dc
                         } else {
-                            modes[grid_y * mode_stride + grid_x - 1]
+                            modes[grid_y
+                                .saturating_mul(mode_stride)
+                                .saturating_add(grid_x)
+                                .saturating_sub(1)]
                         };
-                        let mode = luma.modes[block_y * 4 + block_x];
+                        let mode = luma.modes[block_y.saturating_mul(4).saturating_add(block_x)];
                         write_intra4_mode(
                             writer,
                             mode,
                             &INTRA4_MODE_PROBABILITIES[top as usize][left as usize],
                         );
-                        modes[grid_y * mode_stride + grid_x] = mode;
+                        modes[grid_y.saturating_mul(mode_stride).saturating_add(grid_x)] = mode;
                     }
                 }
             }
@@ -249,8 +268,9 @@ fn write_modes(
             let mode = intra16_as_intra4(luma.mode);
             for block_y in 0..4 {
                 for block_x in 0..4 {
-                    modes[(decision.y * 4 + block_y) * mode_stride + decision.x * 4 + block_x] =
-                        mode;
+                    let grid_y = decision.y.saturating_mul(4).saturating_add(block_y);
+                    let grid_x = decision.x.saturating_mul(4).saturating_add(block_x);
+                    modes[grid_y.saturating_mul(mode_stride).saturating_add(grid_x)] = mode;
                 }
             }
         }
@@ -275,9 +295,7 @@ pub(super) fn encode_first_partition(
     let filter_level = params
         .segments
         .iter()
-        .map(|segment| segment.filter_strength)
-        .max()
-        .unwrap();
+        .fold(0, |maximum, segment| maximum.max(segment.filter_strength));
     writer.encode_literal(u32::from(filter_level), 6);
     writer.encode_literal(0, 3); // sharpness
     writer.encode_bool(128, false); // no loop-filter deltas

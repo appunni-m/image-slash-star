@@ -201,8 +201,9 @@ fn prepare_palette_pixels_with_capacity(
     let mut pixels = Vec::with_capacity(capacity);
     for &index in &image.pixels {
         let index = usize::from(index);
-        let offset = index * 3;
-        pixels.extend_from_slice(palette.rgb.get(offset..offset + 3)?);
+        let offset = index.saturating_mul(3);
+        let end = offset.saturating_add(3);
+        pixels.extend_from_slice(palette.rgb.get(offset..end)?);
         if has_alpha {
             pixels.push(palette.alpha.get(index).copied().unwrap_or(u8::MAX));
         }
@@ -222,16 +223,18 @@ const fn palette_capacity(pixel_count: usize, channels: usize) -> Option<usize> 
 fn unpack_l1_to_rgb(image: &DecodedImage) -> Option<Vec<u8>> {
     let width = image.width as usize;
     let source_stride = width.div_ceil(8);
+    let product = u64::from(image.width).saturating_mul(u64::from(image.height));
     #[cfg(target_pointer_width = "64")]
-    let pixel_count = (u64::from(image.width) * u64::from(image.height)) as usize;
+    let pixel_count = usize::from_ne_bytes(product.to_ne_bytes());
     #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = usize::try_from(u64::from(image.width) * u64::from(image.height)).ok()?;
+    let pixel_count = usize::try_from(product).ok()?;
     let capacity = pixel_count.checked_mul(3)?;
     let mut pixels = Vec::with_capacity(capacity);
     for row in image.pixels.chunks_exact(source_stride) {
         for x in 0..width {
-            let bit = 7 - (x % 8);
-            let value = if row[x / 8] & (1 << bit) == 0 {
+            let bit = 7usize.saturating_sub(x.rem_euclid(8));
+            let byte_index = x.div_euclid(8);
+            let value = if row[byte_index] & (1 << bit) == 0 {
                 0
             } else {
                 u8::MAX
@@ -247,10 +250,14 @@ fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
     pixels
         .chunks_exact(4)
         .flat_map(|pixel| {
-            let black = u16::from(255 - pixel[3]);
+            let black = u16::from(u8::MAX.saturating_sub(pixel[3]));
             std::array::from_fn::<_, 3, _>(|channel| {
-                let ink = u16::from(255 - pixel[channel]);
-                ((ink * black + 127) / 255) as u8
+                let ink = u16::from(u8::MAX.saturating_sub(pixel[channel]));
+                let scaled = ink
+                    .saturating_mul(black)
+                    .saturating_add(127)
+                    .div_euclid(u16::from(u8::MAX));
+                scaled.to_le_bytes()[0]
             })
         })
         .collect()
@@ -390,9 +397,9 @@ fn parse_hex_option(options: &EncodeOptions, name: &str) -> Option<Vec<u8>> {
 #[cfg(not(target_arch = "wasm32"))]
 const fn hex_nibble(value: u8) -> Option<u8> {
     match value {
-        b'0'..=b'9' => Some(value - b'0'),
-        b'a'..=b'f' => Some(value - b'a' + 10),
-        b'A'..=b'F' => Some(value - b'A' + 10),
+        b'0'..=b'9' => Some(value.saturating_sub(b'0')),
+        b'a'..=b'f' => Some(value.saturating_sub(b'a').saturating_add(10)),
+        b'A'..=b'F' => Some(value.saturating_sub(b'A').saturating_add(10)),
         _ => None,
     }
 }

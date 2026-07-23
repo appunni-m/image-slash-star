@@ -9,7 +9,7 @@
 //! 4. Dispatches to the PNG decoder if the entry data starts with the PNG
 //!    signature, or attempts BMP/DIB decoding otherwise.
 //!
-//! Reference: https://en.wikipedia.org/wiki/ICO_(file_format)
+//! Reference: <https://en.wikipedia.org/wiki/ICO_(file_format)>
 
 use crate::types::{ColorType, DecodedImage};
 
@@ -46,7 +46,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     // Read all directory entries
     let entries_start = ICO_HEADER_SIZE;
-    let entries_end = entries_start + count * ICO_DIR_ENTRY_SIZE;
+    let entries_end = entries_start.saturating_add(count.saturating_mul(ICO_DIR_ENTRY_SIZE));
     if data.len() < entries_end {
         return None;
     }
@@ -56,8 +56,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let mut best_score: u32 = 0;
 
     for i in 0..count {
-        let entry_offset = entries_start + i * ICO_DIR_ENTRY_SIZE;
-        let entry = &data[entry_offset..entry_offset + ICO_DIR_ENTRY_SIZE];
+        let entry_offset = entries_start.saturating_add(i.saturating_mul(ICO_DIR_ENTRY_SIZE));
+        let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
 
         let w = entry[0] as u32;
         let h = entry[1] as u32;
@@ -78,8 +78,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
 /// Decode a single ICO directory entry by index.
 fn decode_entry(data: &[u8], index: usize, cursor: bool) -> Option<DecodedImage> {
-    let entry_offset = ICO_HEADER_SIZE + index * ICO_DIR_ENTRY_SIZE;
-    let entry = &data[entry_offset..entry_offset + ICO_DIR_ENTRY_SIZE];
+    let entry_offset = ICO_HEADER_SIZE.saturating_add(index.saturating_mul(ICO_DIR_ENTRY_SIZE));
+    let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
 
     // Directory entry fields:
     //   byte 0:    width (0 = 256)
@@ -104,7 +104,7 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> Option<DecodedImage>
         return None;
     }
     let entry_data_start = data_offset;
-    let entry_data_end = entry_data_start + data_size;
+    let entry_data_end = entry_data_start.saturating_add(data_size);
 
     let entry_data = data.get(entry_data_start..entry_data_end)?;
 
@@ -229,22 +229,22 @@ fn decode_ico_bmp(data: &[u8], _entry: &[u8]) -> Option<DecodedImage> {
 
 /// Decode a 32-bit BGRA ICO BMP entry (4 bytes/pixel).
 fn decode_ico_bmp_32bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedImage> {
-    let header_size = 40;
-    let row_size = width as usize * 4;
+    let header_size = 40_usize;
+    let row_size = (width as usize).wrapping_mul(4);
     // Each row is padded to a multiple of 4 bytes
-    let padded_row = (row_size + 3) & !3;
-    let pixel_data_size = padded_row * height as usize;
+    let padded_row = row_size.wrapping_add(3) & !3;
+    let pixel_data_size = padded_row.wrapping_mul(height as usize);
 
     let pixel_start = header_size;
-    let pixel_end = pixel_start + pixel_data_size;
+    let pixel_end = pixel_start.wrapping_add(pixel_data_size);
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
-    let mut pixels = Vec::with_capacity(row_size * height as usize);
+    let mut pixels = Vec::with_capacity(row_size.wrapping_mul(height as usize));
 
     // ICO BMP stores rows bottom-up; we flip to top-down
     for y in (0..height as usize).rev() {
-        let row_start = y * padded_row;
-        let row_end = row_start + row_size;
+        let row_start = y.wrapping_mul(padded_row);
+        let row_end = row_start.wrapping_add(row_size);
         let row = &pixels_raw[row_start..row_end];
 
         // BGRA → RGBA conversion
@@ -265,13 +265,13 @@ fn decode_ico_bmp_32bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
 
 /// Decode a 24-bit BGR ICO BMP entry (3 bytes/pixel).
 fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedImage> {
-    let header_size = 40;
-    let row_size = width as usize * 3;
-    let padded_row = (row_size + 3) & !3;
-    let pixel_data_size = padded_row * height as usize;
+    let header_size = 40_usize;
+    let row_size = (width as usize).wrapping_mul(3);
+    let padded_row = row_size.wrapping_add(3) & !3;
+    let pixel_data_size = padded_row.wrapping_mul(height as usize);
 
     let pixel_start = header_size;
-    let pixel_end = pixel_start + pixel_data_size;
+    let pixel_end = pixel_start.wrapping_add(pixel_data_size);
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Pillow IcoImagePlugin reads the padded AND mask from the end of the DIB
@@ -281,11 +281,15 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
     // present once `pixels_raw` above succeeded. Pillow overlaps the XOR tail
     // when explicit mask bytes are omitted.
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
-    let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let mut pixels = Vec::with_capacity(
+        (width as usize)
+            .wrapping_mul(height as usize)
+            .wrapping_mul(4),
+    );
 
     for y in (0..height as usize).rev() {
-        let row_start = y * padded_row;
-        let row_end = row_start + row_size;
+        let row_start = y.wrapping_mul(padded_row);
+        let row_end = row_start.wrapping_add(row_size);
         let row = &pixels_raw[row_start..row_end];
 
         for (x, chunk) in row.chunks(3).enumerate() {
@@ -295,7 +299,7 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> Option<DecodedI
             pixels.push(r);
             pixels.push(g);
             pixels.push(b);
-            let byte = mask[y * mask_row_size + x / 8];
+            let byte = mask[y.wrapping_mul(mask_row_size).wrapping_add(x / 8)];
             let transparent = byte & (0x80 >> (x % 8)) != 0;
             pixels.push(if transparent { 0 } else { 255 });
         }
@@ -311,38 +315,42 @@ fn decode_ico_bmp_8bpp(
     height: u32,
     colors_used: u32,
 ) -> Option<DecodedImage> {
-    let header_size = 40;
+    let header_size = 40_usize;
     let color_count = (if colors_used == 0 { 256 } else { colors_used }) as usize;
     let palette_size = ico_palette_bytes(color_count);
     #[cfg(not(target_pointer_width = "64"))]
     let palette_size = palette_size?;
-    let palette_end = header_size + palette_size;
+    let palette_end = header_size.saturating_add(palette_size);
 
     let row_size = width as usize;
-    let padded_row = (row_size + 3) & !3;
-    let pixel_data_size = padded_row * height as usize;
+    let padded_row = row_size.wrapping_add(3) & !3;
+    let pixel_data_size = padded_row.wrapping_mul(height as usize);
 
     let pixel_start = palette_end;
-    let pixel_end = pixel_start + pixel_data_size;
+    let pixel_end = pixel_start.saturating_add(pixel_data_size);
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Read palette (BGRA → RGBA)
     let palette_raw = &data[header_size..palette_end];
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
-        let offset = i * 4;
+        let offset = i.wrapping_mul(4);
         let b = palette_raw[offset];
-        let g = palette_raw[offset + 1];
-        let r = palette_raw[offset + 2];
+        let g = palette_raw[offset.wrapping_add(1)];
+        let r = palette_raw[offset.wrapping_add(2)];
         palette.push([r, g, b]);
     }
 
-    let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let mut pixels = Vec::with_capacity(
+        (width as usize)
+            .wrapping_mul(height as usize)
+            .wrapping_mul(4),
+    );
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
-        let row_start = y * padded_row;
-        let row_end = row_start + row_size;
+        let row_start = y.wrapping_mul(padded_row);
+        let row_end = row_start.wrapping_add(row_size);
         let row = &pixels_raw[row_start..row_end];
 
         for (x, &idx) in row.iter().enumerate() {
@@ -364,39 +372,43 @@ fn decode_ico_bmp_4bpp(
     height: u32,
     colors_used: u32,
 ) -> Option<DecodedImage> {
-    let header_size = 40;
+    let header_size = 40_usize;
     let color_count = (if colors_used == 0 { 16 } else { colors_used }) as usize;
     let palette_size = ico_palette_bytes(color_count);
     #[cfg(not(target_pointer_width = "64"))]
     let palette_size = palette_size?;
-    let palette_end = header_size + palette_size;
+    let palette_end = header_size.saturating_add(palette_size);
 
     // 4bpp: 2 pixels per byte
     let row_bytes = (width as usize).div_ceil(2);
-    let padded_row = (row_bytes + 3) & !3;
-    let pixel_data_size = padded_row * height as usize;
+    let padded_row = row_bytes.wrapping_add(3) & !3;
+    let pixel_data_size = padded_row.wrapping_mul(height as usize);
 
     let pixel_start = palette_end;
-    let pixel_end = pixel_start + pixel_data_size;
+    let pixel_end = pixel_start.saturating_add(pixel_data_size);
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Read palette
     let palette_raw = &data[header_size..palette_end];
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
-        let offset = i * 4;
+        let offset = i.wrapping_mul(4);
         let b = palette_raw[offset];
-        let g = palette_raw[offset + 1];
-        let r = palette_raw[offset + 2];
+        let g = palette_raw[offset.wrapping_add(1)];
+        let r = palette_raw[offset.wrapping_add(2)];
         palette.push([r, g, b]);
     }
 
-    let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let mut pixels = Vec::with_capacity(
+        (width as usize)
+            .wrapping_mul(height as usize)
+            .wrapping_mul(4),
+    );
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
-        let row_start = y * padded_row;
-        let row_end = row_start + row_bytes;
+        let row_start = y.wrapping_mul(padded_row);
+        let row_end = row_start.wrapping_add(row_bytes);
         let row = &pixels_raw[row_start..row_end];
 
         let mut col = 0;
@@ -408,7 +420,7 @@ fn decode_ico_bmp_4bpp(
             pixels.push(color[1]);
             pixels.push(color[2]);
             pixels.push(mask_alpha(mask, mask_row_size, col, y));
-            col += 1;
+            col = col.wrapping_add(1);
             if col < width as usize {
                 let color = palette[lo as usize];
                 pixels.push(color[0]);
@@ -416,7 +428,7 @@ fn decode_ico_bmp_4bpp(
                 pixels.push(color[2]);
                 pixels.push(mask_alpha(mask, mask_row_size, col, y));
             }
-            col += 1;
+            col = col.wrapping_add(1);
         }
     }
 
@@ -430,39 +442,43 @@ fn decode_ico_bmp_1bpp(
     height: u32,
     colors_used: u32,
 ) -> Option<DecodedImage> {
-    let header_size = 40;
+    let header_size = 40_usize;
     let color_count = (if colors_used == 0 { 2 } else { colors_used }) as usize;
     let palette_size = ico_palette_bytes(color_count);
     #[cfg(not(target_pointer_width = "64"))]
     let palette_size = palette_size?;
-    let palette_end = header_size + palette_size;
+    let palette_end = header_size.saturating_add(palette_size);
 
     // 1bpp: 8 pixels per byte
     let row_bytes = (width as usize).div_ceil(8);
-    let padded_row = (row_bytes + 3) & !3;
-    let pixel_data_size = padded_row * height as usize;
+    let padded_row = row_bytes.wrapping_add(3) & !3;
+    let pixel_data_size = padded_row.wrapping_mul(height as usize);
 
     let pixel_start = palette_end;
-    let pixel_end = pixel_start + pixel_data_size;
+    let pixel_end = pixel_start.saturating_add(pixel_data_size);
     let pixels_raw = data.get(pixel_start..pixel_end)?;
 
     // Read palette
     let palette_raw = &data[header_size..palette_end];
     let mut palette = Vec::with_capacity(color_count);
     for i in 0..color_count {
-        let offset = i * 4;
+        let offset = i.wrapping_mul(4);
         let b = palette_raw[offset];
-        let g = palette_raw[offset + 1];
-        let r = palette_raw[offset + 2];
+        let g = palette_raw[offset.wrapping_add(1)];
+        let r = palette_raw[offset.wrapping_add(2)];
         palette.push([r, g, b]);
     }
 
-    let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    let mut pixels = Vec::with_capacity(
+        (width as usize)
+            .wrapping_mul(height as usize)
+            .wrapping_mul(4),
+    );
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
-        let row_start = y * padded_row;
-        let row_end = row_start + row_bytes;
+        let row_start = y.wrapping_mul(padded_row);
+        let row_end = row_start.wrapping_add(row_bytes);
         let row = &pixels_raw[row_start..row_end];
 
         let mut col = 0;
@@ -477,7 +493,7 @@ fn decode_ico_bmp_1bpp(
                 pixels.push(color[1]);
                 pixels.push(color[2]);
                 pixels.push(mask_alpha(mask, mask_row_size, col, y));
-                col += 1;
+                col = col.wrapping_add(1);
             }
         }
     }
@@ -486,15 +502,15 @@ fn decode_ico_bmp_1bpp(
 }
 
 fn ico_and_mask_after_xor(data: &[u8], width: u32, height: u32) -> (&[u8], usize) {
-    let row_size = (width as usize).div_ceil(32) * 4;
-    let size = row_size * height as usize;
+    let row_size = (width as usize).div_ceil(32).wrapping_mul(4);
+    let size = row_size.wrapping_mul(height as usize);
     debug_assert!(data.len() >= size);
-    (&data[data.len() - size..], row_size)
+    (&data[data.len().wrapping_sub(size)..], row_size)
 }
 
 #[cfg(target_pointer_width = "64")]
 fn ico_palette_bytes(color_count: usize) -> usize {
-    color_count * 4
+    color_count.wrapping_mul(4)
 }
 
 #[cfg(not(target_pointer_width = "64"))]
@@ -503,7 +519,7 @@ fn ico_palette_bytes(color_count: usize) -> Option<usize> {
 }
 
 fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
-    let transparent = mask[y * row_size + x / 8] & (0x80 >> (x % 8)) != 0;
+    let transparent = mask[y.wrapping_mul(row_size).wrapping_add(x / 8)] & (0x80 >> (x % 8)) != 0;
     if transparent { 0 } else { 255 }
 }
 

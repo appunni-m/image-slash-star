@@ -35,6 +35,7 @@ pub(crate) fn decompress_zlib_prefix(data: &[u8], max_output: usize) -> Option<V
 }
 
 #[cfg(coverage)]
+#[allow(clippy::expect_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decompress_zlib(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 1);
     let _ = decompress_zlib(&[0x88, 0x00, 0x00, 0x00, 0x00, 0x00], 1);
@@ -331,6 +332,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 #[cfg(coverage)]
+#[allow(clippy::expect_used)]
 fn huffman_with_symbol(symbol: usize) -> Huffman {
     let mut lengths = vec![0; symbol + 1];
     lengths[symbol] = 1;
@@ -338,13 +340,14 @@ fn huffman_with_symbol(symbol: usize) -> Huffman {
 }
 
 #[cfg(coverage)]
+#[allow(clippy::expect_used)]
 fn huffman_with_symbols(symbols: &[(usize, u8)]) -> Huffman {
     let max_symbol = symbols
         .iter()
         .map(|&(symbol, _)| symbol)
         .max()
         .expect("coverage huffman should have symbols");
-    let mut lengths = vec![0; max_symbol + 1];
+    let mut lengths = vec![0; max_symbol.saturating_add(1)];
     for &(symbol, length) in symbols {
         lengths[symbol] = length;
     }
@@ -357,6 +360,8 @@ enum DecodeStatus {
     OutputFull,
 }
 
+// The fixed RFC 1951 distance table is statically valid.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn decompress_zlib_with_limit(
     data: &[u8],
     max_output: usize,
@@ -369,15 +374,19 @@ fn decompress_zlib_with_limit(
     let flg = data[1];
     if cmf & 0x0f != 8
         || cmf >> 4 > 7
-        || (u16::from(cmf) * 256 + u16::from(flg)) % 31 != 0
+        || u16::from(cmf)
+            .saturating_mul(256)
+            .saturating_add(u16::from(flg))
+            .rem_euclid(31)
+            != 0
         || flg & 0x20 != 0
     {
         return None;
     }
 
-    let payload_end = data.len() - 4;
+    let payload_end = data.len().saturating_sub(4);
     let mut bits = BitReader::new(&data[2..payload_end]);
-    let mut output = Vec::with_capacity(max_output.min(64 * 1024));
+    let mut output = Vec::with_capacity(max_output.min(65_536));
     loop {
         let block_header = bits.read(3)?;
         let final_block = block_header & 1 != 0;
@@ -464,15 +473,15 @@ pub(crate) fn compress_zlib_chunked(
 #[cfg(any(feature = "png", feature = "tiff"))]
 fn compress_zlib_stored_chunked(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
     const MIN_BLOCK: usize = 32_768;
-    const MAX_STORED: usize = u16::MAX as usize;
+    const MAX_STORED: usize = 65_535;
 
     let mut output = vec![0x78, 0x01];
     let mut pending_start = 0usize;
     let mut input_end = 0usize;
     for &input_len in input_chunks {
         input_end = input_end.checked_add(input_len)?;
-        while input_end - pending_start >= MIN_BLOCK {
-            let maximum_end = pending_start + MAX_STORED;
+        while input_end.saturating_sub(pending_start) >= MIN_BLOCK {
+            let maximum_end = pending_start.saturating_add(MAX_STORED);
             let block_end = input_end.min(maximum_end);
             write_stored_block_bounded(&mut output, &data[pending_start..block_end], false);
             pending_start = block_end;
@@ -493,7 +502,7 @@ fn write_stored_block(output: &mut Vec<u8>, block: &[u8], final_block: bool) -> 
 #[cfg(any(feature = "png", feature = "tiff"))]
 fn write_stored_block_bounded(output: &mut Vec<u8>, block: &[u8], final_block: bool) {
     debug_assert!(u16::try_from(block.len()).is_ok());
-    write_stored_block_with_len(output, block, final_block, block.len() as u16);
+    write_stored_block_with_len(output, block, final_block, low_u16(block.len()));
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
@@ -511,15 +520,15 @@ fn decode_stored(
     allow_trailing_output: bool,
 ) -> Option<DecodeStatus> {
     bits.align_to_byte();
-    let len = bits.read(16)? as u16;
-    let complement = bits.read(16)? as u16;
+    let len = low_u16(bounded_usize(bits.read(16)?));
+    let complement = low_u16(bounded_usize(bits.read(16)?));
     if len != !complement {
         return None;
     }
     let available = max_output.checked_sub(output.len())?;
     let copied = usize::from(len).min(available);
     for _ in 0..copied {
-        output.push(bits.read(8)? as u8);
+        output.push(bits.read(8)?.to_le_bytes()[0]);
     }
     if copied < usize::from(len) {
         allow_trailing_output.then_some(DecodeStatus::OutputFull)
@@ -528,6 +537,8 @@ fn decode_stored(
     }
 }
 
+// The fixed RFC 1951 literal table is statically valid.
+#[allow(clippy::expect_used)]
 fn fixed_literal_table() -> Huffman {
     let mut lengths = vec![0; 288];
     lengths[0..144].fill(8);
@@ -538,16 +549,16 @@ fn fixed_literal_table() -> Huffman {
 }
 
 fn read_dynamic_tables(bits: &mut BitReader<'_>) -> Option<(Huffman, Huffman)> {
-    let literal_count = bits.read(5)? as usize + 257;
-    let distance_count = bits.read(5)? as usize + 1;
-    let code_length_count = bits.read(4)? as usize + 4;
+    let literal_count = bounded_usize(bits.read(5)?).saturating_add(257);
+    let distance_count = bounded_usize(bits.read(5)?).saturating_add(1);
+    let code_length_count = bounded_usize(bits.read(4)?).saturating_add(4);
     let mut code_lengths = [0u8; 19];
     for &symbol in &CODE_LENGTH_ORDER[..code_length_count] {
-        code_lengths[symbol] = bits.read(3)? as u8;
+        code_lengths[symbol] = bits.read(3)?.to_le_bytes()[0];
     }
     let code_length_table = Huffman::from_lengths(&code_lengths)?;
 
-    let total = literal_count + distance_count;
+    let total = literal_count.saturating_add(distance_count);
     let lengths = read_dynamic_code_lengths(bits, &code_length_table, total)?;
     build_dynamic_tables(&lengths, literal_count)
 }
@@ -561,20 +572,20 @@ fn read_dynamic_code_lengths(
     while lengths.len() < total {
         let symbol = code_length_table.decode(bits)?;
         match symbol {
-            symbol @ 0..=15 => lengths.push(symbol as u8),
+            symbol @ 0..=15 => lengths.push(symbol.to_le_bytes()[0]),
             16 => {
                 let previous = *lengths.last()?;
-                let repeat = bits.read(2)? as usize + 3;
+                let repeat = bounded_usize(bits.read(2)?).saturating_add(3);
                 extend_repeated(&mut lengths, previous, repeat, total)?;
             }
             17 => {
-                let repeat = bits.read(3)? as usize + 3;
+                let repeat = bounded_usize(bits.read(3)?).saturating_add(3);
                 extend_repeated(&mut lengths, 0, repeat, total)?;
             }
             _ => {
                 // The code-length alphabet has exactly 19 symbols.
                 debug_assert_eq!(symbol, 18);
-                let repeat = bits.read(7)? as usize + 11;
+                let repeat = bounded_usize(bits.read(7)?).saturating_add(11);
                 extend_repeated(&mut lengths, 0, repeat, total)?;
             }
         }
@@ -589,10 +600,11 @@ fn build_dynamic_tables(lengths: &[u8], literal_count: usize) -> Option<(Huffman
 }
 
 fn extend_repeated(lengths: &mut Vec<u8>, value: u8, repeat: usize, limit: usize) -> Option<()> {
-    if lengths.len().checked_add(repeat)? > limit {
+    let new_len = lengths.len().checked_add(repeat)?;
+    if new_len > limit {
         return None;
     }
-    lengths.resize(lengths.len() + repeat, value);
+    lengths.resize(new_len, value);
     Some(())
 }
 
@@ -610,27 +622,27 @@ fn decode_compressed(
                 if output.len() >= max_output {
                     return allow_trailing_output.then_some(DecodeStatus::OutputFull);
                 }
-                output.push(byte as u8);
+                output.push(byte.to_le_bytes()[0]);
             }
             256 => return Some(DecodeStatus::Complete),
             symbol @ 257..=285 => {
-                let length_index = usize::from(symbol - 257);
-                let length =
-                    LENGTH_BASE[length_index] + bits.read(LENGTH_EXTRA[length_index])? as usize;
+                let length_index = usize::from(symbol.saturating_sub(257));
+                let length = LENGTH_BASE[length_index]
+                    .saturating_add(bounded_usize(bits.read(LENGTH_EXTRA[length_index])?));
                 let distance_symbol = distance.decode(bits)?;
                 if distance_symbol >= 30 {
                     return None;
                 }
                 let distance_index = usize::from(distance_symbol);
                 let backwards = DISTANCE_BASE[distance_index]
-                    + bits.read(DISTANCE_EXTRA[distance_index])? as usize;
+                    .saturating_add(bounded_usize(bits.read(DISTANCE_EXTRA[distance_index])?));
                 if backwards > output.len() {
                     return None;
                 }
                 let available = max_output.checked_sub(output.len())?;
                 let copied = length.min(available);
                 for _ in 0..copied {
-                    let source = output.len() - backwards;
+                    let source = output.len().saturating_sub(backwards);
                     output.push(output[source]);
                 }
                 if copied < length {
@@ -647,10 +659,10 @@ fn adler32(data: &[u8]) -> u32 {
     let mut a = 1u32;
     let mut b = 0u32;
     for &byte in data {
-        a = (a + u32::from(byte)) % MODULUS;
-        b = (b + a) % MODULUS;
+        a = a.saturating_add(u32::from(byte)).rem_euclid(MODULUS);
+        b = b.saturating_add(a).rem_euclid(MODULUS);
     }
-    (b << 16) | a
+    b.wrapping_shl(16) | a
 }
 
 struct Huffman {
@@ -680,8 +692,10 @@ impl Huffman {
 
         let mut next_codes = [0u16; 16];
         let mut code = 0u16;
-        for length in 1..=15 {
-            code = code.checked_add(counts[length - 1])? << 1;
+        for length in 1usize..=15 {
+            code = code
+                .checked_add(counts[length.saturating_sub(1)])?
+                .wrapping_shl(1);
             next_codes[length] = code;
         }
 
@@ -691,10 +705,10 @@ impl Huffman {
                 continue;
             }
             let canonical = next_codes[usize::from(length)];
-            if canonical >= (1u16 << length) {
+            if canonical >= 1u16.wrapping_shl(u32::from(length)) {
                 return None;
             }
-            next_codes[usize::from(length)] = canonical + 1;
+            next_codes[usize::from(length)] = canonical.saturating_add(1);
             entries.push(HuffmanEntry {
                 reversed_code: reverse_low_bits(canonical, length),
                 length,
@@ -710,7 +724,8 @@ impl Huffman {
     fn decode(&self, bits: &mut BitReader<'_>) -> Option<u16> {
         let mut code = 0u16;
         for length in 1..=self.maximum_length {
-            code |= (bits.read(1)? as u16) << (length - 1);
+            code |= low_u16(bounded_usize(bits.read(1)?))
+                .wrapping_shl(u32::from(length.saturating_sub(1)));
             if let Some(entry) = self
                 .entries
                 .iter()
@@ -726,8 +741,8 @@ impl Huffman {
 fn reverse_low_bits(mut value: u16, width: u8) -> u16 {
     let mut reversed = 0u16;
     for _ in 0..width {
-        reversed = (reversed << 1) | (value & 1);
-        value >>= 1;
+        reversed = reversed.wrapping_shl(1) | (value & 1);
+        value = value.wrapping_shr(1);
     }
     reversed
 }
@@ -751,7 +766,7 @@ impl<'a> BitReader<'a> {
         }
         let end = self.bit_position.checked_add(usize::from(width))?;
         #[cfg(target_pointer_width = "64")]
-        let bit_len = self.data.len() * 8;
+        let bit_len = self.data.len().saturating_mul(8);
         #[cfg(not(target_pointer_width = "64"))]
         let bit_len = self.data.len().checked_mul(8)?;
         if end > bit_len {
@@ -759,14 +774,34 @@ impl<'a> BitReader<'a> {
         }
         let mut value = 0u32;
         for shift in 0..width {
-            let byte = self.data[self.bit_position / 8];
-            value |= u32::from((byte >> (self.bit_position % 8)) & 1) << shift;
-            self.bit_position += 1;
+            let byte = self.data[self.bit_position.div_euclid(8)];
+            value |= u32::from(
+                byte.wrapping_shr(self.bit_position.rem_euclid(8).to_le_bytes()[0].into()) & 1,
+            )
+            .wrapping_shl(u32::from(shift));
+            self.bit_position = self.bit_position.saturating_add(1);
         }
         Some(value)
     }
 
     fn align_to_byte(&mut self) {
-        self.bit_position = self.bit_position.div_ceil(8) * 8;
+        self.bit_position = self.bit_position.div_ceil(8).saturating_mul(8);
     }
+}
+
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn low_u16(value: usize) -> u16 {
+    let [a, b, ..] = value.to_le_bytes();
+    u16::from_le_bytes([a, b])
 }

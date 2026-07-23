@@ -33,6 +33,13 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     Some(DecodedImage::new(width, height, pixels, color))
 }
 
+/// Validate the RIFF container and encoded frame headers without decoding pixels.
+pub(crate) fn verify(data: &[u8]) -> Option<()> {
+    super::native::WebPDecoder::new(Cursor::new(data))
+        .ok()
+        .map(|_| ())
+}
+
 /// Decode every composited frame and its presentation timing from a WebP stream.
 pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     let cursor = Cursor::new(data);

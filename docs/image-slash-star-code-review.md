@@ -11,9 +11,9 @@ source caching. The manifest-driven exact-byte tests and the use of
 `Arc`/`OnceLock` for shared deterministic results are strong foundations.
 
 No unsafe Rust or new FFI boundary was introduced in the reviewed source-cache
-slice. The remaining upstream work is contract and target correctness, feature
-test strength, and maintenance-gate cleanup. It does not require a new codec or
-an expansion of the approved migration.
+slice. The accepted contract, target-capability, feature-test, path-boundary,
+and maintenance-gate findings are now implemented. It did not require a new
+codec or an expansion of the approved migration.
 
 Downstream lazy pipeline, palette, compatibility, and repository findings are
 owned by `docs/image-backend-migration-code-review.md` in the `pillow-rs`
@@ -35,12 +35,14 @@ manifest, add Pillow operations, or redesign the downstream compute pipeline.
 
 - The complete migration diff and relevant call paths were inspected.
 - `git diff --check` passed.
-- The recorded Coverage MCP snapshot
-  `bc41e67e-4be2-4eac-9444-abe318a0a151` reports 100% line, branch, and region
-  coverage.
-- The strict all-target/all-feature Clippy command was run and currently fails
-  with more than two thousand diagnostics, primarily existing arithmetic/cast
-  lint debt.
+- Coverage MCP run `5b0f1ca0-0ecf-433b-a159-722387249757`, snapshot
+  `2a9e4148-d559-44db-8368-57df58bf21fc`, passed all six test targets and
+  reports 100% coverage: 30,616 lines, 3,924 branches, 1,837 functions, and
+  51,578 regions.
+- `cargo clippy --workspace --all-targets --all-features --locked -- -D
+  warnings` passes. The library-root and integration-test blanket allowances
+  have been removed. The inherited `webp/native` blanket allowance is also
+  removed after a file-by-file arithmetic and conversion audit.
 
 ## Findings
 
@@ -61,77 +63,112 @@ A later corrupt frame or image directory can therefore be outside the work
 performed by `verify()`. The public rustdoc and migration documents currently
 call this full snapshot validation.
 
-Recommendation:
+Accepted implementation:
 
-- decide whether `verify()` means “validate the primary decoded image” or
-  “validate the entire encoded container”;
-- if full-container validation is required, route multi-image formats through
-  sequence/container validation and add fixtures with a valid first image and
-  corrupt later image;
-- otherwise narrow the rustdoc and migration claims to the primary image;
-- retain independent execution so verification does not populate the ordinary
-  lazy decode cache.
+The accepted implementation is recorded in
+`docs/lazy-loading-correctness-proposal.md`: match the pinned Pillow oracle's
+codec-specific `Image.verify()` behavior rather than imposing one generic
+primary-image or full-container definition. Dispatch verification by detected
+format, use primary decode, sequence decode, or structural validation only when
+oracle fixtures prove it, and retain independent execution so verification
+never populates the ordinary lazy decode cache.
 
-### I2 — Feature tests do not exercise each codec in isolation
+### I2 — Feature and target capability combinations are not proved
 
-Severity: medium test gap.
+Severity: medium correctness and test gap.
 
 `tests/feature_gate_tests.rs` correctly proves that disabled formats return the
 exact `FeatureDisabled` error. The usual all-feature lane proves that all
 formats work together. Those endpoints do not prove that each individual
-feature enables exactly its intended codec.
+feature enables exactly its intended codec. The same availability contract is
+incomplete across targets: the `avif` feature can be enabled on `wasm32`, but
+its native implementation is unavailable there, causing valid AVIF input to be
+reported as malformed instead of target-unsupported.
 
-Recommendation:
+Accepted implementation:
 
-- run one manifest lane for each of `jpeg`, `png`, `gif`, `bmp`, `tiff`,
-  `webp`, `ico`, and `avif`;
-- in each lane, prove that the selected codec succeeds and unrelated codecs
-  retain their exact disabled-feature errors;
-- explicitly prove ICO's intentional transitive `bmp` and `png` features;
-- retain the no-default and all-feature lanes as boundary checks.
+The combined feature and target capability matrix is recorded in
+`docs/lazy-loading-correctness-proposal.md`. Run the same manifest-driven test
+with no features, every individual codec feature, the default set, and all
+features. Enabled rows must prove successful detection, inspection, source
+construction, and decode behavior; disabled rows must prove exact structured
+feature errors. ICO must prove its intentional PNG/BMP transitive features, and
+AVIF must prove native success, disabled-feature errors, and one consistent
+`Unsupported` capability error across every core-WASM entry point. Valid AVIF
+must never be labeled malformed solely because the target lacks libavif.
 
-### I3 — AVIF enabled on WASM reports malformed input instead of capability
+Implemented (July 2026): the shared dispatcher applies the target capability
+check to inspect, verify, still/sequence decode, and still/sequence encode.
+`scripts/test_feature_matrix.sh` executes the accepted native matrix and
+compiles both core-WASM lanes from the same fixture-driven integration test.
 
-Severity: medium.
+### I3 — Strict Clippy did not pass
 
-The `avif` Cargo feature can be selected for `wasm32`, while AVIF decode and
-sequence functions return `None` on that target. A valid AVIF can consequently
-surface as malformed input instead of a structured target-unavailable or
-unsupported-capability error.
+Severity: high acceptance-gate defect.
 
-Recommendation:
+The documented all-target/all-feature invocation currently fails on two denied
+`map_unwrap_or` diagnostics in the integration test. Running the accepted
+strict form with `-D warnings` also promotes the existing arithmetic, cast, and
+style warnings into thousands of errors. A release cannot claim strict lint
+quality while that command is red.
 
-- either prevent the native AVIF feature from being selected on unsupported
-  targets or return a structured target/capability error;
-- add a WASM compile and behavior lane before exposing AVIF in the planned
-  core/extra JS package split;
-- preserve the current pinned native libavif behavior.
+Accepted implementation:
 
-### I4 — The documented strict Clippy gate is permanently red
+The strict implementation contract is recorded in
+`docs/lazy-loading-correctness-proposal.md`. Fix every diagnostic across
+production code, integration tests, and coverage hooks; do not accept a warning
+baseline as completion. Arithmetic and conversion fixes must use checked,
+explicitly wrapping, or proven-bounded behavior according to codec semantics,
+and any observable error/output change requires a Pillow-oracle manifest row.
+The authoritative command must pass with `-D warnings`.
 
-Severity: medium process risk.
+Progress (July 2026):
 
-The documented all-target/all-feature Clippy invocation currently emits more
-than two thousand diagnostics when warnings are denied. Most are existing
-arithmetic and cast warnings rather than regressions from `EncodedImage`.
-A permanently failing gate cannot distinguish new defects from baseline debt.
+- the authoritative command passes with warnings denied;
+- the coverage-matrix and feature-matrix integration crates no longer suppress
+  `unwrap`, `expect`, or unused-dependency diagnostics;
+- the library root no longer suppresses those lints across every codec;
+- explicit wrapping, saturation, checked conversion, and invariant-scoped
+  assertions replaced the exposed diagnostics without changing oracle bytes;
+- `byteorder_lite.rs`, `alpha_blending.rs`, `transform.rs`, `yuv.rs`, and
+  `encoder/predictor.rs`, plus `huffman.rs` and `extended.rs`, now override the
+  inherited WebP allowance with strict child-module policy; `loop_filter.rs`
+  and `encoder/cross_color.rs` also replace the blanket policy with documented
+  RFC/reference-kernel arithmetic exceptions. `vp8_arithmetic_decoder.rs`
+  similarly confines bit-coder arithmetic and one padded-chunk invariant, while
+  `encoder/histogram.rs` confines fixed-point entropy and deterministic
+  clustering arithmetic. `lossless_transform.rs` now confines inverse VP8L
+  arithmetic and fixed-width slice conversion invariants, and
+  `encoder/backward_refs.rs` confines its hash-chain, fixed-point, and LZ77
+  interval arithmetic. `decoder.rs` confines RIFF/geometry arithmetic and
+  documents the three constructor-proven chunk/canvas invariants that retain
+  infallible access. `encoder.rs`, `lossless.rs`, and `vp8.rs` complete the
+  orchestrator and decoder audits with only reference arithmetic and exact
+  collection/block invariants scoped locally. Other exceptions are confined to
+  packed fields and validated geometry traversals;
+- the inherited blanket allowance in `src/codecs/webp/native/mod.rs` has been
+  removed. Every child module now owns its explicit strict policy, and the
+  authoritative command plus exact WebP parity and Coverage MCP gates pass.
 
-Recommendation:
-
-- record a lint-debt baseline and reject new diagnostics in touched code;
-- burn down the existing diagnostics separately;
-- do not weaken correctness lints globally or absorb the whole cleanup into
-  this migration.
-
-### I5 — `ImageFormat::from_path()` performs an avoidable allocation
+### I4 — `ImageFormat::from_path()` performs an avoidable allocation
 
 Severity: optional.
 
 `ImageFormat::from_path()` lowercases an extension into a new `String`, while
 `ImageFormat::from_name()` already compares names case-insensitively.
 
-Recommendation: pass the borrowed extension directly when this function is
-next touched. This does not justify a standalone migration task.
+Implemented (July 2026): successful parsing now passes the borrowed extension
+directly to the existing case-insensitive parser. Allocation occurs only while
+constructing the normalized structured error for an unknown extension; exact
+uppercase-success, uppercase-error, and missing-extension behavior is covered.
+
+Security boundary: this API only inspects the final extension. It performs no
+filesystem access, path resolution, canonicalization, or root-containment
+check, so it is not itself a path-traversal surface. Downstream code that opens
+an untrusted path must enforce allowed-root and symlink policy at the actual I/O
+boundary; successful format inference must not be treated as path validation.
+The accepted boundary and its nonexistent traversal-looking path regression
+case are recorded in `docs/lazy-loading-correctness-proposal.md`.
 
 ## Positive findings
 
@@ -150,13 +187,13 @@ next touched. This does not justify a standalone migration task.
 
 ## Resolution order
 
-1. Decide and prove the `verify()` contract in I1.
-2. Add isolated feature lanes from I2.
-3. Make AVIF target behavior explicit under I3.
-4. Align migration and rustdoc claims with those decisions.
-5. Establish the lint baseline from I4 without widening migration scope.
-6. Apply I5 only alongside another relevant format-parsing change.
-7. Rerun formatting, exact manifest tests, isolated feature lanes, and Coverage
+1. Implement and prove the accepted codec-specific `verify()` contract in I1.
+2. Implement the combined codec feature and target matrix from I2.
+3. Align migration and rustdoc claims with those decisions.
+4. Complete the strict Clippy implementation from I3 without suppressing
+   diagnostics or changing parity.
+5. Apply I4 only alongside another relevant format-parsing change.
+6. Rerun formatting, exact manifest tests, isolated feature/target lanes, and Coverage
    MCP line/branch/region coverage before declaring the upstream slice complete.
 
 ## Review completion rule

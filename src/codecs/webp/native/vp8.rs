@@ -10,6 +10,31 @@
 //! * [rfc-6386](http://tools.ietf.org/html/rfc6386) - The VP8 Data Format and Decoding Guide
 //! * [VP8.pdf](http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/37073.pdf) - An overview of of the VP8 format
 
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+// RFC 6386 specifies fixed-width probability arithmetic, coefficient
+// transforms, border geometry, and saturating pixel reconstruction. Frame
+// validation and fixed codec dimensions bound these operations.
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use super::byteorder_lite::{LittleEndian, ReadBytesExt};
 use std::default::Default;
 use std::io::Read;
@@ -991,6 +1016,8 @@ impl<R: Read> Vp8Decoder<R> {
         self.b.check(res, ())
     }
 
+    // The complete-partition size check makes the slice reader infallible.
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn init_partitions(&mut self, n: usize) -> Result<(), DecodingError> {
         if n > 1 {
             let mut sizes = vec![0; 3 * n - 3];
@@ -1229,6 +1256,9 @@ impl<R: Read> Vp8Decoder<R> {
         Ok(())
     }
 
+    // The keyframe mode trees contain only values represented by the mode
+    // enums below.
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn read_macroblock_header(&mut self, mbx: usize) -> Result<MacroBlock, DecodingError> {
         let mut mb = MacroBlock::default();
         let mut res = self.b.start_accumulated_result();
@@ -1289,6 +1319,8 @@ impl<R: Read> Vp8Decoder<R> {
         self.b.check(res, mb)
     }
 
+    // Residual storage is laid out as exact 16-coefficient blocks.
+    #[allow(clippy::unwrap_used)]
     fn intra_predict_luma(&mut self, mbx: usize, mby: usize, mb: &MacroBlock, resdata: &[i32]) {
         let stride = 1usize + 16 + 4;
         let mw = self.mbwidth as usize;
@@ -1339,6 +1371,8 @@ impl<R: Read> Vp8Decoder<R> {
         }
     }
 
+    // Residual storage is laid out as exact 16-coefficient blocks.
+    #[allow(clippy::unwrap_used)]
     fn intra_predict_chroma(&mut self, mbx: usize, mby: usize, mb: &MacroBlock, resdata: &[i32]) {
         let stride = 1usize + 8;
 
@@ -1481,6 +1515,8 @@ impl<R: Read> Vp8Decoder<R> {
         decoder.check(res, has_coefficients)
     }
 
+    // Each iterator chunk is created with `chunks_exact_mut(16)`.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
     fn read_residual_data(
         &mut self,
         mb: &mut MacroBlock,
@@ -2664,6 +2700,8 @@ fn add_residue(pblock: &mut [u8], rblock: &[i32; 16], y0: usize, x0: usize, stri
     }
 }
 
+// Residual storage is laid out as exact 16-coefficient blocks.
+#[allow(clippy::unwrap_used)]
 fn predict_4x4(ws: &mut [u8], stride: usize, modes: &[IntraMode], resdata: &[i32]) {
     for sby in 0usize..4 {
         for sbx in 0usize..4 {

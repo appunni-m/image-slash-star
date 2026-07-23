@@ -73,15 +73,36 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
 
     let samples = decode_scanlines(&inflated, width, height, channels, depth, interlace)?;
     build_image(
-        width,
-        height,
-        png_color,
-        depth,
-        color,
+        PngImageSpec {
+            width,
+            height,
+            png_color,
+            depth,
+            color,
+        },
         &samples,
         palette_rgb,
         palette_alpha,
     )
+}
+
+/// Validate PNG chunk framing and CRCs without decompressing image samples.
+///
+/// This matches Pillow's PNG-specific `Image.verify()` behavior: validation
+/// proceeds from the image-data chunk through `IEND`, while construction has
+/// already inspected the preceding header and metadata chunks.
+pub(crate) fn verify(data: &[u8]) -> Option<()> {
+    let mut chunks = Chunks::new(data)?;
+    let header = chunks.next()?;
+    if header.kind != *b"IHDR" || header.data.len() != 13 {
+        return None;
+    }
+    for chunk in &mut chunks {
+        if chunk.kind == *b"IEND" {
+            return Some(());
+        }
+    }
+    None
 }
 
 fn png_layout(color: u8, depth: u8) -> Option<(usize, ColorType)> {
@@ -105,7 +126,9 @@ fn inflated_len(
     let width = width as usize;
     let height = height as usize;
     if interlace == 0 {
-        return (row_bytes(width, channels, depth)? + 1).checked_mul(height);
+        return row_bytes(width, channels, depth)?
+            .saturating_add(1)
+            .checked_mul(height);
     }
 
     let mut total = 0usize;
@@ -114,7 +137,9 @@ fn inflated_len(
         let pass_height = pass_size(height, y_start, y_step);
         if pass_width != 0 && pass_height != 0 {
             total = total.checked_add(
-                (row_bytes(pass_width, channels, depth)? + 1).checked_mul(pass_height)?,
+                row_bytes(pass_width, channels, depth)?
+                    .saturating_add(1)
+                    .checked_mul(pass_height)?,
             )?;
         }
     }
@@ -148,7 +173,11 @@ fn decode_scanlines(
             channels,
             depth,
             |x, y, channel, value| {
-                let index = (y * width + x) * channels + channel;
+                let index = y
+                    .wrapping_mul(width)
+                    .wrapping_add(x)
+                    .wrapping_mul(channels)
+                    .wrapping_add(channel);
                 samples[index] = value;
             },
         );
@@ -174,9 +203,13 @@ fn decode_scanlines(
                 channels,
                 depth,
                 |pass_x, pass_y, channel, value| {
-                    let x = x_start + pass_x * x_step;
-                    let y = y_start + pass_y * y_step;
-                    let index = (y * width + x) * channels + channel;
+                    let x = x_start.wrapping_add(pass_x.wrapping_mul(x_step));
+                    let y = y_start.wrapping_add(pass_y.wrapping_mul(y_step));
+                    let index = y
+                        .wrapping_mul(width)
+                        .wrapping_add(x)
+                        .wrapping_mul(channels)
+                        .wrapping_add(channel);
                     samples[index] = value;
                 },
             );
@@ -191,7 +224,7 @@ fn read_filtered_row<'a>(
     stride: usize,
 ) -> Option<(u8, &'a [u8])> {
     let filter = *data.get(*position)?;
-    *position += 1;
+    *position = position.wrapping_add(1);
     let source_end = (*position).checked_add(stride)?;
     let source = data.get(*position..source_end)?;
     *position = source_end;
@@ -212,29 +245,37 @@ fn unfilter_rows(
 
     for row in 0..height {
         let (filter, source) = read_filtered_row(data, position, stride)?;
-        let row_start = row * stride;
+        let row_start = row.wrapping_mul(stride);
 
         for column in 0..stride {
             let left = if column >= bytes_per_pixel {
-                rows[row_start + column - bytes_per_pixel]
+                rows[row_start.wrapping_add(column).wrapping_sub(bytes_per_pixel)]
             } else {
                 0
             };
             let above = if row != 0 {
-                rows[row_start - stride + column]
+                rows[row_start.wrapping_sub(stride).wrapping_add(column)]
             } else {
                 0
             };
             let upper_left = if row != 0 && column >= bytes_per_pixel {
-                rows[row_start - stride + column - bytes_per_pixel]
+                rows[row_start
+                    .wrapping_sub(stride)
+                    .wrapping_add(column)
+                    .wrapping_sub(bytes_per_pixel)]
             } else {
                 0
             };
-            rows[row_start + column] = match filter {
+            rows[row_start.wrapping_add(column)] = match filter {
                 0 => source[column],
                 1 => source[column].wrapping_add(left),
                 2 => source[column].wrapping_add(above),
-                3 => source[column].wrapping_add(((u16::from(left) + u16::from(above)) / 2) as u8),
+                3 => {
+                    let average = u16::from(left)
+                        .wrapping_add(u16::from(above))
+                        .wrapping_div(2);
+                    source[column].wrapping_add(average.to_le_bytes()[0])
+                }
                 4 => source[column].wrapping_add(paeth(left, above, upper_left)),
                 _ => return None,
             };
@@ -253,23 +294,27 @@ fn unpack_into<F>(
 ) where
     F: FnMut(usize, usize, usize, u16),
 {
-    let stride = rows.len() / height;
+    let stride = rows.len().checked_div(height).unwrap_or_default();
     for y in 0..height {
-        let row = &rows[y * stride..(y + 1) * stride];
+        let row_start = y.wrapping_mul(stride);
+        let row = &rows[row_start..row_start.wrapping_add(stride)];
         for x in 0..width {
             for channel in 0..channels {
-                let sample_index = x * channels + channel;
+                let sample_index = x.wrapping_mul(channels).wrapping_add(channel);
                 let value = match depth {
                     1 | 2 | 4 => {
-                        let bit = sample_index * usize::from(depth);
-                        let shift = 8 - usize::from(depth) - bit % 8;
-                        u16::from((row[bit / 8] >> shift) & ((1u8 << depth) - 1))
+                        let bit = sample_index.wrapping_mul(usize::from(depth));
+                        let shift = 8_usize
+                            .saturating_sub(usize::from(depth))
+                            .saturating_sub(bit % 8);
+                        let mask = 1_u8.wrapping_shl(depth.into()).wrapping_sub(1);
+                        u16::from(row[bit / 8].wrapping_shr(shift.to_le_bytes()[0].into()) & mask)
                     }
                     8 => u16::from(row[sample_index]),
                     _ => {
                         debug_assert_eq!(depth, 16);
-                        let offset = sample_index * 2;
-                        u16::from_be_bytes([row[offset], row[offset + 1]])
+                        let offset = sample_index.wrapping_mul(2);
+                        u16::from_be_bytes([row[offset], row[offset.wrapping_add(1)]])
                     }
                 };
                 store(x, y, channel, value);
@@ -278,38 +323,61 @@ fn unpack_into<F>(
     }
 }
 
-fn build_image(
+struct PngImageSpec {
     width: u32,
     height: u32,
     png_color: u8,
     depth: u8,
     color: ColorType,
+}
+
+fn build_image(
+    spec: PngImageSpec,
     samples: &[u16],
     palette_rgb: Option<Vec<u8>>,
     mut palette_alpha: Vec<u8>,
 ) -> Option<DecodedImage> {
+    let PngImageSpec {
+        width,
+        height,
+        png_color,
+        depth,
+        color,
+    } = spec;
     let pixels = if png_color == 0 && depth == 1 {
         pack_one_bit(samples, width as usize, height as usize)
     } else if png_color == 0 && depth < 8 {
-        let maximum = (1u16 << depth) - 1;
+        let maximum = 1_u16.wrapping_shl(depth.into()).wrapping_sub(1);
         samples
             .iter()
-            .map(|&sample| ((sample * 255) / maximum) as u8)
+            .map(|&sample| {
+                sample
+                    .wrapping_mul(255)
+                    .checked_div(maximum)
+                    .unwrap_or_default()
+                    .to_le_bytes()[0]
+            })
             .collect()
     } else if png_color == 4 && depth == 16 {
-        let mut bytes = Vec::with_capacity(samples.len() * 2);
+        let mut bytes = Vec::with_capacity(samples.len().wrapping_mul(2));
         for pair in samples.chunks_exact(2) {
-            let luminance = (pair[0] >> 8) as u8;
-            let alpha = (pair[1] >> 8) as u8;
+            let luminance = pair[0].to_be_bytes()[0];
+            let alpha = pair[1].to_be_bytes()[0];
             bytes.extend_from_slice(&[luminance, luminance, luminance, alpha]);
         }
         bytes
     } else if depth == 16 && matches!(png_color, 2 | 6) {
-        samples.iter().map(|&sample| (sample >> 8) as u8).collect()
+        samples
+            .iter()
+            .map(|&sample| sample.to_be_bytes()[0])
+            .collect()
     } else if png_color == 3 || depth == 8 {
-        samples.iter().map(|&sample| sample as u8).collect()
+        samples
+            .iter()
+            .map(|&sample| sample.to_le_bytes()[0])
+            .collect()
     } else {
-        let mut bytes = Vec::with_capacity(samples.len() * 2);
+        let mut bytes = Vec::with_capacity(samples.len().wrapping_mul(2));
         for &sample in samples {
             bytes.extend_from_slice(&sample.to_le_bytes());
         }
@@ -321,16 +389,16 @@ fn build_image(
         _ => color.into(),
     };
     let mut image = DecodedImage::with_mode(width, height, pixels, mode);
-    if png_color == 3 {
-        if let Some(mut rgb) = palette_rgb {
-            let entries = rgb.len() / 3;
-            if entries != 0 {
-                rgb.truncate(entries * 3);
-                if !palette_alpha.is_empty() {
-                    palette_alpha.truncate(entries);
-                }
-                image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
+    if png_color == 3
+        && let Some(mut rgb) = palette_rgb
+    {
+        let entries = rgb.len() / 3;
+        if entries != 0 {
+            rgb.truncate(entries.wrapping_mul(3));
+            if !palette_alpha.is_empty() {
+                palette_alpha.truncate(entries);
             }
+            image = image.with_palette(ImagePalette::new(rgb, palette_alpha).ok()?);
         }
     }
     Some(image)
@@ -338,11 +406,13 @@ fn build_image(
 
 fn pack_one_bit(samples: &[u16], width: usize, height: usize) -> Vec<u8> {
     let stride = width.div_ceil(8);
-    let mut output = vec![0u8; stride * height];
+    let mut output = vec![0u8; stride.wrapping_mul(height)];
     for y in 0..height {
         for x in 0..width {
-            if samples[y * width + x] != 0 {
-                output[y * stride + x / 8] |= 1 << (7 - x % 8);
+            if samples[y.wrapping_mul(width).wrapping_add(x)] != 0 {
+                let output_index = y.wrapping_mul(stride).wrapping_add(x / 8);
+                let shift = 7_usize.saturating_sub(x % 8);
+                output[output_index] |= 1_u8.wrapping_shl(shift.to_le_bytes()[0].into());
             }
         }
     }
@@ -361,7 +431,7 @@ fn pass_size(full: usize, start: usize, step: usize) -> usize {
     if full <= start {
         0
     } else {
-        (full - start).div_ceil(step)
+        full.saturating_sub(start).div_ceil(step)
     }
 }
 
@@ -369,16 +439,16 @@ fn paeth(left: u8, above: u8, upper_left: u8) -> u8 {
     let left = i32::from(left);
     let above = i32::from(above);
     let upper_left = i32::from(upper_left);
-    let prediction = left + above - upper_left;
-    let left_distance = (prediction - left).unsigned_abs();
-    let above_distance = (prediction - above).unsigned_abs();
-    let diagonal_distance = (prediction - upper_left).unsigned_abs();
+    let prediction = left.wrapping_add(above).wrapping_sub(upper_left);
+    let left_distance = prediction.wrapping_sub(left).unsigned_abs();
+    let above_distance = prediction.wrapping_sub(above).unsigned_abs();
+    let diagonal_distance = prediction.wrapping_sub(upper_left).unsigned_abs();
     if left_distance <= above_distance && left_distance <= diagonal_distance {
-        left as u8
+        left.to_le_bytes()[0]
     } else if above_distance <= diagonal_distance {
-        above as u8
+        above.to_le_bytes()[0]
     } else {
-        upper_left as u8
+        upper_left.to_le_bytes()[0]
     }
 }
 
@@ -401,7 +471,7 @@ fn chunk_payload_with_crc<'a>(
 ) -> Option<(&'a [u8], usize)> {
     let end = start.checked_add(length)?;
     let payload = data.get(start..end)?;
-    let crc_end = end + 4;
+    let crc_end = end.saturating_add(4);
     let expected_bytes = data.get(end..crc_end)?;
     let expected = u32::from_be_bytes([
         expected_bytes[0],
@@ -441,16 +511,20 @@ impl<'a> Iterator for Chunks<'a> {
             return None;
         }
         let result = (|| {
-            let length_bytes = self.data.get(self.position..self.position + 4)?;
+            let length_bytes = self
+                .data
+                .get(self.position..self.position.saturating_add(4))?;
             let length = u32::from_be_bytes([
                 length_bytes[0],
                 length_bytes[1],
                 length_bytes[2],
                 length_bytes[3],
             ]) as usize;
-            let kind_bytes = self.data.get(self.position + 4..self.position + 8)?;
+            let kind_bytes = self
+                .data
+                .get(self.position.saturating_add(4)..self.position.saturating_add(8))?;
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
-            let start = self.position + 8;
+            let start = self.position.saturating_add(8);
             let (payload, crc_end) = chunk_payload_with_crc(self.data, &kind, start, length)?;
             self.position = crc_end;
             Some(Chunk {
@@ -467,6 +541,19 @@ impl<'a> Iterator for Chunks<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    fn png_chunk(kind: [u8; 4], payload: &[u8]) -> Vec<u8> {
+        let mut data = PNG_SIGNATURE.to_vec();
+        data.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+        data.extend_from_slice(&kind);
+        data.extend_from_slice(payload);
+        data.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
+        data
+    }
+
+    let _ = verify(b"");
+    let _ = verify(PNG_SIGNATURE);
+    let _ = verify(&png_chunk(*b"NOPE", &[0; 13]));
+    let _ = verify(&png_chunk(*b"IHDR", &[0; 12]));
     let malformed = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x01tEXtx";
     let mut chunks = Chunks::new(malformed).expect("coverage PNG signature should parse");
 

@@ -50,7 +50,7 @@ impl<'a> BitReader<'a> {
                 return;
             }
             let byte = self.data[self.pos];
-            self.pos += 1;
+            self.pos = self.pos.saturating_add(1);
 
             if byte == 0xFF {
                 // IJG: loop to discard padding 0xFF bytes
@@ -63,13 +63,13 @@ impl<'a> BitReader<'a> {
                     let next = self.data[self.pos];
                     if next == 0x00 {
                         // FF 00 → data byte 0xFF
-                        self.pos += 1;
-                        self.buf = (self.buf << 8) | 0xFF;
-                        self.bits += 8;
+                        self.pos = self.pos.saturating_add(1);
+                        self.buf = self.buf.wrapping_shl(8) | 0xFF;
+                        self.bits = self.bits.saturating_add(8);
                         break;
                     } else if next == 0xFF {
                         // Padding 0xFF — skip it, continue looking
-                        self.pos += 1;
+                        self.pos = self.pos.saturating_add(1);
                         // continue the inner loop
                     } else {
                         // Other marker byte — end of entropy data
@@ -79,16 +79,16 @@ impl<'a> BitReader<'a> {
                     }
                 }
             } else {
-                self.buf = (self.buf << 8) | byte as u64;
-                self.bits += 8;
+                self.buf = self.buf.wrapping_shl(8) | u64::from(byte);
+                self.bits = self.bits.saturating_add(8);
             }
         }
     }
 
     fn pad_with_zero_bits_if_needed(&mut self, nbits: u32) {
         if nbits > self.bits {
-            let missing = MIN_GET_BITS - self.bits;
-            self.buf <<= missing;
+            let missing = MIN_GET_BITS.saturating_sub(self.bits);
+            self.buf = self.buf.wrapping_shl(missing);
             self.bits = MIN_GET_BITS;
             self.insufficient_data = true;
         }
@@ -117,22 +117,24 @@ impl<'a> BitReader<'a> {
     #[inline]
     pub(super) fn peek_bits(&self, n: u32) -> u32 {
         debug_assert!(n > 0 && n <= self.bits);
-        ((self.buf >> (self.bits - n)) as u32) & ((1u32 << n) - 1)
+        let shifted = self.buf.wrapping_shr(self.bits.saturating_sub(n));
+        low_u32(shifted) & u32::MAX.wrapping_shr(u32::BITS.saturating_sub(n))
     }
 
     /// GET_BITS(n): consume and return top n bits. Caller must ensure n ≤ bits.
     #[inline]
     pub(super) fn get_bits(&mut self, n: u32) -> u32 {
         debug_assert!(n <= self.bits && n > 0);
-        self.bits -= n;
-        ((self.buf >> self.bits) as u32) & ((1u32 << n) - 1)
+        self.bits = self.bits.saturating_sub(n);
+        let shifted = self.buf.wrapping_shr(self.bits);
+        low_u32(shifted) & u32::MAX.wrapping_shr(u32::BITS.saturating_sub(n))
     }
 
     /// DROP_BITS(n): discard top n bits. Caller must ensure n ≤ bits.
     #[inline]
     pub(super) fn drop_bits(&mut self, n: u32) {
         debug_assert!(n <= self.bits);
-        self.bits -= n;
+        self.bits = self.bits.saturating_sub(n);
     }
 
     /// High-level "read n bits" used by non-Huffman callers (DC refinement, sign bits).
@@ -144,6 +146,11 @@ impl<'a> BitReader<'a> {
         }
         Some(self.get_bits(n))
     }
+}
+
+fn low_u32(value: u64) -> u32 {
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
 
 #[cfg(coverage)]

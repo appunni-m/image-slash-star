@@ -170,24 +170,31 @@ fn thumbnail_dimensions(
     debug_assert!((1..=256).contains(&bound_height));
     let source_width = u64::from(source_width);
     let source_height = u64::from(source_height);
-    let bound_width = bound_width as u64;
-    let bound_height = bound_height as u64;
-    let (width, height) = if source_width * bound_height > source_height * bound_width {
-        let height = (source_height * bound_width + source_width / 2) / source_width;
-        (bound_width, height.max(1))
-    } else {
-        let width = (source_width * bound_height + source_height / 2) / source_height;
-        (width.max(1), bound_height)
-    };
-    (width as usize, height as usize)
+    let bound_width = u64::from(low_u16(bound_width));
+    let bound_height = u64::from(low_u16(bound_height));
+    let (width, height) =
+        if source_width.saturating_mul(bound_height) > source_height.saturating_mul(bound_width) {
+            let height = source_height
+                .saturating_mul(bound_width)
+                .saturating_add(source_width.div_euclid(2))
+                .div_euclid(source_width);
+            (bound_width, height.max(1))
+        } else {
+            let width = source_width
+                .saturating_mul(bound_height)
+                .saturating_add(source_height.div_euclid(2))
+                .div_euclid(source_height);
+            (width.max(1), bound_height)
+        };
+    (bounded_usize_u64(width), bounded_usize_u64(height))
 }
 
 fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> Option<Vec<u8>> {
     debug_assert_eq!(sizes.len(), frames.len());
 
-    let directory_bytes = sizes.len() * 16;
-    let mut offset = 6usize + directory_bytes;
-    let total = offset + frames.iter().map(Vec::len).sum::<usize>();
+    let directory_bytes = sizes.len().saturating_mul(16);
+    let mut offset = 6usize.saturating_add(directory_bytes);
+    let total = offset.saturating_add(frames.iter().map(Vec::len).sum::<usize>());
     let mut output = Vec::with_capacity(total);
     output.extend_from_slice(&[0, 0, 1, 0]);
     output.extend_from_slice(&u16::try_from(sizes.len()).ok()?.to_le_bytes());
@@ -198,9 +205,9 @@ fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> 
         output.extend_from_slice(&bits.to_le_bytes());
         // Public callers build entries from `ico_sizes()`, which caps every
         // generated PNG/BMP frame at 256x256 pixels.
-        output.extend_from_slice(&(frame.len() as u32).to_le_bytes());
-        output.extend_from_slice(&(offset as u32).to_le_bytes());
-        offset += frame.len();
+        output.extend_from_slice(&low_u32(frame.len()).to_le_bytes());
+        output.extend_from_slice(&low_u32(offset).to_le_bytes());
+        offset = offset.saturating_add(frame.len());
     }
     for frame in frames {
         output.extend_from_slice(frame);
@@ -210,7 +217,11 @@ fn encode_directory(sizes: &[(usize, usize)], frames: &[Vec<u8>], bits: u16) -> 
 
 fn directory_dimension(value: usize) -> u8 {
     debug_assert!(value <= 256);
-    if value == 256 { 0 } else { value as u8 }
+    if value == 256 {
+        0
+    } else {
+        value.to_le_bytes()[0]
+    }
 }
 
 fn encode_bmp_entries(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
@@ -253,8 +264,14 @@ fn resize_lanczos(img: &DecodedImage, width: usize, height: usize) -> Option<Dec
         for pixel in pixels.chunks_exact_mut(4) {
             let alpha = u32::from(pixel[3]);
             for channel in &mut pixel[..3] {
-                let product = u32::from(*channel) * alpha + 128;
-                *channel = (((product >> 8) + product) >> 8) as u8;
+                let product = u32::from(*channel)
+                    .saturating_mul(alpha)
+                    .saturating_add(128);
+                *channel = product
+                    .wrapping_shr(8)
+                    .saturating_add(product)
+                    .wrapping_shr(8)
+                    .to_le_bytes()[0];
             }
         }
     }
@@ -266,14 +283,18 @@ fn resize_lanczos(img: &DecodedImage, width: usize, height: usize) -> Option<Dec
             let alpha = u32::from(pixel[3]);
             if alpha != 0 && alpha != 255 {
                 for channel in &mut pixel[..3] {
-                    *channel = (255 * u32::from(*channel) / alpha).min(255) as u8;
+                    *channel = 255u32
+                        .saturating_mul(u32::from(*channel))
+                        .div_euclid(alpha)
+                        .min(255)
+                        .to_le_bytes()[0];
                 }
             }
         }
     }
     Some(DecodedImage::new(
-        width as u32,
-        height as u32,
+        low_u32(width),
+        low_u32(height),
         resized,
         img.color,
     ))
@@ -294,28 +315,43 @@ fn resample_axis(
     } else {
         (width, output_size)
     };
-    let mut output = vec![0; output_width * output_height * channels];
+    let mut output = vec![
+        0;
+        output_width
+            .saturating_mul(output_height)
+            .saturating_mul(channels)
+    ];
     for y in 0..output_height {
         for x in 0..output_width {
             let coefficient = &coefficients[if horizontal { x } else { y }];
             for channel in 0..channels {
-                let mut sum = 1i64 << 21;
+                let mut sum = 1i64.wrapping_shl(21);
                 for (index, &weight) in coefficient.weights.iter().enumerate() {
                     let source_x = if horizontal {
-                        coefficient.start + index
+                        coefficient.start.saturating_add(index)
                     } else {
                         x
                     };
                     let source_y = if horizontal {
                         y
                     } else {
-                        coefficient.start + index
+                        coefficient.start.saturating_add(index)
                     };
-                    let source = (source_y * width + source_x) * channels + channel;
-                    sum += i64::from(pixels[source]) * i64::from(weight);
+                    let source = source_y
+                        .saturating_mul(width)
+                        .saturating_add(source_x)
+                        .saturating_mul(channels)
+                        .saturating_add(channel);
+                    sum = sum.saturating_add(
+                        i64::from(pixels[source]).saturating_mul(i64::from(weight)),
+                    );
                 }
-                let value = (sum >> 22).clamp(0, 255) as u8;
-                let target = (y * output_width + x) * channels + channel;
+                let value = sum.wrapping_shr(22).clamp(0, 255).to_le_bytes()[0];
+                let target = y
+                    .saturating_mul(output_width)
+                    .saturating_add(x)
+                    .saturating_mul(channels)
+                    .saturating_add(channel);
                 output[target] = value;
             }
         }
@@ -335,10 +371,10 @@ fn lanczos_coefficients(input: usize, output: usize) -> Vec<Coefficients> {
     let mut coefficients = Vec::with_capacity(output);
     for out in 0..output {
         let center = (out as f64 + 0.5) * scale;
-        let start = ((center - support + 0.5) as isize).max(0) as usize;
-        let end = ((center + support + 0.5) as usize).min(input);
+        let start = trunc_nonnegative_usize((center - support + 0.5).max(0.0));
+        let end = trunc_nonnegative_usize(center + support + 0.5).min(input);
         debug_assert!(start <= end);
-        let mut weights = Vec::with_capacity(end - start);
+        let mut weights = Vec::with_capacity(end.saturating_sub(start));
         let mut total = 0.0;
         for source in start..end {
             let distance = (source as f64 - center + 0.5) / filter_scale;
@@ -351,9 +387,9 @@ fn lanczos_coefficients(input: usize, output: usize) -> Vec<Coefficients> {
             .map(|weight| {
                 let normalized = weight / total * ((1u64 << 22) as f64);
                 if normalized < 0.0 {
-                    (normalized - 0.5) as i32
+                    rounded_weight_i32(normalized - 0.5)
                 } else {
-                    (normalized + 0.5) as i32
+                    rounded_weight_i32(normalized + 0.5)
                 }
             })
             .collect();
@@ -377,25 +413,83 @@ fn sinc(mut value: f64) -> f64 {
     value.sin() / value
 }
 
+// Rust has no checked float-to-integer conversion in the standard library.
+// ICO dimensions are capped at 256 and Lanczos support stays below 1024, so
+// this conversion is range-proven immediately before the cast.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn trunc_nonnegative_usize(value: f64) -> usize {
+    value as usize
+}
+
+// The normalized Lanczos coefficient uses 22 fractional bits. Its bounded
+// three-lobe kernel is many orders of magnitude inside i32's range; the cast
+// intentionally truncates after the explicit half-away-from-zero adjustment.
+#[allow(clippy::cast_possible_truncation)]
+fn rounded_weight_i32(value: f64) -> i32 {
+    value as i32
+}
+
+fn bounded_usize_u32(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn bounded_usize_u64(value: u64) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        let [a, b, c, d, ..] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d])
+    }
+}
+
+fn low_u16(value: usize) -> u16 {
+    let [a, b, ..] = value.to_le_bytes();
+    u16::from_le_bytes([a, b])
+}
+
+fn low_u32(value: usize) -> u32 {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d, ..] = value.to_le_bytes();
+        u32::from_le_bytes([a, b, c, d])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        u32::from_le_bytes(value.to_le_bytes())
+    }
+}
+
 fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    let width = img.width as usize;
-    let height = img.height as usize;
+    let width = bounded_usize_u32(img.width);
+    let height = bounded_usize_u32(img.height);
     let (bits, row_bytes, pixels) = match img.color {
         ColorType::Rgb8 => {
-            let source_row_bytes = width * 3;
+            let source_row_bytes = width.saturating_mul(3);
             let row_bytes = source_row_bytes.next_multiple_of(4);
-            let mut pixels = Vec::with_capacity(row_bytes * height);
+            let mut pixels = Vec::with_capacity(row_bytes.saturating_mul(height));
             for row in img.pixels.chunks_exact(source_row_bytes).rev() {
                 for pixel in row.chunks_exact(3) {
                     pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
                 }
-                pixels.resize(pixels.len() + row_bytes - source_row_bytes, 0);
+                let padding = row_bytes.saturating_sub(source_row_bytes);
+                pixels.resize(pixels.len().saturating_add(padding), 0);
             }
             (24u16, row_bytes, pixels)
         }
         ColorType::Rgba8 => {
-            let row_bytes = width * 4;
-            let mut pixels = Vec::with_capacity(row_bytes * height);
+            let row_bytes = width.saturating_mul(4);
+            let mut pixels = Vec::with_capacity(row_bytes.saturating_mul(height));
             for row in img.pixels.chunks_exact(row_bytes).rev() {
                 for pixel in row.chunks_exact(4) {
                     pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
@@ -405,7 +499,7 @@ fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<V
         }
         _ => return None,
     };
-    let pixel_bytes = row_bytes * height;
+    let pixel_bytes = row_bytes.saturating_mul(height);
     // Each color arm emits exactly one validated source row at `row_bytes`.
     debug_assert_eq!(pixels.len(), pixel_bytes);
 
@@ -424,9 +518,11 @@ fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<V
         mask_row_bytes.checked_mul(mask_dimensions.1)?
     };
     // Public BMP-backed ICO entries are generated only for <=256px sizes.
-    let dib_bytes = 40usize + pixel_bytes + mask_bytes;
+    let dib_bytes = 40usize
+        .saturating_add(pixel_bytes)
+        .saturating_add(mask_bytes);
     let dib_size = u32::try_from(dib_bytes).ok()?;
-    let mut output = Vec::with_capacity(22usize + dib_bytes);
+    let mut output = Vec::with_capacity(22usize.saturating_add(dib_bytes));
     output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);
     output.push(directory_dimension(width));
     output.push(directory_dimension(height));
@@ -437,17 +533,17 @@ fn encode_bmp_single_entry(img: &DecodedImage, opts: &EncodeOptions) -> Option<V
 
     output.extend_from_slice(&40u32.to_le_bytes());
     output.extend_from_slice(&img.width.to_le_bytes());
-    output.extend_from_slice(&(img.height * 2).to_le_bytes());
+    output.extend_from_slice(&img.height.saturating_mul(2).to_le_bytes());
     output.extend_from_slice(&1u16.to_le_bytes());
     output.extend_from_slice(&bits.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
-    output.extend_from_slice(&(pixel_bytes as u32).to_le_bytes());
+    output.extend_from_slice(&low_u32(pixel_bytes).to_le_bytes());
     output.extend_from_slice(&3_780i32.to_le_bytes());
     output.extend_from_slice(&3_780i32.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
     output.extend_from_slice(&pixels);
-    output.resize(output.len() + mask_bytes, 0);
+    output.resize(output.len().saturating_add(mask_bytes), 0);
     Some(output)
 }
 

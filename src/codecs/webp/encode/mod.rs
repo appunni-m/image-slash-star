@@ -27,7 +27,7 @@ fn decode_hex(value: Option<&String>) -> Option<Option<Vec<u8>>> {
         .step_by(2)
         .map(|index| {
             value
-                .get(index..index + 2)
+                .get(index..index.saturating_add(2))
                 .and_then(|byte| u8::from_str_radix(byte, 16).ok())
         })
         .collect::<Option<Vec<_>>>()?;
@@ -36,9 +36,9 @@ fn decode_hex(value: Option<&String>) -> Option<Option<Vec<u8>>> {
 
 fn write_chunk(output: &mut Vec<u8>, name: &[u8; 4], payload: &[u8]) {
     output.extend_from_slice(name);
-    output.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+    output.extend_from_slice(&low_u32(payload.len()).to_le_bytes());
     output.extend_from_slice(payload);
-    if payload.len() % 2 != 0 {
+    if !payload.len().is_multiple_of(2) {
         output.push(0);
     }
 }
@@ -58,44 +58,45 @@ fn attach_metadata(
     let mut chunks = Vec::new();
     let mut offset = 12usize;
     let mut flags = 0u8;
-    while offset + 8 <= encoded.len() {
+    while offset.saturating_add(8) <= encoded.len() {
         let name = [
             encoded[offset],
-            encoded[offset + 1],
-            encoded[offset + 2],
-            encoded[offset + 3],
+            encoded[offset.saturating_add(1)],
+            encoded[offset.saturating_add(2)],
+            encoded[offset.saturating_add(3)],
         ];
-        let length = u32::from_le_bytes([
-            encoded[offset + 4],
-            encoded[offset + 5],
-            encoded[offset + 6],
-            encoded[offset + 7],
-        ]) as usize;
-        let end = offset + 8 + length;
-        let payload = &encoded[offset + 8..end];
+        let length = bounded_usize(u32::from_le_bytes([
+            encoded[offset.saturating_add(4)],
+            encoded[offset.saturating_add(5)],
+            encoded[offset.saturating_add(6)],
+            encoded[offset.saturating_add(7)],
+        ]));
+        let payload_start = offset.saturating_add(8);
+        let end = payload_start.saturating_add(length);
+        let payload = &encoded[payload_start..end];
         if &name == b"VP8X" {
-            flags |= encoded[offset + 8];
+            flags |= encoded[payload_start];
         } else {
             chunks.push((name, payload.to_vec()));
         }
-        offset = end + (length & 1);
+        offset = end.saturating_add(length & 1);
     }
     if icc.is_some() {
-        flags |= 1 << 5;
+        flags |= 1u8.wrapping_shl(5);
     }
     if exif.is_some() {
-        flags |= 1 << 3;
+        flags |= 1u8.wrapping_shl(3);
     }
     if xmp.is_some() {
-        flags |= 1 << 2;
+        flags |= 1u8.wrapping_shl(2);
     }
     let mut output = Vec::new();
     output.extend_from_slice(b"RIFF");
     output.extend_from_slice(&[0; 4]);
     output.extend_from_slice(b"WEBP");
     let mut vp8x = vec![flags, 0, 0, 0];
-    vp8x.extend_from_slice(&(width - 1).to_le_bytes()[..3]);
-    vp8x.extend_from_slice(&(height - 1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&width.saturating_sub(1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&height.saturating_sub(1).to_le_bytes()[..3]);
     write_chunk(&mut output, b"VP8X", &vp8x);
     if let Some(payload) = icc {
         write_chunk(&mut output, b"ICCP", &payload);
@@ -121,7 +122,7 @@ fn attach_metadata(
     };
     #[cfg(not(coverage))]
     let output_len = output.len();
-    let riff_size = u32::try_from(output_len - 8).ok()?;
+    let riff_size = u32::try_from(output_len.saturating_sub(8)).ok()?;
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
     Some(output)
 }
@@ -210,13 +211,40 @@ fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
     pixels
         .chunks_exact(4)
         .flat_map(|pixel| {
-            let black = u16::from(255 - pixel[3]);
+            let black = u16::from(255u8.saturating_sub(pixel[3]));
             std::array::from_fn::<_, 3, _>(|channel| {
-                let ink = u16::from(255 - pixel[channel]);
-                ((ink * black + 127) / 255) as u8
+                let ink = u16::from(255u8.saturating_sub(pixel[channel]));
+                ink.saturating_mul(black)
+                    .saturating_add(127)
+                    .div_euclid(255)
+                    .to_le_bytes()[0]
             })
         })
         .collect()
+}
+
+fn bounded_usize(value: u32) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d] = value.to_le_bytes();
+        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        usize::from_le_bytes(value.to_le_bytes())
+    }
+}
+
+fn low_u32(value: usize) -> u32 {
+    #[cfg(target_pointer_width = "64")]
+    {
+        let [a, b, c, d, ..] = value.to_le_bytes();
+        u32::from_le_bytes([a, b, c, d])
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        u32::from_le_bytes(value.to_le_bytes())
+    }
 }
 
 #[cfg(coverage)]

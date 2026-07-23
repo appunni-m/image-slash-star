@@ -84,15 +84,16 @@ impl EncodedImage {
             .map_err(Clone::clone)
     }
 
-    /// Fully validates the snapshot without populating the ordinary cache.
+    /// Applies the format-specific Pillow verification contract to the snapshot.
     ///
-    /// This deliberately performs an independent decode so callers can verify
-    /// input without changing observable lazy-load state.
+    /// Verification executes independently from ordinary materialization, so
+    /// it does not populate or change the shared decode cache.
     ///
     /// # Errors
     ///
-    /// Returns the same structured decoder errors as [`Self::decode`].
+    /// Returns a structured error when the pinned Pillow oracle's
+    /// format-specific verification contract rejects the snapshot.
     pub fn verify(&self) -> ImageResult<()> {
-        crate::decode(&self.inner.bytes).map(|_| ())
+        crate::codecs::verify_format(&self.inner.bytes, self.format())
     }
 }

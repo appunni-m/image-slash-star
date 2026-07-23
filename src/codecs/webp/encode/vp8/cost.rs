@@ -150,7 +150,11 @@ const LEVEL_FIXED_COSTS: [u16; 2048] = [
 ];
 
 pub(super) fn bit_cost(bit: bool, probability: u8) -> u32 {
-    let index = if bit { 255 - probability } else { probability };
+    let index = if bit {
+        255_u8.wrapping_sub(probability)
+    } else {
+        probability
+    };
     u32::from(ENTROPY_COST[usize::from(index)])
 }
 
@@ -164,26 +168,28 @@ pub(super) fn level_cost(level: usize, probabilities: &[u8; 11], context: usize)
         0
     };
     if level == 0 {
-        return cost + bit_cost(false, probabilities[1]);
+        return cost.wrapping_add(bit_cost(false, probabilities[1]));
     }
-    cost += bit_cost(true, probabilities[1]) + u32::from(LEVEL_FIXED_COSTS[level]);
+    cost = cost
+        .wrapping_add(bit_cost(true, probabilities[1]))
+        .wrapping_add(u32::from(LEVEL_FIXED_COSTS[level]));
     if level == 1 {
-        return cost + bit_cost(false, probabilities[2]);
+        return cost.wrapping_add(bit_cost(false, probabilities[2]));
     }
-    cost += bit_cost(true, probabilities[2]);
+    cost = cost.wrapping_add(bit_cost(true, probabilities[2]));
     if level <= 4 {
-        cost += bit_cost(false, probabilities[3]);
-        cost += bit_cost(level != 2, probabilities[4]);
+        cost = cost.wrapping_add(bit_cost(false, probabilities[3]));
+        cost = cost.wrapping_add(bit_cost(level != 2, probabilities[4]));
         if level != 2 {
-            cost += bit_cost(level == 4, probabilities[5]);
+            cost = cost.wrapping_add(bit_cost(level == 4, probabilities[5]));
         }
     } else {
-        cost += bit_cost(true, probabilities[3]);
+        cost = cost.wrapping_add(bit_cost(true, probabilities[3]));
         if level <= 10 {
-            cost += bit_cost(false, probabilities[6]);
-            cost += bit_cost(level > 6, probabilities[7]);
+            cost = cost.wrapping_add(bit_cost(false, probabilities[6]));
+            cost = cost.wrapping_add(bit_cost(level > 6, probabilities[7]));
         } else {
-            cost += bit_cost(true, probabilities[6]);
+            cost = cost.wrapping_add(bit_cost(true, probabilities[6]));
             let (node8, node9_or_10) = if level < 19 {
                 (false, false)
             } else if level < 35 {
@@ -193,84 +199,104 @@ pub(super) fn level_cost(level: usize, probabilities: &[u8; 11], context: usize)
             } else {
                 (true, true)
             };
-            cost += bit_cost(node8, probabilities[8]);
-            cost += bit_cost(node9_or_10, probabilities[if node8 { 10 } else { 9 }]);
+            cost = cost.wrapping_add(bit_cost(node8, probabilities[8]));
+            cost = cost.wrapping_add(bit_cost(
+                node9_or_10,
+                probabilities[if node8 { 10 } else { 9 }],
+            ));
         }
     }
     cost
 }
 
 pub(super) fn squared_error_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 {
-    left.iter()
-        .zip(right)
-        .map(|(&left, &right)| {
-            let difference = i32::from(left) - i32::from(right);
-            (difference * difference) as u32
-        })
-        .sum()
+    left.iter().zip(right).fold(0_u32, |sum, (&left, &right)| {
+        let difference = i32::from(left).wrapping_sub(i32::from(right));
+        sum.wrapping_add(difference.wrapping_mul(difference).cast_unsigned())
+    })
 }
 
 pub(super) fn squared_error_16x16(left: &[u8; 256], right: &[u8; 256]) -> u32 {
-    left.iter()
-        .zip(right)
-        .map(|(&left, &right)| {
-            let difference = i32::from(left) - i32::from(right);
-            (difference * difference) as u32
-        })
-        .sum()
+    left.iter().zip(right).fold(0_u32, |sum, (&left, &right)| {
+        let difference = i32::from(left).wrapping_sub(i32::from(right));
+        sum.wrapping_add(difference.wrapping_mul(difference).cast_unsigned())
+    })
 }
 
 fn weighted_transform(block: &[u8; 16]) -> i32 {
     const WEIGHTS: [i32; 16] = [38, 32, 20, 9, 32, 28, 17, 7, 20, 17, 10, 4, 9, 7, 4, 2];
     let mut temporary = [0i32; 16];
-    for row in 0..4 {
-        let offset = row * 4;
-        let a0 = i32::from(block[offset]) + i32::from(block[offset + 2]);
-        let a1 = i32::from(block[offset + 1]) + i32::from(block[offset + 3]);
-        let a2 = i32::from(block[offset + 1]) - i32::from(block[offset + 3]);
-        let a3 = i32::from(block[offset]) - i32::from(block[offset + 2]);
-        temporary[offset] = a0 + a1;
-        temporary[offset + 1] = a3 + a2;
-        temporary[offset + 2] = a3 - a2;
-        temporary[offset + 3] = a0 - a1;
+    for row in 0_usize..4 {
+        let offset = row.wrapping_mul(4);
+        let a0 = i32::from(block[offset]).wrapping_add(i32::from(block[offset.wrapping_add(2)]));
+        let a1 = i32::from(block[offset.wrapping_add(1)])
+            .wrapping_add(i32::from(block[offset.wrapping_add(3)]));
+        let a2 = i32::from(block[offset.wrapping_add(1)])
+            .wrapping_sub(i32::from(block[offset.wrapping_add(3)]));
+        let a3 = i32::from(block[offset]).wrapping_sub(i32::from(block[offset.wrapping_add(2)]));
+        temporary[offset] = a0.wrapping_add(a1);
+        temporary[offset.wrapping_add(1)] = a3.wrapping_add(a2);
+        temporary[offset.wrapping_add(2)] = a3.wrapping_sub(a2);
+        temporary[offset.wrapping_add(3)] = a0.wrapping_sub(a1);
     }
-    let mut sum = 0;
-    for column in 0..4 {
-        let a0 = temporary[column] + temporary[8 + column];
-        let a1 = temporary[4 + column] + temporary[12 + column];
-        let a2 = temporary[4 + column] - temporary[12 + column];
-        let a3 = temporary[column] - temporary[8 + column];
-        let transformed = [a0 + a1, a3 + a2, a3 - a2, a0 - a1];
-        for row in 0..4 {
-            sum += WEIGHTS[row * 4 + column] * transformed[row].abs();
+    let mut sum = 0_i32;
+    for column in 0_usize..4 {
+        let a0 = temporary[column].wrapping_add(temporary[8_usize.wrapping_add(column)]);
+        let a1 = temporary[4_usize.wrapping_add(column)]
+            .wrapping_add(temporary[12_usize.wrapping_add(column)]);
+        let a2 = temporary[4_usize.wrapping_add(column)]
+            .wrapping_sub(temporary[12_usize.wrapping_add(column)]);
+        let a3 = temporary[column].wrapping_sub(temporary[8_usize.wrapping_add(column)]);
+        let transformed = [
+            a0.wrapping_add(a1),
+            a3.wrapping_add(a2),
+            a3.wrapping_sub(a2),
+            a0.wrapping_sub(a1),
+        ];
+        for (row, &value) in transformed.iter().enumerate() {
+            let weight_index = row.wrapping_mul(4).wrapping_add(column);
+            sum = sum.wrapping_add(WEIGHTS[weight_index].wrapping_mul(value.abs()));
         }
     }
     sum
 }
 
 pub(super) fn spectral_distortion_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 {
-    ((weighted_transform(left) - weighted_transform(right)).unsigned_abs()) >> 5
+    weighted_transform(left)
+        .wrapping_sub(weighted_transform(right))
+        .unsigned_abs()
+        .wrapping_shr(5)
 }
 
 pub(super) fn spectral_distortion_16x16(left: &[u8; 256], right: &[u8; 256]) -> u32 {
-    let mut distortion = 0;
-    for block_y in 0..4 {
-        for block_x in 0..4 {
+    let mut distortion = 0_u32;
+    for block_y in 0_usize..4 {
+        for block_x in 0_usize..4 {
             let mut left_block = [0; 16];
             let mut right_block = [0; 16];
-            for row in 0..4 {
-                let offset = (block_y * 4 + row) * 16 + block_x * 4;
-                left_block[row * 4..row * 4 + 4].copy_from_slice(&left[offset..offset + 4]);
-                right_block[row * 4..row * 4 + 4].copy_from_slice(&right[offset..offset + 4]);
+            for row in 0_usize..4 {
+                let offset = block_y
+                    .wrapping_mul(4)
+                    .wrapping_add(row)
+                    .wrapping_mul(16)
+                    .wrapping_add(block_x.wrapping_mul(4));
+                let block_offset = row.wrapping_mul(4);
+                left_block[block_offset..block_offset.wrapping_add(4)]
+                    .copy_from_slice(&left[offset..offset.wrapping_add(4)]);
+                right_block[block_offset..block_offset.wrapping_add(4)]
+                    .copy_from_slice(&right[offset..offset.wrapping_add(4)]);
             }
-            distortion += spectral_distortion_4x4(&left_block, &right_block);
+            distortion =
+                distortion.wrapping_add(spectral_distortion_4x4(&left_block, &right_block));
         }
     }
     distortion
 }
 
 pub(super) fn rd_score(rate: u32, header: u32, distortion: u32, lambda: u32) -> u64 {
-    u64::from(rate + header) * u64::from(lambda) + 256 * u64::from(distortion)
+    u64::from(rate.wrapping_add(header))
+        .wrapping_mul(u64::from(lambda))
+        .wrapping_add(256_u64.wrapping_mul(u64::from(distortion)))
 }
 
 /// Returns the libwebp fractional-bit cost for one zigzag-ordered block.
@@ -292,35 +318,35 @@ pub(super) fn residual_cost(
 
     loop {
         let coefficient = levels[position];
-        position += 1;
+        position = position.wrapping_add(1);
         if coefficient == 0 {
-            cost += bit_cost(false, probabilities[1]);
+            cost = cost.wrapping_add(bit_cost(false, probabilities[1]));
             probabilities =
                 &coefficient_probabilities[coefficient_type][usize::from(COEFF_BANDS[position])][0];
             continue;
         }
 
-        cost += bit_cost(true, probabilities[1]);
+        cost = cost.wrapping_add(bit_cost(true, probabilities[1]));
         let magnitude = coefficient.unsigned_abs();
-        cost += u32::from(LEVEL_FIXED_COSTS[usize::from(magnitude)]);
+        cost = cost.wrapping_add(u32::from(LEVEL_FIXED_COSTS[usize::from(magnitude)]));
         let next_context = if magnitude == 1 {
-            cost += bit_cost(false, probabilities[2]);
+            cost = cost.wrapping_add(bit_cost(false, probabilities[2]));
             1
         } else {
-            cost += bit_cost(true, probabilities[2]);
+            cost = cost.wrapping_add(bit_cost(true, probabilities[2]));
             if magnitude <= 4 {
-                cost += bit_cost(false, probabilities[3]);
-                cost += bit_cost(magnitude != 2, probabilities[4]);
+                cost = cost.wrapping_add(bit_cost(false, probabilities[3]));
+                cost = cost.wrapping_add(bit_cost(magnitude != 2, probabilities[4]));
                 if magnitude != 2 {
-                    cost += bit_cost(magnitude == 4, probabilities[5]);
+                    cost = cost.wrapping_add(bit_cost(magnitude == 4, probabilities[5]));
                 }
             } else {
-                cost += bit_cost(true, probabilities[3]);
+                cost = cost.wrapping_add(bit_cost(true, probabilities[3]));
                 if magnitude <= 10 {
-                    cost += bit_cost(false, probabilities[6]);
-                    cost += bit_cost(magnitude > 6, probabilities[7]);
+                    cost = cost.wrapping_add(bit_cost(false, probabilities[6]));
+                    cost = cost.wrapping_add(bit_cost(magnitude > 6, probabilities[7]));
                 } else {
-                    cost += bit_cost(true, probabilities[6]);
+                    cost = cost.wrapping_add(bit_cost(true, probabilities[6]));
                     let (node8, node9_or_10) = if magnitude < 19 {
                         (false, false)
                     } else if magnitude < 35 {
@@ -330,8 +356,11 @@ pub(super) fn residual_cost(
                     } else {
                         (true, true)
                     };
-                    cost += bit_cost(node8, probabilities[8]);
-                    cost += bit_cost(node9_or_10, probabilities[if node8 { 10 } else { 9 }]);
+                    cost = cost.wrapping_add(bit_cost(node8, probabilities[8]));
+                    cost = cost.wrapping_add(bit_cost(
+                        node9_or_10,
+                        probabilities[if node8 { 10 } else { 9 }],
+                    ));
                 }
             }
             2
@@ -342,7 +371,7 @@ pub(super) fn residual_cost(
         probabilities = &coefficient_probabilities[coefficient_type]
             [usize::from(COEFF_BANDS[position])][next_context];
         let has_more = position <= last;
-        cost += bit_cost(has_more, probabilities[0]);
+        cost = cost.wrapping_add(bit_cost(has_more, probabilities[0]));
         if !has_more {
             return cost;
         }

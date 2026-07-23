@@ -17,15 +17,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let height = img.height as usize;
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
         ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
-        ImageMode::La8 => (1, 2, 8, true, width * 2),
-        ImageMode::L16 => (1, 1, 16, false, width * 2),
-        ImageMode::F32 => (1, 1, 32, false, width * 4),
-        ImageMode::I32 => (1, 1, 32, false, width * 4),
+        ImageMode::La8 => (1, 2, 8, true, width.saturating_mul(2)),
+        ImageMode::L16 => (1, 1, 16, false, width.saturating_mul(2)),
+        ImageMode::F32 => (1, 1, 32, false, width.saturating_mul(4)),
+        ImageMode::I32 => (1, 1, 32, false, width.saturating_mul(4)),
         _ => match img.color {
             ColorType::L8 => (1, 1, 8, false, width),
-            ColorType::Rgb8 => (2, 3, 8, false, width * 3),
-            ColorType::Rgba8 => (2, 4, 8, true, width * 4),
-            ColorType::Cmyk8 => (5, 4, 8, false, width * 4),
+            ColorType::Rgb8 => (2, 3, 8, false, width.saturating_mul(3)),
+            ColorType::Rgba8 => (2, 4, 8, true, width.saturating_mul(4)),
+            ColorType::Cmyk8 => (5, 4, 8, false, width.saturating_mul(4)),
             _ => return None,
         },
     };
@@ -64,11 +64,13 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 
     let has_sample_format = matches!(img.mode, ImageMode::F32 | ImageMode::I32);
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
-        + u16::from(channels > 1)
-        + u16::from(extra_sample)
-        + u16::from(predictor == 2)
-        + u16::from(has_sample_format);
-    let ifd_size = 2 + usize::from(entry_count) * 12 + 4;
+        .wrapping_add(u16::from(channels > 1))
+        .wrapping_add(u16::from(extra_sample))
+        .wrapping_add(u16::from(predictor == 2))
+        .wrapping_add(u16::from(has_sample_format));
+    let ifd_size = 2_usize
+        .saturating_add(usize::from(entry_count).saturating_mul(12))
+        .saturating_add(4);
     let bits_len = if channels <= 2 {
         0
     } else {
@@ -84,21 +86,21 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         (0, 0)
     };
     let ifd_offset = if compressed_layout {
-        (8usize + encoded.len()).next_multiple_of(2)
+        8_usize.saturating_add(encoded.len()).saturating_add(1) & !1
     } else {
         8
     };
-    let bits_offset = ifd_offset + ifd_size;
+    let bits_offset = ifd_offset.saturating_add(ifd_size);
     let pixel_offset = if compressed_layout {
         8
     } else {
-        (bits_offset + bits_len).next_multiple_of(2)
+        bits_offset.saturating_add(bits_len).saturating_add(1) & !1
     };
 
     let output_len = if compressed_layout {
-        bits_offset + bits_len
+        bits_offset.saturating_add(bits_len)
     } else {
-        pixel_offset + encoded.len()
+        pixel_offset.saturating_add(encoded.len())
     };
     #[cfg(coverage)]
     let output_len = if opts
@@ -117,7 +119,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         Endian::Little => b"II",
     });
     endian.push_u16(&mut output, 42);
-    endian.push_u32(&mut output, ifd_offset as u32);
+    endian.push_u32(&mut output, bounded_u32(ifd_offset));
     if compressed_layout {
         output.extend_from_slice(&encoded);
         output.resize(ifd_offset, 0);
@@ -151,12 +153,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             258,
             3,
             u32::from(channels),
-            bits_offset as u32,
+            bounded_u32(bits_offset),
         );
     }
     write_short_entry(&mut output, endian, 259, compression);
     write_short_entry(&mut output, endian, 262, photometric);
-    write_entry(&mut output, endian, 273, 4, 1, pixel_offset as u32);
+    write_entry(&mut output, endian, 273, 4, 1, bounded_u32(pixel_offset));
     if channels > 1 {
         write_short_entry(&mut output, endian, 277, channels);
     }
@@ -165,7 +167,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     } else {
         write_entry(&mut output, endian, 278, 4, 1, img.height);
     }
-    write_entry(&mut output, endian, 279, 4, 1, encoded.len() as u32);
+    write_entry(&mut output, endian, 279, 4, 1, bounded_u32(encoded.len()));
     write_short_entry(&mut output, endian, 284, 1);
     if predictor == 2 {
         write_short_entry(&mut output, endian, 317, predictor);
@@ -190,6 +192,11 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         output.extend_from_slice(&encoded);
     }
     Some(output)
+}
+
+fn bounded_u32(value: usize) -> u32 {
+    let bytes = value.to_le_bytes();
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
 
 fn compress_zlib_tiff_with_options(
@@ -307,15 +314,17 @@ fn apply_horizontal_predictor(
     bits_per_sample: u16,
 ) {
     let sample_bytes = usize::from(bits_per_sample / 8);
-    let stride = channels * sample_bytes;
+    let stride = channels.wrapping_mul(sample_bytes);
     for row in data.chunks_exact_mut(row_len) {
         for offset in (stride..row.len()).step_by(sample_bytes).rev() {
-            let previous = offset - stride;
+            let previous = offset.wrapping_sub(stride);
             let mut borrow = 0u16;
             for byte in 0..sample_bytes {
-                let value = u16::from(row[offset + byte]);
-                let subtrahend = u16::from(row[previous + byte]) + borrow;
-                row[offset + byte] = value.wrapping_sub(subtrahend) as u8;
+                let current_index = offset.wrapping_add(byte);
+                let previous_index = previous.wrapping_add(byte);
+                let value = u16::from(row[current_index]);
+                let subtrahend = u16::from(row[previous_index]).wrapping_add(borrow);
+                row[current_index] = value.wrapping_sub(subtrahend).to_le_bytes()[0];
                 borrow = u16::from(value < subtrahend);
             }
         }
@@ -344,11 +353,11 @@ fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
     let mut position = 0usize;
     while position < row.len() {
         let byte = row[position];
-        position += 1;
+        position = position.wrapping_add(1);
         let mut run_len = 1usize;
         while position < row.len() && row[position] == byte {
-            position += 1;
-            run_len += 1;
+            position = position.wrapping_add(1);
+            run_len = run_len.wrapping_add(1);
         }
 
         loop {
@@ -371,7 +380,7 @@ fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
                         again = run_len > 128;
                         emit_packbits_run(output, byte, &mut run_len);
                     } else {
-                        output[last_literal] += 1;
+                        output[last_literal] = output[last_literal].wrapping_add(1);
                         if output[last_literal] == 127 {
                             state = State::Base;
                         }
@@ -390,17 +399,17 @@ fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
                 }
                 State::LiteralRun => {
                     if run_len == 1
-                        && output[output.len() - 2] == u8::MAX
+                        && output[output.len().wrapping_sub(2)] == u8::MAX
                         && output[last_literal] < 126
                     {
-                        output[last_literal] += 2;
+                        output[last_literal] = output[last_literal].wrapping_add(2);
                         state = if output[last_literal] == 127 {
                             State::Base
                         } else {
                             State::Literal
                         };
-                        let repeated = output[output.len() - 1];
-                        let control = output.len() - 2;
+                        let repeated = output[output.len().wrapping_sub(1)];
+                        let control = output.len().wrapping_sub(2);
                         output[control] = repeated;
                     } else {
                         state = State::Run;
@@ -418,9 +427,10 @@ fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
 
 fn emit_packbits_run(output: &mut Vec<u8>, byte: u8, run_len: &mut usize) {
     let emitted = (*run_len).min(128);
-    output.push((1i16 - emitted as i16) as i8 as u8);
+    let control = 1_i16.wrapping_sub(i16::from(emitted.to_le_bytes()[0]));
+    output.push(control.to_le_bytes()[0]);
     output.push(byte);
-    *run_len -= emitted;
+    *run_len = run_len.wrapping_sub(emitted);
 }
 
 fn encode_lzw(data: &[u8]) -> Vec<u8> {
@@ -437,7 +447,7 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
 
     let mut dictionary = HashMap::<(u16, u8), u16>::with_capacity(4096);
     let mut width = 9u8;
-    let mut max_code = (1u16 << width) - 1;
+    let mut max_code = 1_u16.wrapping_shl(width.into()).wrapping_sub(1);
     let mut free_entry = FIRST;
     let mut input_count = 1usize;
     let mut output_bits = 0usize;
@@ -445,11 +455,11 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
     let mut ratio = 0usize;
 
     writer.write(CLEAR, width);
-    output_bits += usize::from(width);
+    output_bits = output_bits.wrapping_add(usize::from(width));
     let mut entry = u16::from(first);
 
     for &byte in rest {
-        input_count += 1;
+        input_count = input_count.wrapping_add(1);
         if let Some(&code) = dictionary.get(&(entry, byte)) {
             entry = code;
             continue;
@@ -457,27 +467,30 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
 
         let prefix = entry;
         writer.write(prefix, width);
-        output_bits += usize::from(width);
+        output_bits = output_bits.wrapping_add(usize::from(width));
         entry = u16::from(byte);
         dictionary.insert((prefix, byte), free_entry);
-        free_entry += 1;
+        free_entry = free_entry.wrapping_add(1);
 
-        if free_entry == MAX_CODE - 1 {
+        if free_entry == MAX_CODE.wrapping_sub(1) {
             dictionary.clear();
             ratio = 0;
             input_count = 0;
             output_bits = 0;
             free_entry = FIRST;
             writer.write(CLEAR, width);
-            output_bits += usize::from(width);
+            output_bits = output_bits.wrapping_add(usize::from(width));
             width = 9;
-            max_code = (1u16 << width) - 1;
+            max_code = 1_u16.wrapping_shl(width.into()).wrapping_sub(1);
         } else if free_entry > max_code {
-            width += 1;
-            max_code = (1u16 << width) - 1;
+            width = width.wrapping_add(1);
+            max_code = 1_u16.wrapping_shl(width.into()).wrapping_sub(1);
         } else if input_count >= checkpoint {
-            checkpoint = input_count + CHECK_GAP;
-            let current_ratio = (input_count << 8) / output_bits;
+            checkpoint = input_count.wrapping_add(CHECK_GAP);
+            let current_ratio = input_count
+                .wrapping_shl(8)
+                .checked_div(output_bits)
+                .unwrap_or_default();
             if current_ratio <= ratio {
                 dictionary.clear();
                 ratio = 0;
@@ -485,9 +498,9 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
                 output_bits = 0;
                 free_entry = FIRST;
                 writer.write(CLEAR, width);
-                output_bits += usize::from(width);
+                output_bits = output_bits.wrapping_add(usize::from(width));
                 width = 9;
-                max_code = (1u16 << width) - 1;
+                max_code = 1_u16.wrapping_shl(width.into()).wrapping_sub(1);
             } else {
                 ratio = current_ratio;
             }
@@ -495,12 +508,12 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
     }
 
     writer.write(entry, width);
-    free_entry += 1;
-    if free_entry == MAX_CODE - 1 {
+    free_entry = free_entry.wrapping_add(1);
+    if free_entry == MAX_CODE.wrapping_sub(1) {
         writer.write(CLEAR, width);
         width = 9;
     } else if free_entry > max_code {
-        width += 1;
+        width = width.wrapping_add(1);
     }
     writer.write(END, width);
     writer.finish()
@@ -516,8 +529,9 @@ struct MsbWriter {
 impl MsbWriter {
     fn write(&mut self, value: u16, width: u8) {
         for shift in (0..width).rev() {
-            self.current = (self.current << 1) | ((value >> shift) as u8 & 1);
-            self.used += 1;
+            self.current = self.current.wrapping_shl(1)
+                | value.wrapping_shr(shift.into()).to_le_bytes()[0] & 1;
+            self.used = self.used.wrapping_add(1);
             if self.used == 8 {
                 self.bytes.push(self.current);
                 self.current = 0;
@@ -528,7 +542,9 @@ impl MsbWriter {
 
     fn finish(mut self) -> Vec<u8> {
         if self.used != 0 {
-            self.current <<= 8 - self.used;
+            self.current = self
+                .current
+                .wrapping_shl(u32::from(8_u8.saturating_sub(self.used)));
             self.bytes.push(self.current);
         }
         self.bytes

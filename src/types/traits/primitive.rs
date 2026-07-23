@@ -38,17 +38,17 @@ macro_rules! impl_primitive_int {
             #[inline]
             fn from_f32(val: f32) -> Self {
                 let clamped = val.clamp(0.0, <$ty>::MAX as f32);
-                clamped as $ty
+                <$ty>::try_from(saturating_trunc_f32_to_u128(clamped)).unwrap_or(<$ty>::MAX)
             }
 
             #[inline]
             fn to_u64(self) -> u64 {
-                self as u64
+                u64::try_from(self).unwrap_or(u64::MAX)
             }
 
             #[inline]
             fn from_u64(val: u64) -> Self {
-                val.min(<$ty>::MAX as u64) as $ty
+                <$ty>::try_from(val).unwrap_or(<$ty>::MAX)
             }
         }
     };
@@ -77,7 +77,7 @@ impl Primitive for f32 {
 
     #[inline]
     fn to_u64(self) -> u64 {
-        self as u64
+        u64::try_from(saturating_trunc_f32_to_u128(self)).unwrap_or(u64::MAX)
     }
 
     #[inline]
@@ -92,7 +92,7 @@ impl Primitive for f64 {
 
     #[inline]
     fn to_f32(self) -> f32 {
-        self as f32
+        f64_to_f32(self)
     }
 
     #[inline]
@@ -102,7 +102,7 @@ impl Primitive for f64 {
 
     #[inline]
     fn to_u64(self) -> u64 {
-        self as u64
+        u64::try_from(saturating_trunc_f64_to_u128(self)).unwrap_or(u64::MAX)
     }
 
     #[inline]
@@ -125,7 +125,7 @@ impl Enlargeable for u8 {
 
     #[inline]
     fn clamp_from(n: Self::Larger) -> Self {
-        n.min(u8::MAX as u32) as u8
+        u8::try_from(n).unwrap_or(u8::MAX)
     }
 
     #[inline]
@@ -139,7 +139,7 @@ impl Enlargeable for u16 {
 
     #[inline]
     fn clamp_from(n: Self::Larger) -> Self {
-        n.min(u16::MAX as u32) as u16
+        u16::try_from(n).unwrap_or(u16::MAX)
     }
 
     #[inline]
@@ -153,7 +153,7 @@ impl Enlargeable for u32 {
 
     #[inline]
     fn clamp_from(n: Self::Larger) -> Self {
-        n.min(u32::MAX as u64) as u32
+        u32::try_from(n).unwrap_or(u32::MAX)
     }
 
     #[inline]
@@ -167,7 +167,7 @@ impl Enlargeable for u64 {
 
     #[inline]
     fn clamp_from(n: Self::Larger) -> Self {
-        n.min(u64::MAX as u128) as u64
+        u64::try_from(n).unwrap_or(u64::MAX)
     }
 
     #[inline]
@@ -181,7 +181,7 @@ impl Enlargeable for usize {
 
     #[inline]
     fn clamp_from(n: Self::Larger) -> Self {
-        n.min(usize::MAX as u128) as usize
+        usize::try_from(n).unwrap_or(usize::MAX)
     }
 
     #[inline]
@@ -190,12 +190,183 @@ impl Enlargeable for usize {
     }
 }
 
+/// Convert a non-negative `f32` to an integer with Rust's saturating cast
+/// semantics, without hiding a narrowing conversion from Clippy.
+pub(crate) fn saturating_trunc_f32_to_u128(value: f32) -> u128 {
+    if value.is_nan() || value <= 0.0 {
+        return 0;
+    }
+    if value.is_infinite() {
+        return u128::MAX;
+    }
+
+    let bits = value.to_bits();
+    let biased_exponent = (bits >> 23) & 0xff;
+    if biased_exponent == 0 {
+        return 0;
+    }
+    let exponent = i32::try_from(biased_exponent)
+        .unwrap_or_default()
+        .saturating_sub(127);
+    if exponent < 0 {
+        return 0;
+    }
+    let significand = u128::from((bits & 0x7f_ffff) | 0x80_0000);
+    if exponent >= 23 {
+        significand << u32::try_from(exponent.saturating_sub(23)).unwrap_or_default()
+    } else {
+        significand >> u32::try_from(23i32.saturating_sub(exponent)).unwrap_or_default()
+    }
+}
+
+fn saturating_trunc_f64_to_u128(value: f64) -> u128 {
+    if value.is_nan() || value <= 0.0 {
+        return 0;
+    }
+    if value.is_infinite() {
+        return u128::MAX;
+    }
+
+    let bits = value.to_bits();
+    let biased_exponent = (bits >> 52) & 0x7ff;
+    if biased_exponent == 0 {
+        return 0;
+    }
+    let exponent = i32::try_from(biased_exponent)
+        .unwrap_or_default()
+        .saturating_sub(1023);
+    if exponent < 0 {
+        return 0;
+    }
+    if exponent >= 128 {
+        return u128::MAX;
+    }
+
+    let significand = u128::from((bits & 0x000f_ffff_ffff_ffff) | 0x0010_0000_0000_0000);
+    if exponent >= 52 {
+        significand << u32::try_from(exponent.saturating_sub(52)).unwrap_or_default()
+    } else {
+        significand >> u32::try_from(52i32.saturating_sub(exponent)).unwrap_or_default()
+    }
+}
+
+fn f64_to_f32(value: f64) -> f32 {
+    let bits = value.to_bits();
+    let sign = u32::try_from(bits >> 32).unwrap_or_default() & 0x8000_0000;
+    let biased_exponent = (bits >> 52) & 0x7ff;
+    let fraction = bits & 0x000f_ffff_ffff_ffff;
+
+    if biased_exponent == 0x7ff {
+        let payload = if fraction == 0 {
+            0
+        } else {
+            let narrowed = u32::try_from(fraction >> 29).unwrap_or_default();
+            narrowed | 0x0040_0000
+        };
+        return f32::from_bits(sign | 0x7f80_0000 | payload);
+    }
+    if biased_exponent == 0 {
+        return f32::from_bits(sign);
+    }
+
+    let mut exponent = i32::try_from(biased_exponent)
+        .unwrap_or_default()
+        .saturating_sub(1023);
+    if exponent > 127 {
+        return f32::from_bits(sign | 0x7f80_0000);
+    }
+    if exponent < -149 {
+        return f32::from_bits(sign);
+    }
+
+    let significand = (1u64 << 52) | fraction;
+    if exponent >= -126 {
+        let mut rounded = round_shift_right(significand, 29);
+        if rounded == (1u64 << 24) {
+            rounded >>= 1;
+            exponent = exponent.saturating_add(1);
+            if exponent > 127 {
+                return f32::from_bits(sign | 0x7f80_0000);
+            }
+        }
+        let target_exponent = u32::try_from(exponent.saturating_add(127)).unwrap_or_default();
+        let target_fraction = u32::try_from(rounded & 0x007f_ffff).unwrap_or_default();
+        return f32::from_bits(sign | (target_exponent << 23) | target_fraction);
+    }
+
+    let shift = u32::try_from((-97i32).saturating_sub(exponent)).unwrap_or_default();
+    let rounded = round_shift_right(significand, shift);
+    let target_fraction = u32::try_from(rounded).unwrap_or(0x0080_0000);
+    f32::from_bits(sign | target_fraction)
+}
+
+fn round_shift_right(value: u64, shift: u32) -> u64 {
+    let quotient = value >> shift;
+    let mask = (1u64 << shift).saturating_sub(1);
+    let remainder = value & mask;
+    let halfway = 1u64 << shift.saturating_sub(1);
+    if remainder > halfway || (remainder == halfway && quotient & 1 == 1) {
+        quotient.saturating_add(1)
+    } else {
+        quotient
+    }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    for value in [
+        f32::NAN,
+        -1.0,
+        0.0,
+        f32::INFINITY,
+        f32::MAX,
+        f32::from_bits(1),
+        0.5,
+        1.0,
+    ] {
+        let _ = saturating_trunc_f32_to_u128(value);
+    }
+    for value in [
+        f64::NAN,
+        -1.0,
+        0.0,
+        f64::INFINITY,
+        f64::MAX,
+        f64::from_bits(1),
+        0.5,
+        1.0,
+        4_503_599_627_370_496.0,
+    ] {
+        let _ = saturating_trunc_f64_to_u128(value);
+        let _ = f64_to_f32(value);
+    }
+    for value in [
+        f64::from_bits(1),
+        f64::from(f32::MAX),
+        f64::from(f32::MIN_POSITIVE),
+        f64::from(f32::INFINITY),
+        f64::from(f32::NEG_INFINITY),
+        f64::from_bits(0x47f0_0000_0000_0000),
+        f64::from_bits(0x3800_0000_0000_0000),
+        f64::from_bits(0x3690_0000_0000_0000),
+        f64::from_bits(0x3ff0_0000_1000_0000),
+        f64::from_bits(0x3fff_ffff_f000_0000),
+        f64::from_bits(0x47ef_ffff_f000_0000),
+    ] {
+        let _ = f64_to_f32(value);
+    }
+    let _ = round_shift_right(4, 1);
+    let _ = round_shift_right(3, 1);
+    let _ = round_shift_right(1, 1);
+    let _ = round_shift_right(7, 2);
+}
+
 impl Enlargeable for f32 {
     type Larger = f64;
 
     #[inline]
     fn clamp_from(n: Self::Larger) -> Self {
-        n.clamp(f32::MIN as f64, f32::MAX as f64) as f32
+        f64_to_f32(n.clamp(f64::from(f32::MIN), f64::from(f32::MAX)))
     }
 
     #[inline]

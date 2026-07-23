@@ -1,3 +1,27 @@
+//! Extended WebP canvas, animation, and alpha-chunk support.
+
+#![warn(clippy::all)]
+#![deny(
+    clippy::clone_on_copy,
+    clippy::expect_used,
+    clippy::large_enum_variant,
+    clippy::map_unwrap_or,
+    clippy::needless_borrow,
+    clippy::needless_collect,
+    clippy::needless_range_loop,
+    clippy::redundant_clone,
+    clippy::todo,
+    clippy::unnecessary_cast,
+    clippy::unnecessary_to_owned,
+    clippy::unwrap_in_result,
+    clippy::unwrap_used
+)]
+#![warn(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use super::byteorder_lite::ReadBytesExt;
 use super::decoder::DecodingError;
 use super::lossless::LosslessDecoder;
@@ -22,6 +46,9 @@ pub(crate) struct WebPExtendedInfo {
 ///
 /// Starts by filling the rectangle occupied by the previous frame with the background
 /// color, if provided. Then copies or blends the frame onto the canvas.
+// The decoder validates every frame rectangle against the canvas before this
+// compositor runs, so row/byte index arithmetic remains in bounds.
+#[allow(clippy::arithmetic_side_effects)]
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn composite_frame(
     canvas: &mut [u8],
@@ -112,8 +139,10 @@ pub(crate) fn composite_frame(
                 let input = &frame[frame_index..][..4];
                 let output = &mut canvas[canvas_index..][..4];
 
-                let blended =
-                    do_alpha_blending(input.try_into().unwrap(), output.try_into().unwrap());
+                let blended = do_alpha_blending(
+                    [input[0], input[1], input[2], input[3]],
+                    [output[0], output[1], output[2], output[3]],
+                );
                 output.copy_from_slice(&blended);
             }
         }
@@ -213,6 +242,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(chunk.data, vec![7]);
 }
 
+// Callers pass in-canvas coordinates and a four-byte-per-pixel image slice.
+// The branch structure excludes every underflowing neighbor calculation.
+#[allow(clippy::arithmetic_side_effects)]
 pub(crate) fn get_alpha_predictor(
     x: usize,
     y: usize,
@@ -269,8 +301,10 @@ pub(crate) fn get_alpha_predictor(
                 }
             };
 
-            let combination = i16::from(left) + i16::from(top) - i16::from(top_left);
-            i16::clamp(combination, 0, 255).try_into().unwrap()
+            let combination = i16::from(left)
+                .wrapping_add(i16::from(top))
+                .wrapping_sub(i16::from(top_left));
+            i16::clamp(combination, 0, 255).to_le_bytes()[0]
         }
     }
 }
@@ -286,8 +320,9 @@ pub(crate) fn read_extended_header<R: Read>(
     // reserved bytes are ignored
     let _reserved_bytes = read_3_bytes(reader)?;
 
-    let canvas_width = read_3_bytes(reader)? + 1;
-    let canvas_height = read_3_bytes(reader)? + 1;
+    // Stored dimensions are 24-bit values minus one, so adding one fits u32.
+    let canvas_width = read_3_bytes(reader)?.wrapping_add(1);
+    let canvas_height = read_3_bytes(reader)?.wrapping_add(1);
 
     //product of canvas dimensions cannot be larger than u32 max
     if u32::checked_mul(canvas_width, canvas_height).is_none() {
@@ -359,19 +394,20 @@ pub(crate) fn read_alpha_chunk<R: BufRead>(
         _ => return Err(DecodingError::InvalidCompressionMethod),
     };
 
+    let pixel_count = usize::from(width).wrapping_mul(usize::from(height));
     let data = if lossless_compression {
         let mut decoder = LosslessDecoder::new(Box::new(reader));
 
-        let mut data = vec![0; usize::from(width) * usize::from(height) * 4];
+        let mut data = vec![0; pixel_count.wrapping_mul(4)];
         decoder.decode_frame_implicit_dimensions(u32::from(width), u32::from(height), &mut data)?;
 
-        let mut green = vec![0; usize::from(width) * usize::from(height)];
+        let mut green = vec![0; pixel_count];
         for (rgba_val, green_val) in data.chunks_exact(4).zip(green.iter_mut()) {
             *green_val = rgba_val[1];
         }
         green
     } else {
-        let mut framedata = vec![0; width as usize * height as usize];
+        let mut framedata = vec![0; pixel_count];
         reader.read_exact(&mut framedata)?;
         framedata
     };

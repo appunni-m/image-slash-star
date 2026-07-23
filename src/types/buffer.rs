@@ -156,13 +156,16 @@ where
 
 impl<'a, P: Pixel + 'a> Rows<'a, P> {
     fn with_image(pixels: &'a [P::Subpixel], width: u32, height: u32) -> Self {
-        let row_len = (width as usize) * usize::from(<P as Pixel>::CHANNEL_COUNT);
+        let width = usize::try_from(width).unwrap_or(usize::MAX);
+        let height = usize::try_from(height).unwrap_or(usize::MAX);
+        let row_len = width.saturating_mul(usize::from(<P as Pixel>::CHANNEL_COUNT));
         if row_len == 0 {
             Rows {
                 pixels: [].chunks_exact(1),
             }
         } else {
-            let Some(pixels) = pixels.get(..row_len * height as usize) else {
+            let total_len = row_len.saturating_mul(height);
+            let Some(pixels) = pixels.get(..total_len) else {
                 panic!("Pixel buffer has too few subpixels");
             };
             Rows {
@@ -248,13 +251,16 @@ where
 
 impl<'a, P: Pixel + 'a> RowsMut<'a, P> {
     fn with_image(pixels: &'a mut [P::Subpixel], width: u32, height: u32) -> Self {
-        let row_len = (width as usize) * usize::from(<P as Pixel>::CHANNEL_COUNT);
+        let width = usize::try_from(width).unwrap_or(usize::MAX);
+        let height = usize::try_from(height).unwrap_or(usize::MAX);
+        let row_len = width.saturating_mul(usize::from(<P as Pixel>::CHANNEL_COUNT));
         if row_len == 0 {
             RowsMut {
                 pixels: [].chunks_exact_mut(1),
             }
         } else {
-            let Some(pixels) = pixels.get_mut(..row_len * height as usize) else {
+            let total_len = row_len.saturating_mul(height);
+            let Some(pixels) = pixels.get_mut(..total_len) else {
                 panic!("Pixel buffer has too few subpixels");
             };
             RowsMut {
@@ -343,10 +349,10 @@ where
     fn next(&mut self) -> Option<(u32, u32, &'a P)> {
         if self.x >= self.width {
             self.x = 0;
-            self.y += 1;
+            self.y = self.y.saturating_add(1);
         }
         let (x, y) = (self.x, self.y);
-        self.x += 1;
+        self.x = self.x.saturating_add(1);
         self.pixels.next().map(|p| (x, y, p))
     }
 
@@ -414,10 +420,10 @@ where
     fn next(&mut self) -> Option<(u32, u32, &'a mut P)> {
         if self.x >= self.width {
             self.x = 0;
-            self.y += 1;
+            self.y = self.y.saturating_add(1);
         }
         let (x, y) = (self.x, self.y);
-        self.x += 1;
+        self.x = self.x.saturating_add(1);
         self.pixels.next().map(|p| (x, y, p))
     }
 
@@ -474,7 +480,7 @@ where
     #[inline(always)]
     fn next(&mut self) -> Option<(u32, EnumeratePixels<'a, P>)> {
         let y = self.y;
-        self.y += 1;
+        self.y = self.y.saturating_add(1);
         self.rows.next().map(|r| {
             (
                 y,
@@ -549,7 +555,7 @@ where
     #[inline(always)]
     fn next(&mut self) -> Option<(u32, EnumeratePixelsMut<'a, P>)> {
         let y = self.y;
-        self.y += 1;
+        self.y = self.y.saturating_add(1);
         self.rows.next().map(|r| {
             (
                 y,
@@ -748,9 +754,16 @@ where
 
     #[inline(always)]
     fn pixel_indices_unchecked(&self, x: u32, y: u32) -> Range<usize> {
-        let no_channels = <P as Pixel>::CHANNEL_COUNT as usize;
-        let min_index = (y as usize * self.width as usize + x as usize) * no_channels;
-        min_index..min_index + no_channels
+        let no_channels = usize::from(<P as Pixel>::CHANNEL_COUNT);
+        let y = usize::try_from(y).unwrap_or(usize::MAX);
+        let x = usize::try_from(x).unwrap_or(usize::MAX);
+        let width = usize::try_from(self.width).unwrap_or(usize::MAX);
+        let min_index = y
+            .saturating_mul(width)
+            .saturating_add(x)
+            .saturating_mul(no_channels);
+        let max_index = min_index.saturating_add(no_channels);
+        min_index..max_index
     }
 }
 
@@ -1161,7 +1174,7 @@ where
         let mut buffer: ImageBuffer<ToType, Vec<ToType::Subpixel>> =
             ImageBuffer::new(self.width, self.height);
         for (to, from) in buffer.pixels_mut().zip(self.pixels()) {
-            to.from_color(from);
+            to.copy_from_color(from);
         }
         buffer
     }
