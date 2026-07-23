@@ -24,7 +24,7 @@ use serde::Deserialize;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use image_slash_star as img;
 
@@ -1166,17 +1166,7 @@ fn inspect_direct(data: &[u8], format: &str) -> Option<img::ImageInfo> {
 }
 
 fn format_from_name(format: &str) -> Option<img::ImageFormat> {
-    match format {
-        "jpeg" => Some(img::ImageFormat::Jpeg),
-        "png" => Some(img::ImageFormat::Png),
-        "gif" => Some(img::ImageFormat::Gif),
-        "bmp" => Some(img::ImageFormat::Bmp),
-        "tiff" => Some(img::ImageFormat::Tiff),
-        "webp" => Some(img::ImageFormat::WebP),
-        "ico" => Some(img::ImageFormat::Ico),
-        "avif" => Some(img::ImageFormat::Avif),
-        _ => None,
-    }
+    img::ImageFormat::from_name(format).ok()
 }
 
 fn encode_direct(
@@ -1212,6 +1202,7 @@ fn test_decode_matrix() {
     let mut passed = 0u32;
     let mut failed = 0u32;
     let mut skipped = 0u32;
+    let mut source_lifecycle_formats = HashSet::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         for row in &fmt_data.decode {
@@ -1296,16 +1287,35 @@ fn test_decode_matrix() {
                     }
                     Err(_) => false,
                 };
-                if structured_error && direct.is_none() && sequence_rejected {
+                let source_error_is_stable =
+                    match img::EncodedImage::new(Arc::<[u8]>::from(data.clone())) {
+                        Err(error) => img::inspect(&data) == Err(error),
+                        Ok(source) => {
+                            let clone = source.clone();
+                            let verified = source.verify();
+                            let first = source.decode();
+                            let second = clone.decode();
+                            verified.is_err()
+                                && first.is_err()
+                                && first == second
+                                && !source.is_decoded()
+                        }
+                    };
+                if structured_error
+                    && direct.is_none()
+                    && sequence_rejected
+                    && source_error_is_stable
+                {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input decoded successfully (auto={}, direct={}, sequence_rejected={})",
+                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, direct={}, sequence_rejected={}, source_error_is_stable={})",
                         row.id,
                         decoded.is_ok(),
                         direct.is_some(),
-                        sequence_rejected
+                        sequence_rejected,
+                        source_error_is_stable
                     );
                     failed += 1;
                 }
@@ -1321,6 +1331,74 @@ fn test_decode_matrix() {
                 }
             };
             let expected_format = format_from_name(fmt_name).unwrap();
+            if source_lifecycle_formats.insert(fmt_name.as_str()) {
+                let source = match img::EncodedImage::new(Arc::<[u8]>::from(data.clone())) {
+                    Ok(source) => source,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: encoded source inspection failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                let source_clone = source.clone();
+                if source.format() != expected_format
+                    || source.info().format != expected_format
+                    || source.bytes() != data
+                    || source.is_decoded()
+                {
+                    eprintln!(
+                        "  FAIL [{}]: encoded source changed inspected state",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(error) = source.verify() {
+                    eprintln!("  FAIL [{}]: encoded source verify failed: {error}", row.id);
+                    failed += 1;
+                    continue;
+                }
+                if source.is_decoded() {
+                    eprintln!(
+                        "  FAIL [{}]: verify populated ordinary decode cache",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                let concurrent_addresses = std::thread::scope(|scope| {
+                    (0..4)
+                        .map(|_| {
+                            let source = source.clone();
+                            scope.spawn(move || {
+                                source
+                                    .decode()
+                                    .map(|decoded| std::ptr::from_ref(decoded) as usize)
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .map(|handle| handle.join().unwrap())
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .unwrap();
+                let cached = source.decode().unwrap();
+                let cached_from_clone = source_clone.decode().unwrap();
+                if !std::ptr::eq(cached, cached_from_clone)
+                    || !source.is_decoded()
+                    || cached != &decoded
+                    || concurrent_addresses
+                        .iter()
+                        .any(|address| *address != std::ptr::from_ref(cached) as usize)
+                {
+                    eprintln!("  FAIL [{}]: shared lazy decode cache diverged", row.id);
+                    failed += 1;
+                    continue;
+                }
+            }
             if decoded.format != expected_format {
                 eprintln!(
                     "  FAIL [{}]: detected {:?}, expected {:?}",
@@ -2567,6 +2645,21 @@ fn exercise_type_metadata() {
     ];
     for path in paths {
         assert!(img::ImageFormat::from_path(path).is_ok());
+    }
+    let format_names = [
+        (img::ImageFormat::Jpeg, "JPEG"),
+        (img::ImageFormat::Png, "PNG"),
+        (img::ImageFormat::Gif, "GIF"),
+        (img::ImageFormat::Bmp, "BMP"),
+        (img::ImageFormat::WebP, "WEBP"),
+        (img::ImageFormat::Tiff, "TIFF"),
+        (img::ImageFormat::Ico, "ICO"),
+        (img::ImageFormat::Avif, "AVIF"),
+    ];
+    for (format, name) in format_names {
+        assert_eq!(format.as_str(), name);
+        assert_eq!(format.to_string(), name);
+        assert_eq!(name.parse::<img::ImageFormat>(), Ok(format));
     }
     assert!(img::ImageFormat::from_path("a.unknown").is_err());
     let errors = [

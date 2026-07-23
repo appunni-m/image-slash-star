@@ -30,8 +30,10 @@ use serde_json as _;
 pub mod codecs;
 pub mod decode;
 pub mod encode;
+pub mod source;
 pub mod types;
 
+pub use source::EncodedImage;
 pub use types::*;
 
 /// Detect an encoded image format from its magic bytes.

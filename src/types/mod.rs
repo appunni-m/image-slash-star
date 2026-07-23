@@ -236,6 +236,49 @@ impl<T> Decoded<T> {
 }
 
 impl ImageFormat {
+    /// Returns Pillow's canonical uppercase name for this encoded format.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ImageFormat::Jpeg => "JPEG",
+            ImageFormat::Png => "PNG",
+            ImageFormat::Gif => "GIF",
+            ImageFormat::Bmp => "BMP",
+            ImageFormat::WebP => "WEBP",
+            ImageFormat::Tiff => "TIFF",
+            ImageFormat::Ico => "ICO",
+            ImageFormat::Avif => "AVIF",
+        }
+    }
+
+    /// Parses a case-insensitive image format name or common extension alias.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::UnknownFormat`] when `name` does not identify a
+    /// supported image container.
+    pub fn from_name(name: &str) -> Result<Self, ImageError> {
+        if name.eq_ignore_ascii_case("jpeg") || name.eq_ignore_ascii_case("jpg") {
+            Ok(ImageFormat::Jpeg)
+        } else if name.eq_ignore_ascii_case("png") {
+            Ok(ImageFormat::Png)
+        } else if name.eq_ignore_ascii_case("gif") {
+            Ok(ImageFormat::Gif)
+        } else if name.eq_ignore_ascii_case("bmp") {
+            Ok(ImageFormat::Bmp)
+        } else if name.eq_ignore_ascii_case("webp") {
+            Ok(ImageFormat::WebP)
+        } else if name.eq_ignore_ascii_case("tiff") || name.eq_ignore_ascii_case("tif") {
+            Ok(ImageFormat::Tiff)
+        } else if name.eq_ignore_ascii_case("ico") {
+            Ok(ImageFormat::Ico)
+        } else if name.eq_ignore_ascii_case("avif") {
+            Ok(ImageFormat::Avif)
+        } else {
+            Err(ImageError::UnknownFormat)
+        }
+    }
+
     /// Attempt to detect the image format from a file path extension.
     pub fn from_path<P: AsRef<std::path::Path>>(path: P) -> Result<ImageFormat, ImageError> {
         let ext = path
@@ -244,20 +287,24 @@ impl ImageFormat {
             .and_then(|e| e.to_str())
             .map(|e| e.to_lowercase())
             .unwrap_or_default();
-        match ext.as_str() {
-            "jpg" | "jpeg" => Ok(ImageFormat::Jpeg),
-            "png" => Ok(ImageFormat::Png),
-            "gif" => Ok(ImageFormat::Gif),
-            "bmp" => Ok(ImageFormat::Bmp),
-            "webp" => Ok(ImageFormat::WebP),
-            "tiff" | "tif" => Ok(ImageFormat::Tiff),
-            "ico" => Ok(ImageFormat::Ico),
-            "avif" => Ok(ImageFormat::Avif),
-            _ => Err(ImageError::Unsupported {
-                format: None,
-                message: format!("unknown extension: {ext}"),
-            }),
-        }
+        Self::from_name(&ext).map_err(|_| ImageError::Unsupported {
+            format: None,
+            message: format!("unknown extension: {ext}"),
+        })
+    }
+}
+
+impl std::fmt::Display for ImageFormat {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for ImageFormat {
+    type Err = ImageError;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        Self::from_name(name)
     }
 }
 

@@ -20,6 +20,10 @@ buffer backend for `pillow-rs` and `pillow-rs-js`.
 The migration should remove duplicated codec logic from `pillow-rs` while
 keeping image manipulation semantics and operation execution in `pillow-rs`.
 
+The correctness-first lazy source, shared materialization, pipeline caching,
+and copy-on-write mutation contract is specified separately in
+[`lazy-loading-correctness-proposal.md`](lazy-loading-correctness-proposal.md).
+
 ## Reviewed Worktree Findings
 
 The July 2026 migration worktrees are design prototypes, not merge sources.
@@ -56,6 +60,7 @@ MCP.
 It owns:
 
 - encoded image format detection
+- canonical format names and extension/name parsing
 - metadata inspection
 - image header parsing
 - codec feature dispatch
@@ -877,8 +882,11 @@ Implementation checkpoint (July 2026):
 
 - the historical `pillow-rs-image` workspace member is excluded and retained
   only as a reference directory
-- `pillow-rs` aliases the external package `image-slash-star` as the Rust crate
-  name `pillow_rs_image`, avoiding a broad import-only rewrite
+- `pillow-rs` depends on `image-slash-star` by its canonical package name and
+  imports it as `image_slash_star`
+- the unused downstream format-handler registry is removed; all signature
+  detection, header inspection, codec dispatch, and canonical format parsing
+  remain owned by `image-slash-star`
 - JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO are forwarded by
   `image-codecs-all`; AVIF remains an explicit opt-in feature
 - the direct `png` dependency and PNG-specific palette reader are removed
@@ -893,6 +901,15 @@ Implementation checkpoint (July 2026):
   transparency application is now mutating
 - a Pillow 12.2 manifest fixture set covers exact bytes and state transitions
   for every codec plus structured unknown/malformed errors
+- a separate Pillow 12.2 operation manifest now records exact `P` mode,
+  dimensions, index bytes, palette bytes, and transparency for crop, nearest
+  resize/thumbnail, fill-free rotation, every transpose variant,
+  `ImageOps` flip/mirror/crop, `ImageChops` offset/duplicate, and the supported
+  zero-fill nearest affine transform
+- palette preservation is restricted to those evidenced paths; randomized
+  spread, mesh transforms, custom rotate/transform fills, filters,
+  enhancement, conversion, drawing, lookup-table operations, and composition
+  expand to visible colors until independently proven
 
 This checkpoint is not accepted until its registered Coverage MCP command has
 passed and line, branch, function, and region metrics have been reviewed.
