@@ -150,6 +150,48 @@
           "ref_is_animated": false
         },
         {
+          "id": "portable_lossy_420_q99_gray_126",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "4x4 lossy 4:2:0 key frame with one negative DC-only 8x8 luma residual",
+          "asset": "portable_lossy_420_q99_gray_126.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_126_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_8x8_gray_126",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "8x8 lossy 4:2:0 key frame proving the complete negative DC-only luma reconstruction",
+          "asset": "portable_lossy_420_q99_8x8_gray_126.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_126_avif.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "portable_lossy_420_q99_gray_127",
           "type": "decode",
           "format": "avif",
@@ -234,6 +276,69 @@
           "ref_is_animated": false
         },
         {
+          "id": "portable_lossy_420_q99_gray_130",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "4x4 lossy 4:2:0 key frame with one positive DC-only 8x8 luma residual",
+          "asset": "portable_lossy_420_q99_gray_130.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_130_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_8x8_gray_130",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "8x8 lossy 4:2:0 key frame proving the complete positive DC-only luma reconstruction",
+          "asset": "portable_lossy_420_q99_8x8_gray_130.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_130_avif.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_gray_125_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Pillow-decodable adjacent lossy Golomb-extension control below the Slice 35 direct-token boundary",
+          "asset": "portable_lossy_420_q99_gray_125_control.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_125_control_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "portable_lossy_420_q99_gray_128_control",
           "type": "decode",
           "format": "avif",
@@ -245,6 +350,27 @@
           "verify_status": "ok",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_128_control_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_gray_131_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Pillow-decodable adjacent lossy Golomb-extension control above the Slice 35 direct-token boundary",
+          "asset": "portable_lossy_420_q99_gray_131_control.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_131_control_avif.bin",
           "ref_bytes": 48,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -24003,12 +24129,12 @@
     }
   },
   "summary": {
-    "total_rows": 1165,
-    "decode_rows": 887,
+    "total_rows": 1171,
+    "decode_rows": 893,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 886,
-    "decode_active": 887,
+    "assets_available": 892,
+    "decode_active": 893,
     "decode_planned": 0,
     "encode_not_wired": 0
   }

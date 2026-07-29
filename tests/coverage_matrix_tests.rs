@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 134);
+    assert_eq!(expected.cases.len(), 138);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2662,6 +2662,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "portable_lossless_420_8x8_b.avif" => {
                 "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
             }
+            "portable_lossy_420_q99_gray_126.avif" => {
+                "0bc6b6903ab77a6d1706777bb507e076f01290f57cb975508aec1cd5cf589810"
+            }
+            "portable_lossy_420_q99_8x8_gray_126.avif" => {
+                "9a5f0b79fce197304a6aa5a89af73862b128be0db6e93117a67d3ddd07e28edd"
+            }
             "portable_lossy_420_q99_gray_127.avif" => {
                 "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
             }
@@ -2673,6 +2679,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "portable_lossy_420_q99_8x8_gray_129.avif" => {
                 "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+            }
+            "portable_lossy_420_q99_gray_130.avif" => {
+                "2c28ec0de076c8c2e7d6d8222ada07a0da8ec45ea53160a39b5dd64b79d7bcc8"
+            }
+            "portable_lossy_420_q99_8x8_gray_130.avif" => {
+                "4371170b5239419060ed559afe13157740d69ef2aee0592cf4fc71c47dff58a5"
             }
             "portable_lossless_gray_32.avif" => {
                 "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
@@ -3001,7 +3013,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "animated.avif",
         "10bit.avif",
         "multitile.avif",
+        "portable_lossy_420_q99_gray_125_control.avif",
         "portable_lossy_420_q99_gray_128_control.avif",
+        "portable_lossy_420_q99_gray_131_control.avif",
     ] {
         let input = require_ok(
             fs::read(

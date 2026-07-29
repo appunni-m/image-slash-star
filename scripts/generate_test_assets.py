@@ -4114,7 +4114,7 @@ def gen_avif():
         size=(8, 8),
         subsampling="4:2:0",
     )
-    for gray in (127, 129):
+    for gray in (126, 127, 129, 130):
         write_portable(
             f"portable_lossy_420_q99_gray_{gray}.avif",
             (gray, gray, gray),
@@ -4128,12 +4128,13 @@ def gen_avif():
             quality=99,
             subsampling="4:2:0",
         )
-    write_portable(
-        "portable_lossy_420_q99_gray_128_control.avif",
-        (128, 128, 128),
-        quality=99,
-        subsampling="4:2:0",
-    )
+    for gray in (125, 128, 131):
+        write_portable(
+            f"portable_lossy_420_q99_gray_{gray}_control.avif",
+            (gray, gray, gray),
+            quality=99,
+            subsampling="4:2:0",
+        )
     for geometry, size in (
         ("4x8", (4, 8)),
         ("8x4", (8, 4)),
