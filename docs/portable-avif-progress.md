@@ -3614,7 +3614,7 @@ The edge-clipped square visibility slice is accepted:
 
 ## Slice 21 Exploration Plan: First Lossless AC Coefficient
 
-Status: exploration in progress; no production change approved.
+Status: accepted.
 
 ### Why the midpoint control is not the implementation fixture
 
@@ -3685,6 +3685,114 @@ The existing DC-only path must remain byte- and operation-exact. Unsupported
 EOBs, coefficient positions, contexts, predictors, and transforms must stop
 the portable attempt at their first unproved syntax value.
 
+### Completed reverse mapping
+
+The initial deterministic sweep covered 112 candidates: seven nearby colors
+at all sixteen origins in the bottom-right coded child. Repeating the complete
+sweep produced byte-identical reports with SHA-256
+`08621f05dd6780ea4236eaacd87d5ab71a74ee24f7884786afe84b65c7508ac6`.
+Only eight candidates retained the required five-node square tree. The best of
+those still changed all three planes, so a second fixed-origin color-direction
+sweep isolated luma from chroma.
+
+The fifteen-case color-direction reports are byte-identical with SHA-256
+`d81d56896dc63b261e0b3cf9a4c2dee99b7227a040cf998c1d31723b08d5250e`.
+The selected input changes source RGB `(17,91,203)` to `(22,96,208)` beginning
+at `(10,8)` in a 12x12 image. It retains:
+
+- the level-3 `PARTITION_SPLIT` followed by four level-4
+  `PARTITION_NONE` children;
+- the predictor sequence vertical, DC, DC, DC;
+- the accepted palette and filter-intra decisions;
+- DC-only or skipped syntax in the first three leaves;
+- skipped U and V transforms in the bottom-right leaf; and
+- exactly two luma transforms with EOB 1 in the bottom-right leaf.
+
+The complete trace was generated twice and is byte-identical with SHA-256
+`aaf515808f92b9bf9d2733c637024ab2aa638702b57c6e83ec447effbb301ccb`.
+The candidate is 320 bytes with file SHA-256
+`db9102a9b302387df2214814ac2cd02c8414beaf4751f3f374370237a210e9bc`.
+Its 45-byte AV1 item has SHA-256
+`04faf25091666ab62fe193c680174fb63a31e47adc06140aca17dfd995213201`
+and consumes 247 scalar entropy operations. Pinned dav1d produces Y/U/V
+SHA-256 values
+`b644fd44e9e27da42e1f52a6287f9b2e42d13891b7853ce3adcaf87c1da37ace`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB bytes have SHA-256
+`d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691`.
+
+### Closed coefficient class
+
+Dav1d 1.5.3 `decode_coefs` in `src/recon_tmpl.c:321-728` proves the
+following exact path for both affected transforms:
+
+1. `eob_bin_16[0][0]` decodes symbol 1. For a 4x4 two-dimensional WHT,
+   this is EOB 1 and requires no EOB high bit or extra bits.
+2. `eob_base_tok[0][0][1]` decodes symbol 2, producing base token 3.
+   `br_tok[0][0][7]` then decodes direct high token 10.
+3. `scan_4x4[1]` from `src/scan.c:35-40` maps the one AC coefficient to
+   raster index 4.
+4. `base_tok[0][0][0]` decodes the DC token. The preceding AC magnitude ten
+   derives high-token context five, so `br_tok[0][0][5]` supplies the DC
+   direct high token. Dav1d's diagnostic label reports context zero here, but
+   the indexed source and scalar state transition prove context five.
+5. The DC sign is adaptive; the AC sign is equiprobable. The first and third
+   transform DC values are positive and their AC values are negative.
+6. Q-index-zero eight-bit dequantization multiplies both direct token
+   magnitudes by four. No quantization matrix, Golomb residual, saturation, or
+   coefficient-context scan loop is entered.
+
+The additional default descending CDFs, converted exactly from dav1d
+`src/cdf.c:839-924,1316-1339`, are:
+
+- EOB base context 1: `[3168, 1322, 0]`;
+- base-token context 0: `[28734, 23838, 20041, 0]`; and
+- high-token context 5: `[28965, 25451, 22222, 0]`; and
+- high-token context 7: `[18376, 12817, 10012, 0]`.
+
+The trace proves their adaptive updates. For example, the first EOB-base
+decode changes `[3168,1322,0]` to `[5018,3287,1]`, and the first context-7
+high-token decode changes `[18376,12817,10012,0]` through symbols `3,3,1`
+to `[18825,13440,10723,1]` while returning token 10. The second EOB 1
+transform reuses the updated tables, so shared CDF state is part of the
+required implementation.
+
+The four bottom-right luma transform vectors, in row-major transform order,
+are:
+
+1. `[40,0,0,0,-40,0,0,0,0,0,0,0,0,0,0,0]`;
+2. `[32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]`;
+3. `[24,0,0,0,-40,0,0,0,0,0,0,0,0,0,0,0]`; and
+4. all zero because the transform is skipped.
+
+Dav1d's lossless inverse transform in `src/itx_tmpl.c:184-207` first reads
+the coefficient matrix by columns and arithmetic-shifts every input by two.
+For the first vector, the first one-dimensional pass receives
+`[10,-10,0,0]` and produces `[0,0,10,10]`. The column pass therefore
+produces residual rows `[0,0,5,5]`. Adding the DC predictor 81 gives
+`[81,81,86,86]` on every row, exactly matching dav1d's reconstruction dump.
+The third vector starts with `[6,-10,0,0]`, produces residual rows
+`[-1,-1,4,4]`, and reaches the same reconstructed rows from predictor 82.
+This proves that the Rust transform must accept the complete 16-entry vector;
+passing only a scalar DC value cannot represent this class.
+
+### Focused rejection control
+
+A same-color sweep over all sixteen bottom-right origins was also repeated
+byte-for-byte. Both reports have SHA-256
+`3b59bb8379555274680c4f55e1ce0e796163957e7b414802cd934bc43a0b3a50`.
+The nearby `(8,10)` origin retains the same tree, predictors, luma-only change,
+and skipped chroma, but its two affected transforms have EOB 2. Its file
+SHA-256 is
+`89842483e159b7d9d98f58282679f9b6d09f4e164576270e9546b13df176c986`
+and its AV1-item SHA-256 is
+`b82a922f6ed1d120cea78da616206109707d3d4b9022d943a4d28b55093bb57e`.
+This is the required private portable miss: EOB-bin symbol two identifies the
+unsupported EOB-2 class, so the portable path rejects before consuming any
+high bit, extra bits, or unproved coefficient scan loop.
+
 ### Acceptance criteria
 
 Acceptance requires:
@@ -3700,3 +3808,27 @@ Acceptance requires:
 - strict native and WASM feature matrices, rustdoc, formatting, whitespace,
   legal, and package verification; and
 - Coverage MCP at exactly 100% line, branch, function, and region coverage.
+
+### Acceptance result
+
+The implementation keeps complete 16-entry coefficient vectors per 4x4
+transform, decodes the exact luma EOB-1/direct-token-10 class, selects the DC
+high-token CDF from the preceding AC magnitude, and runs the full lossless
+inverse WHT. The nearby EOB-2 fixture remains a private portable miss at its
+first unsupported EOB-bin symbol. A fixture-driven byte mutation sweep over
+the accepted EOB-1 item covers alternate rejected DC base symbols without
+injecting decoder state or adding fixture-selected production behavior.
+
+The manifest now has 1,124 active rows: 846 decode and 278 encode. AVIF has
+104 active decode rows and 23 active encode rows. The independent
+reconstruction oracle expands from 91 to 92 positive cases; its JSON SHA-256
+is
+`406229a4d724629e2813f0f7bfe85a8bd9dd6a3c75c93090575fc1d101bf057c`.
+
+Coverage MCP run `dfc373c8-6c1d-4aad-a616-f0176881dc7b`, snapshot
+`050874ed-680d-43e5-a482-166925d773e0`, passes all seven managed test
+counters with 36,448/36,448 lines, 5,342/5,342 branches, 1,840/1,840
+functions, and 60,136/60,136 regions. Strict native and
+`wasm32-unknown-unknown` all-feature and no-default-feature Clippy, strict
+rustdoc, formatting, whitespace, the 19-file third-party legal audit, and
+offline source-package verification also pass.

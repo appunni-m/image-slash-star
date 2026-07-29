@@ -33,13 +33,14 @@ All notable changes will be documented in this file. This project follows
   frames, with shared partition/block CDF mutation, spatial luma-mode
   contexts, all-skip second leaves, exact reconstructed left/top edge
   prediction, and partial or full visibility on both axes. The pinned
-  independent dav1d oracle now covers 91 complete reconstruction cases.
+  independent dav1d oracle now covers 92 complete reconstruction cases.
 - Portable lossless AVIF materialization for the first closed 12x12 and 16x16
   four-leaf square splits, with interleaved child partition symbols, shared
   adaptive block state, DC-only spatial-neighbor restrictions, boundary
   transform prediction, direct high-token magnitudes below 15, the token-15
   Golomb extension, declared-frame visibility, and exact Y/U/V reconstruction
-  for positive and negative residual signs.
+  for positive and negative residual signs. The 12x12 class also includes the
+  first luma-only EOB-1 AC coefficient path and its complete inverse 4x4 WHT.
 
 ### Changed
 
