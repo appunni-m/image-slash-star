@@ -658,13 +658,34 @@
           "type": "decode",
           "format": "avif",
           "category": "partitioned",
-          "description": "12x12 luma-only EOB-4 control outside the portable EOB-2 coefficient class",
+          "description": "12x12 four-leaf square split with a luma-only EOB-4 lossless transform",
           "asset": "partitioned_square_12x12_luma_eob4_control.avif",
           "expect_error": false,
           "status": "active",
           "verify_status": "ok",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_luma_eob4_control_avif.bin",
+          "ref_bytes": 432,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            12,
+            12
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "partitioned_square_12x12_luma_eob6_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "partitioned",
+          "description": "12x12 luma-only EOB-6 control outside the portable EOB-4 coefficient class",
+          "asset": "partitioned_square_12x12_luma_eob6_control.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_luma_eob6_control_avif.bin",
           "ref_bytes": 432,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -23163,12 +23184,12 @@
     }
   },
   "summary": {
-    "total_rows": 1125,
-    "decode_rows": 847,
+    "total_rows": 1126,
+    "decode_rows": 848,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 846,
-    "decode_active": 847,
+    "assets_available": 847,
+    "decode_active": 848,
     "decode_planned": 0,
     "encode_not_wired": 0
   }
