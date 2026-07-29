@@ -163,3 +163,9 @@ fn le_i32(data: &[u8], offset: usize) -> Option<i32> {
     let bytes = data.get(offset..offset.wrapping_add(4))?;
     Some(i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    let _ = inspect(b"not a bitmap");
+}

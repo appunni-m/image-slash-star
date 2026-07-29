@@ -1,22 +1,111 @@
-//! Pillow-compatible AVIF decoding through the pinned libavif stack.
+//! Pillow-compatible AVIF decoding with a portable closed-class fast path.
 
-use crate::types::DecodedImage;
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::types::{ColorType, ImageMode};
+use crate::types::{ColorType, DecodedImage, ImageMode};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::types::{DecodedFrame, DecodedSequence, FrameDisposal};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 #[must_use]
 pub fn decode(data: &[u8]) -> Option<DecodedImage> {
-    decode_native(data)
+    let validated = validate_av1(data)?;
+    decode_portable(&validated).or_else(|| decode_native(data))
 }
 
 /// Decode every AVIF frame with its Pillow-observable presentation duration.
 #[must_use]
 pub fn decode_sequence(data: &[u8]) -> Option<crate::types::DecodedSequence> {
-    decode_sequence_native(data)
+    let validated = validate_av1(data)?;
+    decode_sequence_native(data, &validated)
+}
+
+fn validate_av1(data: &[u8]) -> Option<super::av1::ValidatedAv1> {
+    let extracted = super::samples::validated(data)?;
+    super::av1::validate(&extracted)
+}
+
+fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
+    let still = validated.portable_still.as_ref()?;
+    let plane_length = match (still.width, still.height) {
+        (4, 4) => 16,
+        (4, 8) | (8, 4) => 32,
+        (12, 4) | (4, 12) => 48,
+        (8, 8) | (16, 4) | (4, 16) => 64,
+        (12, 8) | (8, 12) => 96,
+        (16, 8) | (8, 16) => 128,
+        (12, 12) => 144,
+        (12, 16) | (16, 12) => 192,
+        (16, 16) => 256,
+        _ => return None,
+    };
+    (still.bit_depth == 8
+        && !still.monochrome
+        && still.color_primaries == 1
+        && still.transfer_characteristics == 13
+        && still.matrix_coefficients == 6
+        && still.color_range
+        && !still.subsampling_x
+        && !still.subsampling_y)
+        .then_some(())?;
+
+    let [y_plane, u_plane, v_plane] = &still.planes;
+    (y_plane.samples.len() == plane_length
+        && u_plane.samples.len() == plane_length
+        && v_plane.samples.len() == plane_length)
+        .then_some(())?;
+    let mut pixels = Vec::with_capacity(plane_length.saturating_mul(3));
+    for ((&y, &u), &v) in y_plane
+        .samples
+        .iter()
+        .zip(&u_plane.samples)
+        .zip(&v_plane.samples)
+    {
+        pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
+    }
+    Some(DecodedImage {
+        width: still.width,
+        height: still.height,
+        pixels,
+        color: ColorType::Rgb8,
+        mode: ImageMode::Rgb8,
+        palette: None,
+    })
+}
+
+// ✅ VERIFIED: Pillow's libavif 1.4.1 uses libyuv 1922's JPEG-range BT.601
+// I444-to-RGB24 integer path for this exact output declaration.
+fn libyuv_bt601_full_range_rgb(y: u16, u: u16, v: u16) -> [u8; 3] {
+    let y_scaled = u32::from(y)
+        .wrapping_mul(0x0101)
+        .wrapping_mul(16_320)
+        .wrapping_shr(16);
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "eight-bit input bounds the libyuv fixed-point luma value below i32::MAX"
+    )]
+    let y_scaled = y_scaled as i32;
+    let blue = y_scaled
+        .wrapping_add(i32::from(u).wrapping_mul(113))
+        .wrapping_sub(14_432);
+    let green = y_scaled.wrapping_add(8_736).wrapping_sub(
+        i32::from(u)
+            .wrapping_mul(22)
+            .wrapping_add(i32::from(v).wrapping_mul(46)),
+    );
+    let red = y_scaled
+        .wrapping_add(i32::from(v).wrapping_mul(90))
+        .wrapping_sub(11_488);
+    [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
+}
+
+fn libyuv_rgb8(value: i32) -> u8 {
+    let value = value.wrapping_shr(6).clamp(0, 255);
+    #[expect(
+        clippy::cast_sign_loss,
+        reason = "the libyuv channel result is explicitly clamped to the u8 range"
+    )]
+    {
+        value as u8
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -32,7 +121,11 @@ fn decode_native(_data: &[u8]) -> Option<DecodedImage> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn decode_sequence_native(data: &[u8]) -> Option<DecodedSequence> {
+fn decode_sequence_native(
+    data: &[u8],
+    validated: &super::av1::ValidatedAv1,
+) -> Option<DecodedSequence> {
+    let _ = validated.portable_still.as_ref();
     let mut decoder = super::native::Decoder::new(data)?;
     let info = decoder.info();
     decoded_sequence(info, &mut |frame_index| decoder.decode_frame(frame_index))
@@ -79,7 +172,11 @@ fn decoded_sequence(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn decode_sequence_native(_data: &[u8]) -> Option<crate::types::DecodedSequence> {
+fn decode_sequence_native(
+    _data: &[u8],
+    validated: &super::av1::ValidatedAv1,
+) -> Option<crate::types::DecodedSequence> {
+    let _ = validated.portable_still.as_ref();
     None
 }
 
@@ -118,6 +215,7 @@ fn duration_ms(duration: u64, timescale: std::num::NonZeroU64) -> Option<u32> {
 pub(crate) fn __coverage_exercise_private_branches() {
     use std::num::NonZeroU64;
 
+    use super::av1::{PortableStill, ValidatedAv1};
     use super::native::{DecodeInfo, FrameTiming};
 
     let one = NonZeroU64::new(1).unwrap();
@@ -129,6 +227,66 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = duration_ms(3, four_hundred);
     let _ = duration_ms(u64::MAX, one);
     let _ = decode_sequence(b"not an AVIF container");
+    let validated = ValidatedAv1 {
+        portable_still: None,
+    };
+    let _ = decode_portable(&validated);
+    let valid_still = super::av1::__coverage_portable_still();
+    let rejects = |still: PortableStill| {
+        assert!(
+            decode_portable(&ValidatedAv1 {
+                portable_still: Some(still),
+            })
+            .is_none()
+        );
+    };
+    let mut still = valid_still.clone();
+    still.width = 5;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.height = 5;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.bit_depth = 10;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.monochrome = true;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.color_primaries = 2;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.transfer_characteristics = 2;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.matrix_coefficients = 1;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.color_range = false;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.subsampling_x = true;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.subsampling_y = true;
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.planes[0].samples.pop();
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.planes[1].samples.pop();
+    rejects(still);
+    let mut still = valid_still.clone();
+    still.planes[2].samples.pop();
+    rejects(still);
+    assert!(
+        decode_portable(&ValidatedAv1 {
+            portable_still: Some(valid_still),
+        })
+        .is_some()
+    );
+    let _ = decode_native(b"not an AVIF container");
+    let _ = decode_sequence_native(b"not an AVIF container", &validated);
 
     let info = DecodeInfo {
         width: 1,

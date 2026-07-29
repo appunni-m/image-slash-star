@@ -115,3 +115,9 @@ fn read_chunk(chunk: &[u8], position: usize) -> Option<([u8; 4], &[u8], usize)> 
         .wrapping_add(4);
     Some((kind, payload, next))
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    let _ = inspect(b"not png!");
+}

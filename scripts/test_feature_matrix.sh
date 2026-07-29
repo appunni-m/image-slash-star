@@ -15,16 +15,16 @@ cargo test --locked --test feature_gate_tests
 cargo clippy --workspace --all-targets --locked --all-features -- -D warnings
 cargo test --locked --test feature_gate_tests --all-features
 
-for features in none avif default all; do
+for features in none jpeg png gif bmp tiff webp ico avif default all; do
     case "$features" in
         none)
             cargo clippy --workspace --all-targets --locked \
                 --target wasm32-unknown-unknown --no-default-features -- -D warnings
             ;;
-        avif)
+        jpeg|png|gif|bmp|tiff|webp|ico|avif)
             cargo clippy --workspace --all-targets --locked \
                 --target wasm32-unknown-unknown --no-default-features \
-                --features avif -- -D warnings
+                --features "$features" -- -D warnings
             ;;
         default)
             cargo clippy --workspace --all-targets --locked \

@@ -1,5 +1,17 @@
 # Repository Instructions
 
+## Codec-Only Scope
+
+- This repository detects, inspects, decodes, and encodes image formats. Do
+  not add public or reusable general-purpose resizing, cropping, rotation,
+  flipping, filtering, drawing, compositing, color adjustment, or mutable
+  image-editor APIs.
+- Codec-mandated transforms such as JPEG IDCT, PNG filtering, sample
+  reconstruction, and animation disposal must remain private codec internals.
+- Keep codec algorithm modules private. Every public fallible operation must
+  use the canonical structured `ImageResult` API rather than exposing an
+  `Option`-returning implementation helper.
+
 ## Correctness Authority
 
 - The pinned Pillow oracle and manifest fixtures define observable codec

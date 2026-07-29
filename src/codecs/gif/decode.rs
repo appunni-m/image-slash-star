@@ -331,6 +331,9 @@ fn append_code(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    assert!(decode_sequence(b"").is_none());
+    assert!(decode_sequence(b"not gif").is_none());
+    assert!(decode_sequence(b"GIF89a").is_none());
     assert!(decode_lzw(&[0], 2, 0).is_none());
 }
 

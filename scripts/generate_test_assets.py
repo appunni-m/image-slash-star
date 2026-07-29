@@ -21,6 +21,7 @@ import struct
 import subprocess
 import tempfile
 import zlib
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -3991,8 +3992,232 @@ def gen_ico():
 def gen_avif():
     d = OUT / "avif"
     d.mkdir(parents=True, exist_ok=True)
+    from PIL import _avif, features
+
+    codec_versions = _avif.codec_versions()
+    if features.version("avif") != "1.4.1":
+        raise RuntimeError(
+            "AVIF fixture oracle requires libavif 1.4.1, "
+            f"found {features.version('avif')}"
+        )
+    for expected in ("dav1d [dec]:1.5.3", "aom [enc]:3.13.2"):
+        if expected not in codec_versions:
+            raise RuntimeError(
+                f"AVIF fixture oracle requires {expected}, found {codec_versions}"
+            )
+
+    def write_portable_lossless(name, color, size=(4, 4), speed=8):
+        image = Image.new("RGB", size, color)
+
+        def encode():
+            output = BytesIO()
+            image.save(
+                output,
+                format="AVIF",
+                quality=100,
+                speed=speed,
+                max_threads=1,
+                subsampling="4:4:4",
+                autotiling=False,
+            )
+            return output.getvalue()
+
+        first = encode()
+        second = encode()
+        if first != second:
+            raise RuntimeError(f"AVIF fixture {name} is not deterministic")
+        (d / name).write_bytes(first)
+
+    write_portable_lossless("portable_lossless_a.avif", (17, 91, 203))
+    write_portable_lossless("portable_lossless_b.avif", (199, 37, 83))
+    write_portable_lossless("portable_lossless_gray_32.avif", (32, 32, 32))
+    write_portable_lossless("portable_lossless_gray_127.avif", (127, 127, 127))
+    write_portable_lossless("portable_probe_gray_128.avif", (128, 128, 128))
+    write_portable_lossless("portable_probe_gray_129.avif", (129, 129, 129))
+    write_portable_lossless(
+        "portable_lossless_8x8_a.avif", (17, 91, 203), size=(8, 8)
+    )
+    write_portable_lossless(
+        "portable_lossless_8x8_gray_127.avif", (127, 127, 127), size=(8, 8)
+    )
+    write_portable_lossless(
+        "portable_probe_8x8_gray_128.avif", (128, 128, 128), size=(8, 8)
+    )
+    write_portable_lossless(
+        "portable_probe_8x8_gray_129.avif", (129, 129, 129), size=(8, 8)
+    )
+    for orientation, size in (("4x8", (4, 8)), ("8x4", (8, 4))):
+        write_portable_lossless(
+            f"portable_lossless_{orientation}_a.avif",
+            (17, 91, 203),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_lossless_{orientation}_gray_127.avif",
+            (127, 127, 127),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_probe_{orientation}_gray_128.avif",
+            (128, 128, 128),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_probe_{orientation}_gray_129.avif",
+            (129, 129, 129),
+            size=size,
+        )
+    for dimension in (12, 16):
+        geometry = f"{dimension}x{dimension}"
+        size = (dimension, dimension)
+        write_portable_lossless(
+            f"portable_lossless_{geometry}_a.avif",
+            (17, 91, 203),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_lossless_{geometry}_gray_127.avif",
+            (127, 127, 127),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_probe_{geometry}_gray_128.avif",
+            (128, 128, 128),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_probe_{geometry}_gray_129.avif",
+            (129, 129, 129),
+            size=size,
+        )
+    for orientation, size in (("12x16", (12, 16)), ("16x12", (16, 12))):
+        write_portable_lossless(
+            f"portable_lossless_{orientation}_a.avif",
+            (17, 91, 203),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_lossless_{orientation}_gray_127.avif",
+            (127, 127, 127),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_probe_{orientation}_gray_128.avif",
+            (128, 128, 128),
+            size=size,
+        )
+        write_portable_lossless(
+            f"portable_probe_{orientation}_gray_129.avif",
+            (129, 129, 129),
+            size=size,
+        )
+    for orientation, size in (
+        ("4x12", (4, 12)),
+        ("12x4", (12, 4)),
+        ("4x16", (4, 16)),
+        ("16x4", (16, 4)),
+        ("8x12", (8, 12)),
+        ("12x8", (12, 8)),
+        ("8x16", (8, 16)),
+        ("16x8", (16, 8)),
+    ):
+        write_portable_lossless(
+            f"partitioned_{orientation}_a.avif",
+            (17, 91, 203),
+            size=size,
+        )
+        if orientation in {"4x12", "12x4"}:
+            write_portable_lossless(
+                f"partitioned_{orientation}_gray_127.avif",
+                (127, 127, 127),
+                size=size,
+            )
+        write_portable_lossless(
+            f"partitioned_{orientation}_gray_32.avif",
+            (32, 32, 32),
+            size=size,
+        )
+        write_portable_lossless(
+            f"partitioned_{orientation}_green.avif",
+            (0, 255, 0),
+            size=size,
+        )
+    for orientation, size in (
+        ("12x4", (12, 4)),
+        ("12x8", (12, 8)),
+        ("16x4", (16, 4)),
+        ("16x8", (16, 8)),
+        ("4x12", (4, 12)),
+        ("8x12", (8, 12)),
+        ("4x16", (4, 16)),
+        ("8x16", (8, 16)),
+    ):
+        for gray in (128, 129):
+            write_portable_lossless(
+                f"portable_rect_{orientation}_gray_{gray}.avif",
+                (gray, gray, gray),
+                size=size,
+            )
+        if orientation not in {"12x4", "4x12"}:
+            write_portable_lossless(
+                f"portable_rect_{orientation}_gray_127.avif",
+                (127, 127, 127),
+                size=size,
+            )
+    for orientation, size in (("12x4", (12, 4)), ("4x12", (4, 12))):
+        write_portable_lossless(
+            f"portable_rect_{orientation}_a_speed0.avif",
+            (17, 91, 203),
+            size=size,
+            speed=0,
+        )
+        write_portable_lossless(
+            f"portable_rect_{orientation}_gray_32_speed0.avif",
+            (32, 32, 32),
+            size=size,
+            speed=0,
+        )
+
+    multitile_path = d / "multitile.avif"
+    pattern_img("RGB", (256, 128)).save(
+        multitile_path,
+        format="AVIF",
+        quality=75,
+        speed=6,
+        max_threads=1,
+        tile_cols=1,
+    )
+    from inspect_av1_obus import inspect as inspect_av1
+
+    report = inspect_av1(multitile_path)
+    size_field = next(
+        tile["size_field"]
+        for sample in report["samples"]
+        for obu in sample["obus"]
+        for tile in obu.get("tile_group", {}).get("tiles", [])
+        if tile["size_field"] is not None
+    )
+    size_spans = size_field["physical_spans"]
+    if len(size_spans) != 1 or size_spans[0]["length"] < 2:
+        raise RuntimeError("generated AVIF does not have one two-byte tile size field")
+    malformed = bytearray(multitile_path.read_bytes())
+    # Change only the most-significant byte of tile_size_minus_1. The resulting
+    # first tile crosses the frame OBU payload while the container and frame
+    # header remain intact.
+    malformed[size_spans[0]["offset"] + size_spans[0]["length"] - 1] = 0xFF
+    (d / "invalid_tile_size.avif").write_bytes(malformed)
+
     (d / "unsupported_major_brand.avif").write_bytes(b"\0\0\0\x18ftypheic")
-    print("  AVIF: wrote unsupported-major-brand error fixture")
+    baseline_path = d / "baseline.avif"
+    baseline = bytearray(baseline_path.read_bytes())
+    sequence_marker = bytes.fromhex("0a091819bfff6880868342")
+    sequence_offset = baseline.index(sequence_marker) + 2
+    baseline[sequence_offset] = (baseline[sequence_offset] & 0x1f) | 0xe0
+    (d / "invalid_sequence_profile.avif").write_bytes(baseline)
+    print(
+        "  AVIF: wrote portable lossless, multi-tile success/error, "
+        "and existing error fixtures"
+    )
 
 
 def main():

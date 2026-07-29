@@ -262,6 +262,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     opts.extra = HashMap::from([("exif_hex".to_owned(), "f".to_owned())]);
     let _ = attach_metadata(Vec::new(), 1, 1, &opts);
 
+    opts.extra = HashMap::from([("xmp_hex".to_owned(), "f".to_owned())]);
+    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+
     opts.extra = HashMap::from([
         ("icc_hex".to_owned(), "00".to_owned()),
         (
@@ -277,4 +280,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..EncodeOptions::default()
     };
     let _ = encode(&zero_width, &opts);
+
+    let unsupported = DecodedImage::new(1, 1, vec![0, 0], ColorType::La8);
+    let _ = encode(&unsupported, &opts);
+    let _ = encode(&unsupported, &EncodeOptions::default());
 }

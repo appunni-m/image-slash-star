@@ -42,7 +42,7 @@ between C and Rust. Unsafe Rust is confined to one documented FFI module.
 
 Library resolution order:
 
-1. an explicit `PILLOW_RS_AVIF_LIB_DIR`;
+1. an explicit `IMAGE_SLASH_STAR_AVIF_LIB_DIR`;
 2. an exact libavif installation exposed by `pkg-config`;
 3. the pinned `.oracle-venv` wheel library in a development checkout.
 

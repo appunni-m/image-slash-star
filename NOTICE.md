@@ -1,23 +1,63 @@
 # Third-party notices
 
 Original work in this repository is licensed under either Apache-2.0 or MIT,
-at your option. Portions are derived from or are behavioral ports of upstream
-open source projects and remain subject to their original licenses.
+at your option. Portions are modified translations or source-derived
+implementations of upstream open-source projects and remain subject to their
+original terms. The exact revisions and source hashes are recorded in
+`third_party/README.md`.
 
-| Repository paths | Upstream and fixed version | License and retained text |
+## Code and data incorporated into the crate
+
+| Repository scope | Fixed upstream | Terms and retained text |
 | --- | --- | --- |
-| `src/codecs/webp/native/` | image-webp 0.2.4 | MIT OR Apache-2.0; see `third_party/image-webp/` |
-| `src/codecs/jpeg/` | libjpeg-turbo 3.1.4.1 and IJG libjpeg | IJG and BSD-style terms; see `third_party/libjpeg-turbo/` |
-| `src/codecs/webp/` | libwebp 1.6.0 | BSD-3-Clause; see `third_party/libwebp/COPYING` |
-| `src/codecs/compression/zlib_ng.rs` and related DEFLATE code | zlib-ng 2.3.3 | Zlib; see `third_party/zlib-ng/LICENSE.md` |
-| Pillow-compatible codec and color behavior identified in source comments | Pillow 12.2.0 / libImaging | MIT-CMU; see `third_party/pillow/LICENSE` |
-| GIF RGBA FASTOCTREE quantization in `src/codecs/gif/encode.rs` | Pillow 12.2.0 `QuantOctree.c`, Oliver Tonnhofer / Omniscale | MIT; see `third_party/pillow/QUANT-OCTREE-LICENSE` |
-| GIF palette bucket ordering in `src/codecs/gif/encode.rs` | Apple Libc / FreeBSD `qsort.c`, Regents of the University of California | BSD-3-Clause; see `third_party/apple-libc/LICENSE` |
-| `third_party/libavif/include/avif/avif.h` and AVIF reference fixtures | libavif 1.4.1, Joe Drago and contributors | BSD-2-Clause; see `third_party/libavif/LICENSE` |
+| `src/codecs/webp/native/` | image-webp 0.2.4 | MIT OR Apache-2.0; `third_party/image-webp/` |
+| WebP code under `src/codecs/webp/`, including marked native helpers and VP8 encoder code | libwebp 1.6.0 | BSD-3-Clause; `third_party/libwebp/COPYING` |
+| `src/codecs/jpeg/` | libjpeg-turbo 3.1.4.1 and IJG libjpeg | IJG and BSD-style terms; `third_party/libjpeg-turbo/` |
+| `src/codecs/compression/zlib_ng.rs` and marked related DEFLATE code | zlib-ng 2.3.3 | Zlib; `third_party/zlib-ng/LICENSE.md` |
+| AVIF container and sample-table ports under `src/codecs/avif/`, the copied public header, and copied libavif fixtures | libavif 1.4.1 | BSD-2-Clause and the complete upstream notice bundle; `third_party/libavif/` |
+| Portable AV1 implementation under `src/codecs/avif/av1/` | dav1d 1.5.3 and libaom 3.13.2 | BSD-2-Clause; `third_party/dav1d/COPYING`, `third_party/libaom/LICENSE`, and the root `PATENTS` |
+| Explicitly marked Pillow/libImaging source-derived portions and copied Pillow AVIF fixtures | Pillow 12.2.0 | MIT-CMU; `third_party/pillow/LICENSE` |
+| GIF RGBA FASTOCTREE quantization in `src/codecs/gif/encode.rs` | Pillow 12.2.0 `QuantOctree.c`, Oliver Tonnhofer / Omniscale | MIT; `third_party/pillow/QUANT-OCTREE-LICENSE` |
+| GIF palette-bucket ordering in `src/codecs/gif/encode.rs` | Apple Libc `stdlib/FreeBSD/qsort.c` | BSD-3-Clause; `third_party/apple-libc/LICENSE` |
 
-The committed oracle fixtures are observations produced by the pinned Pillow
+All C-to-Rust ports in this repository are altered translations. Their
+corresponding module comments and this notice identify that modification; no
+ported Rust file should be represented as unmodified upstream source.
+
+## Cargo dependency
+
+The sole Cargo dependency is bytemuck 1.25.1, licensed under
+Zlib OR Apache-2.0 OR MIT. Exact license texts are retained in
+`third_party/bytemuck/`, and the package checksum is pinned in `Cargo.lock` and
+`third_party/README.md`.
+
+## Optional native AVIF stack
+
+The `avif` feature can link a separately built native stack. The pinned build
+script uses these components:
+
+| Component | Fixed revision | Terms |
+| --- | --- | --- |
+| libavif | 1.4.1 | Complete upstream bundle in `third_party/libavif/LICENSE` |
+| libaom | 3.13.2 | BSD-2-Clause plus Alliance for Open Media Patent License 1.0 in `third_party/libaom/` and root `PATENTS` |
+| dav1d | 1.5.3 | BSD-2-Clause in `third_party/dav1d/COPYING` |
+| libyuv | commit `6067afde563c3946eebd94f146b3824ab7a97a9c` | BSD-3-Clause in `third_party/libyuv/LICENSE` |
+| libwebp SharpYUV | 1.6.0 | BSD-3-Clause in `third_party/libwebp/COPYING` |
+
+These native components are not Cargo dependencies and are not part of the
+core WASM build. A source distribution retains the AOM patent license at its
+root. Distributors of an AV1 implementation in another form should retain that
+license in the documentation, legal notices, or other written materials
+provided with the implementation, as specified by `PATENTS`.
+
+## Fixtures, attribution, and names
+
+Committed oracle outputs are observations produced by the pinned Pillow
 binary described in `pillow-oracle.lock.yaml`; they are not linked into the
-library. Format specifications, interoperability targets, and project names
-belong to their respective owners. No endorsement is implied.
+library. Copied AVIF input files have per-file source, revision, hash, and
+license records in `tests/fixtures/input/images/avif/README.md`.
 
 This software is based in part on the work of the Independent JPEG Group.
+
+Format specifications, interoperability targets, and project names belong to
+their respective owners. No endorsement is implied.

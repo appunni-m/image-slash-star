@@ -25,30 +25,6 @@
       "encoded_ref_bytes": 839
     },
     {
-      "id": "enc_32x32",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_32x32.bin",
-      "ref_bytes": 3072,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        32,
-        32
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_32x32.bin",
-      "encoded_ref_bytes": 2385
-    },
-    {
-      "id": "enc_48x48",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_48x48.bin",
-      "ref_bytes": 6912,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        48,
-        48
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_48x48.bin",
-      "encoded_ref_bytes": 4666
-    },
-    {
       "id": "enc_256x256",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_256x256.bin",
       "ref_bytes": 196608,
@@ -59,75 +35,6 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_256x256.bin",
       "encoded_ref_bytes": 59255
-    },
-    {
-      "id": "enc_multi_2",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi_2.bin",
-      "ref_bytes": 3072,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        32,
-        32
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi_2.bin",
-      "encoded_ref_bytes": 3191
-    },
-    {
-      "id": "enc_multi_4",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi_4.bin",
-      "ref_bytes": 196608,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        256,
-        256
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi_4.bin",
-      "encoded_ref_bytes": 67100
-    },
-    {
-      "id": "enc_empty_sizes",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_empty_sizes.bin",
-      "encoded_ref_bytes": 6
-    },
-    {
-      "id": "enc_width_filtered_sizes",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_width_filtered_sizes.bin",
-      "encoded_ref_bytes": 6
-    },
-    {
-      "id": "enc_height_filtered_sizes",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_height_filtered_sizes.bin",
-      "encoded_ref_bytes": 6
-    },
-    {
-      "id": "enc_width_cap_filtered_sizes",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_width_cap_filtered_sizes.bin",
-      "encoded_ref_bytes": 6
-    },
-    {
-      "id": "enc_height_cap_filtered_sizes",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_height_cap_filtered_sizes.bin",
-      "encoded_ref_bytes": 6
     },
     {
       "id": "enc_error_zero_width_size",
@@ -151,7 +58,7 @@
         16
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_entry.bin",
-      "encoded_ref_bytes": 9022
+      "encoded_ref_bytes": 862
     },
     {
       "id": "enc_png_entry",
@@ -175,7 +82,7 @@
         128
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_24bit.bin",
-      "encoded_ref_bytes": 19587
+      "encoded_ref_bytes": 3677
     },
     {
       "id": "enc_32bit",
@@ -187,7 +94,7 @@
         128
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_32bit.bin",
-      "encoded_ref_bytes": 21880
+      "encoded_ref_bytes": 3963
     },
     {
       "id": "enc_no_hotspot",
@@ -214,54 +121,6 @@
       "encoded_ref_bytes": 839
     },
     {
-      "id": "enc_oversized_source",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_oversized_source.bin",
-      "ref_bytes": 98304,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        256,
-        128
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_oversized_source.bin",
-      "encoded_ref_bytes": 1273
-    },
-    {
-      "id": "enc_gray_resize",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_gray_resize.bin",
-      "ref_bytes": 256,
-      "ref_mode": "L8",
-      "ref_size": [
-        16,
-        16
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_gray_resize.bin",
-      "encoded_ref_bytes": 353
-    },
-    {
-      "id": "enc_rgba_resize",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_rgba_resize.bin",
-      "ref_bytes": 1024,
-      "ref_mode": "Rgba8",
-      "ref_size": [
-        16,
-        16
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_rgba_resize.bin",
-      "encoded_ref_bytes": 878
-    },
-    {
-      "id": "enc_integer_scale_resize",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_integer_scale_resize.bin",
-      "ref_bytes": 768,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        16,
-        16
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_integer_scale_resize.bin",
-      "encoded_ref_bytes": 810
-    },
-    {
       "id": "enc_bmp_rgba",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_rgba.bin",
       "ref_bytes": 65536,
@@ -271,7 +130,7 @@
         128
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_rgba.bin",
-      "encoded_ref_bytes": 98902
+      "encoded_ref_bytes": 65598
     },
     {
       "id": "enc_bmp_256",
@@ -284,27 +143,6 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_256.bin",
       "encoded_ref_bytes": 204862
-    },
-    {
-      "id": "enc_bmp_empty_sizes",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_empty_sizes.bin",
-      "encoded_ref_bytes": 6
-    },
-    {
-      "id": "enc_error_cmyk_resize",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": null,
-      "encoded_ref_bytes": null,
-      "oracle_status": "error",
-      "error_type": "builtins.OSError",
-      "error_message": "cannot write mode CMYK as PNG"
     },
     {
       "id": "enc_error_cmyk_png",
@@ -329,42 +167,6 @@
       "oracle_status": "error",
       "error_type": "builtins.KeyError",
       "error_message": "'CMYK'"
-    },
-    {
-      "id": "enc_error_cmyk_bmp_resize",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "encoded_ref_path": null,
-      "encoded_ref_bytes": null,
-      "oracle_status": "error",
-      "error_type": "builtins.KeyError",
-      "error_message": "'CMYK'"
-    },
-    {
-      "id": "enc_malformed_sizes_ignored",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_malformed_sizes_ignored.bin",
-      "ref_bytes": 768,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        16,
-        16
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_malformed_sizes_ignored.bin",
-      "encoded_ref_bytes": 839
-    },
-    {
-      "id": "enc_multi",
-      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_multi.bin",
-      "ref_bytes": 3072,
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        32,
-        32
-      ],
-      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_multi.bin",
-      "encoded_ref_bytes": 3191
     }
   ]
 }

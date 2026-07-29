@@ -170,6 +170,9 @@ impl<'a> Input<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    let _ = inspect(b"not gif");
+    let _ = inspect(b"GIF89a");
     let mut image = b"GIF89a\x01\0\x01\0\0\0\0,\0\0\0\0\x01\0\x01\0\0\x02\0".to_vec();
     assert!(inspect(&image).is_some());
     image.truncate(13);

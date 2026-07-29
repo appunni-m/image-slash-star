@@ -451,3 +451,45 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
         adobe_transform,
     })
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut position = 0;
+    assert!(parse_sof0(&[], &mut position).is_none());
+    let mut position = 0;
+    assert!(parse_sof0(&[0, 2], &mut position).is_none());
+
+    let mut position = 0;
+    assert!(parse_dqt(&[], &mut position, &mut Vec::new()).is_none());
+    let mut position = 0;
+    assert!(parse_dqt(&[0, 3], &mut position, &mut Vec::new()).is_none());
+
+    let mut position = 0;
+    assert!(parse_dht(&[], &mut position, &mut Vec::new(), &mut Vec::new()).is_none());
+    let mut position = 0;
+    assert!(parse_dht(&[0, 3], &mut position, &mut Vec::new(), &mut Vec::new()).is_none());
+
+    let mut position = 0;
+    assert!(parse_dri(&[], &mut position).is_none());
+    let mut position = 0;
+    assert!(parse_dri(&[0, 4], &mut position).is_none());
+
+    let mut position = 0;
+    assert!(find_next_marker(&[0xff], &mut position).is_none());
+
+    for data in [&[0xff, 0x00][..], &[0xff, 0xff, 0xff, 0xd8]] {
+        let mut position = 0;
+        let _ = find_next_marker(data, &mut position);
+    }
+
+    for data in [
+        &[][..],
+        &[0, 0],
+        &[0xff, 0xd8, 0xff, 0xdd],
+        &[0xff, 0xd8, 0xff, 0xee],
+        &[0xff, 0xd8, 0xff, 0xd0],
+        &[0xff, 0xd8, 0xff, 0xe0],
+    ] {
+        assert!(parse_jpeg(data).is_none());
+    }
+}

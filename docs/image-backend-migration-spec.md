@@ -419,8 +419,6 @@ pub enum ImageError {
     Dimensions,
 
     Parameter(String),
-
-    IoError(String),
 }
 ```
 
@@ -433,7 +431,10 @@ Semantics:
   implemented
 - `Dimensions`: dimensions overflow or violate decoded-buffer invariants
 - `Parameter`: caller-provided encode/decode options are invalid
-- `IoError`: file or stream access failed
+
+Host I/O errors are deliberately outside this enum because the codec API owns
+bytes, not filesystem or network access. Native and WASM callers retain their
+own host-specific errors while passing byte buffers into this crate.
 
 ### Metadata Inspection
 

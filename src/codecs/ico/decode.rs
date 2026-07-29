@@ -525,6 +525,11 @@ fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    assert!(decode(b"").is_none());
+    assert!(decode(&[1, 0, 1, 0, 1, 0]).is_none());
+    assert!(decode(&[0, 0, 0, 0, 1, 0]).is_none());
+    assert!(decode(&[0, 0, 1, 0, 0, 0]).is_none());
+
     let mut too_many = Vec::new();
     too_many.extend_from_slice(&0u16.to_le_bytes());
     too_many.extend_from_slice(&1u16.to_le_bytes());

@@ -162,6 +162,11 @@ fn bounded_u32(value: usize) -> u32 {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    let _ = inspect(b"II");
+    let _ = inspect(b"II\x2a\0");
+    let _ = inspect(b"ZZ\0\0\0\0\0\0");
+    let _ = inspect(b"II\0\0\0\0\0\0");
     let _ = verify(b"");
     let _ = verify(b"II");
     let _ = verify(b"II\x2a\0\xff\xff\xff\xff");

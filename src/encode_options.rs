@@ -1,9 +1,11 @@
-//! Encode options — passed from Python save(**options) or JS encode options.
-//! Each format picks the params it cares about; others are ignored.
+//! Portable options accepted by the format-specific encoders.
+//!
+//! Each encoder consumes the fields it documents and ignores unrelated fields.
 
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
+/// Format-neutral encoder settings plus ordered codec-specific values.
 pub struct EncodeOptions {
     /// Quality 0-100 (JPEG, WebP lossy, and AVIF).
     pub quality: Option<u8>,
@@ -31,6 +33,8 @@ pub struct EncodeOptions {
 }
 
 impl EncodeOptions {
+    /// Returns an option set with every override unset.
+    #[must_use]
     pub fn none() -> Self {
         Self::default()
     }

@@ -1,4 +1,4 @@
-//! Build the optional, dependency-free C bridge for the exact AVIF oracle ABI.
+//! Build the optional AVIF C bridge without a Rust build dependency.
 
 use std::env;
 use std::ffi::OsStr;
@@ -9,8 +9,8 @@ use std::process::{Command, Output};
 fn main() {
     println!("cargo:rerun-if-changed=src/codecs/avif/native/bridge.c");
     println!("cargo:rerun-if-changed=third_party/libavif/include/avif/avif.h");
-    println!("cargo:rerun-if-env-changed=PILLOW_RS_AVIF_LIB_DIR");
-    println!("cargo:rerun-if-env-changed=PILLOW_RS_AVIF_LIB_NAME");
+    println!("cargo:rerun-if-env-changed=IMAGE_SLASH_STAR_AVIF_LIB_DIR");
+    println!("cargo:rerun-if-env-changed=IMAGE_SLASH_STAR_AVIF_LIB_NAME");
     println!("cargo:rerun-if-env-changed=CC");
     println!("cargo:rerun-if-env-changed=AR");
 
@@ -31,8 +31,8 @@ fn main() {
 fn compile_bridge(manifest_dir: &Path, out_dir: &Path, target: &str) {
     let source = manifest_dir.join("src/codecs/avif/native/bridge.c");
     let include = manifest_dir.join("third_party/libavif/include");
-    let object = out_dir.join("pillow_rs_avif_bridge.o");
-    let archive = out_dir.join("libpillow_rs_avif_bridge.a");
+    let object = out_dir.join("image_slash_star_avif_bridge.o");
+    let archive = out_dir.join("libimage_slash_star_avif_bridge.a");
     let compiler = target_tool("CC", target, "cc");
     let archiver = target_tool("AR", target, "ar");
 
@@ -54,12 +54,13 @@ fn compile_bridge(manifest_dir: &Path, out_dir: &Path, target: &str) {
     require_success(archive_command.output(), "archive the AVIF C bridge");
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
-    println!("cargo:rustc-link-lib=static=pillow_rs_avif_bridge");
+    println!("cargo:rustc-link-lib=static=image_slash_star_avif_bridge");
 }
 
 fn link_libavif(manifest_dir: &Path, out_dir: &Path, target_os: &str) {
-    if let Some(directory) = env::var_os("PILLOW_RS_AVIF_LIB_DIR").map(PathBuf::from) {
-        let requested_name = env::var("PILLOW_RS_AVIF_LIB_NAME").unwrap_or_else(|_| "avif".into());
+    if let Some(directory) = env::var_os("IMAGE_SLASH_STAR_AVIF_LIB_DIR").map(PathBuf::from) {
+        let requested_name =
+            env::var("IMAGE_SLASH_STAR_AVIF_LIB_NAME").unwrap_or_else(|_| "avif".into());
         if let Some(library) = find_named_library(&directory, target_os) {
             link_library_file(&library, out_dir, target_os);
         } else {
@@ -85,7 +86,7 @@ fn link_libavif(manifest_dir: &Path, out_dir: &Path, target_os: &str) {
 
     panic!(
         "the `avif` feature requires libavif 1.4.1 with dav1d 1.5.3 and \
-         libaom 3.13.2; set PILLOW_RS_AVIF_LIB_DIR, install the exact \
+         libaom 3.13.2; set IMAGE_SLASH_STAR_AVIF_LIB_DIR, install the exact \
          pkg-config package, or create the pinned .oracle-venv"
     );
 }
@@ -173,7 +174,7 @@ fn link_library_file(library: &Path, out_dir: &Path, target_os: &str) {
                     .args(["-id", &linked_text])
                     .arg(&linked)
                     .output(),
-                "fix the Pillow libavif install name",
+                "fix the copied libavif install name",
             );
             let _ = Command::new("codesign")
                 .args(["--force", "--sign", "-"])
@@ -195,8 +196,8 @@ fn link_library_file(library: &Path, out_dir: &Path, target_os: &str) {
             );
         }
         _ => panic!(
-            "automatic Pillow libavif linking is not implemented for target OS {target_os}; \
-             set PILLOW_RS_AVIF_LIB_DIR to an installed import library"
+            "automatic libavif linking is not implemented for target OS {target_os}; \
+             set IMAGE_SLASH_STAR_AVIF_LIB_DIR to an installed import library"
         ),
     }
 }

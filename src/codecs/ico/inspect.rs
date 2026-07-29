@@ -141,3 +141,16 @@ fn bounded_usize(value: u32) -> usize {
         usize::from_le_bytes(value.to_le_bytes())
     }
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    for header in [
+        [1, 0, 1, 0, 1, 0],
+        [0, 0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 1],
+    ] {
+        let _ = inspect(&header);
+    }
+}

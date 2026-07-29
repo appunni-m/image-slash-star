@@ -23,7 +23,7 @@ pub(crate) mod parser;
 pub(crate) mod progressive;
 pub(crate) mod upsample;
 
-// Re-export the public entry point so `crate::decode::jpeg::decode` still works.
+// Expose the implementation only to the crate-level structured dispatcher.
 pub use implementation::decode;
 
 #[cfg(coverage)]
@@ -31,5 +31,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     bit_reader::__coverage_exercise_private_branches();
     implementation::__coverage_exercise_private_branches();
     huffman::__coverage_exercise_private_branches();
+    parser::__coverage_exercise_private_branches();
     progressive::__coverage_exercise_private_branches();
 }

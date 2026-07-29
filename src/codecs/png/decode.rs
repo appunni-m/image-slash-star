@@ -550,6 +550,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         data
     }
 
+    let _ = decode(b"");
     let _ = verify(b"");
     let _ = verify(PNG_SIGNATURE);
     let _ = verify(&png_chunk(*b"NOPE", &[0; 13]));
