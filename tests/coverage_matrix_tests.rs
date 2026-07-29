@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 94);
+    assert_eq!(expected.cases.len(), 96);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2419,6 +2419,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             | "partitioned_square_12x12_luma_eob1.avif"
             | "partitioned_square_12x12_luma_eob2_control.avif"
             | "partitioned_square_12x12_luma_eob4_control.avif"
+            | "partitioned_square_12x12_luma_eob6_control.avif"
+            | "partitioned_square_12x12_luma_eob9_control.avif"
             | "partitioned_square_16x16_g64.avif"
             | "partitioned_square_16x16_g96_direct_tokens.avif"
             | "partitioned_square_16x16_r64.avif"
@@ -2686,6 +2688,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_square_12x12_luma_eob4_control.avif" => {
                 "299dc7d8cf7b620bb3cc3a56ab17da5414d8377e0b79196fce64cae0e05ca7f3"
             }
+            "partitioned_square_12x12_luma_eob6_control.avif" => {
+                "84c006c2c0f8e322453101374baeb3c0f1e30653b7960fb1068cfc8f33c96e68"
+            }
+            "partitioned_square_12x12_luma_eob9_control.avif" => {
+                "7b69d30ebe2894d11aa6d4f7c3385c8675a4cf8daf702d5b6cd709a6001ce506"
+            }
             "partitioned_square_16x16_g96_direct_tokens.avif" => {
                 "87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f"
             }
@@ -2836,6 +2844,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     | "partitioned_square_12x12_luma_eob1.avif"
                     | "partitioned_square_12x12_luma_eob2_control.avif"
                     | "partitioned_square_12x12_luma_eob4_control.avif"
+                    | "partitioned_square_12x12_luma_eob6_control.avif"
+                    | "partitioned_square_12x12_luma_eob9_control.avif"
                     | "partitioned_square_16x16_g64.avif"
             )
         {
@@ -2850,7 +2860,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "10bit.avif",
         "multitile.avif",
         "partitioned_square_12x12_midpoint_g96_ac.avif",
-        "partitioned_square_12x12_luma_eob6_control.avif",
+        "partitioned_square_12x12_luma_eob10_control.avif",
     ] {
         let input = require_ok(
             fs::read(
