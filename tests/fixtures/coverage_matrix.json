@@ -381,6 +381,34 @@
           "ref_is_animated": false
         },
         {
+          "id": "portable_lossy_420_q99_eob_bin_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two",
+          "asset": "portable_lossy_420_q99_eob_bin_control.avif",
+          "expect_error": true,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed"
+        },
+        {
+          "id": "portable_lossy_420_q99_eob_base_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "One-byte coded-tile mutation retaining EOB-bin zero before selecting unsupported EOB-base zero",
+          "asset": "portable_lossy_420_q99_eob_base_control.avif",
+          "expect_error": true,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed"
+        },
+        {
           "id": "portable_lossless_420_leaf_4x8_a",
           "type": "decode",
           "format": "avif",
@@ -24129,12 +24157,12 @@
     }
   },
   "summary": {
-    "total_rows": 1171,
-    "decode_rows": 893,
+    "total_rows": 1173,
+    "decode_rows": 895,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 892,
-    "decode_active": 893,
+    "assets_available": 894,
+    "decode_active": 895,
     "decode_planned": 0,
     "encode_not_wired": 0
   }

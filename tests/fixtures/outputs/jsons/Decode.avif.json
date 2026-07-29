@@ -337,6 +337,36 @@
       "ref_is_animated": false
     },
     {
+      "id": "portable_lossy_420_q99_eob_bin_control",
+      "status": "error",
+      "error_type": "builtins.RuntimeError",
+      "error_message": "Failed to decode frame 0: Decoding of color planes failed",
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
+      "id": "portable_lossy_420_q99_eob_base_control",
+      "status": "error",
+      "error_type": "builtins.RuntimeError",
+      "error_message": "Failed to decode frame 0: Decoding of color planes failed",
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null
+    },
+    {
       "id": "portable_lossless_420_leaf_4x8_a",
       "status": "ok",
       "error_type": null,

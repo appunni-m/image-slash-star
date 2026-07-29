@@ -3016,6 +3016,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "portable_lossy_420_q99_gray_125_control.avif",
         "portable_lossy_420_q99_gray_128_control.avif",
         "portable_lossy_420_q99_gray_131_control.avif",
+        "portable_lossy_420_q99_eob_bin_control.avif",
+        "portable_lossy_420_q99_eob_base_control.avif",
     ] {
         let input = require_ok(
             fs::read(
