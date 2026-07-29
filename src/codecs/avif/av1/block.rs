@@ -14,6 +14,7 @@ struct BlockSyntax {
     coefficients: [PlaneCoefficients; 3],
     transform_grid: TransformGrid,
     chroma_sampling: ChromaSampling,
+    reconstruction: ReconstructionPolicy,
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +40,12 @@ impl ChromaSampling {
     const fn subsampled_cfl_allowed(luma_grid_width: usize, luma_grid_height: usize) -> bool {
         luma_grid_width.div_ceil(2) == 1 && luma_grid_height.div_ceil(2) == 1
     }
+}
+
+#[derive(Clone, Copy)]
+enum ReconstructionPolicy {
+    LosslessWht4x4,
+    Lossy420Dct8x8,
 }
 
 /// Complete set of coded transform grids admitted by the closed AV1 class.
@@ -151,7 +158,7 @@ enum CoefficientPolicy {
     DcOrSkipped,
     DcThenLumaAc,
     Skipped,
-    Lossy420Skipped,
+    Lossy420DcOrSkipped,
     SquareContextual {
         neighbor_contexts: [[u8; 2]; 3],
         orientation: SplitOrientation,
@@ -258,6 +265,10 @@ struct BlockCdfs {
     use_filter_intra: [u16; 2],
     coefficient_skip: [[u16; 2]; 2],
     lossy_luma_8x8_coefficient_skip: [u16; 2],
+    lossy_luma_8x8_transform_type: [[u16; 7]; 2],
+    lossy_luma_8x8_eob_bin: [u16; 7],
+    lossy_luma_8x8_eob_base: [u16; 3],
+    lossy_luma_8x8_high_token: [u16; 4],
     subsampled_chroma_coefficient_skip: [[u16; 2]; 2],
     trailing_coefficient_skip: [[u16; 2]; 2],
     double_neighbor_coefficient_skip: [[u16; 2]; 2],
@@ -345,6 +356,13 @@ impl BlockCdfs {
             use_filter_intra,
             coefficient_skip: [[26_876, 0], [22_807, 0]],
             lossy_luma_8x8_coefficient_skip: [1_220, 0],
+            lossy_luma_8x8_transform_type: [
+                [32_442, 23_972, 18_136, 17_689, 13_496, 5_282, 0],
+                [32_284, 25_192, 25_056, 18_325, 13_609, 10_177, 0],
+            ],
+            lossy_luma_8x8_eob_bin: [32_439, 32_270, 31_667, 30_984, 29_503, 25_010, 0],
+            lossy_luma_8x8_eob_base: [27_051, 6_291, 0],
+            lossy_luma_8x8_high_token: [18_362, 11_906, 8_354, 0],
             subsampled_chroma_coefficient_skip: [[25_114, 0], [13_295, 0]],
             trailing_coefficient_skip: [[10_833, 0], [2_526, 0]],
             double_neighbor_coefficient_skip: [[281, 0], [651, 0]],
@@ -1596,22 +1614,52 @@ fn decode_delta_q(
     (initial_qindex.wrapping_sub(delta) == 2).then_some(())
 }
 
-// ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:318-354 and
-// src/cdf.c:689-706. The admitted lossy leaf has one skipped 8x8 luma
-// transform in context one and one skipped 4x4 transform per chroma plane in
-// context seven. Zero coefficients below are a reconstruction representation;
-// the real transform sizes and skip symbols are consumed here.
-fn decode_lossy_420_skipped_coefficients(
+// ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:318-643,
+// src/msac.c:187-201, src/cdf.c:308-336, 749-755, 839-865, and
+// 1316-1465. The admitted lossy leaf has one 8x8 luma transform in context
+// one and one skipped 4x4 transform per chroma plane in context seven. Luma
+// may be skipped or contain exactly one direct-token DCT_DCT DC coefficient.
+fn decode_lossy_420_dc_or_skipped_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
+    luma_predictor: LumaPredictor,
     cdfs: &mut BlockCdfs,
 ) -> Option<PlaneCoefficients> {
-    let skipped = if plane == 0 {
-        decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip)
-    } else {
-        decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[0])
+    if plane != 0 {
+        return decoder
+            .adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[0])
+            .then_some([[0_i32; 16]; 16]);
+    }
+    if decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip) {
+        return Some([[0_i32; 16]; 16]);
+    }
+
+    // Slice 35 admits only directional lossy predictors. Their AV1 mode
+    // indices are one and two, so subtracting one selects the corresponding
+    // 8x8 transform-type CDF without consulting source pixels or fixtures.
+    let transform_context = luma_predictor.cdf_index().wrapping_sub(1);
+    (decoder.adaptive_symbol(
+        &mut cdfs.lossy_luma_8x8_transform_type[transform_context],
+        6,
+    ) == 1)
+        .then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_bin, 6) == 0).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_base, 2) == 2).then_some(())?;
+    let token = decode_high_token(decoder, &mut cdfs.lossy_luma_8x8_high_token);
+    let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
+
+    // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:54-73,
+    // src/dequant_tables.c, src/qm.c:1604-1692, and
+    // src/recon_tmpl.c:597-643. At block qindex two, eight-bit Y-DC dequant
+    // is eight and qmatrix-ten DC weight 32 leaves it unchanged.
+    let magnitude = match token {
+        8 => 64,
+        9 => 72,
+        _ => return None,
     };
-    skipped.then_some([[0_i32; 16]; 16])
+    let mut coefficients = [[0_i32; 16]; 16];
+    coefficients[0][0] = if negative { -magnitude } else { magnitude };
+    Some(coefficients)
 }
 
 fn decode_syntax(
@@ -1728,8 +1776,8 @@ fn decode_syntax(
                 plane_grid_width,
                 plane_grid_height,
             ),
-            CoefficientPolicy::Lossy420Skipped => {
-                decode_lossy_420_skipped_coefficients(decoder, plane, cdfs)
+            CoefficientPolicy::Lossy420DcOrSkipped => {
+                decode_lossy_420_dc_or_skipped_coefficients(decoder, plane, luma_predictor, cdfs)
             }
             CoefficientPolicy::SquareContextual {
                 neighbor_contexts,
@@ -1805,6 +1853,11 @@ fn decode_syntax(
         coefficients,
         transform_grid,
         chroma_sampling,
+        reconstruction: if matches!(quantization_syntax, QuantizationSyntax::Lossless) {
+            ReconstructionPolicy::LosslessWht4x4
+        } else {
+            ReconstructionPolicy::Lossy420Dct8x8
+        },
     })
 }
 
@@ -1869,6 +1922,31 @@ fn reconstruct_transform(predictor: u16, coefficients: TransformCoefficients) ->
         *sample = reconstructed;
     }
     samples
+}
+
+// ✅ VERIFIED: dav1d 1.5.3 src/itx_tmpl.c:44-73. DCT_DCT transforms with
+// EOB zero use this scalar DC-only fast path. The 8x8 transform shift is one;
+// the signed right shifts intentionally mirror dav1d's target arithmetic.
+fn inverse_dct_8x8_dc(coefficient: i32) -> i32 {
+    let dc = (coefficient * 181 + 128) >> 8;
+    let dc = (dc + 1) >> 1;
+    (dc * 181 + 128 + 2_048) >> 12
+}
+
+fn reconstruct_lossy_luma_8x8(
+    predictor: u16,
+    coefficients: PlaneCoefficients,
+) -> ReconstructedPlane {
+    let residual = inverse_dct_8x8_dc(coefficients[0][0]);
+    let reconstructed = i32::from(predictor).saturating_add(residual).clamp(0, 255);
+    #[expect(
+        clippy::cast_sign_loss,
+        reason = "the reconstructed eight-bit sample is explicitly clamped to 0..=255"
+    )]
+    let reconstructed = reconstructed as u16;
+    ReconstructedPlane {
+        samples: vec![reconstructed; 64],
+    }
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:1176-1545. For the accepted
@@ -1943,28 +2021,52 @@ struct ClosedLeaf {
 }
 
 fn reconstruct_leaf(syntax: BlockSyntax, predictors: [u16; 3]) -> ClosedLeaf {
-    let planes = [
-        reconstruct_coded_plane(
-            predictors[0],
-            syntax.coefficients[0],
-            syntax.transform_grid,
-            ChromaSampling::Full,
-        ),
-        reconstruct_coded_plane(
-            predictors[1],
-            syntax.coefficients[1],
-            syntax.transform_grid,
-            syntax.chroma_sampling,
-        ),
-        reconstruct_coded_plane(
-            predictors[2],
-            syntax.coefficients[2],
-            syntax.transform_grid,
-            syntax.chroma_sampling,
-        ),
-    ];
+    let BlockSyntax {
+        luma_predictor,
+        coefficients,
+        transform_grid,
+        chroma_sampling,
+        reconstruction,
+    } = syntax;
+    let planes = match reconstruction {
+        ReconstructionPolicy::LosslessWht4x4 => [
+            reconstruct_coded_plane(
+                predictors[0],
+                coefficients[0],
+                transform_grid,
+                ChromaSampling::Full,
+            ),
+            reconstruct_coded_plane(
+                predictors[1],
+                coefficients[1],
+                transform_grid,
+                chroma_sampling,
+            ),
+            reconstruct_coded_plane(
+                predictors[2],
+                coefficients[2],
+                transform_grid,
+                chroma_sampling,
+            ),
+        ],
+        ReconstructionPolicy::Lossy420Dct8x8 => [
+            reconstruct_lossy_luma_8x8(predictors[0], coefficients[0]),
+            reconstruct_coded_plane(
+                predictors[1],
+                coefficients[1],
+                transform_grid,
+                ChromaSampling::Subsampled420,
+            ),
+            reconstruct_coded_plane(
+                predictors[2],
+                coefficients[2],
+                transform_grid,
+                ChromaSampling::Subsampled420,
+            ),
+        ],
+    };
     ClosedLeaf {
-        luma_predictor: syntax.luma_predictor,
+        luma_predictor,
         planes,
     }
 }
@@ -2166,6 +2268,7 @@ fn reconstruct_following_square_leaf(
         coefficients,
         transform_grid,
         chroma_sampling: _,
+        reconstruction: _,
     } = syntax;
     let edges = neighbor
         .planes
@@ -2418,7 +2521,7 @@ pub(super) fn decode_first_lossless_420_leaf(
     ))
 }
 
-/// Decode the first closed lossy 4:2:0 leaf whose residuals are all skipped.
+/// Decode the first closed lossy 4:2:0 leaf with a skipped or DC-only luma residual.
 pub(super) fn decode_first_lossy_420_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     width: u32,
@@ -2437,7 +2540,7 @@ pub(super) fn decode_first_lossy_420_leaf(
         ChromaSampling::Subsampled420,
         SyntaxPolicy {
             spatial_luma_context: SpatialLumaContext::Origin,
-            coefficient_policy: CoefficientPolicy::Lossy420Skipped,
+            coefficient_policy: CoefficientPolicy::Lossy420DcOrSkipped,
             quantization_syntax: QuantizationSyntax::DeltaQ {
                 initial_qindex,
                 resolution_log2: delta_q_resolution_log2,

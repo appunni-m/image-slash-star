@@ -132,6 +132,40 @@
       ]
     },
     {
+      "id": "portable_lossy_420_q99_gray_126",
+      "asset": "portable_lossy_420_q99_gray_126.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_gray_126.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_8x8_gray_126",
+      "asset": "portable_lossy_420_q99_8x8_gray_126.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_8x8_gray_126.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossy_420_q99_gray_127",
       "asset": "portable_lossy_420_q99_gray_127.avif",
       "expect_error": false,
@@ -200,11 +234,79 @@
       ]
     },
     {
+      "id": "portable_lossy_420_q99_gray_130",
+      "asset": "portable_lossy_420_q99_gray_130.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_gray_130.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_8x8_gray_130",
+      "asset": "portable_lossy_420_q99_8x8_gray_130.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_8x8_gray_130.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_gray_125_control",
+      "asset": "portable_lossy_420_q99_gray_125_control.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_gray_125_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossy_420_q99_gray_128_control",
       "asset": "portable_lossy_420_q99_gray_128_control.avif",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_gray_128_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_gray_131_control",
+      "asset": "portable_lossy_420_q99_gray_131_control.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_gray_131_control.avif",
         "operations": [
           "PIL.Image.open",
           "load",

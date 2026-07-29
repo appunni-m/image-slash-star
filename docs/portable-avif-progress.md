@@ -6985,3 +6985,119 @@ Final Coverage MCP run `bc08b11f-30ae-4155-b6dd-a8bd8e618f89`, snapshot
 `14a62b36-f9b5-4e19-9a9b-08c9b59992c6`, passes all seven test binaries with
 exact totals of 38,203/38,203 lines, 5,460/5,460 branches, 1,909/1,909
 functions, and 62,837/62,837 regions. Slice 34 is accepted.
+
+## Slice 35 Exploration Plan: One Lossy 8x8 Luma DC Residual
+
+Status: exploration complete. Fixture and production changes remain blocked
+until the deterministic targets and excluded controls described here are
+retained by the manifest oracle.
+
+Slice 34 deliberately accepts only an all-skipped lossy residual. The nearest
+unsupported behavior must be found inside the same 4:2:0 frame-tool class so
+that coefficient decoding, dequantization, and inverse transformation are the
+only new dependencies. A prior all-gray diagnostic used the separate 4:4:4
+corpus and therefore cannot justify this slice. Slice 35 uses only
+`scripts/explore_avif_subsampling_corpus.py`, which explicitly encodes and
+validates 4:2:0 plane geometry.
+
+### Corrected 4:2:0 reverse map
+
+Two complete runs through Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, and
+instrumented scalar dav1d 1.5.3 at commit
+`b546257f770768b2c88258c533da38b91a06f737` produce byte-identical reports.
+Each report contains gray 125, 126, 130, and 131 at declared 4x4 and 8x8
+dimensions, quality 99, speed 8, one encoder thread, explicit 4:2:0
+subsampling, and disabled autotiling. The complete report SHA-256 is
+`6e011139955aaf351ab94c5b5096d31aa7927d9a24c0e7ffc01d671af544b29c`.
+
+All eight inputs retain the Slice 34 container, frame-tool, partition,
+quantizer, predictor, chroma, and post-filter class. Their sole coded leaf is
+one level-four `PARTITION_NONE` block. Both declared dimensions use the same
+complete coded 8x8 luma and 4x4 chroma geometry; the 4x4 result is the exact
+top-left visible crop.
+
+| Source | AVIF bytes and SHA-256 | AV1 item bytes and SHA-256 | Scalar operations | Y/U/V SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| gray 125, 4x4 excluded control | 302, `43e09f9447cb94aaa979956887dad091ec1f630f6dab5e33eb68dfbc989537fa` | 27, `d8d9d078d6e991c49cc9cbc298b48602f5cac5fe32b8055bb9a46de9c6f4743c` | 26 | `cb2e66ce3a0f8217491084e1b165ae8f0ccb56e11d5aece9f357e2f8ea54e9b0` / `8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222` / same | `e82feb502523b0e30e96c557012bbc79208f186e3fcb858916b2972db760aac1` |
+| gray 125, 8x8 excluded control | 302, `70b97a8ecfdca48dadf67624fe03db3fa4672dfd921f11f7da1396c393c0b7be` | 27, `2f69874f7bb4fe5a87d23f113f724ef698d999f94e8d3d8cced39151d8ecace6` | 26 | `4a95ade13abf1e946b30c731baab7cde0f7f1a1cc580b5132ee2c99c8e3199c7` / `4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916` / same | `4d11382e9da0a7e9facadaf22c7d9036b341797376ecc5a77c2779e1884e1ec5` |
+| gray 126, 4x4 target | 302, `f82b264295ffb7ea9e357a352e674200ed89138a182b0de7c4002fbc55fade4d` | 27, `00143b1bf95c47014cd15b1dd3daea6b470df80125dd29da5ced61067f08fa5b` | 23 | `7020373caed49533ac20d462ab47a36daf11e920c649a07b12358ed338399684` / `8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222` / same | `0bc6b6903ab77a6d1706777bb507e076f01290f57cb975508aec1cd5cf589810` |
+| gray 126, 8x8 target | 302, `90d415cfd1292d211e6b3874837853f8a7690f27de93c28a133e18f4af986ad1` | 27, `53b99eb196aa3bb35c7d0e84439166cb7003a0498299743332d2718e39314811` | 23 | `1049f7787008516a44e781e66f45beb7ee7e773124c98e0f8456366a7e9d1113` / `4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916` / same | `9a5f0b79fce197304a6aa5a89af73862b128be0db6e93117a67d3ddd07e28edd` |
+| gray 130, 4x4 target | 302, `cf98497c2b678d67bbb9327f7816b9ef9d3d186ffee51b24ee10ec50e8e8d776` | 27, `699477a9b97d4bd3b0741d4762bb87460baf22136c32d4877172178d35360050` | 24 | `14dca06b7ce38551d2e0de4d8210c31481268b45efbbe0f923df8b348509792a` / `8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222` / same | `2c28ec0de076c8c2e7d6d8222ada07a0da8ec45ea53160a39b5dd64b79d7bcc8` |
+| gray 130, 8x8 target | 302, `a579a6a3f85a4b5574d237c3c06f1cff79404bb565ece13e099c3611bac7b39f` | 27, `d706641049062082799f4331211b4691ebf43e88232b5f75a8e6da887edd8904` | 24 | `cad41c1b84b0fe6cb0fd6070bcc44ee4f8a8a14b27dc3d2fd2d8b66b363f9577` / `4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916` / same | `4371170b5239419060ed559afe13157740d69ef2aee0592cf4fc71c47dff58a5` |
+| gray 131, 4x4 excluded control | 302, `ff49a749f44a139b697671a2c21032ff0a3298a0fb749ed7d9a7c193fbbeacfb` | 27, `e273c3937e76e48a440971559827d3c6090d14b0f6d07a8b8fd8ba96a58ca3d6` | 28 | `942110fe58e512ec68fcca4f8223a7175981fa22fd6b8d829c392bcbb0f9a618` / `8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222` / same | `d8044c92ef2a961ebee78d49908caae12338872a8cb36675ef6dbfb0f244e2e9` |
+| gray 131, 8x8 excluded control | 302, `f238b91f4c6b225691933fc5a46a1c2b42dd2460bdc3567a92dcd907fb8ac7bb` | 27, `64282fac510487674cc451cf09ee0fff4e31ae365a5131497d95296c1a199209` | 28 | `d856170c5ecea6fe72b3dde89ee757ec0b249737a9e04b845d42abe7f6f60e11` / `4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916` / same | `831ca0567d6d09bf16b7c76da27026347d9000d12ca92f486dd9c56b4226055e` |
+
+### First divergence and pinned source mapping
+
+The targets match Slice 34 through partition, block skip, delta-q, luma mode
+and angle, and DC chroma mode. The first divergence is the luma coefficient
+skip in pinned dav1d `src/recon_tmpl.c:318-354`: Slice 34 decodes one, while
+gray 126 and 130 decode zero from initial inverse CDF `[1220,0]`.
+
+The exact added path is:
+
+1. `src/recon_tmpl.c:355-415` decodes luma transform-set symbol one from the
+   8x8 intra CDF selected by the vertical or horizontal predictor. Pinned
+   `dav1d_tx_types_per_set` maps it to `DCT_DCT`;
+2. `src/recon_tmpl.c:417-446` decodes EOB-bin zero from the 8x8 two-dimensional
+   inverse CDF `[31426,31262,30678,30016,28582,24229,0]`, proving a DC-only
+   transform;
+3. `src/recon_tmpl.c:577-592` decodes EOB-base symbol two from
+   `[27408,7945,0]`, then `src/msac.c:187-201` decodes direct high token eight
+   for gray 126 or nine for gray 130 from `[18812,12557,9116,0]`;
+4. the existing luma DC-sign CDF decodes negative for gray 126 and positive
+   for gray 130;
+5. `src/decode.c:54-73` and `src/dequant_tables.c` select eight-bit Y-DC
+   dequant eight at block qindex two. Qmatrix ten has DC weight 32, so
+   `src/recon_tmpl.c:597-643` retains effective dequant eight and produces
+   coefficients -64 and +72 respectively; and
+6. the DC-only `DCT_DCT` fast path in `src/itx_tmpl.c:44-73`, with the 8x8
+   transform shift one, applies the exact signed integer sequence
+   `(dc*181+128)>>8`, `(dc+1)>>1`, and
+   `(dc*181+128+2048)>>12`. It yields residual -1 or +1 over the origin
+   vertical predictor 127 or horizontal predictor 129.
+
+Both chroma transforms retain the already verified context-seven skipped
+path, producing constant U and V 128. Loop-filter levels, CDEF strengths,
+restoration, super-resolution, and film grain remain inactive, so the
+reconstructed planes are the final decoded planes.
+
+Gray 125 and 131 are the nearest excluded coefficient controls. Both decode
+high token fifteen and enter the Golomb extension in
+`src/recon_tmpl.c:619-628`; their final tokens are fifteen and sixteen and
+their dequantized DC values are -120 and +128. Slice 35 must reject token
+fifteen before admitting either extension. This boundary is based only on
+parsed AV1 syntax, never the source gray value, fixture identity, encoded
+bytes, hash, or final pixels.
+
+### Closed Slice 35 boundary
+
+Slice 35 retains every Slice 34 frame, geometry, predictor, quantizer, and
+post-filter restriction. It widens only the single 8x8 luma residual:
+
+- a skipped luma transform remains accepted;
+- a non-skipped luma transform must select `DCT_DCT`, EOB zero, EOB-base
+  symbol two, and direct high token eight or nine;
+- the decoded sign and qindex-two/qmatrix-ten dequantization must produce
+  exactly one dequantized DC coefficient and no AC coefficient;
+- each 4x4 chroma transform must remain skipped; and
+- the exact pinned 8x8 DC-only inverse-DCT rounding must reconstruct the
+  complete coded luma plane before the declared 4x4 or 8x8 crop.
+
+Any transform-set symbol, EOB, base token, high token, Golomb extension,
+chroma residual, qindex, matrix, predictor, filter, dimension, partition, or
+container/frame state outside that class remains a portable miss. Production
+changes may start only after the four target fixtures, exact Pillow RGB
+oracles, complete scalar reconstruction records, and gray-125/131 manifest
+controls are committed and an intentional Coverage MCP failure proves the
+current all-skipped gate is the first missing implementation stage.
+
+The fixture layer now retains those four targets and two 4x4 excluded controls.
+Both asset generations and both Pillow-reference generations are identical;
+the reconstruction generator independently builds and runs the pinned scalar
+decoder twice before writing its 138-case document. Coverage MCP run
+`1b144407-6a8c-4f07-91fe-a547ec240df8` is the intentional red proof. Its sole
+failing test reports that production retained no first leaf for
+`portable_lossy_420_q99_gray_126.avif`, after the manifest and reconstruction
+document contracts had already passed. The current all-skipped luma
+coefficient gate is therefore the first missing production stage.
