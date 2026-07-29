@@ -5718,7 +5718,7 @@ processing, or native-only default behavior.
 
 ## Slice 30 Exploration Plan: Alternate Lossless EOB 12 Body
 
-Status: planned.
+Status: accepted.
 
 ### Exact Rust first divergence
 
@@ -5847,3 +5847,333 @@ target-independent, and codec-only.
   features on native and `wasm32-unknown-unknown`, plus strict rustdoc,
   rustfmt, whitespace, legal inventory, deterministic oracle generation, and
   offline source-package verification.
+
+### Acceptance result
+
+The private coefficient decoder now admits the independently traced alternate
+lossless EOB-12 body after the shared Slice 27 prefix. Base-context-seven value
+three selects the new path; every subsequent base token, adaptive high-token
+update, DC context, sign, coefficient, and residual is still derived from AV1
+syntax. The retained Slice 27 value-two path is unchanged, and the
+midpoint-g96 body and all other unproved combinations remain structured
+portable misses at their first unsupported symbol.
+
+The `(7,6)` fixture is the one-hundred-first independent reconstruction
+positive. It matches all 242 pinned dav1d entropy operations and adaptive CDF
+states, the exact coefficient vector
+`[12,-8,0,0,-12,8,0,0,8,-12,0,0,-12,8,0,0]`, every Y/U/V byte, and every
+Pillow RGB byte. Two independent regenerations of the 101-case oracle are
+byte-identical with SHA-256
+`e00b4ab4e4fbcb53628c0fa0d752cdd223ed7c1f2ca79553b9d2d0dbf5dc37cd`.
+
+The manifest still has 1,132 active rows: 854 decode and 278 encode. AVIF has
+112 active decode rows and 23 active encode rows, with no planned, skipped, or
+unwired row. The generated coverage matrix remains byte-identical with
+SHA-256
+`c30092c2b3520329442a51f8912a06d2bd09469c4d22b6fe39f2325555f44fe0`.
+
+Final Coverage MCP run `a18198d2-944b-4de2-aa16-313d84a29b54`, snapshot
+`88470d84-0eb1-41bd-b7fa-cfcd4ab24d9c`, passes all seven test binaries with
+37,124/37,124 lines, 5,378/5,378 branches, 1,869/1,869 functions, and
+61,575/61,575 regions.
+
+Strict Clippy passes for no features, every isolated codec feature, defaults,
+and all features on native and `wasm32-unknown-unknown`. Strict native and
+WASM rustdoc, rustfmt, whitespace, and the 19-file third-party legal inventory
+also pass. Offline source-package verification contains 132 files, is 2.0 MiB
+unpacked and 433,260 bytes compressed, with crate SHA-256
+`52d06e9ae1bc969fe8f6527d8a1381ef79fd94f89cf300c2ffb9f149c51499b9`.
+The slice adds no dependency, unsafe Rust, target fork, public image
+processing, native-only default behavior, or fixture-selected production
+branch.
+
+## Slice 31 Exploration Plan: Midpoint Lossless AC Composition
+
+Status: accepted.
+
+### Current first divergence
+
+`partitioned_square_12x12_midpoint_g96_ac.avif` is the remaining committed
+manifest-backed private reconstruction miss after Slice 30. Its file,
+extracted AV1 item, decoded planes, and Pillow RGB output were already pinned
+independently during Slice 28:
+
+- 337-byte AVIF SHA-256
+  `d10972f944777129121ef100ee66903959138ae946295bb5fe271cef8035b258`;
+- 62-byte AV1 item SHA-256
+  `2b5355aa7d702243dcf6e16933fe18241d94d0bddac3cd7f827c0b83c11cbd84`;
+- 349 scalar dav1d entropy operations;
+- Y/U/V SHA-256 values
+  `f7772f81549eec68ab54ae7799bd8090c9898058f6f3873b127c07fd25e8fb3c`,
+  `2b90f39a18f397971a7da8a663662751ab60d84196371c2813f1e8b009116fb3`,
+  and
+  `d6d3b6aee2d52121d6a0204d1f66171b23c04ef562a2bc4815138ad43986bc8c`;
+- Pillow RGB SHA-256
+  `1d316f3236ecba0ebb2e4483622a7dbaa736686fc6ce609a44c3e7c7380a0ff4`.
+
+The accepted contextual 2x2 grid now reaches the fourth top-left luma
+transform and decodes EOB four. The first unproved value is raster-five
+high-token context seven returning token three; the admitted Slice 23/29
+EOB-4 class requires token five. Slice 30 does not alter this path, so the
+same symbol remains the current Rust/dav1d boundary. Rust must reject there
+without consuming later luma coefficients, chroma coefficients, following
+leaf syntax, or reconstruction state.
+
+### Exploration sequence
+
+1. Add the existing fixture to the reconstruction-oracle generator using only
+   its independently pinned file hash, RGB hash, and dimensions. Generate two
+   complete reports from Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, and
+   instrumented scalar dav1d 1.5.3; require byte-identical output.
+2. Promote the fixture to a failing 102nd manifest-derived reconstruction
+   case before production changes. The expected failure must occur at the
+   current private reconstruction assertion, not in fixture loading, oracle
+   parsing, native decoding, or final byte-size checks.
+3. Reverse-map all four top-left luma transforms, both chroma transform grids,
+   the top-right/bottom-left/bottom-right leaves, residual contexts,
+   predictor contexts, adaptive CDF mutations, coefficient vectors, inverse
+   transforms, edge propagation, and final YUV-to-RGB materialization.
+4. Compare the complete dav1d operation/state sequence with a one-fixture
+   Rust trace and record the first divergence after each candidate boundary.
+   Do not infer a downstream coefficient, predictor, or context from final
+   pixels.
+5. Search the committed constant-color/origin corpus for at least one smaller
+   positive isolator or adjacent negative control for every newly required
+   syntax class. If no encoder-produced isolator exists, retain the class as
+   a private miss rather than broadening from this fixture alone.
+6. Update this section with the exact coefficient/context/sign/reconstruction
+   mapping and a closed implementation boundary before editing production
+   Rust.
+
+### Deterministic reverse-mapping evidence
+
+The fixture was promoted to the 102-case reconstruction oracle before any
+production edit. Two independent generations are byte-identical with SHA-256
+`12cadc61261e4a4c9068e340d8b21e90c0cc6174a383b80849081a8a9ca028f2`.
+Coverage MCP run `27135abd-18f8-424b-b4b0-7d5cb7349f3d` then failed only at
+the intended positive reconstruction assertion; fixture loading, oracle
+parsing, native decoding, and the preceding 101 positives all completed.
+
+`scripts/explore_avif_square_partition_corpus.py` independently encoded and
+traced a 36-case origin grid through the pinned stack. Two runs are
+byte-identical with SHA-256
+`699c2572183e1fd938e5df5bb2c74b963531acdc975c940d381c350443143041`.
+Only origin `(6,6)` produces the target's exact partition ranges 34880, 40768,
+39772, 48314, and 52050; adjacent origins retain the same top-level geometry
+while independently varying EOB and neighbor-context classes.
+
+A second 25-case color corpus at origin `(6,6)` has SHA-256
+`e9780c9b4a59979ceb04b01761616197961f180d713d60861dca7a3b54ad82fb`.
+Green values 95 through 99 and red values 24 through 25 independently retain
+the four-leaf square and the EOB-4/EOB-2 composition. Green 92 through 94,
+red 18 through 23, and blue 195 through 202 collapse to a single leaf while
+retaining smaller subsets of the same coefficient classes. This establishes
+that the admitted decisions follow decoded transform syntax and spatial
+contexts rather than one fixture's identity or final pixels.
+
+### Complete coefficient and context mapping
+
+The top-left leaf uses vertical luma and DC chroma predictors:
+
+1. Luma transforms zero through two are respectively DC-only, skipped, and
+   skipped. Transform three is EOB four. Its final raster-five base context
+   two returns symbol two and high context seven returns token three. Raster
+   two is zero from base context six. Rasters one and four return symbol three
+   from base context three and token three from high context nine. DC returns
+   symbol three from base context zero and token three from high context five:
+   the three stored high-token levels sum to 585, mask to 9, and
+   `(9 + 1) >> 1` selects context five.
+   DC and raster five are positive; rasters one and four are negative. The
+   exact vector is `[12,-12,0,0,-12,12,0,0,0,0,0,0,0,0,0,0]`.
+2. U transform zero is DC-only `+1088`; transforms one and two are skipped;
+   transform three is chroma EOB four. Its final base context two returns
+   token two directly, raster two is zero from context six, rasters one and
+   four return token two from context two, and DC returns token two from
+   context zero. The exact vector is
+   `[-8,8,0,0,8,-8,0,0,0,0,0,0,0,0,0,0]`.
+3. V has the same skip/EOB-four body and vector as U after its DC-only
+   transform zero value `-752`.
+
+The top-right leaf uses horizontal luma. All four luma transforms and chroma
+transforms zero and one are skipped. Chroma transforms two and three each use
+EOB two: EOB-base context one plus high context seven returns token four,
+raster four is zero from base context one, and DC base context zero plus high
+context two returns token four: the stored AC level masks to four and
+`(4 + 1) >> 1` selects context two. DC is negative and raster one positive,
+producing `[-16,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0]` independently for U and
+V.
+
+The bottom-left leaf uses vertical luma. All luma transforms and chroma
+transforms zero and two are skipped. Chroma transforms one and three each use
+EOB one: EOB-base context one plus high context seven returns token four, and
+DC base context zero plus high context two returns token four. DC is negative
+and raster four positive, producing
+`[-16,0,0,0,16,0,0,0,0,0,0,0,0,0,0,0]` independently for U and V.
+
+The bottom-right leaf uses DC luma mode. Every transform is skipped. Its
+external top and left residual contexts select chroma skip contexts twelve,
+eleven, eleven, and ten in row-major order for both planes. All 349 arithmetic
+operations and adaptive mutations then close before reconstruction.
+
+Lossless inverse WHT changes the top-left luma transform's lower-right 2x2
+samples from predictor 81 to 84. The corresponding U and V samples become 194
+and 79. One-sided horizontal and vertical prediction propagates the EOB-two
+and EOB-one residual edges, and two-sided DC reconstructs the skipped
+bottom-right leaf. The resulting plane and RGB hashes are the pinned values
+above.
+
+### Closed implementation boundary
+
+1. Add only the q-context-zero 4x4 chroma CDF rows exercised by base contexts
+   zero through six, high contexts zero through seven, EOB-base contexts zero
+   through two, and EOB high-bit contexts zero and one.
+2. Generalize the existing 2x2 transform-grid walker to accept explicit top
+   and left residual contexts. Derive skip CDF, DC sign context, and outgoing
+   edge contexts from decoded coefficients for each leaf.
+3. Admit chroma EOB one, two, and four only with the complete token/context
+   bodies above. Admit the alternate luma EOB-four body only when its parsed
+   high-context-seven token is three; retain the existing token-five body
+   byte for byte.
+4. Top-left permits the existing luma class plus the mapped chroma class;
+   top-right and bottom-left permit only the mapped chroma class; bottom-right
+   permits no new nonzero transform and continues to require DC luma mode.
+5. Carry top-right bottom-edge and bottom-left right-edge residual contexts
+   into bottom-right decoding before reconstruction. No decision may depend
+   on filename, dimensions, file hash, byte offset, source/replacement color,
+   target, expected output, or reconstructed pixels.
+6. Every unlisted EOB, base symbol, high token, sign-context path, Golomb
+   extension, luma skip context, and chroma context remains a structured
+   private miss at its first unproved value.
+
+### Provisional acceptance boundary
+
+- Admit only syntax classes proved by the complete pinned report and an
+  independent fixture/control relationship. Do not select behavior by
+  filename, dimensions, file hash, byte offset, source color, target, or
+  expected output.
+- Preserve every Slice 1-30 reconstruction case byte for byte and retain a
+  structured private miss for every downstream class not included in the
+  documented closed boundary.
+- Keep all implementation private, safe Rust, dependency-free,
+  target-independent, and codec-only.
+- Promote the target only after all 349 entropy operations, adaptive CDF
+  states, coefficient vectors, Y/U/V bytes, and Pillow RGB bytes match
+  exactly.
+- Preserve all active manifest rows with no planned, skipped, or unwired row.
+- Use Coverage MCP as the only test runner and restore exactly 100% line,
+  branch, function, and region coverage.
+- Pass strict native and WASM Clippy for every feature lane, strict rustdoc,
+  rustfmt, whitespace, the third-party legal inventory, deterministic oracle
+  generation, and offline package verification.
+
+### Acceptance result
+
+The production decoder now admits the mapped alternate luma EOB-four body,
+chroma EOB values one, two, and four, and syntax-derived residual contexts
+across all four square leaves. The initial implementation trace exposed two
+incorrect provisional DC high-token contexts: the luma token-three
+neighborhood selects context five, and the chroma token-four neighborhood
+selects context two. After correcting those mappings, Rust matches all 349
+pinned dav1d arithmetic operations and adaptive CDF states exactly.
+
+`partitioned_square_12x12_midpoint_g96_ac.avif` is the one-hundred-second
+independent reconstruction positive. Its exact luma and chroma coefficient
+vectors, every Y/U/V byte and hash, and every Pillow RGB byte and hash match
+the 102-case oracle. Two independent oracle generations are byte-identical
+with SHA-256
+`12cadc61261e4a4c9068e340d8b21e90c0cc6174a383b80849081a8a9ca028f2`.
+The preceding 101 reconstruction cases remain byte-identical.
+
+The manifest still has 1,132 active rows: 854 decode and 278 encode. AVIF has
+112 active decode rows and 23 active encode rows, with no planned, skipped, or
+unwired row. The generated coverage matrix remains byte-identical with
+SHA-256
+`c30092c2b3520329442a51f8912a06d2bd09469c4d22b6fe39f2325555f44fe0`.
+
+Final Coverage MCP run `56dbcb77-b471-448e-b6d1-3869e97883bd`, snapshot
+`6bfda5ef-fdee-4e3a-b50f-c745767384af`, passes all seven test binaries with
+37,279/37,279 lines, 5,408/5,408 branches, 1,876/1,876 functions, and
+61,873/61,873 regions.
+
+Strict Clippy passes for no features, every isolated codec feature, defaults,
+and all features on native and `wasm32-unknown-unknown`; the final AVIF,
+default, and all-feature lanes were rerun after context propagation was
+refactored. Strict native and WASM rustdoc, rustfmt, whitespace, diagnostic
+script syntax, and the 19-file third-party legal inventory also pass.
+Offline source-package verification contains 132 files, is 2.0 MiB unpacked
+and 434,153 bytes compressed, with crate SHA-256
+`64c6507b28e29403fb6fc0fb3b4e949d9e476a13d94518e42aa0d6d755202d75`.
+The slice adds no dependency, unsafe Rust, target fork, public image
+processing, native-only default behavior, coverage exclusion, or
+fixture-selected production branch.
+
+## Slice 32 Exploration Plan: Minimal 4:2:0 Lossless Geometry
+
+Status: exploration in progress; production changes are blocked on the
+complete mapping below.
+
+### Capability boundary
+
+The next portable AVIF boundary is chroma subsampling, not another
+fixture-specific lossless coefficient body. Pillow's upstream
+`baseline.avif` is the long-term 4:2:0 parity control:
+
+- 3,077-byte AVIF SHA-256
+  `d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2`;
+- 128x128 Pillow `RGB` output with 49,152 bytes and SHA-256
+  `f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf`;
+- copied from Pillow 12.2.0 `Tests/images/avif/hopper.avif` under the retained
+  MIT-CMU license.
+
+That fixture combines 4:2:0 geometry with lossy quantization, many blocks,
+loop filters, restoration choices, and nontrivial prediction. Admitting it
+directly would not isolate which syntax and reconstruction class is proved.
+Slice 32 therefore begins with a deterministic 4x4 constant-color 4:2:0
+candidate encoded by the already pinned Pillow 12.2.0/libavif
+1.4.1/libaom 3.13.2 stack at quality 100, speed 8, one thread, and disabled
+autotiling. `baseline.avif` remains the fixed downstream control.
+
+### Exploration sequence
+
+1. Extend the existing AVIF diagnostic generator to encode the same 4x4 RGB
+   source used by `portable_lossless_a.avif` with explicit 4:2:0 subsampling.
+   Encode twice and require byte-identical AVIF and AV1 items.
+2. Decode the candidate through pinned scalar dav1d 1.5.3. Record the complete
+   sequence/frame declarations, partition path, transform dimensions,
+   coefficient syntax, reconstructed Y/U/V plane dimensions and bytes, and
+   Pillow RGB bytes.
+3. Run the current Rust validation trace against the candidate and identify
+   the first divergence. Distinguish an intentional closed-class gate from a
+   parser or arithmetic mismatch; do not bypass the gate until all downstream
+   syntax is mapped.
+4. Reverse-map 4:2:0 chroma block coordinates, residual-context indexing,
+   visible-plane sizing, edge padding, and the exact libyuv I420-to-RGB24
+   integer path. Do not infer chroma upsampling or RGB rounding from final
+   pixels alone.
+5. Search a small deterministic source-color and dimension corpus for at
+   least two independent positive candidates and an adjacent negative control
+   for every new geometry or conversion decision.
+6. Pin the chosen candidate in the manifest, fixture provenance, and a
+   dedicated reconstruction oracle before production changes. The first
+   Coverage MCP run must fail only at the expected portable reconstruction
+   boundary.
+7. Update this section with the exact syntax, plane, upsampling, conversion,
+   and rejection mapping plus a closed implementation boundary before editing
+   production Rust.
+
+### Provisional implementation boundary
+
+- Add no general image resize, chroma-resampling, or color-conversion API.
+  Subsampled reconstruction and I420 materialization remain private AVIF codec
+  machinery.
+- Admit only eight-bit, all-lossless, single-item, single-frame, full-range
+  4:2:0 syntax proved by the generated corpus. Lossy `baseline.avif` remains a
+  portable miss until its independent quantization/filter slice is mapped.
+- Preserve every Slice 1-31 output and all native fallback behavior byte for
+  byte. Never select production behavior by fixture name, dimensions, file
+  hash, byte offset, source color, target, or expected output.
+- Keep the implementation safe Rust, dependency-free apart from retained
+  `bytemuck`, target-independent, WASM-compatible, and codec-only.
+- Require exact manifest/oracle byte parity and exactly 100% line, branch,
+  function, and region coverage through Coverage MCP, followed by the complete
+  native/WASM feature-gate, rustdoc, legal, and package gates.
