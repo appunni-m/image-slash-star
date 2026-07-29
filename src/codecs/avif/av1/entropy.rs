@@ -761,10 +761,19 @@ fn closed_reconstruction_context(context: &FirstBlockContext) -> bool {
         & !context.skip_mode_enabled
         & !context.allow_intrabc
         & !context.monochrome
-        & !context.subsampling_x
-        & !context.subsampling_y
         & (context.block_x == 0)
         & (context.block_y == 0)
+}
+
+fn closed_444_reconstruction_context(context: &FirstBlockContext) -> bool {
+    closed_reconstruction_context(context) & !context.subsampling_x & !context.subsampling_y
+}
+
+fn closed_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    closed_reconstruction_context(context)
+        & context.subsampling_x
+        & context.subsampling_y
+        & matches!((context.frame_width, context.frame_height), (4, 4) | (8, 8))
 }
 
 fn decode_closed_leaf(
@@ -777,6 +786,22 @@ fn decode_closed_leaf(
         context.frame_width,
         context.frame_height,
         transform_grid,
+        super::block::BlockTools {
+            allow_screen_content_tools: context.allow_screen_content_tools,
+            enable_filter_intra: context.enable_filter_intra,
+        },
+    );
+    finish_closed_leaf(decoder, reconstructed)
+}
+
+fn decode_closed_420_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    context: &FirstBlockContext,
+) -> Option<super::block::FirstLeaf> {
+    let reconstructed = super::block::decode_first_lossless_420_leaf(
+        decoder,
+        context.frame_width,
+        context.frame_height,
         super::block::BlockTools {
             allow_screen_content_tools: context.allow_screen_content_tools,
             enable_filter_intra: context.enable_filter_intra,
@@ -809,8 +834,9 @@ pub(super) fn validate_first_partition(
     let mut decoder = RangeDecoder::new(data, range.start, range.end, context.disable_cdf_update)?;
     #[cfg(coverage)]
     {
-        let trace_closed_context = closed_reconstruction_context(context)
-            & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context));
+        let trace_closed_context = (closed_444_reconstruction_context(context)
+            & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context)))
+            | closed_420_reconstruction_context(context);
         if trace_closed_context {
             decoder.enable_operation_trace();
         }
@@ -835,7 +861,7 @@ pub(super) fn validate_first_partition(
                     return None;
                 }
                 let reconstruct_closed_leaf = (partition == 0)
-                    & closed_reconstruction_context(context)
+                    & closed_444_reconstruction_context(context)
                     & closed_leaf_dimensions(context)
                     & closed_leaf_level_dimensions(context, level);
                 if reconstruct_closed_leaf {
@@ -850,8 +876,13 @@ pub(super) fn validate_first_partition(
                     };
                     return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
                 }
+                let reconstruct_closed_420_leaf =
+                    (partition == 0) & closed_420_reconstruction_context(context) & (level == 4);
+                if reconstruct_closed_420_leaf {
+                    return Some(decode_closed_420_leaf(&mut decoder, context));
+                }
                 let reconstruct_square_split = (partition == 3)
-                    & closed_reconstruction_context(context)
+                    & closed_444_reconstruction_context(context)
                     & (level == 3)
                     & square_recursive_split_dimensions(context);
                 if reconstruct_square_split {
@@ -895,7 +926,7 @@ pub(super) fn validate_first_partition(
                     return None;
                 }
                 let reconstruct_rectangular_leaf = !split
-                    & closed_reconstruction_context(context)
+                    & closed_444_reconstruction_context(context)
                     & (level == 3)
                     & rectangular_leaf_dimensions(context);
                 if reconstruct_rectangular_leaf {
@@ -907,7 +938,7 @@ pub(super) fn validate_first_partition(
                     return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
                 }
                 let reconstruct_recursive_split = split
-                    & closed_reconstruction_context(context)
+                    & closed_444_reconstruction_context(context)
                     & (level == 3)
                     & recursive_split_dimensions(context);
                 if reconstruct_recursive_split {

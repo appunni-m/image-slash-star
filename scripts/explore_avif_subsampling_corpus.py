@@ -94,17 +94,16 @@ def plane_record(data: bytes, width: int) -> dict[str, object]:
     }
 
 
-def decode_case(
+def decode_encoded_case(
     executable: Path,
     environment: dict[str, str],
     work: Path,
-    color: tuple[int, int, int],
-    size: tuple[int, int],
+    encoded: bytes,
+    stem: str,
+    source: dict[str, object],
 ) -> dict[str, object]:
-    """Encode and trace one corpus member."""
+    """Trace one encoded 4:2:0 corpus member."""
 
-    encoded = encode(color, size)
-    stem = f"rgb_{color[0]}_{color[1]}_{color[2]}_{size[0]}x{size[1]}_420"
     path = work / f"{stem}.avif"
     path.write_bytes(encoded)
     sample, _ = extract_color_item(path)
@@ -135,6 +134,10 @@ def decode_case(
     debug_log, event_stream, entropy_operations, blocks, states = parse_debug_log(
         result.stdout
     )
+    portable_color = portable_color_reference(path)
+    if not portable_color["subsampling_x"] or not portable_color["subsampling_y"]:
+        raise RuntimeError(f"{stem} is not a 4:2:0 AVIF")
+    size = (int(portable_color["width"]), int(portable_color["height"]))
     yuv = output_path.read_bytes()
     chroma_size = ((size[0] + 1) // 2, (size[1] + 1) // 2)
     y_length = size[0] * size[1]
@@ -150,13 +153,13 @@ def decode_case(
         if image.mode != "RGB" or image.size != size:
             raise RuntimeError(f"unexpected Pillow output for {stem}")
     return {
-        "color": list(color),
+        **source,
         "size": list(size),
         "file_length": len(encoded),
         "file_sha256": sha256(encoded),
         "sample_length": len(sample),
         "sample_sha256": sha256(sample),
-        "portable_color": portable_color_reference(path),
+        "portable_color": portable_color,
         "partition_blocks": blocks,
         "entropy_operation_count": len(entropy_operations),
         "entropy_operations": entropy_operations,
@@ -175,6 +178,45 @@ def decode_case(
     }
 
 
+def decode_generated_case(
+    executable: Path,
+    environment: dict[str, str],
+    work: Path,
+    color: tuple[int, int, int],
+    size: tuple[int, int],
+) -> dict[str, object]:
+    """Encode and trace one generated corpus member."""
+
+    encoded = encode(color, size)
+    stem = f"rgb_{color[0]}_{color[1]}_{color[2]}_{size[0]}x{size[1]}_420"
+    return decode_encoded_case(
+        executable,
+        environment,
+        work,
+        encoded,
+        stem,
+        {"color": list(color)},
+    )
+
+
+def decode_input_case(
+    executable: Path,
+    environment: dict[str, str],
+    work: Path,
+    path: Path,
+) -> dict[str, object]:
+    """Trace one existing AVIF without re-encoding it."""
+
+    return decode_encoded_case(
+        executable,
+        environment,
+        work,
+        path.read_bytes(),
+        f"fixture_{path.stem}",
+        {"fixture": path.name},
+    )
+
+
 def main() -> None:
     """Run the requested deterministic subsampling corpus."""
 
@@ -186,9 +228,18 @@ def main() -> None:
     parser.add_argument("--ninja", default="ninja")
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--color", type=parse_color, action="append", required=True)
-    parser.add_argument("--size", type=parse_pair, action="append", required=True)
+    parser.add_argument("--input", type=Path, action="append")
+    parser.add_argument("--color", type=parse_color, action="append")
+    parser.add_argument("--size", type=parse_pair, action="append")
     args = parser.parse_args()
+
+    if args.input and (args.color or args.size):
+        parser.error("--input cannot be combined with --color or --size")
+    if not args.input and (not args.color or not args.size):
+        parser.error("provide --input or at least one --color and one --size")
+    for path in args.input or []:
+        if not path.is_file():
+            parser.error(f"input file does not exist: {path}")
 
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -212,11 +263,17 @@ def main() -> None:
         else:
             executable = args.dav1d.resolve()
             environment = dict(os.environ)
-        cases = [
-            decode_case(executable, environment, work, color, size)
-            for color in args.color
-            for size in args.size
-        ]
+        if args.input:
+            cases = [
+                decode_input_case(executable, environment, work, path.resolve())
+                for path in args.input
+            ]
+        else:
+            cases = [
+                decode_generated_case(executable, environment, work, color, size)
+                for color in args.color
+                for size in args.size
+            ]
 
     report = {
         "oracle": {

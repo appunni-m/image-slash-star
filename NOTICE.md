@@ -11,7 +11,8 @@ original terms. The exact revisions and source hashes are recorded in
 | Repository scope | Fixed upstream | Terms and retained text |
 | --- | --- | --- |
 | `src/codecs/webp/native/` | image-webp 0.2.4 | MIT OR Apache-2.0; `third_party/image-webp/` |
-| WebP code under `src/codecs/webp/`, including marked native helpers and VP8 encoder code | libwebp 1.6.0 | BSD-3-Clause; `third_party/libwebp/COPYING` |
+| WebP code under `src/codecs/webp/`, including marked native helpers and VP8 encoder code | libwebp 1.6.0 | BSD-3-Clause and the WebM patent grant; `third_party/libwebp/` |
+| VP8 quantization tables in `src/codecs/webp/encode/vp8/quant.rs` | libvpx 1.15.2 | BSD-3-Clause and the WebM patent grant; `third_party/libvpx/` |
 | `src/codecs/jpeg/` | libjpeg-turbo 3.1.4.1 and IJG libjpeg | IJG and BSD-style terms; `third_party/libjpeg-turbo/` |
 | `src/codecs/compression/zlib_ng.rs` and marked related DEFLATE code | zlib-ng 2.3.3 | Zlib; `third_party/zlib-ng/LICENSE.md` |
 | AVIF container and sample-table ports under `src/codecs/avif/`, the copied public header, and copied libavif fixtures | libavif 1.4.1 | BSD-2-Clause and the complete upstream notice bundle; `third_party/libavif/` |
@@ -42,7 +43,7 @@ script uses these components:
 | libaom | 3.13.2 | BSD-2-Clause plus Alliance for Open Media Patent License 1.0 in `third_party/libaom/` and root `PATENTS` |
 | dav1d | 1.5.3 | BSD-2-Clause in `third_party/dav1d/COPYING` |
 | libyuv | commit `6067afde563c3946eebd94f146b3824ab7a97a9c` | BSD-3-Clause in `third_party/libyuv/LICENSE` |
-| libwebp SharpYUV | 1.6.0 | BSD-3-Clause in `third_party/libwebp/COPYING` |
+| libwebp SharpYUV | 1.6.0 | BSD-3-Clause and the WebM patent grant in `third_party/libwebp/` |
 
 These native components are not Cargo dependencies and are not part of the
 core WASM build. A source distribution retains the AOM patent license at its

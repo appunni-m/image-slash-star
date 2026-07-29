@@ -13,6 +13,13 @@ struct BlockSyntax {
     luma_predictor: LumaPredictor,
     coefficients: [PlaneCoefficients; 3],
     transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
+}
+
+#[derive(Clone, Copy)]
+enum ChromaSampling {
+    Full,
+    Subsampled420,
 }
 
 /// Complete set of coded transform grids admitted by the closed AV1 class.
@@ -179,10 +186,12 @@ struct BlockCdfs {
     luma_mode: [[u16; 13]; 6],
     luma_angle: [[u16; 7]; 2],
     chroma_mode: [[u16; 13]; 3],
+    subsampled_chroma_mode: [u16; 14],
     palette_y: [u16; 2],
     palette_uv: [u16; 2],
     use_filter_intra: [u16; 2],
     coefficient_skip: [[u16; 2]; 2],
+    subsampled_chroma_coefficient_skip: [u16; 2],
     trailing_coefficient_skip: [[u16; 2]; 2],
     double_neighbor_coefficient_skip: [[u16; 2]; 2],
     eob_bin_luma: [u16; 5],
@@ -249,10 +258,15 @@ impl BlockCdfs {
                     739, 0,
                 ],
             ],
+            subsampled_chroma_mode: [
+                28_236, 12_988, 12_711, 12_553, 12_340, 11_697, 11_569, 11_317, 10_669, 8_540,
+                8_075, 5_736, 3_296, 0,
+            ],
             palette_y: [1_092, 0],
             palette_uv: [307, 0],
             use_filter_intra,
             coefficient_skip: [[26_876, 0], [22_807, 0]],
+            subsampled_chroma_coefficient_skip: [25_114, 0],
             trailing_coefficient_skip: [[10_833, 0], [2_526, 0]],
             double_neighbor_coefficient_skip: [[281, 0], [651, 0]],
             eob_bin_luma: [31_928, 31_729, 30_788, 27_873, 0],
@@ -1106,11 +1120,19 @@ fn decode_dc_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
+    subsampled_chroma: bool,
 ) -> Option<PlaneCoefficients> {
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
     let mut coefficients = [[0_i32; 16]; 16];
     let coefficient_context = usize::from(plane != 0);
-    let first_zero = decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context]);
+    let first_zero = if subsampled_chroma {
+        // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:328-345 and the pinned
+        // Slice 32 scalar traces. The sole 4:2:0 chroma transform in an 8x8
+        // lossless block selects coefficient-skip context seven.
+        decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip)
+    } else {
+        decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
+    };
     if first_zero {
         // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:754-838 and the pinned
         // Slice 12 scalar traces. With no top-left coefficient context, every
@@ -1413,6 +1435,7 @@ fn decode_syntax(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
     spatial_luma_context: SpatialLumaContext,
     coefficient_policy: CoefficientPolicy,
     tools: BlockTools,
@@ -1449,8 +1472,22 @@ fn decode_syntax(
             (decoder.adaptive_symbol(&mut cdfs.luma_angle[angle_index], 6) as i32).wrapping_sub(3);
         (luma_angle_delta == 0).then_some(())?;
     }
-    let predictor_index = luma_predictor.cdf_index();
-    (decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12) == 0).then_some(())?;
+    match chroma_sampling {
+        ChromaSampling::Full => {
+            let predictor_index = luma_predictor.cdf_index();
+            (decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12) == 0)
+                .then_some(())?;
+        }
+        ChromaSampling::Subsampled420 => {
+            // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:1072-1078,
+            // src/cdf.c:113-177, and the pinned Slice 32 scalar traces.
+            // Lossless 8x8 luma with one 4x4 chroma block permits CFL, so the
+            // vertical-luma row has thirteen coded symbols even though this
+            // closed class retains only decoded DC chroma.
+            matches!(luma_predictor, LumaPredictor::Vertical).then_some(())?;
+            (decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode, 13) == 0).then_some(())?;
+        }
+    }
     if tools.allow_screen_content_tools {
         if matches!(luma_predictor, LumaPredictor::Dc) {
             (!decoder.adaptive_bool(&mut cdfs.palette_y)).then_some(())?;
@@ -1461,13 +1498,21 @@ fn decode_syntax(
         (!decoder.adaptive_bool(&mut cdfs.use_filter_intra)).then_some(())?;
     }
     let decode_plane = |decoder: &mut RangeDecoder<'_, '_, '_>, plane, cdfs: &mut BlockCdfs| {
+        let subsampled_chroma =
+            plane != 0 && matches!(chroma_sampling, ChromaSampling::Subsampled420);
+        let (plane_grid_width, plane_grid_height) = if subsampled_chroma {
+            (1, 1)
+        } else {
+            (transform_grid_width, transform_grid_height)
+        };
         match coefficient_policy {
             CoefficientPolicy::DcOrSkipped => decode_dc_coefficients(
                 decoder,
                 plane,
                 cdfs,
-                transform_grid_width,
-                transform_grid_height,
+                plane_grid_width,
+                plane_grid_height,
+                subsampled_chroma,
             ),
             CoefficientPolicy::DcThenLumaAc => {
                 decode_contextual_top_left_coefficients(decoder, plane, cdfs)
@@ -1510,6 +1555,7 @@ fn decode_syntax(
         luma_predictor,
         coefficients,
         transform_grid,
+        chroma_sampling,
     })
 }
 
@@ -1586,8 +1632,16 @@ fn reconstruct_coded_plane(
     predictor: u16,
     coefficients: PlaneCoefficients,
     transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
 ) -> ReconstructedPlane {
-    let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
+    let (mut transform_grid_width, mut transform_grid_height, _) = transform_grid.properties();
+    if matches!(chroma_sampling, ChromaSampling::Subsampled420) {
+        // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:1176-1545 and the pinned
+        // Slice 32 traces. Both chroma shifts reduce the 2x2 luma transform
+        // grid to one 4x4 transform.
+        transform_grid_width = transform_grid_width.div_ceil(2);
+        transform_grid_height = transform_grid_height.div_ceil(2);
+    }
     let coded_width = transform_grid_width.saturating_mul(4);
     let coded_height = transform_grid_height.saturating_mul(4);
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
@@ -1641,9 +1695,24 @@ struct ClosedLeaf {
 
 fn reconstruct_leaf(syntax: BlockSyntax, predictors: [u16; 3]) -> ClosedLeaf {
     let planes = [
-        reconstruct_coded_plane(predictors[0], syntax.coefficients[0], syntax.transform_grid),
-        reconstruct_coded_plane(predictors[1], syntax.coefficients[1], syntax.transform_grid),
-        reconstruct_coded_plane(predictors[2], syntax.coefficients[2], syntax.transform_grid),
+        reconstruct_coded_plane(
+            predictors[0],
+            syntax.coefficients[0],
+            syntax.transform_grid,
+            ChromaSampling::Full,
+        ),
+        reconstruct_coded_plane(
+            predictors[1],
+            syntax.coefficients[1],
+            syntax.transform_grid,
+            syntax.chroma_sampling,
+        ),
+        reconstruct_coded_plane(
+            predictors[2],
+            syntax.coefficients[2],
+            syntax.transform_grid,
+            syntax.chroma_sampling,
+        ),
     ];
     ClosedLeaf {
         luma_predictor: syntax.luma_predictor,
@@ -1803,6 +1872,7 @@ fn reconstruct_following_square_leaf(
         luma_predictor,
         coefficients,
         transform_grid,
+        chroma_sampling: _,
     } = syntax;
     let edges = neighbor
         .planes
@@ -1813,6 +1883,7 @@ fn reconstruct_following_square_leaf(
             one_sided_dc_predictor(edges[0]),
             coefficients[0],
             transform_grid,
+            ChromaSampling::Full,
         )
     } else {
         reconstruct_directional_plane(edges[0], orientation)
@@ -1823,11 +1894,13 @@ fn reconstruct_following_square_leaf(
             one_sided_dc_predictor(edges[1]),
             coefficients[1],
             transform_grid,
+            ChromaSampling::Full,
         ),
         reconstruct_coded_plane(
             one_sided_dc_predictor(edges[2]),
             coefficients[2],
             transform_grid,
+            ChromaSampling::Full,
         ),
     ];
     ClosedLeaf {
@@ -1869,6 +1942,7 @@ where
         decoder,
         cdfs,
         transform_grid,
+        ChromaSampling::Full,
         spatial_luma_context,
         coefficient_policy,
         tools,
@@ -1880,13 +1954,35 @@ fn visible_leaf(
     transform_grid: TransformGrid,
     width: u32,
     height: u32,
+    chroma_sampling: ChromaSampling,
 ) -> FirstLeaf {
     let (transform_grid_width, _, _) = transform_grid.properties();
     let coded_width = transform_grid_width.saturating_mul(4);
-    let planes = leaf
-        .planes
-        .each_ref()
-        .map(|plane| visible_plane(plane, coded_width, width, height));
+    let (chroma_coded_width, chroma_width, chroma_height) =
+        if matches!(chroma_sampling, ChromaSampling::Subsampled420) {
+            (
+                transform_grid_width.div_ceil(2).saturating_mul(4),
+                width.div_ceil(2),
+                height.div_ceil(2),
+            )
+        } else {
+            (coded_width, width, height)
+        };
+    let planes = [
+        visible_plane(&leaf.planes[0], coded_width, width, height),
+        visible_plane(
+            &leaf.planes[1],
+            chroma_coded_width,
+            chroma_width,
+            chroma_height,
+        ),
+        visible_plane(
+            &leaf.planes[2],
+            chroma_coded_width,
+            chroma_width,
+            chroma_height,
+        ),
+    ];
     FirstLeaf {
         width,
         height,
@@ -1910,13 +2006,50 @@ pub(super) fn decode_first_lossless_444_leaf(
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         SpatialLumaContext::Origin,
         CoefficientPolicy::DcOrSkipped,
         tools,
     )?;
     let predictors = origin_predictors(syntax.luma_predictor);
     let leaf = reconstruct_leaf(syntax, predictors);
-    Some(visible_leaf(leaf, transform_grid, width, height))
+    Some(visible_leaf(
+        leaf,
+        transform_grid,
+        width,
+        height,
+        ChromaSampling::Full,
+    ))
+}
+
+/// Decode the minimal closed 4:2:0 lossless leaf class.
+pub(super) fn decode_first_lossless_420_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    width: u32,
+    height: u32,
+    tools: BlockTools,
+) -> Option<FirstLeaf> {
+    let transform_grid = TransformGrid::Square8;
+    let (_, _, use_filter_intra) = transform_grid.properties();
+    let mut cdfs = BlockCdfs::defaults(use_filter_intra);
+    let syntax = decode_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        SpatialLumaContext::Origin,
+        CoefficientPolicy::DcOrSkipped,
+        tools,
+    )?;
+    let predictors = origin_predictors(syntax.luma_predictor);
+    let leaf = reconstruct_leaf(syntax, predictors);
+    Some(visible_leaf(
+        leaf,
+        transform_grid,
+        width,
+        height,
+        ChromaSampling::Subsampled420,
+    ))
 }
 
 fn compose_split_plane(
@@ -1978,6 +2111,7 @@ where
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         SpatialLumaContext::Origin,
         CoefficientPolicy::DcOrSkipped,
         tools,
@@ -1992,6 +2126,7 @@ where
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         spatial_luma_context,
         CoefficientPolicy::Skipped,
         tools,
@@ -2039,6 +2174,7 @@ where
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         SpatialLumaContext::Origin,
         CoefficientPolicy::DcThenLumaAc,
         tools,

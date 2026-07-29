@@ -2558,6 +2558,22 @@ formats:
       description: Independent minimal 4x4 lossless 4:4:4 key frame preventing payload special-casing
       test_assets:
       - portable_lossless_b.avif
+    - id: portable_lossless_420_a
+      description: Minimal 4x4 lossless 4:2:0 key frame proving subsampled chroma geometry
+      test_assets:
+      - portable_lossless_420_a.avif
+    - id: portable_lossless_420_b
+      description: Independent minimal 4x4 lossless 4:2:0 key frame preventing source-color special-casing
+      test_assets:
+      - portable_lossless_420_b.avif
+    - id: portable_lossless_420_8x8_a
+      description: 8x8 lossless 4:2:0 key frame proving complete visible luma and chroma planes
+      test_assets:
+      - portable_lossless_420_8x8_a.avif
+    - id: portable_lossless_420_8x8_b
+      description: Independent 8x8 lossless 4:2:0 key frame preventing dimension-specific materialization
+      test_assets:
+      - portable_lossless_420_8x8_b.avif
     - id: portable_lossless_gray_32
       description: Minimal 4x4 lossless 4:4:4 key frame with nonzero luma and zero chroma residuals
       test_assets:
