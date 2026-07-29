@@ -28,6 +28,8 @@ That subset includes closed lossless full-range YUV 4:4:4 and 4:2:0
 single-leaf, two-leaf, and four-leaf classes over the documented 4x4 through
 16x16 geometries, plus the first 4x4 and 8x8 lossy 4:2:0 directional-predictor
 classes with skipped, direct-token, or token-15 Golomb DC-only luma residuals.
+That closed residual map currently reaches final token 24; adjacent final
+tokens 32 and 33 remain explicit non-portable controls.
 Other recursive partitions and AVIF pixel decode classes, plus AVIF encoding,
 still report an unsupported codec operation on that target. The exact accepted
 AV1 boundary is tracked in `docs/portable-avif-progress.md`; it is deliberately
@@ -51,15 +53,15 @@ The manifest-driven parity matrix is the source of truth.
 
 | Metric | Count |
 | --- | ---: |
-| Manifest rows | 1,179 |
-| Active manifest rows | 1,179 |
-| Active decode rows | 901 |
+| Manifest rows | 1,183 |
+| Active manifest rows | 1,183 |
+| Active decode rows | 905 |
 | Active encode rows | 278 |
 | Planned or skipped rows | 0 |
 | Formats tracked | 8 |
 
 All rows compare exact decoded pixels, exact sequence frames, exact encoded
-files, or an exact oracle success/error outcome. AVIF contributes 159 decode
+files, or an exact oracle success/error outcome. AVIF contributes 163 decode
 rows and 23 encode rows, including five-frame animation and invalid-input
 behavior.
 
