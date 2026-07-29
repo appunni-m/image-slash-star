@@ -127,6 +127,10 @@ const fn is_standalone(marker: u8) -> bool {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    let _ = inspect(b"not jpeg");
+    let _ = inspect(&[0xff, SOI, 0xff, 0xee]);
+    let _ = inspect(&[0xff, SOI, 0xff, SOF0, 0, 2]);
     let _ = verify(b"");
     let _ = verify(b"not jpeg");
     let _ = verify(&[0xff, SOI]);

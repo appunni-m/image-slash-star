@@ -69,6 +69,14 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
         && pixel_offset.saturating_add(pixel_bytes) <= u128::from(u32::MAX)
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    for (width, height) in [(u32::MAX, 1), (1, u32::MAX), (i32::MAX as u32, 1)] {
+        let image = DecodedImage::new(width, height, Vec::new(), crate::types::ColorType::L8);
+        assert!(encode(&image, &EncodeOptions::none()).is_none());
+    }
+}
+
 fn encode_1bit(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     let encoded_width = width;
     let encoded_height = height;

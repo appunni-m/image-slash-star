@@ -1,49 +1,97 @@
-//! The image-slash-star type system.
-//!
-//! This module provides the core image types matching the `image` crate's API,
-//! allowing `pillow-rs` to swap `use image::*` for `use image_slash_star::*`.
+//! Container, decoded-sample, palette, animation, and error types used by codecs.
 
-pub mod buffer;
-pub mod color;
-pub mod dynamic;
-pub mod error;
-pub mod traits;
+mod color_type;
+mod error;
 
-// Re-exports matching the `image` crate's top-level API.
-pub use self::buffer::{
-    ConvertBuffer,
-    // Iterators
-    EnumeratePixels,
-    EnumeratePixelsMut,
-    EnumerateRows,
-    EnumerateRowsMut,
-    GrayAlphaImage,
-    GrayImage,
-    ImageBuffer,
-    Pixels,
-    PixelsMut,
-    Rgb32FImage,
-    RgbImage,
-    Rgba32FImage,
-    RgbaImage,
-    Rows,
-    RowsMut,
-};
-pub use self::color::{
-    ColorType, ExtendedColorType, FromColor, FromPrimitive, Luma, LumaA, Rgb, Rgba,
-};
-pub use self::dynamic::DynamicImage;
-pub use self::error::{ImageError, ImageResult, Rect};
-pub use self::traits::{
-    EncodableLayout, Enlargeable, GenericImage, GenericImageView, Pixel, Primitive,
-};
+pub use self::color_type::ColorType;
+pub use self::error::{ImageError, ImageResult};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    buffer::__coverage_exercise_private_branches();
-    color::__coverage_exercise_private_branches();
-    dynamic::__coverage_exercise_private_branches();
-    traits::__coverage_exercise_private_branches();
+    let formats = [
+        ImageFormat::Jpeg,
+        ImageFormat::Png,
+        ImageFormat::Gif,
+        ImageFormat::Bmp,
+        ImageFormat::WebP,
+        ImageFormat::Tiff,
+        ImageFormat::Ico,
+        ImageFormat::Avif,
+    ];
+    for format in formats {
+        let _ = format.as_str();
+        let _ = format.to_string();
+    }
+    for name in [
+        "jpeg", "jpg", "png", "gif", "bmp", "webp", "tiff", "tif", "ico", "avif",
+    ] {
+        let _ = ImageFormat::from_name(name);
+        let _ = name.parse::<ImageFormat>();
+    }
+    let _ = ImageFormat::from_name("unknown");
+    let _ = ImageFormat::from_path("fixture.PNG");
+    let _ = ImageFormat::from_path("fixture.unknown");
+    let _ = ImageFormat::from_path("fixture");
+
+    let colors = [
+        ColorType::L8,
+        ColorType::La8,
+        ColorType::Rgb8,
+        ColorType::Rgba8,
+        ColorType::Cmyk8,
+        ColorType::L16,
+        ColorType::La16,
+        ColorType::Rgb16,
+        ColorType::Rgba16,
+        ColorType::Rgb32F,
+        ColorType::Rgba32F,
+        ColorType::L32F,
+        ColorType::L32I,
+    ];
+    for color in colors {
+        let _ = color.bytes_per_pixel();
+        let _ = color.channel_count();
+        let _ = color.bits_per_pixel();
+        let _ = color.has_alpha();
+        let _ = color.has_color();
+        let mode = ImageMode::from(color);
+        let _ = mode.color_type();
+    }
+
+    for (rgb, alpha) in [
+        (Vec::new(), Vec::new()),
+        (vec![0], Vec::new()),
+        (vec![0; 257 * 3], Vec::new()),
+        (vec![0, 0, 0], vec![0, 0]),
+    ] {
+        let _ = ImagePalette::new(rgb, alpha);
+    }
+
+    let errors = [
+        ImageError::UnknownFormat,
+        ImageError::FeatureDisabled {
+            format: ImageFormat::Png,
+            feature: "png",
+        },
+        ImageError::Malformed {
+            format: ImageFormat::Png,
+            message: "coverage".to_owned(),
+        },
+        ImageError::Unsupported {
+            format: Some(ImageFormat::Png),
+            message: "coverage".to_owned(),
+        },
+        ImageError::Unsupported {
+            format: None,
+            message: "coverage".to_owned(),
+        },
+        ImageError::Dimensions,
+        ImageError::Parameter("coverage".to_owned()),
+    ];
+    for error in errors {
+        let _ = error.to_string();
+    }
+
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let _ = image.validate();
     let _ = DecodedImage::new(0, 1, Vec::new(), ColorType::L8).validate();
@@ -55,7 +103,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .validate();
     let _ = DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8)
-        .with_palette(ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage palette"))
+        .with_palette(ImagePalette {
+            rgb: vec![0, 0, 0],
+            alpha: Vec::new(),
+        })
+        .validate();
+    let _ = DecodedImage {
+        width: 1,
+        height: 1,
+        pixels: vec![0],
+        color: ColorType::Rgb8,
+        mode: ImageMode::L8,
+        palette: None,
+    }
+    .validate();
+    let _ = DecodedImage::new(1, 1, vec![0], ColorType::L8)
+        .with_palette(ImagePalette {
+            rgb: vec![0, 0, 0],
+            alpha: Vec::new(),
+        })
         .validate();
     let _ = DecodedImage::new(u32::MAX, u32::MAX, Vec::new(), ColorType::Rgb8).validate();
     let _ = DecodedSequence {
@@ -94,6 +160,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![frame],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let right_outside_frame = DecodedFrame {
+        image: DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        left: 1,
+        top: 0,
+        duration_ms: 0,
+        disposal: FrameDisposal::Keep,
+        interlaced: false,
+    };
+    let _ = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![right_outside_frame],
         loop_count: None,
         background: None,
     }
@@ -383,7 +465,7 @@ impl From<ColorType> for ImageMode {
 }
 
 impl ImageMode {
-    /// Return the unpacked channel representation used by generic operations.
+    /// Return the unpacked channel representation used by codecs.
     #[must_use]
     pub const fn color_type(self) -> ColorType {
         match self {

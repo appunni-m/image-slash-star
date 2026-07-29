@@ -785,6 +785,10 @@ impl<'a> Directory<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    assert!(decode(b"").is_none());
+    assert!(decode(b"II").is_none());
+    assert!(decode(b"ZZ\0\0\0\0\0\0").is_none());
+
     fn put_entry(out: &mut Vec<u8>, tag: u16, field_type: u16, count: u32, value: [u8; 4]) {
         out.extend_from_slice(&tag.to_le_bytes());
         out.extend_from_slice(&field_type.to_le_bytes());

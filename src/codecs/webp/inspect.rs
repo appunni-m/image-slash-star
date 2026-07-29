@@ -169,6 +169,10 @@ fn le_u24(data: &[u8], offset: usize) -> u32 {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = inspect(b"");
+    let _ = inspect(b"not a WebP!!");
+    let _ = inspect(b"RIFFxxxxNOPE");
+
     fn chunk(kind: &[u8; 4], payload: &[u8]) -> Vec<u8> {
         let mut result = kind.to_vec();
         result.extend_from_slice(&(payload.len() as u32).to_le_bytes());

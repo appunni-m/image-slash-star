@@ -7,39 +7,6 @@ quality_goals:
     target: 100% line, function, branch, and region coverage
     method: Prefer fixture-based, manifest-driven parity rows that exercise real codec inputs and Pillow reference outputs.
     fallback: Coverage-only internal hooks may exercise private unreachable or defensive branches, but should stay behind cfg(coverage) and should not replace fixture parity coverage for codec behavior.
-operations:
-  - {id: convert_rgba_l, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: L}}
-  - {id: convert_rgba_la, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: LA}}
-  - {id: convert_rgba_rgb, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: RGB}}
-  - {id: convert_rgba_rgba, source_format: png, source_asset: alpha_partial.png, action: convert, params: {mode: RGBA}}
-  - {id: l_fliph, source_format: png, source_asset: gray.png, action: fliph}
-  - {id: l_flipv, source_format: png, source_asset: gray.png, action: flipv}
-  - {id: l_rotate90, source_format: png, source_asset: gray.png, action: rotate90}
-  - {id: l_rotate180, source_format: png, source_asset: gray.png, action: rotate180}
-  - {id: l_rotate270, source_format: png, source_asset: gray.png, action: rotate270}
-  - {id: la_fliph, source_format: png, source_asset: gray_alpha.png, action: fliph}
-  - {id: la_flipv, source_format: png, source_asset: gray_alpha.png, action: flipv}
-  - {id: la_rotate90, source_format: png, source_asset: gray_alpha.png, action: rotate90}
-  - {id: la_rotate180, source_format: png, source_asset: gray_alpha.png, action: rotate180}
-  - {id: la_rotate270, source_format: png, source_asset: gray_alpha.png, action: rotate270}
-  - {id: rgb_fliph, source_format: png, source_asset: 2x3.png, action: fliph}
-  - {id: rgb_flipv, source_format: png, source_asset: 2x3.png, action: flipv}
-  - {id: rgb_rotate90, source_format: png, source_asset: 2x3.png, action: rotate90}
-  - {id: rgb_rotate180, source_format: png, source_asset: 2x3.png, action: rotate180}
-  - {id: rgb_rotate270, source_format: png, source_asset: 2x3.png, action: rotate270}
-  - {id: rgba_fliph, source_format: png, source_asset: alpha_partial.png, action: fliph}
-  - {id: rgba_flipv, source_format: png, source_asset: alpha_partial.png, action: flipv}
-  - {id: rgba_rotate90, source_format: png, source_asset: alpha_partial.png, action: rotate90}
-  - {id: rgba_rotate180, source_format: png, source_asset: alpha_partial.png, action: rotate180}
-  - {id: rgba_rotate270, source_format: png, source_asset: alpha_partial.png, action: rotate270}
-  - {id: rgb_crop, source_format: png, source_asset: 2x3.png, action: crop, params: {x: 0, y: 1, width: 2, height: 2}}
-  - {id: rgba_crop, source_format: png, source_asset: alpha_partial.png, action: crop, params: {x: 7, y: 9, width: 11, height: 13}}
-  - {id: l16_fliph, source_format: png, source_asset: gray.png, action: fliph, params: {intermediate: L16, mode: L}}
-  - {id: la16_flipv, source_format: png, source_asset: gray_alpha.png, action: flipv, params: {intermediate: LA16, mode: LA}}
-  - {id: rgb16_rotate90, source_format: png, source_asset: 2x3.png, action: rotate90, params: {intermediate: RGB16, mode: RGB}}
-  - {id: rgba16_rotate180, source_format: png, source_asset: alpha_partial.png, action: rotate180, params: {intermediate: RGBA16, mode: RGBA}}
-  - {id: rgb32f_rotate270, source_format: png, source_asset: 2x3.png, action: rotate270, params: {intermediate: RGB32F, mode: RGB}}
-  - {id: rgba32f_crop, source_format: png, source_asset: alpha_partial.png, action: crop, params: {intermediate: RGBA32F, mode: RGBA, x: 7, y: 9, width: 11, height: 13}}
 reference_oracles:
   primary:
     implementation: Pillow
@@ -2502,112 +2469,46 @@ formats:
       description: 16x16 icon
       params: {'sizes': [[16, 16]]}
       source_asset: 16x16.ico
-    - id: enc_32x32
-      description: 32x32 icon
-      params: {'sizes': [[32, 32]]}
-      source_asset: 256x256.ico
-    - id: enc_48x48
-      description: 48x48 icon
-      params: {'sizes': [[48, 48]]}
-      source_asset: 256x256.ico
     - id: enc_256x256
       description: 256x256 icon
       params: {'sizes': [[256, 256]]}
       source_asset: 256x256.ico
-    - id: enc_multi_2
-      description: Two-resolution icon
-      params: {'sizes': [[16, 16], [32, 32]]}
-      source_asset: 256x256.ico
-    - id: enc_multi_4
-      description: Four-resolution icon
-      params: {'sizes': [[16, 16], [32, 32], [48, 48], [256, 256]]}
-      source_asset: 256x256.ico
-    - id: enc_empty_sizes
-      description: Pillow emits a zero-entry ICO when the requested size list is empty
-      params: {'sizes': [], 'encoded_only': true}
-      source_asset: 256x256.ico
-    - id: enc_width_filtered_sizes
-      description: Pillow emits a zero-entry ICO when all requested widths exceed the source
-      params: {'sizes': [[512, 16]], 'encoded_only': true}
-      source_asset: 256x256.ico
-    - id: enc_height_filtered_sizes
-      description: Pillow emits a zero-entry ICO when all requested heights exceed the source
-      params: {'sizes': [[16, 512]], 'encoded_only': true}
-      source_asset: 256x256.ico
-    - id: enc_width_cap_filtered_sizes
-      description: Pillow emits a zero-entry ICO when requested widths exceed the ICO 256px cap
-      source_format: png
-      source_asset: large.png
-      params: {'sizes': [[257, 16]], 'encoded_only': true}
-    - id: enc_height_cap_filtered_sizes
-      description: Pillow emits a zero-entry ICO when requested heights exceed the ICO 256px cap
-      source_format: png
-      source_asset: large.png
-      params: {'sizes': [[16, 257]], 'encoded_only': true}
     - id: enc_error_zero_width_size
       description: Pillow rejects zero-width requested ICO sizes
       source_asset: 256x256.ico
       params: {'sizes': [[0, 16]]}
       expect_error: true
     - id: enc_bmp_entry
-      description: 
-      params: {'entry_type': 'bmp'}
+      description: Source-sized BMP-backed ICO entry
+      params: {'entry_type': 'bmp', 'sizes': [[16, 16]]}
     - id: enc_png_entry
-      description: 
-      params: {'entry_type': 'png'}
+      description: Source-sized PNG-backed ICO entry
+      params: {'entry_type': 'png', 'sizes': [[16, 16]]}
     - id: enc_24bit
-      description: 
+      description: Source-sized RGB ICO entry
       source_format: bmp
       source_asset: 24bit.bmp
-      params: {'bit_depth': 24}
+      params: {'bit_depth': 24, 'sizes': [[128, 128]]}
     - id: enc_32bit
-      description: 
+      description: Source-sized RGBA ICO entry
       source_format: png
       source_asset: rgba.png
-      params: {'bit_depth': 32}
+      params: {'bit_depth': 32, 'sizes': [[128, 128]]}
     - id: enc_no_hotspot
-      description: 
-      params: {'hotspot': False}
+      description: Source-sized ICO with no hotspot request
+      params: {'hotspot': False, 'sizes': [[16, 16]]}
     - id: enc_hotspot
       description: Pillow accepts but ignores the ICO hotspot option
-      params: {'hotspot': [8, 8]}
-    - id: enc_oversized_source
-      description: Pillow downsamples sources larger than the 256px ICO ceiling
-      source_format: png
-      source_asset: large.png
-    - id: enc_gray_resize
-      description: Grayscale Lanczos resize before PNG-backed ICO encoding
-      source_format: png
-      source_asset: gray.png
-      params: {'sizes': [[16, 16]]}
-    - id: enc_rgba_resize
-      description: Alpha-aware Lanczos resize before PNG-backed ICO encoding
-      source_format: png
-      source_asset: alpha_partial.png
-      params: {'sizes': [[16, 16]]}
-    - id: enc_integer_scale_resize
-      description: Lanczos resize whose sample center has an exact sinc value
-      source_asset: 48x48.ico
-      params: {'sizes': [[16, 16]]}
+      params: {'hotspot': [8, 8], 'sizes': [[16, 16]]}
     - id: enc_bmp_rgba
       description: 32-bit BGRA BMP-backed ICO entry
       source_format: png
       source_asset: rgba.png
-      params: {'entry_type': 'bmp'}
+      params: {'entry_type': 'bmp', 'sizes': [[128, 128]]}
     - id: enc_bmp_256
       description: BMP-backed ICO directory sentinel dimensions at 256px
       source_asset: 256x256.ico
       params: {'entry_type': 'bmp', 'sizes': [[256, 256]]}
-    - id: enc_bmp_empty_sizes
-      description: Pillow emits a zero-entry BMP-backed ICO when the requested size list is empty
-      source_asset: 256x256.ico
-      params: {'entry_type': 'bmp', 'sizes': [], 'encoded_only': true}
-    - id: enc_error_cmyk_resize
-      description: Pillow cannot resize CMYK into its PNG-backed ICO path
-      source_format: tiff
-      source_asset: cmyk.tiff
-      params: {'sizes': [[16, 16]]}
-      expect_error: true
     - id: enc_error_cmyk_png
       description: Pillow cannot write an unscaled CMYK PNG-backed ICO entry
       source_format: tiff
@@ -2620,23 +2521,6 @@ formats:
       source_asset: cmyk.tiff
       params: {'entry_type': 'bmp', 'sizes': [[128, 128]]}
       expect_error: true
-    - id: enc_error_cmyk_bmp_resize
-      description: Pillow cannot resize CMYK into its BMP-backed ICO path
-      source_format: tiff
-      source_asset: cmyk.tiff
-      params: {'entry_type': 'bmp', 'sizes': [[16, 16]]}
-      expect_error: true
-    - id: enc_malformed_sizes_ignored
-      description: Pillow ignores an incomplete size tuple after valid entries
-      params: {'sizes': [[16, 16], [32]]}
-
-    - id: enc_multi
-      description: Multi-resolution
-      source_asset: 256x256.ico
-      params:
-        sizes:
-        - [16, 16]
-        - [32, 32]
   avif:
     name: AVIF
     extensions:
@@ -2666,6 +2550,350 @@ formats:
       description: Baseline AVIF (8-bit, 4:2:0)
       test_assets:
       - baseline.avif
+    - id: portable_lossless_a
+      description: Minimal 4x4 lossless 4:4:4 key frame for portable AV1 reconstruction
+      test_assets:
+      - portable_lossless_a.avif
+    - id: portable_lossless_b
+      description: Independent minimal 4x4 lossless 4:4:4 key frame preventing payload special-casing
+      test_assets:
+      - portable_lossless_b.avif
+    - id: portable_lossless_gray_32
+      description: Minimal 4x4 lossless 4:4:4 key frame with nonzero luma and zero chroma residuals
+      test_assets:
+      - portable_lossless_gray_32.avif
+    - id: portable_lossless_gray_127
+      description: Minimal 4x4 lossless 4:4:4 key frame with zero residuals in every plane
+      test_assets:
+      - portable_lossless_gray_127.avif
+    - id: portable_probe_gray_128
+      description: 4x4 lossless 4:4:4 fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_gray_128.avif
+    - id: portable_probe_gray_129
+      description: 4x4 lossless 4:4:4 fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_gray_129.avif
+    - id: portable_lossless_8x8_a
+      description: 8x8 lossless 4:4:4 key frame with four visible 4x4 transforms per plane
+      test_assets:
+      - portable_lossless_8x8_a.avif
+    - id: portable_lossless_8x8_gray_127
+      description: 8x8 lossless 4:4:4 key frame with twelve visible zero-residual transforms
+      test_assets:
+      - portable_lossless_8x8_gray_127.avif
+    - id: portable_probe_8x8_gray_128
+      description: 8x8 lossless 4:4:4 geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_8x8_gray_128.avif
+    - id: portable_probe_8x8_gray_129
+      description: 8x8 lossless 4:4:4 geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_8x8_gray_129.avif
+    - id: portable_lossless_4x8_a
+      description: 4x8 visible lossless 4:4:4 frame with a padded 8x8 coded leaf
+      test_assets:
+      - portable_lossless_4x8_a.avif
+    - id: portable_lossless_4x8_gray_127
+      description: 4x8 visible lossless frame with zero residuals in every coded transform
+      test_assets:
+      - portable_lossless_4x8_gray_127.avif
+    - id: portable_probe_4x8_gray_128
+      description: 4x8 visible lossless geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_4x8_gray_128.avif
+    - id: portable_probe_4x8_gray_129
+      description: 4x8 visible lossless geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_4x8_gray_129.avif
+    - id: portable_lossless_8x4_a
+      description: 8x4 visible lossless 4:4:4 frame with a padded 8x8 coded leaf
+      test_assets:
+      - portable_lossless_8x4_a.avif
+    - id: portable_lossless_8x4_gray_127
+      description: 8x4 visible lossless frame with zero residuals in every coded transform
+      test_assets:
+      - portable_lossless_8x4_gray_127.avif
+    - id: portable_probe_8x4_gray_128
+      description: 8x4 visible lossless geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_8x4_gray_128.avif
+    - id: portable_probe_8x4_gray_129
+      description: 8x4 visible lossless geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_8x4_gray_129.avif
+    - id: portable_lossless_12x12_a
+      description: 12x12 visible lossless 4:4:4 frame with a padded level-3 16x16 coded leaf
+      test_assets:
+      - portable_lossless_12x12_a.avif
+    - id: portable_lossless_12x12_gray_127
+      description: 12x12 visible level-3 lossless frame with zero residuals in all forty-eight transforms
+      test_assets:
+      - portable_lossless_12x12_gray_127.avif
+    - id: portable_probe_12x12_gray_128
+      description: 12x12 visible level-3 geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_12x12_gray_128.avif
+    - id: portable_probe_12x12_gray_129
+      description: 12x12 visible level-3 geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_12x12_gray_129.avif
+    - id: portable_lossless_16x16_a
+      description: 16x16 lossless 4:4:4 frame with a complete level-3 coded leaf
+      test_assets:
+      - portable_lossless_16x16_a.avif
+    - id: portable_lossless_16x16_gray_127
+      description: 16x16 level-3 lossless frame with zero residuals in all forty-eight transforms
+      test_assets:
+      - portable_lossless_16x16_gray_127.avif
+    - id: portable_probe_16x16_gray_128
+      description: 16x16 level-3 geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_16x16_gray_128.avif
+    - id: portable_probe_16x16_gray_129
+      description: 16x16 level-3 geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_16x16_gray_129.avif
+    - id: portable_lossless_12x16_a
+      description: 12x16 visible lossless 4:4:4 frame sharing the level-3 padded 16x16 coded leaf
+      test_assets:
+      - portable_lossless_12x16_a.avif
+    - id: portable_lossless_12x16_gray_127
+      description: 12x16 visible level-3 lossless frame with zero residuals in all forty-eight transforms
+      test_assets:
+      - portable_lossless_12x16_gray_127.avif
+    - id: portable_probe_12x16_gray_128
+      description: 12x16 visible level-3 geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_12x16_gray_128.avif
+    - id: portable_probe_12x16_gray_129
+      description: 12x16 visible level-3 geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_12x16_gray_129.avif
+    - id: portable_lossless_16x12_a
+      description: 16x12 visible lossless 4:4:4 frame sharing the level-3 padded 16x16 coded leaf
+      test_assets:
+      - portable_lossless_16x12_a.avif
+    - id: portable_lossless_16x12_gray_127
+      description: 16x12 visible level-3 lossless frame with zero residuals in all forty-eight transforms
+      test_assets:
+      - portable_lossless_16x12_gray_127.avif
+    - id: portable_probe_16x12_gray_128
+      description: 16x12 visible level-3 geometry fixture selecting luma DC predictor mode 0
+      test_assets:
+      - portable_probe_16x12_gray_128.avif
+    - id: portable_probe_16x12_gray_129
+      description: 16x12 visible level-3 geometry fixture selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_probe_16x12_gray_129.avif
+    - id: partitioned_4x12_a
+      description: 4x12 recursive split with two vertical 8x8 leaves and nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_4x12_a.avif
+    - id: partitioned_4x12_gray_32
+      description: 4x12 recursive split with nonzero first-leaf luma DC and zero chroma residuals
+      test_assets:
+      - partitioned_4x12_gray_32.avif
+    - id: partitioned_4x12_green
+      description: 4x12 recursive split proving horizontal first-leaf mode and top-edge second-leaf DC prediction
+      test_assets:
+      - partitioned_4x12_green.avif
+    - id: partitioned_4x12_gray_127
+      description: 4x12 portable one-axis vertical leaf with eight skipped transforms per plane
+      test_assets:
+      - partitioned_4x12_gray_127.avif
+    - id: partitioned_4x16_a
+      description: 4x16 full-height recursive split with nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_4x16_a.avif
+    - id: partitioned_4x16_gray_32
+      description: 4x16 full-height recursive split with luma-only first-leaf DC residual
+      test_assets:
+      - partitioned_4x16_gray_32.avif
+    - id: partitioned_4x16_green
+      description: 4x16 full-height recursive split proving top-edge second-leaf prediction
+      test_assets:
+      - partitioned_4x16_green.avif
+    - id: partitioned_8x12_a
+      description: 8x12 recursive split with two vertical 8x8 leaves and nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_8x12_a.avif
+    - id: partitioned_8x12_gray_32
+      description: 8x12 recursive split with luma-only first-leaf DC residual and full-width visibility
+      test_assets:
+      - partitioned_8x12_gray_32.avif
+    - id: partitioned_8x12_green
+      description: 8x12 recursive split proving top-edge second-leaf prediction with full-width visibility
+      test_assets:
+      - partitioned_8x12_green.avif
+    - id: partitioned_8x16_a
+      description: 8x16 full-height recursive split with nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_8x16_a.avif
+    - id: partitioned_8x16_gray_32
+      description: 8x16 full-height recursive split with luma-only first-leaf DC residual
+      test_assets:
+      - partitioned_8x16_gray_32.avif
+    - id: partitioned_8x16_green
+      description: 8x16 full-height recursive split proving top-edge second-leaf prediction
+      test_assets:
+      - partitioned_8x16_green.avif
+    - id: partitioned_12x4_a
+      description: 12x4 recursive split with two horizontal 8x8 leaves and nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_12x4_a.avif
+    - id: partitioned_12x4_gray_32
+      description: 12x4 recursive split with nonzero first-leaf luma DC and zero chroma residuals
+      test_assets:
+      - partitioned_12x4_gray_32.avif
+    - id: partitioned_12x4_green
+      description: 12x4 recursive split proving horizontal first-leaf mode and left-edge second-leaf prediction
+      test_assets:
+      - partitioned_12x4_green.avif
+    - id: partitioned_12x4_gray_127
+      description: 12x4 portable one-axis horizontal leaf with eight skipped transforms per plane
+      test_assets:
+      - partitioned_12x4_gray_127.avif
+    - id: partitioned_16x4_a
+      description: 16x4 full-width recursive split with nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_16x4_a.avif
+    - id: partitioned_16x4_gray_32
+      description: 16x4 full-width recursive split with luma-only first-leaf DC residual
+      test_assets:
+      - partitioned_16x4_gray_32.avif
+    - id: partitioned_16x4_green
+      description: 16x4 full-width recursive split proving left-edge second-leaf prediction
+      test_assets:
+      - partitioned_16x4_green.avif
+    - id: partitioned_12x8_a
+      description: 12x8 recursive split with two horizontal 8x8 leaves and nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_12x8_a.avif
+    - id: partitioned_12x8_gray_32
+      description: 12x8 recursive split with luma-only first-leaf DC residual and full-height visibility
+      test_assets:
+      - partitioned_12x8_gray_32.avif
+    - id: partitioned_12x8_green
+      description: 12x8 recursive split proving left-edge second-leaf prediction with full-height visibility
+      test_assets:
+      - partitioned_12x8_green.avif
+    - id: partitioned_16x8_a
+      description: 16x8 full-width recursive split with nonzero first-leaf YUV DC residuals
+      test_assets:
+      - partitioned_16x8_a.avif
+    - id: partitioned_16x8_gray_32
+      description: 16x8 full-width recursive split with luma-only first-leaf DC residual
+      test_assets:
+      - partitioned_16x8_gray_32.avif
+    - id: partitioned_16x8_green
+      description: 16x8 full-width recursive split proving left-edge second-leaf prediction
+      test_assets:
+      - partitioned_16x8_green.avif
+    - id: portable_rect_12x4_gray_128
+      description: 12x4 horizontal one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_12x4_gray_128.avif
+    - id: portable_rect_12x4_gray_129
+      description: 12x4 horizontal one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_12x4_gray_129.avif
+    - id: portable_rect_12x8_gray_127
+      description: 12x8 horizontal one-axis leaf with zero residuals
+      test_assets:
+      - portable_rect_12x8_gray_127.avif
+    - id: portable_rect_12x8_gray_128
+      description: 12x8 horizontal one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_12x8_gray_128.avif
+    - id: portable_rect_12x8_gray_129
+      description: 12x8 horizontal one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_12x8_gray_129.avif
+    - id: portable_rect_16x4_gray_127
+      description: 16x4 horizontal one-axis leaf with zero residuals
+      test_assets:
+      - portable_rect_16x4_gray_127.avif
+    - id: portable_rect_16x4_gray_128
+      description: 16x4 horizontal one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_16x4_gray_128.avif
+    - id: portable_rect_16x4_gray_129
+      description: 16x4 horizontal one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_16x4_gray_129.avif
+    - id: portable_rect_16x8_gray_127
+      description: 16x8 horizontal one-axis leaf with zero residuals
+      test_assets:
+      - portable_rect_16x8_gray_127.avif
+    - id: portable_rect_16x8_gray_128
+      description: 16x8 horizontal one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_16x8_gray_128.avif
+    - id: portable_rect_16x8_gray_129
+      description: 16x8 horizontal one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_16x8_gray_129.avif
+    - id: portable_rect_4x12_gray_128
+      description: 4x12 vertical one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_4x12_gray_128.avif
+    - id: portable_rect_4x12_gray_129
+      description: 4x12 vertical one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_4x12_gray_129.avif
+    - id: portable_rect_8x12_gray_127
+      description: 8x12 vertical one-axis leaf with zero residuals
+      test_assets:
+      - portable_rect_8x12_gray_127.avif
+    - id: portable_rect_8x12_gray_128
+      description: 8x12 vertical one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_8x12_gray_128.avif
+    - id: portable_rect_8x12_gray_129
+      description: 8x12 vertical one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_8x12_gray_129.avif
+    - id: portable_rect_4x16_gray_127
+      description: 4x16 vertical one-axis leaf with zero residuals
+      test_assets:
+      - portable_rect_4x16_gray_127.avif
+    - id: portable_rect_4x16_gray_128
+      description: 4x16 vertical one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_4x16_gray_128.avif
+    - id: portable_rect_4x16_gray_129
+      description: 4x16 vertical one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_4x16_gray_129.avif
+    - id: portable_rect_8x16_gray_127
+      description: 8x16 vertical one-axis leaf with zero residuals
+      test_assets:
+      - portable_rect_8x16_gray_127.avif
+    - id: portable_rect_8x16_gray_128
+      description: 8x16 vertical one-axis leaf selecting luma DC predictor mode 0
+      test_assets:
+      - portable_rect_8x16_gray_128.avif
+    - id: portable_rect_8x16_gray_129
+      description: 8x16 vertical one-axis leaf selecting luma horizontal predictor mode 2
+      test_assets:
+      - portable_rect_8x16_gray_129.avif
+    - id: portable_rect_12x4_a_speed0
+      description: 12x4 horizontal one-axis leaf with DC-only Y/U/V residuals
+      test_assets:
+      - portable_rect_12x4_a_speed0.avif
+    - id: portable_rect_12x4_gray_32_speed0
+      description: 12x4 horizontal one-axis leaf with a DC-only luma residual
+      test_assets:
+      - portable_rect_12x4_gray_32_speed0.avif
+    - id: portable_rect_4x12_a_speed0
+      description: 4x12 vertical one-axis leaf with DC-only Y/U/V residuals
+      test_assets:
+      - portable_rect_4x12_a_speed0.avif
+    - id: portable_rect_4x12_gray_32_speed0
+      description: 4x12 vertical one-axis leaf with a DC-only luma residual
+      test_assets:
+      - portable_rect_4x12_gray_32_speed0.avif
     - id: high_bitdepth
       description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:
@@ -2686,10 +2914,24 @@ formats:
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:
       - animated.avif
+    - id: multitile
+      description: Deterministic 256x128 AVIF with two independently sized tile columns
+      test_assets:
+      - multitile.avif
+    - id: error_invalid_tile_size
+      description: Valid AVIF container and frame header whose first tile size crosses the OBU payload
+      test_assets:
+      - invalid_tile_size.avif
+      expect_error: true
     - id: error_unsupported_major_brand
       description: ISO BMFF input whose major brand is not an accepted AVIF brand
       test_assets:
       - unsupported_major_brand.avif
+      expect_error: true
+    - id: error_invalid_sequence_profile
+      description: Structurally valid AVIF container whose AV1 sequence declares a reserved profile
+      test_assets:
+      - invalid_sequence_profile.avif
       expect_error: true
     encode_edge_cases:
     - id: enc_default_rgb

@@ -9,30 +9,61 @@ use image_slash_star::encode_options::EncodeOptions;
 use image_slash_star::{
     ColorType, DecodedImage, DecodedSequence, EncodedImage, ImageError, ImageFormat, ImageMode,
 };
-use serde::Deserialize;
+
+mod support;
+
+use support::json::{self, FromJson, Object, Value};
 
 const AVIF_WASM_UNAVAILABLE: &str =
     "AVIF is unavailable on wasm32 without an AVIF-capable extra module";
 
-#[derive(Deserialize)]
 struct CoverageMatrix {
     formats: HashMap<String, FormatRows>,
 }
 
-#[derive(Deserialize)]
 struct FormatRows {
     decode: Vec<DecodeRow>,
 }
 
-#[derive(Deserialize)]
 struct DecodeRow {
     status: String,
     asset: Option<String>,
-    #[serde(default)]
     expect_error: bool,
     ref_mode: Option<String>,
     ref_size: Option<[u32; 2]>,
     verify_status: Option<String>,
+}
+
+impl FromJson for CoverageMatrix {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            formats: object.take("formats")?,
+        })
+    }
+}
+
+impl FromJson for FormatRows {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            decode: object.take("decode")?,
+        })
+    }
+}
+
+impl FromJson for DecodeRow {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            status: object.take("status")?,
+            asset: object.take("asset")?,
+            expect_error: object.take_or_default("expect_error")?,
+            ref_mode: object.take("ref_mode")?,
+            ref_size: object.take("ref_size")?,
+            verify_status: object.take("verify_status")?,
+        })
+    }
 }
 
 fn format(name: &str) -> (ImageFormat, &'static str, bool) {
@@ -74,8 +105,49 @@ fn mode(name: &str) -> ImageMode {
 fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let manifest_bytes = fs::read(root.join("tests/fixtures/coverage_matrix.json"))?;
-    let manifest: CoverageMatrix = serde_json::from_slice(&manifest_bytes)?;
+    let manifest_text = fs::read_to_string(root.join("tests/fixtures/coverage_matrix.json"))?;
+    let manifest_value: Value = json::from_str(&manifest_text)?;
+    let Some(root_object) = manifest_value.as_object() else {
+        panic!("coverage matrix root must be an object");
+    };
+    let Some(format_values) = root_object.get("formats").and_then(Value::as_object) else {
+        panic!("coverage matrix formats must be an object");
+    };
+    let Some(decode_values) = format_values
+        .values()
+        .find_map(|format_value| format_value.as_object()?.get("decode")?.as_array())
+    else {
+        panic!("coverage matrix must contain a decode array");
+    };
+    assert!(decode_values.iter().any(|row| {
+        row.as_object()
+            .and_then(|row| row.get("status"))
+            .and_then(Value::as_str)
+            .is_some()
+    }));
+    assert!(format_values.values().any(|format_value| {
+        format_value
+            .as_object()
+            .and_then(|format_value| format_value.get("decode"))
+            .and_then(Value::as_array)
+            .is_some_and(|rows| {
+                rows.iter().any(|row| {
+                    row.as_object()
+                        .and_then(|row| row.get("expect_error"))
+                        .and_then(Value::as_bool)
+                        .is_some()
+                })
+            })
+    }));
+    assert!(
+        root_object
+            .get("summary")
+            .and_then(Value::as_object)
+            .and_then(|summary| summary.get("total_rows"))
+            .and_then(Value::as_u64)
+            .is_some()
+    );
+    let manifest = CoverageMatrix::from_json(manifest_value)?;
     let encode_input = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
     let encode_sequence = DecodedSequence::from_image(encode_input.clone());
     let options = EncodeOptions::none();
@@ -125,13 +197,29 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 format: Some(format),
                 message: AVIF_WASM_UNAVAILABLE.to_owned(),
             };
-            assert_eq!(image_slash_star::inspect(&bytes), Err(expected.clone()));
+            let info = image_slash_star::inspect(&bytes)?;
+            let Some(expected_size) = row.ref_size else {
+                panic!("successful {name} row has no expected size");
+            };
+            let Some(expected_mode) = row.ref_mode.as_deref() else {
+                panic!("successful {name} row has no expected mode");
+            };
+            assert_eq!(info.format, format);
+            assert_eq!([info.width, info.height], expected_size);
+            assert_eq!(info.mode, mode(expected_mode));
+
+            let source = EncodedImage::new(bytes.clone())?;
+            assert_eq!(source.format(), format);
+            assert_eq!(source.info(), &info);
+            assert_eq!(source.verify(), Ok(()));
+            assert!(!source.is_decoded());
             assert_eq!(image_slash_star::decode(&bytes), Err(expected.clone()));
             assert_eq!(
                 image_slash_star::decode_sequence(&bytes),
                 Err(expected.clone())
             );
-            assert!(matches!(EncodedImage::new(bytes), Err(error) if error == expected));
+            assert_eq!(source.decode(), Err(expected.clone()));
+            assert!(!source.is_decoded());
             assert_eq!(
                 image_slash_star::encode(&encode_input, format, &options),
                 Err(expected.clone())

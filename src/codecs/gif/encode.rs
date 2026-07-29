@@ -31,6 +31,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
 #[cfg(coverage)]
 #[allow(clippy::expect_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let invalid_sequence = DecodedSequence {
+        width: 0,
+        height: 1,
+        frames: Vec::new(),
+        loop_count: None,
+        background: None,
+    };
+    assert!(encode_sequence(&invalid_sequence, &EncodeOptions::none()).is_none());
+
     let identical = [0u8, 0, 0, 255];
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = rgba_difference_bounds(&identical, &identical, 1, 1);

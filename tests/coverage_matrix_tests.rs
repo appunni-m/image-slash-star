@@ -3,7 +3,6 @@
 //! Decode: load asset → decode → compare pixel bytes with PIL reference bytes.
 //! Encode: decode reference → encode with params → decode → compare pixel bytes.
 
-use serde::Deserialize;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,6 +10,10 @@ use std::sync::{Arc, OnceLock};
 
 use bytemuck as _;
 use image_slash_star as img;
+
+mod support;
+
+use support::json::{self, FromJson, Object, Value};
 
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
 
@@ -48,48 +51,31 @@ fn coverage_matrix() -> Option<&'static CoverageMatrix> {
                 "coverage matrix must be readable",
             );
             Some(require_ok(
-                serde_json::from_str(&contents),
+                json::from_str(&contents),
                 "coverage matrix must be valid JSON",
             ))
         })
         .as_ref()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(dead_code)]
 struct CoverageMatrix {
     formats: HashMap<String, FormatData>,
     summary: Summary,
-    #[serde(default)]
-    operations: Vec<OperationRow>,
 }
 
-#[derive(Debug, Deserialize)]
-struct OperationRow {
-    id: String,
-    source_format: String,
-    source_asset: String,
-    action: String,
-    #[serde(default)]
-    params: HashMap<String, serde_json::Value>,
-    ref_path: String,
-    ref_bytes: usize,
-    ref_mode: String,
-    ref_size: Vec<u32>,
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(dead_code)]
 struct FormatData {
     decode: Vec<DecodeRow>,
     encode: Vec<EncodeRow>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(dead_code)]
 struct DecodeRow {
     id: String,
-    #[serde(rename = "type")]
     row_type: String,
     format: String,
     category: String,
@@ -105,23 +91,20 @@ struct DecodeRow {
     verify_error_message: Option<String>,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
-    #[serde(default)]
     ref_frame_count: Option<u32>,
-    #[serde(default)]
     ref_is_animated: Option<bool>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
-    #[serde(default)]
     sequence: Option<SequenceParityRef>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct SequenceParityRef {
     loop_count: Option<u32>,
     frames: Vec<FrameParityRef>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct FrameParityRef {
     index: usize,
     ref_path: String,
@@ -131,43 +114,30 @@ struct FrameParityRef {
     duration_ms: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(dead_code)]
 struct EncodeRow {
     id: String,
-    #[serde(rename = "type")]
     row_type: String,
     format: String,
-    params: HashMap<String, serde_json::Value>,
+    params: HashMap<String, Value>,
     description: Option<String>,
     status: String,
-    #[serde(default)]
     expect_error: bool,
-    #[serde(default)]
     oracle_status: Option<String>,
-    #[serde(default)]
     oracle_error_type: Option<String>,
-    #[serde(default)]
     oracle_error_message: Option<String>,
-    #[serde(default)]
     source_format: Option<String>,
-    #[serde(default)]
     source_asset: Option<String>,
-    #[serde(default)]
     ref_bytes: Option<usize>,
-    #[serde(default)]
     ref_mode: Option<String>,
-    #[serde(default)]
     ref_size: Option<Vec<u32>>,
-    #[serde(default)]
     ref_path: Option<String>,
-    #[serde(default)]
     encoded_ref_path: Option<String>,
-    #[serde(default)]
     encoded_ref_bytes: Option<usize>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(dead_code)]
 struct Summary {
     total_rows: usize,
@@ -178,9 +148,324 @@ struct Summary {
     decode_active: usize,
     decode_planned: usize,
     encode_not_wired: usize,
-    #[serde(default)]
-    operation_rows: usize,
 }
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1EntropyDocument {
+    format_version: u32,
+    oracle: Av1EntropyOracle,
+    input_hex: String,
+    partition_422_inputs: HashMap<String, String>,
+    records: Vec<Av1EntropyRecord>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1EntropyOracle {
+    implementation: String,
+    version: String,
+    commit: String,
+    source_files: Vec<String>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug, PartialEq, Eq)]
+struct Av1EntropyRecord {
+    case: String,
+    step: u32,
+    value: i32,
+    byte_position: usize,
+    difference: u64,
+    range: u32,
+    count: i32,
+    cdf: Vec<u16>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1ReconstructionDocument {
+    format_version: u32,
+    oracle: Av1ReconstructionOracle,
+    scope: String,
+    cases: Vec<Av1ReconstructionCase>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1ReconstructionOracle {
+    implementation: String,
+    version: String,
+    commit: String,
+    pillow_avif: String,
+    pillow_codecs: String,
+    pillow_libyuv: u32,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1ReconstructionCase {
+    fixture: String,
+    portable_color: Av1PortableColor,
+    pillow: Av1PillowOutput,
+    partition_blocks: Vec<Av1PartitionBlock>,
+    decoded_planes: Vec<Av1ReconstructionPlane>,
+    entropy_operations: Vec<Av1ReconstructionEntropyOperation>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug, PartialEq, Eq)]
+struct Av1PartitionBlock {
+    poc: i32,
+    x: i32,
+    y: i32,
+    level: u32,
+    context: u32,
+    partition: u32,
+    range: u32,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1PortableColor {
+    width: u32,
+    height: u32,
+    bit_depth: u32,
+    monochrome: bool,
+    color_primaries: u32,
+    transfer_characteristics: u32,
+    matrix_coefficients: u32,
+    color_range: bool,
+    subsampling_x: bool,
+    subsampling_y: bool,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1PillowOutput {
+    mode: String,
+    size: [u32; 2],
+    bytes: usize,
+    sha256: String,
+    row_bytes: Vec<String>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug)]
+struct Av1ReconstructionPlane {
+    name: String,
+    width: u32,
+    height: u32,
+    row_bytes: Vec<String>,
+}
+
+#[cfg(coverage)]
+#[derive(Debug, PartialEq, Eq)]
+struct Av1ReconstructionEntropyOperation {
+    operation: String,
+    parameter: i32,
+    step: u32,
+    value: i32,
+    byte_position: usize,
+    difference: u64,
+    range: u32,
+    count: i32,
+    cdf: Vec<u16>,
+}
+
+macro_rules! json_object {
+    ($type:ty { $($field:ident),+ $(,)? }) => {
+        impl FromJson for $type {
+            fn from_json(value: Value) -> Result<Self, support::json::Error> {
+                let mut object = Object::new(value)?;
+                Ok(Self {
+                    $($field: object.take(stringify!($field))?,)+
+                })
+            }
+        }
+    };
+}
+
+json_object!(CoverageMatrix { formats, summary });
+json_object!(FormatData { decode, encode });
+
+impl FromJson for DecodeRow {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            row_type: object.take("type")?,
+            format: object.take("format")?,
+            category: object.take("category")?,
+            status: object.take("status")?,
+            asset: object.take("asset")?,
+            asset_path: object.take("asset_path")?,
+            expect_error: object.take("expect_error")?,
+            oracle_status: object.take("oracle_status")?,
+            oracle_error_type: object.take("oracle_error_type")?,
+            oracle_error_message: object.take("oracle_error_message")?,
+            verify_status: object.take("verify_status")?,
+            verify_error_type: object.take("verify_error_type")?,
+            verify_error_message: object.take("verify_error_message")?,
+            ref_mode: object.take("ref_mode")?,
+            ref_size: object.take("ref_size")?,
+            ref_frame_count: object.take("ref_frame_count")?,
+            ref_is_animated: object.take("ref_is_animated")?,
+            ref_path: object.take("ref_path")?,
+            ref_bytes: object.take("ref_bytes")?,
+            sequence: object.take("sequence")?,
+        })
+    }
+}
+
+json_object!(SequenceParityRef { loop_count, frames });
+json_object!(FrameParityRef {
+    index,
+    ref_path,
+    ref_bytes,
+    ref_mode,
+    ref_size,
+    duration_ms,
+});
+
+impl FromJson for EncodeRow {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            row_type: object.take("type")?,
+            format: object.take("format")?,
+            params: object.take("params")?,
+            description: object.take("description")?,
+            status: object.take("status")?,
+            expect_error: object.take_or_default("expect_error")?,
+            oracle_status: object.take("oracle_status")?,
+            oracle_error_type: object.take("oracle_error_type")?,
+            oracle_error_message: object.take("oracle_error_message")?,
+            source_format: object.take("source_format")?,
+            source_asset: object.take("source_asset")?,
+            ref_bytes: object.take("ref_bytes")?,
+            ref_mode: object.take("ref_mode")?,
+            ref_size: object.take("ref_size")?,
+            ref_path: object.take("ref_path")?,
+            encoded_ref_path: object.take("encoded_ref_path")?,
+            encoded_ref_bytes: object.take("encoded_ref_bytes")?,
+        })
+    }
+}
+
+json_object!(Summary {
+    total_rows,
+    decode_rows,
+    encode_rows,
+    formats,
+    assets_available,
+    decode_active,
+    decode_planned,
+    encode_not_wired,
+});
+
+#[cfg(coverage)]
+json_object!(Av1EntropyDocument {
+    format_version,
+    oracle,
+    input_hex,
+    partition_422_inputs,
+    records,
+});
+#[cfg(coverage)]
+json_object!(Av1EntropyOracle {
+    implementation,
+    version,
+    commit,
+    source_files,
+});
+#[cfg(coverage)]
+json_object!(Av1EntropyRecord {
+    case,
+    step,
+    value,
+    byte_position,
+    difference,
+    range,
+    count,
+    cdf,
+});
+#[cfg(coverage)]
+json_object!(Av1ReconstructionDocument {
+    format_version,
+    oracle,
+    scope,
+    cases,
+});
+#[cfg(coverage)]
+json_object!(Av1ReconstructionOracle {
+    implementation,
+    version,
+    commit,
+    pillow_avif,
+    pillow_codecs,
+    pillow_libyuv,
+});
+#[cfg(coverage)]
+json_object!(Av1ReconstructionCase {
+    fixture,
+    portable_color,
+    pillow,
+    partition_blocks,
+    decoded_planes,
+    entropy_operations,
+});
+#[cfg(coverage)]
+json_object!(Av1PartitionBlock {
+    poc,
+    x,
+    y,
+    level,
+    context,
+    partition,
+    range,
+});
+#[cfg(coverage)]
+json_object!(Av1PortableColor {
+    width,
+    height,
+    bit_depth,
+    monochrome,
+    color_primaries,
+    transfer_characteristics,
+    matrix_coefficients,
+    color_range,
+    subsampling_x,
+    subsampling_y,
+});
+#[cfg(coverage)]
+json_object!(Av1PillowOutput {
+    mode,
+    size,
+    bytes,
+    sha256,
+    row_bytes,
+});
+#[cfg(coverage)]
+json_object!(Av1ReconstructionPlane {
+    name,
+    width,
+    height,
+    row_bytes,
+});
+#[cfg(coverage)]
+json_object!(Av1ReconstructionEntropyOperation {
+    operation,
+    parameter,
+    step,
+    value,
+    byte_position,
+    difference,
+    range,
+    count,
+    cdf,
+});
 
 #[derive(Debug)]
 struct PixelParityRef {
@@ -202,13 +487,13 @@ struct PixelMismatch {
     actual: u8,
 }
 
-fn option_text(value: &serde_json::Value) -> String {
+fn option_text(value: &Value) -> String {
     value
         .as_str()
         .map_or_else(|| value.to_string(), str::to_owned)
 }
 
-fn extra_encode_options(params: &HashMap<String, serde_json::Value>) -> HashMap<String, String> {
+fn extra_encode_options(params: &HashMap<String, Value>) -> HashMap<String, String> {
     params
         .iter()
         .filter(|(key, _)| key.as_str() != "advanced")
@@ -216,10 +501,10 @@ fn extra_encode_options(params: &HashMap<String, serde_json::Value>) -> HashMap<
         .collect()
 }
 
-fn advanced_encode_options(params: &HashMap<String, serde_json::Value>) -> Vec<(String, String)> {
+fn advanced_encode_options(params: &HashMap<String, Value>) -> Vec<(String, String)> {
     params
         .get("advanced")
-        .and_then(serde_json::Value::as_object)
+        .and_then(Value::as_object)
         .map(|values| {
             values
                 .iter()
@@ -247,10 +532,7 @@ fn read_be_u32(data: &[u8], offset: usize) -> Option<u32> {
     ))
 }
 
-fn assert_png_contract(
-    params: &HashMap<String, serde_json::Value>,
-    encoded: &[u8],
-) -> Result<(), String> {
+fn assert_png_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Result<(), String> {
     if encoded.get(..8) != Some(b"\x89PNG\r\n\x1a\n") {
         return Err("encoded PNG has an invalid signature".to_owned());
     }
@@ -262,7 +544,7 @@ fn assert_png_contract(
     let color_type = ihdr[17];
     let interlace = ihdr[20];
 
-    if let Some(expected) = params.get("bit_depth").and_then(serde_json::Value::as_u64)
+    if let Some(expected) = params.get("bit_depth").and_then(Value::as_u64)
         && u64::from(bit_depth) != expected
     {
         return Err(format!(
@@ -272,7 +554,7 @@ fn assert_png_contract(
     let color_request = params
         .get("color_type")
         .or_else(|| params.get("color"))
-        .and_then(serde_json::Value::as_str);
+        .and_then(Value::as_str);
     if let Some(request) = color_request {
         let expected = match request {
             "1" | "L" | "gray" => 0,
@@ -291,7 +573,7 @@ fn assert_png_contract(
     let requested_interlace = params
         .get("interlace")
         .or_else(|| params.get("interlaced"))
-        .and_then(serde_json::Value::as_bool);
+        .and_then(Value::as_bool);
     if requested_interlace.is_some() && interlace != 0 {
         return Err(format!(
             "PNG interlace mismatch: Pillow ignores this option but encoded {interlace}"
@@ -325,9 +607,7 @@ fn assert_png_contract(
         ("text_chunks", b"tEXt".as_slice()),
         ("time", b"tIME".as_slice()),
     ] {
-        if params.get(option).and_then(serde_json::Value::as_bool) == Some(true)
-            && !chunks.contains(&kind)
-        {
+        if params.get(option).and_then(Value::as_bool) == Some(true) && !chunks.contains(&kind) {
             return Err(format!("PNG option {option} did not emit its chunk"));
         }
     }
@@ -346,10 +626,7 @@ fn skip_gif_sub_blocks(encoded: &[u8], mut offset: usize) -> Option<usize> {
     }
 }
 
-fn assert_gif_contract(
-    params: &HashMap<String, serde_json::Value>,
-    encoded: &[u8],
-) -> Result<(), String> {
+fn assert_gif_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Result<(), String> {
     if !matches!(encoded.get(..6), Some(b"GIF87a" | b"GIF89a")) {
         return Err("encoded GIF has an invalid signature".to_owned());
     }
@@ -423,24 +700,21 @@ fn assert_gif_contract(
     if frames == 0 {
         return Err("encoded GIF has no image descriptor".to_owned());
     }
-    if params.get("loop").and_then(serde_json::Value::as_bool) == Some(true) && !has_loop {
+    if params.get("loop").and_then(Value::as_bool) == Some(true) && !has_loop {
         return Err("GIF loop option did not emit NETSCAPE2.0".to_owned());
     }
-    if let Some(expected) = params.get("interlace").and_then(serde_json::Value::as_bool)
+    if let Some(expected) = params.get("interlace").and_then(Value::as_bool)
         && image_interlace.iter().any(|&value| value != expected)
     {
         return Err(format!("GIF interlace setting does not match {expected}"));
     }
-    if let Some(request) = params
-        .get("color_table")
-        .and_then(serde_json::Value::as_str)
-    {
+    if let Some(request) = params.get("color_table").and_then(Value::as_str) {
         let expected_local = request == "local";
         if !has_global || image_local.iter().any(|&value| value != expected_local) {
             return Err(format!("GIF color-table layout does not match {request}"));
         }
     }
-    if let Some(request) = params.get("disposal").and_then(serde_json::Value::as_str) {
+    if let Some(request) = params.get("disposal").and_then(Value::as_str) {
         let expected = match request {
             "none" => 0,
             "background" => 2,
@@ -451,9 +725,7 @@ fn assert_gif_contract(
             return Err(format!("GIF disposal method does not match {request}"));
         }
     }
-    if let Some(expected) = params
-        .get("transparency")
-        .and_then(serde_json::Value::as_bool)
+    if let Some(expected) = params.get("transparency").and_then(Value::as_bool)
         && (gce_transparency.iter().any(|&value| value != expected)
             || expected && gce_transparency.is_empty())
     {
@@ -464,10 +736,7 @@ fn assert_gif_contract(
     Ok(())
 }
 
-fn assert_bmp_contract(
-    params: &HashMap<String, serde_json::Value>,
-    encoded: &[u8],
-) -> Result<(), String> {
+fn assert_bmp_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Result<(), String> {
     if encoded.get(..2) != Some(b"BM") {
         return Err("encoded BMP is missing BM signature".to_owned());
     }
@@ -476,7 +745,7 @@ fn assert_bmp_contract(
     let depth = read_le_u16(encoded, 28).ok_or("BMP depth is truncated")?;
     let compression = read_le_u32(encoded, 30).ok_or("BMP compression is truncated")?;
 
-    if let Some(expected) = params.get("bit_depth").and_then(serde_json::Value::as_u64) {
+    if let Some(expected) = params.get("bit_depth").and_then(Value::as_u64) {
         let expected = match expected {
             4 | 16 => 24,
             value => u16::try_from(value).map_err(|_| "invalid BMP bit_depth")?,
@@ -529,10 +798,7 @@ impl TiffEndian {
     }
 }
 
-fn assert_tiff_contract(
-    params: &HashMap<String, serde_json::Value>,
-    encoded: &[u8],
-) -> Result<(), String> {
+fn assert_tiff_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Result<(), String> {
     let endian = match encoded.get(..2) {
         Some(b"II") => TiffEndian::Little,
         Some(b"MM") => TiffEndian::Big,
@@ -541,7 +807,7 @@ fn assert_tiff_contract(
     if endian.read_u16(encoded, 2) != Some(42) {
         return Err("encoded TIFF has an invalid magic value".to_owned());
     }
-    if let Some(request) = params.get("byte_order").and_then(serde_json::Value::as_str)
+    if let Some(request) = params.get("byte_order").and_then(Value::as_str)
         && !matches!(endian, TiffEndian::Little)
     {
         return Err(format!(
@@ -581,10 +847,7 @@ fn assert_tiff_contract(
             tags.insert(tag, value);
         }
     }
-    if let Some(request) = params
-        .get("compression")
-        .and_then(serde_json::Value::as_str)
-    {
+    if let Some(request) = params.get("compression").and_then(Value::as_str) {
         let expected = match request {
             "none" => 1,
             "lzw" => 5,
@@ -596,17 +859,14 @@ fn assert_tiff_contract(
             return Err(format!("TIFF compression tag does not match {request}"));
         }
     }
-    if let Some(request) = params.get("predictor").and_then(serde_json::Value::as_str) {
+    if let Some(request) = params.get("predictor").and_then(Value::as_str) {
         let expected = if request == "horizontal" { 2 } else { 1 };
         let actual = tags.get(&317).copied().unwrap_or(1);
         if actual != expected {
             return Err(format!("TIFF predictor tag does not match {request}"));
         }
     }
-    if let Some(request) = params
-        .get("organization")
-        .and_then(serde_json::Value::as_str)
-    {
+    if let Some(request) = params.get("organization").and_then(Value::as_str) {
         let tiled = tags.contains_key(&322) || tags.contains_key(&324);
         if tiled {
             return Err(format!(
@@ -614,7 +874,7 @@ fn assert_tiff_contract(
             ));
         }
     }
-    if let Some(request) = params.get("pages").and_then(serde_json::Value::as_u64) {
+    if let Some(request) = params.get("pages").and_then(Value::as_u64) {
         let next_ifd_offset = ifd
             .checked_add(
                 count
@@ -632,10 +892,7 @@ fn assert_tiff_contract(
     Ok(())
 }
 
-fn assert_jpeg_contract(
-    params: &HashMap<String, serde_json::Value>,
-    encoded: &[u8],
-) -> Result<(), String> {
+fn assert_jpeg_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Result<(), String> {
     if encoded.get(..2) != Some(&[0xff, 0xd8]) {
         return Err("encoded JPEG has no SOI marker".to_owned());
     }
@@ -696,23 +953,18 @@ fn assert_jpeg_contract(
     if sof_data.len() < 8 {
         return Err("truncated JPEG SOF segment".to_owned());
     }
-    if let Some(expected) = params
-        .get("progressive")
-        .and_then(serde_json::Value::as_bool)
+    if let Some(expected) = params.get("progressive").and_then(Value::as_bool)
         && (sof_marker == 0xc2) != expected
     {
         return Err(format!("JPEG progressive mode does not match {expected}"));
     }
-    if let Some(expected) = params.get("grayscale").and_then(serde_json::Value::as_bool) {
+    if let Some(expected) = params.get("grayscale").and_then(Value::as_bool) {
         let components = sof_data[5];
         if (components == 1) != expected {
             return Err(format!("JPEG grayscale mode does not match {expected}"));
         }
     }
-    if let Some(request) = params
-        .get("subsampling")
-        .and_then(serde_json::Value::as_str)
-    {
+    if let Some(request) = params.get("subsampling").and_then(Value::as_str) {
         let expected = match request {
             "444" => 0x11,
             "422" => 0x21,
@@ -723,27 +975,19 @@ fn assert_jpeg_contract(
             return Err(format!("JPEG sampling factors do not match {request}"));
         }
     }
-    if params.get("exif").and_then(serde_json::Value::as_bool) == Some(false) && has_exif {
+    if params.get("exif").and_then(Value::as_bool) == Some(false) && has_exif {
         return Err("JPEG exif=false emitted EXIF metadata".to_owned());
     }
     if params.get("exif_hex").is_some() && !has_exif {
         return Err("JPEG EXIF metadata request did not emit APP1 EXIF".to_owned());
     }
-    if params
-        .get("restart_interval")
-        .and_then(serde_json::Value::as_u64)
-        == Some(0)
-        && has_restart_interval
-    {
+    if params.get("restart_interval").and_then(Value::as_u64) == Some(0) && has_restart_interval {
         return Err("JPEG restart_interval=0 emitted DRI".to_owned());
     }
     Ok(())
 }
 
-fn assert_ico_contract(
-    params: &HashMap<String, serde_json::Value>,
-    encoded: &[u8],
-) -> Result<(), String> {
+fn assert_ico_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Result<(), String> {
     if encoded.get(..4) != Some(&[0, 0, 1, 0]) {
         return Err("encoded ICO has an invalid header".to_owned());
     }
@@ -761,7 +1005,7 @@ fn assert_ico_contract(
         return Err("encoded ICO has an invalid image directory".to_owned());
     }
 
-    let expect_bmp = params.get("entry_type").and_then(serde_json::Value::as_str) == Some("bmp");
+    let expect_bmp = params.get("entry_type").and_then(Value::as_str) == Some("bmp");
     for index in 0..count {
         let entry = index
             .checked_mul(16)
@@ -867,7 +1111,7 @@ fn encoded_dimensions(format: &str, encoded: &[u8]) -> Option<(u32, u32)> {
 
 fn assert_encoded_contract(
     format: &str,
-    params: &HashMap<String, serde_json::Value>,
+    params: &HashMap<String, Value>,
     encoded: &[u8],
 ) -> Result<(), String> {
     match format {
@@ -891,14 +1135,14 @@ fn assert_encoded_contract(
         }
         _ => Ok(()),
     }?;
-    if let Some(size) = params.get("size").and_then(serde_json::Value::as_array) {
+    if let Some(size) = params.get("size").and_then(Value::as_array) {
         let expected = (
             size.first()
-                .and_then(serde_json::Value::as_u64)
+                .and_then(Value::as_u64)
                 .and_then(|value| u32::try_from(value).ok())
                 .ok_or("invalid requested width")?,
             size.get(1)
-                .and_then(serde_json::Value::as_u64)
+                .and_then(Value::as_u64)
                 .and_then(|value| u32::try_from(value).ok())
                 .ok_or("invalid requested height")?,
         );
@@ -1127,27 +1371,6 @@ fn assert_pixel_parity(
     ))
 }
 
-fn assert_dynamic_bridge_parity(
-    expected: &PixelParityRef,
-    decoded: &img::DecodedImage,
-) -> Result<(), String> {
-    if decoded.mode != decoded.color.into()
-        || decoded.palette.is_some()
-        || matches!(
-            decoded.color,
-            img::ColorType::Cmyk8 | img::ColorType::L32F | img::ColorType::L32I
-        )
-    {
-        return Ok(());
-    }
-
-    let dynamic = img::DynamicImage::from_decoded(decoded)
-        .ok_or("canonical decoded image could not enter the DynamicImage bridge")?;
-    let bridged = dynamic.into_decoded();
-    assert_pixel_parity(expected, &bridged)
-        .map_err(|message| format!("DynamicImage bridge changed Pillow bytes: {message}"))
-}
-
 fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
     let Some(expected) = &row.sequence else {
         return Ok(());
@@ -1204,53 +1427,8 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
 
 // ── Decode Tests ─────────────────────────────────────────────────────────
 
-fn decode_direct(data: &[u8], format: &str) -> Option<img::DecodedImage> {
-    match format {
-        "jpeg" => img::codecs::jpeg::decode::decode(data),
-        "png" => img::codecs::png::decode::decode(data),
-        "gif" => img::codecs::gif::decode::decode(data),
-        "bmp" => img::codecs::bmp::decode::decode(data),
-        "tiff" => img::codecs::tiff::decode::decode(data),
-        "webp" => img::codecs::webp::decode::decode(data),
-        "ico" => img::codecs::ico::decode::decode(data),
-        "avif" => img::codecs::avif::decode::decode(data),
-        _ => None,
-    }
-}
-
-fn inspect_direct(data: &[u8], format: &str) -> Option<img::ImageInfo> {
-    match format {
-        "jpeg" => img::codecs::jpeg::inspect::inspect(data),
-        "png" => img::codecs::png::inspect::inspect(data),
-        "gif" => img::codecs::gif::inspect::inspect(data),
-        "bmp" => img::codecs::bmp::inspect::inspect(data),
-        "webp" => img::codecs::webp::inspect::inspect(data),
-        "tiff" => img::codecs::tiff::inspect::inspect(data),
-        "ico" => img::codecs::ico::inspect::inspect(data),
-        "avif" => img::codecs::avif::inspect::inspect(data),
-        _ => None,
-    }
-}
-
 fn format_from_name(format: &str) -> Option<img::ImageFormat> {
     img::ImageFormat::from_name(format).ok()
-}
-
-fn encode_direct(
-    image: &img::DecodedImage,
-    format: img::ImageFormat,
-    options: &img::encode_options::EncodeOptions,
-) -> Option<Vec<u8>> {
-    match format {
-        img::ImageFormat::Jpeg => None,
-        img::ImageFormat::Png => img::codecs::png::encode::encode(image, options),
-        img::ImageFormat::Gif => img::codecs::gif::encode::encode(image, options),
-        img::ImageFormat::Bmp => img::codecs::bmp::encode::encode(image, options),
-        img::ImageFormat::Tiff => img::codecs::tiff::encode::encode(image, options),
-        img::ImageFormat::WebP => img::codecs::webp::encode::encode(image, options),
-        img::ImageFormat::Ico => img::codecs::ico::encode::encode(image, options),
-        img::ImageFormat::Avif => img::codecs::avif::encode::encode(image, options),
-    }
 }
 
 #[test]
@@ -1306,8 +1484,6 @@ fn test_decode_matrix() {
             };
 
             let decoded = img::decode(&data);
-            let direct = decode_direct(&data, fmt_name);
-            let direct_info = inspect_direct(&data, fmt_name);
             let verify_result =
                 img::EncodedImage::new(Arc::<[u8]>::from(data.clone())).and_then(|source| {
                     let result = source.verify();
@@ -1352,7 +1528,6 @@ fn test_decode_matrix() {
                     "png" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "ico" | "avif"
                 ) {
                     let _ = img::inspect(&data);
-                    let _ = direct_info.as_ref();
                 }
                 let sequence_rejected = match fmt_name.as_str() {
                     "gif" | "webp" | "avif" => match img::decode_sequence(&data) {
@@ -1405,19 +1580,14 @@ fn test_decode_matrix() {
                                 && !source.is_decoded()
                         }
                     };
-                if structured_error
-                    && direct.is_none()
-                    && sequence_rejected
-                    && source_error_is_stable
-                {
+                if structured_error && sequence_rejected && source_error_is_stable {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, direct={}, sequence_rejected={}, source_error_is_stable={})",
+                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, sequence_rejected={}, source_error_is_stable={})",
                         row.id,
                         decoded.is_ok(),
-                        direct.is_some(),
                         sequence_rejected,
                         source_error_is_stable
                     );
@@ -1542,14 +1712,6 @@ fn test_decode_matrix() {
                         continue;
                     }
                 };
-                if direct_info.as_ref() != Some(&info) {
-                    eprintln!(
-                        "  FAIL [{}]: direct and auto-detected metadata differ",
-                        row.id
-                    );
-                    failed += 1;
-                    continue;
-                }
                 let expected_mode = row.ref_mode.as_deref().and_then(expected_image_mode);
                 let expected_is_animated = row
                     .ref_is_animated
@@ -1588,23 +1750,6 @@ fn test_decode_matrix() {
                 failed += 1;
                 continue;
             }
-            let direct = match direct {
-                Some(image) if image == decoded => image,
-                Some(_) => {
-                    eprintln!(
-                        "  FAIL [{}]: direct and auto-detected decoders differ",
-                        row.id
-                    );
-                    failed += 1;
-                    continue;
-                }
-                None => {
-                    eprintln!("  FAIL [{}]: direct decoder returned None", row.id);
-                    failed += 1;
-                    continue;
-                }
-            };
-
             let Some(expected) = load_pixel_reference(
                 manifest_dir,
                 &row.id,
@@ -1623,8 +1768,6 @@ fn test_decode_matrix() {
             };
 
             match assert_pixel_parity(&expected, &decoded)
-                .and_then(|()| assert_pixel_parity(&expected, &direct))
-                .and_then(|()| assert_dynamic_bridge_parity(&expected, &decoded))
                 .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
             {
                 Ok(()) => {
@@ -1842,8 +1985,7 @@ fn test_encode_matrix() {
                     require_some(decoded.first(), "encoded sequence must have a first frame")
                         .clone();
                 malformed.pixels.pop();
-                encode_direct(&malformed, format, &opts)
-                    .map_or_else(|| img::encode(&malformed, format, &opts), Ok)
+                img::encode(&malformed, format, &opts)
             } else if let Some(dimensions) = row.params.get("source_dimensions") {
                 let dimensions = require_some(
                     dimensions.as_array(),
@@ -1866,8 +2008,7 @@ fn test_encode_matrix() {
                     )),
                     "source height must fit u32",
                 );
-                encode_direct(&malformed, format, &opts)
-                    .map_or_else(|| img::encode(&malformed, format, &opts), Ok)
+                img::encode(&malformed, format, &opts)
             } else {
                 img::encode_sequence(decoded, format, &opts)
             };
@@ -1961,12 +2102,7 @@ fn test_encode_matrix() {
                 failed += 1;
                 continue;
             }
-            if row
-                .params
-                .get("encoded_only")
-                .and_then(serde_json::Value::as_bool)
-                == Some(true)
-            {
+            if row.params.get("encoded_only").and_then(Value::as_bool) == Some(true) {
                 eprintln!(
                     "  OK   [{}] {}B, encoded-byte parity",
                     row.id,
@@ -1991,9 +2127,7 @@ fn test_encode_matrix() {
                             (row.ref_size.as_deref(), row.ref_mode.as_deref()),
                         )
                     }) {
-                        match assert_pixel_parity(&expected, &redecoded)
-                            .and_then(|()| assert_dynamic_bridge_parity(&expected, &redecoded))
-                        {
+                        match assert_pixel_parity(&expected, &redecoded) {
                             Ok(()) => {
                                 eprintln!(
                                     "  OK   [{}] {}B, re-decoded {}x{} pixel-parity (mode={})",
@@ -2032,883 +2166,611 @@ fn test_encode_matrix() {
     }
 }
 
-#[test]
-fn test_operation_matrix() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let matrix = require_some(coverage_matrix(), "coverage_matrix.json is required");
-    let mut failed = Vec::new();
-    let mut exercised_variants = HashSet::new();
-    exercise_type_metadata();
-
-    for row in &matrix.operations {
-        let source_path = manifest_dir
-            .join("tests/fixtures/input/images")
-            .join(&row.source_format)
-            .join(&row.source_asset);
-        let source = require_ok(fs::read(source_path), "operation source must be readable");
-        let decoded = require_ok(img::decode(&source), "operation source must decode");
-        let mut dynamic = require_some(
-            img::DynamicImage::from_decoded(&decoded.content),
-            "decoded operation source must have a dynamic representation",
-        );
-        dynamic = match row
-            .params
-            .get("intermediate")
-            .and_then(|value| value.as_str())
-        {
-            Some("L16") => img::DynamicImage::ImageLuma16(dynamic.to_luma16()),
-            Some("LA16") => img::DynamicImage::ImageLumaA16(dynamic.to_luma_alpha16()),
-            Some("RGB16") => img::DynamicImage::ImageRgb16(dynamic.to_rgb16()),
-            Some("RGBA16") => img::DynamicImage::ImageRgba16(dynamic.to_rgba16()),
-            Some("RGB32F") => img::DynamicImage::ImageRgb32F(dynamic.to_rgb32f()),
-            Some("RGBA32F") => img::DynamicImage::ImageRgba32F(dynamic.to_rgba32f()),
-            Some(value) => panic!("unknown intermediate mode {value}"),
-            None => dynamic,
-        };
-        exercise_dynamic_buffer(&mut dynamic);
-        if exercised_variants.insert(dynamic.color()) {
-            exercise_dynamic_api(&dynamic);
-        }
-        let result = match row.action.as_str() {
-            "convert" => dynamic,
-            "fliph" => dynamic.fliph(),
-            "flipv" => dynamic.flipv(),
-            "rotate90" => dynamic.rotate90(),
-            "rotate180" => dynamic.rotate180(),
-            "rotate270" => dynamic.rotate270(),
-            "crop" => dynamic.crop_imm(
-                operation_u32(row, "x"),
-                operation_u32(row, "y"),
-                operation_u32(row, "width"),
-                operation_u32(row, "height"),
-            ),
-            action => panic!("unknown operation {action}"),
-        };
-        let actual = match row.ref_mode.as_str() {
-            "L" => result.to_luma8().into_raw(),
-            "LA" => result.to_luma_alpha8().into_raw(),
-            "RGB" => result.to_rgb8().into_raw(),
-            "RGBA" => result.to_rgba8().into_raw(),
-            mode => panic!("unsupported oracle operation mode {mode}"),
-        };
-        let expected = require_ok(
-            fs::read(manifest_dir.join(&row.ref_path)),
-            "operation reference must be readable",
-        );
-        if actual != expected
-            || actual.len() != row.ref_bytes
-            || vec![result.width(), result.height()] != row.ref_size
-        {
-            let mismatch = actual
-                .iter()
-                .zip(&expected)
-                .position(|(actual, expected)| actual != expected)
-                .map(|index| {
-                    format!(
-                        " at byte {index}: actual {}, expected {}",
-                        actual[index], expected[index]
-                    )
-                })
-                .unwrap_or_default();
-            failed.push(format!(
-                "{}: actual {} bytes {}x{}, expected {} bytes {:?}{}",
-                row.id,
-                actual.len(),
-                result.width(),
-                result.height(),
-                expected.len(),
-                row.ref_size,
-                mismatch,
-            ));
-        }
-    }
-    assert!(
-        failed.is_empty(),
-        "operation parity failures:\n{}",
-        failed.join("\n")
-    );
-}
-
-fn operation_u32(row: &OperationRow, name: &str) -> u32 {
-    let value = require_some(
-        row.params.get(name).and_then(serde_json::Value::as_u64),
-        "operation parameter must be an unsigned integer",
-    );
-    require_ok(u32::try_from(value), "operation parameter must fit u32")
-}
-
 #[cfg(coverage)]
 #[test]
 fn test_internal_coverage_hooks() {
     img::__coverage_exercise_private_branches();
 }
 
-fn exercise_buffer<P>(buffer: &mut img::ImageBuffer<P, Vec<P::Subpixel>>)
-where
-    P: img::Pixel,
-    P::Subpixel: std::fmt::Debug,
-{
-    use img::{GenericImage, GenericImageView, Primitive};
-
-    let (width, height) = buffer.dimensions();
-    assert_eq!(buffer.width(), width);
-    assert_eq!(buffer.height(), height);
-    assert_eq!(buffer.as_raw().len(), buffer.len());
-    let mut clone = buffer.clone();
-    clone.clone_from(buffer);
-
-    let mut pixels = buffer.pixels();
-    let area = require_some(
-        width.checked_mul(height),
-        "image-buffer dimensions must have a representable area",
+#[cfg(coverage)]
+#[test]
+fn test_av1_entropy_trace_matches_pinned_dav1d_fixture() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("outputs")
+        .join("av1_entropy.json");
+    let contents = require_ok(
+        fs::read_to_string(path),
+        "AV1 entropy fixture must be readable",
     );
-    let pixel_count = require_ok(usize::try_from(area), "image-buffer area must fit usize");
-    assert_eq!(pixels.size_hint().0, pixel_count);
-    assert_eq!(pixels.len(), pixel_count);
-    let _ = format!("{pixels:?}");
-    let _ = pixels.clone().next();
-    let _ = pixels.next_back();
-    let mut rows = buffer.rows();
-    let _ = rows.size_hint();
-    let _ = rows.len();
-    let _ = format!("{rows:?}");
-    let _ = rows.clone().next();
-    let _ = rows.next_back();
-    let enumerate_pixels = buffer.enumerate_pixels();
-    let _ = enumerate_pixels.size_hint();
-    let _ = enumerate_pixels.len();
-    let _ = format!("{enumerate_pixels:?}");
-    let _ = enumerate_pixels.clone().count();
-    let enumerate_rows = buffer.enumerate_rows();
-    let _ = enumerate_rows.size_hint();
-    let _ = enumerate_rows.len();
-    let _ = format!("{enumerate_rows:?}");
-    let _ = enumerate_rows.clone().count();
-
-    let pixel = *buffer.get_pixel(0, 0);
-    let one_pixel = img::ImageBuffer::from_pixel(1, 1, pixel);
-    let mut one_pixel_iter = one_pixel.pixels();
-    assert!(one_pixel_iter.next_back().is_some());
-    assert!(one_pixel_iter.next_back().is_none());
-    let mut one_row_iter = one_pixel.rows();
-    assert!(one_row_iter.next_back().is_some());
-    assert!(one_row_iter.next_back().is_none());
-    let mut one_enumerate_rows = one_pixel.enumerate_rows();
-    assert!(one_enumerate_rows.next().is_some());
-    assert!(one_enumerate_rows.next().is_none());
-
-    assert!(buffer.get_pixel_checked(0, 0).is_some());
-    assert!(buffer.get_pixel_checked(width, 0).is_none());
-    assert!(buffer.get_pixel_checked(0, height).is_none());
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = buffer.get_pixel(width, 0);
-    }));
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = buffer.get_pixel(0, height);
-    }));
-    buffer.put_pixel(0, 0, pixel);
-    buffer[(0, 0)] = pixel;
-    assert!(buffer.get_pixel_mut_checked(0, 0).is_some());
-    assert!(buffer.get_pixel_mut_checked(width, 0).is_none());
-    assert!(buffer.get_pixel_mut_checked(0, height).is_none());
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = buffer.get_pixel_mut(width, 0);
-    }));
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = buffer.get_pixel_mut(0, height);
-    }));
-    let _ = buffer[(0, 0)];
-    {
-        let mut pixels = buffer.pixels_mut();
-        let _ = pixels.size_hint();
-        let _ = pixels.len();
-        let _ = format!("{pixels:?}");
-        let _ = pixels.next_back();
-    }
-    {
-        let mut rows = buffer.rows_mut();
-        let _ = rows.size_hint();
-        let _ = rows.len();
-        let _ = format!("{rows:?}");
-        let _ = rows.next();
-        let _ = rows.next_back();
-    }
-    {
-        let pixels = buffer.enumerate_pixels_mut();
-        let _ = pixels.size_hint();
-        let _ = pixels.len();
-        let _ = format!("{pixels:?}");
-        let _ = pixels.count();
-    }
-    {
-        let rows = buffer.enumerate_rows_mut();
-        let _ = rows.size_hint();
-        let _ = rows.len();
-        let _ = format!("{rows:?}");
-        let _ = rows.count();
-    }
-    {
-        let mut one_pixel_mut = img::ImageBuffer::from_pixel(1, 1, pixel);
-        let mut pixels = one_pixel_mut.pixels_mut();
-        assert!(pixels.next_back().is_some());
-        assert!(pixels.next_back().is_none());
-    }
-    {
-        let mut one_row_mut = img::ImageBuffer::from_pixel(1, 1, pixel);
-        let mut rows = one_row_mut.rows_mut();
-        assert!(rows.next_back().is_some());
-        assert!(rows.next_back().is_none());
-    }
-    {
-        let mut one_enumerate_rows_mut = img::ImageBuffer::from_pixel(1, 1, pixel);
-        let mut rows = one_enumerate_rows_mut.enumerate_rows_mut();
-        assert!(rows.next().is_some());
-        assert!(rows.next().is_none());
-    }
-
-    assert!(GenericImageView::in_bounds(buffer, 0, 0));
-    assert!(!GenericImageView::in_bounds(buffer, width, height));
-    let mut view_pixels = GenericImageView::pixels(buffer);
-    let _ = view_pixels.clone();
-    while view_pixels.next().is_some() {}
-    assert!(view_pixels.next().is_none());
-    let _ = GenericImageView::buffer_like(buffer);
-    let _ = GenericImageView::buffer_with_dimensions(buffer, 1, 1);
-    require_ok(
-        GenericImage::copy_from(buffer, &clone, 0, 0),
-        "same-size image-buffer copy must succeed",
+    let expected: Av1EntropyDocument = require_ok(
+        json::from_str(&contents),
+        "AV1 entropy fixture must be valid JSON",
     );
-    let _ = GenericImage::get_pixel_mut(buffer, 0, 0);
-    #[allow(deprecated)]
-    GenericImage::blend_pixel(buffer, 0, 0, pixel);
-    let mut too_small = img::ImageBuffer::<P, Vec<P::Subpixel>>::new(1, 1);
-    assert!(GenericImage::copy_from(&mut too_small, &clone, 0, 0).is_err());
-
-    let mut copy = img::ImageBuffer::from_pixel(3, 3, pixel);
-    let rects = [
-        (img::Rect::new(0, 0, 1, 1), 1, 1),
-        (img::Rect::new(0, 1, 1, 1), 1, 0),
-        (img::Rect::new(1, 0, 1, 1), 0, 1),
-        (img::Rect::new(1, 1, 1, 1), 0, 0),
-    ];
-    for (source, x, y) in rects {
-        assert!(GenericImage::copy_within(&mut copy, source, x, y));
-    }
-    assert!(!GenericImage::copy_within(
-        &mut copy,
-        img::Rect::new(3, 0, 1, 1),
-        0,
-        0,
-    ));
-    assert!(!GenericImage::copy_within(
-        &mut copy,
-        img::Rect::new(0, 3, 1, 1),
-        0,
-        0,
-    ));
-    assert!(!GenericImage::copy_within(
-        &mut copy,
-        img::Rect::new(0, 0, 3, 3),
-        1,
-        1,
-    ));
-
-    let generated = img::ImageBuffer::from_fn(2, 2, |_x, _y| pixel);
+    assert_eq!(expected.format_version, 2);
+    assert_eq!(expected.oracle.implementation, "dav1d");
+    assert_eq!(expected.oracle.version, "1.5.3");
     assert_eq!(
-        generated.into_vec().len(),
-        4 * usize::from(P::CHANNEL_COUNT)
+        expected.oracle.commit,
+        "b546257f770768b2c88258c533da38b91a06f737"
     );
-    assert!(img::ImageBuffer::<P, Vec<P::Subpixel>>::from_vec(1, 1, vec![]).is_none());
-    let default = img::ImageBuffer::<P, Vec<P::Subpixel>>::default();
-    assert_eq!(default.dimensions(), (0, 0));
-    assert_eq!(default.rows().count(), 0);
-    let mut default_mut = default;
-    assert_eq!(default_mut.rows_mut().count(), 0);
-    let _: &mut [P::Subpixel] = &mut default_mut;
+    assert_eq!(
+        expected.oracle.source_files,
+        [
+            "src/msac.c",
+            "src/msac.h",
+            "src/decode.c",
+            "src/cdf.c",
+            "src/tables.c"
+        ]
+    );
+    assert_eq!(
+        expected.input_hex,
+        "00ff817e55aa13ec42bd99660180fe24db10ef738c31ce5aa50ff069963cc37f"
+    );
+    assert_eq!(
+        expected
+            .partition_422_inputs
+            .get("still")
+            .map(String::as_str),
+        Some("00e234fe35f6ba4026a9e0b77e80")
+    );
+    assert_eq!(
+        expected
+            .partition_422_inputs
+            .get("frame_2")
+            .map(String::as_str),
+        Some("0a057797a7a05837feb11c8887")
+    );
+    assert_eq!(
+        expected
+            .partition_422_inputs
+            .get("frame_3")
+            .map(String::as_str),
+        Some(
+            "f83f9ffd73c02fa55948fac5e5748785cac600815da53a6efaf37c24180bfc69\
+             2c41073b722ecfffb02a3b55452247bb8c3c03b219e9df68caf0156ec0e79d21\
+             ff54f6ce3093636f599789ba72"
+        )
+    );
 
-    let mut local = pixel;
-    let _ = local.channels();
-    let _ = local.channels_mut();
-    let _ = local.alpha();
-    #[allow(deprecated)]
-    let _ = local.channels4();
-    let _ = local.to_rgb();
-    let _ = local.to_rgba();
-    let _ = local.to_luma();
-    let _ = local.to_luma_alpha();
-    let _ = local.map(|value| value);
-    local.apply(|value| value);
-    let _ = local.map_with_alpha(|value| value, |alpha| alpha);
-    local.apply_with_alpha(|value| value, |alpha| alpha);
-    let _ = local.map_without_alpha(|value| value);
-    local.apply_without_alpha(|value| value);
-    let _ = local.map2(&pixel, |left, _right| left);
-    local.apply2(&pixel, |left, _right| left);
-    local.invert();
-    local.blend(&pixel);
-    let _ = P::Subpixel::DEFAULT_MIN_VALUE;
-}
-
-fn exercise_dynamic_buffer(image: &mut img::DynamicImage) {
-    match image {
-        img::DynamicImage::ImageLuma8(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageLumaA8(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageRgb8(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageRgba8(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageLuma16(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageLumaA16(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageRgb16(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageRgba16(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageRgb32F(buffer) => exercise_buffer(buffer),
-        img::DynamicImage::ImageRgba32F(buffer) => exercise_buffer(buffer),
-        _ => panic!("unsupported dynamic image variant"),
+    let actual = require_ok(
+        img::__coverage_av1_entropy_reference_trace(),
+        "Rust AV1 entropy trace must be constructible",
+    )
+    .into_iter()
+    .map(|state| Av1EntropyRecord {
+        case: state.case.to_owned(),
+        step: state.step,
+        value: state.value,
+        byte_position: state.byte_position,
+        difference: state.difference,
+        range: state.range,
+        count: state.count,
+        cdf: state.cdf,
+    })
+    .collect::<Vec<_>>();
+    assert_eq!(actual.len(), expected.records.len());
+    for (index, (actual, expected)) in actual.iter().zip(&expected.records).enumerate() {
+        assert_eq!(actual, expected, "AV1 entropy record {index}");
     }
 }
 
-fn exercise_dynamic_api(image: &img::DynamicImage) {
-    use img::{GenericImage, GenericImageView};
-
-    let (width, height) = (image.width(), image.height());
-    let supported = [
-        img::ColorType::L8,
-        img::ColorType::La8,
-        img::ColorType::Rgb8,
-        img::ColorType::Rgba8,
-        img::ColorType::L16,
-        img::ColorType::La16,
-        img::ColorType::Rgb16,
-        img::ColorType::Rgba16,
-        img::ColorType::Rgb32F,
-        img::ColorType::Rgba32F,
-    ];
-    for color in supported {
-        let created = img::DynamicImage::new(1, 1, color);
-        assert_eq!(created.color(), color);
-    }
-    let mut same = image.clone();
-    same.clone_from(image);
-    let mut different = if image.color() == img::ColorType::L8 {
-        img::DynamicImage::new_rgba8(1, 1)
-    } else {
-        img::DynamicImage::new_luma8(1, 1)
-    };
-    different.clone_from(image);
-
-    let _ = image.to_rgb8();
-    let _ = image.to_rgba8();
-    let _ = image.to_luma8();
-    let _ = image.to_luma_alpha8();
-    let _ = image.to_rgb16();
-    let _ = image.to_rgba16();
-    let _ = image.to_luma16();
-    let _ = image.to_luma_alpha16();
-    let _ = image.to_rgb32f();
-    let _ = image.to_rgba32f();
-    let _: img::RgbaImage = image.to::<img::Rgba<u8>>();
-    let _ = image.clone().into_rgb8();
-    let _ = image.clone().into_rgba8();
-    let _ = image.clone().into_luma8();
-    let _ = image.clone().into_luma_alpha8();
-    let _ = image.clone().into_rgb16();
-    let _ = image.clone().into_rgba16();
-    let _ = image.clone().into_luma16();
-    let _ = image.clone().into_luma_alpha16();
-    let _ = image.clone().into_rgb32f();
-    let _ = image.clone().into_rgba32f();
-
-    let mut mutable = image.clone();
-    let _ = mutable.as_rgb8();
-    let _ = mutable.as_mut_rgb8();
-    let _ = mutable.as_rgba8();
-    let _ = mutable.as_mut_rgba8();
-    let _ = mutable.as_luma8();
-    let _ = mutable.as_mut_luma8();
-    let _ = mutable.as_luma_alpha8();
-    let _ = mutable.as_mut_luma_alpha8();
-    let _ = mutable.as_rgb16();
-    let _ = mutable.as_mut_rgb16();
-    let _ = mutable.as_rgba16();
-    let _ = mutable.as_mut_rgba16();
-    let _ = mutable.as_luma16();
-    let _ = mutable.as_mut_luma16();
-    let _ = mutable.as_luma_alpha16();
-    let _ = mutable.as_mut_luma_alpha16();
-    let _ = mutable.as_rgb32f();
-    let _ = mutable.as_mut_rgb32f();
-    let _ = mutable.as_rgba32f();
-    let _ = mutable.as_mut_rgba32f();
-    assert!(!image.as_bytes().is_empty());
-    assert_eq!(image.color().has_alpha(), image.has_alpha());
-
-    let decoded = image.clone().into_decoded();
-    let roundtrip = require_some(
-        img::DynamicImage::from_decoded(&decoded),
-        "dynamic image must roundtrip through its decoded representation",
+#[cfg(coverage)]
+#[test]
+fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
+    let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures");
+    let document_path = fixture_root.join("outputs").join("av1_reconstruction.json");
+    let contents = require_ok(
+        fs::read_to_string(document_path),
+        "AV1 reconstruction fixture must be readable",
     );
-    assert_eq!(roundtrip.as_bytes(), image.as_bytes());
-    let _ = image.crop_imm(0, 0, 1, 1);
-    assert_eq!(GenericImageView::dimensions(image), (width, height));
-    let pixel = GenericImageView::get_pixel(image, 0, 0);
-    let mut writable = image.clone();
-    GenericImage::put_pixel(&mut writable, 0, 0, pixel);
-    #[allow(deprecated)]
-    GenericImage::blend_pixel(&mut writable, 0, 0, pixel);
-    let _: img::RgbImage = image.clone().into();
-    let _: img::RgbaImage = image.clone().into();
-    let _: img::GrayImage = image.clone().into();
-    let _: img::GrayAlphaImage = image.clone().into();
-    let _: img::DynamicImage = image.to_rgb8().into();
-    let _: img::DynamicImage = image.to_rgba8().into();
-    let _: img::DynamicImage = image.to_luma8().into();
-    let _: img::DynamicImage = image.to_luma_alpha8().into();
-
-    let invalid_mode = img::DecodedImage {
-        width: 1,
-        height: 1,
-        pixels: vec![0, 0, 0],
-        color: img::ColorType::Rgb8,
-        mode: img::ImageMode::L8,
-        palette: None,
-    };
-    assert!(img::DynamicImage::from_decoded(&invalid_mode).is_none());
-    let invalid_palette = img::DecodedImage {
-        mode: img::ImageMode::Rgb8,
-        palette: Some(img::ImagePalette::default()),
-        ..invalid_mode
-    };
-    assert!(img::DynamicImage::from_decoded(&invalid_palette).is_none());
-    for color in [
-        img::ColorType::Cmyk8,
-        img::ColorType::L32F,
-        img::ColorType::L32I,
+    let expected: Av1ReconstructionDocument = require_ok(
+        json::from_str(&contents),
+        "AV1 reconstruction fixture must be valid JSON",
+    );
+    assert_eq!(expected.format_version, 3);
+    assert_eq!(expected.oracle.implementation, "dav1d");
+    assert_eq!(expected.oracle.version, "1.5.3");
+    assert_eq!(
+        expected.oracle.commit,
+        "b546257f770768b2c88258c533da38b91a06f737"
+    );
+    assert_eq!(expected.oracle.pillow_avif, "1.4.1");
+    assert_eq!(
+        expected.oracle.pillow_codecs,
+        "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2"
+    );
+    assert_eq!(
+        expected.scope,
+        "private AV1 first-block reconstruction and closed-class AVIF materialization; \
+         not a public image-processing API"
+    );
+    assert_eq!(expected.oracle.pillow_libyuv, 1922);
+    assert_eq!(expected.cases.len(), 86);
+    for (accepted, extension) in [
+        ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
+        (
+            "partitioned_12x4_gray_32.avif",
+            "partitioned_16x4_gray_32.avif",
+        ),
+        ("partitioned_12x4_green.avif", "partitioned_16x4_green.avif"),
+        ("partitioned_4x12_a.avif", "partitioned_4x16_a.avif"),
+        (
+            "partitioned_4x12_gray_32.avif",
+            "partitioned_4x16_gray_32.avif",
+        ),
+        ("partitioned_4x12_green.avif", "partitioned_4x16_green.avif"),
+        ("partitioned_16x4_a.avif", "partitioned_12x8_a.avif"),
+        (
+            "partitioned_16x4_gray_32.avif",
+            "partitioned_12x8_gray_32.avif",
+        ),
+        ("partitioned_16x4_green.avif", "partitioned_12x8_green.avif"),
+        ("partitioned_16x4_a.avif", "partitioned_16x8_a.avif"),
+        (
+            "partitioned_16x4_gray_32.avif",
+            "partitioned_16x8_gray_32.avif",
+        ),
+        ("partitioned_16x4_green.avif", "partitioned_16x8_green.avif"),
+        ("partitioned_4x16_a.avif", "partitioned_8x12_a.avif"),
+        (
+            "partitioned_4x16_gray_32.avif",
+            "partitioned_8x12_gray_32.avif",
+        ),
+        ("partitioned_4x16_green.avif", "partitioned_8x12_green.avif"),
+        ("partitioned_4x16_a.avif", "partitioned_8x16_a.avif"),
+        (
+            "partitioned_4x16_gray_32.avif",
+            "partitioned_8x16_gray_32.avif",
+        ),
+        ("partitioned_4x16_green.avif", "partitioned_8x16_green.avif"),
     ] {
-        let decoded =
-            img::DecodedImage::new(1, 1, vec![0; usize::from(color.bytes_per_pixel())], color);
-        assert!(img::DynamicImage::from_decoded(&decoded).is_none());
+        let accepted = expected
+            .cases
+            .iter()
+            .find(|case| case.fixture == accepted)
+            .expect("accepted recursive AVIF oracle case");
+        let extension = expected
+            .cases
+            .iter()
+            .find(|case| case.fixture == extension)
+            .expect("extended recursive AVIF oracle case");
+        assert_eq!(extension.partition_blocks, accepted.partition_blocks);
+        assert_eq!(extension.entropy_operations, accepted.entropy_operations);
     }
-    let short = img::DecodedImage::new(1, 1, vec![], img::ColorType::Rgb8);
-    assert!(img::DynamicImage::from_decoded(&short).is_none());
-    let short_alpha = img::DecodedImage::new(1, 1, vec![], img::ColorType::La8);
-    assert!(img::DynamicImage::from_decoded(&short_alpha).is_none());
-}
 
-fn exercise_primitive<T>(value: T)
-where
-    T: img::Primitive,
-{
-    let _ = value.to_f32();
-    let _ = value.to_u64();
-    let _ = T::from_f32(0.5);
-    let _ = T::from_u64(1);
-}
-
-fn exercise_enlargeable<T>(value: T)
-where
-    T: img::Enlargeable,
-{
-    let larger = value.to_larger();
-    let _ = T::clamp_from(larger);
-}
-
-fn exercise_type_metadata() {
-    use img::{EncodableLayout, ExtendedColorType as E, GenericImage, Pixel};
-
-    let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::Cmyk8));
-    let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::L32F));
-    let _ = std::panic::catch_unwind(|| img::DynamicImage::new(1, 1, img::ColorType::L32I));
-    let mut dynamic = img::DynamicImage::new_rgba8(1, 1);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        #[allow(deprecated)]
-        let _ = GenericImage::get_pixel_mut(&mut dynamic, 0, 0);
-    }));
-    let immutable = img::RgbaImage::new(1, 1);
-    let _ = std::panic::catch_unwind(|| immutable.get_pixel(1, 0));
-    let mut mutable = img::RgbaImage::new(1, 1);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = mutable.get_pixel_mut(0, 1);
-    }));
-    let _ = std::panic::catch_unwind(|| img::RgbaImage::new(u32::MAX, u32::MAX));
-
-    let mut luma: img::Luma<u8> = [1].into();
-    luma[0] = 2;
-    let mut luma_alpha: img::LumaA<u8> = [1, 2].into();
-    luma_alpha[1] = 3;
-    let mut rgb: img::Rgb<u8> = [1, 2, 3].into();
-    rgb[2] = 4;
-    let mut rgba: img::Rgba<u8> = [1, 2, 3, 4].into();
-    rgba[3] = 5;
-    #[allow(deprecated)]
-    {
-        let _ = <img::Luma<u8> as Pixel>::from_channels(1, 2, 3, 4);
-        let _ = <img::LumaA<u8> as Pixel>::from_channels(1, 2, 3, 4);
-        let _ = <img::Rgb<u8> as Pixel>::from_channels(1, 2, 3, 4);
-        let _ = <img::Rgba<u8> as Pixel>::from_channels(1, 2, 3, 4);
-    }
-    #[derive(Clone, Copy)]
-    struct DefaultAlphaPixel([u8; 2]);
-    impl Pixel for DefaultAlphaPixel {
-        type Subpixel = u8;
-        const CHANNEL_COUNT: u8 = 2;
-        const COLOR_MODEL: &'static str = "YA";
-        const HAS_ALPHA: bool = true;
-        fn channels(&self) -> &[u8] {
-            &self.0
-        }
-        fn channels_mut(&mut self) -> &mut [u8] {
-            &mut self.0
-        }
-        #[allow(deprecated)]
-        fn channels4(&self) -> (u8, u8, u8, u8) {
-            (self.0[0], 255, 255, self.0[1])
-        }
-        #[allow(deprecated)]
-        fn from_channels(a: u8, _b: u8, _c: u8, d: u8) -> Self {
-            Self([a, d])
-        }
-        fn from_slice(_slice: &[u8]) -> &Self {
-            panic!("not needed by coverage matrix")
-        }
-        fn from_slice_mut(_slice: &mut [u8]) -> &mut Self {
-            panic!("not needed by coverage matrix")
-        }
-        fn to_rgb(&self) -> img::Rgb<u8> {
-            img::Rgb([self.0[0]; 3])
-        }
-        fn to_rgba(&self) -> img::Rgba<u8> {
-            img::Rgba([self.0[0], self.0[0], self.0[0], self.0[1]])
-        }
-        fn to_luma(&self) -> img::Luma<u8> {
-            img::Luma([self.0[0]])
-        }
-        fn to_luma_alpha(&self) -> img::LumaA<u8> {
-            img::LumaA(self.0)
-        }
-        fn map<F>(&self, mut f: F) -> Self
-        where
-            F: FnMut(u8) -> u8,
-        {
-            Self([f(self.0[0]), f(self.0[1])])
-        }
-        fn apply<F>(&mut self, mut f: F)
-        where
-            F: FnMut(u8) -> u8,
-        {
-            self.0 = [f(self.0[0]), f(self.0[1])];
-        }
-        fn map_with_alpha<F, G>(&self, mut f: F, mut g: G) -> Self
-        where
-            F: FnMut(u8) -> u8,
-            G: FnMut(u8) -> u8,
-        {
-            Self([f(self.0[0]), g(self.0[1])])
-        }
-        fn apply_with_alpha<F, G>(&mut self, mut f: F, mut g: G)
-        where
-            F: FnMut(u8) -> u8,
-            G: FnMut(u8) -> u8,
-        {
-            self.0 = [f(self.0[0]), g(self.0[1])];
-        }
-        fn map2<F>(&self, other: &Self, mut f: F) -> Self
-        where
-            F: FnMut(u8, u8) -> u8,
-        {
-            Self([f(self.0[0], other.0[0]), f(self.0[1], other.0[1])])
-        }
-        fn apply2<F>(&mut self, other: &Self, mut f: F)
-        where
-            F: FnMut(u8, u8) -> u8,
-        {
-            self.0 = [f(self.0[0], other.0[0]), f(self.0[1], other.0[1])];
-        }
-        fn invert(&mut self) {
-            self.0 = [
-                255_u8.wrapping_sub(self.0[0]),
-                255_u8.wrapping_sub(self.0[1]),
-            ];
-        }
-        fn blend(&mut self, other: &Self) {
-            *self = *other;
-        }
-    }
-    assert_eq!(DefaultAlphaPixel([1, 7]).alpha(), 7);
-
-    let mut gray_bg = img::LumaA([10u8, 100]);
-    gray_bg.blend(&img::LumaA([20, 255]));
-    gray_bg.blend(&img::LumaA([20, 0]));
-    gray_bg.blend(&img::LumaA([20, 128]));
-    let mut gray_zero = img::LumaA([0.0f32, -1.0]);
-    gray_zero.blend(&img::LumaA([0.0, 0.5]));
-    let mut rgba_bg = img::Rgba([10u8, 20, 30, 100]);
-    rgba_bg.blend(&img::Rgba([20, 30, 40, 255]));
-    rgba_bg.blend(&img::Rgba([20, 30, 40, 0]));
-    rgba_bg.blend(&img::Rgba([20, 30, 40, 128]));
-    let mut rgba_zero = img::Rgba([0.0f32, 0.0, 0.0, -1.0]);
-    rgba_zero.blend(&img::Rgba([0.0, 0.0, 0.0, 0.5]));
-    let mut flat_luma = img::Luma([1u8]);
-    flat_luma.blend(&img::Luma([2]));
-    let mut flat_rgb = img::Rgb([1u8, 2, 3]);
-    flat_rgb.blend(&img::Rgb([4, 5, 6]));
-
-    let colors = [
-        img::ColorType::L8,
-        img::ColorType::La8,
-        img::ColorType::Rgb8,
-        img::ColorType::Rgba8,
-        img::ColorType::Cmyk8,
-        img::ColorType::L16,
-        img::ColorType::La16,
-        img::ColorType::Rgb16,
-        img::ColorType::Rgba16,
-        img::ColorType::Rgb32F,
-        img::ColorType::Rgba32F,
-        img::ColorType::L32F,
-        img::ColorType::L32I,
-    ];
-    for color in colors {
-        assert_eq!(
-            color.bits_per_pixel(),
-            u16::from(color.bytes_per_pixel()) * 8
+    for (case_index, case) in expected.cases.iter().enumerate() {
+        let input = require_ok(
+            fs::read(
+                fixture_root
+                    .join("input")
+                    .join("images")
+                    .join("avif")
+                    .join(&case.fixture),
+            ),
+            "portable AVIF fixture must be readable",
         );
-        let _ = color.has_alpha();
-        let _ = color.has_color();
-        let _ = color.channel_count();
-        let _: E = color.into();
-    }
-    let extended = [
-        E::A8,
-        E::L1,
-        E::La1,
-        E::Rgb1,
-        E::Rgba1,
-        E::L2,
-        E::La2,
-        E::Rgb2,
-        E::Rgba2,
-        E::L4,
-        E::La4,
-        E::Rgb4,
-        E::Rgba4,
-        E::Rgb5x1,
-        E::L8,
-        E::La8,
-        E::Rgb8,
-        E::Rgba8,
-        E::L16,
-        E::La16,
-        E::Rgb16,
-        E::Rgba16,
-        E::Bgr8,
-        E::Bgra8,
-        E::Rgb32F,
-        E::Rgba32F,
-        E::L32F,
-        E::L32I,
-        E::Cmyk8,
-        E::Cmyk16,
-        E::Unknown(7),
-    ];
-    for color in extended {
-        assert!(color.channel_count() > 0);
-        assert!(color.bits_per_pixel() > 0);
-        let _ = color.color_type();
+        let actual = img::__coverage_av1_reconstruction(&input).unwrap_or_else(|| {
+            panic!(
+                "production AV1 path must retain the reconstructed first leaf for {}",
+                case.fixture
+            )
+        });
+        assert_eq!(
+            (
+                actual.width,
+                actual.height,
+                actual.bit_depth,
+                actual.monochrome,
+                actual.color_primaries,
+                actual.transfer_characteristics,
+                actual.matrix_coefficients,
+                actual.color_range,
+                actual.subsampling_x,
+                actual.subsampling_y,
+            ),
+            (
+                case.portable_color.width,
+                case.portable_color.height,
+                case.portable_color.bit_depth,
+                case.portable_color.monochrome,
+                case.portable_color.color_primaries,
+                case.portable_color.transfer_characteristics,
+                case.portable_color.matrix_coefficients,
+                case.portable_color.color_range,
+                case.portable_color.subsampling_x,
+                case.portable_color.subsampling_y,
+            ),
+            "AV1 portable color state case {case_index}"
+        );
+        let recursive_ranges = match case.fixture.as_str() {
+            "partitioned_12x4_a.avif" => Some([37_392, 43_662, 53_296]),
+            "partitioned_12x4_gray_32.avif" => Some([37_392, 43_662, 58_282]),
+            "partitioned_12x4_green.avif" => Some([37_392, 43_662, 56_842]),
+            "partitioned_16x4_a.avif" => Some([37_392, 43_662, 53_296]),
+            "partitioned_16x4_gray_32.avif" => Some([37_392, 43_662, 58_282]),
+            "partitioned_16x4_green.avif" => Some([37_392, 43_662, 56_842]),
+            "partitioned_12x8_a.avif" => Some([37_392, 43_662, 53_296]),
+            "partitioned_12x8_gray_32.avif" => Some([37_392, 43_662, 58_282]),
+            "partitioned_12x8_green.avif" => Some([37_392, 43_662, 56_842]),
+            "partitioned_16x8_a.avif" => Some([37_392, 43_662, 53_296]),
+            "partitioned_16x8_gray_32.avif" => Some([37_392, 43_662, 58_282]),
+            "partitioned_16x8_green.avif" => Some([37_392, 43_662, 56_842]),
+            "partitioned_4x12_a.avif" => Some([46_608, 54_426, 36_309]),
+            "partitioned_4x12_gray_32.avif" => Some([46_608, 54_426, 36_767]),
+            "partitioned_4x12_green.avif" => Some([46_608, 54_426, 61_946]),
+            "partitioned_4x16_a.avif" => Some([46_608, 54_426, 36_309]),
+            "partitioned_4x16_gray_32.avif" => Some([46_608, 54_426, 36_767]),
+            "partitioned_4x16_green.avif" => Some([46_608, 54_426, 61_946]),
+            "partitioned_8x12_a.avif" => Some([46_608, 54_426, 36_309]),
+            "partitioned_8x12_gray_32.avif" => Some([46_608, 54_426, 36_767]),
+            "partitioned_8x12_green.avif" => Some([46_608, 54_426, 61_946]),
+            "partitioned_8x16_a.avif" => Some([46_608, 54_426, 36_309]),
+            "partitioned_8x16_gray_32.avif" => Some([46_608, 54_426, 36_767]),
+            "partitioned_8x16_green.avif" => Some([46_608, 54_426, 61_946]),
+            _ => None,
+        };
+        if let Some(ranges) = recursive_ranges {
+            let horizontal = case.portable_color.width > case.portable_color.height;
+            let expected_blocks = [
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 3,
+                    range: ranges[0],
+                },
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 4,
+                    context: 0,
+                    partition: 0,
+                    range: ranges[1],
+                },
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: if horizontal { 2 } else { 0 },
+                    y: if horizontal { 0 } else { 2 },
+                    level: 4,
+                    context: 0,
+                    partition: 0,
+                    range: ranges[2],
+                },
+            ];
+            assert_eq!(
+                case.partition_blocks, expected_blocks,
+                "AV1 recursive partition topology case {case_index}"
+            );
+        } else {
+            assert_eq!(
+                case.partition_blocks.len(),
+                1,
+                "AV1 single-leaf partition topology case {case_index}"
+            );
+        }
+        assert_eq!(case.decoded_planes.len(), 3);
+        for (plane_index, (actual, expected)) in
+            actual.planes.iter().zip(&case.decoded_planes).enumerate()
+        {
+            assert_eq!(expected.name, ["y", "u", "v"][plane_index]);
+            assert_eq!(
+                (expected.width, expected.height),
+                (case.portable_color.width, case.portable_color.height)
+            );
+            assert_eq!(
+                expected.row_bytes.len(),
+                usize::try_from(expected.height).expect("AV1 plane height")
+            );
+            let expected_bytes = expected
+                .row_bytes
+                .iter()
+                .flat_map(|row| {
+                    assert_eq!(
+                        row.len(),
+                        usize::try_from(expected.width)
+                            .expect("AV1 plane width")
+                            .saturating_mul(2)
+                    );
+                    row.as_bytes().chunks_exact(2).map(|pair| {
+                        let pair = std::str::from_utf8(pair).expect("hex pair must be UTF-8");
+                        u8::from_str_radix(pair, 16).expect("hex pair must be valid")
+                    })
+                })
+                .collect::<Vec<_>>();
+            let actual_bytes = actual
+                .iter()
+                .map(|sample| u8::try_from(*sample).expect("eight-bit AV1 sample"))
+                .collect::<Vec<_>>();
+            assert_eq!(
+                actual_bytes, expected_bytes,
+                "AV1 reconstruction case {case_index} plane {plane_index}"
+            );
+        }
+        let actual_operations = actual
+            .entropy_operations
+            .into_iter()
+            .map(|operation| Av1ReconstructionEntropyOperation {
+                operation: operation.operation.to_owned(),
+                parameter: operation.parameter,
+                step: operation.step,
+                value: operation.value,
+                byte_position: operation.byte_position,
+                difference: operation.difference,
+                range: operation.range,
+                count: operation.count,
+                cdf: operation.cdf,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actual_operations.len(),
+            case.entropy_operations.len(),
+            "AV1 reconstruction entropy operation count case {case_index}"
+        );
+        for (operation_index, (actual, expected)) in actual_operations
+            .iter()
+            .zip(&case.entropy_operations)
+            .enumerate()
+        {
+            assert_eq!(
+                actual, expected,
+                "AV1 reconstruction entropy case {case_index} operation {operation_index}"
+            );
+        }
+
+        assert_eq!(case.pillow.mode, "RGB");
+        assert_eq!(
+            case.pillow.size,
+            [case.portable_color.width, case.portable_color.height]
+        );
+        assert_eq!(
+            case.pillow.bytes,
+            usize::try_from(
+                case.pillow.size[0]
+                    .saturating_mul(case.pillow.size[1])
+                    .saturating_mul(3),
+            )
+            .expect("Pillow RGB byte count")
+        );
+        let expected_pillow_sha256 = match case.fixture.as_str() {
+            "portable_lossless_a.avif" => {
+                "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b"
+            }
+            "portable_lossless_b.avif" => {
+                "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
+            }
+            "portable_lossless_gray_32.avif" => {
+                "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
+            }
+            "portable_lossless_gray_127.avif" => {
+                "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
+            }
+            "portable_probe_gray_128.avif" => {
+                "2ac4dd6f486e2f061ebe8ce8b651dbdf25d71b88184d0bf308608cdcaae05309"
+            }
+            "portable_probe_gray_129.avif" => {
+                "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57"
+            }
+            "portable_lossless_8x8_a.avif" => {
+                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+            }
+            "portable_lossless_8x8_gray_127.avif" => {
+                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+            }
+            "portable_probe_8x8_gray_128.avif" => {
+                "fa7b78cc215df21d7ce54d8c3c6637c326dab95c10fbc12263101365973f4268"
+            }
+            "portable_probe_8x8_gray_129.avif" => {
+                "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+            }
+            "portable_lossless_4x8_a.avif" | "portable_lossless_8x4_a.avif" => {
+                "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475"
+            }
+            "portable_lossless_4x8_gray_127.avif" | "portable_lossless_8x4_gray_127.avif" => {
+                "faa8c27b41b2603cd12911cd93ee3953ff1f98c9fba83fdeef738cc8406c4b3f"
+            }
+            "portable_probe_4x8_gray_128.avif" | "portable_probe_8x4_gray_128.avif" => {
+                "1b34669db94decae583e183ee2ffeb07cf504b9f52fae0056c5cf343325157e4"
+            }
+            "portable_probe_4x8_gray_129.avif" | "portable_probe_8x4_gray_129.avif" => {
+                "780832a7ab39814257a857d37a67ab541a1152afbcf6a1883a16ad32c264ff4e"
+            }
+            "portable_lossless_12x12_a.avif" => {
+                "cbc97cf0c2652e60e6e36611be9869444f603abf5f48b292a03d340f501320f8"
+            }
+            "portable_lossless_12x12_gray_127.avif" => {
+                "cb4987527501d0915664b8e624e5f51ebbf5f48b52917058615c1f3b96764076"
+            }
+            "portable_probe_12x12_gray_128.avif" => {
+                "cc0fcf371bdd305ff6099895e60aac93968bf0358724de1678979a37a9bd7a17"
+            }
+            "portable_probe_12x12_gray_129.avif" => {
+                "143efd9552ea35a74333bbfc58d10ae5a0eccfe76d2283c05b2b4a9391c346cd"
+            }
+            "portable_lossless_16x16_a.avif" => {
+                "8bdcc97ae19b09ec3d6b76a7d59f13d4aa3dd7a06d21db706f2a1d15caaa0431"
+            }
+            "portable_lossless_16x16_gray_127.avif" => {
+                "cbab715ff6cfaa81c9b09e014dc1406ceff24034caa265de65f9f948c5434807"
+            }
+            "portable_probe_16x16_gray_128.avif" => {
+                "7f3e5e4e65eca4390e9242558012bc9bdad133d7ac9f6aed53fa156a2288f73b"
+            }
+            "portable_probe_16x16_gray_129.avif" => {
+                "15dc2c3b0ea25a84b4994b9a73dbcf65eef174bad152c689cc1945843b543657"
+            }
+            "portable_lossless_12x16_a.avif" | "portable_lossless_16x12_a.avif" => {
+                "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
+            }
+            "portable_lossless_12x16_gray_127.avif" | "portable_lossless_16x12_gray_127.avif" => {
+                "1b9924ee11c55d5fd4d944003b8b272c1f4ce12ea8e800c33563bed483fa406d"
+            }
+            "portable_probe_12x16_gray_128.avif" | "portable_probe_16x12_gray_128.avif" => {
+                "af1857bf5516aa3e2e39b6842559746fa7b45daa8dc4cc6675ad86e0cfe425b9"
+            }
+            "portable_probe_12x16_gray_129.avif" | "portable_probe_16x12_gray_129.avif" => {
+                "5269c00892aff8abcc6a4da60b82b890936aef6b1aa24c6b713c5a80a831c0b9"
+            }
+            "partitioned_12x4_gray_127.avif" | "partitioned_4x12_gray_127.avif" => {
+                "35fc07c937c1c3d13641f32cdc94ce1315ec420dd26e12b81a4651cfc1786ee3"
+            }
+            "portable_rect_12x4_gray_128.avif" | "portable_rect_4x12_gray_128.avif" => {
+                "7053108d4e37b600ae17d35890c69102ee6484d79a3a5cd622afca6f5606c543"
+            }
+            "portable_rect_12x4_gray_129.avif" | "portable_rect_4x12_gray_129.avif" => {
+                "c60b05f1911c0ccc80c5af2cd922c7cf1836279d44a17682c918cdaa5c7747e6"
+            }
+            "portable_rect_12x8_gray_127.avif" | "portable_rect_8x12_gray_127.avif" => {
+                "cf8691a9b8c6c8e329b94f40345d822ef7d4f6e8e5c2343d74b12aa16e84838a"
+            }
+            "portable_rect_12x8_gray_128.avif" | "portable_rect_8x12_gray_128.avif" => {
+                "88f2f6050a4ef8c9fd8bd69d3e51689155f6aa570f0ac0da6d3c0ee794bf3867"
+            }
+            "portable_rect_12x8_gray_129.avif" | "portable_rect_8x12_gray_129.avif" => {
+                "fe124f63ee1300955e9b2ffbed15cf383e9f4ae7c5cf60a09b074e4b0d73947f"
+            }
+            "portable_rect_16x4_gray_127.avif" | "portable_rect_4x16_gray_127.avif" => {
+                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+            }
+            "portable_rect_16x4_gray_128.avif" | "portable_rect_4x16_gray_128.avif" => {
+                "fa7b78cc215df21d7ce54d8c3c6637c326dab95c10fbc12263101365973f4268"
+            }
+            "portable_rect_16x4_gray_129.avif" | "portable_rect_4x16_gray_129.avif" => {
+                "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+            }
+            "portable_rect_16x8_gray_127.avif" | "portable_rect_8x16_gray_127.avif" => {
+                "7e18f1b2ca4e075b955848b4deafd56e47eeda83cc15b3ecdeb71d7ff58a5f57"
+            }
+            "portable_rect_16x8_gray_128.avif" | "portable_rect_8x16_gray_128.avif" => {
+                "f83545d43c6939ec393b6b8310959b6174fd764b08a12fc22d908408a7e6a43e"
+            }
+            "portable_rect_16x8_gray_129.avif" | "portable_rect_8x16_gray_129.avif" => {
+                "7d965db8cbcf57e71b10b16973c9c2439222485594191da31460986a000f497c"
+            }
+            "portable_rect_12x4_a_speed0.avif" | "portable_rect_4x12_a_speed0.avif" => {
+                "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
+            }
+            "portable_rect_12x4_gray_32_speed0.avif" | "portable_rect_4x12_gray_32_speed0.avif" => {
+                "31178565d9d883446d9e273ee881220f43cb4c5de74e237f590f845e25659f38"
+            }
+            "partitioned_12x4_a.avif" | "partitioned_4x12_a.avif" => {
+                "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
+            }
+            "partitioned_12x4_gray_32.avif" | "partitioned_4x12_gray_32.avif" => {
+                "31178565d9d883446d9e273ee881220f43cb4c5de74e237f590f845e25659f38"
+            }
+            "partitioned_12x4_green.avif" | "partitioned_4x12_green.avif" => {
+                "7f5e545c140df34ec243d4449ab8c4c0e476f532d3f6472ce956e7060b271e1c"
+            }
+            "partitioned_16x4_a.avif" | "partitioned_4x16_a.avif" => {
+                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+            }
+            "partitioned_16x4_gray_32.avif" | "partitioned_4x16_gray_32.avif" => {
+                "1d3659ada1bf4b80ae974a7b544090591793cb954ac3f9ad13d3af3f09c21967"
+            }
+            "partitioned_16x4_green.avif" | "partitioned_4x16_green.avif" => {
+                "32e7c45e59200de4c1012eac0ef31f3fa35d02b40d563f4602644bca9266f7fc"
+            }
+            "partitioned_12x8_a.avif" | "partitioned_8x12_a.avif" => {
+                "47c4a5d65d8ac82aa68f04754b38e5bf00438aeb64b2e48c2bb54a9268e6e4e7"
+            }
+            "partitioned_12x8_gray_32.avif" | "partitioned_8x12_gray_32.avif" => {
+                "a80ec409692fd6c32b82fa895a118a06751d63671cd6da6ed14ef5bb59f41541"
+            }
+            "partitioned_12x8_green.avif" | "partitioned_8x12_green.avif" => {
+                "c1046797ae8db85c1b32d232085bdc2251d6e94567771f20ce9f86b6a2cc5cbc"
+            }
+            "partitioned_16x8_a.avif" | "partitioned_8x16_a.avif" => {
+                "983aef668db1ea0d5801725fdf2b49d32232fc7f1d9ae578a03ffad6aebc4fc2"
+            }
+            "partitioned_16x8_gray_32.avif" | "partitioned_8x16_gray_32.avif" => {
+                "f89d41f00d89e8b0bf8cb8cff89f9f23e9fa1e5113473dda8d16098575db7388"
+            }
+            "partitioned_16x8_green.avif" | "partitioned_8x16_green.avif" => {
+                "ff87dfd10bc6c01f8e9dac23bb518192e6579a383b2ff1bbd8b8c80a58e677b4"
+            }
+            fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
+        };
+        assert_eq!(case.pillow.sha256, expected_pillow_sha256);
+        let expected_rgb = case
+            .pillow
+            .row_bytes
+            .iter()
+            .flat_map(|row| {
+                assert_eq!(
+                    row.len(),
+                    usize::try_from(case.pillow.size[0])
+                        .expect("Pillow RGB width")
+                        .saturating_mul(6)
+                );
+                row.as_bytes().chunks_exact(2).map(|pair| {
+                    let pair = std::str::from_utf8(pair).expect("hex pair must be UTF-8");
+                    u8::from_str_radix(pair, 16).expect("hex pair must be valid")
+                })
+            })
+            .collect::<Vec<_>>();
+        let decoded = require_ok(
+            img::decode(&input),
+            "closed-class AVIF must decode through the production path",
+        );
+        assert_eq!(decoded.format, img::ImageFormat::Avif);
+        assert_eq!(
+            (
+                decoded.content.width,
+                decoded.content.height,
+                decoded.content.mode,
+                decoded.content.color,
+            ),
+            (
+                case.portable_color.width,
+                case.portable_color.height,
+                img::ImageMode::Rgb8,
+                img::ColorType::Rgb8,
+            )
+        );
+        assert_eq!(
+            decoded.content.pixels, expected_rgb,
+            "portable AVIF RGB case {case_index}"
+        );
+        if case_index == 0
+            || matches!(
+                case.fixture.as_str(),
+                "partitioned_12x4_a.avif" | "partitioned_4x12_a.avif"
+            )
+        {
+            img::__coverage_sweep_av1_first_leaf(&input);
+        }
     }
 
-    for mode in [
-        img::ImageMode::La16,
-        img::ImageMode::Rgb16,
-        img::ImageMode::Rgba16,
-        img::ImageMode::Rgb32F,
-        img::ImageMode::Rgba32F,
-        img::ImageMode::I32,
+    for fixture in [
+        "baseline.avif",
+        "alpha.avif",
+        "animated.avif",
+        "10bit.avif",
+        "multitile.avif",
     ] {
-        let _ = mode.color_type();
+        let input = require_ok(
+            fs::read(
+                fixture_root
+                    .join("input")
+                    .join("images")
+                    .join("avif")
+                    .join(fixture),
+            ),
+            "non-portable AVIF fixture must be readable",
+        );
+        assert!(
+            img::__coverage_av1_reconstruction(&input).is_none(),
+            "{fixture} must not be classified as the closed portable still"
+        );
     }
-    for (rgb, alpha) in [
-        (vec![], vec![]),
-        (vec![0], vec![]),
-        (vec![0; 257 * 3], vec![]),
-        (vec![0, 0, 0], vec![0, 0]),
-    ] {
-        assert!(img::ImagePalette::new(rgb, alpha).is_err());
-    }
-    let palette = require_ok(
-        img::ImagePalette::new(vec![0, 0, 0], vec![255]),
-        "one-entry RGB palette must be valid",
-    );
-    let invalid_images = [
-        img::DecodedImage::new(0, 1, vec![], img::ColorType::L8),
-        img::DecodedImage {
-            width: 1,
-            height: 1,
-            pixels: vec![0],
-            color: img::ColorType::Rgb8,
-            mode: img::ImageMode::L8,
-            palette: None,
-        },
-        img::DecodedImage::with_mode(1, 1, vec![1], img::ImageMode::P8)
-            .with_palette(palette.clone()),
-        img::DecodedImage::new(1, 1, vec![0], img::ColorType::L8).with_palette(palette),
-    ];
-    for image in invalid_images {
-        assert!(image.validate().is_err());
-    }
-    let valid = img::DecodedImage::new(1, 1, vec![0, 0, 0], img::ColorType::Rgb8);
-    let empty = img::DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![],
-        loop_count: None,
-        background: None,
-    };
-    assert!(empty.validate().is_err());
-    let outside = img::DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![img::DecodedFrame {
-            image: valid.clone(),
-            left: 1,
-            top: 0,
-            duration_ms: 0,
-            disposal: img::FrameDisposal::Unspecified,
-            interlaced: false,
-        }],
-        loop_count: None,
-        background: None,
-    };
-    assert!(outside.validate().is_err());
-    assert_eq!(
-        img::detect_format(b"\0\0\0\x18ftypavif\0\0\0\0"),
-        Ok(img::ImageFormat::Avif)
-    );
-    for brand in [b"avis", b"mif1", b"msf1"] {
-        let mut header = *b"\0\0\0\x18ftyp____";
-        header[8..12].copy_from_slice(brand);
-        assert_eq!(img::detect_format(&header), Ok(img::ImageFormat::Avif));
-    }
-    assert!(img::encode(&valid, img::ImageFormat::Avif, &Default::default()).is_ok());
-    assert!(img::encode_default(&valid, img::ImageFormat::Avif).is_ok());
-    let zero_png = img::DecodedImage::new(0, 1, vec![], img::ColorType::L8);
-    assert!(img::codecs::png::encode::encode(&zero_png, &Default::default()).is_none());
-    let unsupported_tiff = img::DecodedImage::new(1, 1, vec![0; 4], img::ColorType::La16);
-    assert!(img::codecs::tiff::encode::encode(&unsupported_tiff, &Default::default()).is_none());
-    let unsupported_webp = img::DecodedImage::new(1, 1, vec![0, 0], img::ColorType::La8);
-    assert!(img::codecs::webp::encode::encode(&unsupported_webp, &Default::default()).is_none());
-    let mut bad_webp_metadata = img::encode_options::EncodeOptions::default();
-    bad_webp_metadata
-        .extra
-        .insert("xmp_hex".to_owned(), "f".to_owned());
-    assert!(img::codecs::webp::encode::encode(&valid, &bad_webp_metadata).is_none());
-    let lossless_webp = img::encode_options::EncodeOptions {
-        lossless: Some(true),
-        ..Default::default()
-    };
-    assert!(img::codecs::webp::encode::encode(&unsupported_webp, &lossless_webp).is_none());
-
-    exercise_primitive(1u8);
-    exercise_primitive(1u16);
-    exercise_primitive(1u32);
-    exercise_primitive(1u64);
-    exercise_primitive(1u128);
-    exercise_primitive(1usize);
-    exercise_primitive(0.5f32);
-    exercise_primitive(0.5f64);
-    exercise_enlargeable(1u8);
-    exercise_enlargeable(1u16);
-    exercise_enlargeable(1u32);
-    exercise_enlargeable(1u64);
-    exercise_enlargeable(1usize);
-    exercise_enlargeable(0.5f32);
-    assert_eq!(<u8 as img::Primitive>::from_f32(255.0), u8::MAX);
-    assert_eq!(<u8 as img::Primitive>::from_f32(f32::NAN), 0);
-    assert_eq!(<u128 as img::Primitive>::from_f32(f32::INFINITY), u128::MAX);
-    assert_eq!(<f64 as img::Primitive>::to_f32(0.5), 0.5);
-    assert_eq!(
-        <f64 as img::Primitive>::to_f32(f64::INFINITY),
-        f32::INFINITY
-    );
-    assert_eq!(<f64 as img::Primitive>::to_u64(f64::NAN), 0);
-    assert_eq!(<f64 as img::Primitive>::to_u64(f64::INFINITY), u64::MAX);
-    let _ = <u8 as img::FromPrimitive<f32>>::from_primitive(0.5);
-    let _ = <u16 as img::FromPrimitive<f32>>::from_primitive(0.5);
-    let _ = <u8 as img::FromPrimitive<u16>>::from_primitive(257);
-    let _ = <f32 as img::FromPrimitive<u16>>::from_primitive(1);
-    let _ = <f32 as img::FromPrimitive<u8>>::from_primitive(1);
-    let _ = <u16 as img::FromPrimitive<u8>>::from_primitive(1);
-    assert_eq!([1u8, 2].as_slice().as_bytes(), &[1, 2]);
-    let _ = [1u16, 2].as_slice().as_bytes();
-    let _ = [0.25f32, 0.5].as_slice().as_bytes();
-
-    let paths = [
-        "a.jpg",
-        "a.PNG",
-        "a.gif",
-        "a.bmp",
-        "a.webp",
-        "a.tif",
-        "a.ico",
-        "a.avif",
-        "../../definitely-not-present/IMAGE.PNG",
-    ];
-    for path in paths {
-        assert!(img::ImageFormat::from_path(path).is_ok());
-    }
-    let format_names = [
-        (img::ImageFormat::Jpeg, "JPEG"),
-        (img::ImageFormat::Png, "PNG"),
-        (img::ImageFormat::Gif, "GIF"),
-        (img::ImageFormat::Bmp, "BMP"),
-        (img::ImageFormat::WebP, "WEBP"),
-        (img::ImageFormat::Tiff, "TIFF"),
-        (img::ImageFormat::Ico, "ICO"),
-        (img::ImageFormat::Avif, "AVIF"),
-    ];
-    for (format, name) in format_names {
-        assert_eq!(format.as_str(), name);
-        assert_eq!(format.to_string(), name);
-        assert_eq!(name.parse::<img::ImageFormat>(), Ok(format));
-    }
-    assert_eq!(
-        img::ImageFormat::from_path("a.UNKNOWN"),
-        Err(img::ImageError::Unsupported {
-            format: None,
-            message: "unknown extension: unknown".to_owned(),
-        })
-    );
-    assert_eq!(
-        img::ImageFormat::from_path("no-extension"),
-        Err(img::ImageError::Unsupported {
-            format: None,
-            message: "unknown extension: ".to_owned(),
-        })
-    );
-    let errors = [
-        img::ImageError::Dimensions,
-        img::ImageError::UnknownFormat,
-        img::ImageError::FeatureDisabled {
-            format: img::ImageFormat::Png,
-            feature: "png",
-        },
-        img::ImageError::Malformed {
-            format: img::ImageFormat::Png,
-            message: "x".to_owned(),
-        },
-        img::ImageError::Unsupported {
-            format: Some(img::ImageFormat::Png),
-            message: "x".to_owned(),
-        },
-        img::ImageError::Unsupported {
-            format: None,
-            message: "x".to_owned(),
-        },
-        img::ImageError::Parameter("x".to_owned()),
-        img::ImageError::IoError("x".to_owned()),
-    ];
-    for error in errors {
-        assert!(!error.to_string().is_empty());
-    }
-    let _ = img::Rect::new(0, 0, 1, 1);
-    let _ = img::encode_options::EncodeOptions::none();
 }
 
 // ── Manifest Coverage ────────────────────────────────────────────────────
@@ -2922,18 +2784,10 @@ fn test_coverage_matrix() {
 
     let s = &matrix.summary;
     eprintln!(
-        "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} operations, {} assets",
-        s.decode_active,
-        s.decode_rows,
-        s.decode_planned,
-        s.encode_not_wired,
-        s.operation_rows,
-        s.assets_available
+        "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} assets",
+        s.decode_active, s.decode_rows, s.decode_planned, s.encode_not_wired, s.assets_available
     );
 
     assert!(s.total_rows > 0, "Matrix must have rows");
-    assert_eq!(
-        s.total_rows,
-        s.decode_rows + s.encode_rows + s.operation_rows
-    );
+    assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
 }

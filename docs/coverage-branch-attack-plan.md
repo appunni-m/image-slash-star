@@ -8013,6 +8013,107 @@ Validation after this batch:
    `all-features-llvm-cov-json-nightly-branch`.
 4. Record the new summary and zlib movement here.
 
+## Codec-only public-boundary validation
+
+Date: 2026-07-29.
+
+The supported codec API was reduced to the structured root
+detect/inspect/decode/encode functions. Direct format modules and their
+`Option` helpers became private, and the general processing compatibility
+layer was removed.
+
+That encapsulation initially removed direct-test execution of malformed
+format-prefix guards. The reverse map showed that the gaps were private
+decoder/inspector propagation states, not missing public behavior. The
+existing `cfg(coverage)` hooks now exercise those states without reopening the
+implementation modules or replacing manifest-backed public errors.
+
+Final approved Coverage MCP evidence:
+
+- command: `all-features-llvm-cov-json-nightly-branch`;
+- run: `1021abe5-d106-473a-bec5-5a2b560718f9`;
+- snapshot: `d98b6bc6-6852-40c9-8800-b9937e711a91`;
+- tests: 5 passed, 0 failed;
+- lines: 34,683 / 34,683;
+- branches: 5,136 / 5,136;
+- functions: 1,735 / 1,735; and
+- regions: 57,658 / 57,658.
+
+All 1,028 manifest rows remain active. No processing fixture, public
+format-specific helper, or synthetic public error test was added.
+
+## 2026-07-29 ICO processing-boundary correction
+
+### Plan and reverse map
+
+The follow-up codec-only audit found one surviving processing implementation:
+`src/codecs/ico/encode.rs` generated Pillow-style icon pyramids by applying a
+private Lanczos resampler to a single decoded raster. The accepted boundary
+does not change merely because processing is hidden behind an encoder option.
+
+The correction:
+
+1. removed the resampler, coefficient generator, alpha premultiplication, and
+   thumbnail geometry helpers;
+2. limited still-image ICO encoding to one source-sized PNG- or BMP-backed
+   entry at or below 256x256;
+3. rejected size requests that are empty, multiple, malformed, different from
+   the source, or above the ICO ceiling;
+4. removed 18 Pillow rows whose behavior required generated sizes, size-list
+   filtering, or resize-only failure handling;
+5. regenerated exact source-sized Pillow references for the retained ICO rows;
+6. retained fixture-driven zero-size and unsupported-color errors; and
+7. reverse-mapped the final two region misses to impossible checked arithmetic
+   after the 256x256 limit, then replaced those checks with locally proven
+   bounded calculations.
+
+### Result
+
+Coverage MCP run `1c6cd033-433a-41d4-9cb0-ba236d47e354`, snapshot
+`0336350d-e9fc-4daa-aaf7-90f7d9ad3725`, passed and ingested.
+
+- Tests: `5 passed, 0 failed`
+- Manifest rows: `1,027 active, 0 planned or skipped`
+- Lines: `27834 / 27834`
+- Branches: `3778 / 3778`
+- Functions: `1425 / 1425`
+- Regions: `47169 / 47169`
+
+Strict all-feature Clippy, the native check, and the all-feature
+`wasm32-unknown-unknown` check also pass. No runtime dependency was added.
+
+## 2026-07-29 codec-only boundary sweep
+
+### Plan
+
+The accepted product boundary prohibits public decoded-pixel processing in
+image-slash-star. Reverse dependency mapping showed that no codec path used the
+generic buffer, pixel, conversion, blending, crop, flip, or rotation layer.
+The sweep therefore:
+
+1. removed the complete image-rs-compatible processing/type layer;
+2. retained a minimal codec-owned `ColorType` and decoded sample model;
+3. removed the 32 Pillow processing rows and their generated binary references;
+4. retained exact decode, inspect, encode, sequence, and structured-error rows;
+5. restored lost model/defensive coverage through `cfg(coverage)` hooks only;
+6. ran the approved nightly LLVM Coverage MCP command with branch data; and
+7. required 100% line, branch, function, and region coverage.
+
+### Result
+
+Coverage MCP run `85da0126-c3f6-4160-9ac8-0575c8ef8f3f`, snapshot
+`1f25f975-d90f-4414-b4fc-de340dc8ac8b`, passed and ingested.
+
+- Tests: `5 passed, 0 failed`
+- Lines: `28086 / 28086`
+- Branches: `3818 / 3818`
+- Functions: `1442 / 1442`
+- Regions: `47601 / 47601`
+
+The one final region-only miss was reverse-mapped from the LLVM JSON artifact
+to the malformed `xmp_hex` early-return path in WebP metadata attachment. A
+coverage-only malformed-XMP probe closed it without adding public behavior.
+
 ## Attempt 43 plan: one-region dispatcher/WebP encode sweep
 
 Current Coverage MCP baseline before editing:

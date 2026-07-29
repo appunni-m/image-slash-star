@@ -1,0 +1,1346 @@
+{
+  "format_version": 2,
+  "oracle": {
+    "implementation": "dav1d",
+    "version": "1.5.3",
+    "commit": "b546257f770768b2c88258c533da38b91a06f737",
+    "source_files": [
+      "src/msac.c",
+      "src/msac.h",
+      "src/decode.c",
+      "src/cdf.c",
+      "src/tables.c"
+    ]
+  },
+  "input_hex": "00ff817e55aa13ec42bd99660180fe24db10ef738c31ce5aa50ff069963cc37f",
+  "partition_422_inputs": {
+    "still": "00e234fe35f6ba4026a9e0b77e80",
+    "frame_2": "0a057797a7a05837feb11c8887",
+    "frame_3": "f83f9ffd73c02fa55948fac5e5748785cac600815da53a6efaf37c24180bfc692c41073b722ecfffb02a3b55452247bb8c3c03b219e9df68caf0156ec0e79d21ff54f6ce3093636f599789ba72"
+  },
+  "records": [
+    {
+      "case": "equal",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18298403476753602560,
+      "range": 65520,
+      "count": 39,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 2,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 9109934337010948096,
+      "range": 32876,
+      "count": 39,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 3,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 8994244837353435136,
+      "range": 32976,
+      "count": 38,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 4,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 8762865838038409216,
+      "range": 33176,
+      "count": 37,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 5,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 8228050245370429440,
+      "range": 33320,
+      "count": 36,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 6,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 7086361465996541952,
+      "range": 33352,
+      "count": 35,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 7,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 4802983907248766976,
+      "range": 33416,
+      "count": 34,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 8,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 236228789753217024,
+      "range": 33544,
+      "count": 33,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 9,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 472457579506434048,
+      "range": 33544,
+      "count": 32,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 10,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 944915159012868096,
+      "range": 33544,
+      "count": 31,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 11,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 1889830318025736192,
+      "range": 33544,
+      "count": 30,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 12,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 3779660636051472384,
+      "range": 33544,
+      "count": 29,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 13,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 7559321272102944768,
+      "range": 33544,
+      "count": 28,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 14,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 5676845925423644672,
+      "range": 33544,
+      "count": 27,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 15,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 1911895232065044480,
+      "range": 33544,
+      "count": 26,
+      "cdf": []
+    },
+    {
+      "case": "equal",
+      "step": 16,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 3823790464130088960,
+      "range": 33544,
+      "count": 25,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18372573775231577088,
+      "range": 65528,
+      "count": 40,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 2,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18371447875324734464,
+      "range": 65524,
+      "count": 40,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 3,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 16073486165458938880,
+      "range": 57360,
+      "count": 40,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 4,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 12037134999428131840,
+      "range": 43020,
+      "count": 40,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 5,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 11966342400670685184,
+      "range": 43024,
+      "count": 39,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 6,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 11543838607939690496,
+      "range": 43056,
+      "count": 37,
+      "cdf": []
+    },
+    {
+      "case": "fixed",
+      "step": 7,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 11543838607939690496,
+      "range": 42928,
+      "count": 37,
+      "cdf": []
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        16384,
+        0
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18298403476753602560,
+      "range": 65520,
+      "count": 39,
+      "cdf": [
+        15360,
+        1
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 2,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 9684143289500686336,
+      "range": 34916,
+      "count": 39,
+      "cdf": [
+        14400,
+        2
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 3,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 10752900491841613824,
+      "range": 39224,
+      "count": 38,
+      "cdf": [
+        13500,
+        3
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 4,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 12459758182156165120,
+      "range": 46310,
+      "count": 37,
+      "cdf": [
+        12657,
+        4
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 5,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 14936161890338783232,
+      "range": 57152,
+      "count": 36,
+      "cdf": [
+        11866,
+        5
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 6,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 9129051645821239296,
+      "range": 36521,
+      "count": 36,
+      "cdf": [
+        11125,
+        6
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 7,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 11341137213954818048,
+      "range": 48468,
+      "count": 35,
+      "cdf": [
+        10430,
+        7
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 8,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 7030910895584542720,
+      "range": 33155,
+      "count": 35,
+      "cdf": [
+        9779,
+        8
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 9,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 8540408648012857344,
+      "range": 46694,
+      "count": 34,
+      "cdf": [
+        9168,
+        9
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 10,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 4876448876170248192,
+      "range": 33677,
+      "count": 34,
+      "cdf": [
+        8595,
+        10
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 11,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 4809634211347955712,
+      "range": 49792,
+      "count": 33,
+      "cdf": [
+        8058,
+        11
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 12,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 1395624218824409088,
+      "range": 37663,
+      "count": 33,
+      "cdf": [
+        7555,
+        12
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 13,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 5582496875297636352,
+      "range": 34708,
+      "count": 31,
+      "cdf": [
+        9130,
+        13
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 14,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 5766866647238311936,
+      "range": 50238,
+      "count": 30,
+      "cdf": [
+        8560,
+        14
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 15,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 2096995900884779008,
+      "range": 37200,
+      "count": 30,
+      "cdf": [
+        8025,
+        15
+      ]
+    },
+    {
+      "case": "adaptive_bool",
+      "step": 16,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 8387983603539116032,
+      "range": 36264,
+      "count": 28,
+      "cdf": [
+        9571,
+        16
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18132048481288171520,
+      "range": 65440,
+      "count": 38,
+      "cdf": [
+        23808,
+        15872,
+        7936,
+        1
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 2,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 9556625272362459136,
+      "range": 35996,
+      "count": 37,
+      "cdf": [
+        23064,
+        15376,
+        7688,
+        2
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 3,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 9840312638133600256,
+      "range": 43136,
+      "count": 35,
+      "cdf": [
+        22344,
+        14896,
+        7448,
+        3
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 4,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 6340858084653924352,
+      "range": 55232,
+      "count": 33,
+      "cdf": [
+        21646,
+        14431,
+        7216,
+        4
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 5,
+      "value": 2,
+      "byte_position": 7,
+      "difference": 11803093860603133952,
+      "range": 48604,
+      "count": 31,
+      "cdf": [
+        21993,
+        15004,
+        6991,
+        5
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 6,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 10705070963040452608,
+      "range": 64716,
+      "count": 29,
+      "cdf": [
+        21306,
+        14536,
+        6773,
+        6
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 7,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 10608287517394337792,
+      "range": 52936,
+      "count": 27,
+      "cdf": [
+        21664,
+        14082,
+        6562,
+        7
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 8,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 1611279956938063872,
+      "range": 36220,
+      "count": 26,
+      "cdf": [
+        20987,
+        13642,
+        6357,
+        8
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 9,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 12890239655504510976,
+      "range": 55864,
+      "count": 23,
+      "cdf": [
+        21355,
+        14239,
+        7182,
+        9
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 10,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 5340329452234604544,
+      "range": 39110,
+      "count": 22,
+      "cdf": [
+        20688,
+        13795,
+        6958,
+        10
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 11,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 2955106131875201024,
+      "range": 32848,
+      "count": 20,
+      "cdf": [
+        21065,
+        13364,
+        6741,
+        11
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 12,
+      "value": 2,
+      "byte_position": 7,
+      "difference": 8499747107782000640,
+      "range": 52768,
+      "count": 17,
+      "cdf": [
+        21430,
+        13970,
+        6531,
+        12
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 13,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 8709024723628982272,
+      "range": 47808,
+      "count": 15,
+      "cdf": [
+        21784,
+        13534,
+        6327,
+        13
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 14,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 12733557823288377344,
+      "range": 48004,
+      "count": 13,
+      "cdf": [
+        22127,
+        13112,
+        6130,
+        14
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 15,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 14602567199248875520,
+      "range": 62940,
+      "count": 11,
+      "cdf": [
+        21436,
+        12703,
+        5939,
+        15
+      ]
+    },
+    {
+      "case": "adaptive_symbol",
+      "step": 16,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 6165281654823714816,
+      "range": 44026,
+      "count": 10,
+      "cdf": [
+        20767,
+        12307,
+        5754,
+        16
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18132048481288171520,
+      "range": 65440,
+      "count": 38,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 2,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 8695311843627851776,
+      "range": 32936,
+      "count": 37,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 3,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 7097620465064968192,
+      "range": 33392,
+      "count": 35,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 4,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 274509386585866240,
+      "range": 33680,
+      "count": 33,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 5,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 1098037546343464960,
+      "range": 33552,
+      "count": 31,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 6,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 4392150185373859840,
+      "range": 33552,
+      "count": 29,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 7,
+      "value": 2,
+      "byte_position": 7,
+      "difference": 8124552322899509248,
+      "range": 33552,
+      "count": 27,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "frozen_symbol",
+      "step": 8,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 4166064035810246656,
+      "range": 33552,
+      "count": 25,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        24576,
+        16384,
+        8192,
+        0
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 1,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 18132048481288171520,
+      "range": 65440,
+      "count": 38,
+      "cdf": [
+        23808,
+        15872,
+        7936,
+        1
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 2,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 9556625272362459136,
+      "range": 35996,
+      "count": 37,
+      "cdf": [
+        23064,
+        15376,
+        7688,
+        2
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 3,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 9840312638133600256,
+      "range": 43136,
+      "count": 35,
+      "cdf": [
+        22344,
+        14896,
+        7448,
+        3
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 4,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 6340858084653924352,
+      "range": 55232,
+      "count": 33,
+      "cdf": [
+        21646,
+        14431,
+        7216,
+        4
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 5,
+      "value": 5,
+      "byte_position": 7,
+      "difference": 11803093860603133952,
+      "range": 48604,
+      "count": 31,
+      "cdf": [
+        21993,
+        15004,
+        6991,
+        5
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 6,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 10705070963040452608,
+      "range": 64716,
+      "count": 29,
+      "cdf": [
+        21306,
+        14536,
+        6773,
+        6
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 7,
+      "value": 4,
+      "byte_position": 7,
+      "difference": 10608287517394337792,
+      "range": 52936,
+      "count": 27,
+      "cdf": [
+        21664,
+        14082,
+        6562,
+        7
+      ]
+    },
+    {
+      "case": "high_token",
+      "step": 8,
+      "value": 3,
+      "byte_position": 7,
+      "difference": 1611279956938063872,
+      "range": 36220,
+      "count": 26,
+      "cdf": [
+        20987,
+        13642,
+        6357,
+        8
+      ]
+    },
+    {
+      "case": "uniform",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": []
+    },
+    {
+      "case": "uniform",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 18298403476753602560,
+      "range": 65520,
+      "count": 39,
+      "cdf": []
+    },
+    {
+      "case": "uniform",
+      "step": 2,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 9109934337010948096,
+      "range": 32876,
+      "count": 39,
+      "cdf": []
+    },
+    {
+      "case": "uniform",
+      "step": 3,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 8762865838038409216,
+      "range": 33176,
+      "count": 37,
+      "cdf": []
+    },
+    {
+      "case": "uniform",
+      "step": 4,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 236228789753217024,
+      "range": 33544,
+      "count": 33,
+      "cdf": []
+    },
+    {
+      "case": "uniform",
+      "step": 5,
+      "value": 248,
+      "byte_position": 7,
+      "difference": 3823790464130088960,
+      "range": 33544,
+      "count": 25,
+      "cdf": []
+    },
+    {
+      "case": "subexponential",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9187412787522631168,
+      "range": 32768,
+      "count": 41,
+      "cdf": []
+    },
+    {
+      "case": "subexponential",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 7086361465996541952,
+      "range": 33352,
+      "count": 35,
+      "cdf": []
+    },
+    {
+      "case": "subexponential",
+      "step": 2,
+      "value": 55,
+      "byte_position": 7,
+      "difference": 3779660636051472384,
+      "range": 33544,
+      "count": 29,
+      "cdf": []
+    },
+    {
+      "case": "subexponential",
+      "step": 3,
+      "value": 149,
+      "byte_position": 7,
+      "difference": 2264933856693977088,
+      "range": 33544,
+      "count": 22,
+      "cdf": []
+    },
+    {
+      "case": "subexponential",
+      "step": 4,
+      "value": 235,
+      "byte_position": 7,
+      "difference": 7746947135882395648,
+      "range": 33544,
+      "count": 13,
+      "cdf": []
+    },
+    {
+      "case": "partition_422_still",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 9191536231270621824,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        12631,
+        11221,
+        9690,
+        3202,
+        2931,
+        2507,
+        2244,
+        1876,
+        1044,
+        0
+      ]
+    },
+    {
+      "case": "partition_422_still",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 11265133251482174720,
+      "range": 40248,
+      "count": 40,
+      "cdf": [
+        12237,
+        10871,
+        9388,
+        3102,
+        2840,
+        2429,
+        2174,
+        1818,
+        1012,
+        1
+      ]
+    },
+    {
+      "case": "partition_422_frame_2",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 8862314632605324160,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        12631,
+        11221,
+        9690,
+        3202,
+        2931,
+        2507,
+        2244,
+        1876,
+        1044,
+        0
+      ]
+    },
+    {
+      "case": "partition_422_frame_2",
+      "step": 1,
+      "value": 0,
+      "byte_position": 7,
+      "difference": 10606690054151579392,
+      "range": 40248,
+      "count": 40,
+      "cdf": [
+        12237,
+        10871,
+        9388,
+        3102,
+        2840,
+        2429,
+        2174,
+        1818,
+        1012,
+        1
+      ]
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 0,
+      "value": -1,
+      "byte_position": 7,
+      "difference": 279275958926567424,
+      "range": 32768,
+      "count": 41,
+      "cdf": [
+        15913,
+        0
+      ]
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 1,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 1117103835706269696,
+      "range": 63504,
+      "count": 39,
+      "cdf": [
+        16966,
+        1
+      ]
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 2,
+      "value": 14,
+      "byte_position": 7,
+      "difference": 1126250080501760,
+      "range": 63496,
+      "count": 35,
+      "cdf": []
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 3,
+      "value": -96,
+      "byte_position": 7,
+      "difference": 576640041216901120,
+      "range": 63496,
+      "count": 26,
+      "cdf": []
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 4,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 576640041216901120,
+      "range": 32864,
+      "count": 26,
+      "cdf": [
+        17953,
+        2
+      ]
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 5,
+      "value": 14,
+      "byte_position": 7,
+      "difference": 616822801956864,
+      "range": 32776,
+      "count": 22,
+      "cdf": []
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 6,
+      "value": -96,
+      "byte_position": 7,
+      "difference": 315813274601914368,
+      "range": 32776,
+      "count": 13,
+      "cdf": []
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 7,
+      "value": 1,
+      "byte_position": 7,
+      "difference": 631626549203828736,
+      "range": 35848,
+      "count": 12,
+      "cdf": [
+        18878,
+        3
+      ]
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 8,
+      "value": 14,
+      "byte_position": 7,
+      "difference": 15709822137663488,
+      "range": 35848,
+      "count": 8,
+      "cdf": []
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 9,
+      "value": -96,
+      "byte_position": 13,
+      "difference": 8043628278646993972,
+      "range": 35848,
+      "count": 47,
+      "cdf": []
+    },
+    {
+      "case": "restoration_422_frame_3",
+      "step": 10,
+      "value": 0,
+      "byte_position": 13,
+      "difference": 8303910501290928232,
+      "range": 44044,
+      "count": 46,
+      "cdf": [
+        12237,
+        10871,
+        9388,
+        3102,
+        2840,
+        2429,
+        2174,
+        1818,
+        1012,
+        1
+      ]
+    }
+  ]
+}

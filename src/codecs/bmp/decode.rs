@@ -629,3 +629,10 @@ fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u
     }
     pixels
 }
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    assert!(decode(b"").is_none());
+    assert!(decode(b"BM").is_none());
+    assert!(decode(b"not a bitmap").is_none());
+}

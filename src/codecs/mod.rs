@@ -9,27 +9,38 @@ use crate::types::{
 };
 
 #[cfg(feature = "avif")]
-pub mod avif;
+mod avif;
 #[cfg(feature = "bmp")]
-pub mod bmp;
+mod bmp;
 #[cfg(feature = "gif")]
-pub mod gif;
+mod gif;
 #[cfg(feature = "ico")]
-pub mod ico;
+mod ico;
 #[cfg(feature = "jpeg")]
-pub mod jpeg;
+mod jpeg;
 #[cfg(feature = "png")]
-pub mod png;
+mod png;
 #[cfg(feature = "tiff")]
-pub mod tiff;
+mod tiff;
 #[cfg(feature = "webp")]
-pub mod webp;
+mod webp;
 
 #[cfg(any(feature = "png", feature = "tiff"))]
 mod compression;
 
 /// Dispatch decoding to the enabled format implementation.
-pub fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<DecodedImage> {
+pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<DecodedImage> {
+    #[cfg(all(target_arch = "wasm32", feature = "avif"))]
+    if format == ImageFormat::Avif {
+        return match avif::decode::decode(_data) {
+            Some(image) => validate_decoded_image(image),
+            None => Err(ImageError::Unsupported {
+                format: Some(format),
+                message: AVIF_WASM_UNAVAILABLE.to_owned(),
+            }),
+        };
+    }
+
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -88,21 +99,18 @@ fn validate_decoded_image(image: DecodedImage) -> ImageResult<DecodedImage> {
 }
 
 /// Dispatch header inspection to the enabled format implementation.
-pub fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInfo> {
-    #[cfg(any(
-        not(all(
-            feature = "jpeg",
-            feature = "png",
-            feature = "gif",
-            feature = "bmp",
-            feature = "tiff",
-            feature = "webp",
-            feature = "ico",
-            feature = "avif"
-        )),
-        target_arch = "wasm32"
-    ))]
-    ensure_available(format)?;
+pub(crate) fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInfo> {
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    )))]
+    ensure_inspection_available(format)?;
 
     #[cfg(feature = "png")]
     if format == ImageFormat::Png {
@@ -183,20 +191,17 @@ pub fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInf
 
 /// Apply the pinned Pillow oracle's codec-specific verification contract.
 pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()> {
-    #[cfg(any(
-        not(all(
-            feature = "jpeg",
-            feature = "png",
-            feature = "gif",
-            feature = "bmp",
-            feature = "tiff",
-            feature = "webp",
-            feature = "ico",
-            feature = "avif"
-        )),
-        target_arch = "wasm32"
-    ))]
-    ensure_available(format)?;
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    )))]
+    ensure_inspection_available(format)?;
 
     #[cfg(feature = "png")]
     if format == ImageFormat::Png {
@@ -241,7 +246,10 @@ pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()
 }
 
 /// Dispatch decoding while retaining every frame and its presentation data.
-pub fn decode_sequence_format(data: &[u8], format: ImageFormat) -> ImageResult<DecodedSequence> {
+pub(crate) fn decode_sequence_format(
+    data: &[u8],
+    format: ImageFormat,
+) -> ImageResult<DecodedSequence> {
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -287,7 +295,7 @@ pub fn decode_sequence_format(data: &[u8], format: ImageFormat) -> ImageResult<D
 }
 
 /// Dispatch encoding to the enabled format implementation.
-pub fn encode_format(
+pub(crate) fn encode_format(
     _image: &DecodedImage,
     format: ImageFormat,
     _options: &EncodeOptions,
@@ -345,7 +353,7 @@ pub fn encode_format(
 }
 
 /// Dispatch encoding without collapsing an animation to its first frame.
-pub fn encode_sequence_format(
+pub(crate) fn encode_sequence_format(
     sequence: &DecodedSequence,
     format: ImageFormat,
     options: &EncodeOptions,
@@ -466,6 +474,20 @@ fn ensure_available(format: ImageFormat) -> ImageResult<()> {
 fn ensure_available(format: ImageFormat) -> ImageResult<()> {
     ensure_enabled(format)?;
     ensure_target_available(format, cfg!(all(target_arch = "wasm32", feature = "avif")))
+}
+
+#[cfg(not(all(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif"
+)))]
+fn ensure_inspection_available(format: ImageFormat) -> ImageResult<()> {
+    ensure_enabled(format)
 }
 
 #[cfg(any(
@@ -628,6 +650,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     compression::__coverage_exercise_private_branches();
     #[cfg(feature = "avif")]
     avif::__coverage_exercise_private_branches();
+    #[cfg(feature = "bmp")]
+    bmp::__coverage_exercise_private_branches();
     #[cfg(feature = "gif")]
     gif::__coverage_exercise_private_branches();
     #[cfg(feature = "ico")]
@@ -640,4 +664,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     tiff::__coverage_exercise_private_branches();
     #[cfg(feature = "webp")]
     webp::__coverage_exercise_private_branches();
+}
+
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+pub(crate) fn __coverage_av1_entropy_reference_trace()
+-> Result<Vec<crate::Av1EntropyTraceState>, &'static str> {
+    avif::__coverage_entropy_reference_trace()
+}
+
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+pub(crate) fn __coverage_av1_reconstruction(data: &[u8]) -> Option<crate::Av1ReconstructionTrace> {
+    avif::__coverage_reconstruction(data)
+}
+
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+pub(crate) fn __coverage_sweep_av1_first_leaf(data: &[u8]) {
+    avif::__coverage_sweep_first_leaf(data);
 }

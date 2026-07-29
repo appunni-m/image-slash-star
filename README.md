@@ -9,22 +9,39 @@ oracle.
 The Cargo package is `image-slash-star`; Rust source imports it as
 `image_slash_star`.
 
+This crate is intentionally limited to encoded-image detection, inspection,
+decoding, and encoding. It does not provide resizing, cropping, rotation,
+flipping, compositing, drawing, color adjustment, filters, or a mutable
+`DynamicImage`-style processing layer. Applications should keep those concerns
+in a downstream crate.
+
 The default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO codecs are 100% Rust:
 zero Pillow imports and zero native codec libraries. `bytemuck` remains the
-only third-party Rust runtime dependency. The opt-in `avif` feature uses the
+only Cargo dependency, including development targets. The opt-in `avif`
+feature uses the
 exact native library stack used by the oracle because a different AV1 encoder
-cannot produce libaom-identical bytes.
+cannot produce libaom-identical bytes. That native AVIF implementation is
+current compatibility behavior, not the final portable release design: it
+compiles on `wasm32-unknown-unknown`, where detection, bounded container
+inspection, and the first proven lossless full-range YUV 4:4:4 single-leaf
+still-decode classes are portable. The accepted geometry covers 4x4 through
+16x16 square/padded leaves and 16x8 or 8x16 one-axis rectangular leaves,
+including nonzero DC-only and zero-residual transforms for the accepted DC,
+vertical, and horizontal luma predictor modes. It also covers the first closed
+two-leaf recursive split in 12x4, 16x4, 12x8, 16x8, 4x12, 4x16, 8x12, and
+8x16 frames, including shared adaptive CDF state, reconstructed left/top edge
+prediction, and partial or full visibility on both axes. Other recursive
+partitions and AVIF pixel decode classes, plus AVIF encoding, still report an
+unsupported codec operation on that target.
 
-The crate publishes three API surfaces:
+The crate publishes one canonical codec API: format detection, inspection,
+still-image decode/encode, and sequence decode/encode over encoded bytes and
+decoded samples. Its public result types retain pixels, modes, palettes, frame
+timing, disposal, background metadata, and encoder options. Codec algorithms
+and format dispatchers are private so malformed input cannot lose its
+structured error merely because a caller selected a lower-level entry point.
 
-- A high-level byte API: format detection, still-image decode/encode, and
-  sequence decode/encode.
-- Feature-scoped codec modules under `codecs::<format>` for callers that
-  already know the image format.
-- Pillow-observable image types that retain pixels, modes, palettes, frame
-  timing, disposal, background metadata, and encoder options.
-
-Project goal: exact Pillow 12.2.0 parity across public image behavior — success
+Project goal: exact Pillow 12.2.0 parity across public codec behavior — success
 or error, mode, dimensions, metadata, frame data, decoded pixels, and
 deterministic encoded file bytes. Pillow itself remains fixture-only; the
 explicitly enabled AVIF feature is the sole native runtime boundary.
@@ -35,16 +52,15 @@ The manifest-driven parity matrix is the source of truth.
 
 | Metric | Count |
 | --- | ---: |
-| Manifest rows | 1,037 |
-| Active manifest rows | 1,037 |
-| Active decode rows | 709 |
-| Active encode rows | 296 |
-| Operation rows | 32 |
+| Manifest rows | 1,116 |
+| Active manifest rows | 1,116 |
+| Active decode rows | 838 |
+| Active encode rows | 278 |
 | Planned or skipped rows | 0 |
 | Formats tracked | 8 |
 
 All rows compare exact decoded pixels, exact sequence frames, exact encoded
-files, or an exact oracle success/error outcome. AVIF contributes six decode
+files, or an exact oracle success/error outcome. AVIF contributes 96 decode
 rows and 23 encode rows, including five-frame animation and invalid-input
 behavior.
 
@@ -62,10 +78,28 @@ opt-in because it links a fixed native stack.
 | `tiff` | yes | parity rows active | libtiff 4.7.1 |
 | `webp` | yes | parity rows active | libwebp 1.6.0 |
 | `ico` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `avif` | no | parity rows active | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 |
+| `avif` | no | parity rows active; portable inspection plus closed lossless single- and two-leaf decode classes | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 / libyuv 1922 |
 
 Select only the formats an application needs by disabling default features and
 enabling the relevant format features.
+
+Until the first crates.io release, add the repository directly:
+
+```toml
+[dependencies.image-slash-star]
+git = "https://github.com/appunni-m/image-slash-star"
+default-features = false
+features = ["jpeg", "png"]
+```
+
+The Cargo package name contains hyphens; Rust code imports it as
+`image_slash_star`.
+
+ICO still-image encoding writes one entry at the source raster's existing
+dimensions. If the `sizes` compatibility option is supplied, it must name that
+same single size. The codec rejects different, multiple, empty, or
+over-256-pixel requests instead of resizing pixels. A future multi-resolution
+ICO API must accept independently supplied, already-sized entries.
 
 ## From source
 
@@ -82,7 +116,7 @@ To enable AVIF on a native target, install libavif 1.4.1 built with dav1d
 1.5.3 and libaom 3.13.2, or point the build at its library directory:
 
 ```bash
-export PILLOW_RS_AVIF_LIB_DIR=/path/to/the/exact/libavif/lib
+export IMAGE_SLASH_STAR_AVIF_LIB_DIR=/path/to/the/exact/libavif/lib
 cargo test --all-features --test coverage_matrix_tests
 ```
 
@@ -90,14 +124,17 @@ The build also accepts an exact `pkg-config` `libavif` installation. Every
 operation checks the loaded libavif and codec versions at runtime. On macOS
 arm64, the pinned oracle environment described below supplies the same bundled
 library used to create the references. AVIF compiles on `wasm32` so feature
-unification remains safe, but its operations return unsupported there.
+unification remains safe. Detection and inspection use the portable in-tree
+parser there. The first closed portable AV1 decode class is active; inputs
+outside that proven class and all AVIF encoding remain unsupported pending
+later portable slices.
 
 Linux contributors can build the complete pinned stack with the same flags as
 Pillow's wheel build:
 
 ```bash
 scripts/build_avif_stack.sh /tmp/image-star-avif /tmp/image-star-avif-build
-PILLOW_RS_AVIF_LIB_DIR=/tmp/image-star-avif/lib \
+IMAGE_SLASH_STAR_AVIF_LIB_DIR=/tmp/image-star-avif/lib \
   cargo test --all-features --test coverage_matrix_tests
 ```
 
@@ -112,11 +149,30 @@ Primary entry points:
 | Function | Purpose |
 | --- | --- |
 | `detect_format(&[u8])` | Detect JPEG, PNG, GIF, BMP, WebP, TIFF, ICO, or AVIF from magic bytes. |
+| `inspect(&[u8])` | Read format, dimensions, mode, depth, palette, and frame count without decoding pixels. |
 | `decode(&[u8])` | Decode one still image from auto-detected bytes. |
 | `decode_sequence(&[u8])` | Decode retained frames and animation metadata. |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode with explicit format options. |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode a still image with default options. |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode still or animated sequences while retaining frame metadata. |
+
+```rust,no_run
+use image_slash_star::{decode, encode_default, inspect, ImageFormat, ImageResult};
+
+fn transcode_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
+    let info = inspect(input)?;
+    assert_eq!(info.format, ImageFormat::Png);
+
+    let decoded = decode(input)?;
+    assert_eq!(decoded.format, info.format);
+    encode_default(&decoded.content, ImageFormat::Jpeg)
+}
+```
+
+All inputs and outputs are byte buffers. Native applications may wrap the API
+with `std::fs`; browser and worker applications may pass fetched or uploaded
+bytes directly. The crate itself does not open paths or apply host filesystem
+policy.
 
 ## Parity harness
 
@@ -174,13 +230,14 @@ Before submitting a change, run:
 
 ```bash
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --all-features --test coverage_matrix_tests
 cargo check --no-default-features
+python3 scripts/verify_third_party_licenses.py
 ```
 
 Coverage work should first add manifest-backed Pillow fixtures when a missing
-path is public image behavior. `cfg(coverage)` hooks are reserved for private
+path is public codec behavior. `cfg(coverage)` hooks are reserved for private
 state machines, generated helper states, or defensive limits that cannot be
 represented as a public Pillow fixture.
 
@@ -200,6 +257,13 @@ that genuinely cross format boundaries.
 DecodedImage / DecodedSequence
   └─ encode*()         → exact Pillow-observable container bytes
 ```
+
+Transforms intrinsic to a codec—such as JPEG IDCT, PNG filtering, YUV/RGB
+sample reconstruction, and animation disposal needed to reproduce decoded
+frames—remain private implementation details. They do not constitute a general
+image-processing API. Container convenience behavior that transforms an
+arbitrary source raster is excluded: in particular, ICO encoding never creates
+smaller entries by resampling the input.
 
 The AVIF boundary is deliberately strict. A small repository-owned C bridge
 uses libavif 1.4.1 for container/color behavior, dav1d 1.5.3 for decoding, and
@@ -225,8 +289,10 @@ When adding or changing fixtures:
 
 Start with `CONTRIBUTING.md`. The short version:
 
-- Keep default runtime codec execution pure Rust and AVIF confined to its
-  fixed, opt-in native boundary.
+- Keep default runtime codec execution pure Rust and do not add public image
+  processing.
+- Treat the fixed, opt-in native AVIF boundary as migration debt until a
+  portable in-tree AV1 implementation replaces it.
 - Keep Pillow as offline oracle tooling and native codec calls confined to
   the AVIF feature.
 - Prefer manifest-driven fixtures over narrow implementation probes.
@@ -240,8 +306,14 @@ Security issues should follow `SECURITY.md`.
 Original project code is available under your choice of
 [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT). The crate as a combined
 distribution is also subject to BSD-2-Clause, BSD-3-Clause, Zlib, IJG, and
-MIT-CMU terms for ported, derived, and retained portions. `NOTICE.md` maps
-repository paths to exact upstream versions and retained license files under
-`third_party/`.
+MIT-CMU terms for ported, derived, and retained portions.
+[NOTICE.md](NOTICE.md) maps repository paths to those terms, and the
+[third-party provenance inventory](third_party/README.md) records exact
+versions, revisions, hashes, roles, and retained files.
+
+The portable AV1 implementation and optional native AVIF stack are also
+distributed with the [Alliance for Open Media Patent License 1.0](PATENTS).
+Keep that file with source distributions; follow its written-notice
+requirements when distributing an AV1 implementation in another form.
 
 This software is based in part on the work of the Independent JPEG Group.

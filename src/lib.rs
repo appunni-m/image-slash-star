@@ -1,7 +1,4 @@
-// These exceptions are explicit technical debt. Remove them as public API
-// documentation and legacy algorithm ports are brought under the workspace
-// lint policy.
-#![allow(missing_docs)]
+#![cfg_attr(coverage, feature(coverage_attribute))]
 
 //! image-slash-star — dependency-light pixel-perfect image decoders and encoders.
 //!
@@ -13,18 +10,12 @@
 //! Architecture:
 //!   &[u8] → decode() → `Decoded<DecodedImage>` { format, content }
 //!   &[u8] → decode_sequence() → `Decoded<DecodedSequence>` { format, content }
-//!   pillow-rs wraps DecodedImage into DynamicImage/Image::Loaded.
+//!   downstream consumers own any processing of `DecodedImage`.
 
-// Integration-test-only dependencies are still visible while Cargo builds the
-// library test target. Mark them deliberately used under that configuration.
-#[cfg(test)]
-use serde as _;
-#[cfg(test)]
-use serde_json as _;
+// Retained as the project's one explicitly approved byte-layout utility.
+use bytemuck as _;
 
-pub mod codecs;
-pub mod decode;
-pub mod encode;
+mod codecs;
 pub mod source;
 pub mod types;
 
@@ -132,10 +123,112 @@ pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> ImageResult<Ve
     encode(img, format, &EncodeOptions::default())
 }
 
+/// One exact scalar AV1 entropy state used by the fixture-backed coverage gate.
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Av1EntropyTraceState {
+    /// Oracle case name.
+    pub case: &'static str,
+    /// Operation index inside the case.
+    pub step: u32,
+    /// Decoded boolean, symbol, or integer.
+    pub value: i32,
+    /// Logical bytes consumed from the tile.
+    pub byte_position: usize,
+    /// Arithmetic difference window.
+    pub difference: u64,
+    /// Normalized arithmetic range.
+    pub range: u32,
+    /// Refill bit count.
+    pub count: i32,
+    /// Complete adaptive CDF after the operation.
+    pub cdf: Vec<u16>,
+}
+
+/// Produce scalar AV1 entropy states for the pinned fixture operation sequence.
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[doc(hidden)]
+pub fn __coverage_av1_entropy_reference_trace() -> Result<Vec<Av1EntropyTraceState>, &'static str> {
+    codecs::__coverage_av1_entropy_reference_trace()
+}
+
+/// Codec-private Y/U/V samples reconstructed by the first supported AV1 leaf.
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Av1ReconstructionTrace {
+    /// Visible decoded width.
+    pub width: u32,
+    /// Visible decoded height.
+    pub height: u32,
+    /// AV1 decoded sample depth.
+    pub bit_depth: u32,
+    /// Whether the AV1 sequence is monochrome.
+    pub monochrome: bool,
+    /// CICP color-primaries value.
+    pub color_primaries: u32,
+    /// CICP transfer-characteristics value.
+    pub transfer_characteristics: u32,
+    /// CICP matrix-coefficients value.
+    pub matrix_coefficients: u32,
+    /// Whether AV1 declares full-range YUV.
+    pub color_range: bool,
+    /// Whether chroma is subsampled horizontally.
+    pub subsampling_x: bool,
+    /// Whether chroma is subsampled vertically.
+    pub subsampling_y: bool,
+    /// Three visible planes in Y, U, V order.
+    pub planes: [Vec<u16>; 3],
+    /// Every scalar range-decoder operation that produced the retained leaf.
+    pub entropy_operations: Vec<Av1EntropyOperationState>,
+}
+
+/// One scalar range-decoder operation from a reconstructed AV1 leaf.
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Av1EntropyOperationState {
+    /// Scalar decoder operation.
+    pub operation: &'static str,
+    /// Probability, symbol-count-minus-one, or sentinel parameter.
+    pub parameter: i32,
+    /// Operation index in the tile decoder.
+    pub step: u32,
+    /// Decoded value.
+    pub value: i32,
+    /// Logical bytes consumed from the start of the tile.
+    pub byte_position: usize,
+    /// Arithmetic difference window.
+    pub difference: u64,
+    /// Normalized arithmetic range.
+    pub range: u32,
+    /// Refill bit count.
+    pub count: i32,
+    /// Complete adaptive CDF after the operation.
+    pub cdf: Vec<u16>,
+}
+
+/// Return the retained production-path AV1 reconstruction for a fixture.
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[doc(hidden)]
+pub fn __coverage_av1_reconstruction(data: &[u8]) -> Option<Av1ReconstructionTrace> {
+    codecs::__coverage_av1_reconstruction(data)
+}
+
+/// Exercise unsupported closed-leaf syntax by mutating one fixture's AV1 item.
+#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[doc(hidden)]
+pub fn __coverage_sweep_av1_first_leaf(data: &[u8]) {
+    codecs::__coverage_sweep_av1_first_leaf(data);
+}
+
 #[cfg(coverage)]
 #[doc(hidden)]
 pub fn __coverage_exercise_private_branches() {
     let _ = decode_sequence(b"not an image");
+    let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
+    let _ = encode_default(&image, ImageFormat::Png);
     codecs::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }

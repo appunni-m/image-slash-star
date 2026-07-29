@@ -24,6 +24,8 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+      - name: Verify retained third-party legal texts
+        run: python3 scripts/verify_third_party_licenses.py
       - name: Install AVIF build tools
         run: |
           sudo apt-get update
@@ -39,10 +41,11 @@ jobs:
         run: scripts/build_avif_stack.sh "$RUNNER_TEMP/avif-oracle" "$RUNNER_TEMP/avif-build"
       - name: Select pinned AVIF stack
         run: |
-          echo "PILLOW_RS_AVIF_LIB_DIR=$RUNNER_TEMP/avif-oracle/lib" >> "$GITHUB_ENV"
+          echo "IMAGE_SLASH_STAR_AVIF_LIB_DIR=$RUNNER_TEMP/avif-oracle/lib" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/avif-oracle/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
       - run: cargo test --locked --all-features --test coverage_matrix_tests
       - name: Test native and core-WASM feature matrix
         run: scripts/test_feature_matrix.sh
@@ -80,11 +83,16 @@ jobs:
         run: scripts/build_avif_stack.sh "$RUNNER_TEMP/avif-oracle" "$RUNNER_TEMP/avif-build"
       - name: Select pinned AVIF stack
         run: |
-          echo "PILLOW_RS_AVIF_LIB_DIR=$RUNNER_TEMP/avif-oracle/lib" >> "$GITHUB_ENV"
+          echo "IMAGE_SLASH_STAR_AVIF_LIB_DIR=$RUNNER_TEMP/avif-oracle/lib" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/avif-oracle/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-      - run: cargo +nightly llvm-cov --all-features --branch --test coverage_matrix_tests --lcov --output-path lcov.info
+      - name: Run exact parity coverage
+        run: >-
+          cargo +nightly llvm-cov --all-features --branch --json
+          --output-path coverage.json --no-fail-fast
+      - name: Require complete line, branch, function, and region coverage
+        run: python3 scripts/verify_llvm_coverage.py coverage.json
       - uses: actions/upload-artifact@v4
         with:
-          name: lcov
-          path: lcov.info
+          name: llvm-coverage
+          path: coverage.json
           if-no-files-found: error
