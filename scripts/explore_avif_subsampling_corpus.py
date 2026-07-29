@@ -4,7 +4,8 @@
 This diagnostic tool encodes a small source-color/dimension corpus through the
 pinned Pillow/libavif/libaom oracle, decodes each AV1 item through instrumented
 scalar dav1d, and records exact syntax, plane, and Pillow RGB evidence. Generated
-AVIF, OBU, and YUV files remain in a temporary directory.
+OBU and YUV files remain in a temporary directory. Generated AVIFs do too unless
+the caller supplies a diagnostic retention directory.
 """
 
 from __future__ import annotations
@@ -60,7 +61,12 @@ def parse_color(value: str) -> tuple[int, int, int]:
     return color
 
 
-def encode(color: tuple[int, int, int], size: tuple[int, int]) -> bytes:
+def encode(
+    color: tuple[int, int, int],
+    size: tuple[int, int],
+    quality: int,
+    speed: int,
+) -> bytes:
     """Encode one deterministic 4:2:0 constant-color candidate."""
 
     image = Image.new("RGB", size, color)
@@ -70,8 +76,8 @@ def encode(color: tuple[int, int, int], size: tuple[int, int]) -> bytes:
         image.save(
             output,
             format="AVIF",
-            quality=100,
-            speed=8,
+            quality=quality,
+            speed=speed,
             max_threads=1,
             subsampling="4:2:0",
             autotiling=False,
@@ -184,18 +190,31 @@ def decode_generated_case(
     work: Path,
     color: tuple[int, int, int],
     size: tuple[int, int],
+    quality: int,
+    speed: int,
+    retain_dir: Path | None,
 ) -> dict[str, object]:
     """Encode and trace one generated corpus member."""
 
-    encoded = encode(color, size)
+    encoded = encode(color, size, quality, speed)
     stem = f"rgb_{color[0]}_{color[1]}_{color[2]}_{size[0]}x{size[1]}_420"
+    source: dict[str, object] = {"color": list(color)}
+    if quality != 100:
+        stem = f"{stem}_q{quality}"
+        source["quality"] = quality
+    if speed != 8:
+        stem = f"{stem}_s{speed}"
+        source["speed"] = speed
+    if retain_dir is not None:
+        retain_dir.mkdir(parents=True, exist_ok=True)
+        (retain_dir / f"{stem}.avif").write_bytes(encoded)
     return decode_encoded_case(
         executable,
         environment,
         work,
         encoded,
         stem,
-        {"color": list(color)},
+        source,
     )
 
 
@@ -228,15 +247,47 @@ def main() -> None:
     parser.add_argument("--ninja", default="ninja")
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--retain-dir",
+        type=Path,
+        help="Retain generated AVIF inputs in this diagnostic directory",
+    )
     parser.add_argument("--input", type=Path, action="append")
     parser.add_argument("--color", type=parse_color, action="append")
     parser.add_argument("--size", type=parse_pair, action="append")
+    parser.add_argument(
+        "--quality",
+        type=int,
+        action="append",
+        help="Pillow AVIF quality in 0..100; repeat for a sweep (default: 100)",
+    )
+    parser.add_argument(
+        "--speed",
+        type=int,
+        default=8,
+        help="libaom speed in 0..10 (default: 8)",
+    )
     args = parser.parse_args()
 
-    if args.input and (args.color or args.size):
-        parser.error("--input cannot be combined with --color or --size")
+    if args.input and (
+        args.color
+        or args.size
+        or args.quality
+        or args.speed != 8
+        or args.retain_dir
+    ):
+        parser.error(
+            "--input cannot be combined with generation or retention options"
+        )
     if not args.input and (not args.color or not args.size):
         parser.error("provide --input or at least one --color and one --size")
+    qualities = args.quality or [100]
+    if any(quality < 0 or quality > 100 for quality in qualities):
+        parser.error("--quality must be in 0..100")
+    if len(set(qualities)) != len(qualities):
+        parser.error("--quality values must be unique")
+    if args.speed < 0 or args.speed > 10:
+        parser.error("--speed must be in 0..10")
     for path in args.input or []:
         if not path.is_file():
             parser.error(f"input file does not exist: {path}")
@@ -270,9 +321,19 @@ def main() -> None:
             ]
         else:
             cases = [
-                decode_generated_case(executable, environment, work, color, size)
+                decode_generated_case(
+                    executable,
+                    environment,
+                    work,
+                    color,
+                    size,
+                    quality,
+                    args.speed,
+                    args.retain_dir.resolve() if args.retain_dir else None,
+                )
                 for color in args.color
                 for size in args.size
+                for quality in qualities
             ]
 
     report = {

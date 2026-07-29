@@ -6722,3 +6722,218 @@ The post-Clippy Coverage MCP run
 `18c5896a-80b0-4c5a-ba69-400b2e0d41a2`, passes all seven binaries with final
 exact totals of 38,021/38,021 lines, 5,454/5,454 branches, 1,901/1,901
 functions, and 62,659/62,659 regions. Slice 33 is accepted.
+
+## Slice 34 Exploration Plan: Minimal Lossy 4:2:0 Reconstruction
+
+Status: exploration only. Production changes are blocked until the complete
+closed class and its first-divergence evidence are recorded below.
+
+Slice 33 closes the lossless 4:2:0 geometry needed by the fixed 128x128 lossy
+baseline, but it deliberately does not decode lossy residuals or apply AV1
+post-filters. The fixed baseline is too broad for the first lossy production
+slice: its first leaf alone selects CDEF strength, transform selection, a
+quantized 64-coefficient residual, loop filtering, and later multi-block
+context. Implementing those stages together would make a first divergence
+difficult to isolate and would not establish which subsets are independently
+correct.
+
+The next diagnostic must therefore search for the smallest deterministic
+Pillow-oracle input that changes exactly one dependency beyond the accepted
+lossless class.
+
+### Diagnostic changes
+
+Generalize `scripts/explore_avif_subsampling_corpus.py`, which already derives
+the correct luma and ceiling-half chroma plane lengths, so it can:
+
+1. accept one or more explicit Pillow AVIF quality values in `0..=100`;
+2. accept an explicit libaom speed in `0..=10`;
+3. optionally retain generated AVIF inputs outside the repository; and
+4. preserve its existing quality-100, speed-8 report byte for byte when the
+   new options are omitted.
+
+The script remains an oracle diagnostic. It must not import or call the Rust
+implementation, become a package dependency, write selected behavior into
+production, or retain generated corpus files inside the repository before a
+minimal fixture is accepted.
+
+### Search matrix
+
+Use pinned Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, and scalar dav1d 1.5.3
+to search:
+
+- 4x4 and 8x8 constant 4:2:0 sources first, because each maps to one coded 8x8
+  luma leaf and one 4x4 transform per chroma plane;
+- gray 0, 32, 64, 96, 127, 128, 129, 160, 192, and 255 plus RGB probes
+  `(17,91,203)`, `(199,37,83)`, red, green, and blue;
+- qualities 99, 95, 90, 80, 60, and 40 at deterministic speed 8;
+- the existing quality-100 controls for every selected size and color.
+
+For every candidate retain exact AVIF bytes and hash, extracted AV1 item bytes
+and hash, parsed color/frame state, partition nodes, ordered scalar entropy
+operations, reconstructed Y/U/V bytes and hashes, and Pillow RGB bytes and
+hash. Decode each retained candidate twice and require byte-identical evidence.
+
+### Candidate ranking
+
+Rank candidates by the first syntax difference from their quality-100 control,
+not by encoded size or final pixel similarity. Prefer, in order:
+
+1. one level-four `PARTITION_NONE` leaf;
+2. no segmentation, super-resolution, restoration, film grain, alpha,
+   animation, extra tile, or reference-frame state;
+3. the fewest nonzero transform blocks and smallest transform size;
+4. zero loop-filter levels and no active CDEF strength when the encoder emits
+   such a class;
+5. otherwise one post-filter whose exact input and output can be isolated;
+6. the shortest complete scalar trace.
+
+If every lossy input necessarily selects transform syntax plus active filtering,
+the first production slice must include those inseparable stages. It must not
+pretend that unfiltered inverse-transform output is decoded AVIF output.
+
+### Reverse mapping and acceptance boundary
+
+For the best candidate, compare the quality-100 and lossy traces operation by
+operation and record the first divergence. Then map every added value to pinned
+dav1d 1.5.3 and libaom 3.13.2 source:
+
+- frame base quantizer and every Y/U/V delta;
+- segment qindex and lossless state;
+- block skip, CDEF index, transform size/type selection, coefficient scan,
+  token contexts, signs, and dequantization;
+- inverse-transform integer rounding and clipping;
+- deblocking thresholds and edge order when any loop-filter level is active;
+- CDEF direction, strength, damping, constrain arithmetic, and edge handling
+  when any CDEF strength is active; and
+- the exact stage at which reconstructed planes first differ from the pinned
+  scalar decoder.
+
+Only a topology and syntax family proved by complete traces may become the
+Slice 34 closed class. The implementation must remain private, safe Rust,
+target-independent, WASM-compatible, codec-only, and dependency-free apart
+from retained `bytemuck`.
+
+### Fixture-first proof and gates
+
+After the closed class is defined:
+
+1. add the selected AVIF and its exact Pillow pixels to the manifest oracle;
+2. add the complete pinned dav1d reconstruction record;
+3. regenerate both twice and require identical bytes;
+4. run the approved all-feature Coverage MCP command before production edits
+   and retain the intentional portable-reconstruction failure;
+5. implement only the reverse-mapped syntax and reconstruction stages;
+6. keep the nearest excluded syntax as an exact fixture-based unsupported
+   control;
+7. rerun Coverage MCP and require exactly 100% lines, branches, functions, and
+   regions; and
+8. pass rustfmt, strict native and WASM Clippy for every feature lane, strict
+   rustdoc, legal inventory, package verification, and dependency audit.
+
+No random unit test, fixture-selected production branch, source-color check,
+encoded hash check, target fork, public image-processing operation, unsafe
+Rust, or new dependency may be used to close the slice.
+
+### Minimal lossy corpus evidence
+
+The generalized diagnostic preserves its prior default report byte for byte.
+Running the pre-change and post-change scripts over the same 4x4
+`(17,91,203)` quality-100 input produces the identical SHA-256
+`97ada991eb94bc6e9575b8c321f526deb34db716d82d336b37e8d29403d57a7e`.
+
+The documented 210-case search then covered fifteen colors, 4x4 and 8x8
+dimensions, and qualities 100, 99, 95, 90, 80, 60, and 40. Its complete report
+SHA-256 is
+`38720021d08e1a9c097093cc3a85400b7581380b2434103ca4a76eb2542b140f`.
+All cases use one level-four `PARTITION_NONE` leaf, but the smallest complete
+lossy traces are the quality-99 gray-127 and gray-129 families. They require
+only fifteen scalar operations and skip every transform residual.
+
+The four retained lossy candidates are:
+
+| Source | AVIF bytes and SHA-256 | AV1 item bytes and SHA-256 | Predictor | Y/U/V SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| gray 127, 4x4 | 300, `c232a943aef1ec71422567e9c00a137a70576c63a383621a4417a9637ee08732` | 25, `dab6b70f03615d555f528de87238497a44c7d673a2e45b7c9ca53e6077c7a946` | vertical | `87dcde7fa6df23e15fa7ba9b2a1f31408eac832f4e615ea815ae92024e3d818b` / `8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222` / same | `a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42` |
+| gray 127, 8x8 | 300, `947d6326cc09f88e50e0aba60d9cb468970d793ac323003a5d2452934998dcf1` | 25, `252a33a85f65075308bd39fae30721b12fc6d2f0cfc5e44e54a37ade483f4ac5` | vertical | `e0205519f6bcde4208fd5e9aece72f518eb4ce5879ca1832a6cb221d534a2d7e` / `4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916` / same | `c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd` |
+| gray 129, 4x4 | 300, `79e3d72995eb382d5462e4309fec24e37111cd039a10bc9b28bd370b9b26fa64` | 25, `02b7fa3313138af177db9770ec6e2f552ec499382cbccc94471fcb7b5779d293` | horizontal | `c1b0c2097d76922820e5daf5ca095f8aa1ff51948ee1201dd5fed705fadb58fe` / `8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222` / same | `b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57` |
+| gray 129, 8x8 | 300, `ca48aaddde1310eecde25c24c24314089a5e62164c8dbd36b0c64b2ef9812507` | 25, `92266a90c54fa17a99eb657d4ae4081dd8aecaa39609b6aa209d0e18262c4974` | horizontal | `761421230b7d9df6f62ba984f246d5880b13a45ac28bbc93e38abc39f0c15add` / `4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916` / same | `fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e` |
+
+Two independent generations and scalar decodes of those four lossy cases plus
+their four quality-100 controls produce the same complete report SHA-256
+`9eeb65b0f1b6b5869fb33cee398baff6c67333a1363b90e4d5ed8bf2d38265b1`.
+Every retained AVIF is also byte-identical between the two runs.
+
+### First divergence and source mapping
+
+The quality-100 gray-127 control consumes nineteen operations: partition,
+block skip, vertical luma mode and angle, DC chroma mode, four skipped 4x4
+luma transforms, and one skipped 4x4 transform per chroma plane. The
+quality-99 candidate consumes fifteen:
+
+1. the partition and block-skip operations are identical;
+2. pinned dav1d `src/decode.c:963-983` then decodes delta-q symbol two from
+   initial inverse CDF `[4608,648,91,0]`, reads a negative equiprobable sign,
+   and changes the frame base qindex from four to block qindex two;
+3. it decodes the same vertical or horizontal zero-angle luma predictor and DC
+   chroma predictor;
+4. transform mode `largest` makes the 8x8 luma transform implicit, so the
+   reported `Post-tx[1]` consumes no entropy operation;
+5. pinned dav1d `src/recon_tmpl.c:318-354` derives transform context one and
+   coefficient-neighbor context zero. The q-category remains zero because
+   qindex two is not greater than twenty. Pinned `src/cdf.c:689-706` supplies
+   initial inverse skip CDF `[1220,0]`; the decoded skipped value updates it to
+   `[3191,1]`;
+6. both 4x4 chroma transforms reuse context seven. Their initial inverse skip
+   CDF `[25114,0]` updates first to `[25592,1]` and then to `[26040,2]`; and
+7. because all three residuals are skipped, pinned dav1d never enters
+   coefficient token decoding, dequantization, or an inverse transform.
+
+The frame header independently proves why no post-filter implementation is
+needed for this closed class:
+
+- base quantizer four, zero Y/U/V deltas, qmatrix enabled with matrix ten on
+  all planes, delta-q enabled at resolution zero, and delta loop-filter
+  disabled;
+- loop-filter luma and chroma levels all zero;
+- CDEF damping four, zero strength bits, and the sole luma/chroma strengths
+  both zero;
+- restoration disabled for every plane, with no super-resolution or film
+  grain; and
+- one tile, one still item, eight-bit full-range 4:2:0, no alpha,
+  segmentation, reference inheritance, or animation.
+
+Pinned dav1d `src/ipred_tmpl.c:220-242` reconstructs the vertical or horizontal
+origin predictor directly. It yields luma 127 or 129 and chroma 128 at the
+complete coded 8x8/4x4 geometry. The declared 4x4 candidates are the exact
+top-left visible crop of that coded geometry; the 8x8 candidates prove the
+complete luma and chroma extent. Pillow RGB bytes are identical to each
+candidate's quality-100 control.
+
+### Closed Slice 34 boundary
+
+The first production slice may admit only eight-bit, full-range, single-item,
+single-frame 4:2:0 inputs with:
+
+- declared dimensions 4x4 or 8x8 and one level-four `PARTITION_NONE` leaf;
+- the exact non-segmented frame-tool class above;
+- frame base qindex four and one block delta-q value negative two, producing
+  qindex two;
+- vertical or horizontal zero-angle luma prediction and DC chroma prediction;
+- one skipped 8x8 luma residual and one skipped 4x4 residual for each chroma
+  plane; and
+- no active loop filter, CDEF, restoration, super-resolution, or film grain.
+
+Implementation must carry the parsed quantization, delta-q, loop-filter, CDEF,
+restoration, and transform-mode facts into the first-block context. It must
+decode the real delta-q CDF and real 8x8 coefficient-skip CDF, derive the
+visible geometry, and reuse the already verified predictor construction.
+Any different qindex, delta, transform, predictor, nonzero residual, filter
+strength, partition, dimension, or frame/container state remains a portable
+miss.
+
+This boundary selects behavior exclusively from parsed AV1 syntax. It does not
+inspect source color, fixture name, encoded bytes, hashes, or final pixels.
+The four lossy AVIFs and complete pinned reconstruction records must now be
+committed before production Rust changes, followed by an intentional Coverage
+MCP failure at the existing all-lossless reconstruction gate.
