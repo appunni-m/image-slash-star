@@ -763,7 +763,7 @@
           "type": "decode",
           "format": "avif",
           "category": "partitioned",
-          "description": "12x12 luma-only EOB-15 control outside the portable EOB-12 coefficient class",
+          "description": "12x12 four-leaf square split with a luma-only EOB-15 lossless transform",
           "asset": "partitioned_square_12x12_luma_eob15_control.avif",
           "expect_error": false,
           "status": "active",
