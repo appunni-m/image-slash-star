@@ -2606,12 +2606,20 @@ formats:
       description: 8x8 lossy 4:2:0 key frame proving the complete positive DC-only luma reconstruction
       test_assets:
       - portable_lossy_420_q99_8x8_gray_130.avif
+    - id: portable_lossy_420_q99_gray_122_control
+      description: Pillow-decodable negative final-token-40 control below the Slice 38 boundary
+      test_assets:
+      - portable_lossy_420_q99_gray_122_control.avif
+    - id: portable_lossy_420_q99_8x8_gray_122_control
+      description: Complete 8x8 negative final-token-40 control below the Slice 38 boundary
+      test_assets:
+      - portable_lossy_420_q99_8x8_gray_122_control.avif
     - id: portable_lossy_420_q99_gray_123_control
-      description: Pillow-decodable negative final-token-32 control below the Slice 37 boundary
+      description: 4x4 lossy 4:2:0 key frame with final-token-32 negative DC-only luma residual
       test_assets:
       - portable_lossy_420_q99_gray_123_control.avif
     - id: portable_lossy_420_q99_8x8_gray_123_control
-      description: Complete 8x8 negative final-token-32 control below the Slice 37 boundary
+      description: 8x8 lossy 4:2:0 key frame proving the complete final-token-32 negative reconstruction
       test_assets:
       - portable_lossy_420_q99_8x8_gray_123_control.avif
     - id: portable_lossy_420_q99_gray_124_control
@@ -2651,13 +2659,21 @@ formats:
       test_assets:
       - portable_lossy_420_q99_8x8_gray_132_control.avif
     - id: portable_lossy_420_q99_gray_133_control
-      description: Pillow-decodable positive final-token-33 control above the Slice 37 boundary
+      description: 4x4 lossy 4:2:0 key frame with final-token-33 positive DC-only luma residual
       test_assets:
       - portable_lossy_420_q99_gray_133_control.avif
     - id: portable_lossy_420_q99_8x8_gray_133_control
-      description: Complete 8x8 positive final-token-33 control above the Slice 37 boundary
+      description: 8x8 lossy 4:2:0 key frame proving the complete final-token-33 positive reconstruction
       test_assets:
       - portable_lossy_420_q99_8x8_gray_133_control.avif
+    - id: portable_lossy_420_q99_gray_134_control
+      description: Pillow-decodable positive final-token-41 control above the Slice 38 boundary
+      test_assets:
+      - portable_lossy_420_q99_gray_134_control.avif
+    - id: portable_lossy_420_q99_8x8_gray_134_control
+      description: Complete 8x8 positive final-token-41 control above the Slice 38 boundary
+      test_assets:
+      - portable_lossy_420_q99_8x8_gray_134_control.avif
     - id: portable_lossy_420_q99_eob_bin_control
       description: One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two
       test_assets:

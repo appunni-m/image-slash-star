@@ -283,6 +283,42 @@
       "ref_is_animated": false
     },
     {
+      "id": "portable_lossy_420_q99_gray_122_control",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_122_control_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_8x8_gray_122_control",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_122_control_avif.bin",
+      "ref_bytes": 192,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
       "id": "portable_lossy_420_q99_gray_123_control",
       "status": "ok",
       "error_type": null,
@@ -507,6 +543,42 @@
       "verify_error_type": null,
       "verify_error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_133_control_avif.bin",
+      "ref_bytes": 192,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_gray_134_control",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_134_control_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_8x8_gray_134_control",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_134_control_avif.bin",
       "ref_bytes": 192,
       "ref_mode": "Rgb8",
       "ref_size": [

@@ -7569,3 +7569,136 @@ legal/provenance files; the complete Cargo dependency graph remains only
 passes. Offline package verification builds 135 files, 2.1 MiB unpacked and
 431.5 KiB compressed. No dependency, unsafe Rust, public processing API, or
 published diagnostic/fixture artifact was added.
+
+## Slice 38: Lossy 4:2:0 Final Tokens 32 And 33
+
+Status: accepted on 2026-07-30.
+
+### First unsupported boundary
+
+Slice 37 maps final token 24 while retaining final tokens 32 and 33 as the
+nearest negative and positive excluded controls. A wider deterministic sweep
+proves that those two values form the next closed coefficient boundary:
+
+| Gray | Sign | Golomb extension | Final token | Dequantized DC | Role |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 122 | negative | 25 | 40 | -320 | nearest lower excluded control |
+| 123 | negative | 17 | 32 | -256 | Slice 38 target |
+| 124 | negative | 9 | 24 | -192 | accepted lower control |
+| 132 | positive | 9 | 24 | +192 | accepted upper control |
+| 133 | positive | 18 | 33 | +264 | Slice 38 target |
+| 134 | positive | 26 | 41 | +328 | nearest upper excluded control |
+
+The target pair is intentionally asymmetric: the AV1 coefficient token is
+multiplied by the verified qindex-two/qmatrix-ten scale of eight, so final
+token 32 produces magnitude 256 and final token 33 produces magnitude 264.
+No source-gray arithmetic is used by production.
+
+### Deterministic reverse-map evidence
+
+The new corpus covers every constant gray value from 118 through 138 at both a
+declared 4x4 crop and the complete 8x8 coded plane, for 42 total cases. It ran
+twice through independently instrumented builds of pinned dav1d. The complete
+reports are byte-identical and have SHA-256
+`3df05f4ff8fa33e8822bab2588d61c2fff02e1ce0fa8d239685abd7a2bc5cb17`.
+
+The exact boundary evidence is:
+
+| Gray/size | AVIF SHA-256 | AV1 item SHA-256 | Y SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| 122, 4x4 | `17c312d10c6cd7ecd6a1bf1fb6b1bfff07aa970ff2ff3e722f2dd984c714a80a` | `93fa45f55bcb3b098d40977ff89add502c35624ebeb713691057f766dce3dd11` | `a0d139df7200d6d3412f6240f3486bbece5f88f137d449a65be14a18db801847` | `ad287d41398b2bc6aae343d24767bded9795b882f382b5abf480a6fc0bbddfdf` |
+| 122, 8x8 | `7163cc6aee6597f1792a6b963fb2777758fdbe7096bcfe5712df0e150f5c4d49` | `5f76fb46cbed3747fa52c2cd2211dab40e43ec44796491a8f56520be73cdd185` | `72996563049cc84daa2c3f31fd5c3d10770e69d6ebbb8da5b6d76db303dbae43` | `9e96fe6320d50c09026df65c9676a19e57fe86b26652cf513c2cc03015711df0` |
+| 123, 4x4 | `1e0f1f2ae4da78ca2cee5af734916106bb822d2d780f44111f257beed7c05890` | `046424541bc43b4af182639a279f0974945d473b4a92e0c2d3d1e408460c8e9b` | `fa42e0806a1c446ea0a93219b3f5ce5d424dcddd0cd5546afd3157b1a87c29f7` | `819d474948483b42b8e875e2bb3446526e0a5f1f090d012b993d6a12fcf0e4da` |
+| 123, 8x8 | `842883fdf557bb56f02454da1f5e5fe91a87f4afa21b87ba4155abd51396687f` | `fa31592ed3b981c15501f6dc2b8045d8e4daf68d1f3e25cdadba5f7ba0337056` | `a37c500096beae63865307f24092441b6eb6bcf8d1ca3454818e4eac94ed9e24` | `d9bced69730dcb4567fcd0eac9073a83993278a18aebf3c03544b49d5660576d` |
+| 133, 4x4 | `536cd711fe24a5c63489ecefc3f53d3a732aa606ebb3cb94a00789a5b4d9798d` | `05dcc7a6c32b365ec64b683ba7bfe157bf90cc4bc3ac2dacb69cc153c001c9ae` | `517d971c868ad938e5dba2ca036612a409e696fcd52b821fc5a18da10b4bfe0f` | `7f0d7099d13d4903645f8fc327e2f0fe46fd9655a948fbc375024f82acc50fc2` |
+| 133, 8x8 | `6abbf10ccf33392f217a6db1e1b9a66cd6b0cea9e95d06845252a0389beaa029` | `5bc21ec543abf9d02c50d2223ab561fd116cfed29978d96cd5e2b688c16cbc12` | `bc6fa004b6646065c2eb4fdf90679029a4588eb31d503f8724df0daa4b843be1` | `108f70bd32bd6aa8f4d1a6ee9450a6505f16158b350b293f7e37ca87724ae29a` |
+| 134, 4x4 | `88a3a51f1107ca20a77bd70db89891e9431dd932914a2e4494d017e11018ca68` | `c5c5db26f11896e56fcaeb615dac6e80c70c918b7b1ff8391dbb564b18d8a6d0` | `86a58f4dcec69e4af30695780fa0b88dba9905c54eb841d2b8cbf315a5b5e80e` | `96a0187338028cdac12765e42d24b4cf369039db628878c674d273bdb0af4324` |
+| 134, 8x8 | `65fe71943e62a346b20249a420f323dab9601ba99cbb5bf9782074d0d16a6331` | `8be99a5f1ba761f0ddf68ef003eb4e2540d81be0e6a76f1bcb9957c1e3ee99ed` | `09ea7fd78fd94605bcd9910327324421446e77e685a625ff2010cab28816f36ee` | `d4ea4542b1b805cc3f636afb8bf16a483cc0fe47a40b4fba4c876ebb26432b2a` |
+
+Each AVIF is 303 bytes and each extracted AV1 item is 28 bytes. Chroma remains
+the accepted constant-128 skipped-transform state. The reports match through
+container, frame tools, partition, qindex, predictor, transform type, EOB,
+high token, sign, and Golomb decoding; the first production distinction is
+the final-token magnitude map.
+
+### Fixture-first implementation method
+
+Before production changes:
+
+1. retain gray 122 and 134 at both sizes in the manifest and deterministic
+   asset generator as the excluded controls;
+2. promote gray 123 and 133 at both sizes into the pinned reconstruction
+   document and exact Pillow RGB guard;
+3. generate the asset, Pillow, and instrumented-dav1d references twice and
+   require byte identity;
+4. reclassify only gray 123 and 133 as expected portable reconstructions while
+   gray 122 and 134 remain explicitly non-portable;
+5. run Coverage MCP and require the reconstruction test to fail first on
+   production's missing gray-123 first leaf; and only then
+6. map final tokens 32 and 33 to magnitudes 256 and 264 in the existing closed
+   lossy 4:2:0 DC path.
+
+Production selection must depend only on decoded AV1 syntax. Fixture names,
+source gray values, encoded bytes, hashes, native output, and final pixels are
+oracle evidence only.
+
+### Acceptance
+
+Slice 38 is accepted only when both target signs and sizes match exact Pillow
+bytes, the adjacent final-token-40/41 controls remain non-portable, the
+complete dav1d document is independently reproduced, no dependency/unsafe/API
+scope expansion occurs, all native/WASM Clippy and rustdoc lanes pass, legal
+and package gates pass, and Coverage MCP reports exact 100% line, branch,
+function, and region coverage.
+
+### Fixture-first failure
+
+The complete AVIF asset corpus is byte-identical across two generations; its
+sorted digest document has SHA-256
+`bc165833bf50bc07d755178defb2d98f59fa3d180d2dceafb044fa8091a1f14b`.
+The complete Pillow reference corpus is also byte-identical across two
+generations; its sorted digest document has SHA-256
+`819ca3fb7adba9fbbc1ea6cb675b4e2b7dcfe05599c2969225c89e912e627324`.
+Two independently generated 150-case pinned-dav1d reconstruction documents
+are byte-identical, with SHA-256
+`07f7c8902b7a86ee42711bfc7f27451a8922714a7a8e4b035195bc3eb7df66a1`.
+
+Coverage MCP run `b74db089-7b29-43dc-894d-6e5af3ae68f1` is the intentional
+fixture-first failure. Six test targets pass and only
+`test_av1_reconstruction_matches_pinned_dav1d_fixture` fails. Its first
+failure is:
+
+`production AV1 path must retain the reconstructed first leaf for
+portable_lossy_420_q99_gray_123_control.avif`
+
+This proves the first missing production stage is the documented final-token
+32/33 magnitude map.
+
+### Accepted result
+
+The manifest now contains 1,187 cases: 909 decode cases and 278 encode cases
+over all eight formats, with 908 retained input assets, no planned cases, and
+no unwired encode cases. AVIF contributes 167 decode rows and 23 encode rows.
+Gray 122 and 134 are retained at both sizes as exact Pillow-success controls
+while remaining outside portable reconstruction.
+
+Production adds only the syntax-derived `32 => 256` and `33 => 264` mappings
+to the closed qindex-two/qmatrix-ten coefficient map. Both values reuse the
+verified sign, inverse-DCT, prediction, crop, chroma, and color paths. Final
+tokens 40 and 41 continue to return no portable reconstruction. Production
+does not inspect fixture identity, source gray, encoded bytes, hashes, native
+output, or final pixels.
+
+Final Coverage MCP run `f8f8484a-ec21-4e65-8925-3c9b2e093b8d`, snapshot
+`bf0026bb-dcd8-479a-8950-5b33a453aec0`, passes all seven test binaries. Its
+LLVM report records exact coverage of 38,279/38,279 lines, 5,464/5,464
+branches, 1,911/1,911 functions, and 62,941/62,941 regions.
+
+All 22 strict Clippy lanes and all 22 strict rustdoc lanes pass across native
+and `wasm32-unknown-unknown`. Rustfmt, whitespace, and Python syntax checks
+pass. The retained-license verifier confirms all 22 legal/provenance files;
+the dependency graph remains only `bytemuck 1.25.1`; and `cargo-deny` passes
+advisories, bans, licenses, and sources. Offline package verification builds
+135 files, 2.1 MiB unpacked and 431.5 KiB compressed. No dependency, unsafe
+Rust, public processing API, or published diagnostic/fixture artifact was
+added.
