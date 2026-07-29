@@ -6109,8 +6109,7 @@ fixture-selected production branch.
 
 ## Slice 32 Exploration Plan: Minimal 4:2:0 Lossless Geometry
 
-Status: exploration in progress; production changes are blocked on the
-complete mapping below.
+Status: accepted.
 
 ### Capability boundary
 
@@ -6161,11 +6160,90 @@ autotiling. `baseline.avif` remains the fixed downstream control.
    and rejection mapping plus a closed implementation boundary before editing
    production Rust.
 
-### Provisional implementation boundary
+### Deterministic reverse-mapping evidence
+
+`scripts/explore_avif_subsampling_corpus.py` encoded two independent source
+colors, `(17,91,203)` and `(199,37,83)`, at 4x4 and 8x8 through Pillow 12.2.0,
+libavif 1.4.1, and libaom 3.13.2. It then decoded each AV1 item through the
+instrumented scalar dav1d 1.5.3 commit
+`b546257f770768b2c88258c533da38b91a06f737`. Two complete generations are
+byte-identical with SHA-256
+`978dcfd201ebfd98386ef482abc6b542fec24d85d1f0835cc525ec1758f8b24d`.
+
+The exact encoded cases are:
+
+| Source and size | AVIF bytes and SHA-256 | AV1 item bytes and SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- |
+| `(17,91,203)`, 4x4 | 307, `640d19800ff27dbd1cd28e881736e923a48eb46e8223bed9d52bfb624b85e6a7` | 32, `ef4fb82e42436db8bed02ef19c4290017c13b09d5b9b17937445f4279bc638d5` | `0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b` |
+| `(17,91,203)`, 8x8 | 307, `21d453da436be1bbb47238e35d919499c7814a2a8073550b9ae958cafe78d15e` | 32, `31777519cfd42890ca337c5cd2ef4382bd8f02257fd54f8f2e30c2a59a0a9123` | `1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac` |
+| `(199,37,83)`, 4x4 | 305, `bd6427ce4848cb4d65f83b1621ffda46a4614e6a8b316998b69234298077ffba` | 30, `5b808499f5cbb6f31edb7381029821e0caaa296822d90640d02174064e5e0e56` | `34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5` |
+| `(199,37,83)`, 8x8 | 305, `311de615cc4f0f7cbd9f6c136170c383f5263659c07dcaa8fabb1877f87f415e` | 30, `a0b5fe36cbabab1b6a4bc186a0f3cd65b62de4b10e871001b2478536b6d043fe` | `1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008` |
+
+Every case declares eight-bit, non-monochrome, BT.709 primaries, sRGB
+transfer, matrix coefficient six, full range, and both horizontal and
+vertical chroma subsampling. Every case selects one level-four
+`PARTITION_NONE` leaf with partition range 38,248. The 4x4 and 8x8 members of
+each color pair have the same complete entropy decision sequence: 93
+operations for the first color and 83 for the second. The dimensions therefore
+change only visible-plane retention, not the accepted syntax.
+
+The one leaf has a 2x2 luma transform grid and one 4x4 transform for each
+chroma plane. Luma is DC-only followed by three skipped transforms. U and V
+are independently DC-only. For `(17,91,203)`, dav1d reconstructs Y as `0x51`,
+U as `0xc4`, and V as `0x51`; the 4x4 plane hashes are respectively
+`e69bbe113521a140d5a5cb83f97f97d7a8f35c848bf782a56774b4c17cf35a7e`,
+`4089ec8729dc0b65c45e4a5f166be2b01ee110d16451b93b3de78cc7326aa5a5`,
+and `40ec83fb669a851c39652a07496b4b1aba91173f40986bc2452c893e36cda5ff`.
+For `(199,37,83)`, the corresponding constants are `0x5b`, `0x7b`, and
+`0xcd`, with hashes
+`6d524a9c2256a3a8389e7192226b587c2272231a2c860b7dc77cd920add3d13a`,
+`9e48255104c06a48122044b9b67a941a50862e8dc2a7c1c0ab67af80a2df69b3`,
+and `4119996d821419b474b9fe7393b90d663c6766375a7479f653e0d5dab49c567f`.
+
+The existing 4:4:4 fixtures generated from the same two source colors are the
+adjacent controls. Relative to those controls, 4:2:0 selects dav1d's
+subsampled DC chroma-mode row (the initial CDF starts
+`[27354,12583,12314,...,3193,0]`), uses chroma coefficient-skip context seven,
+and emits only one chroma transform per plane. The luma coefficient bodies are
+unchanged. This relationship closes format selection by declared subsampling
+and block geometry rather than source color, fixture identity, encoded bytes,
+or final RGB.
+
+Pillow's exact output is libyuv 1922 I420-to-RGB24. For these constant planes,
+nearest 2x2 chroma replication followed by the already proved JPEG-range
+BT.601 fixed-point channel equations produces byte-identical RGB. The
+implementation must nevertheless index chroma by
+`(x >> 1, y >> 1)` from declared 4:2:0 geometry; it must not expand or mutate a
+general-purpose image buffer.
+
+The four candidates are now active manifest rows and cases 3 through 6 of the
+106-case reconstruction oracle. Two complete oracle generations are
+byte-identical with SHA-256
+`087efe0139b1f7f85fac3bd428484077075f6815cb49aa1b49160163a9db7cd0`.
+The generated coverage matrix has 1,136 active rows: 858 decode and 278
+encode, with SHA-256
+`75a79cdcbb44a49c62e4b31346fefeab909c7ff3a449e2ce48dc23d147717c36`.
+The four Pillow raw references contain exactly 48, 48, 192, and 192 RGB bytes.
+Coverage MCP run `53a11936-65ad-467c-a497-70a30cd209fd` is the intentional
+pre-production failure: five of six matrix tests pass, and the reconstruction
+test first fails because the production AV1 path does not retain
+`portable_lossless_420_a.avif`. The manifest, Pillow decode matrix, native
+decode, oracle parser, and preceding 4:4:4 reconstruction cases all pass
+before that assertion.
+
+### Closed implementation boundary
 
 - Add no general image resize, chroma-resampling, or color-conversion API.
   Subsampled reconstruction and I420 materialization remain private AVIF codec
   machinery.
+- Admit 4:2:0 only for one level-four `PARTITION_NONE` leaf at 4x4 or 8x8.
+  Decode the existing 2x2 luma grid and exactly one 4x4 transform for each
+  chroma plane, using the pinned subsampled chroma-mode and coefficient-skip
+  CDF rows. Preserve the 4:4:4 path byte for byte.
+- Retain Y at declared width and height; retain U and V at
+  `ceil(width / 2)` by `ceil(height / 2)`. Materialize RGB privately by
+  selecting chroma sample `(x >> 1, y >> 1)` and applying the proved libyuv
+  fixed-point equations.
 - Admit only eight-bit, all-lossless, single-item, single-frame, full-range
   4:2:0 syntax proved by the generated corpus. Lossy `baseline.avif` remains a
   portable miss until its independent quantization/filter slice is mapped.
@@ -6177,3 +6255,132 @@ autotiling. `baseline.avif` remains the fixed downstream control.
 - Require exact manifest/oracle byte parity and exactly 100% line, branch,
   function, and region coverage through Coverage MCP, followed by the complete
   native/WASM feature-gate, rustdoc, legal, and package gates.
+
+### Acceptance result
+
+The portable decoder now admits exactly the proved 4x4 and 8x8 lossless 4:2:0
+class. It retains the declared luma plane and half-width, half-height chroma
+planes, reconstructs the independent U and V transforms with the pinned
+subsampled contexts, and materializes I420 privately through the already
+proved libyuv-compatible integer conversion. The four new Pillow decode rows
+match exact mode, dimensions, and all 480 RGB bytes. The 102 preceding
+reconstruction cases and every Slice 1-31 output remain byte-identical.
+
+The final reconstruction oracle contains 106 cases and has SHA-256
+`087efe0139b1f7f85fac3bd428484077075f6815cb49aa1b49160163a9db7cd0`.
+The manifest has 1,136 active rows: 858 decode and 278 encode. AVIF has 116
+active decode rows and 23 active encode rows, with no planned, skipped, or
+unwired row. The generated matrix has SHA-256
+`75a79cdcbb44a49c62e4b31346fefeab909c7ff3a449e2ce48dc23d147717c36`.
+
+Final Coverage MCP run `b9405d7c-30da-4ed4-9d95-32b81f9027d7`, snapshot
+`59f64b26-1b22-47cf-b696-37812d1a2c33`, passes all seven test binaries with
+37,426/37,426 lines, 5,418/5,418 branches, 1,879/1,879 functions, and
+62,033/62,033 regions.
+
+Strict Clippy passes for no features, every isolated codec feature, defaults,
+and all features on native and `wasm32-unknown-unknown`. Strict native and
+WASM rustdoc, rustfmt, diagnostic-script syntax, deterministic fixture and
+oracle regeneration, the expanded 22-file third-party legal audit, and offline
+source-package verification also pass. The expanded source package contains
+135 files, is 2.1 MiB unpacked and 436,291 bytes compressed, with crate
+SHA-256
+`b78aea2e92bc4e0c39d59607a89f7bde4d0118919e06297a851a6819770cc74c`.
+The slice adds no dependency, unsafe Rust, target fork, public
+image-processing API, coverage exclusion, or fixture-selected production
+branch. The only materialization added is decoder-private chroma sampling
+required to return the decoded RGB bytes.
+
+## Slice 33 Exploration Plan: General Lossless 4:2:0 Geometry
+
+Status: exploration in progress; production changes are blocked on the closed
+mapping and manifest-backed failure below.
+
+### Why this is on the baseline critical path
+
+Slice 32 proved the independent 4:2:0 syntax, plane retention, and private
+I420-to-RGB materialization for one coded 8x8 leaf. The portable decoder still
+admits that syntax only when the visible frame is 4x4 or 8x8. Its chroma
+coefficient grid is fixed to 1x1, and its only subsampled reconstruction entry
+point is fixed to `Square8`. This is not a complete geometry model.
+
+Pillow's fixed `baseline.avif` is a 128x128, eight-bit, full-range 4:2:0 key
+frame in one tile. Its parsed frame header selects quantizer 120,
+transform-select mode, luma/chroma loop-filter level nine, CDEF luma strength
+four, and CDEF chroma strength eight. It is therefore still outside the
+lossless class and remains a negative portable control. But decoding it
+eventually requires multiple subsampled leaves and persistent chroma contexts;
+proving only another isolated 8x8 leaf would not advance that dependency.
+
+Slice 33 will generalize lossless 4:2:0 geometry through the same coded shapes
+already proved for 4:4:4:
+
+- cropped visibility within one coded 8x8 leaf;
+- one 16x8 or 8x16 rectangular leaf;
+- one coded 16x16 square leaf with a 4x4 luma and 2x2 chroma transform grid;
+- two 8x8 leaves composed horizontally or vertically with shared CDF,
+  predictor, and residual-neighbor state; and
+- top-left visible cropping of the reconstructed luma and half-resolution
+  chroma planes.
+
+This is a prerequisite slice, not a substitute for lossy reconstruction.
+Quantization, deblocking, CDEF, restoration, alpha, animation, high bit depth,
+and multi-tile output remain separate unproved capabilities.
+
+### Initial deterministic corpus
+
+`scripts/explore_avif_subsampling_corpus.py` encoded three independent source
+colors, `(17,91,203)`, `(199,37,83)`, and `(127,127,127)`, at 4x8, 8x4,
+12x4, 4x12, 12x8, 8x12, and 16x16 through the pinned Pillow
+12.2.0/libavif 1.4.1/libaom 3.13.2 oracle. Instrumented scalar dav1d 1.5.3
+commit `b546257f770768b2c88258c533da38b91a06f737` decoded every AV1 item. Two
+complete generations are byte-identical with SHA-256
+`7c6c51b90bf0e6d645915d55d8c951fb60e3608d23b0fabdfe953ff9b37512db`.
+
+The corpus exposes four syntax families:
+
+1. 4x8 and 8x4 use one level-four `PARTITION_NONE` leaf and the exact Slice 32
+   decision sequence. Only visible-plane cropping changes.
+2. Non-neutral 12x4, 4x12, 12x8, and 8x12 sources use a level-three recursive
+   split followed by two level-four `PARTITION_NONE` leaves. Their entropy
+   traces contain 103 or 113 operations according to the source residual.
+3. Neutral 12x4/12x8 sources use one horizontal level-three leaf; neutral
+   4x12/8x12 sources use one vertical level-three leaf. Each trace contains 31
+   operations and all coded transforms are skipped.
+4. Every 16x16 source uses one level-three `PARTITION_NONE` leaf. The two
+   non-neutral traces contain 119 or 129 operations; the neutral trace contains
+   55.
+
+The paired horizontal and vertical cases have equal reconstructed plane and
+Pillow RGB hashes for equal visible area. This makes orientation, coded stride,
+and visible cropping independently observable rather than inferred from final
+color alone.
+
+### Exploration and acceptance sequence
+
+1. Extend the diagnostic to trace the fixed baseline input without encoding a
+   replacement. Record its complete first partition path and the exact first
+   syntax decision that the current lossless model cannot consume.
+2. Expand the deterministic corpus to the full 4..16 visible geometry matrix,
+   including 12x12, 12x16, 16x12, full-width/full-height recursive splits, two
+   non-neutral residual families, and neutral DC/vertical/horizontal controls.
+3. Compare every scalar dav1d entropy operation and reconstructed Y/U/V plane
+   across orientation pairs. Reverse-map chroma transform-grid dimensions,
+   per-leaf neighbor contexts, shared CDF mutation, prediction boundaries, and
+   composition strides from dav1d source and traces.
+4. Define one closed production boundary covering only syntax families whose
+   complete operation and plane traces are mapped. Do not select behavior by
+   fixture name, source color, file bytes, hashes, dimensions alone, or final
+   RGB.
+5. Add deterministic assets, provenance, manifest rows, exact Pillow raw
+   outputs, and dav1d reconstruction records before production changes.
+6. Run Coverage MCP once to prove that the new matrix fails first and only
+   because the production portable reconstruction does not retain the first
+   admitted Slice 33 fixture.
+7. Implement the common subsampled geometry and context model. Keep all chroma
+   sampling and composition private to the AVIF codec; expose no image
+   processing operation.
+8. Require byte-exact Pillow and dav1d parity, unchanged prior fixtures, and
+   exactly 100% line, branch, function, and region coverage. Then run the full
+   native/WASM feature, Clippy, rustdoc, legal, deterministic-regeneration, and
+   offline-package gates.

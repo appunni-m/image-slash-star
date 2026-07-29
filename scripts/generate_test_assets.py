@@ -4006,7 +4006,13 @@ def gen_avif():
                 f"AVIF fixture oracle requires {expected}, found {codec_versions}"
             )
 
-    def write_portable_lossless(name, color, size=(4, 4), speed=8):
+    def write_portable_lossless(
+        name,
+        color,
+        size=(4, 4),
+        speed=8,
+        subsampling="4:4:4",
+    ):
         image = Image.new("RGB", size, color)
 
         def encode():
@@ -4017,7 +4023,7 @@ def gen_avif():
                 quality=100,
                 speed=speed,
                 max_threads=1,
-                subsampling="4:4:4",
+                subsampling=subsampling,
                 autotiling=False,
             )
             return output.getvalue()
@@ -4068,6 +4074,28 @@ def gen_avif():
 
     write_portable_lossless("portable_lossless_a.avif", (17, 91, 203))
     write_portable_lossless("portable_lossless_b.avif", (199, 37, 83))
+    write_portable_lossless(
+        "portable_lossless_420_a.avif",
+        (17, 91, 203),
+        subsampling="4:2:0",
+    )
+    write_portable_lossless(
+        "portable_lossless_420_b.avif",
+        (199, 37, 83),
+        subsampling="4:2:0",
+    )
+    write_portable_lossless(
+        "portable_lossless_420_8x8_a.avif",
+        (17, 91, 203),
+        size=(8, 8),
+        subsampling="4:2:0",
+    )
+    write_portable_lossless(
+        "portable_lossless_420_8x8_b.avif",
+        (199, 37, 83),
+        size=(8, 8),
+        subsampling="4:2:0",
+    )
     write_portable_lossless("portable_lossless_gray_32.avif", (32, 32, 32))
     write_portable_lossless("portable_lossless_gray_127.avif", (127, 127, 127))
     write_portable_lossless("portable_probe_gray_128.avif", (128, 128, 128))

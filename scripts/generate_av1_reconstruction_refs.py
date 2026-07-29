@@ -45,6 +45,26 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5",
         "size": [4, 4],
     },
+    "portable_lossless_420_a.avif": {
+        "file_sha256": "640d19800ff27dbd1cd28e881736e923a48eb46e8223bed9d52bfb624b85e6a7",
+        "rgb_sha256": "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b",
+        "size": [4, 4],
+    },
+    "portable_lossless_420_b.avif": {
+        "file_sha256": "bd6427ce4848cb4d65f83b1621ffda46a4614e6a8b316998b69234298077ffba",
+        "rgb_sha256": "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5",
+        "size": [4, 4],
+    },
+    "portable_lossless_420_8x8_a.avif": {
+        "file_sha256": "21d453da436be1bbb47238e35d919499c7814a2a8073550b9ae958cafe78d15e",
+        "rgb_sha256": "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac",
+        "size": [8, 8],
+    },
+    "portable_lossless_420_8x8_b.avif": {
+        "file_sha256": "311de615cc4f0f7cbd9f6c136170c383f5263659c07dcaa8fabb1877f87f415e",
+        "rgb_sha256": "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008",
+        "size": [8, 8],
+    },
     "portable_lossless_gray_32.avif": {
         "file_sha256": "f57c5df28dc28add5b9913c9d3cc0c0aae2e69e0087e7a8614674c8658987875",
         "rgb_sha256": "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3",
@@ -973,22 +993,35 @@ def decode_fixture(
     )
     log, event_stream, entropy_operations, blocks, states = parse_debug_log(result.stdout)
     yuv = yuv_path.read_bytes()
-    plane_size = size[0] * size[1]
-    if len(yuv) != plane_size * 3:
-        raise RuntimeError(
-            f"{path.name} is not the expected 8-bit 4:4:4 dav1d output"
-        )
+    chroma_width = (size[0] + int(portable_color["subsampling_x"])) >> int(
+        portable_color["subsampling_x"]
+    )
+    chroma_height = (size[1] + int(portable_color["subsampling_y"])) >> int(
+        portable_color["subsampling_y"]
+    )
+    plane_dimensions = [
+        (size[0], size[1]),
+        (chroma_width, chroma_height),
+        (chroma_width, chroma_height),
+    ]
+    plane_lengths = [width * height for width, height in plane_dimensions]
+    if len(yuv) != sum(plane_lengths):
+        raise RuntimeError(f"{path.name} has an unexpected decoded YUV length")
     planes = []
-    for index, name in enumerate(("y", "u", "v")):
-        plane = yuv[index * plane_size : (index + 1) * plane_size]
+    offset = 0
+    for name, (plane_width, plane_height), plane_length in zip(
+        ("y", "u", "v"), plane_dimensions, plane_lengths
+    ):
+        plane = yuv[offset : offset + plane_length]
+        offset += plane_length
         planes.append(
             {
                 "name": name,
-                "width": size[0],
-                "height": size[1],
+                "width": plane_width,
+                "height": plane_height,
                 "row_bytes": [
-                    plane[row * size[0] : (row + 1) * size[0]].hex()
-                    for row in range(size[1])
+                    plane[row * plane_width : (row + 1) * plane_width].hex()
+                    for row in range(plane_height)
                 ],
                 "sha256": sha256(plane),
             }

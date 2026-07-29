@@ -28,7 +28,8 @@ identified in comments and for copied Pillow fixtures.
 | libaom | 3.13.2, commit `ad44980d7f3c7a2605c25d51ea96946949000841` | Portable AV1 source reference and optional native AVIF encoder | `libaom/LICENSE` (BSD-2-Clause) and `libaom/PATENTS`; `PATENTS` is also retained at the crate root |
 | libavif | 1.4.1, commit `6543b22b5bc706c53f038a16fe515f921556d9b3` | AVIF container/parser port, copied public header, copied fixtures, and optional native bridge | `libavif/LICENSE` (complete upstream license bundle) |
 | libjpeg-turbo | 3.1.4.1, commit `9217719d3a58633923b096af4c1d50d304768a64` | JPEG encoder/decoder ports | `libjpeg-turbo/LICENSE.md` and `libjpeg-turbo/README.ijg` (IJG and BSD-style terms) |
-| libwebp | 1.6.0, commit `4fa21912338357f89e4fd51cf2368325b59e9bd9` | WebP encoder/decoder ports and optional native SharpYUV component | `libwebp/COPYING` (BSD-3-Clause) |
+| libvpx | 1.15.2, commit `d168454ecd099805c675d4a98c66f4891373302a`; `vp8/common/quant_common.c` SHA-256 `fc8471698f061e5dcb9e7caef0df3bceec9921ec3aada2e1dc4c3348a5d7e8f2` | VP8 quantization-table source named by `src/codecs/webp/encode/vp8/quant.rs` | `libvpx/LICENSE` (BSD-3-Clause) and `libvpx/PATENTS` (WebM patent grant) |
+| libwebp | 1.6.0, commit `4fa21912338357f89e4fd51cf2368325b59e9bd9` | WebP encoder/decoder ports and optional native SharpYUV component | `libwebp/COPYING` (BSD-3-Clause) and `libwebp/PATENTS` (WebM patent grant) |
 | libyuv | commit `6067afde563c3946eebd94f146b3824ab7a97a9c` (libavif revision 1922) | AVIF color-conversion reference and optional native component | `libyuv/LICENSE` (BSD-3-Clause) |
 | Pillow | 12.2.0, commit `3c41c095064200a02672d89cc5ff629eaf4b0d4f` | Explicit source-derived behavior and copied AVIF fixtures | `pillow/LICENSE` (MIT-CMU) |
 | Pillow `QuantOctree.c` | Pillow 12.2.0 at the commit above | GIF FASTOCTREE port | `pillow/QUANT-OCTREE-LICENSE` (MIT; Oliver Tonnhofer / Omniscale) |
@@ -43,6 +44,7 @@ Upstream repositories:
 - libaom: <https://aomedia.googlesource.com/aom>
 - libavif: <https://github.com/AOMediaCodec/libavif>
 - libjpeg-turbo: <https://github.com/libjpeg-turbo/libjpeg-turbo>
+- libvpx: <https://chromium.googlesource.com/webm/libvpx>
 - libwebp: <https://chromium.googlesource.com/webm/libwebp>
 - libyuv: <https://chromium.googlesource.com/libyuv/libyuv>
 - Pillow: <https://github.com/python-pillow/Pillow>
@@ -57,7 +59,9 @@ below:
   `stdlib/FreeBSD/qsort.c`; only C comment leaders were removed.
 - `pillow/QUANT-OCTREE-LICENSE` is the license block extracted from
   `src/libImaging/QuantOctree.c`; only C comment leaders were removed.
-- `libwebp/COPYING` has one redundant terminal empty line removed.
+- `libwebp/PATENTS` and `libvpx/PATENTS` are byte-exact copies from the pinned
+  upstream commits. `libwebp/COPYING` and `libvpx/LICENSE` each have one
+  redundant terminal empty line removed.
 - `libavif/LICENSE` is intentionally the complete upstream file, including
   notices for files that are not copied into this repository. Keeping the
   complete bundle also supports distributions built by the pinned native AVIF

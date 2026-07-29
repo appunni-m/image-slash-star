@@ -66,6 +66,90 @@
           "ref_is_animated": false
         },
         {
+          "id": "portable_lossless_420_a",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Minimal 4x4 lossless 4:2:0 key frame proving subsampled chroma geometry",
+          "asset": "portable_lossless_420_a.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_a_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossless_420_b",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Independent minimal 4x4 lossless 4:2:0 key frame preventing source-color special-casing",
+          "asset": "portable_lossless_420_b.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_b_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossless_420_8x8_a",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "8x8 lossless 4:2:0 key frame proving complete visible luma and chroma planes",
+          "asset": "portable_lossless_420_8x8_a.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_8x8_a_avif.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossless_420_8x8_b",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Independent 8x8 lossless 4:2:0 key frame preventing dimension-specific materialization",
+          "asset": "portable_lossless_420_8x8_b.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_8x8_b_avif.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "portable_lossless_gray_32",
           "type": "decode",
           "format": "avif",
@@ -595,7 +679,7 @@
           "type": "decode",
           "format": "avif",
           "category": "partitioned",
-          "description": "12x12 midpoint square pattern retaining unsupported AC coefficient syntax",
+          "description": "12x12 four-leaf midpoint split with admitted lossless luma/chroma AC composition",
           "asset": "partitioned_square_12x12_midpoint_g96_ac.avif",
           "expect_error": false,
           "status": "active",
@@ -637,7 +721,7 @@
           "type": "decode",
           "format": "avif",
           "category": "partitioned",
-          "description": "12x12 fourth-transform luma EOB-12 body retained as a portable error control",
+          "description": "12x12 four-leaf square split with an admitted alternate fourth-transform luma EOB-12 body",
           "asset": "partitioned_square_12x12_top_left_luma_eob12_control.avif",
           "expect_error": false,
           "status": "active",
@@ -23310,12 +23394,12 @@
     }
   },
   "summary": {
-    "total_rows": 1132,
-    "decode_rows": 854,
+    "total_rows": 1136,
+    "decode_rows": 858,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 853,
-    "decode_active": 854,
+    "assets_available": 857,
+    "decode_active": 858,
     "decode_planned": 0,
     "encode_not_wired": 0
   }

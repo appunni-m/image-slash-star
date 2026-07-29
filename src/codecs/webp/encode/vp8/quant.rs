@@ -14,8 +14,10 @@ use super::{
 
 // ── VP8 quantization step tables ──
 //
-// These are the exact tables from libvpx (vp8/common/quant_common.c),
-// implementing the base quantization step sizes for indices 0..127.
+// These are the exact tables from libvpx 1.15.2
+// (vp8/common/quant_common.c), implementing the base quantization step sizes
+// for indices 0..127. The fixed source and legal terms are retained under
+// third_party/libvpx/.
 
 /// DC quantization step sizes for luma (Y) blocks. Indexed 0..127.
 pub const Y_DC_QUANT: [u16; 128] = [

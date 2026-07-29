@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 102);
+    assert_eq!(expected.cases.len(), 106);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2540,10 +2540,23 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             actual.planes.iter().zip(&case.decoded_planes).enumerate()
         {
             assert_eq!(expected.name, ["y", "u", "v"][plane_index]);
-            assert_eq!(
-                (expected.width, expected.height),
+            let expected_dimensions = if plane_index == 0 {
                 (case.portable_color.width, case.portable_color.height)
-            );
+            } else {
+                (
+                    if case.portable_color.subsampling_x {
+                        case.portable_color.width.div_ceil(2)
+                    } else {
+                        case.portable_color.width
+                    },
+                    if case.portable_color.subsampling_y {
+                        case.portable_color.height.div_ceil(2)
+                    } else {
+                        case.portable_color.height
+                    },
+                )
+            };
+            assert_eq!((expected.width, expected.height), expected_dimensions);
             assert_eq!(
                 expected.row_bytes.len(),
                 usize::try_from(expected.height).expect("AV1 plane height")
@@ -2624,6 +2637,18 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "portable_lossless_b.avif" => {
                 "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
+            }
+            "portable_lossless_420_a.avif" => {
+                "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b"
+            }
+            "portable_lossless_420_b.avif" => {
+                "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
+            }
+            "portable_lossless_420_8x8_a.avif" => {
+                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+            }
+            "portable_lossless_420_8x8_b.avif" => {
+                "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
             }
             "portable_lossless_gray_32.avif" => {
                 "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
@@ -2869,7 +2894,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         if case_index == 0
             || matches!(
                 case.fixture.as_str(),
-                "partitioned_12x4_a.avif"
+                "portable_lossless_420_a.avif"
+                    | "partitioned_12x4_a.avif"
                     | "partitioned_4x12_a.avif"
                     | "partitioned_square_12x12_luma_eob1.avif"
                     | "partitioned_square_12x12_luma_eob2_control.avif"

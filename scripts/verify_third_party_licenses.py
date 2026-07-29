@@ -54,6 +54,15 @@ EXPECTED_SHA256 = {
     "third_party/libwebp/COPYING": (
         "e293d1dddc9785200b1f58a4f5293543cf8566d9e0b8a3c02fad955035b19f42"
     ),
+    "third_party/libwebp/PATENTS": (
+        "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c"
+    ),
+    "third_party/libvpx/LICENSE": (
+        "aa56ba9024f01edde9bfa5f5364644e6dd305874c3da8b73b92eb8af05539861"
+    ),
+    "third_party/libvpx/PATENTS": (
+        "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c"
+    ),
     "third_party/libyuv/LICENSE": (
         "2b2cc1180c7e6988328ad2033b04b80117419db9c4c584918bbb3cfec7e9364f"
     ),
@@ -76,7 +85,8 @@ NOTICE_FRAGMENTS = (
     "third_party/libaom/LICENSE",
     "third_party/libavif/",
     "third_party/libjpeg-turbo/",
-    "third_party/libwebp/COPYING",
+    "third_party/libwebp/",
+    "third_party/libvpx/",
     "third_party/libyuv/LICENSE",
     "third_party/pillow/LICENSE",
     "third_party/pillow/QUANT-OCTREE-LICENSE",

@@ -25,16 +25,23 @@ fn validate_av1(data: &[u8]) -> Option<super::av1::ValidatedAv1> {
 
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
-    let plane_length = match (still.width, still.height) {
-        (4, 4) => 16,
-        (4, 8) | (8, 4) => 32,
-        (12, 4) | (4, 12) => 48,
-        (8, 8) | (16, 4) | (4, 16) => 64,
-        (12, 8) | (8, 12) => 96,
-        (16, 8) | (8, 16) => 128,
-        (12, 12) => 144,
-        (12, 16) | (16, 12) => 192,
-        (16, 16) => 256,
+    let (plane_length, width): (usize, usize) = match (still.width, still.height) {
+        (4, 4) => (16, 4),
+        (4, 8) => (32, 4),
+        (8, 4) => (32, 8),
+        (12, 4) => (48, 12),
+        (4, 12) => (48, 4),
+        (8, 8) => (64, 8),
+        (16, 4) => (64, 16),
+        (4, 16) => (64, 4),
+        (12, 8) => (96, 12),
+        (8, 12) => (96, 8),
+        (16, 8) => (128, 16),
+        (8, 16) => (128, 8),
+        (12, 12) => (144, 12),
+        (12, 16) => (192, 12),
+        (16, 12) => (192, 16),
+        (16, 16) => (256, 16),
         _ => return None,
     };
     (still.bit_depth == 8
@@ -42,23 +49,38 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         && still.color_primaries == 1
         && still.transfer_characteristics == 13
         && still.matrix_coefficients == 6
-        && still.color_range
-        && !still.subsampling_x
-        && !still.subsampling_y)
+        && still.color_range)
         .then_some(())?;
+    let subsampled = match (still.subsampling_x, still.subsampling_y) {
+        (false, false) => false,
+        (true, true) => true,
+        _ => return None,
+    };
+    let chroma_length = if subsampled {
+        plane_length.div_euclid(4)
+    } else {
+        plane_length
+    };
 
     let [y_plane, u_plane, v_plane] = &still.planes;
     (y_plane.samples.len() == plane_length
-        && u_plane.samples.len() == plane_length
-        && v_plane.samples.len() == plane_length)
+        && u_plane.samples.len() == chroma_length
+        && v_plane.samples.len() == chroma_length)
         .then_some(())?;
     let mut pixels = Vec::with_capacity(plane_length.saturating_mul(3));
-    for ((&y, &u), &v) in y_plane
-        .samples
-        .iter()
-        .zip(&u_plane.samples)
-        .zip(&v_plane.samples)
-    {
+    let chroma_width = if subsampled { width.div_ceil(2) } else { width };
+    for (index, &y) in y_plane.samples.iter().enumerate() {
+        let chroma_index = if still.subsampling_x {
+            index
+                .div_euclid(width)
+                .div_euclid(2)
+                .saturating_mul(chroma_width)
+                .saturating_add(index.rem_euclid(width).div_euclid(2))
+        } else {
+            index
+        };
+        let u = u_plane.samples[chroma_index];
+        let v = v_plane.samples[chroma_index];
         pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
     }
     Some(DecodedImage {
