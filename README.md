@@ -23,19 +23,15 @@ exact native library stack used by the oracle because a different AV1 encoder
 cannot produce libaom-identical bytes. That native AVIF implementation is
 current compatibility behavior, not the final portable release design: it
 compiles on `wasm32-unknown-unknown`, where detection, bounded container
-inspection, and the first proven lossless full-range YUV 4:4:4 single-leaf
-still-decode classes are portable. The accepted geometry covers 4x4 through
-16x16 square/padded leaves and 16x8 or 8x16 one-axis rectangular leaves,
-including nonzero DC-only and zero-residual transforms for the accepted DC,
-vertical, and horizontal luma predictor modes. It also covers the first closed
-two-leaf recursive split in 12x4, 16x4, 12x8, 16x8, 4x12, 4x16, 8x12, and
-8x16 frames, including shared adaptive CDF state, reconstructed left/top edge
-prediction, and partial or full visibility on both axes. A four-leaf square
-split is also portable at 12x12 and 16x16 when its four coded 8x8 leaves
-remain inside the proved DC-only/zero-residual syntax class, including direct
-high-token coefficient magnitudes below 15 and the token-15 Golomb extension.
+inspection, and a growing manifest-bounded still-decode subset are portable.
+That subset includes closed lossless full-range YUV 4:4:4 and 4:2:0
+single-leaf, two-leaf, and four-leaf classes over the documented 4x4 through
+16x16 geometries, plus the first 4x4 and 8x8 lossy 4:2:0 directional-predictor
+classes with skipped, direct-token, or token-15 Golomb DC-only luma residuals.
 Other recursive partitions and AVIF pixel decode classes, plus AVIF encoding,
-still report an unsupported codec operation on that target.
+still report an unsupported codec operation on that target. The exact accepted
+AV1 boundary is tracked in `docs/portable-avif-progress.md`; it is deliberately
+narrower than general AVIF support.
 
 The crate publishes one canonical codec API: format detection, inspection,
 still-image decode/encode, and sequence decode/encode over encoded bytes and
@@ -55,15 +51,15 @@ The manifest-driven parity matrix is the source of truth.
 
 | Metric | Count |
 | --- | ---: |
-| Manifest rows | 1,122 |
-| Active manifest rows | 1,122 |
-| Active decode rows | 844 |
+| Manifest rows | 1,179 |
+| Active manifest rows | 1,179 |
+| Active decode rows | 901 |
 | Active encode rows | 278 |
 | Planned or skipped rows | 0 |
 | Formats tracked | 8 |
 
 All rows compare exact decoded pixels, exact sequence frames, exact encoded
-files, or an exact oracle success/error outcome. AVIF contributes 102 decode
+files, or an exact oracle success/error outcome. AVIF contributes 159 decode
 rows and 23 encode rows, including five-frame animation and invalid-input
 behavior.
 
@@ -81,7 +77,7 @@ opt-in because it links a fixed native stack.
 | `tiff` | yes | parity rows active | libtiff 4.7.1 |
 | `webp` | yes | parity rows active | libwebp 1.6.0 |
 | `ico` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `avif` | no | parity rows active; portable inspection plus closed lossless single-, two-, and four-leaf decode classes | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 / libyuv 1922 |
+| `avif` | no | parity rows active; portable inspection plus closed lossless and initial lossy 4:2:0 still-decode classes | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 / libyuv 1922 |
 
 Select only the formats an application needs by disabling default features and
 enabling the relevant format features.

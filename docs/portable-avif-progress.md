@@ -1,12 +1,13 @@
 # Portable AVIF Implementation Progress
 
-Date: 2026-07-29
+Date: 2026-07-30
 
 Status: portable container inspection, borrowed sample extraction, AV1
 sequence/frame parsing, tile boundaries, and scalar entropy decoding accepted;
-portable closed-class 4x4, 4x8, 8x4, 8x8, 12x12, and 16x16 pixel decoding
-plus 12x16 and 16x12 visibility accepted; full portable decode/encode remains
-in progress.
+portable closed-class lossless 4:4:4 and 4:2:0 decoding across the documented
+single-, two-, and four-leaf geometries is accepted; the first 4x4 and 8x8
+lossy 4:2:0 skipped/DC-only residual classes are also accepted. Full portable
+decode/encode remains in progress.
 
 ## Scope And Non-Negotiable Constraints
 
@@ -6988,9 +6989,7 @@ functions, and 62,837/62,837 regions. Slice 34 is accepted.
 
 ## Slice 35 Exploration Plan: One Lossy 8x8 Luma DC Residual
 
-Status: exploration complete. Fixture and production changes remain blocked
-until the deterministic targets and excluded controls described here are
-retained by the manifest oracle.
+Status: accepted on 2026-07-30.
 
 Slice 34 deliberately accepts only an all-skipped lossy residual. The nearest
 unsupported behavior must be found inside the same 4:2:0 frame-tool class so
@@ -7248,3 +7247,174 @@ and `cargo package --allow-dirty --locked --offline` builds and verifies 135
 files, 2.1 MiB unpacked and 431.5 KiB compressed. The diagnostic search
 scripts, manifest fixtures, and coverage artifacts remain outside the
 published crate.
+
+## Slice 36 Exploration Plan: Lossy 4:2:0 Token-15 Golomb DC
+
+Status: accepted on 2026-07-30.
+
+### First unsupported boundary
+
+Slice 35 accepts a non-skipped 8x8 luma transform only when the decoded direct
+high token is eight or nine. The nearest retained, Pillow-decodable controls
+already prove the next syntax boundary without changing the container, frame
+tools, partition, quantizer, predictors, chroma transforms, filters, or coded
+geometry:
+
+| Fixture family | Direct high token | Golomb extension | Final token | Dequantized DC | Role |
+| --- | ---: | ---: | ---: | ---: | --- |
+| gray 126 | 8 | none | 8 | -64 | accepted lower direct-token control |
+| gray 130 | 9 | none | 9 | +72 | accepted upper direct-token control |
+| gray 125 | 15 | 0 | 15 | -120 | Slice 36 target |
+| gray 131 | 15 | 1 | 16 | +128 | Slice 36 target |
+
+Each family has both a declared 4x4 crop and a complete 8x8 coded-plane
+fixture. The target AVIF and Pillow RGB digests are already recorded in the
+Slice 35 reverse map. Their pinned scalar traces match Slice 35 through
+transform type, EOB-bin, EOB-base, and high-token decoding; the first missing
+operation is the Golomb extension after the DC sign.
+
+### Exploration and implementation method
+
+Before production changes:
+
+1. run `scripts/explore_avif_subsampling_corpus.py` over grayscale values
+   immediately outside 125 through 131 at 4x4 and 8x8, quality 99, speed 8,
+   one thread, explicit 4:2:0, and disabled autotiling;
+2. run the corpus twice and require byte-identical AVIF, scalar trace, plane,
+   and Pillow RGB evidence;
+3. retain gray 125 and 131 in the pinned reconstruction document, including
+   their exact Golomb operation ordering and complete Y/U/V planes;
+4. select the nearest decoded final-token value outside 15 and 16 as a manifest
+   control, or document why the pinned encoder cannot emit one in this closed
+   class and use a coded-tile mutation that preserves the complete accepted
+   prefix;
+5. make the existing reconstruction fixture fail intentionally while gray 125
+   and 131 remain classified as non-portable; and only then
+6. widen the coefficient parser to consume token-15 Golomb zero or one, apply
+   the pinned qindex-two/qmatrix-ten dequantization, and reuse the already
+   verified 8x8 DC-only inverse DCT.
+
+Production selection must depend only on decoded AV1 syntax. Fixture names,
+source gray values, file/sample hashes, native output, and final RGB pixels are
+for oracle proof only and may not influence the implementation.
+
+### Deterministic boundary result
+
+The documented sweep ran twice through independently instrumented builds of
+pinned dav1d. Both complete 22-case reports are byte-identical and have
+SHA-256
+`5d79ac7592c31015e220eb6ca3b4d27e29eae58ef94bf9ce46e019a0c5d90620`.
+The corpus covers gray values 123 through 133 at both 4x4 and 8x8.
+
+The natural encoder output provides the required excluded boundary, so no
+mutation fixture is needed:
+
+| Gray | Sign | Golomb prefix/data | Extension | Final token | Role |
+| ---: | --- | --- | ---: | ---: | --- |
+| 124 | negative | `0001` / `010` | 9 | 24 | nearest lower excluded control |
+| 125 | negative | `1` / empty | 0 | 15 | admitted target |
+| 126 | negative | no Golomb extension | none | 8 | retained direct-token control |
+| 130 | positive | no Golomb extension | none | 9 | retained direct-token control |
+| 131 | positive | `01` / `0` | 1 | 16 | admitted target |
+| 132 | positive | `0001` / `010` | 9 | 24 | nearest upper excluded control |
+
+All six families preserve the same closed Slice 35 container, frame-tool,
+partition, qindex, directional predictor, skipped chroma, and disabled
+post-filter class. Gray 124 and 132 therefore isolate the final-token rejection
+without depending on malformed entropy bytes.
+
+The fixture-first Coverage MCP proof is run
+`e83138a3-358c-4653-a4f4-5ac9303a1a6d`. Six test targets pass and only
+`test_av1_reconstruction_matches_pinned_dav1d_fixture` fails. Its first
+failure states that production retained no reconstructed first leaf for
+`portable_lossy_420_q99_gray_125_control.avif`. The manifest, Pillow RGB
+references, and 142-case pinned dav1d reconstruction document were already
+valid at that point. This proves the existing direct-token rejection is the
+first missing production stage rather than a container, frame, color, or
+fixture-contract defect.
+
+The new control evidence is:
+
+| Gray/size | AVIF bytes and SHA-256 | AV1 item bytes and SHA-256 | Y SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| 124, 4x4 | 303, `f2c1d46376a93d91baa784dfd69615bb1d334471ac997515612366085e2cb781` | 28, `163a77b653098783b3e9e5d03da87122cb6fc5bf0bc092337e4a0479bae05073` | `748f164db0deb277130f05193b06e14b745740b3448bacb8bf3903ec1e652453` | `5acbd8048d53d1aa8fcbaacb57506e7eb6a1f570d93c899bd97f899f535f7ce9` |
+| 124, 8x8 | 303, `4d1fc957ddb0e368fe179d7f93c8d64afb01bb24f3b876bd6c8cc7d2b337c033` | 28, `eb32e896c046da5b6ed2229cd13a88db716c283256762c0f89b81f6add997643` | `04d11b84a625b3fe7bc7b1cc4c91cb6210ae0a1ccb15466821b81a467504aefe` | `25c65b22ccf260aff6e521fbce082a40fd940968592a3c2e5272768c362481da` |
+| 132, 4x4 | 303, `98ee27816a74ee14b345e4a3c39856a328f18d77c7bbba95e40630b335bf44dd` | 28, `8bb1a35b114d76c1e366232b8591a06eb18e8fb2d2dcc00d33a6d985c47f2620` | `f93fed8efa5d968ef1a3b170cac57114aa04a463d9e3853cd4ecb0acb3f8f1d9` | `03a471cd2fdf8af4107b02673eec688e6c7bc946d184af0c514af6a206e51681` |
+| 132, 8x8 | 303, `adeca8ec9e6cbe47fc2a7a046d631be33772e385f868d7d943d99175e6535c32` | 28, `5c7081006580b70999651ad56bd327c131e038d261658c54bcc6700ecf5f3726` | `b6778cd126c930465f7b44fd228716fed74acb8c70d59d2f1474035b1380f113` | `603bfc293271617bfea86708fcd2820aa7246d3d73a47fd2c0184de328c68ab3` |
+
+For every 4x4 case U and V are constant 128 with SHA-256
+`8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222`;
+for every 8x8 case their SHA-256 is
+`4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916`.
+
+### Closed candidate boundary
+
+The candidate Slice 36 path retains every Slice 35 invariant. It may add only:
+
+- high token fifteen;
+- DC sign before the extension, matching pinned dav1d operation order;
+- Golomb extension zero or one, producing final token fifteen or sixteen;
+- qindex-two/qmatrix-ten dequantized DC -120 or +128; and
+- the existing 8x8 `DCT_DCT` DC fast path over the same vertical/horizontal
+  predictors and skipped 4x4 chroma transforms.
+
+Any larger Golomb value, different high-token context, AC coefficient, chroma
+residual, transform, quantizer, predictor, filter, dimension, partition, frame,
+or container state remains unsupported.
+
+### Acceptance
+
+Slice 36 is accepted only when:
+
+1. both target sizes match exact Pillow RGB bytes through the production
+   portable path;
+2. the complete reconstruction document is independently generated twice from
+   pinned dav1d 1.5.3 and remains byte-identical;
+3. direct-token controls remain unchanged and the first excluded final token
+   returns the manifest's exact Pillow success/error classification without
+   widening production;
+4. no dependency, unsafe Rust, native/WASM semantic fork, public processing
+   API, or fixture-selected branch is introduced;
+5. strict native and `wasm32-unknown-unknown` Clippy and rustdoc pass for no
+   features, every individual feature, defaults, and all features;
+6. legal verification, `cargo-deny`, and offline package verification pass;
+   and
+7. Coverage MCP reports exact 100% line, branch, function, and region coverage.
+
+### Accepted result
+
+The manifest now contains 1,179 cases: 901 decode cases and 278 encode cases
+over all eight formats, with 900 retained input assets, no planned cases, and
+no unwired encode cases. AVIF contributes 159 decode rows. Two complete asset
+generations and two Pillow-reference generations were byte-identical; the
+regenerated decode-reference diff has SHA-256
+`0f23476998c4ddb67ddccad0016f7e4d8aa8e1151cf9e0d487a8e5e877d2dca7`.
+
+The pinned reconstruction generator builds and runs instrumented dav1d twice
+inside one invocation. Its 142-case output has SHA-256
+`1220ad62353c24bb2fcf7168e96fd1c544403caf9e5c1c32b13580d8c739e5b5`.
+The four new target records retain exact token/sign/Golomb operation order,
+complete Y/U/V planes, and Pillow RGB rows for both declared dimensions.
+
+Production now calls the existing reference-mapped high-token extension only
+after the DC sign. It accepts final tokens fifteen and sixteen, dequantizes
+them to magnitudes 120 and 128 under the already closed qindex-two/qmatrix-ten
+policy, and reuses the verified 8x8 DC-only inverse DCT. It does not inspect a
+fixture name, source gray value, encoded byte, digest, native result, or final
+pixel. The gray-124 and gray-132 fixtures naturally reach final token 24 and
+remain rejected by portable reconstruction while retaining exact Pillow
+success through the native compatibility fallback.
+
+Final Coverage MCP run `1a021e5c-0a26-4212-a5ac-0bc5fac58bac`, snapshot
+`35222ef8-9b6f-4d04-80f9-9f2824c76093`, passes all seven test binaries. Its
+LLVM report records exact coverage of 38,276/38,276 lines, 5,464/5,464
+branches, 1,911/1,911 functions, and 62,938/62,938 regions.
+
+All 22 strict Clippy lanes and all 22 strict rustdoc lanes pass across native
+and `wasm32-unknown-unknown`: no features, each individual codec feature,
+default features, and all features. Rustfmt, whitespace validation, and Python
+syntax checks pass. The retained-license verifier confirms all 22
+legal/provenance files, and `cargo deny check advisories bans licenses
+sources` passes. Offline package verification builds 135 files, 2.1 MiB
+unpacked and 431.4 KiB compressed. No dependency, unsafe Rust, public
+processing API, or published diagnostic/fixture artifact was added.

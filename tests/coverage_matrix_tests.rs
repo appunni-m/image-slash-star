@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 138);
+    assert_eq!(expected.cases.len(), 142);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2662,6 +2662,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "portable_lossless_420_8x8_b.avif" => {
                 "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
             }
+            "portable_lossy_420_q99_gray_125_control.avif" => {
+                "e82feb502523b0e30e96c557012bbc79208f186e3fcb858916b2972db760aac1"
+            }
+            "portable_lossy_420_q99_8x8_gray_125_control.avif" => {
+                "4d11382e9da0a7e9facadaf22c7d9036b341797376ecc5a77c2779e1884e1ec5"
+            }
             "portable_lossy_420_q99_gray_126.avif" => {
                 "0bc6b6903ab77a6d1706777bb507e076f01290f57cb975508aec1cd5cf589810"
             }
@@ -2685,6 +2691,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "portable_lossy_420_q99_8x8_gray_130.avif" => {
                 "4371170b5239419060ed559afe13157740d69ef2aee0592cf4fc71c47dff58a5"
+            }
+            "portable_lossy_420_q99_gray_131_control.avif" => {
+                "d8044c92ef2a961ebee78d49908caae12338872a8cb36675ef6dbfb0f244e2e9"
+            }
+            "portable_lossy_420_q99_8x8_gray_131_control.avif" => {
+                "831ca0567d6d09bf16b7c76da27026347d9000d12ca92f486dd9c56b4226055e"
             }
             "portable_lossless_gray_32.avif" => {
                 "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
@@ -3013,9 +3025,11 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "animated.avif",
         "10bit.avif",
         "multitile.avif",
-        "portable_lossy_420_q99_gray_125_control.avif",
+        "portable_lossy_420_q99_gray_124_control.avif",
+        "portable_lossy_420_q99_8x8_gray_124_control.avif",
         "portable_lossy_420_q99_gray_128_control.avif",
-        "portable_lossy_420_q99_gray_131_control.avif",
+        "portable_lossy_420_q99_gray_132_control.avif",
+        "portable_lossy_420_q99_8x8_gray_132_control.avif",
         "portable_lossy_420_q99_eob_bin_control.avif",
         "portable_lossy_420_q99_eob_base_control.avif",
     ] {
