@@ -156,10 +156,12 @@ struct BlockCdfs {
     double_neighbor_coefficient_skip: [[u16; 2]; 2],
     eob_bin_luma: [u16; 5],
     eob_bin_chroma: [u16; 5],
+    eob_high_luma_zero: [u16; 2],
     eob_base_luma: [u16; 3],
     eob_base_luma_context_one: [u16; 3],
     eob_base_chroma: [u16; 3],
     base_luma_context_zero: [u16; 4],
+    base_luma_context_one: [u16; 4],
     high_luma: [[u16; 4]; 8],
     high_chroma: [u16; 4],
     dc_sign: [[[u16; 2]; 3]; 2],
@@ -220,10 +222,12 @@ impl BlockCdfs {
             double_neighbor_coefficient_skip: [[281, 0], [651, 0]],
             eob_bin_luma: [31_928, 31_729, 30_788, 27_873, 0],
             eob_bin_chroma: [29_521, 27_818, 23_080, 18_205, 0],
+            eob_high_luma_zero: [15_807, 0],
             eob_base_luma: [14_931, 3_713, 0],
             eob_base_luma_context_one: [3_168, 1_322, 0],
             eob_base_chroma: [11_403, 2_742, 0],
             base_luma_context_zero: [28_734, 23_838, 20_041, 0],
+            base_luma_context_one: [14_686, 3_027, 891, 0],
             high_luma: [
                 [18_470, 12_050, 8_594, 0],
                 [20_232, 13_167, 8_979, 0],
@@ -326,19 +330,13 @@ fn decode_dc_only_after_eob(
     Some(coefficients)
 }
 
-fn decode_luma_eob_one_after_eob(
+fn decode_luma_direct_ac_and_dc(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
+    ac_token: u32,
+    ac_coefficient_index: usize,
 ) -> Option<TransformCoefficients> {
-    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:443-480 and pinned Slice 21
-    // traces. EOB one uses context one, scan_4x4[1] == 4, and the high-token
-    // context seven for its final AC base token.
-    let ac_base_token = decoder.adaptive_symbol(&mut cdfs.eob_base_luma_context_one, 2);
-    (ac_base_token == 2).then_some(())?;
-    let ac_token = decode_high_token(decoder, &mut cdfs.high_luma[7]);
-    (ac_token == 10).then_some(())?;
-
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:526-546. Once EOB is nonzero,
     // DC uses base_tok rather than eob_base_tok.
     let dc_base_token = decoder.adaptive_symbol(&mut cdfs.base_luma_context_zero, 3);
@@ -358,21 +356,60 @@ fn decode_luma_eob_one_after_eob(
 
     let mut coefficients = [0_i32; 16];
     coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
-    coefficients[4] = dequantize_lossless_coefficient(ac_token, ac_negative);
+    coefficients[ac_coefficient_index] = dequantize_lossless_coefficient(ac_token, ac_negative);
     Some(coefficients)
+}
+
+fn decode_luma_direct_ac_token(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+) -> Option<u32> {
+    let ac_base_token = decoder.adaptive_symbol(&mut cdfs.eob_base_luma_context_one, 2);
+    (ac_base_token == 2).then_some(())?;
+    let ac_token = decode_high_token(decoder, &mut cdfs.high_luma[7]);
+    (ac_token == 10).then_some(ac_token)
+}
+
+fn decode_luma_eob_one_after_eob(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:443-480 and pinned Slice 21
+    // traces. EOB one uses context one, scan_4x4[1] == 4, and the high-token
+    // context seven for its final AC base token.
+    let ac_token = decode_luma_direct_ac_token(decoder, cdfs)?;
+    decode_luma_direct_ac_and_dc(decoder, sign_context, cdfs, ac_token, 4)
+}
+
+fn decode_luma_eob_two_after_eob(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:407-564, src/scan.c:35-40,
+    // and the pinned Slice 22 scalar trace. EOB-bin symbol two uses high-bit
+    // context zero, scan_4x4[2] == 1, then visits scan_4x4[1] == 4 in reverse.
+    (!decoder.adaptive_bool(&mut cdfs.eob_high_luma_zero)).then_some(())?;
+    let ac_token = decode_luma_direct_ac_token(decoder, cdfs)?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma_context_one, 3) == 0).then_some(())?;
+    decode_luma_direct_ac_and_dc(decoder, sign_context, cdfs, ac_token, 1)
 }
 
 fn decode_nonzero_lossless_transform(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     sign_context: usize,
-    allow_luma_eob_one: bool,
+    allow_luma_ac: bool,
     cdfs: &mut BlockCdfs,
 ) -> Option<TransformCoefficients> {
     match decode_eob_bin(decoder, plane, cdfs) {
         0 => decode_dc_only_after_eob(decoder, plane, sign_context, cdfs),
-        1 if allow_luma_eob_one && plane == 0 => {
+        1 if allow_luma_ac && plane == 0 => {
             decode_luma_eob_one_after_eob(decoder, sign_context, cdfs)
+        }
+        2 if allow_luma_ac && plane == 0 => {
+            decode_luma_eob_two_after_eob(decoder, sign_context, cdfs)
         }
         _ => None,
     }

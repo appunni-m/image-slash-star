@@ -175,6 +175,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691",
         "size": [12, 12],
     },
+    "partitioned_square_12x12_luma_eob2_control.avif": {
+        "file_sha256": "89842483e159b7d9d98f58282679f9b6d09f4e164576270e9546b13df176c986",
+        "rgb_sha256": "13878ffdf1168508a15759ff58c897370e8428fe522422d52149126a9cc42ef4",
+        "size": [12, 12],
+    },
     "partitioned_square_16x16_g64.avif": {
         "file_sha256": "4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7",
         "rgb_sha256": "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe",

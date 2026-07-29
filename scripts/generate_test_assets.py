@@ -4151,6 +4151,12 @@ def gen_avif():
         size=(12, 12),
         replacement_origin=(8, 10),
     )
+    write_square_partition(
+        "partitioned_square_12x12_luma_eob4_control.avif",
+        (22, 96, 208),
+        size=(12, 12),
+        replacement_origin=(10, 10),
+    )
     write_square_partition("partitioned_square_16x16_g64.avif", (17, 64, 203))
     write_square_partition(
         "partitioned_square_16x16_g96_direct_tokens.avif",
