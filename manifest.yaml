@@ -2683,9 +2683,17 @@ formats:
       test_assets:
       - partitioned_square_12x12_luma_eob9_control.avif
     - id: partitioned_square_12x12_luma_eob10_control
-      description: 12x12 luma-only EOB-10 control outside the portable EOB-9 coefficient class
+      description: 12x12 four-leaf square split with a luma-only EOB-10 lossless transform
       test_assets:
       - partitioned_square_12x12_luma_eob10_control.avif
+    - id: partitioned_square_12x12_luma_eob12_control
+      description: 12x12 four-leaf square split with a luma-only EOB-12 lossless transform
+      test_assets:
+      - partitioned_square_12x12_luma_eob12_control.avif
+    - id: partitioned_square_12x12_luma_eob15_control
+      description: 12x12 luma-only EOB-15 control outside the portable EOB-12 coefficient class
+      test_assets:
+      - partitioned_square_12x12_luma_eob15_control.avif
     - id: partitioned_square_16x16_g64
       description: 16x16 four-leaf square split with negative luma and positive chroma boundary DC residuals
       test_assets:

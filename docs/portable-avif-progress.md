@@ -4702,3 +4702,469 @@ defaults, and all features on native and `wasm32-unknown-unknown`. Strict
 rustdoc, formatting, whitespace, and the 19-file third-party legal inventory
 also pass. Offline `cargo package` verifies 132 publishable files, 2.0 MiB
 unpacked and 429,765 bytes compressed.
+
+## Slice 26 Exploration Plan: Lossless EOB 10
+
+Status: accepted.
+
+### Current boundary and reproducibility
+
+`partitioned_square_12x12_luma_eob10_control.avif` is the smallest retained
+portable miss after Slice 25. It changes source RGB `(17,91,203)` to
+`(22,96,208)` beginning at `(10,9)`. It retains the same five-node square
+partition tree, vertical/DC/DC/DC luma predictor sequence, DC-only or skipped
+first three leaves, and skipped U and V transforms in the bottom-right leaf.
+Its four bottom-right luma transforms have EOB values 10, 9, 1, and skipped.
+
+A fresh deterministic 36-origin sweep over the same 12x12 source family
+selected `(10,9)` as the EOB-10 target and `(9,10)` as the nearest EOB-12
+control with identical partition topology and predictor sequence. Two
+subsequent full runs through the pinned Pillow 12.2.0, libavif 1.4.1, libaom
+3.13.2, and scalar instrumented dav1d 1.5.3 stack produced byte-identical
+complete reports with SHA-256
+`b2a185b04f7f4892aff2e65f5138f1ee78ec96f7f6b568229fb5a93f318db64c`.
+Each report retains the encoded file and AV1 item hashes, all five partition
+nodes, every adaptive entropy operation and CDF state, coefficient vectors,
+reconstructed Y/U/V rows, and Pillow RGB rows.
+
+The EOB-10 target is the committed 326-byte file with SHA-256
+`2cb6cfd94fb6cfaf62375d0c7c9dd51b9193d4b3740b31a62750b14ddc39e072`.
+Its 51-byte AV1 color item has SHA-256
+`a223fe1af18bb44cdc2161e2f590f6fec45721f10af076827d7f92ffdb89e361`,
+and the complete scalar decode consumes 301 entropy operations. The five
+partition ranges remain 34880, 40768, 50626, 52336, and 54330. Pinned dav1d
+produces Y/U/V SHA-256 values
+`9703bae4c02ef874cce9dfe174437a520f97f291d37017c88c94f3a70791719d`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`edb3552022d80b01938371e9e0d78ea4544d2b1bab41cfe67253a89458774264`.
+
+### First-divergence entropy mapping
+
+The first unsupported value is the first EOB-extra bit after dav1d
+`src/recon_tmpl.c:403-546` EOB-bin symbol four:
+
+1. `eob_bin_16[0][0]` returns symbol four. EOB-high context two begins at
+   `[25147,0]`, the reverse representation of dav1d
+   `src/cdf.c:787-797` `CDF1(7621)`. It decodes zero and updates to
+   `[23576,1]`.
+2. The two equiprobable EOB-extra bits are one and zero, so
+   `((0 | 2) << 2) | 2` is exactly ten.
+3. `scan_4x4[10] == 7` selects the final coefficient. EOB-base context three
+   returns base symbol two. High-token context fourteen returns direct token
+   three.
+4. The reverse loop visits `scan_4x4[9] == 3` and
+   `scan_4x4[8] == 6`. Both use base-token context eight and high-token
+   context sixteen, returning direct token three after their respective
+   adaptive updates.
+5. `scan_4x4[7] == 9`, `scan_4x4[6] == 12`, and
+   `scan_4x4[5] == 8` use base-token context six and return zero.
+6. `scan_4x4[4] == 5` introduces base-token context nine. Its initial CDF is
+   `[27513,19929,14136,0]`, the reverse representation of dav1d
+   `src/cdf.c:881-905` `CDF3(5255,12839,18632)`. It returns symbol three and
+   updates to `[27677,20330,14718,1]`; high-token context nine then returns
+   direct token three.
+7. `scan_4x4[3] == 2` introduces base-token context ten. Its initial CDF is
+   `[29948,25562,21607,0]`, the reverse representation of
+   `CDF3(2820,7206,11161)`. It returns symbol three and updates to
+   `[30036,25787,21955,1]`. Its neighborhood introduces high-token context
+   nineteen, whose initial CDF is `[27431,22870,19008,0]`, the reverse
+   representation of dav1d `src/cdf.c:1316-1340`
+   `CDF3(5337,9898,13760)`. It returns direct token three and updates to
+   `[26574,22156,18414,1]`.
+8. `scan_4x4[2] == 1` uses base-token context five and high-token context
+   twelve, returning direct token three.
+9. `scan_4x4[1] == 4` uses base-token context four. Its reused high-token
+   context nine first returns adaptive symbol three and then symbol two,
+   producing direct token eight after the earlier raster-five update.
+10. The neighboring levels select DC high-token context six. DC base-token
+    context zero returns symbol three and DC high-token context six returns
+    direct token eight. The DC sign is positive; no Golomb extension is read
+    for any direct token.
+11. The nonzero link chain reads AC signs in raster order 4, 1, 2, 5, 6, 3,
+    and 7. Their signs are negative, negative, negative, positive, positive,
+    negative, and positive. The final raster coefficient vector is
+    `[32,-12,-12,-12,-32,12,12,12,0,0,0,0,0,0,0,0]` after
+    Q-index-zero luma dequantization by four.
+
+The second transform is the independently proved EOB-9 class with coefficient
+vector `[32,-24,-24,-24,0,0,0,0,0,0,0,0,0,0,0,0]`. The third
+is the independently proved EOB-1 class with coefficient vector
+`[24,0,0,0,-40,0,0,0,0,0,0,0,0,0,0,0]`. This sequence proves
+that EOB-10 must leave every shared adaptive table in exactly the state
+expected by the existing EOB-9 and EOB-1 decoders.
+
+### Independent inverse-transform and reconstruction check
+
+Applying dav1d `src/itx_1d.c:1066-1080` and
+`src/itx_tmpl.c:184-203` independently to the EOB-10 vector gives:
+
+```text
+0 0 0 0
+0 0 5 5
+0 0 5 5
+0 0 5 5
+```
+
+The first transform's DC predictor is 81, so it reconstructs to one row of
+`[81,81,81,81]` followed by three rows of `[81,81,86,86]`. The
+second EOB-9 transform has predictor 83 and reconstructs to one row of 81
+followed by three rows of 86. The third EOB-1 transform has predictor 82 and
+reconstructs every row to `[81,81,86,86]`. The fourth transform is skipped
+and propagates predictor 86.
+
+The complete bottom-right 8x8 luma leaf therefore has a first row entirely
+equal to 81 and every later row equal to
+`[81,81,86,86,86,86,86,86]`. Clipping it to the declared 12x12 frame
+changes visible coordinates from `(10,9)` through the lower-right corner,
+matching every pinned dav1d row and the target Y hash.
+
+### Focused next rejection control
+
+The same 36-origin sweep identifies `(9,10)` as the closest same-topology
+control whose first transform uses the next unsupported EOB-high value. Its
+bottom-right luma transforms have EOB values 12, 2, 6, and skipped.
+
+The control is a deterministic 326-byte AVIF with SHA-256
+`52293589be5deed92756c5e11447b571686381ec3c873dbb9e5a221b91eb820c`.
+Its 51-byte AV1 item has SHA-256
+`a62aca255bdc1ebdb8b2aca233bf82fc975c3f846bc9244df943911d8ba18e14`,
+and pinned dav1d consumes 293 entropy operations. Its Y/U/V SHA-256 values
+are
+`6a0bfe91c043e35738f5d6ac96e0c23ff865f37c29978c03caf937c39e78998c`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`a98fa8dc8ff3ed903815016c02089c888bee48bfb8774903c8bf70d57aed2735`.
+
+Its first new syntax shares EOB-bin symbol four but EOB-high context two
+returns one, updating from `[25147,0]` to `[25623,1]`. Its two extra bits
+are zero and zero, producing EOB twelve. Slice 26 must reject at the high bit
+before consuming either extra bit or any EOB-12 coefficient syntax.
+
+### Implementation boundary
+
+Extend only the private lossless 4x4 two-dimensional luma coefficient
+decoder:
+
+1. retain EOB-bin symbol four and EOB-high context two, accept only high zero
+   with extra bits one then zero for EOB ten, and reject high one before
+   either extra bit;
+2. decode EOB ten through scan positions 7, 3, 6, 9, 12, 8, 5, 2, 1, and
+   4 using the exact traced base/high contexts, direct tokens, coefficient
+   link order, DC-context derivation, signs, and dequantization;
+3. add q-context-zero base-token contexts nine and ten and aligned high-token
+   contexts eighteen and nineteen, while exercising only the traced contexts
+   nine, ten, and nineteen;
+4. preserve the following EOB-9 and EOB-1 adaptive entropy states exactly;
+   and
+5. leave EOB twelve, every other symbol-four high/extra combination, every
+   unproved token or context, other plane, transform type, or transform size
+   rejected before its downstream syntax.
+
+The production path must be selected only by parsed AV1 syntax. It must not
+inspect a fixture name, file hash, dimensions, transform ordinal, encoded
+byte offset, target, or expected output. Do not broaden this slice to the
+EOB-12 control or any untraced coefficient class.
+
+### Acceptance criteria
+
+- The existing EOB-10 manifest fixture becomes the ninety-seventh independent
+  reconstruction positive, matching all 301 entropy operations, every
+  adaptive CDF state, exact Y/U/V bytes and hashes, and exact Pillow RGB
+  bytes.
+- A regenerated `(9,10)` EOB-12 manifest success fixture remains a private
+  portable miss at EOB-high context two before either extra bit or any
+  coefficient syntax.
+- The EOB-12 bytes are regenerated by the existing deterministic fixture
+  script and retain the pinned file, AV1 item, plane, and Pillow hashes.
+- EOB ten's accepted high/extra values, the rejected EOB-12 high value, every
+  new base/high context, direct-token branch, sign, and downstream adaptive
+  EOB-9/EOB-1 occurrence are exercised through manifest-derived
+  reverse-mapped inputs.
+- Every previous reconstruction case and all manifest rows remain
+  byte-exact, with no planned, skipped, or unwired row.
+- There is no new dependency, unsafe Rust, public image-processing API,
+  target fork, native-only behavior, or fixture-selected production path.
+- Strict Clippy passes for no features, each codec feature, defaults, and all
+  features on native and `wasm32-unknown-unknown`; strict rustdoc, rustfmt,
+  whitespace, third-party legal audit, and offline source-package checks pass.
+- Coverage MCP is the only test runner and reports exactly 100% line, branch,
+  function, and region coverage after all implementation and documentation
+  changes are complete.
+
+### Acceptance result
+
+The private coefficient decoder now implements the proved lossless EOB-10
+syntax class. EOB-bin symbol four shares EOB-high context two with EOB nine
+and accepts extra bits one then zero for EOB ten. The coefficient path follows
+scan positions 7, 3, 6, 9, 12, 8, 5, 2, 1, and 4, uses the exact traced
+base/high contexts, derives DC high-token context six, and preserves the
+raster 4-to-1-to-2-to-5-to-6-to-3-to-7 sign chain. Every magnitude is a
+direct token, including the reused high-context-nine token eight; no Golomb
+extension is consumed. No fixture name, hash, dimension, transform ordinal,
+byte offset, target, dependency, unsafe Rust, or public image-processing API
+selects this path.
+
+The former EOB-10 control is now the ninety-seventh independent reconstruction
+positive. The production trace matches all 301 pinned scalar entropy
+operations and adaptive CDF states, exact Y/U/V rows and hashes, and exact
+Pillow RGB bytes. The deterministic reconstruction oracle has SHA-256
+`d90c4ceb873c94cdc43caaa6e9acfa1abae6a8cf6a29ee91e264e1c42fed987d`.
+
+The new 326-byte
+`partitioned_square_12x12_luma_eob12_control.avif` is an active manifest
+success with file SHA-256
+`52293589be5deed92756c5e11447b571686381ec3c873dbb9e5a221b91eb820c`
+and exact Pillow RGB SHA-256
+`a98fa8dc8ff3ed903815016c02089c888bee48bfb8774903c8bf70d57aed2735`.
+The private portable classifier rejects it when EOB-high context two returns
+one, before consuming either EOB-extra bit or any EOB-12 coefficient syntax.
+
+The manifest contains 1,129 active rows: 851 decode and 278 encode. AVIF has
+109 active decode rows and 23 active encode rows, with no planned, skipped,
+or unwired rows. Every retained manifest and reconstruction case remains
+byte-exact.
+
+Coverage MCP run `548d675d-a850-4324-a957-8358b1372935`, snapshot
+`bfe299d5-86fd-4c69-8e47-05e52d89a694`, passes all seven test binaries with
+36,700/36,700 lines, 5,358/5,358 branches, 1,850/1,850 functions, and
+60,734/60,734 regions.
+
+Strict Clippy passes for no features, every individual codec feature,
+defaults, and all features on native and `wasm32-unknown-unknown`. Strict
+rustdoc, formatting, whitespace, and the 19-file third-party legal inventory
+also pass. Offline `cargo package` verifies 132 publishable files, 2.0 MiB
+unpacked and 430,191 bytes compressed, with crate SHA-256
+`5c0e496f30bc894986afc653b77821316ac2b44a0bde3250836644bc060c75c8`.
+
+## Slice 27 Exploration Plan: Lossless EOB 12
+
+Status: accepted.
+
+### Current boundary and reproducibility
+
+`partitioned_square_12x12_luma_eob12_control.avif` is the smallest retained
+portable miss after Slice 26. It changes source RGB `(17,91,203)` to
+`(22,96,208)` beginning at `(9,10)`. It retains the same five-node square
+partition tree, vertical/DC/DC/DC luma predictor sequence, DC-only or skipped
+first three leaves, and skipped U and V transforms in the bottom-right leaf.
+Its four bottom-right luma transforms have EOB values 12, 2, 6, and skipped.
+
+The existing deterministic 36-origin sweep selected `(9,10)` as the EOB-12
+target and `(9,9)` as the nearest same-topology EOB-15 control. Two fresh full
+runs through the pinned Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, and
+scalar instrumented dav1d 1.5.3 stack produced byte-identical complete reports
+with SHA-256
+`e09f1bd24d96e6d7548d52d80e9930b5634ba2d68c17c41428a466ac5a9b8b4b`.
+Each report retains the encoded file and AV1 item hashes, all five partition
+nodes, every adaptive entropy operation and CDF state, coefficient vectors,
+reconstructed Y/U/V rows, and Pillow RGB rows.
+
+The EOB-12 target is the committed 326-byte file with SHA-256
+`52293589be5deed92756c5e11447b571686381ec3c873dbb9e5a221b91eb820c`.
+Its 51-byte AV1 color item has SHA-256
+`a62aca255bdc1ebdb8b2aca233bf82fc975c3f846bc9244df943911d8ba18e14`,
+and the complete scalar decode consumes 293 entropy operations. The five
+partition ranges remain 34880, 40768, 50626, 52336, and 54330. Pinned dav1d
+produces Y/U/V SHA-256 values
+`6a0bfe91c043e35738f5d6ac96e0c23ff865f37c29978c03caf937c39e78998c`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`a98fa8dc8ff3ed903815016c02089c888bee48bfb8774903c8bf70d57aed2735`.
+
+### First-divergence entropy mapping
+
+The first unsupported value is EOB-high context two returning one in dav1d
+`src/recon_tmpl.c:403-546`:
+
+1. `eob_bin_16[0][0]` returns symbol four. EOB-high context two begins at
+   `[25147,0]`, the reverse representation of dav1d
+   `src/cdf.c:787-797` `CDF1(7621)`. It decodes one and updates to
+   `[25623,1]`.
+2. The two equiprobable EOB-extra bits are zero and zero, so
+   `((1 | 2) << 2) | 0` is exactly twelve.
+3. `scan_4x4[12] == 13` selects the final coefficient. EOB-base context three
+   returns symbol one, producing direct base token two without a high-token
+   read.
+4. The reverse loop visits `scan_4x4[11] == 10` and
+   `scan_4x4[10] == 7`. Both introduce base-token context twenty-one. Its
+   initial CDF is `[17032,5215,2164,0]`, the reverse representation of dav1d
+   `src/cdf.c:881-905` `CDF3(15736,27553,30604)`. Both symbols are zero,
+   updating it through `[16500,5053,2097,1]` to
+   `[15985,4896,2032,2]`.
+5. `scan_4x4[9] == 3` and `scan_4x4[8] == 6` use base-token context six
+   and return zero.
+6. `scan_4x4[7] == 9` uses base-token context seven and returns symbol two,
+   producing direct base token two. `scan_4x4[6] == 12` reuses the adaptively
+   updated context seven, returns symbol three, and selects high-token context
+   fifteen, which returns direct token three.
+7. `scan_4x4[5] == 8` uses base-token context ten and introduces high-token
+   context eighteen. Its initial CDF is `[26245,20989,16768,0]`, the reverse
+   representation of dav1d `src/cdf.c:1316-1340`
+   `CDF3(6523,11779,16000)`. It returns direct token three and updates to
+   `[25425,20334,16244,1]`.
+8. `scan_4x4[4] == 5` uses base-token context eight and returns symbol two,
+   producing direct base token two. `scan_4x4[3] == 2` uses base-token
+   context six and returns zero.
+9. `scan_4x4[2] == 1` uses base-token context three. High-token context eight
+   returns token seven through adaptive symbols three and one.
+10. `scan_4x4[1] == 4` uses base-token context five. High-token context
+    eleven returns direct token three.
+11. The neighboring levels select DC high-token context six. DC base-token
+    context zero returns symbol three and DC high-token context six returns
+    direct token eight. The DC sign is positive; no Golomb extension is read.
+12. The nonzero link chain reads AC signs in raster order 4, 1, 5, 8, 12, 9,
+    and 13. Their signs are negative, negative, positive, negative, negative,
+    positive, and positive. The final raster coefficient vector is
+    `[32,-28,0,0,-12,8,0,0,-12,8,0,0,-12,8,0,0]` after
+    Q-index-zero luma dequantization by four.
+
+The second transform is the independently proved EOB-2 class with coefficient
+vector `[24,-40,0,0,0,0,0,0,0,0,0,0,0,0,0,0]`. The third is the
+independently proved EOB-6 class with coefficient vector
+`[28,0,0,0,-20,0,0,0,-20,0,0,0,-20,0,0,0]`. This sequence proves
+that EOB-12 must leave every shared adaptive table in exactly the state
+expected by the existing EOB-2 and EOB-6 decoders.
+
+### Independent inverse-transform and reconstruction check
+
+Applying dav1d `src/itx_1d.c:1066-1080` and
+`src/itx_tmpl.c:184-203` independently to the EOB-12 vector gives:
+
+```text
+0 0 0 0
+0 0 0 0
+0 5 5 5
+0 5 5 5
+```
+
+The first transform's DC predictor is 81, so it reconstructs to two rows of
+81 followed by two rows of `[81,86,86,86]`. The second EOB-2 transform has
+predictor 82 and reconstructs to two rows of 81 followed by two rows of 86.
+The third EOB-6 transform has predictor 83 and reconstructs every row to
+`[81,86,86,86]`. The fourth transform is skipped and propagates predictor
+86.
+
+The complete bottom-right 8x8 luma leaf therefore has its first two rows
+entirely equal to 81 and every later row equal to
+`[81,86,86,86,86,86,86,86]`. Clipping it to the declared 12x12 frame
+changes visible coordinates from `(9,10)` through the lower-right corner,
+matching every pinned dav1d row and the target Y hash.
+
+### Focused next rejection control
+
+The same 36-origin sweep identifies `(9,9)` as the closest same-topology
+control whose first transform uses the next EOB value. Its bottom-right luma
+transforms have EOB values 15, 9, 6, and skipped.
+
+The control is a deterministic 329-byte AVIF with SHA-256
+`3265cf40613523eab69cba5ae73af453f781a29ab3b36f13c21b6720a4d42d7a`.
+Its 54-byte AV1 item has SHA-256
+`51e80d7551ce4d8882e851ae7c9f454a1579152fe87e0c7f089e7b795eed6442`,
+and pinned dav1d consumes 325 entropy operations. Its Y/U/V SHA-256 values
+are
+`3537a0e7b58ee08b95158e8246e3943d29f9072f41ae0ffb2e9bc5f3417463a3`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`2d41c17b74e78417fd7ab3fdb5da3225f52c4035e39133275ee01496cc21a77a`.
+
+Its first new syntax shares EOB-bin symbol four and EOB-high context two
+returning one. Its first equiprobable EOB-extra bit is one, whereas EOB twelve
+requires zero; the second bit is also one, producing EOB fifteen. Slice 27
+must reject at the first extra bit before consuming the second bit or any
+EOB-15 coefficient syntax.
+
+### Implementation boundary
+
+Extend only the private lossless 4x4 two-dimensional luma coefficient
+decoder:
+
+1. retain EOB-bin symbol four and EOB-high context two, accept high one only
+   when both extra bits are zero for EOB twelve, and reject the EOB-15 first
+   extra bit before reading its second bit;
+2. decode EOB twelve through scan positions 13, 10, 7, 3, 6, 9, 12, 8, 5,
+   2, 1, and 4 using the exact traced base/high contexts, direct base and high
+   tokens, coefficient link order, DC-context derivation, signs, and
+   dequantization;
+3. add aligned q-context-zero base-token contexts eleven through twenty-one,
+   while exercising only the newly traced context twenty-one;
+4. preserve the following EOB-2 and EOB-6 adaptive entropy states exactly;
+   and
+5. leave EOB fifteen, every other symbol-four high/extra combination, every
+   unproved token or context, other plane, transform type, or transform size
+   rejected before its downstream syntax.
+
+The production path must be selected only by parsed AV1 syntax. It must not
+inspect a fixture name, file hash, dimensions, transform ordinal, encoded
+byte offset, target, or expected output. Do not broaden this slice to the
+EOB-15 control or any untraced coefficient class.
+
+### Acceptance criteria
+
+- The existing EOB-12 manifest fixture becomes the ninety-eighth independent
+  reconstruction positive, matching all 293 entropy operations, every
+  adaptive CDF state, exact Y/U/V bytes and hashes, and exact Pillow RGB
+  bytes.
+- A regenerated `(9,9)` EOB-15 manifest success fixture remains a private
+  portable miss at the first EOB-extra bit before its second bit or
+  coefficient syntax.
+- The EOB-15 bytes are regenerated by the existing deterministic fixture
+  script and retain the pinned file, AV1 item, plane, and Pillow hashes.
+- EOB twelve's accepted high/extra values, the rejected EOB-15 first extra
+  bit, context twenty-one, every direct-token branch and sign, and downstream
+  adaptive EOB-2/EOB-6 occurrence are exercised through manifest-derived
+  reverse-mapped inputs.
+- Every previous reconstruction case and all manifest rows remain
+  byte-exact, with no planned, skipped, or unwired row.
+- There is no new dependency, unsafe Rust, public image-processing API,
+  target fork, native-only behavior, or fixture-selected production path.
+- Strict Clippy passes for no features, each codec feature, defaults, and all
+  features on native and `wasm32-unknown-unknown`; strict rustdoc, rustfmt,
+  whitespace, third-party legal audit, and offline source-package checks pass.
+- Coverage MCP is the only test runner and reports exactly 100% line, branch,
+  function, and region coverage after all implementation and documentation
+  changes are complete.
+
+### Acceptance result
+
+The private coefficient decoder now implements the proved lossless EOB-12
+syntax class. EOB-bin symbol four shares EOB-high context two with EOB nine
+and ten, accepts extra bits zero then zero for EOB twelve, and rejects the
+EOB-15 control at its first extra bit of one. The coefficient path follows
+scan positions 13, 10, 7, 3, 6, 9, 12, 8, 5, 2, 1, and 4, including the
+newly proved base-token context twenty-one and high-token context eighteen.
+Its exact dequantized coefficients are
+`[32,-28,0,0,-12,8,0,0,-12,8,0,0,-12,8,0,0]`.
+
+The committed EOB-12 fixture is now the ninety-eighth independent positive
+in the reconstruction oracle. All 293 entropy operations, adaptive CDF
+states, coefficient vectors, reconstructed Y/U/V bytes, and Pillow RGB bytes
+match exactly. The regenerated reconstruction oracle has SHA-256
+`a66198fb36acde59ab02912e79ce735b32280a3546a1b2bc696da9c908c5d235`.
+The deterministic EOB-15 control remains a private portable miss at the first
+extra bit, before its second extra bit or any coefficient syntax is consumed.
+
+The manifest contains 1,130 active rows: 852 decode and 278 encode. AVIF has
+110 active decode rows and 23 active encode rows, with no planned, skipped,
+or unwired rows. Every retained manifest and reconstruction case remains
+byte-exact.
+
+Coverage MCP run `9bcd31a0-4546-45e0-b03d-29c69d52c667`, snapshot
+`7d72d435-cc3e-470b-a93a-eb5ef6108fb6`, passes all seven test binaries with
+36,775/36,775 lines, 5,360/5,360 branches, 1,851/1,851 functions, and
+60,930/60,930 regions.
+
+Strict Clippy passes for no features, every individual codec feature,
+defaults, and all features on native and `wasm32-unknown-unknown`. Strict
+rustdoc, formatting, whitespace, and the 19-file third-party legal inventory
+also pass. Offline `cargo package` verifies 132 publishable files, 2.0 MiB
+unpacked and 430,571 bytes compressed, with crate SHA-256
+`620a6d5a784857d9e624522b85e752b79ab581a135e0fbbac8d3be5eeb93c295`.

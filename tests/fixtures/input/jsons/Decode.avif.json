@@ -608,6 +608,40 @@
       ]
     },
     {
+      "id": "partitioned_square_12x12_luma_eob12_control",
+      "asset": "partitioned_square_12x12_luma_eob12_control.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_12x12_luma_eob12_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_12x12_luma_eob15_control",
+      "asset": "partitioned_square_12x12_luma_eob15_control.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_12x12_luma_eob15_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "partitioned_square_16x16_g64",
       "asset": "partitioned_square_16x16_g64.avif",
       "expect_error": false,

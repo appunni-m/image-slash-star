@@ -159,15 +159,15 @@ struct BlockCdfs {
     eob_high_luma: [[u16; 2]; 3],
     eob_base_luma: [[u16; 3]; 4],
     eob_base_chroma: [u16; 3],
-    base_luma: [[u16; 4]; 9],
-    high_luma: [[u16; 4]; 18],
+    base_luma: [[u16; 4]; 22],
+    high_luma: [[u16; 4]; 20],
     high_chroma: [u16; 4],
     dc_sign: [[[u16; 2]; 3]; 2],
 }
 
 impl BlockCdfs {
     // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:113-138, 169-177, 412-414,
-    // 719-843, 881-890, and 1313-1348 for q-context zero. Filter-intra is
+    // 719-905 and 1313-1348 for q-context zero. Filter-intra is
     // indexed by block size at src/cdf.c:88-110.
     const fn defaults(use_filter_intra: [u16; 2]) -> Self {
         Self {
@@ -238,6 +238,19 @@ impl BlockCdfs {
                 [12_101, 2_222, 839, 0],
                 [19_725, 6_645, 2_634, 0],
                 [24_617, 14_011, 7_990, 0],
+                [27_513, 19_929, 14_136, 0],
+                [29_948, 25_562, 21_607, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [24_576, 16_384, 8_192, 0],
+                [17_032, 5_215, 2_164, 0],
             ],
             high_luma: [
                 [18_470, 12_050, 8_594, 0],
@@ -258,6 +271,8 @@ impl BlockCdfs {
                 [18_984, 12_047, 8_287, 0],
                 [21_932, 15_147, 10_868, 0],
                 [24_396, 18_324, 13_921, 0],
+                [26_245, 20_989, 16_768, 0],
+                [27_431, 22_870, 19_008, 0],
             ],
             high_chroma: [16_801, 9_863, 6_482, 0],
             dc_sign: [
@@ -529,22 +544,15 @@ fn decode_luma_eob_four_or_six_after_eob(
     }
 }
 
-fn decode_luma_eob_nine_after_eob(
+fn decode_luma_eob_nine_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
 ) -> Option<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
-    // and the pinned Slice 25 scalar trace. Symbol four uses high-bit context
-    // two and two equiprobable extra bits. This closed class admits only the
-    // zero/zero/one EOB-nine combination and rejects EOB ten at its first
-    // extra bit.
-    (!decoder.adaptive_bool(&mut cdfs.eob_high_luma[2])).then_some(())?;
-    (!decoder.equal()).then_some(())?;
-    decoder.equal().then_some(())?;
-
-    // scan_4x4[9] == 3 is final. The reverse loop then visits raster 6, 9,
-    // 12, 8, 5, 2, 1, and 4 with contexts 6, 6, 6, 6, 6, 8, 4, and 1.
+    // and the pinned Slice 25 scalar trace. scan_4x4[9] == 3 is final. The
+    // reverse loop then visits raster 6, 9, 12, 8, 5, 2, 1, and 4 with
+    // contexts 6, 6, 6, 6, 6, 8, 4, and 1.
     (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2).then_some(())?;
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
     (coefficient_three_token == 6).then_some(())?;
@@ -581,6 +589,177 @@ fn decode_luma_eob_nine_after_eob(
     Some(coefficients)
 }
 
+fn decode_luma_eob_ten_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
+    // src/cdf.c:881-894, 1316-1340, and the pinned Slice 26 scalar trace.
+    // scan_4x4[10] == 7 is final. The reverse loop then visits raster 3, 6,
+    // 9, 12, 8, 5, 2, 1, and 4.
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2).then_some(())?;
+    let coefficient_seven_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
+    (coefficient_seven_token == 3).then_some(())?;
+
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3).then_some(())?;
+    let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[16]);
+    (coefficient_three_token == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3).then_some(())?;
+    let coefficient_six_token = decode_high_token(decoder, &mut cdfs.high_luma[16]);
+    (coefficient_six_token == 3).then_some(())?;
+
+    for _ in 0..3 {
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
+    }
+
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3).then_some(())?;
+    let coefficient_five_token = decode_high_token(decoder, &mut cdfs.high_luma[9]);
+    (coefficient_five_token == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3).then_some(())?;
+    let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[19]);
+    (coefficient_two_token == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[12]);
+    (coefficient_one_token == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3).then_some(())?;
+    let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[9]);
+    (coefficient_four_token == 8).then_some(())?;
+
+    // The three DC-neighbor levels select high-token context six. dav1d's
+    // nonzero link chain reads signs in raster order 4, 1, 2, 5, 6, 3, and 7.
+    let (dc_token, dc_negative) = decode_luma_dc_after_ac(decoder, sign_context, cdfs, 6)?;
+    let coefficient_four_negative = decoder.equal();
+    let coefficient_four_token = extend_high_token(decoder, coefficient_four_token);
+    let coefficient_one_negative = decoder.equal();
+    let coefficient_one_token = extend_high_token(decoder, coefficient_one_token);
+    let coefficient_two_negative = decoder.equal();
+    let coefficient_two_token = extend_high_token(decoder, coefficient_two_token);
+    let coefficient_five_negative = decoder.equal();
+    let coefficient_five_token = extend_high_token(decoder, coefficient_five_token);
+    let coefficient_six_negative = decoder.equal();
+    let coefficient_six_token = extend_high_token(decoder, coefficient_six_token);
+    let coefficient_three_negative = decoder.equal();
+    let coefficient_three_token = extend_high_token(decoder, coefficient_three_token);
+    let coefficient_seven_negative = decoder.equal();
+    let coefficient_seven_token = extend_high_token(decoder, coefficient_seven_token);
+
+    let mut coefficients = [0_i32; 16];
+    coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
+    coefficients[1] =
+        dequantize_lossless_coefficient(coefficient_one_token, coefficient_one_negative);
+    coefficients[2] =
+        dequantize_lossless_coefficient(coefficient_two_token, coefficient_two_negative);
+    coefficients[3] =
+        dequantize_lossless_coefficient(coefficient_three_token, coefficient_three_negative);
+    coefficients[4] =
+        dequantize_lossless_coefficient(coefficient_four_token, coefficient_four_negative);
+    coefficients[5] =
+        dequantize_lossless_coefficient(coefficient_five_token, coefficient_five_negative);
+    coefficients[6] =
+        dequantize_lossless_coefficient(coefficient_six_token, coefficient_six_negative);
+    coefficients[7] =
+        dequantize_lossless_coefficient(coefficient_seven_token, coefficient_seven_negative);
+    Some(coefficients)
+}
+
+fn decode_luma_eob_twelve_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
+    // src/cdf.c:881-905, 1316-1340, and the pinned Slice 27 scalar trace.
+    // scan_4x4[12] == 13 is final. The reverse loop then visits raster 10,
+    // 7, 3, 6, 9, 12, 8, 5, 2, 1, and 4.
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 1).then_some(())?;
+    let coefficient_thirteen_token = 2;
+
+    for _ in 0..2 {
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[21], 3) == 0).then_some(())?;
+    }
+    for _ in 0..2 {
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
+    }
+
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 2).then_some(())?;
+    let coefficient_nine_token = 2;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
+    (coefficient_twelve_token == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3).then_some(())?;
+    let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[18]);
+    (coefficient_eight_token == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 2).then_some(())?;
+    let coefficient_five_token = 2;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3).then_some(())?;
+    let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[8]);
+    (coefficient_one_token == 7).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[11]);
+    (coefficient_four_token == 3).then_some(())?;
+
+    // The three DC-neighbor levels select high-token context six. dav1d's
+    // nonzero link chain reads signs in raster order 4, 1, 5, 8, 12, 9, and
+    // 13.
+    let (dc_token, dc_negative) = decode_luma_dc_after_ac(decoder, sign_context, cdfs, 6)?;
+    let coefficient_four_negative = decoder.equal();
+    let coefficient_four_token = extend_high_token(decoder, coefficient_four_token);
+    let coefficient_one_negative = decoder.equal();
+    let coefficient_one_token = extend_high_token(decoder, coefficient_one_token);
+    let coefficient_five_negative = decoder.equal();
+    let coefficient_five_token = extend_high_token(decoder, coefficient_five_token);
+    let coefficient_eight_negative = decoder.equal();
+    let coefficient_eight_token = extend_high_token(decoder, coefficient_eight_token);
+    let coefficient_twelve_negative = decoder.equal();
+    let coefficient_twelve_token = extend_high_token(decoder, coefficient_twelve_token);
+    let coefficient_nine_negative = decoder.equal();
+    let coefficient_nine_token = extend_high_token(decoder, coefficient_nine_token);
+    let coefficient_thirteen_negative = decoder.equal();
+    let coefficient_thirteen_token = extend_high_token(decoder, coefficient_thirteen_token);
+
+    let mut coefficients = [0_i32; 16];
+    coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
+    coefficients[1] =
+        dequantize_lossless_coefficient(coefficient_one_token, coefficient_one_negative);
+    coefficients[4] =
+        dequantize_lossless_coefficient(coefficient_four_token, coefficient_four_negative);
+    coefficients[5] =
+        dequantize_lossless_coefficient(coefficient_five_token, coefficient_five_negative);
+    coefficients[8] =
+        dequantize_lossless_coefficient(coefficient_eight_token, coefficient_eight_negative);
+    coefficients[9] =
+        dequantize_lossless_coefficient(coefficient_nine_token, coefficient_nine_negative);
+    coefficients[12] =
+        dequantize_lossless_coefficient(coefficient_twelve_token, coefficient_twelve_negative);
+    coefficients[13] =
+        dequantize_lossless_coefficient(coefficient_thirteen_token, coefficient_thirteen_negative);
+    Some(coefficients)
+}
+
+fn decode_luma_eob_nine_ten_or_twelve_after_eob(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-438 and pinned Slice
+    // 25-27 traces. Symbol four uses high-bit context two and two
+    // equiprobable extra bits. High one with first extra bit one is rejected
+    // before the second bit, preserving EOB fifteen as the next boundary.
+    if decoder.adaptive_bool(&mut cdfs.eob_high_luma[2]) {
+        (!decoder.equal()).then_some(())?;
+        (!decoder.equal()).then_some(())?;
+        decode_luma_eob_twelve_coefficients(decoder, sign_context, cdfs)
+    } else if decoder.equal() {
+        (!decoder.equal()).then_some(())?;
+        decode_luma_eob_ten_coefficients(decoder, sign_context, cdfs)
+    } else {
+        decoder.equal().then_some(())?;
+        decode_luma_eob_nine_coefficients(decoder, sign_context, cdfs)
+    }
+}
+
 fn decode_nonzero_lossless_transform(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
@@ -600,7 +779,7 @@ fn decode_nonzero_lossless_transform(
             decode_luma_eob_four_or_six_after_eob(decoder, sign_context, cdfs)
         }
         4 if allow_luma_ac && plane == 0 => {
-            decode_luma_eob_nine_after_eob(decoder, sign_context, cdfs)
+            decode_luma_eob_nine_ten_or_twelve_after_eob(decoder, sign_context, cdfs)
         }
         _ => None,
     }
