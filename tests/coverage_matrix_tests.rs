@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 101);
+    assert_eq!(expected.cases.len(), 102);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2420,6 +2420,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "partitioned_square_12x12_top_left_luma_eob12_control.avif" => {
                 Some([34_880, 40_768, 53_060, 33_964, 42_488])
+            }
+            "partitioned_square_12x12_midpoint_g96_ac.avif" => {
+                Some([34_880, 40_768, 39_772, 48_314, 52_050])
             }
             "partitioned_square_12x12_g96_direct_tokens.avif"
             | "partitioned_square_12x12_luma_eob1.avif"
@@ -2694,6 +2697,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_square_12x12_top_left_luma_eob12_control.avif" => {
                 "16195f9646d15f2857da1864cbffdd3f12a965bbd287ca888b7dde113c2d7ec7"
             }
+            "partitioned_square_12x12_midpoint_g96_ac.avif" => {
+                "1d316f3236ecba0ebb2e4483622a7dbaa736686fc6ce609a44c3e7c7380a0ff4"
+            }
             "partitioned_square_12x12_luma_eob1.avif" => {
                 "d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691"
             }
@@ -2873,6 +2879,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     | "partitioned_square_12x12_luma_eob10_control.avif"
                     | "partitioned_square_12x12_luma_eob12_control.avif"
                     | "partitioned_square_12x12_luma_eob15_control.avif"
+                    | "partitioned_square_12x12_midpoint_g96_ac.avif"
                     | "partitioned_square_12x12_top_left_luma_eob12_control.avif"
                     | "partitioned_square_12x12_top_left_luma_eob4.avif"
                     | "partitioned_square_16x16_g64.avif"
@@ -2888,7 +2895,6 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "animated.avif",
         "10bit.avif",
         "multitile.avif",
-        "partitioned_square_12x12_midpoint_g96_ac.avif",
     ] {
         let input = require_ok(
             fs::read(
