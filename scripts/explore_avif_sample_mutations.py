@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 from io import BytesIO
@@ -44,6 +45,7 @@ SLICE_35_PREFIX = (
     ("adaptive_bool", 0),
     ("adaptive_symbol", 1),
 )
+DC_RESIDUAL_PATTERN = re.compile(r"^Post-dc_residual\[\d+->(?P<token>\d+)\]:")
 
 
 def sha256(data: bytes) -> str:
@@ -88,6 +90,35 @@ def rejection_stage(operations: list[dict[str, object]]) -> str | None:
     eob_base = operations[len(SLICE_35_PREFIX) + 1]
     if eob_base["operation"] == "adaptive_symbol" and eob_base["value"] in (0, 1):
         return "eob_base"
+    return None
+
+
+def closed_dc_final_token(output: str) -> int | None:
+    """Return the first-leaf final DC token for the retained Slice 39 class."""
+
+    lines = output.splitlines()
+    required = (
+        "Post-skip[0]:",
+        "Post-cdef_idx[0]:",
+        "Post-delta_q[-2->2]:",
+        "Post-ymode[1]:",
+        "Post-uvmode[0]:",
+        "Post-tx[1]:",
+        "Post-non-zero[1][0][0]:",
+        "Post-txtp-intra[1->1][1][1->0]:",
+        "Post-eob_bin_64[0][0][0]:",
+        "Post-dc_lo_tok[1][0][0][3]:",
+        "Post-dc_hi_tok[1][0][0][15]:",
+        "Post-dc_sign[0][0][1]:",
+        "Post-y-cf-blk[tx=1,txtp=0,eob=0]:",
+        "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]:",
+        "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]:",
+    )
+    if not all(any(line.startswith(prefix) for line in lines) for prefix in required):
+        return None
+    for line in lines:
+        if match := DC_RESIDUAL_PATTERN.match(line):
+            return int(match.group("token"))
     return None
 
 
@@ -178,8 +209,10 @@ def candidate_record(
         output_path,
     )
     decoded = output_path.read_bytes() if output_path.exists() else b""
+    dc_final_token = closed_dc_final_token(result.stdout)
     record = {
         "stage": rejection_stage(operations),
+        "dc_final_token": dc_final_token,
         "sample_offset": sample_offset,
         "file_offset": item_offset + sample_offset,
         "old_byte": old,
@@ -212,7 +245,17 @@ def main() -> None:
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument(
+        "--dc-token-min",
+        type=int,
+        help=(
+            "select the smallest successful closed-class final DC token above "
+            "this value instead of the Slice 35 EOB controls"
+        ),
+    )
     args = parser.parse_args()
+    if args.dc_token_min is not None and args.dc_token_min < 0:
+        parser.error("--dc-token-min must be non-negative")
 
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -266,8 +309,13 @@ def main() -> None:
         sample_path = work / "candidate.obu"
         output_path = work / "candidate.yuv"
         selected: dict[str, tuple[int, int]] = {}
-        matches = {"eob_bin": 0, "eob_base": 0}
-        tile_matches = {"eob_bin": 0, "eob_base": 0}
+        matches = (
+            {"dc_token": 0}
+            if args.dc_token_min is not None
+            else {"eob_bin": 0, "eob_base": 0}
+        )
+        tile_matches = dict.fromkeys(matches, 0)
+        selected_dc_token: int | None = None
         candidates_run = 0
         for sample_offset, old in enumerate(original_sample):
             for replacement in range(256):
@@ -276,14 +324,27 @@ def main() -> None:
                 mutated = bytearray(original_sample)
                 mutated[sample_offset] = replacement
                 sample_path.write_bytes(mutated)
-                _, operations = run_dav1d(
+                result, operations = run_dav1d(
                     executable,
                     environment,
                     sample_path,
                     output_path,
                 )
                 candidates_run += 1
-                if (stage := rejection_stage(operations)) is not None:
+                if args.dc_token_min is not None:
+                    token = closed_dc_final_token(result.stdout)
+                    if (
+                        result.returncode == 0
+                        and token is not None
+                        and token > args.dc_token_min
+                    ):
+                        matches["dc_token"] += 1
+                        if sample_offset in tile_offsets:
+                            tile_matches["dc_token"] += 1
+                            if selected_dc_token is None or token < selected_dc_token:
+                                selected_dc_token = token
+                                selected["dc_token"] = (sample_offset, replacement)
+                elif (stage := rejection_stage(operations)) is not None:
                     matches[stage] += 1
                     if sample_offset in tile_offsets:
                         tile_matches[stage] += 1
@@ -315,12 +376,16 @@ def main() -> None:
             records[stage] = first_record
             retained[stage] = first_file
 
-    if set(records) != {"eob_bin", "eob_base"}:
-        raise RuntimeError(f"mutation sweep did not find both rejection stages: {records}")
+    expected_records = (
+        {"dc_token"} if args.dc_token_min is not None else {"eob_bin", "eob_base"}
+    )
+    if set(records) != expected_records:
+        raise RuntimeError(f"mutation sweep did not find required states: {records}")
     if args.retain_dir is not None:
         args.retain_dir.mkdir(parents=True, exist_ok=True)
         for stage, data in retained.items():
-            (args.retain_dir / f"slice35_{stage}_control.avif").write_bytes(data)
+            prefix = "slice39" if stage == "dc_token" else "slice35"
+            (args.retain_dir / f"{prefix}_{stage}_control.avif").write_bytes(data)
 
     report = {
         "oracle": {

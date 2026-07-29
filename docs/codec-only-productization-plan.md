@@ -22,7 +22,7 @@ updated whenever an accepted slice changes the public or published contract.
 | Feature isolation | No-feature, individual-codec, default, and all-feature native/WASM compilation and strict-lint lanes pass; ICO alone intentionally enables BMP and PNG. | aligned for compilation |
 | Portable AVIF | Detection, bounded inspection, and the manifest-bounded AV1 still-decode classes in `portable-avif-progress.md` run in-tree. Native decode outside those classes and all native encode still use the pinned C stack. | partial; release blocker |
 | Executed WASM parity | The matrix cross-compiles, but the full semantic manifest is not executed in a WASM runtime. | missing; release blocker |
-| Public status claims | README counts and the portable-AVIF boundary are synchronized with the Slice 38 manifest in this update. | aligned through Slice 38 |
+| Public status claims | README counts and the portable-AVIF boundary are synchronized with the Slice 39 manifest in this update. | aligned through Slice 39 |
 | Caller-controlled limits | No `DecodeLimits` or `DecodeOptions` contract exists in `src/`. | missing |
 | Typed encoder configuration | `EncodeOptions` still exposes string-valued subsampling, AVIF pairs, and a catch-all `HashMap`; metadata is passed through string/hex keys. | missing |
 | Capability discovery | No public capability query describes format, operation, feature, and target support. | missing |

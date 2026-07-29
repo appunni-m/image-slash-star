@@ -4115,7 +4115,7 @@ def gen_avif():
         size=(8, 8),
         subsampling="4:2:0",
     )
-    for gray in (126, 127, 129, 130):
+    for gray in (0, 64, 126, 127, 129, 130, 192, 255):
         write_portable(
             f"portable_lossy_420_q99_gray_{gray}.avif",
             (gray, gray, gray),
@@ -4144,6 +4144,23 @@ def gen_avif():
             quality=99,
             subsampling="4:2:0",
         )
+
+    token_boundary_source = d / "portable_lossy_420_q99_gray_0.avif"
+    token_boundary_bytes = bytearray(token_boundary_source.read_bytes())
+    if hashlib.sha256(token_boundary_bytes).hexdigest() != (
+        "7f1485129fd93e4318cf21bcf59934963c1a84b3bcb0d74f3e7555b3bad20b38"
+    ):
+        raise RuntimeError("Slice 39 token-boundary source differs")
+    if token_boundary_bytes[303] != 0x42:
+        raise RuntimeError("Slice 39 token-boundary source byte differs")
+    token_boundary_bytes[303] = 0x43
+    if hashlib.sha256(token_boundary_bytes).hexdigest() != (
+        "1097067dca85e499768a40e15232dce3602afbb1cabcbf485e8a14bf83e9bb73"
+    ):
+        raise RuntimeError("Slice 39 token-boundary mutation differs")
+    (d / "portable_lossy_420_q99_token_1048_control.avif").write_bytes(
+        token_boundary_bytes
+    )
 
     mutation_source = d / "portable_lossy_420_q99_gray_126.avif"
     mutation_source_bytes = mutation_source.read_bytes()

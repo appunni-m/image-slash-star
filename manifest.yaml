@@ -2606,6 +2606,22 @@ formats:
       description: 8x8 lossy 4:2:0 key frame proving the complete positive DC-only luma reconstruction
       test_assets:
       - portable_lossy_420_q99_8x8_gray_130.avif
+    - id: portable_lossy_420_q99_gray_0
+      description: 4x4 negative endpoint of the exhaustive quality-99 constant-gray DC domain
+      test_assets:
+      - portable_lossy_420_q99_gray_0.avif
+    - id: portable_lossy_420_q99_8x8_gray_0
+      description: Complete 8x8 negative endpoint with final token 1047
+      test_assets:
+      - portable_lossy_420_q99_8x8_gray_0.avif
+    - id: portable_lossy_420_q99_gray_64
+      description: 4x4 negative interior of the exhaustive quality-99 constant-gray DC domain
+      test_assets:
+      - portable_lossy_420_q99_gray_64.avif
+    - id: portable_lossy_420_q99_8x8_gray_64
+      description: Complete 8x8 negative interior with final token 519
+      test_assets:
+      - portable_lossy_420_q99_8x8_gray_64.avif
     - id: portable_lossy_420_q99_gray_122_control
       description: Pillow-decodable negative final-token-40 control below the Slice 38 boundary
       test_assets:
@@ -2674,6 +2690,26 @@ formats:
       description: Complete 8x8 positive final-token-41 control above the Slice 38 boundary
       test_assets:
       - portable_lossy_420_q99_8x8_gray_134_control.avif
+    - id: portable_lossy_420_q99_gray_192
+      description: 4x4 positive interior of the exhaustive quality-99 constant-gray DC domain
+      test_assets:
+      - portable_lossy_420_q99_gray_192.avif
+    - id: portable_lossy_420_q99_8x8_gray_192
+      description: Complete 8x8 positive interior with final token 519
+      test_assets:
+      - portable_lossy_420_q99_8x8_gray_192.avif
+    - id: portable_lossy_420_q99_gray_255
+      description: 4x4 positive endpoint of the exhaustive quality-99 constant-gray DC domain
+      test_assets:
+      - portable_lossy_420_q99_gray_255.avif
+    - id: portable_lossy_420_q99_8x8_gray_255
+      description: Complete 8x8 positive endpoint with final token 1039
+      test_assets:
+      - portable_lossy_420_q99_8x8_gray_255.avif
+    - id: portable_lossy_420_q99_token_1048_control
+      description: Pillow-decodable one-byte mutation selecting final token 1048 just outside the exhaustive domain
+      test_assets:
+      - portable_lossy_420_q99_token_1048_control.avif
     - id: portable_lossy_420_q99_eob_bin_control
       description: One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two
       test_assets:
