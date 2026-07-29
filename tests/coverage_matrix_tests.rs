@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 89);
+    assert_eq!(expected.cases.len(), 91);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2415,7 +2415,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             _ => None,
         };
         let square_recursive_ranges = match case.fixture.as_str() {
-            "partitioned_square_16x16_g64.avif"
+            "partitioned_square_12x12_g96_direct_tokens.avif"
+            | "partitioned_square_16x16_g64.avif"
+            | "partitioned_square_16x16_g96_direct_tokens.avif"
             | "partitioned_square_16x16_r64.avif"
             | "partitioned_square_16x16_g127.avif" => {
                 Some([34_880, 40_768, 50_626, 52_336, 54_330])
@@ -2669,6 +2671,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_square_16x16_g64.avif" => {
                 "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe"
             }
+            "partitioned_square_12x12_g96_direct_tokens.avif" => {
+                "8fd169458756409edfaf3380195c6ab881e3d7043d5c3b158a82feaaa82b993f"
+            }
+            "partitioned_square_16x16_g96_direct_tokens.avif" => {
+                "87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f"
+            }
             "partitioned_square_16x16_r64.avif" => {
                 "6492bb904bafc0a5c8acedff1fd7cd70965e3be844e8fd19d0e04a6bd63e2017"
             }
@@ -2826,6 +2834,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "animated.avif",
         "10bit.avif",
         "multitile.avif",
+        "partitioned_square_12x12_midpoint_g96_ac.avif",
     ] {
         let input = require_ok(
             fs::read(

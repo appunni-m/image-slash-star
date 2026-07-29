@@ -3029,7 +3029,7 @@ The eight-pixel two-leaf visibility extension is accepted:
 
 ## Slice 18 Exploration Plan: Square Multi-Leaf Partitioning
 
-Status: exploration in progress; no production change approved.
+Status: accepted.
 
 ### Current mismatch
 
@@ -3274,3 +3274,429 @@ The first four-leaf square reconstruction slice is accepted:
   `7f5dc69d-64d0-4055-b2a1-e347ab88d3f2`, passes all seven test binaries with
   36,366/36,366 lines, 5,334/5,334 branches, 1,834/1,834 functions, and
   60,026/60,026 regions.
+
+## Slice 19 Exploration Plan: Direct High-Token DC Magnitudes
+
+Status: accepted.
+
+### Isolated mismatch
+
+The rejected Slice 18 boundary candidate changes only the bottom-right
+quadrant from `(17,91,203)` to `(17,96,203)`. It retains the accepted 16x16
+five-node partition topology and reduces the scalar trace from 363 to 272
+entropy operations, but its nonzero transforms select high-token values 12,
+4, and 8. The current portable coefficient decoder accepts only high token 15
+and then reads a Golomb extension.
+
+Pinned scalar dav1d separates those cases: the high-token entropy symbol is the
+coefficient magnitude when it is below 15, while only token 15 is replaced by
+`read_golomb() + 15`. Admitting the candidate by sending every high token
+through the existing Golomb path would consume the wrong bits and corrupt all
+following adaptive state. This slice must first prove the direct-token syntax
+and its exact coefficient, sign, dequantization, inverse-transform, and
+reconstruction consequences.
+
+### Reverse-mapping procedure
+
+Before changing production code:
+
+1. add a deterministic name filter to the existing partition-pattern
+   diagnostic so one candidate can retain its complete trace without
+   regenerating the unrelated corpus;
+2. generate the accepted `(17,64,203)` square case and the candidate
+   `(17,96,203)` case twice each with Pillow 12.2.0, libavif 1.4.1, libaom
+   3.13.2, and scalar dav1d commit
+   `b546257f770768b2c88258c533da38b91a06f737`;
+3. reject either case if its two reports differ byte-for-byte, then record
+   encoded-file, extracted-AV1-item, partition-topology, entropy-operation,
+   reconstructed Y/U/V plane, and Pillow RGB hashes;
+4. compare the two entropy streams event by event and identify the first
+   divergence, including the high-token CDF context, decoded token, sign
+   context, arithmetic-decoder state, coefficient value, and transform
+   position;
+5. map that event to dav1d's `recon_tmpl.c` high-token branch and independently
+   verify that tokens below 15 consume no Golomb extension;
+6. inspect every remaining nonzero transform in the candidate. Reject the
+   candidate from this slice if it introduces a non-DC EOB, non-WHT transform,
+   new predictor, new partition, palette/filter-intra decision, subsampling,
+   alpha, or any coefficient placement beyond the already accepted DC-only
+   class; and
+7. reverse-map additional fixed replacement colors only when they are needed
+   to cover a distinct direct high token, sign, or coefficient context. Do not
+   add random fixtures or a fixture-selected production branch.
+
+### Proposed implementation boundary
+
+If the trace proves a closed class, refactor the private DC coefficient helper
+to return the decoded magnitude:
+
+- high token `1..=14` is the complete magnitude and consumes no Golomb bits;
+- high token `15` retains the accepted `read_golomb() + 15` extension;
+- token zero, non-DC EOB, nonzero AC coefficients, and every syntax class
+  outside the documented boundary remain portable misses.
+
+The caller must then apply the already decoded sign, lossless dequantization,
+inverse WHT, and edge reconstruction exactly as before. This is codec-private
+AV1 reconstruction, not a public image-processing operation. The change may
+not add a dependency, unsafe Rust, target-specific behavior, public API, or
+special case selected by fixture bytes, dimensions alone, or decoded RGB.
+
+### Acceptance criteria
+
+Production work is approved only after the exploration records exact
+deterministic evidence and proves that the candidate is DC-only. Acceptance
+then requires:
+
+- manifest-driven exact Pillow parity for every new positive fixture and
+  structured unsupported parity for the nearest excluded syntax;
+- independent reconstruction-oracle parity for the encoded file, extracted
+  AV1 item, partition tree, scalar entropy trace, Y/U/V planes, and Pillow RGB
+  bytes;
+- unchanged results for every retained fixture and oracle case;
+- strict formatting, Clippy for no features, each codec feature, default
+  features, and all features on native and `wasm32-unknown-unknown`, plus
+  strict rustdoc, whitespace, legal, and source-package verification; and
+- Coverage MCP proving exactly 100% line, branch, function, and region
+  coverage.
+
+### Exploration result and approved implementation
+
+The two-case full trace was generated twice and is byte-identical. Both
+reports have SHA-256
+`a60624bab9fe1ace9c3d9be2869a7f17fd2ddb48bca15447b562d9210f0f1556`.
+The oracle is Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, and scalar dav1d
+`1.5.3-0-gb546257`. Both cases use quality 100, speed 8, one thread, lossless
+4:4:4, disabled autotiling, and the same five-node square partition tree. Its
+canonical topology hash is
+`0cf74ff2639528faf5b68aa96a4731627a1dad0312eb14f4cf72e5f08fe3e990`.
+
+| Case | File SHA-256 | AV1 item SHA-256 | Entropy trace SHA-256 | Operations |
+| --- | --- | --- | --- | ---: |
+| accepted `(17,64,203)` | `4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7` | `2a970e96bba9c9e4890b80d3bc19f798d3282ac80a5f190528816c69711b3916` | `ba82b7751e44884bc48da5d7c1e3b2c031df26b001e8e887296702f00c5b0ccc` | 363 |
+| candidate `(17,96,203)` | `1fcdc276a8521a7d248fa9382aca518c880921615a392d6116e3fff28320032d` | `12c92ef6e04a08cb044228c8cedd3e74767fedb7bb2afc31658b68ddd514f9ce` | `a697f0ba02f955967e04b1049860ac03fb34b22cac3d3b524bc8260ecca5cba2` | 272 |
+
+The candidate's Y/U/V plane hashes are
+`26a88b7b0ab184c7dc876773157965b847e1d4ebba7a145ac36e0e8ab1f08653`,
+`2f395c7835ece618b848156a8e7ae2d7adfbd5be5a970684c831b26055ec8c50`,
+and
+`e3893487aef90949c3b0cfd18a259450e0d016c3dd954a846ce3c291fc26b9b6`.
+Its Pillow RGB hash is
+`87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f`.
+
+The first syntax-value divergence is entropy operation 196, the fourth symbol
+of the bottom-right luma transform's high-token cascade. The accepted stream
+selects `3` and completes token 15; the candidate selects `0` and completes
+token 12. The candidate immediately decodes the sign at operation 198 and
+does not consume a Golomb bit. This matches dav1d
+`src/msac.c:187-202` and `src/recon_tmpl.c:615-632`.
+
+Every bottom-right candidate transform remains lossless WHT and DC-only:
+
+- luma has EOB sequence `0,0,0,-1`, direct tokens `12,4,4`, and positive
+  signs;
+- U has EOB sequence `0,0,0,-1`, direct tokens `8,4,4`, and negative signs;
+- V has EOB sequence `0,0,0,-1`, direct tokens `8,4,4`, and negative signs;
+- the root and all four child partitions, predictors, palette decisions,
+  filter-intra decisions, coefficient-skip contexts, transform positions, and
+  reconstruction topology remain in the accepted Slice 18 class.
+
+The production change is therefore limited to returning the decoded high
+token from the private DC coefficient helper and reading the Golomb extension
+only for token 15. The complete AV1-defined direct-token interval `3..=14` is
+one syntax branch and must not be reduced to the observed values `4`, `8`, and
+`12`. Add `(17,96,203)` as a generated manifest fixture and independent
+reconstruction-oracle case, retain structured unsupported behavior for all
+excluded syntax, and run every acceptance gate above before changing this
+status to accepted.
+
+### Accepted result
+
+The direct high-token DC slice is accepted:
+
+- the private coefficient decoder now preserves every AV1 high token below 15
+  as the complete coefficient magnitude and reads the existing Golomb
+  extension only for token 15; all EOB, AC-position, transform, predictor,
+  partition, color-layout, and container restrictions remain unchanged;
+- `partitioned_square_16x16_g96_direct_tokens.avif` matches its documented
+  325-byte encoded file, 50-byte extracted AV1 item, five-node topology,
+  272-operation scalar entropy trace, reconstructed Y/U/V planes, and Pillow
+  RGB bytes exactly;
+- the independent reconstruction oracle expands from 89 to 90 positive cases.
+  Its committed JSON has SHA-256
+  `fd1c864b74e44c52a63e4139f68a37f9b3977716b82030144537bf10144bd14e`,
+  and every retained case remains byte-exact;
+- the manifest now has 1,120 active rows: 842 decode and 278 encode. AVIF
+  contributes 100 decode and 23 encode rows, with zero planned, skipped, or
+  unwired rows;
+- no dependency, unsafe Rust, public raster operation, target fork,
+  fixture-selected production branch, or third-party source was added. The
+  deterministic fixture generator and provenance document the original input,
+  pinned Pillow stack, and exact oracle hashes;
+- strict Clippy passes for no features, every individual codec feature,
+  default features, and all features on both native and
+  `wasm32-unknown-unknown`; formatting, strict rustdoc, whitespace, and the
+  19-file third-party legal inventory pass;
+- `cargo package --allow-dirty --locked` verifies the publishable crate. It
+  contains 132 files, is 2.0 MiB unpacked, and is 427,253 bytes (417.2 KiB)
+  compressed; and
+- Coverage MCP run `12922eab-c261-4eed-9299-e13bee6f8af2`, snapshot
+  `9c50d5bb-5fc8-4b40-b43e-44a587b86482`, passes all seven test binaries with
+  36,367/36,367 lines, 5,336/5,336 branches, 1,834/1,834 functions, and
+  60,023/60,023 regions.
+
+## Slice 20 Exploration Plan: Edge-Clipped Square Visibility
+
+Status: accepted.
+
+### Candidate boundary
+
+The current four-leaf path is restricted to a declared 16x16 frame even
+though its private reconstruction already composes a coded 16x16 plane and
+the common visibility helper can retain a smaller declared rectangle. A
+declared 12x12 frame is the nearest square geometry, but the existing
+half-quadrant pattern changes at source coordinate six. That boundary crosses
+the coded 8x8 child edges and introduces non-DC residuals in the first three
+leaves, so it is not evidence that geometry alone can reuse Slice 19.
+
+The next diagnostic candidate keeps a 12x12 declared frame but changes the
+source only where `x >= 8 && y >= 8`. This aligns the visible replacement with
+the bottom-right coded child. It may prove a strictly smaller extension:
+top-left remains a complete 8x8 leaf, top-right and bottom-left expose 4x8 and
+8x4 rectangles, and bottom-right exposes 4x4, while the coded reconstruction
+still uses four 8x8 children.
+
+### Reverse-mapping procedure
+
+Before production changes:
+
+1. extend the existing diagnostic with an explicit bottom-right origin so a
+   declared-frame midpoint and a coded-child boundary are different named
+   inputs rather than implicit geometry behavior;
+2. generate the fixed-origin 12x12 candidate twice with the pinned Pillow,
+   libavif, libaom, and scalar dav1d stack and reject nondeterministic output;
+3. compare it with the accepted 16x16 `(17,96,203)` case and the rejected
+   12x12 midpoint control, recording exact file, AV1-item, topology,
+   entropy-operation, Y/U/V, and Pillow RGB hashes;
+4. identify whether edge child partitions are entropy-coded, inferred by the
+   frame boundary, or use a different block size. Record the exact order in
+   which each partition decision and leaf syntax is consumed;
+5. inspect every predictor, palette/filter-intra decision, EOB, coefficient
+   token, sign context, transform type, and reconstruction edge;
+6. reject the candidate if it requires non-DC coefficients, a new predictor,
+   a new transform, a deeper/asymmetric partition, subsampling, alpha,
+   filtering, or any syntax beyond Slice 19 plus declared-edge clipping; and
+7. only if the candidate is closed, compare its visible planes with the
+   top-left 12x12 rectangle of its independently reconstructed coded planes.
+   Visibility remains private AV1 output selection, not a public crop.
+
+### Possible implementation boundary
+
+If the trace proves exact syntax reuse, admit 12x12 only through its decoded
+level-3 square split. Consume or infer each level-4 child partition exactly as
+dav1d does at the right and bottom frame boundaries; do not reuse the 16x16
+four-callback topology without trace evidence. Decode all four leaves through
+the existing policies and shared adaptive state, compose the coded 16x16
+planes, and retain the declared 12x12 top-left rectangle through the existing
+visibility helper.
+
+Dimensions alone must not select this path. A 12x12 `PARTITION_NONE` stream
+continues through the existing single-leaf path, while any excluded partition
+or leaf syntax remains a portable miss. No dependency, unsafe Rust, public
+raster operation, target fork, or fixture-byte special case is permitted.
+
+### Acceptance criteria
+
+Acceptance requires a generated manifest fixture, complete pinned dav1d
+reconstruction case, exact Pillow RGB parity, exact retained-case parity,
+structured unsupported behavior for the midpoint control, strict native and
+WASM feature matrices, rustdoc, formatting, whitespace, legal and package
+verification, and Coverage MCP at exactly 100% line, branch, function, and
+region coverage.
+
+### Exploration result and approved implementation
+
+Both complete fixed-origin reports are byte-identical with SHA-256
+`2afde10ecb2d3002aeecbb97de3416c08adc8d2a5935685ea96a94a11cf5b294`.
+Both midpoint-control reports are byte-identical with SHA-256
+`f122162cb61172c51c3c9e294647f51ee7f194a77d7de8405d36f4cb8e55c17b`.
+They use the same pinned oracle identities and deterministic encoder settings
+as Slice 19.
+
+The fixed-origin candidate is 325 bytes with file SHA-256
+`b61f62f12306af9744ea06ac8c68bfd86f8b10f27caca820405b295756a3f194`.
+Its 50-byte AV1 item has SHA-256
+`e7265c75566e1a9f09e7059511bbee255443e32abbd719d5eed9f8cb75ba933d`.
+The partition topology hash is
+`0cf74ff2639528faf5b68aa96a4731627a1dad0312eb14f4cf72e5f08fe3e990`,
+and the 272-operation entropy trace hash is
+`a697f0ba02f955967e04b1049860ac03fb34b22cac3d3b524bc8260ecca5cba2`.
+Both are exactly equal to the accepted 16x16
+`partitioned_square_16x16_g96_direct_tokens` case, including every arithmetic
+decoder state, CDF, symbol, partition range, predictor, coefficient, sign, and
+skip decision. Dav1d emits all four level-4 `PARTITION_NONE` decisions in the
+same order; no inferred edge-only topology is introduced.
+
+The fixed candidate's visible Y/U/V hashes are
+`ff66d42d0061e15fc4752e373cfe86a29080134b7bd74989dc998d493e89a6c2`,
+`67135d8a5accb7bba94750eecb2f554a32d900f21558c3d281e97ea4dc660f4b`,
+and
+`647ed911037b576c2bbae2d62afcdef4f76709613e07554651b76864364e2617`.
+Its Pillow RGB hash is
+`8fd169458756409edfaf3380195c6ab881e3d7043d5c3b158a82feaaa82b993f`.
+Every plane row and every Pillow RGB row is exactly the top-left 12x12
+rectangle of the independently decoded 16x16 case.
+
+The midpoint control remains excluded. It is 337 bytes with file SHA-256
+`d10972f944777129121ef100ee66903959138ae946295bb5fe271cef8035b258`
+and a 62-byte AV1 item with SHA-256
+`2b5355aa7d702243dcf6e16933fe18241d94d0bddac3cd7f827c0b83c11cbd84`.
+Its 349-operation trace has SHA-256
+`a9363dc28dd49dff8441bdd7938b20a1567eb7f6092769322ddd62f3e4618a1c`.
+It selects horizontal and vertical predictors in different leaves and AC
+coefficient EOB values 1, 2, and 4, so it is not the same codec class.
+
+Production is approved to:
+
+1. add 12x12 to the square-recursive dimension gate while retaining the
+   decoded root/child partition requirements;
+2. reuse the exact four-child entropy and reconstruction path without a new
+   edge-specific syntax branch;
+3. pass each composed 16x16 coded plane through the existing declared
+   visibility helper before returning it;
+4. add the fixed-origin candidate as a positive manifest and reconstruction
+   case; and
+5. add the midpoint control as a Pillow-success manifest fixture that must
+   remain a private portable reconstruction miss.
+
+No other square dimension, source boundary, predictor, AC coefficient,
+partition, or transform class is approved.
+
+### Accepted result
+
+The edge-clipped square visibility slice is accepted:
+
+- the square-recursive dimension gate now admits decoded level-3 square splits
+  at 12x12 and 16x16. Both geometries consume the same five partition nodes,
+  shared adaptive state, four leaf policies, direct/token-15 coefficient
+  rules, prediction, inverse transforms, and coded-plane composition;
+- the four-leaf path now applies the existing declared-frame visibility helper
+  to its composed 16x16 coded planes. The 16x16 outputs remain unchanged, and
+  the new 12x12 output is the exact top-left rectangle proved independently by
+  dav1d;
+- `partitioned_square_12x12_g96_direct_tokens.avif` is an active positive
+  manifest and reconstruction fixture. Its file, AV1 item, complete entropy
+  trace, Y/U/V planes, and Pillow RGB bytes match the documented exploration
+  hashes exactly;
+- `partitioned_square_12x12_midpoint_g96_ac.avif` is an active Pillow/native
+  success fixture and a required private portable miss. Its horizontal and
+  vertical predictors plus AC EOB values 1, 2, and 4 are not admitted by this
+  slice;
+- the independent reconstruction oracle expands from 90 to 91 positive cases.
+  Its committed JSON has SHA-256
+  `630708138dabca467ef2c9e14a1e7bda74fc818dec2c2ddc27e3b986efe53e89`,
+  and all 89 cases from the pushed baseline plus the Slice 19 case remain
+  byte-exact;
+- the manifest now has 1,122 active rows: 844 decode and 278 encode. AVIF
+  contributes 102 decode and 23 encode rows, with zero planned, skipped, or
+  unwired rows;
+- no dependency, unsafe Rust, public raster operation, target fork,
+  fixture-selected production path, or third-party source was added. Strict
+  Clippy passes for no features, every individual codec feature, default
+  features, and all features on native and `wasm32-unknown-unknown`;
+  formatting, strict rustdoc, whitespace, and the 19-file legal inventory
+  pass;
+- `cargo package --allow-dirty --locked` verifies 132 publishable files,
+  2.0 MiB unpacked and 427,265 bytes (417.3 KiB) compressed; and
+- Coverage MCP run `09532aec-d649-4ba1-931b-2ea8e0d35c3b`, snapshot
+  `de3abd79-822b-4f3c-9cc6-38dfbf037ec5`, passes all seven test binaries with
+  36,372/36,372 lines, 5,336/5,336 branches, 1,835/1,835 functions, and
+  60,032/60,032 regions.
+
+## Slice 21 Exploration Plan: First Lossless AC Coefficient
+
+Status: exploration in progress; no production change approved.
+
+### Why the midpoint control is not the implementation fixture
+
+`partitioned_square_12x12_midpoint_g96_ac.avif` proves that the next missing
+stage is real lossless coefficient decoding, but it is not one closed
+extension. Its 349-operation trace changes the top-left leaf's last luma
+transform to EOB 4, selects horizontal prediction in the top-right leaf,
+selects vertical prediction in the bottom-left leaf, and adds chroma EOB
+values 1, 2, and 4 across those leaves. Implementing that file directly would
+mix coefficient scan placement, coefficient contexts, multiple EOB classes,
+new square-side predictor policies, prediction edges, and reconstruction.
+
+The smallest useful input must retain the accepted five-node square tree and
+all four accepted leaf predictors while introducing one lossless AC
+coefficient class in one bottom-right transform. A source change confined to
+the visible part of the bottom-right coded child can isolate that behavior:
+on the 12x12 frame, vary a replacement rectangle whose origin is within
+`8..=11` on each axis instead of moving the boundary into the first three
+children.
+
+### Deterministic candidate sweep
+
+Before production changes:
+
+1. allow the partition-pattern diagnostic to accept repeated explicit
+   bottom-right origins and generate the Cartesian product with repeated fixed
+   replacement colors;
+2. sweep origins `(8..=11, 8..=11)` using the already pinned source color
+   `(17,91,203)` and deterministic nearby replacement colors. Encode every
+   candidate twice and reject nondeterministic bytes;
+3. retain only candidates with the exact Slice 20 five-node topology and
+   accepted predictor sequence: vertical top-left, then DC top-right,
+   bottom-left, and bottom-right;
+4. rank retained candidates lexicographically by:
+   - number of leaves containing nonzero AC coefficients;
+   - number of planes containing nonzero AC coefficients;
+   - number of transforms containing nonzero AC coefficients;
+   - maximum EOB;
+   - number of nonzero AC positions;
+   - scalar entropy-operation count;
+5. generate the smallest candidate twice with the complete scalar dav1d trace
+   and record file, AV1 item, topology, entropy, Y/U/V, and Pillow RGB hashes;
+6. map every coefficient operation to dav1d `decode_coefs` in
+   `src/recon_tmpl.c`: EOB-bin/EOB-extra decoding, scan order, low/base/high
+   token contexts, signs, coefficient-context propagation, lossless
+   dequantization, and WHT input placement;
+7. trace the exact inverse-WHT input and output for the first affected 4x4
+   transform. The Rust implementation must match the independently
+   reconstructed coefficient vector before pixel reconstruction is attempted;
+   and
+8. reject the candidate if it adds a predictor, transform type, partition,
+   palette/filter-intra decision, subsampling, alpha, loop filter, or any
+   coefficient class not explicitly represented by the trace.
+
+Random pixels, arbitrary public raster operations, fixture-byte dispatch, and
+dimension-only dispatch remain prohibited.
+
+### Implementation boundary if the sweep is closed
+
+Add one private lossless 4x4 coefficient-vector decoder rather than weakening
+the DC-only helper. It may consume only the exact proved EOB/scan/context
+class, but every arithmetic step and context update within that class must be
+the general AV1 rule. Feed the decoded 16-entry coefficient vector through an
+independently verified full inverse WHT, then through the existing
+edge-derived predictor and coded-plane composition.
+
+The existing DC-only path must remain byte- and operation-exact. Unsupported
+EOBs, coefficient positions, contexts, predictors, and transforms must stop
+the portable attempt at their first unproved syntax value.
+
+### Acceptance criteria
+
+Acceptance requires:
+
+- a deterministic Pillow-success manifest fixture and a complete independent
+  dav1d reconstruction case with exact stage hashes;
+- at least one nearby valid control that remains a private portable miss at
+  the first excluded coefficient class;
+- exact parity for decoded coefficient vectors, inverse-WHT residuals, Y/U/V
+  planes, and Pillow RGB bytes, with every retained fixture unchanged;
+- no dependency, unsafe Rust, public image-processing API, target fork, or
+  fixture-selected production branch;
+- strict native and WASM feature matrices, rustdoc, formatting, whitespace,
+  legal, and package verification; and
+- Coverage MCP at exactly 100% line, branch, function, and region coverage.

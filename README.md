@@ -30,11 +30,12 @@ including nonzero DC-only and zero-residual transforms for the accepted DC,
 vertical, and horizontal luma predictor modes. It also covers the first closed
 two-leaf recursive split in 12x4, 16x4, 12x8, 16x8, 4x12, 4x16, 8x12, and
 8x16 frames, including shared adaptive CDF state, reconstructed left/top edge
-prediction, and partial or full visibility on both axes. A 16x16 four-leaf
-square split is also portable when its four coded 8x8 leaves remain inside the
-proved DC-only/zero-residual syntax class. Other recursive partitions and AVIF
-pixel decode classes, plus AVIF encoding, still report an unsupported codec
-operation on that target.
+prediction, and partial or full visibility on both axes. A four-leaf square
+split is also portable at 12x12 and 16x16 when its four coded 8x8 leaves
+remain inside the proved DC-only/zero-residual syntax class, including direct
+high-token coefficient magnitudes below 15 and the token-15 Golomb extension.
+Other recursive partitions and AVIF pixel decode classes, plus AVIF encoding,
+still report an unsupported codec operation on that target.
 
 The crate publishes one canonical codec API: format detection, inspection,
 still-image decode/encode, and sequence decode/encode over encoded bytes and
@@ -54,15 +55,15 @@ The manifest-driven parity matrix is the source of truth.
 
 | Metric | Count |
 | --- | ---: |
-| Manifest rows | 1,119 |
-| Active manifest rows | 1,119 |
-| Active decode rows | 841 |
+| Manifest rows | 1,122 |
+| Active manifest rows | 1,122 |
+| Active decode rows | 844 |
 | Active encode rows | 278 |
 | Planned or skipped rows | 0 |
 | Formats tracked | 8 |
 
 All rows compare exact decoded pixels, exact sequence frames, exact encoded
-files, or an exact oracle success/error outcome. AVIF contributes 99 decode
+files, or an exact oracle success/error outcome. AVIF contributes 102 decode
 rows and 23 encode rows, including five-frame animation and invalid-input
 behavior.
 
