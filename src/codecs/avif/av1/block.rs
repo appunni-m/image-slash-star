@@ -5,10 +5,13 @@
 
 use super::entropy::RangeDecoder;
 
+type TransformCoefficients = [i32; 16];
+type PlaneCoefficients = [TransformCoefficients; 16];
+
 /// Exact syntax consumed for one supported leaf block.
 struct BlockSyntax {
     luma_predictor: LumaPredictor,
-    coefficients: [[i32; 16]; 3],
+    coefficients: [PlaneCoefficients; 3],
     transform_grid: TransformGrid,
 }
 
@@ -154,8 +157,10 @@ struct BlockCdfs {
     eob_bin_luma: [u16; 5],
     eob_bin_chroma: [u16; 5],
     eob_base_luma: [u16; 3],
+    eob_base_luma_context_one: [u16; 3],
     eob_base_chroma: [u16; 3],
-    high_luma: [u16; 4],
+    base_luma_context_zero: [u16; 4],
+    high_luma: [[u16; 4]; 8],
     high_chroma: [u16; 4],
     dc_sign: [[[u16; 2]; 3]; 2],
 }
@@ -216,8 +221,19 @@ impl BlockCdfs {
             eob_bin_luma: [31_928, 31_729, 30_788, 27_873, 0],
             eob_bin_chroma: [29_521, 27_818, 23_080, 18_205, 0],
             eob_base_luma: [14_931, 3_713, 0],
+            eob_base_luma_context_one: [3_168, 1_322, 0],
             eob_base_chroma: [11_403, 2_742, 0],
-            high_luma: [18_470, 12_050, 8_594, 0],
+            base_luma_context_zero: [28_734, 23_838, 20_041, 0],
+            high_luma: [
+                [18_470, 12_050, 8_594, 0],
+                [20_232, 13_167, 8_979, 0],
+                [24_056, 17_717, 13_265, 0],
+                [26_598, 21_441, 17_334, 0],
+                [28_026, 23_842, 20_230, 0],
+                [28_965, 25_451, 22_222, 0],
+                [31_072, 29_451, 27_897, 0],
+                [18_376, 12_817, 10_012, 0],
+            ],
             high_chroma: [16_801, 9_863, 6_482, 0],
             dc_sign: [
                 [[16_768, 0], [19_712, 0], [13_952, 0]],
@@ -246,18 +262,47 @@ fn decode_high_token(decoder: &mut RangeDecoder<'_, '_, '_>, cdf: &mut [u16; 4])
     decoder.high_token(cdf)
 }
 
-fn decode_nonzero_dc_coefficient(
+fn decode_eob_bin(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+) -> u32 {
+    if plane == 0 {
+        decoder.adaptive_symbol(&mut cdfs.eob_bin_luma, 4)
+    } else {
+        decoder.adaptive_symbol(&mut cdfs.eob_bin_chroma, 4)
+    }
+}
+
+fn extend_high_token(decoder: &mut RangeDecoder<'_, '_, '_>, token: u32) -> u32 {
+    if token == 15 {
+        read_golomb(decoder).wrapping_add(15)
+    } else {
+        token
+    }
+}
+
+fn dequantize_lossless_coefficient(token: u32, negative: bool) -> i32 {
+    // ✅ VERIFIED: dav1d 1.5.3 src/dequant_tables.c q-index zero and
+    // src/recon_tmpl.c:596-718. Eight-bit all-lossless dequant is four.
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "dav1d evaluates malformed coefficient syntax with wrapping C-width arithmetic"
+    )]
+    let magnitude = (token as i32).wrapping_mul(4);
+    if negative {
+        magnitude.wrapping_neg()
+    } else {
+        magnitude
+    }
+}
+
+fn decode_dc_only_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<i32> {
-    let eob_bin = if plane == 0 {
-        decoder.adaptive_symbol(&mut cdfs.eob_bin_luma, 4)
-    } else {
-        decoder.adaptive_symbol(&mut cdfs.eob_bin_chroma, 4)
-    };
-    (eob_bin == 0).then_some(())?;
+) -> Option<TransformCoefficients> {
     let base_token = if plane == 0 {
         decoder.adaptive_symbol(&mut cdfs.eob_base_luma, 2)
     } else {
@@ -265,7 +310,7 @@ fn decode_nonzero_dc_coefficient(
     };
     (base_token == 2).then_some(())?;
     let token = if plane == 0 {
-        decode_high_token(decoder, &mut cdfs.high_luma)
+        decode_high_token(decoder, &mut cdfs.high_luma[0])
     } else {
         decode_high_token(decoder, &mut cdfs.high_chroma)
     };
@@ -275,23 +320,62 @@ fn decode_nonzero_dc_coefficient(
     // fifteen are complete magnitudes; only token fifteen has a Golomb
     // extension. Reading that extension for a direct token would consume the
     // following sign or coefficient syntax.
-    let token = if token == 15 {
-        read_golomb(decoder).wrapping_add(15)
-    } else {
-        token
-    };
-    // ✅ VERIFIED: dav1d 1.5.3 src/dequant_tables.c q-index zero and
-    // src/recon_tmpl.c:596-635. Eight-bit all-lossless DC dequant is four.
-    #[expect(
-        clippy::cast_possible_wrap,
-        reason = "dav1d evaluates malformed coefficient syntax with wrapping C-width arithmetic"
-    )]
-    let magnitude = (token as i32).wrapping_mul(4);
-    Some(if negative {
-        magnitude.wrapping_neg()
-    } else {
-        magnitude
-    })
+    let token = extend_high_token(decoder, token);
+    let mut coefficients = [0_i32; 16];
+    coefficients[0] = dequantize_lossless_coefficient(token, negative);
+    Some(coefficients)
+}
+
+fn decode_luma_eob_one_after_eob(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:443-480 and pinned Slice 21
+    // traces. EOB one uses context one, scan_4x4[1] == 4, and the high-token
+    // context seven for its final AC base token.
+    let ac_base_token = decoder.adaptive_symbol(&mut cdfs.eob_base_luma_context_one, 2);
+    (ac_base_token == 2).then_some(())?;
+    let ac_token = decode_high_token(decoder, &mut cdfs.high_luma[7]);
+    (ac_token == 10).then_some(())?;
+
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:526-546. Once EOB is nonzero,
+    // DC uses base_tok rather than eob_base_tok.
+    let dc_base_token = decoder.adaptive_symbol(&mut cdfs.base_luma_context_zero, 3);
+    (dc_base_token == 3).then_some(())?;
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:526-546 and the pinned Slice
+    // 21 trace. The DC high-token context is derived from the preceding AC
+    // magnitude. This closed class admits only direct AC token ten, which
+    // selects context five.
+    let dc_token = decode_high_token(decoder, &mut cdfs.high_luma[5]);
+
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:596-718. DC sign and a possible
+    // DC Golomb extension precede the equiprobable AC sign and AC extension.
+    let dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][sign_context]);
+    let dc_token = extend_high_token(decoder, dc_token);
+    let ac_negative = decoder.equal();
+    let ac_token = extend_high_token(decoder, ac_token);
+
+    let mut coefficients = [0_i32; 16];
+    coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
+    coefficients[4] = dequantize_lossless_coefficient(ac_token, ac_negative);
+    Some(coefficients)
+}
+
+fn decode_nonzero_lossless_transform(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    sign_context: usize,
+    allow_luma_eob_one: bool,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    match decode_eob_bin(decoder, plane, cdfs) {
+        0 => decode_dc_only_after_eob(decoder, plane, sign_context, cdfs),
+        1 if allow_luma_eob_one && plane == 0 => {
+            decode_luma_eob_one_after_eob(decoder, sign_context, cdfs)
+        }
+        _ => None,
+    }
 }
 
 fn decode_dc_coefficients(
@@ -300,9 +384,9 @@ fn decode_dc_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
-) -> Option<[i32; 16]> {
+) -> Option<PlaneCoefficients> {
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
-    let mut coefficients = [0_i32; 16];
+    let mut coefficients = [[0_i32; 16]; 16];
     let coefficient_context = usize::from(plane != 0);
     let first_zero = decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context]);
     if first_zero {
@@ -316,7 +400,7 @@ fn decode_dc_coefficients(
         }
         return Some(coefficients);
     }
-    coefficients[0] = decode_nonzero_dc_coefficient(decoder, plane, 0, cdfs)?;
+    coefficients[0] = decode_nonzero_lossless_transform(decoder, plane, 0, false, cdfs)?;
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:754-838. A nonzero top-left
     // transform changes the coefficient context of exactly its right and
     // lower neighbors. All later row-major transforms return to the base CDF.
@@ -331,23 +415,38 @@ fn decode_dc_coefficients(
     Some(coefficients)
 }
 
-fn decode_boundary_dc_coefficients(
+fn decode_boundary_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
-) -> Option<[i32; 16]> {
+) -> Option<PlaneCoefficients> {
     ((transform_grid_width, transform_grid_height) == (2, 2)).then_some(())?;
     let coefficient_context = usize::from(plane != 0);
-    (!decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])).then_some(())?;
-    let mut coefficients = [0_i32; 16];
-    coefficients[0] = decode_nonzero_dc_coefficient(decoder, plane, 0, cdfs)?;
-    let sign_context = if coefficients[0].is_negative() { 1 } else { 2 };
+    let first_skipped = decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context]);
+    let mut coefficients = [[0_i32; 16]; 16];
+    if first_skipped {
+        // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:59-105, 1282-1545 and
+        // pinned Slice 21 traces. If the first boundary transform is skipped,
+        // all four transforms retain the same base skip context.
+        for _ in 1..4 {
+            decoder
+                .adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
+                .then_some(())?;
+        }
+        return Some(coefficients);
+    }
+    coefficients[0] = decode_nonzero_lossless_transform(decoder, plane, 0, true, cdfs)?;
+    let sign_context = if coefficients[0][0].is_negative() {
+        1
+    } else {
+        2
+    };
     for coefficient in &mut coefficients[1..3] {
         (!decoder.adaptive_bool(&mut cdfs.trailing_coefficient_skip[coefficient_context]))
             .then_some(())?;
-        *coefficient = decode_nonzero_dc_coefficient(decoder, plane, sign_context, cdfs)?;
+        *coefficient = decode_nonzero_lossless_transform(decoder, plane, sign_context, true, cdfs)?;
     }
     decoder
         .adaptive_bool(&mut cdfs.double_neighbor_coefficient_skip[coefficient_context])
@@ -361,7 +460,7 @@ fn decode_skipped_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
-) -> Option<[i32; 16]> {
+) -> Option<PlaneCoefficients> {
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
     let coefficient_context = usize::from(plane != 0);
     for _ in 0..transform_count {
@@ -369,7 +468,7 @@ fn decode_skipped_coefficients(
             .adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
             .then_some(())?;
     }
-    Some([0_i32; 16])
+    Some([[0_i32; 16]; 16])
 }
 
 fn decode_syntax(
@@ -441,7 +540,7 @@ fn decode_syntax(
                     transform_grid_height,
                 )
             }
-            CoefficientPolicy::BoundaryDc => decode_boundary_dc_coefficients(
+            CoefficientPolicy::BoundaryDc => decode_boundary_coefficients(
                 decoder,
                 plane,
                 cdfs,
@@ -482,15 +581,20 @@ fn inverse_wht_4(values: &mut [i32; 4]) {
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/itx_tmpl.c:184-207.
-fn inverse_wht_4x4(dc: i32) -> [i32; 16] {
+fn inverse_wht_4x4(coefficients: TransformCoefficients) -> [i32; 16] {
     let mut values = [0_i32; 16];
-    values[0] = dc >> 2;
-    for row in values.chunks_exact_mut(4) {
-        let mut vector = [row[0], row[1], row[2], row[3]];
+    let columns = [[0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15]];
+    for (row, indices) in values.chunks_exact_mut(4).zip(columns) {
+        let mut vector = [
+            coefficients[indices[0]] >> 2,
+            coefficients[indices[1]] >> 2,
+            coefficients[indices[2]] >> 2,
+            coefficients[indices[3]] >> 2,
+        ];
         inverse_wht_4(&mut vector);
         row.copy_from_slice(&vector);
     }
-    for indices in [[0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15]] {
+    for indices in columns {
         let mut vector = [
             values[indices[0]],
             values[indices[1]],
@@ -505,8 +609,8 @@ fn inverse_wht_4x4(dc: i32) -> [i32; 16] {
     values
 }
 
-fn reconstruct_transform(predictor: u16, coefficient: i32) -> [u16; 16] {
-    let residual = inverse_wht_4x4(coefficient);
+fn reconstruct_transform(predictor: u16, coefficients: TransformCoefficients) -> [u16; 16] {
+    let residual = inverse_wht_4x4(coefficients);
     let mut samples = [0_u16; 16];
     for (sample, value) in samples.iter_mut().zip(residual) {
         let reconstructed = i32::from(predictor).saturating_add(value).clamp(0, 255);
@@ -528,7 +632,7 @@ fn reconstruct_transform(predictor: u16, coefficient: i32) -> [u16; 16] {
 // plane.
 fn reconstruct_coded_plane(
     predictor: u16,
-    coefficients: [i32; 16],
+    coefficients: PlaneCoefficients,
     transform_grid: TransformGrid,
 ) -> ReconstructedPlane {
     let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
@@ -649,14 +753,18 @@ fn dc_predictor(top: [u16; 4], left: [u16; 4]) -> u16 {
     u16::try_from(sum.saturating_add(4).div_euclid(8)).unwrap_or(128)
 }
 
-fn reconstruct_dc_transform(top: [u16; 4], left: [u16; 4], coefficient: i32) -> [u16; 16] {
-    reconstruct_transform(dc_predictor(top, left), coefficient)
+fn reconstruct_dc_transform(
+    top: [u16; 4],
+    left: [u16; 4],
+    coefficients: TransformCoefficients,
+) -> [u16; 16] {
+    reconstruct_transform(dc_predictor(top, left), coefficients)
 }
 
 fn reconstruct_boundary_plane(
     above: &ReconstructedPlane,
     left: &ReconstructedPlane,
-    coefficients: [i32; 16],
+    coefficients: PlaneCoefficients,
 ) -> ReconstructedPlane {
     let top = bottom_edge(above);
     let left = right_edge(left);
@@ -995,7 +1103,7 @@ pub(super) fn __coverage_exercise_private_branches() {
         RangeDecoder::new(&invalid_data, 0, invalid_input.len(), false).unwrap();
     let (_, _, invalid_filter_intra_cdf) = TransformGrid::Square8.properties();
     let mut invalid_cdfs = BlockCdfs::defaults(invalid_filter_intra_cdf);
-    let _ = decode_boundary_dc_coefficients(&mut invalid_decoder, 0, &mut invalid_cdfs, 1, 2);
+    let _ = decode_boundary_coefficients(&mut invalid_decoder, 0, &mut invalid_cdfs, 1, 2);
     for fill in 0..=u8::MAX {
         let input = [fill; 64];
         let spans = [super::super::samples::ByteSpan {
