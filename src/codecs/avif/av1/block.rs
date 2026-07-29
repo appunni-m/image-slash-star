@@ -151,6 +151,7 @@ enum CoefficientPolicy {
     DcOrSkipped,
     DcThenLumaAc,
     Skipped,
+    Lossy420Skipped,
     SquareContextual {
         neighbor_contexts: [[u8; 2]; 3],
         orientation: SplitOrientation,
@@ -167,6 +168,22 @@ enum CoefficientPolicy {
         above_luma_contexts: [u8; 2],
         left_luma_contexts: [u8; 2],
     },
+}
+
+#[derive(Clone, Copy)]
+enum QuantizationSyntax {
+    Lossless,
+    DeltaQ {
+        initial_qindex: u32,
+        resolution_log2: u32,
+    },
+}
+
+#[derive(Clone, Copy)]
+struct SyntaxPolicy {
+    spatial_luma_context: SpatialLumaContext,
+    coefficient_policy: CoefficientPolicy,
+    quantization_syntax: QuantizationSyntax,
 }
 
 #[derive(Clone, Copy)]
@@ -231,6 +248,7 @@ pub(in crate::codecs::avif) struct FirstLeaf {
 
 struct BlockCdfs {
     skip: [u16; 2],
+    delta_q: [u16; 4],
     luma_mode: [[u16; 13]; 6],
     luma_angle: [[u16; 7]; 2],
     chroma_mode: [[u16; 13]; 3],
@@ -239,6 +257,7 @@ struct BlockCdfs {
     palette_uv: [u16; 2],
     use_filter_intra: [u16; 2],
     coefficient_skip: [[u16; 2]; 2],
+    lossy_luma_8x8_coefficient_skip: [u16; 2],
     subsampled_chroma_coefficient_skip: [[u16; 2]; 2],
     trailing_coefficient_skip: [[u16; 2]; 2],
     double_neighbor_coefficient_skip: [[u16; 2]; 2],
@@ -262,6 +281,7 @@ impl BlockCdfs {
     const fn defaults(use_filter_intra: [u16; 2]) -> Self {
         Self {
             skip: [1_097, 0],
+            delta_q: [4_608, 648, 91, 0],
             luma_mode: [
                 [
                     17_180, 15_741, 13_430, 12_550, 12_086, 11_658, 10_943, 9_524, 8_579, 4_603,
@@ -324,6 +344,7 @@ impl BlockCdfs {
             palette_uv: [307, 0],
             use_filter_intra,
             coefficient_skip: [[26_876, 0], [22_807, 0]],
+            lossy_luma_8x8_coefficient_skip: [1_220, 0],
             subsampled_chroma_coefficient_skip: [[25_114, 0], [13_295, 0]],
             trailing_coefficient_skip: [[10_833, 0], [2_526, 0]],
             double_neighbor_coefficient_skip: [[281, 0], [651, 0]],
@@ -1559,20 +1580,65 @@ fn decode_skipped_coefficients(
     Some([[0_i32; 16]; 16])
 }
 
+// ✅ VERIFIED: dav1d 1.5.3 src/decode.c:963-983 and src/cdf.c:410-411.
+// Slice 34 starts at frame qindex four, decodes magnitude two and a negative
+// sign at resolution zero, and therefore reaches block qindex two.
+fn decode_delta_q(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    initial_qindex: u32,
+    resolution_log2: u32,
+) -> Option<()> {
+    let magnitude = decoder.adaptive_symbol(&mut cdfs.delta_q, 3);
+    (magnitude == 2).then_some(())?;
+    decoder.equal().then_some(())?;
+    let delta = magnitude.wrapping_shl(resolution_log2);
+    (initial_qindex.wrapping_sub(delta) == 2).then_some(())
+}
+
+// ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:318-354 and
+// src/cdf.c:689-706. The admitted lossy leaf has one skipped 8x8 luma
+// transform in context one and one skipped 4x4 transform per chroma plane in
+// context seven. Zero coefficients below are a reconstruction representation;
+// the real transform sizes and skip symbols are consumed here.
+fn decode_lossy_420_skipped_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<PlaneCoefficients> {
+    let skipped = if plane == 0 {
+        decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip)
+    } else {
+        decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[0])
+    };
+    skipped.then_some([[0_i32; 16]; 16])
+}
+
 fn decode_syntax(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     transform_grid: TransformGrid,
     chroma_sampling: ChromaSampling,
-    spatial_luma_context: SpatialLumaContext,
-    coefficient_policy: CoefficientPolicy,
+    policy: SyntaxPolicy,
     tools: BlockTools,
 ) -> Option<BlockSyntax> {
+    let SyntaxPolicy {
+        spatial_luma_context,
+        coefficient_policy,
+        quantization_syntax,
+    } = policy;
     let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
     (!decoder.adaptive_bool(&mut cdfs.skip)).then_some(())?;
+    if let QuantizationSyntax::DeltaQ {
+        initial_qindex,
+        resolution_log2,
+    } = quantization_syntax
+    {
+        decode_delta_q(decoder, cdfs, initial_qindex, resolution_log2)?;
+    }
     let luma_predictor =
         match decoder.adaptive_symbol(&mut cdfs.luma_mode[spatial_luma_context.index()], 12) {
-            0 => LumaPredictor::Dc,
+            0 if matches!(quantization_syntax, QuantizationSyntax::Lossless) => LumaPredictor::Dc,
             1 if !matches!(
                 coefficient_policy,
                 CoefficientPolicy::BoundaryContextual { .. }
@@ -1662,6 +1728,9 @@ fn decode_syntax(
                 plane_grid_width,
                 plane_grid_height,
             ),
+            CoefficientPolicy::Lossy420Skipped => {
+                decode_lossy_420_skipped_coefficients(decoder, plane, cdfs)
+            }
             CoefficientPolicy::SquareContextual {
                 neighbor_contexts,
                 orientation,
@@ -2231,8 +2300,11 @@ where
         cdfs,
         transform_grid,
         chroma_sampling,
-        spatial_luma_context,
-        coefficient_policy,
+        SyntaxPolicy {
+            spatial_luma_context,
+            coefficient_policy,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )
 }
@@ -2295,8 +2367,11 @@ pub(super) fn decode_first_lossless_444_leaf(
         &mut cdfs,
         transform_grid,
         ChromaSampling::Full,
-        SpatialLumaContext::Origin,
-        CoefficientPolicy::DcOrSkipped,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::DcOrSkipped,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )?;
     let predictors = origin_predictors(syntax.luma_predictor);
@@ -2325,8 +2400,49 @@ pub(super) fn decode_first_lossless_420_leaf(
         &mut cdfs,
         transform_grid,
         ChromaSampling::Subsampled420,
-        SpatialLumaContext::Origin,
-        CoefficientPolicy::DcOrSkipped,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::DcOrSkipped,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
+        tools,
+    )?;
+    let predictors = origin_predictors(syntax.luma_predictor);
+    let leaf = reconstruct_leaf(syntax, predictors);
+    Some(visible_leaf(
+        leaf,
+        transform_grid,
+        width,
+        height,
+        ChromaSampling::Subsampled420,
+    ))
+}
+
+/// Decode the first closed lossy 4:2:0 leaf whose residuals are all skipped.
+pub(super) fn decode_first_lossy_420_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    width: u32,
+    height: u32,
+    initial_qindex: u32,
+    delta_q_resolution_log2: u32,
+    tools: BlockTools,
+) -> Option<FirstLeaf> {
+    let transform_grid = TransformGrid::Square8;
+    let (_, _, use_filter_intra) = transform_grid.properties();
+    let mut cdfs = BlockCdfs::defaults(use_filter_intra);
+    let syntax = decode_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::Lossy420Skipped,
+            quantization_syntax: QuantizationSyntax::DeltaQ {
+                initial_qindex,
+                resolution_log2: delta_q_resolution_log2,
+            },
+        },
         tools,
     )?;
     let predictors = origin_predictors(syntax.luma_predictor);
@@ -2435,8 +2551,11 @@ where
         &mut cdfs,
         transform_grid,
         ChromaSampling::Full,
-        SpatialLumaContext::Origin,
-        CoefficientPolicy::DcOrSkipped,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::DcOrSkipped,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )?;
     let first_predictors = origin_predictors(first_syntax.luma_predictor);
@@ -2450,8 +2569,11 @@ where
         &mut cdfs,
         transform_grid,
         ChromaSampling::Full,
-        spatial_luma_context,
-        CoefficientPolicy::Skipped,
+        SyntaxPolicy {
+            spatial_luma_context,
+            coefficient_policy: CoefficientPolicy::Skipped,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )?;
     let second_predictors = neighbor_predictors(&first, orientation);
@@ -2499,8 +2621,11 @@ where
         &mut cdfs,
         transform_grid,
         ChromaSampling::Subsampled420,
-        SpatialLumaContext::Origin,
-        CoefficientPolicy::DcOrSkipped,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::DcOrSkipped,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )?;
     let second_neighbor_contexts = coefficient_edge_contexts(
@@ -2519,10 +2644,13 @@ where
         &mut cdfs,
         transform_grid,
         ChromaSampling::Subsampled420,
-        spatial_luma_context,
-        CoefficientPolicy::SubsampledSkippedContextual {
-            neighbor_contexts: second_neighbor_contexts,
-            orientation,
+        SyntaxPolicy {
+            spatial_luma_context,
+            coefficient_policy: CoefficientPolicy::SubsampledSkippedContextual {
+                neighbor_contexts: second_neighbor_contexts,
+                orientation,
+            },
+            quantization_syntax: QuantizationSyntax::Lossless,
         },
         tools,
     )?;
@@ -2583,8 +2711,11 @@ where
         &mut cdfs,
         transform_grid,
         ChromaSampling::Full,
-        SpatialLumaContext::Origin,
-        CoefficientPolicy::DcThenLumaAc,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::DcThenLumaAc,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )?;
     let top_right_neighbor_contexts = coefficient_edge_contexts(
@@ -2729,8 +2860,11 @@ where
         &mut cdfs,
         transform_grid,
         ChromaSampling::Subsampled420,
-        SpatialLumaContext::Origin,
-        CoefficientPolicy::DcOrSkipped,
+        SyntaxPolicy {
+            spatial_luma_context: SpatialLumaContext::Origin,
+            coefficient_policy: CoefficientPolicy::DcOrSkipped,
+            quantization_syntax: QuantizationSyntax::Lossless,
+        },
         tools,
     )?;
     let top_right_neighbor_contexts = coefficient_edge_contexts(

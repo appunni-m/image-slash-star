@@ -435,6 +435,61 @@ impl RestorationType {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct QuantizationContext {
+    pub(super) base: u32,
+    pub(super) y_dc_delta: i32,
+    pub(super) u_dc_delta: i32,
+    pub(super) u_ac_delta: i32,
+    pub(super) v_dc_delta: i32,
+    pub(super) v_ac_delta: i32,
+    pub(super) different_uv_delta: bool,
+    pub(super) using_matrix: bool,
+    pub(super) matrix_y: u32,
+    pub(super) matrix_u: u32,
+    pub(super) matrix_v: u32,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct LoopFilterContext {
+    pub(super) level_y: [u32; 2],
+    pub(super) level_u: u32,
+    pub(super) level_v: u32,
+    pub(super) sharpness: u32,
+    pub(super) delta_enabled: bool,
+    pub(super) delta_update: bool,
+    pub(super) reference_deltas: [i32; 8],
+    pub(super) mode_deltas: [i32; 2],
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct CdefContext {
+    pub(super) damping: u32,
+    pub(super) bits: u32,
+    pub(super) y_strength_count: usize,
+    pub(super) uv_strength_count: usize,
+    pub(super) first_y_strength: Option<u32>,
+    pub(super) first_uv_strength: Option<u32>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct FrameToolsContext {
+    pub(super) quantization: Option<QuantizationContext>,
+    pub(super) segment_qindex: u32,
+    pub(super) segment_lossless: bool,
+    pub(super) delta_q_present: bool,
+    pub(super) delta_q_resolution_log2: u32,
+    pub(super) delta_lf_present: bool,
+    pub(super) delta_lf_resolution_log2: u32,
+    pub(super) delta_lf_multi: bool,
+    pub(super) loop_filter: LoopFilterContext,
+    pub(super) cdef: Option<CdefContext>,
+    pub(super) restoration_present: bool,
+    pub(super) transform_mode: u32,
+    pub(super) reduced_transform_set: bool,
+    pub(super) film_grain_present: bool,
+}
+
 /// Codec state needed before the first block in one tile.
 pub(super) struct FirstBlockContext {
     pub(super) disable_cdf_update: bool,
@@ -459,6 +514,7 @@ pub(super) struct FirstBlockContext {
     pub(super) allow_intrabc: bool,
     pub(super) allow_screen_content_tools: bool,
     pub(super) enable_filter_intra: bool,
+    pub(super) frame_tools: FrameToolsContext,
 }
 
 #[derive(Clone, Copy)]
@@ -753,16 +809,20 @@ fn square_recursive_split_dimensions(context: &FirstBlockContext) -> bool {
     )
 }
 
-fn closed_reconstruction_context(context: &FirstBlockContext) -> bool {
+fn closed_base_reconstruction_context(context: &FirstBlockContext) -> bool {
     (context.bit_depth == 8)
-        & context.all_lossless
         & !context.superres_enabled
         & !context.segmentation_enabled
         & !context.skip_mode_enabled
         & !context.allow_intrabc
         & !context.monochrome
+        & !context.frame_tools.film_grain_present
         & (context.block_x == 0)
         & (context.block_y == 0)
+}
+
+fn closed_reconstruction_context(context: &FirstBlockContext) -> bool {
+    closed_base_reconstruction_context(context) & context.all_lossless
 }
 
 fn closed_444_reconstruction_context(context: &FirstBlockContext) -> bool {
@@ -774,6 +834,65 @@ fn closed_420_reconstruction_context(context: &FirstBlockContext) -> bool {
         & context.subsampling_x
         & context.subsampling_y
         & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context))
+}
+
+const CLOSED_LOSSY_420_FRAME_TOOLS: FrameToolsContext = FrameToolsContext {
+    quantization: Some(QuantizationContext {
+        base: 4,
+        y_dc_delta: 0,
+        u_dc_delta: 0,
+        u_ac_delta: 0,
+        v_dc_delta: 0,
+        v_ac_delta: 0,
+        different_uv_delta: false,
+        using_matrix: true,
+        matrix_y: 10,
+        matrix_u: 10,
+        matrix_v: 10,
+    }),
+    segment_qindex: 4,
+    segment_lossless: false,
+    delta_q_present: true,
+    delta_q_resolution_log2: 0,
+    delta_lf_present: false,
+    delta_lf_resolution_log2: 0,
+    delta_lf_multi: false,
+    loop_filter: LoopFilterContext {
+        level_y: [0; 2],
+        level_u: 0,
+        level_v: 0,
+        sharpness: 7,
+        delta_enabled: true,
+        delta_update: false,
+        reference_deltas: [1, 0, 0, 0, -1, 0, -1, -1],
+        mode_deltas: [0; 2],
+    },
+    cdef: Some(CdefContext {
+        damping: 4,
+        bits: 0,
+        y_strength_count: 1,
+        uv_strength_count: 1,
+        first_y_strength: Some(0),
+        first_uv_strength: Some(0),
+    }),
+    restoration_present: false,
+    transform_mode: 1,
+    reduced_transform_set: false,
+    film_grain_present: false,
+};
+
+fn closed_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    closed_base_reconstruction_context(context)
+        & !context.all_lossless
+        & context.subsampling_x
+        & context.subsampling_y
+        & matches!((context.frame_width, context.frame_height), (4, 4) | (8, 8))
+        & !context.disable_cdf_update
+        & !context.allow_screen_content_tools
+        & context.enable_filter_intra
+        & (context.restoration_types == [None; 3])
+        & (context.restoration_unit_size_log2 == [8; 2])
+        & (context.frame_tools == CLOSED_LOSSY_420_FRAME_TOOLS)
 }
 
 fn decode_closed_leaf(
@@ -812,6 +931,24 @@ fn decode_closed_420_leaf(
     finish_closed_leaf(decoder, reconstructed)
 }
 
+fn decode_closed_lossy_420_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    context: &FirstBlockContext,
+) -> Option<super::block::FirstLeaf> {
+    let reconstructed = super::block::decode_first_lossy_420_leaf(
+        decoder,
+        context.frame_width,
+        context.frame_height,
+        context.frame_tools.segment_qindex,
+        context.frame_tools.delta_q_resolution_log2,
+        super::block::BlockTools {
+            allow_screen_content_tools: context.allow_screen_content_tools,
+            enable_filter_intra: context.enable_filter_intra,
+        },
+    );
+    finish_closed_leaf(decoder, reconstructed)
+}
+
 fn finish_closed_leaf(
     _decoder: &RangeDecoder<'_, '_, '_>,
     reconstructed: Option<super::block::FirstLeaf>,
@@ -838,7 +975,8 @@ pub(super) fn validate_first_partition(
     {
         let trace_closed_context = (closed_444_reconstruction_context(context)
             & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context)))
-            | closed_420_reconstruction_context(context);
+            | closed_420_reconstruction_context(context)
+            | closed_lossy_420_reconstruction_context(context);
         if trace_closed_context {
             decoder.enable_operation_trace();
         }
@@ -893,6 +1031,12 @@ pub(super) fn validate_first_partition(
                         context,
                         transform_grid,
                     ));
+                }
+                let reconstruct_closed_lossy_420_leaf = (partition == 0)
+                    & (level == 4)
+                    & closed_lossy_420_reconstruction_context(context);
+                if reconstruct_closed_lossy_420_leaf {
+                    return Some(decode_closed_lossy_420_leaf(&mut decoder, context));
                 }
                 let reconstruct_square_split = (partition == 3)
                     & closed_444_reconstruction_context(context)
@@ -1284,6 +1428,31 @@ fn coverage_context() -> FirstBlockContext {
         allow_intrabc: false,
         allow_screen_content_tools: false,
         enable_filter_intra: true,
+        frame_tools: FrameToolsContext {
+            quantization: None,
+            segment_qindex: 0,
+            segment_lossless: false,
+            delta_q_present: false,
+            delta_q_resolution_log2: 0,
+            delta_lf_present: false,
+            delta_lf_resolution_log2: 0,
+            delta_lf_multi: false,
+            loop_filter: LoopFilterContext {
+                level_y: [0; 2],
+                level_u: 0,
+                level_v: 0,
+                sharpness: 0,
+                delta_enabled: true,
+                delta_update: true,
+                reference_deltas: [1, 0, 0, 0, -1, 0, -1, -1],
+                mode_deltas: [0; 2],
+            },
+            cdef: None,
+            restoration_present: false,
+            transform_mode: 0,
+            reduced_transform_set: false,
+            film_grain_present: false,
+        },
     }
 }
 

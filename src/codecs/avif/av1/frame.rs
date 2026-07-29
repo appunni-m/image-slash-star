@@ -707,6 +707,52 @@ fn validate_tile_entropy_prefixes(
         .map_or(([None; 3], [8; 2]), |restoration| {
             (restoration.types, restoration.unit_size_log2)
         });
+    let frame_tools = entropy::FrameToolsContext {
+        quantization: header.quantization.as_ref().map(|quantization| {
+            entropy::QuantizationContext {
+                base: quantization.base,
+                y_dc_delta: quantization.y_dc_delta,
+                u_dc_delta: quantization.u_dc_delta,
+                u_ac_delta: quantization.u_ac_delta,
+                v_dc_delta: quantization.v_dc_delta,
+                v_ac_delta: quantization.v_ac_delta,
+                different_uv_delta: quantization.different_uv_delta,
+                using_matrix: quantization.using_matrix,
+                matrix_y: quantization.matrix_y,
+                matrix_u: quantization.matrix_u,
+                matrix_v: quantization.matrix_v,
+            }
+        }),
+        segment_qindex: header.segment_qindex[0],
+        segment_lossless: header.segment_lossless[0],
+        delta_q_present: header.delta_q_present,
+        delta_q_resolution_log2: header.delta_q_resolution_log2,
+        delta_lf_present: header.delta_lf_present,
+        delta_lf_resolution_log2: header.delta_lf_resolution_log2,
+        delta_lf_multi: header.delta_lf_multi,
+        loop_filter: entropy::LoopFilterContext {
+            level_y: header.loop_filter.level_y,
+            level_u: header.loop_filter.level_u,
+            level_v: header.loop_filter.level_v,
+            sharpness: header.loop_filter.sharpness,
+            delta_enabled: header.loop_filter.delta_enabled,
+            delta_update: header.loop_filter.delta_update,
+            reference_deltas: header.loop_filter.deltas.reference,
+            mode_deltas: header.loop_filter.deltas.mode,
+        },
+        cdef: header.cdef.as_ref().map(|cdef| entropy::CdefContext {
+            damping: cdef.damping,
+            bits: cdef.bits,
+            y_strength_count: cdef.y_strengths.len(),
+            uv_strength_count: cdef.uv_strengths.len(),
+            first_y_strength: cdef.y_strengths.first().copied(),
+            first_uv_strength: cdef.uv_strengths.first().copied(),
+        }),
+        restoration_present: header.restoration.is_some(),
+        transform_mode: header.transform_mode,
+        reduced_transform_set: header.reduced_transform_set,
+        film_grain_present: header.film_grain.is_some(),
+    };
 
     let mut first_leaf = None;
     for (range_index, range) in ranges.iter().enumerate() {
@@ -763,6 +809,7 @@ fn validate_tile_entropy_prefixes(
             allow_intrabc: header.allow_intrabc,
             allow_screen_content_tools: header.allow_screen_content_tools,
             enable_filter_intra: sequence.enable_filter_intra,
+            frame_tools,
         };
         let reconstructed = entropy::validate_first_partition(data, range.clone(), &context)?;
         first_leaf = first_leaf.or(reconstructed);

@@ -4006,10 +4006,11 @@ def gen_avif():
                 f"AVIF fixture oracle requires {expected}, found {codec_versions}"
             )
 
-    def write_portable_lossless(
+    def write_portable(
         name,
         color,
         size=(4, 4),
+        quality=100,
         speed=8,
         subsampling="4:4:4",
     ):
@@ -4020,7 +4021,7 @@ def gen_avif():
             image.save(
                 output,
                 format="AVIF",
-                quality=100,
+                quality=quality,
                 speed=speed,
                 max_threads=1,
                 subsampling=subsampling,
@@ -4033,6 +4034,22 @@ def gen_avif():
         if first != second:
             raise RuntimeError(f"AVIF fixture {name} is not deterministic")
         (d / name).write_bytes(first)
+
+    def write_portable_lossless(
+        name,
+        color,
+        size=(4, 4),
+        speed=8,
+        subsampling="4:4:4",
+    ):
+        write_portable(
+            name,
+            color,
+            size=size,
+            quality=100,
+            speed=speed,
+            subsampling=subsampling,
+        )
 
     def write_square_partition(
         name,
@@ -4095,6 +4112,26 @@ def gen_avif():
         "portable_lossless_420_8x8_b.avif",
         (199, 37, 83),
         size=(8, 8),
+        subsampling="4:2:0",
+    )
+    for gray in (127, 129):
+        write_portable(
+            f"portable_lossy_420_q99_gray_{gray}.avif",
+            (gray, gray, gray),
+            quality=99,
+            subsampling="4:2:0",
+        )
+        write_portable(
+            f"portable_lossy_420_q99_8x8_gray_{gray}.avif",
+            (gray, gray, gray),
+            size=(8, 8),
+            quality=99,
+            subsampling="4:2:0",
+        )
+    write_portable(
+        "portable_lossy_420_q99_gray_128_control.avif",
+        (128, 128, 128),
+        quality=99,
         subsampling="4:2:0",
     )
     for geometry, size in (
@@ -4414,7 +4451,7 @@ def gen_avif():
     baseline[sequence_offset] = (baseline[sequence_offset] & 0x1f) | 0xe0
     (d / "invalid_sequence_profile.avif").write_bytes(baseline)
     print(
-        "  AVIF: wrote portable lossless, multi-tile success/error, "
+        "  AVIF: wrote portable lossless/lossy, multi-tile success/error, "
         "and existing error fixtures"
     )
 

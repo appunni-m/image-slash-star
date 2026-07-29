@@ -6937,3 +6937,51 @@ inspect source color, fixture name, encoded bytes, hashes, or final pixels.
 The four lossy AVIFs and complete pinned reconstruction records must now be
 committed before production Rust changes, followed by an intentional Coverage
 MCP failure at the existing all-lossless reconstruction gate.
+
+### Slice 34 implementation and acceptance
+
+The manifest now retains the four admitted quality-99 AVIFs and the adjacent
+gray-128 predictor control. Pillow 12.2.0 provides exact RGB bytes for all five
+inputs, while the pinned dav1d 1.5.3 oracle provides the complete 134-case
+reconstruction document. Both generators reject nondeterministic AVIF or
+trace output.
+
+Coverage MCP run `07dd4ec7-27d0-4bd1-b96e-9a5cab16e3df` is the intentional
+pre-implementation failure. The existing production path returned no retained
+leaf for `portable_lossy_420_q99_gray_127.avif`, proving that the all-lossless
+gate—not the native AVIF fallback—was the first missing portable stage.
+
+The implementation carries the parsed quantization, delta-q, loop-filter,
+CDEF, restoration, transform-mode, reduced-transform, and film-grain facts
+into the first-block context. Admission requires the exact documented frame
+tool class. The scalar path then consumes the real delta-q, luma/chroma mode,
+angle, and coefficient-skip CDFs and reconstructs only the zero-residual
+vertical or horizontal predictor. The gray-128 control reaches the same frame
+and delta-q class but is rejected by its DC luma syntax. It is not selected by
+its name, source color, bytes, hash, or decoded pixels.
+
+Two implementation defects were found by the fixture before acceptance:
+
+- the closed classifier compared the root partition level with leaf level
+  four instead of checking the loop's current level; and
+- Rust transform-mode value one is `largest`, while value two is `select`.
+
+The exact fixture passed only after both parsed-state mappings were corrected.
+An exhaustive deterministic mutation sweep of the retained gray-127 fixture
+then exercised the new rejection paths. The bounded delta magnitude and
+qindex calculation stays unsigned, removing impossible signed-conversion
+failure regions rather than manufacturing test-only behavior.
+
+Strict Clippy required the immutable spatial, coefficient, and quantization
+choices to be grouped in a private `SyntaxPolicy`; no lint allowance was
+added. The complete native and `wasm32-unknown-unknown` Clippy matrix passes
+for no features, every individual codec feature, default features, and all
+features with `-D warnings`. Native and WASM rustdoc, rustfmt, whitespace, the
+22-file legal inventory, `cargo-deny` advisories/bans/licenses/sources, and
+offline package verification also pass. The publishable package contains 135
+files, is 2.1 MiB unpacked, and is 430.6 KiB compressed.
+
+Final Coverage MCP run `bc08b11f-30ae-4155-b6dd-a8bd8e618f89`, snapshot
+`14a62b36-f9b5-4e19-9a9b-08c9b59992c6`, passes all seven test binaries with
+exact totals of 38,203/38,203 lines, 5,460/5,460 branches, 1,909/1,909
+functions, and 62,837/62,837 regions. Slice 34 is accepted.
