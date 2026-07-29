@@ -65,6 +65,26 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008",
         "size": [8, 8],
     },
+    "portable_lossy_420_q99_gray_127.avif": {
+        "file_sha256": "c232a943aef1ec71422567e9c00a137a70576c63a383621a4417a9637ee08732",
+        "rgb_sha256": "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_127.avif": {
+        "file_sha256": "947d6326cc09f88e50e0aba60d9cb468970d793ac323003a5d2452934998dcf1",
+        "rgb_sha256": "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd",
+        "size": [8, 8],
+    },
+    "portable_lossy_420_q99_gray_129.avif": {
+        "file_sha256": "79e3d72995eb382d5462e4309fec24e37111cd039a10bc9b28bd370b9b26fa64",
+        "rgb_sha256": "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_129.avif": {
+        "file_sha256": "ca48aaddde1310eecde25c24c24314089a5e62164c8dbd36b0c64b2ef9812507",
+        "rgb_sha256": "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e",
+        "size": [8, 8],
+    },
     "portable_lossless_420_leaf_4x8_a.avif": {
         "file_sha256": "31aae6e6395da7d749786b00c339ace12d29af7acbfa7d9710bca10d9d92346e",
         "rgb_sha256": "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475",

@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 130);
+    assert_eq!(expected.cases.len(), 134);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2662,6 +2662,18 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "portable_lossless_420_8x8_b.avif" => {
                 "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
             }
+            "portable_lossy_420_q99_gray_127.avif" => {
+                "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
+            }
+            "portable_lossy_420_q99_8x8_gray_127.avif" => {
+                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+            }
+            "portable_lossy_420_q99_gray_129.avif" => {
+                "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57"
+            }
+            "portable_lossy_420_q99_8x8_gray_129.avif" => {
+                "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+            }
             "portable_lossless_gray_32.avif" => {
                 "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
             }
@@ -2972,6 +2984,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     | "partitioned_square_12x12_top_left_luma_eob12_control.avif"
                     | "partitioned_square_12x12_top_left_luma_eob4.avif"
                     | "partitioned_square_16x16_g64.avif"
+                    | "portable_lossy_420_q99_gray_127.avif"
                     | "portable_lossless_420_split_12x4_a.avif"
                     | "portable_lossless_420_split_4x12_a.avif"
                     | "partitioned_square_420_16x16_rgb_delta.avif"
@@ -2988,6 +3001,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "animated.avif",
         "10bit.avif",
         "multitile.avif",
+        "portable_lossy_420_q99_gray_128_control.avif",
     ] {
         let input = require_ok(
             fs::read(

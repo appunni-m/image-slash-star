@@ -150,6 +150,111 @@
           "ref_is_animated": false
         },
         {
+          "id": "portable_lossy_420_q99_gray_127",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "4x4 lossy 4:2:0 key frame with block qindex 2, vertical luma prediction, and every residual skipped",
+          "asset": "portable_lossy_420_q99_gray_127.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_127_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_8x8_gray_127",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "8x8 lossy 4:2:0 key frame proving the complete vertical-predicted luma and chroma extent",
+          "asset": "portable_lossy_420_q99_8x8_gray_127.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_127_avif.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_gray_129",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "4x4 lossy 4:2:0 key frame with block qindex 2, horizontal luma prediction, and every residual skipped",
+          "asset": "portable_lossy_420_q99_gray_129.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_129_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_8x8_gray_129",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "8x8 lossy 4:2:0 key frame proving the complete horizontal-predicted luma and chroma extent",
+          "asset": "portable_lossy_420_q99_8x8_gray_129.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_gray_129_avif.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_gray_128_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Pillow-decodable adjacent lossy DC-predictor control retained outside the current portable reconstruction class",
+          "asset": "portable_lossy_420_q99_gray_128_control.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_gray_128_control_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "portable_lossless_420_leaf_4x8_a",
           "type": "decode",
           "format": "avif",
@@ -23898,12 +24003,12 @@
     }
   },
   "summary": {
-    "total_rows": 1160,
-    "decode_rows": 882,
+    "total_rows": 1165,
+    "decode_rows": 887,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 881,
-    "decode_active": 882,
+    "assets_available": 886,
+    "decode_active": 887,
     "decode_planned": 0,
     "encode_not_wired": 0
   }
