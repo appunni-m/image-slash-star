@@ -3020,7 +3020,8 @@ The eight-pixel two-leaf visibility extension is accepted:
   target fork, or fixture-selected production path was added;
 - strict native all-target/all-feature, AVIF-only WASM, and all-feature WASM
   Clippy, strict rustdoc, formatting, whitespace, and the 19-file third-party
-  legal audit pass; and
+  legal audit pass. The source package contains 132 files, is 2.0 MiB
+  unpacked, and is 415.0 KiB compressed; and
 - Coverage MCP run `1d6d8a08-9718-4c41-80cf-a8948457ba98`, snapshot
   `50a0d22f-8b21-4167-8722-f6605e30201b`, passes all seven test binaries with
   36,064/36,064 lines, 5,324/5,324 branches, 1,820/1,820 functions, and
