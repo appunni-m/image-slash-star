@@ -5387,3 +5387,463 @@ rustdoc, formatting, whitespace, and the 19-file third-party legal inventory
 also pass. Offline `cargo package` verifies 132 publishable files, 2.0 MiB
 unpacked and 431,000 bytes compressed, with crate SHA-256
 `2e8adf26832d966867385b49b13c2c4399dc3f89b0557f63eee6402013e4d076`.
+
+## Slice 29 Exploration Plan: Contextual Top-Left Transform Grid
+
+Status: accepted.
+
+### Exact Rust first divergence
+
+The first unsupported syntax is now proved at the transform-grid boundary,
+not inferred from the final pixels or from dav1d alone. A temporary
+coverage-only trace was exercised through the existing manifest-backed
+`partitioned_square_12x12_midpoint_g96_ac.avif` error case by Coverage MCP
+run `c1165619-249d-4c4e-b4f4-8fe246bb5a0a`. That deliberately failing
+diagnostic run showed the following Rust decisions for the top-left leaf's
+luma 2x2 transform grid:
+
+```text
+transform 0: base skip CDF,     skipped=false
+transform 1: trailing skip CDF, skipped=true
+transform 2: trailing skip CDF, skipped=true
+transform 3: base skip CDF,     skipped=false
+```
+
+Pinned dav1d makes the same four decisions. Rust then returns `None`
+immediately after transform three's `skipped=false` because
+`decode_dc_coefficients` requires every transform after the first nonzero
+transform to be skipped. It does not consume transform three's EOB bin or
+coefficient body. The temporary trace and deliberately inverted assertion
+were removed after the run, leaving the committed error test unchanged.
+
+This rules out the range decoder, adaptive skip tables, EOB dispatcher,
+inverse transform, predictor, and color conversion as the first cause. The
+first divergence is the private top-left coefficient-grid policy.
+
+### Reverse-mapped isolator and neighboring control
+
+The retained 36-origin `(22,96,208)` sweep identified origin `(6,6)` as the
+smallest closed isolator. Two new complete runs through pinned Pillow 12.2.0,
+libavif 1.4.1, libaom 3.13.2, and scalar instrumented dav1d 1.5.3 generated
+byte-identical two-case reports with SHA-256
+`e4ca622f4f85b6e4d53473769c1c02cdd28654e1ccaeb9fff5f22b4f0b8755d0`.
+The reports retain the encoded AVIF and extracted AV1 hashes, every partition
+and arithmetic operation, coefficient vectors, reconstructed Y/U/V rows, and
+Pillow RGB rows for origins `(6,6)` and `(7,6)`.
+
+The `(6,6)` isolator is a deterministic 317-byte AVIF with SHA-256
+`fbc5e3cec5da21a1c1095ecf82525dac5d6ae60ff4a71b101502392de754cc45`.
+Its 42-byte AV1 color item has SHA-256
+`b6ba409e1eb6068ae86da05e613231145bd53082f0ec2db8ccba39465df0415a`,
+and scalar dav1d consumes 229 entropy operations. The five partition ranges
+are 34880, 40768, 47278, 60530, and 38697. Its Y/U/V SHA-256 values are
+`43577826d2dd195a7cc19e7824af21d6a9aa7c45068ea83b7c23a142435912fa`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`fcfe3605207a28cd1596ae0cb2b9b4ad1b8b356f7457cd2e60276b8d6530a691`.
+
+This fixture changes only luma after YUV conversion: its U and V plane hashes
+are identical to all preceding `(22,96,208)` luma controls. The top-left
+leaf's luma transforms are DC-only, skipped, skipped, and EOB four. Its U and
+V transforms are DC-only followed by three skips. Every transform in the
+other three leaves is skipped. The predictor sequence is
+vertical/horizontal/vertical/DC.
+
+That predictor sequence is not incidental. Once the fourth top-left luma
+transform reconstructs nonzero residuals, the top-left leaf has nonuniform
+right and bottom edge vectors. The skipped top-right horizontal leaf must
+repeat the complete right edge by row, and the skipped bottom-left vertical
+leaf must repeat the complete bottom edge by column. Treating either edge as
+one scalar would decode all arithmetic syntax correctly but reconstruct the
+wrong Y plane. The contextual coefficient grid and directional propagation
+therefore form one closed reconstruction boundary for this encoder-produced
+input.
+
+An additional deterministic 32-color equal-RGB-delta sweep at origin `(6,6)`
+confirmed that the behavior cannot be split with the current pinned encoder.
+The report has SHA-256
+`9f688390b8db6851455739dbc8d785c099aaef9a3706c71d6c5895471ad6fba9`.
+The two smallest deltas remain unsplit. All 30 partitioned cases keep the
+same top-left EOB-4 grid: 21 use predictor sequence
+vertical/horizontal/vertical/DC, while the nine largest deltas replace the
+top-right predictor with unproved mode 12. No partitioned case uses DC in
+both following edge leaves. This sweep is diagnostic only and is not added
+to the repository.
+
+The directional entropy syntax and zero-angle decisions were already proved
+for two-leaf horizontal and vertical slices. Slice 29 reuses those exact CDF
+paths in a four-leaf tree and adds the required full-edge reconstruction:
+the top-right luma rows repeat the top-left right edge, the bottom-left luma
+columns repeat the top-left bottom edge, and one-sided DC chroma uses the
+rounded average of the available edge. No new directional mode or angle is
+admitted.
+
+A temporary stage trace then located the first remaining production
+divergence after directional modes were admitted. Coverage MCP run
+`1d982d5a-f198-49a1-9922-1ea67e0096cb` completed the top-left and top-right
+syntax but rejected during the bottom-left syntax. The earlier arithmetic
+divergence occurs inside the top-right coefficient grid: the fixed skipped
+decoder selects the base luma skip table for all four transforms, while
+dav1d carries the top-left transform residual contexts across the leaf
+boundary.
+
+For the top-right leaf, the external left contexts are the top-left right
+edge, transform indices one and three. Index one is skipped and stores
+`0x40`; index three is the nonzero EOB-4 transform. The first transform of
+the second row therefore has one nonzero left neighbor and must select luma
+skip context three, not base context one. The same relationship is rotated
+for the bottom-left leaf: its external above contexts are top-left indices
+two and three, so the second transform of the first row selects context
+three. Every other skipped luma transform in those leaves selects context
+one, and all chroma transforms select context ten. Choosing the wrong table
+can still return a skipped symbol, but it mutates the wrong adaptive CDF and
+causes the later bottom-left rejection. The temporary trace is removed once
+this boundary state is proved by the manifest fixture.
+
+After carrying those residual edges, Coverage MCP diagnostic run
+`616fad03-aaeb-4401-9878-f7a87299d6c4` completed both following skipped
+leaves. It recorded exactly two one-neighbor luma decisions:
+top-right transform two with external left residual context 148, and
+bottom-left transform one with external above residual context 148. All
+other luma and chroma skips used their base tables. The next rejection occurs
+before bottom-right syntax completes.
+
+The cause is the bottom-right keyframe luma-mode context. This is the first
+admitted leaf with two coded predictor neighbors. Its above neighbor is the
+horizontal top-right leaf, whose AV1 intra-mode context is two; its left
+neighbor is the vertical bottom-left leaf, whose context is one. Dav1d
+therefore selects `kfym[2][1]`, while the previous Rust path selects the
+origin-boundary table `kfym[0][0]`. Pinned dav1d 1.5.3
+`src/cdf.c:639-708` defines cumulative values
+
+```text
+9687, 13470, 18506, 19230, 19604, 20147,
+20695, 22062, 23219, 27743, 29211, 30907
+```
+
+which map to the decoder's inverse CDF representation
+
+```text
+23081, 19298, 14262, 13538, 13164, 12621,
+12073, 10706, 9549, 5025, 3557, 1861, 0
+```
+
+Only DC symbol zero is admitted under this new two-neighbor context. All
+other bottom-right modes remain rejected before their angle, chroma, or
+coefficient syntax.
+
+Origin `(7,6)` is the adjacent negative control. It is a deterministic
+318-byte AVIF with SHA-256
+`b8b703ee9e1f2d8200fea338ee85f7ada1b905539bb163712209f60d83af0713`;
+its 43-byte AV1 item has SHA-256
+`4ce82eb946854cffea4231555baba29283a63a9853362c15924da06fddb5d80d`,
+and dav1d consumes 242 entropy operations. Its Y/U/V hashes are
+`666b8f17ef98a5dc4101858348ccc8025d706f95009f8e0231f41d6b7943ce63`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`;
+Pillow's RGB hash is
+`16195f9646d15f2857da1864cbffdd3f12a965bbd287ca888b7dde113c2d7ec7`.
+It preserves the same topology, predictors, first three luma transforms,
+chroma transforms, and later skipped leaves, but its fourth luma transform
+uses a different EOB-12 coefficient body.
+
+### Context and coefficient mapping
+
+For q-index-zero 4x4 transforms, dav1d stores each transform's residual
+context as the coefficient-token sum capped to 63 in bits zero through five,
+plus the DC sign class in bits six and seven. A skipped transform stores
+`0x40`. For luma, `dav1d_skip_ctx[min(above & 63,4)][min(left & 63,4)]`
+selects the next skip CDF. The closed high-magnitude classes therefore use:
+
+```text
+above zero,    left zero:    skip context 1
+one nonzero neighbor:        skip context 3
+two nonzero neighbors:       skip context 6
+```
+
+The equivalent 4:4:4 chroma contexts for this 2x2 grid are 10, 11, and 12.
+These are exactly the existing `coefficient_skip`,
+`trailing_coefficient_skip`, and `double_neighbor_coefficient_skip` tables.
+The first negative DC coefficient in the isolator stores capped magnitude 63.
+It therefore selects context three for transforms one and two. Both are
+skipped and store `0x40`, so transform three correctly returns to context
+one. Its two skipped neighbors also select DC-sign context zero.
+
+The isolator's fourth luma transform then follows the already-proved Slice 23
+EOB-4 path byte for byte:
+
+1. EOB-bin symbol three, EOB-high context one value zero, and extra bit zero
+   produce EOB four.
+2. EOB-base context two returns symbol two; high-token context seven returns
+   token five at raster position five.
+3. Raster position two uses base context six and returns zero. Raster
+   positions one and four use base context three, then high-token context ten,
+   and each return token five.
+4. DC base context zero returns symbol three and DC high-token context six
+   returns token five. DC is positive; raster positions four and one are
+   negative, and raster position five is positive.
+5. Q-index-zero dequantization produces
+   `[32,-32,0,0,-32,32,0,0,0,0,0,0,0,0,0,0]`.
+
+The inverse WHT adds zero to the first two rows and five to the last two
+samples of the last two rows. With predictor 81, the reconstructed transform
+is:
+
+```text
+81 81 81 81
+81 81 81 81
+81 81 86 86
+81 81 86 86
+```
+
+The adjacent `(7,6)` control reaches the same fourth-transform
+`skipped=false` decision and the same EOB-position base symbol one as Slice
+27. Its first different value is later: coefficient nine returns symbol three
+from base context seven, while the admitted Slice 27 EOB-12 class requires
+symbol two. The original midpoint-g96 control reaches EOB four but returns
+token three from high-token context seven; the admitted Slice 23 class
+requires token five and must continue to reject there. These two independent
+controls separate the grid-policy change from accidental coefficient
+broadening.
+
+### Implementation boundary
+
+1. Replace the top-left decoder's fixed “first nonzero, every later transform
+   skipped” assumption with a private contextual 2x2 grid walk that derives
+   the next skip and DC-sign contexts from decoded residual contexts exactly
+   as dav1d does.
+2. Select only the proved q-context-zero skip tables for luma contexts one
+   and three and 4:4:4 chroma contexts ten, eleven, and twelve. Luma context
+   six remains outside this slice and rejects before reading its skip bit, as
+   do all other unproved luma contexts.
+3. Preserve the existing `DcOrSkipped` policy byte for byte. Add a distinct
+   four-leaf top-left policy whose first transform remains DC-only, whose
+   later luma transforms may enter an already-proved AC body, and whose
+   chroma transforms remain DC-only or skipped.
+4. In the two following skipped square leaves, retain only the already-proved
+   zero-angle horizontal mode to the right and zero-angle vertical mode
+   below. Reconstruct their luma from the complete neighboring right or
+   bottom edge instead of collapsing that edge to one sample. Reconstruct
+   one-sided DC planes from the rounded eight-sample edge average.
+5. Carry each top-left transform's residual magnitude and DC-sign class into
+   the adjacent leaf. Derive top-right left contexts from transform indices
+   one and three and bottom-left above contexts from indices two and three.
+   Select only the already-proved base and one-neighbor skip CDFs; do not
+   hard-code transform ordinals or fixture identity in entropy decoding.
+6. Derive the bottom-right luma-mode context from both parsed neighbors.
+   Preserve origin context `[0][0]` for DC/DC neighbors; admit only the
+   proved `[2][1]` table for horizontal-above/vertical-left neighbors. Keep
+   the leaf DC-only and preserve its existing two-edge reconstruction.
+7. Derive residual magnitude and sign state from parsed coefficients. Do not
+   select behavior by fixture name, hash, byte offset, image dimensions,
+   encoded color, expected output, or target architecture.
+8. Admit only the `(6,6)` EOB-4 fixture. Keep the `(7,6)` EOB-12 body and
+   midpoint-g96 EOB-4 token-three body as manifest-backed private portable
+   errors at their first unproved coefficient value.
+
+The production path remains safe Rust, dependency-free, target-independent,
+and codec-private. It does not add image processing or weaken any public
+structured-error contract.
+
+### Acceptance criteria
+
+- Commit both reverse-mapped fixtures through `generate_test_assets.py`:
+  `(6,6)` as the one-hundredth reconstruction positive and `(7,6)` as the
+  adjacent private portable error control.
+- Regenerate the Pillow/dav1d reconstruction oracle and match all 229
+  isolator entropy operations, every adaptive CDF state, coefficient vector,
+  exact Y/U/V row and hash, and exact Pillow RGB row and hash.
+- Prove the `(7,6)` control rejects at EOB-base context-three symbol two and
+  midpoint-g96 rejects at high-token context-seven token three; neither may
+  consume downstream unproved coefficient or chroma syntax.
+- Exercise luma skip contexts one and three, chroma contexts ten and eleven,
+  residual-context derivation, the later nonzero branch, horizontal
+  right-edge repetition, vertical bottom-edge repetition, one-sided DC
+  averaging, and every new structured error branch through manifest-derived
+  fixtures. Luma context six remains rejected; chroma context twelve retains
+  its existing manifest coverage.
+- Preserve every preceding reconstruction result and every active manifest
+  input/output/error row exactly, with no planned, skipped, or unwired row.
+- Add no dependency, unsafe Rust, target fork, native-only behavior, public
+  image-processing API, or fixture-selected production path.
+- Use Coverage MCP as the only test runner and restore exactly 100% line,
+  branch, function, and region coverage after all implementation and
+  documentation changes.
+- Pass strict Clippy for no features, every individual codec feature,
+  defaults, and all features on native and `wasm32-unknown-unknown`, plus
+  strict rustdoc, rustfmt, whitespace, third-party legal, deterministic
+  fixture generation, and offline source-package gates.
+
+### Acceptance result
+
+The contextual top-left grid and its closed four-leaf reconstruction boundary
+are accepted. The production decoder now derives each 2x2 transform's
+residual magnitude and sign state, carries the right and bottom residual
+edges into adjacent leaves, selects the two one-neighbor luma skip
+occurrences exactly, and reconstructs horizontal and vertical leaves from
+their complete pixel edges. The bottom-right DC leaf selects the proved
+`kfym[2][1]` context from its horizontal-above and vertical-left neighbors.
+No behavior is selected from a fixture name, byte offset, hash, dimensions,
+target, or expected output.
+
+The `(6,6)` EOB-4 fixture is the one-hundredth independent reconstruction
+positive. It matches all 229 pinned dav1d entropy operations, adaptive CDF
+states, coefficient vectors, exact Y/U/V bytes, and exact Pillow RGB bytes.
+The regenerated reconstruction oracle has SHA-256
+`e7579f9edd61d2e6f9f7da7d12dbce0b452a1ed87cc5084d690a0eaa79c61da7`.
+The adjacent `(7,6)` EOB-12 fixture remains a structured private portable
+error, as does the midpoint-g96 token-three control.
+
+The manifest has 1,132 active rows: 854 decode and 278 encode. AVIF has 112
+active decode rows and 23 active encode rows, with no planned, skipped, or
+unwired row. The generated coverage matrix has SHA-256
+`c30092c2b3520329442a51f8912a06d2bd09469c4d22b6fe39f2325555f44fe0`.
+
+Final Coverage MCP run `241bed7c-f922-47b6-af7e-ab79c22b81fc`, snapshot
+`ce3d7541-b8fb-4a4a-b2b9-e44da8546ffb`, passes all seven test binaries with
+37,062/37,062 lines, 5,376/5,376 branches, 1,868/1,868 functions, and
+61,420/61,420 regions.
+
+Strict Clippy passes for no features, every isolated codec feature, defaults,
+and all features on native and `wasm32-unknown-unknown`. Strict native and
+WASM rustdoc, rustfmt, whitespace, and the 19-file third-party legal audit
+also pass. Offline source-package verification contains 132 files, is 2.0
+MiB unpacked and 432,958 bytes compressed, with crate SHA-256
+`70f5f24324da6a90650cc85defc90cc5adaa7bbeddbfaa198be0c68d9644dfba`.
+The slice adds no dependency, unsafe Rust, target fork, public image
+processing, or native-only default behavior.
+
+## Slice 30 Exploration Plan: Alternate Lossless EOB 12 Body
+
+Status: planned.
+
+### Exact Rust first divergence
+
+The adjacent `(7,6)` fixture is already manifest-backed and shares Slice 29's
+accepted partition tree, predictor sequence, contextual top-left grid,
+cross-leaf coefficient state, directional edge reconstruction, and
+bottom-right mode context. A temporary coverage-only trace and deliberately
+failing assertion exercised that exact fixture through Coverage MCP run
+`59670fa6-a41a-4d04-b1d1-dc1454b14dce`.
+
+Rust and dav1d both decode EOB twelve, then consume EOB-base context three
+symbol one, two zero values from base context twenty-one, and two zero values
+from base context six. The first divergence is the next arithmetic symbol:
+
+```text
+raster coefficient 9
+base context 7
+Slice 27 accepted value: 2
+this fixture's value:    3
+```
+
+Rust returns `None` immediately after value three. It does not consume the
+coefficient-nine high token or any later coefficient, DC, sign, predictor, or
+reconstruction syntax. The temporary diagnostics and inverted assertion were
+removed after the run.
+
+### Reproducible oracle evidence
+
+The two complete scalar reports
+`/private/tmp/image-star-slice29-grid-a.json` and
+`/private/tmp/image-star-slice29-grid-b.json` were generated independently
+through pinned Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, and instrumented
+dav1d 1.5.3. They are byte-identical with SHA-256
+`e4ca622f4f85b6e4d53473769c1c02cdd28654e1ccaeb9fff5f22b4f0b8755d0`.
+
+The target is a deterministic 318-byte AVIF with SHA-256
+`b8b703ee9e1f2d8200fea338ee85f7ada1b905539bb163712209f60d83af0713`.
+Its 43-byte AV1 color item has SHA-256
+`4ce82eb946854cffea4231555baba29283a63a9853362c15924da06fddb5d80d`,
+and scalar dav1d consumes 242 entropy operations. The five partition ranges
+are 34880, 40768, 53060, 33964, and 42488.
+
+Its Y/U/V SHA-256 values are
+`666b8f17ef98a5dc4101858348ccc8025d706f95009f8e0231f41d6b7943ce63`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`16195f9646d15f2857da1864cbffdd3f12a965bbd287ca888b7dde113c2d7ec7`.
+The accepted Slice 29 `(6,6)` EOB-4 fixture is the adjacent smaller control.
+
+### Coefficient and reconstruction mapping
+
+After the shared prefix, dav1d decodes the alternate EOB-12 body as follows:
+
+1. Raster nine returns base-context-seven symbol three and high-context
+   fifteen token three.
+2. Raster twelve returns base-context-seven symbol three and the adaptively
+   updated high-context-fifteen token three.
+3. Raster eight returns direct token two from base context ten; raster five
+   returns direct token two from base context nine.
+4. Raster two returns zero from base context six. Raster one returns direct
+   token two from base context four.
+5. Raster four returns base-context-five symbol three and high-context-eleven
+   token three.
+6. DC returns base-context-zero symbol three. The neighboring stored levels
+   for raster one, four, and five are 130, 195, and 130; their sum 455 masks
+   to seven, so `(7 + 1) >> 1` selects high-token context four and token three.
+7. The DC sign is positive. The nonzero link chain reads raster signs four,
+   one, five, eight, twelve, nine, and thirteen; four, one, twelve, and nine
+   are negative.
+
+Q-index-zero dequantization produces
+
+```text
+[12,-8,0,0,-12,8,0,0,8,-12,0,0,-12,8,0,0]
+```
+
+Applying dav1d's 4x4 lossless inverse WHT independently gives residual rows:
+
+```text
+0 0 0 0
+0 0 0 0
+0 0 0 5
+0 0 0 5
+```
+
+With predictor 81, the last sample of the last two transform rows becomes 86.
+The already-accepted horizontal and vertical full-edge propagation then
+repeats that value through the visible lower-right region, matching the
+recorded Y rows and Pillow RGB bytes.
+
+### Implementation boundary
+
+1. Preserve the shared EOB-12 prefix and Slice 27 coefficient body byte for
+   byte.
+2. Dispatch only base-context-seven value three to a private alternate body.
+   Decode the exact base/high contexts, direct tokens, DC context four, and
+   sign chain above.
+3. Derive every token, sign, adaptive update, coefficient, and residual
+   context from parsed AV1 syntax. Do not select the path from fixture name,
+   byte offset, dimensions, file hash, color, target, or expected output.
+4. Reuse Slice 29's contextual grid, edge propagation, following-leaf skip
+   state, and two-neighbor DC mode context without broadening them.
+5. Keep every other EOB-12 value/context combination and the midpoint-g96
+   EOB-4 token-three body rejected before its downstream unproved syntax.
+
+The implementation remains private safe Rust, dependency-free,
+target-independent, and codec-only.
+
+### Acceptance criteria
+
+- Promote the existing `(7,6)` manifest fixture to the one-hundred-first
+  reconstruction positive and regenerate the pinned Pillow/dav1d oracle.
+- Match all 242 entropy operations, adaptive CDF states, the exact coefficient
+  vector, Y/U/V rows and hashes, and Pillow RGB rows and hash.
+- Keep midpoint-g96 and every other retained private portable miss rejected at
+  its first unproved syntax value.
+- Preserve all 1,132 active manifest rows with no planned, skipped, or unwired
+  row and preserve every preceding reconstruction result byte for byte.
+- Add no dependency, unsafe Rust, target fork, native-only behavior, public
+  image-processing API, or fixture-selected production branch.
+- Use Coverage MCP as the only test runner and restore exactly 100% line,
+  branch, function, and region coverage.
+- Pass strict Clippy for no features, every codec feature, defaults, and all
+  features on native and `wasm32-unknown-unknown`, plus strict rustdoc,
+  rustfmt, whitespace, legal inventory, deterministic oracle generation, and
+  offline source-package verification.
