@@ -36,10 +36,8 @@ impl ChromaSampling {
         }
     }
 
-    const fn cfl_allowed(self, luma_grid_width: usize, luma_grid_height: usize) -> bool {
-        let (chroma_grid_width, chroma_grid_height) =
-            self.transform_grid(luma_grid_width, luma_grid_height, 1);
-        matches!(self, Self::Subsampled420) && chroma_grid_width == 1 && chroma_grid_height == 1
+    const fn subsampled_cfl_allowed(luma_grid_width: usize, luma_grid_height: usize) -> bool {
+        luma_grid_width.div_ceil(2) == 1 && luma_grid_height.div_ceil(2) == 1
     }
 }
 
@@ -156,11 +154,18 @@ enum CoefficientPolicy {
     SquareContextual {
         neighbor_contexts: [[u8; 2]; 3],
         orientation: SplitOrientation,
-        require_skipped: bool,
+    },
+    SubsampledSkippedContextual {
+        neighbor_contexts: [[u8; 2]; 3],
+        orientation: SplitOrientation,
     },
     BoundaryContextual {
         above_contexts: [[u8; 2]; 3],
         left_contexts: [[u8; 2]; 3],
+    },
+    SubsampledBoundaryContextual {
+        above_luma_contexts: [u8; 2],
+        left_luma_contexts: [u8; 2],
     },
 }
 
@@ -187,6 +192,25 @@ pub(super) enum SplitOrientation {
     Horizontal,
     /// Two coded 8x8 children placed top-to-bottom.
     Vertical,
+}
+
+#[derive(Clone, Copy)]
+struct FollowingCoefficientContext {
+    neighbor_contexts: [u8; 2],
+    orientation: SplitOrientation,
+    transform_grid_width: usize,
+    transform_grid_height: usize,
+    single_subsampled_chroma_transform: bool,
+    require_skipped: bool,
+}
+
+#[derive(Clone, Copy)]
+struct FollowingSyntaxContext {
+    transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
+    spatial_luma_context: SpatialLumaContext,
+    coefficient_policy: CoefficientPolicy,
+    tools: BlockTools,
 }
 
 /// One codec-internal reconstructed plane in coded row-major order.
@@ -1231,15 +1255,15 @@ fn chroma_contextual_skip_cdf(above: u8, left: u8) -> CoefficientSkipCdf {
     }
 }
 
-fn subsampled_chroma_contextual_skip_cdf(above: u8, left: u8) -> Option<CoefficientSkipCdf> {
+fn subsampled_chroma_one_neighbor_skip_cdf(context: u8) -> CoefficientSkipCdf {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:59-105. A single 4x4
-    // chroma transform in one 8x8 4:2:0 luma leaf uses context seven with no
-    // nonzero external neighbor and context eight with exactly one. Context
-    // nine remains outside the closed fixture-proved class.
-    match (above == 0x40, left == 0x40) {
-        (true, true) => Some(CoefficientSkipCdf::SubsampledNoNonzeroNeighbor),
-        (false, false) => None,
-        _ => Some(CoefficientSkipCdf::SubsampledOneNonzeroNeighbor),
+    // chroma transform in a following 8x8 4:2:0 luma leaf has exactly one
+    // previously decoded external edge by geometry. It uses context seven
+    // when that edge is neutral and context eight when it is nonzero.
+    if context == 0x40 {
+        CoefficientSkipCdf::SubsampledNoNonzeroNeighbor
+    } else {
+        CoefficientSkipCdf::SubsampledOneNonzeroNeighbor
     }
 }
 
@@ -1350,13 +1374,16 @@ fn decode_contextual_following_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
-    neighbor_contexts: [u8; 2],
-    orientation: SplitOrientation,
-    transform_grid_width: usize,
-    transform_grid_height: usize,
-    single_subsampled_chroma_transform: bool,
-    require_skipped: bool,
+    context: FollowingCoefficientContext,
 ) -> Option<PlaneCoefficients> {
+    let FollowingCoefficientContext {
+        neighbor_contexts,
+        orientation,
+        transform_grid_width,
+        transform_grid_height,
+        single_subsampled_chroma_transform,
+        require_skipped,
+    } = context;
     let coefficient_context = usize::from(plane != 0);
     let mut coefficients = [[0_i32; 16]; 16];
     let mut above_contexts = match orientation {
@@ -1378,7 +1405,11 @@ fn decode_contextual_following_coefficients(
         }
         let above_context = above_contexts[column];
         let skip_cdf = if single_subsampled_chroma_transform {
-            subsampled_chroma_contextual_skip_cdf(above_context, left_context)?
+            let external_context = match orientation {
+                SplitOrientation::Horizontal => left_context,
+                SplitOrientation::Vertical => above_context,
+            };
+            subsampled_chroma_one_neighbor_skip_cdf(external_context)
         } else if plane == 0 {
             // Following luma is required skipped, so it can retain only its
             // one external coded edge and never has two nonzero neighbors.
@@ -1421,20 +1452,7 @@ fn decode_contextual_boundary_coefficients(
     left_contexts: [u8; 2],
     transform_grid_width: usize,
     transform_grid_height: usize,
-    single_subsampled_chroma_transform: bool,
 ) -> Option<PlaneCoefficients> {
-    if single_subsampled_chroma_transform {
-        let skip_cdf = subsampled_chroma_contextual_skip_cdf(above_contexts[0], left_contexts[0])?;
-        let skipped = decode_contextual_skip(decoder, 1, skip_cdf, cdfs);
-        let mut coefficients = [[0_i32; 16]; 16];
-        if !skipped {
-            let sign_context = coefficient_dc_sign_context(above_contexts[0], left_contexts[0]);
-            coefficients[0] =
-                decode_nonzero_lossless_transform(decoder, plane, sign_context, false, cdfs)?;
-        }
-        return Some(coefficients);
-    }
-
     if plane == 0 || (above_contexts == [0x40; 2] && left_contexts == [0x40; 2]) {
         return decode_boundary_coefficients(
             decoder,
@@ -1460,6 +1478,29 @@ fn decode_contextual_boundary_coefficients(
         left_context = 0x40;
     }
     Some([[0_i32; 16]; 16])
+}
+
+fn decode_subsampled_boundary_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<PlaneCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:59-105 and the Slice 33
+    // scalar traces. Both side leaves are decoded with `require_skipped`, so
+    // their single chroma transforms are neutral by construction. The
+    // bottom-right transform therefore uses context seven and sign context
+    // zero; context nine cannot be represented by this closed policy.
+    let skipped = decode_contextual_skip(
+        decoder,
+        1,
+        CoefficientSkipCdf::SubsampledNoNonzeroNeighbor,
+        cdfs,
+    );
+    let mut coefficients = [[0_i32; 16]; 16];
+    if !skipped {
+        coefficients[0] = decode_nonzero_lossless_transform(decoder, plane, 0, false, cdfs)?;
+    }
+    Some(coefficients)
 }
 
 fn decode_boundary_coefficients(
@@ -1535,6 +1576,8 @@ fn decode_syntax(
             1 if !matches!(
                 coefficient_policy,
                 CoefficientPolicy::BoundaryContextual { .. }
+                    | CoefficientPolicy::SubsampledBoundaryContextual { .. }
+                    | CoefficientPolicy::SubsampledSkippedContextual { .. }
             ) =>
             {
                 LumaPredictor::Vertical
@@ -1542,6 +1585,8 @@ fn decode_syntax(
             2 if !matches!(
                 coefficient_policy,
                 CoefficientPolicy::BoundaryContextual { .. }
+                    | CoefficientPolicy::SubsampledBoundaryContextual { .. }
+                    | CoefficientPolicy::SubsampledSkippedContextual { .. }
             ) =>
             {
                 LumaPredictor::Horizontal
@@ -1571,12 +1616,14 @@ fn decode_syntax(
             // CFL is available only when the subsampled chroma block is one
             // 4x4 transform. Larger leaves use the ordinary twelve-symbol row.
             let predictor_index = luma_predictor.cdf_index();
-            let chroma_dc =
-                if chroma_sampling.cfl_allowed(transform_grid_width, transform_grid_height) {
-                    decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
-                } else {
-                    decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
-                };
+            let chroma_dc = if ChromaSampling::subsampled_cfl_allowed(
+                transform_grid_width,
+                transform_grid_height,
+            ) {
+                decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
+            } else {
+                decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
+            };
             (chroma_dc == 0).then_some(())?;
         }
     }
@@ -1618,17 +1665,34 @@ fn decode_syntax(
             CoefficientPolicy::SquareContextual {
                 neighbor_contexts,
                 orientation,
-                require_skipped,
             } => decode_contextual_following_coefficients(
                 decoder,
                 plane,
                 cdfs,
-                neighbor_contexts[plane],
+                FollowingCoefficientContext {
+                    neighbor_contexts: neighbor_contexts[plane],
+                    orientation,
+                    transform_grid_width: plane_grid_width,
+                    transform_grid_height: plane_grid_height,
+                    single_subsampled_chroma_transform,
+                    require_skipped: false,
+                },
+            ),
+            CoefficientPolicy::SubsampledSkippedContextual {
+                neighbor_contexts,
                 orientation,
-                plane_grid_width,
-                plane_grid_height,
-                single_subsampled_chroma_transform,
-                require_skipped,
+            } => decode_contextual_following_coefficients(
+                decoder,
+                plane,
+                cdfs,
+                FollowingCoefficientContext {
+                    neighbor_contexts: neighbor_contexts[plane],
+                    orientation,
+                    transform_grid_width: plane_grid_width,
+                    transform_grid_height: plane_grid_height,
+                    single_subsampled_chroma_transform,
+                    require_skipped: true,
+                },
             ),
             CoefficientPolicy::BoundaryContextual {
                 above_contexts,
@@ -1641,8 +1705,25 @@ fn decode_syntax(
                 left_contexts[plane],
                 plane_grid_width,
                 plane_grid_height,
-                single_subsampled_chroma_transform,
             ),
+            CoefficientPolicy::SubsampledBoundaryContextual {
+                above_luma_contexts,
+                left_luma_contexts,
+            } => {
+                if plane == 0 {
+                    decode_contextual_boundary_coefficients(
+                        decoder,
+                        plane,
+                        cdfs,
+                        above_luma_contexts,
+                        left_luma_contexts,
+                        plane_grid_width,
+                        plane_grid_height,
+                    )
+                } else {
+                    decode_subsampled_boundary_coefficients(decoder, plane, cdfs)
+                }
+            }
         }
     };
     let coefficients = [
@@ -2131,16 +2212,19 @@ fn reconstruct_boundary_420_leaf(
 fn decode_following_square_syntax<F>(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
-    transform_grid: TransformGrid,
-    chroma_sampling: ChromaSampling,
-    spatial_luma_context: SpatialLumaContext,
-    coefficient_policy: CoefficientPolicy,
-    tools: BlockTools,
+    context: FollowingSyntaxContext,
     between_leaves: &mut F,
 ) -> Option<BlockSyntax>
 where
     F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
 {
+    let FollowingSyntaxContext {
+        transform_grid,
+        chroma_sampling,
+        spatial_luma_context,
+        coefficient_policy,
+        tools,
+    } = context;
     between_leaves(decoder)?;
     decode_syntax(
         decoder,
@@ -2436,14 +2520,12 @@ where
         transform_grid,
         ChromaSampling::Subsampled420,
         spatial_luma_context,
-        CoefficientPolicy::SquareContextual {
+        CoefficientPolicy::SubsampledSkippedContextual {
             neighbor_contexts: second_neighbor_contexts,
             orientation,
-            require_skipped: true,
         },
         tools,
     )?;
-    matches!(second_syntax.luma_predictor, LumaPredictor::Dc).then_some(())?;
     let second = reconstruct_following_420_leaf(second_syntax, &first, orientation);
 
     let (luma_coded_width, chroma_coded_width) = match orientation {
@@ -2523,15 +2605,16 @@ where
     let top_right_syntax = decode_following_square_syntax(
         decoder,
         &mut cdfs,
-        transform_grid,
-        ChromaSampling::Full,
-        top_right_context,
-        CoefficientPolicy::SquareContextual {
-            neighbor_contexts: top_right_neighbor_contexts,
-            orientation: SplitOrientation::Horizontal,
-            require_skipped: false,
+        FollowingSyntaxContext {
+            transform_grid,
+            chroma_sampling: ChromaSampling::Full,
+            spatial_luma_context: top_right_context,
+            coefficient_policy: CoefficientPolicy::SquareContextual {
+                neighbor_contexts: top_right_neighbor_contexts,
+                orientation: SplitOrientation::Horizontal,
+            },
+            tools,
         },
-        tools,
         &mut between_leaves,
     )?;
     let bottom_right_above_contexts = coefficient_edge_contexts(
@@ -2550,15 +2633,16 @@ where
     let bottom_left_syntax = decode_following_square_syntax(
         decoder,
         &mut cdfs,
-        transform_grid,
-        ChromaSampling::Full,
-        bottom_left_context,
-        CoefficientPolicy::SquareContextual {
-            neighbor_contexts: bottom_left_neighbor_contexts,
-            orientation: SplitOrientation::Vertical,
-            require_skipped: false,
+        FollowingSyntaxContext {
+            transform_grid,
+            chroma_sampling: ChromaSampling::Full,
+            spatial_luma_context: bottom_left_context,
+            coefficient_policy: CoefficientPolicy::SquareContextual {
+                neighbor_contexts: bottom_left_neighbor_contexts,
+                orientation: SplitOrientation::Vertical,
+            },
+            tools,
         },
-        tools,
         &mut between_leaves,
     )?;
     let bottom_right_left_contexts = coefficient_edge_contexts(
@@ -2579,14 +2663,16 @@ where
     let bottom_right_syntax = decode_following_square_syntax(
         decoder,
         &mut cdfs,
-        transform_grid,
-        ChromaSampling::Full,
-        bottom_right_context,
-        CoefficientPolicy::BoundaryContextual {
-            above_contexts: bottom_right_above_contexts,
-            left_contexts: bottom_right_left_contexts,
+        FollowingSyntaxContext {
+            transform_grid,
+            chroma_sampling: ChromaSampling::Full,
+            spatial_luma_context: bottom_right_context,
+            coefficient_policy: CoefficientPolicy::BoundaryContextual {
+                above_contexts: bottom_right_above_contexts,
+                left_contexts: bottom_right_left_contexts,
+            },
+            tools,
         },
-        tools,
         &mut between_leaves,
     )?;
     let bottom_right = reconstruct_boundary_leaf(bottom_right_syntax, &top_right, &bottom_left);
@@ -2665,23 +2751,23 @@ where
     let top_right_syntax = decode_following_square_syntax(
         decoder,
         &mut cdfs,
-        transform_grid,
-        ChromaSampling::Subsampled420,
-        top_right_context,
-        CoefficientPolicy::SquareContextual {
-            neighbor_contexts: top_right_neighbor_contexts,
-            orientation: SplitOrientation::Horizontal,
-            require_skipped: true,
+        FollowingSyntaxContext {
+            transform_grid,
+            chroma_sampling: ChromaSampling::Subsampled420,
+            spatial_luma_context: top_right_context,
+            coefficient_policy: CoefficientPolicy::SubsampledSkippedContextual {
+                neighbor_contexts: top_right_neighbor_contexts,
+                orientation: SplitOrientation::Horizontal,
+            },
+            tools,
         },
-        tools,
         &mut between_leaves,
     )?;
-    matches!(top_right_syntax.luma_predictor, LumaPredictor::Dc).then_some(())?;
-    let bottom_right_above_contexts = coefficient_edge_contexts(
+    let bottom_right_above_luma_contexts = coefficient_edge_contexts(
         &top_right_syntax.coefficients,
         SplitOrientation::Vertical,
         ChromaSampling::Subsampled420,
-    );
+    )[0];
     let top_right =
         reconstruct_following_420_leaf(top_right_syntax, &top_left, SplitOrientation::Horizontal);
 
@@ -2690,41 +2776,42 @@ where
     let bottom_left_syntax = decode_following_square_syntax(
         decoder,
         &mut cdfs,
-        transform_grid,
-        ChromaSampling::Subsampled420,
-        bottom_left_context,
-        CoefficientPolicy::SquareContextual {
-            neighbor_contexts: bottom_left_neighbor_contexts,
-            orientation: SplitOrientation::Vertical,
-            require_skipped: true,
+        FollowingSyntaxContext {
+            transform_grid,
+            chroma_sampling: ChromaSampling::Subsampled420,
+            spatial_luma_context: bottom_left_context,
+            coefficient_policy: CoefficientPolicy::SubsampledSkippedContextual {
+                neighbor_contexts: bottom_left_neighbor_contexts,
+                orientation: SplitOrientation::Vertical,
+            },
+            tools,
         },
-        tools,
         &mut between_leaves,
     )?;
-    matches!(bottom_left_syntax.luma_predictor, LumaPredictor::Dc).then_some(())?;
-    let bottom_right_left_contexts = coefficient_edge_contexts(
+    let bottom_right_left_luma_contexts = coefficient_edge_contexts(
         &bottom_left_syntax.coefficients,
         SplitOrientation::Horizontal,
         ChromaSampling::Subsampled420,
-    );
+    )[0];
     let bottom_left =
         reconstruct_following_420_leaf(bottom_left_syntax, &top_left, SplitOrientation::Vertical);
 
-    let bottom_right_context = SpatialLumaContext::from_two_neighbors(
-        top_right.luma_predictor,
-        bottom_left.luma_predictor,
-    )?;
+    // Both side syntax values use the DC-and-skipped subsampled policy, so
+    // their two-neighbor luma context is origin by construction.
+    let bottom_right_context = SpatialLumaContext::Origin;
     let bottom_right_syntax = decode_following_square_syntax(
         decoder,
         &mut cdfs,
-        transform_grid,
-        ChromaSampling::Subsampled420,
-        bottom_right_context,
-        CoefficientPolicy::BoundaryContextual {
-            above_contexts: bottom_right_above_contexts,
-            left_contexts: bottom_right_left_contexts,
+        FollowingSyntaxContext {
+            transform_grid,
+            chroma_sampling: ChromaSampling::Subsampled420,
+            spatial_luma_context: bottom_right_context,
+            coefficient_policy: CoefficientPolicy::SubsampledBoundaryContextual {
+                above_luma_contexts: bottom_right_above_luma_contexts,
+                left_luma_contexts: bottom_right_left_luma_contexts,
+            },
+            tools,
         },
-        tools,
         &mut between_leaves,
     )?;
     let bottom_right = reconstruct_boundary_420_leaf(bottom_right_syntax, &top_right, &bottom_left);

@@ -6576,3 +6576,149 @@ returned no reconstructed leaf. Both runs executed the approved all-feature
 nightly LLVM coverage command. This proves the new behavior is demanded by
 committed manifest/oracle fixtures rather than by a fixture-selected production
 shortcut or a random unit test.
+
+### Slice 33 coverage-closure plan
+
+Coverage MCP run `e7b685a3-2dc9-4e08-ab24-e19b73831b7b`, snapshot
+`783efcf1-2e36-4d2d-bc73-7346740f0cf8`, passes all seven test binaries and all
+130 exact reconstruction cases. It reports 37,974/37,984 lines,
+5,450/5,452 branches, 1,900/1,900 functions, and 62,644/62,666 regions. The
+remaining gaps are rejection propagation introduced by the new closed 4:2:0
+paths:
+
+| Gap | Reverse-mapped reason | Fixture-driven closure |
+| --- | --- | --- |
+| `entropy.rs:936-937` | A level-three 16x16 4:2:0 square split is accepted only when its first level-four child is `PARTITION_NONE`. The two positive square fixtures necessarily take the accepted side. | Run the existing exhaustive coded-span mutation sweep over both retained four-leaf 4:2:0 fixtures so production partition decoding observes the nonzero-child rejection side. |
+| `entropy.rs:1039-1040` | A two-leaf 4:2:0 recursive split likewise requires its first child to be `PARTITION_NONE`. | Sweep one retained horizontal and one retained vertical two-leaf fixture so the real topology, dimensions, and parent-partition prefix remain fixed while the child symbol varies. |
+| `block.rs:2421,2445` | The two-leaf decoder has distinct failure propagation before and after the first leaf boundary. | Use the same horizontal and vertical two-leaf fixture sweeps; byte replacements and suffix fills cross both real leaf prefixes without constructing private decoder state. |
+| `block.rs:2649,2678,2703,2729` | The four-leaf decoder has failure propagation at the top-left, top-right, bottom-left, and bottom-right syntax stages. | Sweep both retained four-leaf fixtures because they differ in the bottom-right chroma payload while sharing the first 142 entropy operations. |
+| `block.rs:2716` | The closed boundary context rejects a non-DC predictor pair before decoding the final child. | Keep the production predicate and let the four-leaf mutation sweep reverse-map a real coded prefix that changes either side predictor. Do not inject an impossible `ClosedLeaf` value. |
+| `block.rs:1241` | Subsampled chroma context nine is intentionally outside the proved class when both external chroma neighbors are nonzero. | The `g96` four-leaf control already carries bottom-right U/V residuals. Sweep it together with the chroma-skipped RGB-delta control so a retained real prefix can exercise the two-nonzero-neighbor rejection if reachable. |
+
+The first closure attempt therefore adds only four already-manifested inputs
+to the existing coverage-only mutation driver:
+`portable_lossless_420_split_12x4_a.avif`,
+`portable_lossless_420_split_4x12_a.avif`,
+`partitioned_square_420_16x16_rgb_delta.avif`, and
+`partitioned_square_420_16x16_g96.avif`. The driver changes only bytes inside
+the extracted AV1 coded spans and always re-enters the production container,
+frame, partition, and block validators. It adds no random unit test, no
+fixture-name branch in production, and no public image-processing behavior.
+If any gap survives, the next step is to retain the smallest deterministic
+mutation as an explicit Pillow-classified error fixture rather than weakening
+the rejection.
+
+The first closure run, Coverage MCP run
+`75b3a3d0-1283-4a75-988f-b11d4113354a`, snapshot
+`cf6ab112-f942-43db-86a7-057b3ac55885`, passes all seven test binaries and
+closes every entropy gap plus every staged block-syntax failure. It reaches
+37,982/37,984 lines, 5,452/5,452 branches, 1,900/1,900 functions, and
+62,657/62,666 regions. Only `block.rs:1241` and `block.rs:2716` survive.
+
+The measured production executions prove why no retained mutation can reach
+them:
+
+- the subsampled chroma skip helper runs 31,164 times: 4,275 calls have no
+  nonzero external neighbor and 26,889 have exactly one; none has two. A
+  following 4:2:0 leaf has only one prior edge by geometry. At the four-leaf
+  boundary, the top-right and bottom-left policies have already required every
+  chroma transform to be skipped, so both boundary chroma contexts are
+  necessarily neutral;
+- the 4:2:0 four-leaf decoder reaches the two-neighbor luma-context expression
+  5,042 times. Every call is dominated by separate checks requiring the
+  top-right and bottom-left predictors to be DC, so the optional failure side
+  cannot occur.
+
+The aligned refinement is to encode those already-enforced invariants rather
+than retain dead rejection expressions:
+
+1. replace the two-neighbor subsampled helper with a total one-external-neighbor
+   helper for following leaves;
+2. distinguish the 4:2:0 boundary coefficient policy from the general 4:4:4
+   boundary policy. It carries real luma edge contexts but represents chroma
+   neighbors as neutral by construction, after the side-leaf skipped policies
+   have proved that fact;
+3. decode boundary chroma through its context-seven CDF and retain the already
+   proved optional DC-only residual syntax;
+4. use the origin luma context directly in the 4:2:0 boundary after both side
+   predictors pass their explicit DC checks; and
+5. keep the general fallible two-neighbor mapping for the 4:4:4 square path,
+   where the proved horizontal-above/vertical-left combination remains real.
+
+This refactor neither accepts context nine nor ignores a decoded state. It
+makes the current closed class unrepresentable with two nonzero boundary
+chroma neighbors or a non-DC 4:2:0 side predictor.
+
+The invariant-refactor run, Coverage MCP run
+`a3f15a97-5588-4b90-b118-e3c8ce06e7ad`, snapshot
+`8159d2d2-9166-4ebf-a900-3f4f2e444eea`, again passes all seven binaries and
+all exact parity checks. It reaches 37,999/37,999 lines, 5,454/5,454 branches,
+1,901/1,901 functions, and 62,663/62,668 regions.
+
+Read-only inspection of the MCP-produced LLVM JSON identifies the five
+region-only survivors exactly:
+
+- four are the failure subexpressions of the explicit top-right and bottom-left
+  `matches!(..., LumaPredictor::Dc).then_some(())?` checks. The decoded
+  `SquareContextual { require_skipped: true }` policy is used only for closed
+  4:2:0 following leaves, which also require DC prediction. Retaining the
+  post-decode checks duplicates that policy and permits an invalid predictor
+  to consume later syntax before rejection;
+- one is the false side of `matches!(self, Subsampled420)` inside
+  `ChromaSampling::cfl_allowed`. Its sole caller is already inside the
+  `ChromaSampling::Subsampled420` match arm, so that receiver predicate is
+  structurally true.
+
+The final region refinement therefore:
+
+1. splits the general square contextual policy from an explicit subsampled
+   DC-and-skipped following policy;
+2. rejects vertical or horizontal luma symbols immediately for the latter,
+   before angle, chroma-mode, palette, filter-intra, or coefficient syntax;
+3. removes the three now-dominated post-decode DC checks in the two- and
+   four-leaf 4:2:0 paths; and
+4. replaces the receiver-dependent CFL helper with a subsampled geometry
+   helper whose result depends only on the derived chroma transform grid.
+
+Both changes narrow representation and move rejection earlier. They do not
+accept new partitions, predictors, coefficients, or image behavior.
+
+Coverage MCP run `b2c61625-7d68-4e3d-a3d0-1f605338f453`, snapshot
+`f3f11d02-e2ec-4a25-8440-7cb49e90d457`, accepts the final refinement. All
+seven test binaries pass with exact totals of 37,999/37,999 lines,
+5,454/5,454 branches, 1,901/1,901 functions, and 62,654/62,654 regions. The
+complete 130-case reconstruction document and every manifest-driven Pillow
+pixel, encoded-byte, metadata, and structured-error assertion remain exact.
+
+### Slice 33 strict-gate findings
+
+Formatting and the 22-file third-party legal inventory pass on Rust 1.96.1.
+The first mandatory Clippy command,
+`cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`,
+rejects two internal functions:
+
+- `decode_contextual_following_coefficients` has nine arguments; and
+- `decode_following_square_syntax` has eight arguments.
+
+No lint allowance will be added. Bundle only immutable, logically related
+geometry and policy fields into private context structs. Keep the range
+decoder and adaptive CDF state as explicit mutable arguments so state
+transitions remain visible. This is a signature-only refactor: it must leave
+the ordered entropy reads, rejection points, reconstructed planes, and public
+API unchanged. Because the source shape affects LLVM regions, exact Coverage
+MCP verification must run again after the complete strict gate is clean.
+
+The private `FollowingCoefficientContext` and `FollowingSyntaxContext` structs
+resolve both diagnostics without an allowance. The complete native and
+`wasm32-unknown-unknown` Clippy matrix passes for no features, each individual
+codec feature, default features, and all features with `-D warnings`.
+Formatting, strict rustdoc, the 22-file legal inventory, and `cargo-deny`
+advisories/bans/licenses/sources also pass. `cargo package --allow-dirty
+--locked` packages and verifies 135 files: 2.1 MiB unpacked and 428.8 KiB
+compressed.
+
+The post-Clippy Coverage MCP run
+`d2e9a3e8-ac2d-4af7-939d-6202d486fed5`, snapshot
+`18c5896a-80b0-4c5a-ba69-400b2e0d41a2`, passes all seven binaries with final
+exact totals of 38,021/38,021 lines, 5,454/5,454 branches, 1,901/1,901
+functions, and 62,659/62,659 regions. Slice 33 is accepted.

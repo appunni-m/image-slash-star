@@ -2972,6 +2972,10 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     | "partitioned_square_12x12_top_left_luma_eob12_control.avif"
                     | "partitioned_square_12x12_top_left_luma_eob4.avif"
                     | "partitioned_square_16x16_g64.avif"
+                    | "portable_lossless_420_split_12x4_a.avif"
+                    | "portable_lossless_420_split_4x12_a.avif"
+                    | "partitioned_square_420_16x16_rgb_delta.avif"
+                    | "partitioned_square_420_16x16_g96.avif"
             )
         {
             img::__coverage_sweep_av1_first_leaf(&input);
