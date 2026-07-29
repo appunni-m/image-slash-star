@@ -185,6 +185,16 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "299dc7d8cf7b620bb3cc3a56ab17da5414d8377e0b79196fce64cae0e05ca7f3",
         "size": [12, 12],
     },
+    "partitioned_square_12x12_luma_eob6_control.avif": {
+        "file_sha256": "90583dd6d88fce42d0cfdb8f9e7217d02d5a711f873955a04526dd99f5886efa",
+        "rgb_sha256": "84c006c2c0f8e322453101374baeb3c0f1e30653b7960fb1068cfc8f33c96e68",
+        "size": [12, 12],
+    },
+    "partitioned_square_12x12_luma_eob9_control.avif": {
+        "file_sha256": "d57ddb0c7dbcdfc63aa77f3bdbd64a793246451528dfec553c0bf800f8137d4b",
+        "rgb_sha256": "7b69d30ebe2894d11aa6d4f7c3385c8675a4cf8daf702d5b6cd709a6001ce506",
+        "size": [12, 12],
+    },
     "partitioned_square_16x16_g64.avif": {
         "file_sha256": "4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7",
         "rgb_sha256": "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe",

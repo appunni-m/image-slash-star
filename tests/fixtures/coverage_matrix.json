@@ -679,13 +679,55 @@
           "type": "decode",
           "format": "avif",
           "category": "partitioned",
-          "description": "12x12 luma-only EOB-6 control outside the portable EOB-4 coefficient class",
+          "description": "12x12 four-leaf square split with two luma-only EOB-6 lossless transforms",
           "asset": "partitioned_square_12x12_luma_eob6_control.avif",
           "expect_error": false,
           "status": "active",
           "verify_status": "ok",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_luma_eob6_control_avif.bin",
+          "ref_bytes": 432,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            12,
+            12
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "partitioned_square_12x12_luma_eob9_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "partitioned",
+          "description": "12x12 four-leaf square split with two luma-only EOB-9 lossless transforms",
+          "asset": "partitioned_square_12x12_luma_eob9_control.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_luma_eob9_control_avif.bin",
+          "ref_bytes": 432,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            12,
+            12
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "partitioned_square_12x12_luma_eob10_control",
+          "type": "decode",
+          "format": "avif",
+          "category": "partitioned",
+          "description": "12x12 luma-only EOB-10 control outside the portable EOB-9 coefficient class",
+          "asset": "partitioned_square_12x12_luma_eob10_control.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_luma_eob10_control_avif.bin",
           "ref_bytes": 432,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -23184,12 +23226,12 @@
     }
   },
   "summary": {
-    "total_rows": 1126,
-    "decode_rows": 848,
+    "total_rows": 1128,
+    "decode_rows": 850,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 847,
-    "decode_active": 848,
+    "assets_available": 849,
+    "decode_active": 850,
     "decode_planned": 0,
     "encode_not_wired": 0
   }
