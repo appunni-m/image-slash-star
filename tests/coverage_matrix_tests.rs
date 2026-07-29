@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 150);
+    assert_eq!(expected.cases.len(), 162);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2662,6 +2662,24 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "portable_lossless_420_8x8_b.avif" => {
                 "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
             }
+            "portable_lossy_420_q99_gray_0.avif" => {
+                "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"
+            }
+            "portable_lossy_420_q99_8x8_gray_0.avif" => {
+                "5d89f056865052bcb89c910d2d62872e029fb273c3db03f8968a52a41593c1b5"
+            }
+            "portable_lossy_420_q99_gray_64.avif" => {
+                "30c8d471cc44e88da2fec08638a4215ed2ce34c899f330115a604b80d19f2831"
+            }
+            "portable_lossy_420_q99_8x8_gray_64.avif" => {
+                "557f22c418e6f4fcd4d4c1df7eb2b46180b67956794483587205e2e82163b395"
+            }
+            "portable_lossy_420_q99_gray_122_control.avif" => {
+                "ad287d41398b2bc6aae343d24767bded9795b882f382b5abf480a6fc0bbddfdf"
+            }
+            "portable_lossy_420_q99_8x8_gray_122_control.avif" => {
+                "9e96fe6320d50c09026df65c9676a19e57fe86b26652cf513c2cc03015711df0"
+            }
             "portable_lossy_420_q99_gray_123_control.avif" => {
                 "819d474948483b42b8e875e2bb3446526e0a5f1f090d012b993d6a12fcf0e4da"
             }
@@ -2721,6 +2739,24 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "portable_lossy_420_q99_8x8_gray_133_control.avif" => {
                 "108f70bd32bd6aa8f4d1a6ee9450a6505f16158b350b293f7e37ca87724ae29a"
+            }
+            "portable_lossy_420_q99_gray_134_control.avif" => {
+                "96a0187338028cdac12765e42d24b4cf369039db628878c674d273bdb0af4324"
+            }
+            "portable_lossy_420_q99_8x8_gray_134_control.avif" => {
+                "d4ea4542b1b805cc3f636afb8bf16a483cc0fe47a40b4fba4c876ebb26432b2a"
+            }
+            "portable_lossy_420_q99_gray_192.avif" => {
+                "af14d74c13f430d78f29de7246b5cbdf0937adbeb872ffe6dcf68282860d7cba"
+            }
+            "portable_lossy_420_q99_8x8_gray_192.avif" => {
+                "6845b27f00c23448c01b082d69fdf01aae50f11e3f0b29b073dfe5e6b864c36b"
+            }
+            "portable_lossy_420_q99_gray_255.avif" => {
+                "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2"
+            }
+            "portable_lossy_420_q99_8x8_gray_255.avif" => {
+                "8f62c344eff1568474fb693b8c18526629db443b9653a84264189c97693605de"
             }
             "portable_lossless_gray_32.avif" => {
                 "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
@@ -3049,11 +3085,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "animated.avif",
         "10bit.avif",
         "multitile.avif",
-        "portable_lossy_420_q99_gray_122_control.avif",
-        "portable_lossy_420_q99_8x8_gray_122_control.avif",
         "portable_lossy_420_q99_gray_128_control.avif",
-        "portable_lossy_420_q99_gray_134_control.avif",
-        "portable_lossy_420_q99_8x8_gray_134_control.avif",
+        "portable_lossy_420_q99_token_1048_control.avif",
         "portable_lossy_420_q99_eob_bin_control.avif",
         "portable_lossy_420_q99_eob_base_control.avif",
     ] {

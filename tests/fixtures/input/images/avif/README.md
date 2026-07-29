@@ -61,9 +61,12 @@ and one 4x4 transform per chroma plane. Gray 127 and 129 skip every residual;
 gray 126 and 130 add one direct-token DC-only luma residual; gray 125 and 131
 use token 15 with Golomb extensions zero and one; and gray 124 and 132 use
 Golomb extension nine and final token 24. Gray 123 and 133 extend the same
-DC-only class through final tokens 32 and 33. Gray 122 and 134 are the adjacent
-final-token-40/41 non-portable controls. Gray 128 changes the luma predictor
-and remains a separate non-portable control.
+DC-only class through final tokens 32 and 33. An exhaustive gray-0-through-255
+sweep proves the same coefficient rule from final token 8 through 1,047.
+Gray 0, 64, 122, 134, 192, and 255 retain its endpoints and interiors. A
+one-byte gray-zero mutation selects final token 1,048 as the adjacent
+non-portable control. Gray 128 changes the luma predictor and remains a
+separate non-portable control.
 
 | Fixture | Source RGB | SHA-256 |
 | --- | --- | --- |
@@ -75,6 +78,10 @@ and remains a separate non-portable control.
 | `portable_lossy_420_q99_8x8_gray_129.avif` | `(129,129,129)` | `ca48aaddde1310eecde25c24c24314089a5e62164c8dbd36b0c64b2ef9812507` |
 | `portable_lossy_420_q99_gray_130.avif` | `(130,130,130)` | `cf98497c2b678d67bbb9327f7816b9ef9d3d186ffee51b24ee10ec50e8e8d776` |
 | `portable_lossy_420_q99_8x8_gray_130.avif` | `(130,130,130)` | `a579a6a3f85a4b5574d237c3c06f1cff79404bb565ece13e099c3611bac7b39f` |
+| `portable_lossy_420_q99_gray_0.avif` | `(0,0,0)` | `7f1485129fd93e4318cf21bcf59934963c1a84b3bcb0d74f3e7555b3bad20b38` |
+| `portable_lossy_420_q99_8x8_gray_0.avif` | `(0,0,0)` | `75df02eb1a44eb478b17910a79179dcc563a4b1b72db2b6b25d229ba377320eb` |
+| `portable_lossy_420_q99_gray_64.avif` | `(64,64,64)` | `6f4d9be7282279fdaaf38c1a464c49e44fb1373be0cfb83bb632f85167d1022e` |
+| `portable_lossy_420_q99_8x8_gray_64.avif` | `(64,64,64)` | `350a8eca70ae23d2e4981c3a4f0e31c5edf060e6da940c56750fa5b4dbed3ff8` |
 | `portable_lossy_420_q99_gray_122_control.avif` | `(122,122,122)` | `17c312d10c6cd7ecd6a1bf1fb6b1bfff07aa970ff2ff3e722f2dd984c714a80a` |
 | `portable_lossy_420_q99_8x8_gray_122_control.avif` | `(122,122,122)` | `7163cc6aee6597f1792a6b963fb2777758fdbe7096bcfe5712df0e150f5c4d49` |
 | `portable_lossy_420_q99_gray_123_control.avif` | `(123,123,123)` | `1e0f1f2ae4da78ca2cee5af734916106bb822d2d780f44111f257beed7c05890` |
@@ -92,6 +99,11 @@ and remains a separate non-portable control.
 | `portable_lossy_420_q99_8x8_gray_133_control.avif` | `(133,133,133)` | `6abbf10ccf33392f217a6db1e1b9a66cd6b0cea9e95d06845252a0389beaa029` |
 | `portable_lossy_420_q99_gray_134_control.avif` | `(134,134,134)` | `88a3a51f1107ca20a77bd70db89891e9431dd932914a2e4494d017e11018ca68` |
 | `portable_lossy_420_q99_8x8_gray_134_control.avif` | `(134,134,134)` | `65fe71943e62a346b20249a420f323dab9601ba99cbb5bf9782074d0d16a6331` |
+| `portable_lossy_420_q99_gray_192.avif` | `(192,192,192)` | `8b517a977c091cbe56ec1997907c27706ba9bdd6c660e646d49df8a6dd16677f` |
+| `portable_lossy_420_q99_8x8_gray_192.avif` | `(192,192,192)` | `5edccf35d44da2f17d41b106681b7535f264863d44e26c0c1e16d1a67bd6e8f9` |
+| `portable_lossy_420_q99_gray_255.avif` | `(255,255,255)` | `e1c3b423417b18795071054196ce1f95e6cf19a841a632c616ab3a96969d6e3f` |
+| `portable_lossy_420_q99_8x8_gray_255.avif` | `(255,255,255)` | `cf7660907939a12972c8ba2def48cb0b8b6014cc24bd75ab82cd0ffe1162f6c5` |
+| `portable_lossy_420_q99_token_1048_control.avif` | gray-zero AV1 item offset 28, `0x42` to `0x43` | `1097067dca85e499768a40e15232dce3602afbb1cabcbf485e8a14bf83e9bb73` |
 | `portable_lossy_420_q99_eob_bin_control.avif` | gray-126 AV1 item offset 24, `0x72` to `0x73` | `0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea` |
 | `portable_lossy_420_q99_eob_base_control.avif` | gray-126 AV1 item offset 25, `0xe1` to `0x1e` | `ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5` |
 

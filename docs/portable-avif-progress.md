@@ -7702,3 +7702,194 @@ advisories, bans, licenses, and sources. Offline package verification builds
 135 files, 2.1 MiB unpacked and 431.5 KiB compressed. No dependency, unsafe
 Rust, public processing API, or published diagnostic/fixture artifact was
 added.
+
+## Slice 39: Exhaustive Q99 Constant-Gray DC Domain
+
+Status: accepted on 2026-07-30.
+
+### Why this slice is broader
+
+Slices 35 through 38 deliberately established the direct-token, Golomb,
+sign-order, dequantization, and inverse-DCT behavior with adjacent controls.
+Continuing one final token at a time would no longer reduce uncertainty about
+the algorithm. Slice 39 instead exhausts the complete constant-gray source
+domain under the same pinned quality-99, speed-eight, one-thread, explicit
+4:2:0 encoder configuration.
+
+The sweep covers every gray value 0 through 255 at both a declared 4x4 crop and
+the complete 8x8 coded plane: 512 cases. It ran twice through independently
+instrumented pinned-dav1d builds. The reports are byte-identical, 21 MiB each,
+and have SHA-256
+`50ba5b6e011891bc006edab4daf467daa2df98d0b9adbaefd18c75c4cd582e41`.
+
+### Exhaustive classification
+
+All 512 cases retain one 8x8 luma leaf, one skipped 4x4 transform per chroma
+plane, qindex two, qmatrix level ten, disabled post-filters, and an 8x8
+`DCT_DCT` luma transform when non-skipped:
+
+| Source gray | Luma predictor | Luma coefficient state |
+| ---: | --- | --- |
+| 0 through 126 | vertical | one negative DC coefficient |
+| 127 | vertical | skipped |
+| 128 | DC | skipped |
+| 129 | horizontal | skipped |
+| 130 through 255 | horizontal | one positive DC coefficient |
+
+There are 506 non-skipped cases and six skipped cases across both sizes. The
+non-skipped cases contain 177 distinct final-token values. Their minimum is
+eight and their maximum is 1,047. Every one of the 506 cases satisfies the
+pinned reference equation exactly:
+
+`abs(dequantized_dc) == final_token * 8`
+
+There are zero formula mismatches. This follows directly from pinned dav1d:
+eight-bit Y-DC dequant at block qindex two is eight; qmatrix-ten DC weight 32
+leaves it unchanged; the transform shift is zero; and the observed domain is
+far below the signed 16-bit coefficient clamp.
+
+### Retained representative targets
+
+The manifest will retain both sizes for four new representative colors plus
+the existing gray-122/134 boundary pair:
+
+| Gray | Final token | Dequantized DC | Purpose |
+| ---: | ---: | ---: | --- |
+| 0 | 1,047 | -8,376 | maximum observed token and negative clipping endpoint |
+| 64 | 519 | -4,152 | negative interior Golomb value |
+| 122 | 40 | -320 | existing near-neutral negative boundary |
+| 134 | 41 | +328 | existing near-neutral positive boundary |
+| 192 | 519 | +4,152 | positive interior Golomb value |
+| 255 | 1,039 | +8,312 | positive clipping endpoint |
+
+The new exact evidence is:
+
+| Gray/size | AVIF SHA-256 | AV1 item SHA-256 | Y SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| 0, 4x4 | `7f1485129fd93e4318cf21bcf59934963c1a84b3bcb0d74f3e7555b3bad20b38` | `ce5eced1b47120a202f04f8e5fbf6b6b2a6dcbd2195846b2bd6cd6a2593305cf` | `374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb` | `17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1` |
+| 0, 8x8 | `75df02eb1a44eb478b17910a79179dcc563a4b1b72db2b6b25d229ba377320eb` | `a2576682ec0e22a1100fee3d870f28c7620fdb7f775bef65e14528abd580fea2` | `f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b` | `5d89f056865052bcb89c910d2d62872e029fb273c3db03f8968a52a41593c1b5` |
+| 64, 4x4 | `6f4d9be7282279fdaaf38c1a464c49e44fb1373be0cfb83bb632f85167d1022e` | `45bbdf5eea5a9dcdd6b8f1168cd7e92901942e27449831c1a8c04e27ac878851` | `5750d4cc5553918490d356beb5f289ac7c4bba5dc9c3fead4c715eeb62efc644` | `30c8d471cc44e88da2fec08638a4215ed2ce34c899f330115a604b80d19f2831` |
+| 64, 8x8 | `350a8eca70ae23d2e4981c3a4f0e31c5edf060e6da940c56750fa5b4dbed3ff8` | `02c495f60510dd727bfa814c1b5518d3b6649cab639dd0930040715afc2e1f76` | `72b5cbdeea550ef8e2d9e0244818a8d86b384fcd0814d57445edd82574fe32ab` | `557f22c418e6f4fcd4d4c1df7eb2b46180b67956794483587205e2e82163b395` |
+| 192, 4x4 | `8b517a977c091cbe56ec1997907c27706ba9bdd6c660e646d49df8a6dd16677f` | `d74ba65860ebacb550ad50e8e2e8bdc8d34808d0a10dcd2ab6960df92c6ea0b4` | `ef9ab097a1cb8f452447c1d6fdb7b347bf2bf42658f68030e6f71a9d201499b2` | `af14d74c13f430d78f29de7246b5cbdf0937adbeb872ffe6dcf68282860d7cba` |
+| 192, 8x8 | `5edccf35d44da2f17d41b106681b7535f264863d44e26c0c1e16d1a67bd6e8f9` | `e4a62d25778b123ad729d601866f1c4c1cdd4ba86c812d399da2bbe3531ac841` | `391bad2328f1cdb8a77803fb079b4495a0d98da6ad195e6769e6c9878fd8448b` | `6845b27f00c23448c01b082d69fdf01aae50f11e3f0b29b073dfe5e6b864c36b` |
+| 255, 4x4 | `e1c3b423417b18795071054196ce1f95e6cf19a841a632c616ab3a96969d6e3f` | `770c240a4705aaaa8990a4ba637e9d3f3d9d202d1eab73646745010f2032e849` | `5ac6a5945f16500911219129984ba8b387a06f24fe383ce4e81a73294065461b` | `80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2` |
+| 255, 8x8 | `cf7660907939a12972c8ba2def48cb0b8b6014cc24bd75ab82cd0ffe1162f6c5` | `38496288a5de28d4035ae67a6c52a5c0189bd61a1b6eb14b7f6b8a756ddf4244` | `8667e718294e9e0df1d30600ba3eeb201f764aad2dad72748643e4a285e1d1f7` | `8f62c344eff1568474fb693b8c18526629db443b9653a84264189c97693605de` |
+
+### Closed candidate rule
+
+The candidate implementation may replace the enumerated token map only with a
+checked range `8..=1_047` and the exact equation `token * 8`. Values outside
+that range remain unsupported until the dav1d 20-bit mask, 24-bit multiply,
+and signed coefficient clamp receive their own mutation-backed fixtures. No
+other frame, partition, prediction, transform, EOB, chroma, quantizer, filter,
+or container behavior may widen.
+
+### Adjacent excluded token
+
+The deterministic mutation explorer now has an explicit
+`--dc-token-min` mode. It exhaustively replaces every byte of the gray-zero
+AV1 item with every other value, accepts only successful scalar traces that
+preserve the complete Slice 39 first-leaf class, and selects the smallest
+final token above the requested boundary.
+
+Two complete 7,650-candidate sweeps are byte-identical. Their report SHA-256 is
+`20a39607e4b8d15430a48afb4762ed7e642542640204f8abc5f9b0718e9b8cc6`.
+There are 113 matching coded-tile mutations. The selected adjacent control:
+
+- changes AV1 sample offset 28 / AVIF file offset 303 from `0x42` to `0x43`;
+- changes final token 1,047 to 1,048 while retaining every admitted prefix and
+  trailing chroma state;
+- has AVIF SHA-256
+  `1097067dca85e499768a40e15232dce3602afbb1cabcbf485e8a14bf83e9bb73`;
+- has AV1-item SHA-256
+  `aeaf6ab02e6f919e9f9ba083e28d29fdfd9ba4dd82f4df46b582ede1d0477871`;
+- succeeds through pinned dav1d and Pillow; and
+- retains Pillow RGB SHA-256
+  `17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1`.
+
+This gives the range check a one-token-adjacent, Pillow-success, manifest
+control without using malformed container structure or a fixture-selected
+production condition.
+
+### Fixture-first implementation method
+
+Before production changes:
+
+1. retain gray 0, 64, 192, and 255 at both sizes in the manifest and generator;
+2. promote gray 122/134 and all eight new representative files into the pinned
+   reconstruction document and exact Pillow guards;
+3. retain the final-token-1,048 mutation as the adjacent non-portable control;
+4. generate all asset, Pillow, and dav1d references twice and require byte
+   identity;
+5. run Coverage MCP and require the first failure at gray zero or gray 64,
+   according to deterministic fixture order; and only then
+6. replace the enumerated magnitude map with the checked observed-domain rule.
+
+The exhaustive diagnostic report remains outside the published crate. The
+manifest retains compact representative fixtures, exact native-oracle bytes,
+and the endpoint/interior semantics required to detect regression.
+
+### Acceptance
+
+Slice 39 requires exact Pillow parity for all retained endpoints and interiors,
+continued rejection of tokens above 1,047, a byte-identical dav1d document, no
+dependency/unsafe/API scope expansion, all native/WASM lint and rustdoc lanes,
+legal/package gates, and exact 100% Coverage MCP line, branch, function, and
+region coverage.
+
+### Fixture-first failure
+
+The complete AVIF asset corpus is byte-identical across two generations; its
+sorted digest document has SHA-256
+`33c00de168c991762a05231269586bfeabe3e2954027899b070171af5d58670b`.
+The complete Pillow reference corpus is also byte-identical across two
+generations; its sorted digest document has SHA-256
+`119c9715cbdd2640b98f1ccdd872a69fcdf81fec8dd29df8ff90157881fcb5c0`.
+Two independently generated 162-case pinned-dav1d reconstruction documents
+are byte-identical, with SHA-256
+`9883fe0c1b6fb0193a07467d1e67b11cb565bd8cd4e0f2fff190a85e5b6ab738`.
+
+Coverage MCP run `c058ae1d-17f5-4436-b796-52e28162fefd` is the intentional
+fixture-first failure. Six test targets pass and only
+`test_av1_reconstruction_matches_pinned_dav1d_fixture` fails. Its first
+failure is:
+
+`production AV1 path must retain the reconstructed first leaf for
+portable_lossy_420_q99_gray_0.avif`
+
+This isolates the enumerated token map as the first missing production stage.
+
+### Accepted result
+
+The manifest now contains 1,196 cases: 918 decode cases and 278 encode cases
+over all eight formats, with 917 retained input assets, no planned cases, and
+no unwired encode cases. AVIF contributes 176 decode rows and 23 encode rows.
+The compact retained set covers both dimensions at the observed endpoints,
+both signs' interiors, the near-neutral boundary, and final token 1,048 as an
+exact Pillow-success/non-portable control.
+
+Production replaces seven enumerated magnitudes with a syntax-derived checked
+range and `token * 8`. It accepts only final tokens 8 through 1,047 under the
+already closed qindex-two/qmatrix-ten DC-only class. The adjacent token-1,048
+fixture is consumed through the same entropy prefix but returns no portable
+reconstruction. No fixture name, source gray, encoded byte, hash, native
+result, or final pixel influences production.
+
+The first green Coverage MCP run exposed one unreachable LLVM region in the
+failure arm of `i32::try_from` after the range check had already bounded the
+value to 8,376. The implementation removed that semantically impossible arm
+and uses the exact bounded unsigned multiply plus signed reinterpretation.
+
+Final Coverage MCP run `4ff28892-7cc1-4c4a-a13a-ec3733d8bc12`, snapshot
+`ac46c09b-8022-4223-bd69-1e49c7da0da6`, passes all seven test binaries. Its
+LLVM report records exact coverage of 38,272/38,272 lines, 5,464/5,464
+branches, 1,911/1,911 functions, and 62,940/62,940 regions.
+
+All 22 strict Clippy lanes and all 22 strict rustdoc lanes pass across native
+and `wasm32-unknown-unknown`. Rustfmt, whitespace, and Python syntax checks
+pass. The retained-license verifier confirms all 22 legal/provenance files;
+the dependency graph remains only `bytemuck 1.25.1`; and `cargo-deny` passes
+advisories, bans, licenses, and sources. Offline package verification builds
+135 files, 2.1 MiB unpacked and 431.6 KiB compressed. No dependency, unsafe
+Rust, public processing API, or published diagnostic/fixture artifact was
+added.

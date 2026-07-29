@@ -65,6 +65,36 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008",
         "size": [8, 8],
     },
+    "portable_lossy_420_q99_gray_0.avif": {
+        "file_sha256": "7f1485129fd93e4318cf21bcf59934963c1a84b3bcb0d74f3e7555b3bad20b38",
+        "rgb_sha256": "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_0.avif": {
+        "file_sha256": "75df02eb1a44eb478b17910a79179dcc563a4b1b72db2b6b25d229ba377320eb",
+        "rgb_sha256": "5d89f056865052bcb89c910d2d62872e029fb273c3db03f8968a52a41593c1b5",
+        "size": [8, 8],
+    },
+    "portable_lossy_420_q99_gray_64.avif": {
+        "file_sha256": "6f4d9be7282279fdaaf38c1a464c49e44fb1373be0cfb83bb632f85167d1022e",
+        "rgb_sha256": "30c8d471cc44e88da2fec08638a4215ed2ce34c899f330115a604b80d19f2831",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_64.avif": {
+        "file_sha256": "350a8eca70ae23d2e4981c3a4f0e31c5edf060e6da940c56750fa5b4dbed3ff8",
+        "rgb_sha256": "557f22c418e6f4fcd4d4c1df7eb2b46180b67956794483587205e2e82163b395",
+        "size": [8, 8],
+    },
+    "portable_lossy_420_q99_gray_122_control.avif": {
+        "file_sha256": "17c312d10c6cd7ecd6a1bf1fb6b1bfff07aa970ff2ff3e722f2dd984c714a80a",
+        "rgb_sha256": "ad287d41398b2bc6aae343d24767bded9795b882f382b5abf480a6fc0bbddfdf",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_122_control.avif": {
+        "file_sha256": "7163cc6aee6597f1792a6b963fb2777758fdbe7096bcfe5712df0e150f5c4d49",
+        "rgb_sha256": "9e96fe6320d50c09026df65c9676a19e57fe86b26652cf513c2cc03015711df0",
+        "size": [8, 8],
+    },
     "portable_lossy_420_q99_gray_123_control.avif": {
         "file_sha256": "1e0f1f2ae4da78ca2cee5af734916106bb822d2d780f44111f257beed7c05890",
         "rgb_sha256": "819d474948483b42b8e875e2bb3446526e0a5f1f090d012b993d6a12fcf0e4da",
@@ -163,6 +193,36 @@ EXPECTED_FIXTURES = {
     "portable_lossy_420_q99_8x8_gray_133_control.avif": {
         "file_sha256": "6abbf10ccf33392f217a6db1e1b9a66cd6b0cea9e95d06845252a0389beaa029",
         "rgb_sha256": "108f70bd32bd6aa8f4d1a6ee9450a6505f16158b350b293f7e37ca87724ae29a",
+        "size": [8, 8],
+    },
+    "portable_lossy_420_q99_gray_134_control.avif": {
+        "file_sha256": "88a3a51f1107ca20a77bd70db89891e9431dd932914a2e4494d017e11018ca68",
+        "rgb_sha256": "96a0187338028cdac12765e42d24b4cf369039db628878c674d273bdb0af4324",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_134_control.avif": {
+        "file_sha256": "65fe71943e62a346b20249a420f323dab9601ba99cbb5bf9782074d0d16a6331",
+        "rgb_sha256": "d4ea4542b1b805cc3f636afb8bf16a483cc0fe47a40b4fba4c876ebb26432b2a",
+        "size": [8, 8],
+    },
+    "portable_lossy_420_q99_gray_192.avif": {
+        "file_sha256": "8b517a977c091cbe56ec1997907c27706ba9bdd6c660e646d49df8a6dd16677f",
+        "rgb_sha256": "af14d74c13f430d78f29de7246b5cbdf0937adbeb872ffe6dcf68282860d7cba",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_192.avif": {
+        "file_sha256": "5edccf35d44da2f17d41b106681b7535f264863d44e26c0c1e16d1a67bd6e8f9",
+        "rgb_sha256": "6845b27f00c23448c01b082d69fdf01aae50f11e3f0b29b073dfe5e6b864c36b",
+        "size": [8, 8],
+    },
+    "portable_lossy_420_q99_gray_255.avif": {
+        "file_sha256": "e1c3b423417b18795071054196ce1f95e6cf19a841a632c616ab3a96969d6e3f",
+        "rgb_sha256": "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2",
+        "size": [4, 4],
+    },
+    "portable_lossy_420_q99_8x8_gray_255.avif": {
+        "file_sha256": "cf7660907939a12972c8ba2def48cb0b8b6014cc24bd75ab82cd0ffe1162f6c5",
+        "rgb_sha256": "8f62c344eff1568474fb693b8c18526629db443b9653a84264189c97693605de",
         "size": [8, 8],
     },
     "portable_lossless_420_leaf_4x8_a.avif": {
