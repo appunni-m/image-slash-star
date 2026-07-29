@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 106);
+    assert_eq!(expected.cases.len(), 130);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2412,6 +2412,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_8x16_a.avif" => Some([46_608, 54_426, 36_309]),
             "partitioned_8x16_gray_32.avif" => Some([46_608, 54_426, 36_767]),
             "partitioned_8x16_green.avif" => Some([46_608, 54_426, 61_946]),
+            "portable_lossless_420_split_12x4_a.avif"
+            | "portable_lossless_420_split_16x4_a.avif"
+            | "portable_lossless_420_split_12x8_a.avif"
+            | "portable_lossless_420_split_16x8_a.avif" => Some([37_392, 43_662, 48_034]),
+            "portable_lossless_420_split_4x12_a.avif"
+            | "portable_lossless_420_split_4x16_a.avif"
+            | "portable_lossless_420_split_8x12_a.avif"
+            | "portable_lossless_420_split_8x16_a.avif" => Some([46_608, 54_426, 53_236]),
             _ => None,
         };
         let square_recursive_ranges = match case.fixture.as_str() {
@@ -2438,6 +2446,10 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             | "partitioned_square_16x16_r64.avif"
             | "partitioned_square_16x16_g127.avif" => {
                 Some([34_880, 40_768, 50_626, 52_336, 54_330])
+            }
+            "partitioned_square_420_16x16_rgb_delta.avif"
+            | "partitioned_square_420_16x16_g96.avif" => {
+                Some([34_880, 40_768, 43_750, 52_892, 59_618])
             }
             _ => None,
         };
@@ -2847,6 +2859,57 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "partitioned_16x8_green.avif" | "partitioned_8x16_green.avif" => {
                 "ff87dfd10bc6c01f8e9dac23bb518192e6579a383b2ff1bbd8b8c80a58e677b4"
+            }
+            "portable_lossless_420_leaf_4x8_a.avif" | "portable_lossless_420_leaf_8x4_a.avif" => {
+                "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475"
+            }
+            "portable_lossless_420_rect_12x4_gray_127.avif"
+            | "portable_lossless_420_rect_4x12_gray_127.avif" => {
+                "35fc07c937c1c3d13641f32cdc94ce1315ec420dd26e12b81a4651cfc1786ee3"
+            }
+            "portable_lossless_420_rect_16x4_gray_127.avif"
+            | "portable_lossless_420_rect_4x16_gray_127.avif" => {
+                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+            }
+            "portable_lossless_420_rect_12x8_gray_127.avif"
+            | "portable_lossless_420_rect_8x12_gray_127.avif" => {
+                "cf8691a9b8c6c8e329b94f40345d822ef7d4f6e8e5c2343d74b12aa16e84838a"
+            }
+            "portable_lossless_420_rect_16x8_gray_127.avif"
+            | "portable_lossless_420_rect_8x16_gray_127.avif" => {
+                "7e18f1b2ca4e075b955848b4deafd56e47eeda83cc15b3ecdeb71d7ff58a5f57"
+            }
+            "portable_lossless_420_split_12x4_a.avif"
+            | "portable_lossless_420_split_4x12_a.avif" => {
+                "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
+            }
+            "portable_lossless_420_split_16x4_a.avif"
+            | "portable_lossless_420_split_4x16_a.avif" => {
+                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+            }
+            "portable_lossless_420_split_12x8_a.avif"
+            | "portable_lossless_420_split_8x12_a.avif" => {
+                "47c4a5d65d8ac82aa68f04754b38e5bf00438aeb64b2e48c2bb54a9268e6e4e7"
+            }
+            "portable_lossless_420_split_16x8_a.avif"
+            | "portable_lossless_420_split_8x16_a.avif" => {
+                "983aef668db1ea0d5801725fdf2b49d32232fc7f1d9ae578a03ffad6aebc4fc2"
+            }
+            "portable_lossless_420_square_12x12_a.avif" => {
+                "cbc97cf0c2652e60e6e36611be9869444f603abf5f48b292a03d340f501320f8"
+            }
+            "portable_lossless_420_square_12x16_a.avif"
+            | "portable_lossless_420_square_16x12_a.avif" => {
+                "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
+            }
+            "portable_lossless_420_square_16x16_a.avif" => {
+                "8bdcc97ae19b09ec3d6b76a7d59f13d4aa3dd7a06d21db706f2a1d15caaa0431"
+            }
+            "partitioned_square_420_16x16_rgb_delta.avif" => {
+                "33170bbddccc8cf1c2ce5dada1ab0dc1c510fc9b059ede87dff076f9df47e18d"
+            }
+            "partitioned_square_420_16x16_g96.avif" => {
+                "1773a465660162ba2a563e2b05acb59d0ccd578de177210f9252a9abd2013bcf"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };

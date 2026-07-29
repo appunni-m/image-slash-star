@@ -6384,3 +6384,195 @@ color alone.
    exactly 100% line, branch, function, and region coverage. Then run the full
    native/WASM feature, Clippy, rustdoc, legal, deterministic-regeneration, and
    offline-package gates.
+
+### Completed full geometry sweep
+
+The expanded constant-color corpus contains 96 cases: six independent source
+colors across all sixteen visible dimensions formed from 4, 8, 12, and 16
+pixels on each axis. Two complete generations are byte-identical with SHA-256
+`f51dfef3dd24eb1fc54fadf0ecc47f5c747b9d2e8553179e396a747f4ed40a23`.
+It closes the following geometry families without selecting behavior by source
+color or encoded bytes:
+
+- 4x4, 4x8, 8x4, and 8x8 use one level-four `PARTITION_NONE` 8x8
+  coded leaf. The three cropped sizes independently prove luma and
+  half-resolution chroma visibility.
+- Neutral 12x4, 16x4, 12x8, and 16x8 cases use one level-three horizontal
+  rectangular leaf. Their transposed 4x12, 4x16, 8x12, and 8x16 cases use one
+  level-three vertical rectangular leaf.
+- Non-neutral members of those same one-axis dimension families use one
+  level-three recursive split followed by two level-four `PARTITION_NONE`
+  leaves. Both children share the adaptive partition state, and the horizontal
+  and vertical orientation pairs reconstruct byte-identical planes when their
+  visible areas are transposes.
+- 12x12, 12x16, 16x12, and 16x16 use one level-three `PARTITION_NONE`
+  16x16 coded leaf. The three clipped sizes independently prove visibility
+  from a 4x4 luma and 2x2 chroma transform grid.
+
+The source families also vary the complete entropy sequence rather than only
+the final constant sample. `(17,91,203)`, `(199,37,83)`, and `(32,32,32)`
+exercise nonzero residual bodies with 129/119/81 operations in the 16x16
+family and 113/103/65 operations in each two-leaf family. Grays 127, 128, and
+129 exercise the adjacent skipped or DC-only rectangular and square paths
+with 31/32/31 and 55/56/55 operations respectively.
+
+The fixed `baseline.avif` trace is also deterministic across two runs with
+SHA-256
+`9a994d46846cc2790e6b7aa08623a909d9f199fc51a5ccd7884bfc6e8f8eabed`.
+Its first coded region selects level-one, level-two, and level-three square
+splits, followed by four level-four `PARTITION_NONE` leaves at `(0,0)`,
+`(2,0)`, `(0,2)`, and `(2,2)`. The complete scalar trace has 20,795
+operations. The first leaf diverges from the proved lossless class immediately
+after its skip decision: it consumes CDEF index, transform-selection, quantized
+64-coefficient residual, and later filtering behavior. Geometry is therefore
+a real prerequisite, but it does not by itself admit the lossy baseline.
+
+### Four-leaf 4:2:0 diagnostic boundary
+
+The 96 constant-color cases never select a four-leaf square split. Production
+changes remain blocked until a patterned lossless 4:2:0 source proves that
+topology independently from the lossy baseline.
+
+Before implementation:
+
+1. Extend `scripts/explore_avif_square_partition_corpus.py` with an explicit
+   `--subsampling` selection while preserving its existing 4:4:4 output byte
+   for byte. Derive Y, U, and V plane lengths from the declared layout instead
+   of assuming equal full-resolution planes.
+2. Search deterministic 12x12 and 16x16 two-color patterns through the pinned
+   Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encoder. Retain only candidates
+   with one level-three `PARTITION_SPLIT` and four level-four
+   `PARTITION_NONE` children.
+3. Decode each retained candidate twice through pinned scalar dav1d 1.5.3.
+   Require byte-identical AVIF, AV1 item, partition, scalar entropy,
+   coefficient, reconstructed Y/U/V, and Pillow RGB evidence.
+4. Reverse-map every child boundary: partition-CDF mutation, luma and chroma
+   predictor contexts, coefficient-neighbor state, visible chroma dimensions,
+   composition stride, and edge clipping. Compare the four-leaf trace with the
+   accepted 4:4:4 square path and the 4:2:0 single- and two-leaf controls.
+5. Close Slice 33 only over the families whose full traces are proved. Add
+   manifest fixtures and exact oracle records first, then require the initial
+   Coverage MCP run to fail at the portable reconstruction gate before editing
+   production Rust.
+
+This diagnostic adds no image-processing API or production resampling path.
+All generated search artifacts remain outside the repository until a minimal,
+independent fixture set is selected.
+
+### Patterned four-leaf evidence
+
+The generalized square diagnostic first regenerated the existing 4:4:4
+`partitioned_square_16x16_g64.avif` control. Its AVIF SHA-256 remains
+`4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7`,
+and its five partition nodes, 363 scalar operations, plane hashes, and report
+schema remain unchanged.
+
+A 125-case 16x16 4:2:0 sweep then varied five replacement colors over every
+origin from `(6,6)` through `(10,10)`. Its report SHA-256 is
+`b366d4357a2eb256fd97b80b7a77554ca746678037f691790fe8272c553a2ab0`.
+One hundred twenty-two cases select the required five-node topology. The
+three exceptions select one level-three `PARTITION_NONE` leaf, proving that
+decoded partition syntax rather than dimensions or the generator chooses the
+path.
+
+Two exact-child-boundary candidates were retained:
+
+| Source replacement at `(8,8)` | AVIF bytes and SHA-256 | AV1 item bytes and SHA-256 | Scalar operations | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| `(22,96,208)` | 318, `9cb30c2c2391c414c5dfef0a0ed27d9409089f88cdd05aad45103e720b6b12f7` | 43, `70fd1ef6646201d376b93befccbbf6185f018037804df282feb5f8a9bddc98b8` | 193 | `33170bbddccc8cf1c2ce5dada1ab0dc1c510fc9b059ede87dff076f9df47e18d` |
+| `(17,96,203)` | 319, `7e66769bff63133cbab59a6d93aa143f4d2f0982fa142567dfc4727783c3330a` | 44, `daffa7fc257513426b4c43b6690b117e6c3940b78cb5d94a23a55051affd279e` | 200 | `1773a465660162ba2a563e2b05acb59d0ccd578de177210f9252a9abd2013bcf` |
+
+Both selected reports are byte-identical across two independent generations
+with SHA-256
+`d371f87b478cd4ff9d7b19265f63d172f8a5372d4bb0169f7ee6f158d4153abf`.
+Their complete scalar, state, partition, coefficient, reconstructed-plane, and
+Pillow reports are also byte-identical across two pinned dav1d runs with
+SHA-256
+`c6505ff7f6cc96b9985bef6800b10147e54c4a1255089bb40f21b1bbe3cacc34`.
+
+Both inputs select level-three `PARTITION_SPLIT` at scalar step 1, followed by
+four level-four `PARTITION_NONE` children at steps 2, 96, 119, and 142. Their
+partition ranges are exactly 34,880, 40,768, 43,750, 52,892, and 59,618. The
+first 142 operations are identical:
+
+- the top-left child is the complete 93-operation Slice 32 `(17,91,203)`
+  lossless 8x8 4:2:0 trace;
+- top-right and bottom-left select luma DC and chroma DC prediction, then skip
+  all four luma transforms and the sole U and V transforms;
+- each following child mutates the same luma-mode, UV-mode, coefficient, and
+  partition CDF state;
+- the bottom-right child selects luma DC and chroma DC prediction. It
+  reconstructs three DC-only luma transforms and skips the fourth;
+- the `(22,96,208)` control skips both bottom-right chroma transforms, while
+  `(17,96,203)` reconstructs independent DC-only U and V transforms.
+
+Pinned dav1d `src/decode.c:1072-1078` selects the UV-mode CDF by both CFL
+availability and decoded luma mode. Lossless 8x8 4:2:0 children permit CFL, so
+the vertical top-left child and the three DC following children use different
+thirteen-symbol rows. Larger 16x16, 16x8, and 8x16 coded leaves do not permit
+CFL because their chroma block is larger than one 4x4 transform; they use the
+existing twelve-symbol DC/vertical/horizontal UV rows.
+
+Pinned dav1d `src/recon_tmpl.c:59-105` maps 4:2:0 child chroma coefficient
+neighbors to skip contexts seven through nine. The selected traces use context
+seven when neither external 4x4 chroma neighbor is nonzero and context eight
+when exactly one is nonzero. Larger subsampled leaves have multiple chroma
+transforms and therefore reuse contexts ten through twelve already proved by
+the 4:4:4 contextual paths. No selected case requires unproved context nine.
+
+### Closed Slice 33 implementation boundary
+
+The production slice may now admit only the following eight-bit, full-range,
+all-lossless, single-item, single-frame 4:2:0 classes:
+
+- one coded 8x8 leaf with any top-left visible size from the proved 4x4, 4x8,
+  8x4, and 8x8 matrix;
+- one coded 16x8 or 8x16 rectangular leaf with the proved 12/16 by 4/8 or
+  transposed visibility;
+- one coded 16x16 leaf with 12x12, 12x16, 16x12, or 16x16 visibility;
+- two coded 8x8 leaves split horizontally or vertically, with the second leaf
+  restricted to the mapped DC-predicted, fully skipped residual class; and
+- one level-three square split with four level-four `PARTITION_NONE`
+  children. Top-left reuses the Slice 32 DC-or-skipped syntax, top-right and
+  bottom-left are DC-predicted with skipped residuals, and bottom-right admits
+  only the mapped DC-only luma and optional DC-only U/V residuals.
+
+Implementation must:
+
+1. derive the luma and chroma transform grids from coded geometry and 4:2:0
+   shifts; never hard-code one chroma transform for larger leaves;
+2. select the UV-mode row from decoded luma mode and actual CFL availability;
+3. carry adaptive CDF and residual-neighbor state across every child;
+4. compute one-sided and two-sided predictors from 8-sample luma or 4-sample
+   chroma edges as appropriate;
+5. compose coded luma at 8-pixel child width and chroma at 4-pixel child width,
+   then retain the declared luma rectangle and its ceiling-half chroma
+   rectangle; and
+6. return a portable miss for context-nine chroma, unproved following-leaf
+   residuals, non-DC boundary AC, different predictors or partitions, lossy
+   quantization, filtering, restoration, alpha, animation, high bit depth,
+   multiple tiles, or any other unproved syntax.
+
+The implementation remains decoder-private codec behavior. It adds no crop,
+resize, resampling, color-conversion, or other image-processing API. Exact
+manifest assets, Pillow bytes, and dav1d reconstruction records must be added
+before production changes, followed by an intentional Coverage MCP failure at
+this newly documented portable gate.
+
+### Fixture-first red proof
+
+The 24 Slice 33 inputs were generated twice by the pinned Pillow
+12.2.0/libavif 1.4.1/libaom 3.13.2 oracle. Every AVIF SHA-256 matches the
+independent geometry or patterned-corpus trace above. The manifest generator
+then wrote exact Pillow RGB outputs, and the pinned scalar dav1d 1.5.3
+reconstruction generator produced two identical complete 130-case documents.
+
+Coverage MCP run `644cc721-549d-434a-b73e-eb507212a951` first failed the
+independent reconstruction-document count guard at 130 actual versus 106
+previous cases. After admitting the exact new oracle count—but before any
+production Rust change—run `92d355d5-dc9e-4d96-9ccb-851c96c326be` failed at
+`portable_lossless_420_leaf_4x8_a.avif` because the production AV1 path
+returned no reconstructed leaf. Both runs executed the approved all-feature
+nightly LLVM coverage command. This proves the new behavior is demanded by
+committed manifest/oracle fixtures rather than by a fixture-selected production
+shortcut or a random unit test.

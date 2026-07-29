@@ -132,6 +132,414 @@
       ]
     },
     {
+      "id": "portable_lossless_420_leaf_4x8_a",
+      "asset": "portable_lossless_420_leaf_4x8_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_leaf_4x8_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_leaf_8x4_a",
+      "asset": "portable_lossless_420_leaf_8x4_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_leaf_8x4_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_12x4_gray_127",
+      "asset": "portable_lossless_420_rect_12x4_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_12x4_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_16x4_gray_127",
+      "asset": "portable_lossless_420_rect_16x4_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_16x4_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_12x8_gray_127",
+      "asset": "portable_lossless_420_rect_12x8_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_12x8_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_16x8_gray_127",
+      "asset": "portable_lossless_420_rect_16x8_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_16x8_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_4x12_gray_127",
+      "asset": "portable_lossless_420_rect_4x12_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_4x12_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_4x16_gray_127",
+      "asset": "portable_lossless_420_rect_4x16_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_4x16_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_8x12_gray_127",
+      "asset": "portable_lossless_420_rect_8x12_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_8x12_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_rect_8x16_gray_127",
+      "asset": "portable_lossless_420_rect_8x16_gray_127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_rect_8x16_gray_127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_12x4_a",
+      "asset": "portable_lossless_420_split_12x4_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_12x4_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_16x4_a",
+      "asset": "portable_lossless_420_split_16x4_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_16x4_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_12x8_a",
+      "asset": "portable_lossless_420_split_12x8_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_12x8_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_16x8_a",
+      "asset": "portable_lossless_420_split_16x8_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_16x8_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_4x12_a",
+      "asset": "portable_lossless_420_split_4x12_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_4x12_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_4x16_a",
+      "asset": "portable_lossless_420_split_4x16_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_4x16_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_8x12_a",
+      "asset": "portable_lossless_420_split_8x12_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_8x12_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_split_8x16_a",
+      "asset": "portable_lossless_420_split_8x16_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_split_8x16_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_square_12x12_a",
+      "asset": "portable_lossless_420_square_12x12_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_square_12x12_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_square_12x16_a",
+      "asset": "portable_lossless_420_square_12x16_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_square_12x16_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_square_16x12_a",
+      "asset": "portable_lossless_420_square_16x12_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_square_16x12_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossless_420_square_16x16_a",
+      "asset": "portable_lossless_420_square_16x16_a.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_420_square_16x16_a.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_420_16x16_rgb_delta",
+      "asset": "partitioned_square_420_16x16_rgb_delta.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_420_16x16_rgb_delta.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_420_16x16_g96",
+      "asset": "partitioned_square_420_16x16_g96.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_420_16x16_g96.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossless_gray_32",
       "asset": "portable_lossless_gray_32.avif",
       "expect_error": false,

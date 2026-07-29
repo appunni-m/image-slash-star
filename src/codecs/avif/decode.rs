@@ -25,23 +25,23 @@ fn validate_av1(data: &[u8]) -> Option<super::av1::ValidatedAv1> {
 
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
-    let (plane_length, width): (usize, usize) = match (still.width, still.height) {
-        (4, 4) => (16, 4),
-        (4, 8) => (32, 4),
-        (8, 4) => (32, 8),
-        (12, 4) => (48, 12),
-        (4, 12) => (48, 4),
-        (8, 8) => (64, 8),
-        (16, 4) => (64, 16),
-        (4, 16) => (64, 4),
-        (12, 8) => (96, 12),
-        (8, 12) => (96, 8),
-        (16, 8) => (128, 16),
-        (8, 16) => (128, 8),
-        (12, 12) => (144, 12),
-        (12, 16) => (192, 12),
-        (16, 12) => (192, 16),
-        (16, 16) => (256, 16),
+    let (plane_length, width, height): (usize, usize, usize) = match (still.width, still.height) {
+        (4, 4) => (16, 4, 4),
+        (4, 8) => (32, 4, 8),
+        (8, 4) => (32, 8, 4),
+        (12, 4) => (48, 12, 4),
+        (4, 12) => (48, 4, 12),
+        (8, 8) => (64, 8, 8),
+        (16, 4) => (64, 16, 4),
+        (4, 16) => (64, 4, 16),
+        (12, 8) => (96, 12, 8),
+        (8, 12) => (96, 8, 12),
+        (16, 8) => (128, 16, 8),
+        (8, 16) => (128, 8, 16),
+        (12, 12) => (144, 12, 12),
+        (12, 16) => (192, 12, 16),
+        (16, 12) => (192, 16, 12),
+        (16, 16) => (256, 16, 16),
         _ => return None,
     };
     (still.bit_depth == 8
@@ -56,11 +56,13 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         (true, true) => true,
         _ => return None,
     };
-    let chroma_length = if subsampled {
-        plane_length.div_euclid(4)
+    let chroma_width = if subsampled { width.div_ceil(2) } else { width };
+    let chroma_height = if subsampled {
+        height.div_ceil(2)
     } else {
-        plane_length
+        height
     };
+    let chroma_length = chroma_width.saturating_mul(chroma_height);
 
     let [y_plane, u_plane, v_plane] = &still.planes;
     (y_plane.samples.len() == plane_length
@@ -68,19 +70,31 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         && v_plane.samples.len() == chroma_length)
         .then_some(())?;
     let mut pixels = Vec::with_capacity(plane_length.saturating_mul(3));
-    let chroma_width = if subsampled { width.div_ceil(2) } else { width };
     for (index, &y) in y_plane.samples.iter().enumerate() {
-        let chroma_index = if still.subsampling_x {
-            index
-                .div_euclid(width)
-                .div_euclid(2)
-                .saturating_mul(chroma_width)
-                .saturating_add(index.rem_euclid(width).div_euclid(2))
+        let (u, v) = if subsampled {
+            let row = index.div_euclid(width);
+            let column = index.rem_euclid(width);
+            (
+                libyuv_420_bilinear_sample(
+                    &u_plane.samples,
+                    chroma_width,
+                    width,
+                    height,
+                    column,
+                    row,
+                ),
+                libyuv_420_bilinear_sample(
+                    &v_plane.samples,
+                    chroma_width,
+                    width,
+                    height,
+                    column,
+                    row,
+                ),
+            )
         } else {
-            index
+            (u_plane.samples[index], v_plane.samples[index])
         };
-        let u = u_plane.samples[chroma_index];
-        let v = v_plane.samples[chroma_index];
         pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
     }
     Some(DecodedImage {
@@ -93,8 +107,55 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     })
 }
 
+fn libyuv_bilinear_axis(index: usize, length: usize) -> [(usize, u32); 2] {
+    if index == 0 {
+        [(0, 4), (0, 0)]
+    } else if index == length.saturating_sub(1) {
+        [(index.div_euclid(2), 4), (index.div_euclid(2), 0)]
+    } else if index.rem_euclid(2) == 1 {
+        let first = index.div_euclid(2);
+        [(first, 3), (first.saturating_add(1), 1)]
+    } else {
+        let second = index.div_euclid(2);
+        [(second.saturating_sub(1), 1), (second, 3)]
+    }
+}
+
+// ✅ VERIFIED: libyuv 1922 commit 6067afde, source/convert_argb.cc:6799-6927
+// (`I420ToRGB24MatrixBilinear`) and source/scale_common.cc:572-621. The
+// boundary wrappers clamp the first and last sample; interior output samples
+// use the exact separable 3:1 bilinear weights and one combined rounding.
+fn libyuv_420_bilinear_sample(
+    plane: &[u16],
+    chroma_width: usize,
+    width: usize,
+    height: usize,
+    column: usize,
+    row: usize,
+) -> u16 {
+    let horizontal = libyuv_bilinear_axis(column, width);
+    let vertical = libyuv_bilinear_axis(row, height);
+    let weighted = vertical
+        .iter()
+        .fold(0_u32, |sum, &(source_row, row_weight)| {
+            horizontal
+                .iter()
+                .fold(sum, |sum, &(source_column, column_weight)| {
+                    let source_index = source_row
+                        .saturating_mul(chroma_width)
+                        .saturating_add(source_column);
+                    sum.saturating_add(
+                        u32::from(plane[source_index])
+                            .saturating_mul(row_weight)
+                            .saturating_mul(column_weight),
+                    )
+                })
+        });
+    u16::try_from(weighted.saturating_add(8).wrapping_shr(4)).unwrap_or(u16::MAX)
+}
+
 // ✅ VERIFIED: Pillow's libavif 1.4.1 uses libyuv 1922's JPEG-range BT.601
-// I444-to-RGB24 integer path for this exact output declaration.
+// I444/I420-to-RGB24 integer path for this exact output declaration.
 fn libyuv_bt601_full_range_rgb(y: u16, u: u16, v: u16) -> [u8; 3] {
     let y_scaled = u32::from(y)
         .wrapping_mul(0x0101)

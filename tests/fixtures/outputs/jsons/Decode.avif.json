@@ -139,6 +139,438 @@
       "ref_is_animated": false
     },
     {
+      "id": "portable_lossless_420_leaf_4x8_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_leaf_4x8_a_avif.bin",
+      "ref_bytes": 96,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_leaf_8x4_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_leaf_8x4_a_avif.bin",
+      "ref_bytes": 96,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_12x4_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_12x4_gray_127_avif.bin",
+      "ref_bytes": 144,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_16x4_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_16x4_gray_127_avif.bin",
+      "ref_bytes": 192,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_12x8_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_12x8_gray_127_avif.bin",
+      "ref_bytes": 288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_16x8_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_16x8_gray_127_avif.bin",
+      "ref_bytes": 384,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_4x12_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_4x12_gray_127_avif.bin",
+      "ref_bytes": 144,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_4x16_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_4x16_gray_127_avif.bin",
+      "ref_bytes": 192,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_8x12_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_8x12_gray_127_avif.bin",
+      "ref_bytes": 288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_rect_8x16_gray_127",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_rect_8x16_gray_127_avif.bin",
+      "ref_bytes": 384,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_12x4_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_12x4_a_avif.bin",
+      "ref_bytes": 144,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_16x4_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_16x4_a_avif.bin",
+      "ref_bytes": 192,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_12x8_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_12x8_a_avif.bin",
+      "ref_bytes": 288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_16x8_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_16x8_a_avif.bin",
+      "ref_bytes": 384,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_4x12_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_4x12_a_avif.bin",
+      "ref_bytes": 144,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_4x16_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_4x16_a_avif.bin",
+      "ref_bytes": 192,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_8x12_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_8x12_a_avif.bin",
+      "ref_bytes": 288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_split_8x16_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_split_8x16_a_avif.bin",
+      "ref_bytes": 384,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_square_12x12_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_square_12x12_a_avif.bin",
+      "ref_bytes": 432,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_square_12x16_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_square_12x16_a_avif.bin",
+      "ref_bytes": 576,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_square_16x12_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_square_16x12_a_avif.bin",
+      "ref_bytes": 576,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossless_420_square_16x16_a",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_420_square_16x16_a_avif.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "partitioned_square_420_16x16_rgb_delta",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_420_16x16_rgb_delta_avif.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "partitioned_square_420_16x16_g96",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_420_16x16_g96_avif.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
       "id": "portable_lossless_gray_32",
       "status": "ok",
       "error_type": null,

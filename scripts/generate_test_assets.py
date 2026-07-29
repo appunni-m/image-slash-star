@@ -4039,6 +4039,7 @@ def gen_avif():
         replacement,
         size=(16, 16),
         replacement_origin=(8, 8),
+        subsampling="4:4:4",
     ):
         source = (17, 91, 203)
         pixels = bytes(
@@ -4061,7 +4062,7 @@ def gen_avif():
                 quality=100,
                 speed=8,
                 max_threads=1,
-                subsampling="4:4:4",
+                subsampling=subsampling,
                 autotiling=False,
             )
             return output.getvalue()
@@ -4094,6 +4095,60 @@ def gen_avif():
         "portable_lossless_420_8x8_b.avif",
         (199, 37, 83),
         size=(8, 8),
+        subsampling="4:2:0",
+    )
+    for geometry, size in (
+        ("4x8", (4, 8)),
+        ("8x4", (8, 4)),
+    ):
+        write_portable_lossless(
+            f"portable_lossless_420_leaf_{geometry}_a.avif",
+            (17, 91, 203),
+            size=size,
+            subsampling="4:2:0",
+        )
+    for geometry, size in (
+        ("12x4", (12, 4)),
+        ("16x4", (16, 4)),
+        ("12x8", (12, 8)),
+        ("16x8", (16, 8)),
+        ("4x12", (4, 12)),
+        ("4x16", (4, 16)),
+        ("8x12", (8, 12)),
+        ("8x16", (8, 16)),
+    ):
+        write_portable_lossless(
+            f"portable_lossless_420_rect_{geometry}_gray_127.avif",
+            (127, 127, 127),
+            size=size,
+            subsampling="4:2:0",
+        )
+        write_portable_lossless(
+            f"portable_lossless_420_split_{geometry}_a.avif",
+            (17, 91, 203),
+            size=size,
+            subsampling="4:2:0",
+        )
+    for geometry, size in (
+        ("12x12", (12, 12)),
+        ("12x16", (12, 16)),
+        ("16x12", (16, 12)),
+        ("16x16", (16, 16)),
+    ):
+        write_portable_lossless(
+            f"portable_lossless_420_square_{geometry}_a.avif",
+            (17, 91, 203),
+            size=size,
+            subsampling="4:2:0",
+        )
+    write_square_partition(
+        "partitioned_square_420_16x16_rgb_delta.avif",
+        (22, 96, 208),
+        subsampling="4:2:0",
+    )
+    write_square_partition(
+        "partitioned_square_420_16x16_g96.avif",
+        (17, 96, 203),
         subsampling="4:2:0",
     )
     write_portable_lossless("portable_lossless_gray_32.avif", (32, 32, 32))
