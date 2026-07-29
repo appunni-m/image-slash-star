@@ -2654,10 +2654,22 @@ formats:
       description: 16x16 level-3 geometry fixture selecting luma horizontal predictor mode 2
       test_assets:
       - portable_probe_16x16_gray_129.avif
+    - id: partitioned_square_12x12_g96_direct_tokens
+      description: 12x12 visible four-leaf square split reusing the direct-token 16x16 coded reconstruction
+      test_assets:
+      - partitioned_square_12x12_g96_direct_tokens.avif
+    - id: partitioned_square_12x12_midpoint_g96_ac
+      description: 12x12 midpoint square pattern retaining unsupported AC coefficient syntax
+      test_assets:
+      - partitioned_square_12x12_midpoint_g96_ac.avif
     - id: partitioned_square_16x16_g64
       description: 16x16 four-leaf square split with negative luma and positive chroma boundary DC residuals
       test_assets:
       - partitioned_square_16x16_g64.avif
+    - id: partitioned_square_16x16_g96_direct_tokens
+      description: 16x16 four-leaf square split with direct high-token DC magnitudes below fifteen
+      test_assets:
+      - partitioned_square_16x16_g96_direct_tokens.avif
     - id: partitioned_square_16x16_r64
       description: 16x16 four-leaf square split proving positive luma and mixed chroma DC-sign contexts
       test_assets:

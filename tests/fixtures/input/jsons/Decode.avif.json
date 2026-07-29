@@ -472,11 +472,62 @@
       ]
     },
     {
+      "id": "partitioned_square_12x12_g96_direct_tokens",
+      "asset": "partitioned_square_12x12_g96_direct_tokens.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_12x12_g96_direct_tokens.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_12x12_midpoint_g96_ac",
+      "asset": "partitioned_square_12x12_midpoint_g96_ac.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_12x12_midpoint_g96_ac.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "partitioned_square_16x16_g64",
       "asset": "partitioned_square_16x16_g64.avif",
       "expect_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/partitioned_square_16x16_g64.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_16x16_g96_direct_tokens",
+      "asset": "partitioned_square_16x16_g96_direct_tokens.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_16x16_g96_direct_tokens.avif",
         "operations": [
           "PIL.Image.open",
           "load",

@@ -242,9 +242,8 @@ fn read_golomb(decoder: &mut RangeDecoder<'_, '_, '_>) -> u32 {
     value.wrapping_sub(1)
 }
 
-fn decode_high_token(decoder: &mut RangeDecoder<'_, '_, '_>, cdf: &mut [u16; 4]) -> Option<u32> {
-    let token = decoder.high_token(cdf);
-    (token == 15).then_some(token)
+fn decode_high_token(decoder: &mut RangeDecoder<'_, '_, '_>, cdf: &mut [u16; 4]) -> u32 {
+    decoder.high_token(cdf)
 }
 
 fn decode_nonzero_dc_coefficient(
@@ -265,14 +264,22 @@ fn decode_nonzero_dc_coefficient(
         decoder.adaptive_symbol(&mut cdfs.eob_base_chroma, 2)
     };
     (base_token == 2).then_some(())?;
-    if plane == 0 {
-        decode_high_token(decoder, &mut cdfs.high_luma)?;
+    let token = if plane == 0 {
+        decode_high_token(decoder, &mut cdfs.high_luma)
     } else {
-        decode_high_token(decoder, &mut cdfs.high_chroma)?;
-    }
+        decode_high_token(decoder, &mut cdfs.high_chroma)
+    };
     let coefficient_context = usize::from(plane != 0);
     let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[coefficient_context][sign_context]);
-    let token = read_golomb(decoder).wrapping_add(15);
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:615-632. High tokens below
+    // fifteen are complete magnitudes; only token fifteen has a Golomb
+    // extension. Reading that extension for a direct token would consume the
+    // following sign or coefficient syntax.
+    let token = if token == 15 {
+        read_golomb(decoder).wrapping_add(15)
+    } else {
+        token
+    };
     // ✅ VERIFIED: dav1d 1.5.3 src/dequant_tables.c q-index zero and
     // src/recon_tmpl.c:596-635. Eight-bit all-lossless DC dequant is four.
     #[expect(
@@ -942,7 +949,7 @@ where
     )?;
     let bottom_right = reconstruct_boundary_leaf(bottom_right_syntax, &top_right, &bottom_left);
 
-    let planes = [
+    let coded_planes = [
         compose_square_plane(
             &top_left.planes[0],
             &top_right.planes[0],
@@ -962,6 +969,9 @@ where
             &bottom_right.planes[2],
         ),
     ];
+    let planes = coded_planes
+        .each_ref()
+        .map(|plane| visible_plane(plane, 16, width, height));
     Some(FirstLeaf {
         width,
         height,

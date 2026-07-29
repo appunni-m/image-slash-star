@@ -165,9 +165,19 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "15dc2c3b0ea25a84b4994b9a73dbcf65eef174bad152c689cc1945843b543657",
         "size": [16, 16],
     },
+    "partitioned_square_12x12_g96_direct_tokens.avif": {
+        "file_sha256": "b61f62f12306af9744ea06ac8c68bfd86f8b10f27caca820405b295756a3f194",
+        "rgb_sha256": "8fd169458756409edfaf3380195c6ab881e3d7043d5c3b158a82feaaa82b993f",
+        "size": [12, 12],
+    },
     "partitioned_square_16x16_g64.avif": {
         "file_sha256": "4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7",
         "rgb_sha256": "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe",
+        "size": [16, 16],
+    },
+    "partitioned_square_16x16_g96_direct_tokens.avif": {
+        "file_sha256": "1fcdc276a8521a7d248fa9382aca518c880921615a392d6116e3fff28320032d",
+        "rgb_sha256": "87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f",
         "size": [16, 16],
     },
     "partitioned_square_16x16_r64.avif": {

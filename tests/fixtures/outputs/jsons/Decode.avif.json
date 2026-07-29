@@ -499,6 +499,42 @@
       "ref_is_animated": false
     },
     {
+      "id": "partitioned_square_12x12_g96_direct_tokens",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_g96_direct_tokens_avif.bin",
+      "ref_bytes": 432,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "partitioned_square_12x12_midpoint_g96_ac",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_12x12_midpoint_g96_ac_avif.bin",
+      "ref_bytes": 432,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        12,
+        12
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
       "id": "partitioned_square_16x16_g64",
       "status": "ok",
       "error_type": null,
@@ -507,6 +543,24 @@
       "verify_error_type": null,
       "verify_error_message": null,
       "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_16x16_g64_avif.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "partitioned_square_16x16_g96_direct_tokens",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_16x16_g96_direct_tokens_avif.bin",
       "ref_bytes": 768,
       "ref_mode": "Rgb8",
       "ref_size": [

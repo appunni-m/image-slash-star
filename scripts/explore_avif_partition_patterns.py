@@ -62,9 +62,13 @@ def changed_bottom_right(x: int, y: int, width: int, height: int) -> Color:
     return GREEN if x >= width // 2 and y >= height // 2 else A
 
 
-def changed_bottom_right_color(color: Color) -> Pattern:
+def changed_bottom_right_color(
+    color: Color,
+    origin: tuple[int, int] | None = None,
+) -> Pattern:
     def pattern(x: int, y: int, width: int, height: int) -> Color:
-        return color if x >= width // 2 and y >= height // 2 else A
+        boundary_x, boundary_y = origin or (width // 2, height // 2)
+        return color if x >= boundary_x and y >= boundary_y else A
 
     return pattern
 
@@ -254,9 +258,14 @@ def summarize_case(case: dict[str, object]) -> dict[str, object]:
         "Post-uvmode",
         "Post-y-cf-blk",
         "Post-uv-cf-blk",
+        "Post-eob",
+        "Post-lo_tok",
+        "Post-hi_tok",
         "Post-dc_lo_tok",
         "Post-dc_hi_tok",
         "Post-dc_sign",
+        "Post-sign",
+        "Post-residual",
     )
     case["syntax_states"] = [
         line
@@ -298,6 +307,22 @@ def main() -> None:
         help="Add a bottom-right-quadrant candidate color; repeat for a corpus",
     )
     parser.add_argument(
+        "--bottom-right-origin",
+        type=parse_size,
+        action="append",
+        help="Add an XxY origin instead of the midpoint; repeat for a sweep",
+    )
+    parser.add_argument(
+        "--pattern",
+        action="append",
+        help="Retain only this named pattern; repeat to compare selected cases",
+    )
+    parser.add_argument(
+        "--only-bottom-right-candidates",
+        action="store_true",
+        help="Skip built-ins and retain only added color/origin candidates",
+    )
+    parser.add_argument(
         "--summary-only",
         action="store_true",
         help="Retain hashes, topology, and operation counts without full traces",
@@ -314,6 +339,9 @@ def main() -> None:
         raise RuntimeError("quality must be in 0..100")
     if not 0 <= args.speed <= 10:
         raise RuntimeError("speed must be in 0..10")
+    for boundary_x, boundary_y in args.bottom_right_origin or ():
+        if boundary_x >= args.size[0] or boundary_y >= args.size[1]:
+            raise RuntimeError("bottom-right origin must be inside the declared size")
 
     with tempfile.TemporaryDirectory(prefix="image-star-avif-patterns-") as name:
         work = Path(name)
@@ -334,15 +362,37 @@ def main() -> None:
         version = (version_result.stdout + version_result.stderr).strip()
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
-        patterns = list(PATTERNS)
-        patterns.extend(
-            (
-                f"changed_bottom_right_{color[0]}_{color[1]}_{color[2]}",
-                changed_bottom_right_color(color),
-                {},
+        patterns = [] if args.only_bottom_right_candidates else list(PATTERNS)
+        if args.only_bottom_right_candidates and not args.bottom_right_color:
+            raise RuntimeError(
+                "only-bottom-right-candidates requires a bottom-right color"
             )
-            for color in args.bottom_right_color or ()
-        )
+        origins = args.bottom_right_origin or [None]
+        for color in args.bottom_right_color or ():
+            for origin in origins:
+                pattern_name = f"changed_bottom_right_{color[0]}_{color[1]}_{color[2]}"
+                if origin is not None:
+                    pattern_name += f"_at_{origin[0]}_{origin[1]}"
+                patterns.append(
+                    (
+                        pattern_name,
+                        changed_bottom_right_color(color, origin),
+                        {},
+                    )
+                )
+        if args.pattern:
+            requested = set(args.pattern)
+            available = {name for name, _pattern, _advanced in patterns}
+            unknown = requested - available
+            if unknown:
+                choices = ", ".join(sorted(available))
+                names = ", ".join(sorted(unknown))
+                raise RuntimeError(
+                    f"unknown pattern name(s) {names}; available patterns: {choices}"
+                )
+            patterns = [
+                entry for entry in patterns if entry[0] in requested
+            ]
         cases = [
             decode_case(
                 executable,

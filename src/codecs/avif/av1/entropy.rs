@@ -747,7 +747,10 @@ fn recursive_split_dimensions(context: &FirstBlockContext) -> bool {
 }
 
 fn square_recursive_split_dimensions(context: &FirstBlockContext) -> bool {
-    (context.frame_width, context.frame_height) == (16, 16)
+    matches!(
+        (context.frame_width, context.frame_height),
+        (12, 12) | (16, 16)
+    )
 }
 
 fn closed_reconstruction_context(context: &FirstBlockContext) -> bool {
