@@ -142,10 +142,10 @@ The 12x12 direct-token fixture's complete entropy trace is identical to the
 coded 16x16 reconstruction.
 `partitioned_square_12x12_midpoint_g96_ac.avif`
 (`d10972f944777129121ef100ee66903959138ae946295bb5fe271cef8035b258`)
-changes at the declared-frame midpoint `(6,6)`. It is an active Pillow/native
-decode fixture but deliberately remains outside the portable reconstruction
-oracle because it introduces horizontal/vertical predictors and non-DC EOB
-values 1, 2, and 4.
+changes at the declared-frame midpoint `(6,6)`. It is the one-hundred-second
+independent reconstruction positive. It composes horizontal and vertical
+prediction, luma EOB-4 token-three residuals, chroma EOB values 1, 2, and 4,
+and the complete one- and two-neighbor residual-context propagation.
 `partitioned_square_12x12_top_left_luma_eob4.avif`
 (`fbc5e3cec5da21a1c1095ecf82525dac5d6ae60ff4a71b101502392de754cc45`)
 changes `(17,91,203)` to `(22,96,208)` beginning at `(6,6)`. It uses the
@@ -157,8 +157,10 @@ and the bottom-right two-neighbor DC mode table.
 `partitioned_square_12x12_top_left_luma_eob12_control.avif`
 (`b8b703ee9e1f2d8200fea338ee85f7ada1b905539bb163712209f60d83af0713`)
 uses the same replacement beginning at `(7,6)`. It preserves the grid
-transition but retains an unadmitted EOB-12 coefficient body as a
-manifest-backed portable error control.
+transition and selects the admitted alternate EOB-12 coefficient body. It is
+the one-hundred-first independent reconstruction positive and proves the
+base-context-seven value-three branch, its adaptive high-token updates,
+DC high-token context four, and the complete nonzero sign chain.
 
 `partitioned_square_12x12_luma_eob1.avif`
 (`db9102a9b302387df2214814ac2cd02c8414beaf4751f3f374370237a210e9bc`)
