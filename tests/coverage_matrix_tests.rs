@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 92);
+    assert_eq!(expected.cases.len(), 93);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2417,6 +2417,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         let square_recursive_ranges = match case.fixture.as_str() {
             "partitioned_square_12x12_g96_direct_tokens.avif"
             | "partitioned_square_12x12_luma_eob1.avif"
+            | "partitioned_square_12x12_luma_eob2_control.avif"
             | "partitioned_square_16x16_g64.avif"
             | "partitioned_square_16x16_g96_direct_tokens.avif"
             | "partitioned_square_16x16_r64.avif"
@@ -2678,6 +2679,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_square_12x12_luma_eob1.avif" => {
                 "d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691"
             }
+            "partitioned_square_12x12_luma_eob2_control.avif" => {
+                "13878ffdf1168508a15759ff58c897370e8428fe522422d52149126a9cc42ef4"
+            }
             "partitioned_square_16x16_g96_direct_tokens.avif" => {
                 "87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f"
             }
@@ -2826,6 +2830,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "partitioned_12x4_a.avif"
                     | "partitioned_4x12_a.avif"
                     | "partitioned_square_12x12_luma_eob1.avif"
+                    | "partitioned_square_12x12_luma_eob2_control.avif"
                     | "partitioned_square_16x16_g64.avif"
             )
         {
@@ -2840,7 +2845,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "10bit.avif",
         "multitile.avif",
         "partitioned_square_12x12_midpoint_g96_ac.avif",
-        "partitioned_square_12x12_luma_eob2_control.avif",
+        "partitioned_square_12x12_luma_eob4_control.avif",
     ] {
         let input = require_ok(
             fs::read(
