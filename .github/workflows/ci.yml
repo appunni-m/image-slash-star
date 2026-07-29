@@ -91,7 +91,7 @@ jobs:
           --output-path coverage.json --no-fail-fast
       - name: Require complete line, branch, function, and region coverage
         run: python3 scripts/verify_llvm_coverage.py coverage.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: llvm-coverage
           path: coverage.json
