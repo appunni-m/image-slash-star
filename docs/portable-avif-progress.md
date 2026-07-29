@@ -3832,3 +3832,110 @@ functions, and 60,136/60,136 regions. Strict native and
 `wasm32-unknown-unknown` all-feature and no-default-feature Clippy, strict
 rustdoc, formatting, whitespace, the 19-file third-party legal audit, and
 offline source-package verification also pass.
+
+## Slice 22 Exploration Plan: Lossless EOB 2
+
+Status: exploration in progress; no production change approved.
+
+### Current boundary
+
+`partitioned_square_12x12_luma_eob2_control.avif` is the smallest retained
+portable miss after Slice 21. It changes the same source RGB `(17,91,203)` to
+`(22,96,208)`, beginning at `(8,10)` instead of `(10,8)`. The fixed-origin
+sweep proves that it retains:
+
+- the same level-3 split and four level-4 leaves;
+- the same vertical, DC, DC, DC luma predictors;
+- the same DC-only or skipped first three leaves;
+- skipped U and V transforms in the bottom-right leaf; and
+- two bottom-right luma transforms with EOB 2, followed by one DC-only and
+  one skipped transform.
+
+The 320-byte file SHA-256 is
+`89842483e159b7d9d98f58282679f9b6d09f4e164576270e9546b13df176c986`.
+Its 45-byte AV1 item SHA-256 is
+`b82a922f6ed1d120cea78da616206109707d3d4b9022d943a4d28b55093bb57e`,
+and the pinned scalar trace consumes 253 entropy operations. Pinned dav1d
+produces Y/U/V SHA-256 values
+`437a03ca722eed08fa3bd8154288bd3f03f3c437049effd2dfe6d99cf93d62d3`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`13878ffdf1168508a15759ff58c897370e8428fe522422d52149126a9cc42ef4`.
+
+The existing scalar trace identifies the first new syntax exactly:
+
+1. `eob_bin_16[0][0]` decodes symbol 2;
+2. `eob_hi_bit[0][0][0]` decodes zero, producing EOB 2;
+3. reverse scan position two uses `scan_4x4[2] == 1`;
+4. `base_tok[0][0][1]` decodes symbol 3 and
+   `br_tok[0][0][7]` produces direct token 10;
+5. reverse scan position one uses `scan_4x4[1] == 4` and its base token is
+   zero, so only raster coefficient one is nonzero; and
+6. DC remains a direct high token with context five derived from AC magnitude
+   ten.
+
+This mapping is preliminary until a complete instrumented trace records the
+coefficient vectors and inverse-WHT residuals twice.
+
+### Required reverse mapping before implementation
+
+Before changing production code:
+
+1. regenerate the target twice with the pinned Pillow 12.2.0/libavif
+   1.4.1/libaom 3.13.2 encoder and require byte-identical AVIF bytes;
+2. generate the complete pinned dav1d 1.5.3 scalar trace twice and require
+   byte-identical partition, entropy, coefficient, reconstructed-plane, and
+   Pillow reports;
+3. map EOB-bin symbol two and the EOB high bit to dav1d
+   `src/recon_tmpl.c:321-442`, including the exact adaptive CDF and update;
+4. map both reverse scan positions, their low/high token contexts, signs, DC
+   context, and Q-index-zero dequantization through
+   `src/recon_tmpl.c:443-718` and `src/scan.c:35-40`;
+5. independently calculate all four bottom-right luma coefficient vectors,
+   inverse-WHT residuals, predictors, and reconstructed rows, then compare
+   them with the instrumented C output; and
+6. stop if the trace introduces any unlisted EOB extra bit, coefficient
+   context, token class, predictor, chroma residual, transform type, or
+   reconstruction rule.
+
+### Focused next rejection control
+
+The same deterministic sweep identifies origin `(10,10)` as the next closed
+control. It retains the five-node tree, predictor sequence, and skipped
+chroma, but its bottom-right luma transforms have EOB values 4, 2, 1, and
+skipped. Its 323-byte file SHA-256 is
+`307512d55df127d8546273a57dedd182fbdb5282aa830191f7fe201b8eff419f`;
+the 48-byte AV1 item SHA-256 is
+`5a69a48c7b9f35f00c3131041eb2ce2e2bf724761051a22be18e2250be58acf1`.
+Pinned dav1d reports 264 entropy operations and Y/U/V SHA-256 values
+`99aec1ce0f240e9ef0096a4e792de99cced21a592c3506f44ed6d314b552e22d`,
+`97981aad65721ea7dfb43cfd031404db089113459940f68f0a9109f1cc8d73d2`,
+and
+`ea6aeb0009d508f51b98a099abb01981af1694d0060b9e7821bebc23d8d91cf9`.
+Pillow's RGB SHA-256 is
+`299dc7d8cf7b620bb3cc3a56ab17da5414d8377e0b79196fce64cae0e05ca7f3`.
+It must remain a private portable miss at its first EOB-4 syntax value.
+
+### Implementation boundary and acceptance
+
+If the complete trace closes the class, extend the private luma coefficient
+decoder with the general AV1 EOB-2 rule. Do not dispatch by fixture, file
+hash, dimensions, or transform ordinal. The decoder may admit only the proved
+EOB-2 scan/token class, but the EOB high-bit CDF update, scan placement,
+coefficient-vector construction, sign handling, dequantization, and inverse
+WHT must follow the general reference rule within that class.
+
+Acceptance requires:
+
+- the existing EOB-2 manifest fixture becoming an independent reconstruction
+  positive with exact entropy, Y/U/V, and Pillow RGB parity;
+- a new deterministic EOB-4 manifest success fixture that remains a private
+  portable miss at its first unsupported syntax value;
+- every prior reconstruction case and manifest row remaining byte-exact;
+- no dependency, unsafe Rust, public image-processing API, target fork, or
+  fixture-selected production path;
+- strict native and WASM feature matrices, rustdoc, formatting, whitespace,
+  legal, and package verification; and
+- Coverage MCP at exactly 100% line, branch, function, and region coverage.
