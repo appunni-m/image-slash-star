@@ -159,7 +159,7 @@ struct BlockCdfs {
     eob_high_luma: [[u16; 2]; 3],
     eob_base_luma: [[u16; 3]; 4],
     eob_base_chroma: [u16; 3],
-    base_luma: [[u16; 4]; 22],
+    base_luma: [[u16; 4]; 24],
     high_luma: [[u16; 4]; 20],
     high_chroma: [u16; 4],
     dc_sign: [[[u16; 2]; 3]; 2],
@@ -251,6 +251,8 @@ impl BlockCdfs {
                 [24_576, 16_384, 8_192, 0],
                 [24_576, 16_384, 8_192, 0],
                 [17_032, 5_215, 2_164, 0],
+                [21_558, 8_974, 3_981, 0],
+                [26_821, 18_894, 13_067, 0],
             ],
             high_luma: [
                 [18_470, 12_050, 8_594, 0],
@@ -738,19 +740,109 @@ fn decode_luma_eob_twelve_coefficients(
     Some(coefficients)
 }
 
-fn decode_luma_eob_nine_ten_or_twelve_after_eob(
+fn decode_luma_eob_fifteen_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    sign_context: usize,
+    cdfs: &mut BlockCdfs,
+) -> Option<TransformCoefficients> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
+    // src/cdf.c:881-907, 1316-1340, and the pinned Slice 28 scalar trace.
+    // scan_4x4[15] == 15 is final. The reverse loop visits every remaining
+    // AC raster position through contexts proved by the trace.
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 0).then_some(())?;
+
+    for _ in 0..3 {
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1).then_some(())?;
+    }
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[23], 3) == 1).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1).then_some(())?;
+
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
+    (coefficient_three_token == 4).then_some(())?;
+    for _ in 0..2 {
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 1).then_some(())?;
+    }
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
+    (coefficient_twelve_token == 4).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3).then_some(())?;
+    let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
+    (coefficient_eight_token == 4).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 1).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3).then_some(())?;
+    let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
+    (coefficient_two_token == 4).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
+    (coefficient_one_token == 4).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
+    (coefficient_four_token == 4).then_some(())?;
+
+    // The neighboring levels select DC high-token context five. The nonzero
+    // link chain visits all AC positions in raster order 4, 1, 2, 5, 8, 12,
+    // 9, 6, 3, 7, 10, 13, 14, 11, and 15.
+    let (dc_token, dc_negative) = decode_luma_dc_after_ac(decoder, sign_context, cdfs, 5)?;
+    let coefficient_four_negative = decoder.equal();
+    let coefficient_one_negative = decoder.equal();
+    let coefficient_two_negative = decoder.equal();
+    let coefficient_five_negative = decoder.equal();
+    let coefficient_eight_negative = decoder.equal();
+    let coefficient_twelve_negative = decoder.equal();
+    let coefficient_nine_negative = decoder.equal();
+    let coefficient_six_negative = decoder.equal();
+    let coefficient_three_negative = decoder.equal();
+    let coefficient_seven_negative = decoder.equal();
+    let coefficient_ten_negative = decoder.equal();
+    let coefficient_thirteen_negative = decoder.equal();
+    let coefficient_fourteen_negative = decoder.equal();
+    let coefficient_eleven_negative = decoder.equal();
+    let coefficient_fifteen_negative = decoder.equal();
+
+    let mut coefficients = [0_i32; 16];
+    coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
+    coefficients[1] =
+        dequantize_lossless_coefficient(coefficient_one_token, coefficient_one_negative);
+    coefficients[2] =
+        dequantize_lossless_coefficient(coefficient_two_token, coefficient_two_negative);
+    coefficients[3] =
+        dequantize_lossless_coefficient(coefficient_three_token, coefficient_three_negative);
+    coefficients[4] =
+        dequantize_lossless_coefficient(coefficient_four_token, coefficient_four_negative);
+    coefficients[5] = dequantize_lossless_coefficient(1, coefficient_five_negative);
+    coefficients[6] = dequantize_lossless_coefficient(1, coefficient_six_negative);
+    coefficients[7] = dequantize_lossless_coefficient(1, coefficient_seven_negative);
+    coefficients[8] =
+        dequantize_lossless_coefficient(coefficient_eight_token, coefficient_eight_negative);
+    coefficients[9] = dequantize_lossless_coefficient(1, coefficient_nine_negative);
+    coefficients[10] = dequantize_lossless_coefficient(1, coefficient_ten_negative);
+    coefficients[11] = dequantize_lossless_coefficient(1, coefficient_eleven_negative);
+    coefficients[12] =
+        dequantize_lossless_coefficient(coefficient_twelve_token, coefficient_twelve_negative);
+    coefficients[13] = dequantize_lossless_coefficient(1, coefficient_thirteen_negative);
+    coefficients[14] = dequantize_lossless_coefficient(1, coefficient_fourteen_negative);
+    coefficients[15] = dequantize_lossless_coefficient(1, coefficient_fifteen_negative);
+    Some(coefficients)
+}
+
+fn decode_luma_eob_nine_ten_twelve_or_fifteen_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
 ) -> Option<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-438 and pinned Slice
-    // 25-27 traces. Symbol four uses high-bit context two and two
-    // equiprobable extra bits. High one with first extra bit one is rejected
-    // before the second bit, preserving EOB fifteen as the next boundary.
+    // 25-28 traces. Symbol four uses high-bit context two and two
+    // equiprobable extra bits. The closed combinations are EOB nine, ten,
+    // twelve, and fifteen; EOB eleven, thirteen, and fourteen remain rejected.
     if decoder.adaptive_bool(&mut cdfs.eob_high_luma[2]) {
-        (!decoder.equal()).then_some(())?;
-        (!decoder.equal()).then_some(())?;
-        decode_luma_eob_twelve_coefficients(decoder, sign_context, cdfs)
+        if decoder.equal() {
+            decoder.equal().then_some(())?;
+            decode_luma_eob_fifteen_coefficients(decoder, sign_context, cdfs)
+        } else {
+            (!decoder.equal()).then_some(())?;
+            decode_luma_eob_twelve_coefficients(decoder, sign_context, cdfs)
+        }
     } else if decoder.equal() {
         (!decoder.equal()).then_some(())?;
         decode_luma_eob_ten_coefficients(decoder, sign_context, cdfs)
@@ -779,7 +871,7 @@ fn decode_nonzero_lossless_transform(
             decode_luma_eob_four_or_six_after_eob(decoder, sign_context, cdfs)
         }
         4 if allow_luma_ac && plane == 0 => {
-            decode_luma_eob_nine_ten_or_twelve_after_eob(decoder, sign_context, cdfs)
+            decode_luma_eob_nine_ten_twelve_or_fifteen_after_eob(decoder, sign_context, cdfs)
         }
         _ => None,
     }
