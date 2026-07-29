@@ -2654,6 +2654,18 @@ formats:
       description: 16x16 level-3 geometry fixture selecting luma horizontal predictor mode 2
       test_assets:
       - portable_probe_16x16_gray_129.avif
+    - id: partitioned_square_16x16_g64
+      description: 16x16 four-leaf square split with negative luma and positive chroma boundary DC residuals
+      test_assets:
+      - partitioned_square_16x16_g64.avif
+    - id: partitioned_square_16x16_r64
+      description: 16x16 four-leaf square split proving positive luma and mixed chroma DC-sign contexts
+      test_assets:
+      - partitioned_square_16x16_r64.avif
+    - id: partitioned_square_16x16_g127
+      description: 16x16 four-leaf square split proving positive luma and negative chroma DC-sign contexts
+      test_assets:
+      - partitioned_square_16x16_g127.avif
     - id: portable_lossless_12x16_a
       description: 12x16 visible lossless 4:4:4 frame sharing the level-3 padded 16x16 coded leaf
       test_assets:

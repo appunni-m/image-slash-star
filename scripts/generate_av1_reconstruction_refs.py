@@ -165,6 +165,21 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "15dc2c3b0ea25a84b4994b9a73dbcf65eef174bad152c689cc1945843b543657",
         "size": [16, 16],
     },
+    "partitioned_square_16x16_g64.avif": {
+        "file_sha256": "4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7",
+        "rgb_sha256": "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe",
+        "size": [16, 16],
+    },
+    "partitioned_square_16x16_r64.avif": {
+        "file_sha256": "fe7610630b212d87a5b9b9650fa156be9729e1bd49d8c01df5df416e5e524898",
+        "rgb_sha256": "6492bb904bafc0a5c8acedff1fd7cd70965e3be844e8fd19d0e04a6bd63e2017",
+        "size": [16, 16],
+    },
+    "partitioned_square_16x16_g127.avif": {
+        "file_sha256": "4085fdb230e1bcc93a3a3be408d5fbbf0a5c740590df3983c07b191d3b59ba08",
+        "rgb_sha256": "d1ce3617b6228d74d2b208847c20486f1a6301cf8b0708242c0019894eeb055e",
+        "size": [16, 16],
+    },
     "portable_lossless_12x16_a.avif": {
         "file_sha256": "67e0005a989d761d36df0ddb12e53f1535a6a04e3606b97dfd33829949bc30ca",
         "rgb_sha256": "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874",

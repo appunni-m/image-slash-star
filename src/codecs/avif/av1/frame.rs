@@ -761,6 +761,8 @@ fn validate_tile_entropy_prefixes(
             segmentation_enabled: header.segmentation.enabled,
             skip_mode_enabled: header.skip_mode_enabled,
             allow_intrabc: header.allow_intrabc,
+            allow_screen_content_tools: header.allow_screen_content_tools,
+            enable_filter_intra: sequence.enable_filter_intra,
         };
         let reconstructed = entropy::validate_first_partition(data, range.clone(), &context)?;
         first_leaf = first_leaf.or(reconstructed);

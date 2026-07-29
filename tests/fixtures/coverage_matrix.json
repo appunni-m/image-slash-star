@@ -570,6 +570,69 @@
           "ref_is_animated": false
         },
         {
+          "id": "partitioned_square_16x16_g64",
+          "type": "decode",
+          "format": "avif",
+          "category": "partitioned",
+          "description": "16x16 four-leaf square split with negative luma and positive chroma boundary DC residuals",
+          "asset": "partitioned_square_16x16_g64.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_16x16_g64_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "partitioned_square_16x16_r64",
+          "type": "decode",
+          "format": "avif",
+          "category": "partitioned",
+          "description": "16x16 four-leaf square split proving positive luma and mixed chroma DC-sign contexts",
+          "asset": "partitioned_square_16x16_r64.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_16x16_r64_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "partitioned_square_16x16_g127",
+          "type": "decode",
+          "format": "avif",
+          "category": "partitioned",
+          "description": "16x16 four-leaf square split proving positive luma and negative chroma DC-sign contexts",
+          "asset": "partitioned_square_16x16_g127.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_partitioned_square_16x16_g127_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "portable_lossless_12x16_a",
           "type": "decode",
           "format": "avif",
@@ -22974,12 +23037,12 @@
     }
   },
   "summary": {
-    "total_rows": 1116,
-    "decode_rows": 838,
+    "total_rows": 1119,
+    "decode_rows": 841,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 837,
-    "decode_active": 838,
+    "assets_available": 840,
+    "decode_active": 841,
     "decode_planned": 0,
     "encode_not_wired": 0
   }

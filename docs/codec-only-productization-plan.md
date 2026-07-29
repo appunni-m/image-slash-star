@@ -86,6 +86,20 @@ representation. General compositing of unrelated decoded images is not.
 Likewise, preserving and reporting an ICC profile is in scope; applying that
 profile as a pixel transformation belongs downstream.
 
+The deciding test is observable purpose, not the name of an algorithm:
+
+- work needed to turn encoded bytes into the documented decoded samples, or
+  documented samples into an encoded format, is codec implementation;
+- work that accepts an already decoded image and returns different pixels for
+  a caller-selected visual effect is image processing and is prohibited here;
+- a container encoder must reject a convenience request that would require
+  resampling, rotation, compositing, or color enhancement unless the caller
+  supplies the already-transformed samples or container entries.
+
+`DecodedImage` and `DecodedSequence` are validated codec data-transfer models.
+They may expose constructors, validation, immutable sample access, palette and
+frame metadata, but must not accumulate transformation methods.
+
 ### 1.4 Retired scope leak
 
 The former compatibility layer exposed `DynamicImage`, generic image buffers
