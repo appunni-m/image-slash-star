@@ -4140,6 +4140,18 @@ def gen_avif():
         replacement_origin=(6, 6),
     )
     write_square_partition(
+        "partitioned_square_12x12_top_left_luma_eob4.avif",
+        (22, 96, 208),
+        size=(12, 12),
+        replacement_origin=(6, 6),
+    )
+    write_square_partition(
+        "partitioned_square_12x12_top_left_luma_eob12_control.avif",
+        (22, 96, 208),
+        size=(12, 12),
+        replacement_origin=(7, 6),
+    )
+    write_square_partition(
         "partitioned_square_12x12_luma_eob1.avif",
         (22, 96, 208),
         size=(12, 12),

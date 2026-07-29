@@ -2662,6 +2662,14 @@ formats:
       description: 12x12 midpoint square pattern retaining unsupported AC coefficient syntax
       test_assets:
       - partitioned_square_12x12_midpoint_g96_ac.avif
+    - id: partitioned_square_12x12_top_left_luma_eob4
+      description: 12x12 four-leaf square split with an admitted fourth-transform luma EOB-4 body
+      test_assets:
+      - partitioned_square_12x12_top_left_luma_eob4.avif
+    - id: partitioned_square_12x12_top_left_luma_eob12_control
+      description: 12x12 fourth-transform luma EOB-12 body retained as a portable error control
+      test_assets:
+      - partitioned_square_12x12_top_left_luma_eob12_control.avif
     - id: partitioned_square_12x12_luma_eob1
       description: 12x12 four-leaf square split with two luma-only EOB-1 lossless transforms
       test_assets:

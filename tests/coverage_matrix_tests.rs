@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 99);
+    assert_eq!(expected.cases.len(), 101);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2415,6 +2415,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             _ => None,
         };
         let square_recursive_ranges = match case.fixture.as_str() {
+            "partitioned_square_12x12_top_left_luma_eob4.avif" => {
+                Some([34_880, 40_768, 47_278, 60_530, 38_697])
+            }
+            "partitioned_square_12x12_top_left_luma_eob12_control.avif" => {
+                Some([34_880, 40_768, 53_060, 33_964, 42_488])
+            }
             "partitioned_square_12x12_g96_direct_tokens.avif"
             | "partitioned_square_12x12_luma_eob1.avif"
             | "partitioned_square_12x12_luma_eob2_control.avif"
@@ -2682,6 +2688,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_square_12x12_g96_direct_tokens.avif" => {
                 "8fd169458756409edfaf3380195c6ab881e3d7043d5c3b158a82feaaa82b993f"
             }
+            "partitioned_square_12x12_top_left_luma_eob4.avif" => {
+                "fcfe3605207a28cd1596ae0cb2b9b4ad1b8b356f7457cd2e60276b8d6530a691"
+            }
+            "partitioned_square_12x12_top_left_luma_eob12_control.avif" => {
+                "16195f9646d15f2857da1864cbffdd3f12a965bbd287ca888b7dde113c2d7ec7"
+            }
             "partitioned_square_12x12_luma_eob1.avif" => {
                 "d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691"
             }
@@ -2861,6 +2873,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     | "partitioned_square_12x12_luma_eob10_control.avif"
                     | "partitioned_square_12x12_luma_eob12_control.avif"
                     | "partitioned_square_12x12_luma_eob15_control.avif"
+                    | "partitioned_square_12x12_top_left_luma_eob12_control.avif"
+                    | "partitioned_square_12x12_top_left_luma_eob4.avif"
                     | "partitioned_square_16x16_g64.avif"
             )
         {
