@@ -15,6 +15,7 @@ Output: tests/fixtures/input/images/{format}/ — committed to repo
 """
 import argparse
 import binascii
+import hashlib
 import os
 import random
 import struct
@@ -4135,6 +4136,37 @@ def gen_avif():
             quality=99,
             subsampling="4:2:0",
         )
+
+    mutation_source = d / "portable_lossy_420_q99_gray_126.avif"
+    mutation_source_bytes = mutation_source.read_bytes()
+    mutation_source_sha256 = hashlib.sha256(mutation_source_bytes).hexdigest()
+    if mutation_source_sha256 != (
+        "f82b264295ffb7ea9e357a352e674200ed89138a182b0de7c4002fbc55fade4d"
+    ):
+        raise RuntimeError("Slice 35 mutation source differs from the pinned fixture")
+    for name, offset, old, new, expected_sha256 in (
+        (
+            "portable_lossy_420_q99_eob_bin_control.avif",
+            299,
+            0x72,
+            0x73,
+            "0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea",
+        ),
+        (
+            "portable_lossy_420_q99_eob_base_control.avif",
+            300,
+            0xE1,
+            0x1E,
+            "ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5",
+        ),
+    ):
+        mutated = bytearray(mutation_source_bytes)
+        if mutated[offset] != old:
+            raise RuntimeError(f"Slice 35 mutation source byte differs at {offset}")
+        mutated[offset] = new
+        if hashlib.sha256(mutated).hexdigest() != expected_sha256:
+            raise RuntimeError(f"Slice 35 mutation {name} differs from its pinned hash")
+        (d / name).write_bytes(mutated)
     for geometry, size in (
         ("4x8", (4, 8)),
         ("8x4", (8, 4)),

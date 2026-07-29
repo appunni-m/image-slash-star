@@ -319,6 +319,40 @@
       ]
     },
     {
+      "id": "portable_lossy_420_q99_eob_bin_control",
+      "asset": "portable_lossy_420_q99_eob_bin_control.avif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_eob_bin_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_eob_base_control",
+      "asset": "portable_lossy_420_q99_eob_base_control.avif",
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_eob_base_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossless_420_leaf_4x8_a",
       "asset": "portable_lossless_420_leaf_4x8_a.avif",
       "expect_error": false,

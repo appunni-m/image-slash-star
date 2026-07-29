@@ -1652,13 +1652,17 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     // src/dequant_tables.c, src/qm.c:1604-1692, and
     // src/recon_tmpl.c:597-643. At block qindex two, eight-bit Y-DC dequant
     // is eight and qmatrix-ten DC weight 32 leaves it unchanged.
-    let magnitude = match token {
+    let magnitude: i32 = match token {
         8 => 64,
         9 => 72,
         _ => return None,
     };
     let mut coefficients = [[0_i32; 16]; 16];
-    coefficients[0][0] = if negative { -magnitude } else { magnitude };
+    coefficients[0][0] = if negative {
+        magnitude.wrapping_neg()
+    } else {
+        magnitude
+    };
     Some(coefficients)
 }
 
@@ -1928,9 +1932,9 @@ fn reconstruct_transform(predictor: u16, coefficients: TransformCoefficients) ->
 // EOB zero use this scalar DC-only fast path. The 8x8 transform shift is one;
 // the signed right shifts intentionally mirror dav1d's target arithmetic.
 fn inverse_dct_8x8_dc(coefficient: i32) -> i32 {
-    let dc = (coefficient * 181 + 128) >> 8;
-    let dc = (dc + 1) >> 1;
-    (dc * 181 + 128 + 2_048) >> 12
+    let dc = coefficient.wrapping_mul(181).wrapping_add(128) >> 8;
+    let dc = dc.wrapping_add(1) >> 1;
+    dc.wrapping_mul(181).wrapping_add(128).wrapping_add(2_048) >> 12
 }
 
 fn reconstruct_lossy_luma_8x8(

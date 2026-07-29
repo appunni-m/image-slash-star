@@ -7101,3 +7101,150 @@ failing test reports that production retained no first leaf for
 `portable_lossy_420_q99_gray_126.avif`, after the manifest and reconstruction
 document contracts had already passed. The current all-skipped luma
 coefficient gate is therefore the first missing production stage.
+
+### Slice 35 acceptance coverage closure plan
+
+The first green production run is Coverage MCP run
+`29fb2b67-181b-4f64-bf23-1d5dbaff30fe`, snapshot
+`0e1e501f-d86f-4f96-90a7-2668e609d9fb`. All seven test binaries pass with
+38,271/38,271 lines, 5,464/5,464 branches, 1,911/1,911 functions, and
+62,925/62,927 regions. The raw LLVM records identify both remaining regions
+inside `decode_lossy_420_dc_or_skipped_coefficients`: the `None` outcomes for
+an EOB-bin value other than zero and an EOB-base value other than two. These
+are real parsed-syntax rejection states, not dead code or compiler-generated
+cleanup.
+
+A complete deterministic 4x4 grayscale sweep over values 0 through 255 at
+quality 99, speed 8, one thread, disabled autotiling, and explicit 4:2:0
+subsampling was reverse-mapped through the pinned Pillow/libaom/dav1d stack.
+It produced no candidate for either state. Every directional, non-skipped
+transform that reaches the Slice 35 transform-type gate is DC-only and uses
+EOB-base two. The report is retained outside the repository at
+`/private/tmp/slice35-q99-all-gray-420.json`; its role is diagnostic, not an
+oracle fixture.
+
+Coverage closure will therefore search deterministic nonconstant luma
+residuals while preserving the already closed container, frame, partition,
+quantizer, predictor, chroma, and filter class:
+
+1. generate one-pixel impulses around the accepted gray 127 and 129 predictors,
+   then row, column, split, stripe, and checkerboard residuals;
+2. encode every candidate twice through the pinned Pillow 12.2.0/libavif
+   1.4.1/libaom 3.13.2 stack and reject nondeterministic bytes;
+3. trace each AV1 item through scalar dav1d 1.5.3 at commit
+   `b546257f770768b2c88258c533da38b91a06f737`;
+4. select the smallest candidate that first differs at EOB-bin and the smallest
+   candidate that retains EOB-bin zero but differs at EOB-base;
+5. retain each as a Pillow-decodable manifest control with exact input,
+   decoded-pixel, plane, syntax, and rejection evidence; and
+6. rerun Coverage MCP without changing production acceptance or hiding the
+   rejection paths through source-shape refactoring.
+
+The search is fixture selection only. No candidate identity, source pixels,
+encoded bytes, digest, or Pillow result may influence production behavior.
+
+The first residual-pattern sweep contains 740 deterministic cases. A one-LSB
+impulse at source coordinate `(0, 3)` over gray 127 is the smallest EOB-bin
+control: its 302-byte AVIF preserves the closed Slice 35 prefix through
+directional transform selection, then decodes EOB-bin three instead of zero.
+No impulse, row, column, split, stripe, or checker candidate retained EOB-bin
+zero while decoding EOB-base zero or one. At qindex two, an integer grayscale
+DC step maps to a quantized magnitude too large for those base symbols.
+
+The bounded fallback search is a constant near-gray RGB cube. Component values
+124 through 132 around the accepted predictor origin provide finer luma steps
+through the pinned RGB-to-YUV conversion while retaining a transform with no
+AC energy. The same deterministic double-encode, 4:2:0, scalar-trace, and
+closed-prefix checks apply. A candidate is acceptable only if production
+reaches EOB-base after decoding EOB-bin zero; later chroma behavior remains
+outside Slice 35 and may still cause the overall portable path to reject.
+
+The 729-case near-gray RGB cube produced no such candidate. This confirms that
+the EOB-base rejection is syntactically reachable from untrusted bytes but is
+not naturally emitted in the closed qindex-two class by the pinned encoder.
+The final fallback is therefore an exhaustive deterministic one-byte mutation
+of the retained `portable_lossy_420_q99_gray_126.avif` AV1 item. Every byte
+position is tried with every other byte value. A mutation qualifies only when
+its scalar entropy operations exactly match the retained target through luma
+transform selection, decode EOB-bin zero, and then decode EOB-base zero or
+one. The selected full AVIF must be retained as a manifest error/control
+fixture with its mutation offset, old/new byte, complete input hash, extracted
+item hash, scalar outcome, and exact Pillow success or structured error
+classification. This is reverse mapping from the missing production region,
+not random fuzzing.
+
+The exhaustive sweep ran all 6,885 replacements and found 87 EOB-bin matches
+and 216 EOB-base matches. The first candidate for each state was re-run twice;
+the complete selected records were byte-identical.
+
+| Control | Mutation | AVIF SHA-256 | AV1 item SHA-256 | Scalar prefix/outcome | Pillow 12.2.0 outcome |
+| --- | --- | --- | --- | --- | --- |
+| EOB-bin | AV1 item offset 24 / file offset 299, `0x72` to `0x73` | `0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea` | `303fb111b5c26b8f350ecafd3668887f37c307c15ce9908a5f1f8e5ac8b042d4` | matches through transform symbol one, then EOB-bin two; standalone scalar decode ends with `Invalid argument` | `builtins.RuntimeError`: `Failed to decode frame 0: Decoding of color planes failed` |
+| EOB-base | AV1 item offset 25 / file offset 300, `0xe1` to `0x1e` | `ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5` | `2ee81aa9ad19f8ef6b3ed326c127c093546f3b76d642e5b7ebb7339865568b36` | matches through EOB-bin zero, then EOB-base zero; standalone scalar decode ends with `Invalid argument` | `builtins.RuntimeError`: `Failed to decode frame 0: Decoding of color planes failed` |
+
+Both derive from the retained 302-byte gray-126 target with AV1 item offset
+275 and item SHA-256
+`00143b1bf95c47014cd15b1dd3daea6b470df80125dd29da5ced61067f08fa5b`.
+Both controls are manifest error fixtures. Together they prove both parser
+rejections without widening Slice 35 or relying on compiler-region
+refactoring.
+
+The first Coverage MCP closure attempt passed all tests and covered the
+EOB-bin rejection, but retained one missing region at the EOB-base `None`
+outcome. Reverse inspection found that the selected EOB-base mutation used
+sample offset 14 / file offset 289, the first byte of the 13-byte frame OBU
+payload. The coded tile occupies sample offsets 22 through 26 / file offsets
+297 through 301. Although scalar dav1d later produced the desired entropy
+prefix, Rust correctly rejected the changed frame-tool class before entering
+coefficient decoding.
+
+The mutation selector must therefore require the chosen control to lie inside
+the inspected coded-tile span. The full-item sweep remains useful for proving
+candidate counts, but an acceptance control may not alter the temporal
+delimiter, sequence header, frame header, or OBU lengths. The next run will
+select the first EOB-base-zero/one trace from sample offsets 22 through 26,
+regenerate the exact manifest fixture, and repeat Coverage MCP.
+
+The tile-constrained rerun retained the same 87 EOB-bin matches and found 160
+EOB-base matches within the five coded bytes. Its first EOB-base control is the
+sample-offset-25 mutation recorded above. It changes no container, OBU,
+sequence, or frame-header byte and Pillow classifies it with the same exact
+decode error as the EOB-bin control.
+
+The first strict all-feature Clippy lane then rejected four raw signed
+arithmetic expressions added by Slice 35: coefficient sign negation and the
+three integer operations in the pinned DC-only inverse DCT. The admitted
+coefficient magnitudes are bounded to 64 and 72, so overflow is impossible in
+the closed class, but the repository lint policy requires explicit arithmetic
+semantics. The implementation will use wrapping signed negation,
+multiplication, and addition to state the C-width behavior directly. No lint
+allowance or output change is permitted.
+
+### Slice 35 final acceptance
+
+The manifest contains 1,173 cases: 895 decode cases and 278 encode cases over
+all eight formats, with 894 retained input assets, 895 active decode cases, no
+planned cases, and no unwired encode cases. The two syntax controls are exact
+Pillow error fixtures; neither stores or compares a synthetic output payload.
+Two complete asset generations and two Pillow-reference generations were
+byte-identical. The regenerated decode-reference diff has SHA-256
+`2b4b1dda202a8eb66e41fd9fa55353d4fb51d6b6faa1e811708f1454c883b941`.
+
+The wrapping-arithmetic cleanup passed `cargo fmt --all -- --check`, every
+strict native and `wasm32-unknown-unknown` Clippy lane for no features, each
+individual codec feature, default features, and all features, and the matching
+22 strict rustdoc lanes. No lint allowance was added.
+
+Final Coverage MCP run `55edb669-4977-457a-a8ee-dd86273d66ba`, snapshot
+`09be7950-be01-4cc5-947f-22277d1e8a92`, passed all seven test binaries. Its
+LLVM report records exact coverage of 38,273/38,273 lines, 5,464/5,464
+branches, 1,911/1,911 functions, and 62,932/62,932 regions. This final run was
+made after the wrapping-arithmetic change.
+
+The remaining release gates also pass: the retained-license verifier confirms
+all 22 legal/provenance files; both new diagnostic scripts compile without
+writing bytecode; `cargo deny check advisories bans licenses sources` passes;
+and `cargo package --allow-dirty --locked --offline` builds and verifies 135
+files, 2.1 MiB unpacked and 431.5 KiB compressed. The diagnostic search
+scripts, manifest fixtures, and coverage artifacts remain outside the
+published crate.
