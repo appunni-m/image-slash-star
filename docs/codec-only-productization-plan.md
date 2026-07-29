@@ -8,6 +8,32 @@ portable AVIF and the remaining WASM/dependency release gates are in progress.
 Related review:
 [image-rs comparison and gap analysis](image-rs-gap-analysis.md).
 
+## Current Alignment Ledger
+
+This ledger records repository evidence rather than inferred completion. It is
+updated whenever an accepted slice changes the public or published contract.
+
+| Requirement | Current evidence | State |
+| --- | --- | --- |
+| Codec-only public surface | The root API exposes byte detection, inspection, decode, encode, immutable encoded sources, decoded transfer models, and options. A source search finds no public processing operation or compatibility buffer/editor type. | aligned |
+| Rust dependency graph | `cargo tree --all-features --locked` contains only `image-slash-star` and `bytemuck 1.25.1`. | aligned |
+| Third-party provenance | The retained-license verifier inventories and verifies 22 legal/provenance files; `cargo-deny` passes advisories, bans, licenses, and sources. | aligned |
+| Canonical structured API | Codec modules are private and the public detect/inspect/decode/encode paths use `ImageResult`. | aligned |
+| Feature isolation | No-feature, individual-codec, default, and all-feature native/WASM compilation and strict-lint lanes pass; ICO alone intentionally enables BMP and PNG. | aligned for compilation |
+| Portable AVIF | Detection, bounded inspection, and the manifest-bounded AV1 still-decode classes in `portable-avif-progress.md` run in-tree. Native decode outside those classes and all native encode still use the pinned C stack. | partial; release blocker |
+| Executed WASM parity | The matrix cross-compiles, but the full semantic manifest is not executed in a WASM runtime. | missing; release blocker |
+| Public status claims | README counts and the portable-AVIF boundary are synchronized with the Slice 36 manifest in this update. | aligned through Slice 36 |
+| Caller-controlled limits | No `DecodeLimits` or `DecodeOptions` contract exists in `src/`. | missing |
+| Typed encoder configuration | `EncodeOptions` still exposes string-valued subsampling, AVIF pairs, and a catch-all `HashMap`; metadata is passed through string/hex keys. | missing |
+| Capability discovery | No public capability query describes format, operation, feature, and target support. | missing |
+| Metadata preservation model | Format parsers retain selected palette/frame fields and some encoders accept opaque metadata, but `ImageInfo` and decoded envelopes do not yet expose the accepted opaque metadata contract. | partial |
+| Publishable external release | Offline packaging verifies 135 files and 431.5 KiB compressed, but portable AVIF, limits, executed WASM parity, examples, and support policy remain incomplete. | not ready |
+
+The highest-priority implementation path remains A3: finish portable AVIF and
+remove the native stack from the published build contract. Limits, typed
+options, metadata, and external-adoption work must not use the native bridge or
+new dependencies as shortcuts.
+
 ## 1. Product Decision
 
 `image-slash-star` is an image **encoding and decoding** crate. It is not an

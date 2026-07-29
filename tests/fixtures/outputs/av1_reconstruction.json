@@ -22463,6 +22463,2882 @@
         "Post-txtp-intra[1->1][1][1->0]: r=61792",
         "Post-eob_bin_64[0][0][0]: r=50880",
         "Post-dc_lo_tok[1][0][0][3]: r=38824",
+        "Post-dc_hi_tok[1][0][0][15]: r=33338",
+        "Post-dc_sign[0][0][1]: r=34068",
+        "Post-dc_residual[0->15]: r=34056",
+        "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=34056",
+        "dq",
+        " -120   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "recon",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        "l",
+        " 00 00 00 00",
+        " 00 7f 7f 7f",
+        "tl",
+        " 00",
+        "t",
+        " 7f 7f 7f 7f",
+        " 7f 7f 7f 7f",
+        "u-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=34056",
+        "Post-non-zero[0][7][1]: r=52144",
+        "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=52144 [x=0,cbx4=0]",
+        "l",
+        " 00 00 00 00",
+        " 00 7f 7f 7f",
+        "tl",
+        " 00",
+        "t",
+        " 7f 7f 7f 7f",
+        " 7f 7f 7f 7f",
+        "v-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=52144",
+        "Post-non-zero[0][7][1]: r=40502",
+        "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=40502 [x=0,cbx4=0]"
+      ],
+      "decoded_planes": [
+        {
+          "height": 4,
+          "name": "y",
+          "row_bytes": [
+            "7d7d7d7d",
+            "7d7d7d7d",
+            "7d7d7d7d",
+            "7d7d7d7d"
+          ],
+          "sha256": "cb2e66ce3a0f8217491084e1b165ae8f0ccb56e11d5aece9f357e2f8ea54e9b0",
+          "width": 4
+        },
+        {
+          "height": 2,
+          "name": "u",
+          "row_bytes": [
+            "8080",
+            "8080"
+          ],
+          "sha256": "8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222",
+          "width": 2
+        },
+        {
+          "height": 2,
+          "name": "v",
+          "row_bytes": [
+            "8080",
+            "8080"
+          ],
+          "sha256": "8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222",
+          "width": 2
+        }
+      ],
+      "decoder_events": [
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 25,
+            "difference": 4053457976244043775,
+            "operation": "init",
+            "parameter": 0,
+            "range": 32768,
+            "step": 0,
+            "value": -1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              13210,
+              7032,
+              2302,
+              1
+            ],
+            "count": 24,
+            "difference": 426026788007706622,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 38248,
+            "step": 1,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 24,
+            "difference": 68553567585173502,
+            "operation": "fixed",
+            "parameter": 1097,
+            "range": 36978,
+            "step": 2,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1029,
+              1
+            ],
+            "count": 24,
+            "difference": 68553567585173502,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 36978,
+            "step": 3,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-skip[0]: r=36978"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-cdef_idx[0]: r=36978"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              5488,
+              1651,
+              89,
+              1
+            ],
+            "count": 18,
+            "difference": 3018334038730473344,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 41728,
+            "step": 4,
+            "value": 2
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 17,
+            "difference": 6036668077460946688,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 41736,
+            "step": 5,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-delta_q[-2->2]: r=41736"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              17667,
+              15250,
+              13011,
+              12158,
+              11709,
+              11294,
+              10602,
+              9227,
+              8311,
+              4460,
+              3561,
+              2231,
+              1
+            ],
+            "count": 12,
+            "difference": 12930314192128303104,
+            "operation": "adaptive_symbol",
+            "parameter": 12,
+            "range": 60128,
+            "step": 6,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-ymode[1]: r=60128"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              30656,
+              27893,
+              25437,
+              9680,
+              5599,
+              2472,
+              1
+            ],
+            "count": 11,
+            "difference": 15578910434969763840,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 55466,
+            "step": 7,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              27354,
+              12583,
+              12314,
+              12161,
+              11955,
+              11332,
+              11208,
+              10964,
+              10336,
+              8274,
+              7823,
+              5557,
+              3193,
+              1
+            ],
+            "count": 8,
+            "difference": 17265468363245486080,
+            "operation": "adaptive_symbol",
+            "parameter": 13,
+            "range": 62288,
+            "step": 8,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uvmode[0]: r=62288"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-tx[1]: r=62288"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "y-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=62288"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 8,
+            "difference": 16614698217090449408,
+            "operation": "fixed",
+            "parameter": 1220,
+            "range": 59976,
+            "step": 9,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1144,
+              1
+            ],
+            "count": 8,
+            "difference": 16614698217090449408,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 59976,
+            "step": 10,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[1][0][0]: r=59976"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              32452,
+              23223,
+              17570,
+              17137,
+              13075,
+              5117,
+              1
+            ],
+            "count": 6,
+            "difference": 17169146746605404160,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 61792,
+            "step": 11,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-txtp-intra[1->1][1][1->0]: r=61792"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              31426,
+              31262,
+              30678,
+              30016,
+              28582,
+              24229,
+              1
+            ],
+            "count": 0,
+            "difference": 1125899873288192,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 50880,
+            "step": 12,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-eob_bin_64[0][0][0]: r=50880"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              27408,
+              7945,
+              1
+            ],
+            "count": -2,
+            "difference": 4503599627370495,
+            "operation": "adaptive_symbol",
+            "parameter": 2,
+            "range": 38824,
+            "step": 13,
+            "value": 2
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_lo_tok[1][0][0][3]: r=38824"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              18812,
+              12557,
+              9116,
+              1
+            ],
+            "count": -4,
+            "difference": 18014398509481980,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 39276,
+            "step": 14,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19248,
+              13188,
+              9855,
+              2
+            ],
+            "count": -6,
+            "difference": 72057594037927920,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 43468,
+            "step": 15,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19670,
+              13799,
+              10571,
+              3
+            ],
+            "count": -8,
+            "difference": 288230376151711680,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 51728,
+            "step": 16,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 576460752303423360,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 33338,
+            "step": 17,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 576460752303423360,
+            "operation": "high_token",
+            "parameter": 3,
+            "range": 33338,
+            "step": 18,
+            "value": 15
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_hi_tok[1][0][0][15]: r=33338"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -10,
+            "difference": 1152921504606846720,
+            "operation": "fixed",
+            "parameter": 16768,
+            "range": 34068,
+            "step": 19,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              17768,
+              1
+            ],
+            "count": -10,
+            "difference": 1152921504606846720,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 34068,
+            "step": 20,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_sign[0][0][1]: r=34068"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -11,
+            "difference": 2305843009213693440,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 34056,
+            "step": 21,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_residual[0->15]: r=34056"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=34056"
+        },
+        {
+          "kind": "debug",
+          "line": "dq"
+        },
+        {
+          "kind": "debug",
+          "line": " -120   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "recon"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "u-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=34056"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "fixed",
+            "parameter": 25114,
+            "range": 52144,
+            "step": 22,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              25592,
+              1
+            ],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 52144,
+            "step": 23,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=52144"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=52144 [x=0,cbx4=0]"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "v-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=52144"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "fixed",
+            "parameter": 25592,
+            "range": 40502,
+            "step": 24,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              26040,
+              2
+            ],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 40502,
+            "step": 25,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=40502"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=40502 [x=0,cbx4=0]"
+        }
+      ],
+      "encoded_item": {
+        "length": 27,
+        "sha256": "d8d9d078d6e991c49cc9cbc298b48602f5cac5fe32b8055bb9a46de9c6f4743c",
+        "spans": [
+          {
+            "length": 27,
+            "offset": 275
+          }
+        ]
+      },
+      "entropy_operations": [
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 25,
+          "difference": 4053457976244043775,
+          "operation": "init",
+          "parameter": 0,
+          "range": 32768,
+          "step": 0,
+          "value": -1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            13210,
+            7032,
+            2302,
+            1
+          ],
+          "count": 24,
+          "difference": 426026788007706622,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 38248,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 24,
+          "difference": 68553567585173502,
+          "operation": "fixed",
+          "parameter": 1097,
+          "range": 36978,
+          "step": 2,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1029,
+            1
+          ],
+          "count": 24,
+          "difference": 68553567585173502,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 36978,
+          "step": 3,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            5488,
+            1651,
+            89,
+            1
+          ],
+          "count": 18,
+          "difference": 3018334038730473344,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 41728,
+          "step": 4,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 17,
+          "difference": 6036668077460946688,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 41736,
+          "step": 5,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            17667,
+            15250,
+            13011,
+            12158,
+            11709,
+            11294,
+            10602,
+            9227,
+            8311,
+            4460,
+            3561,
+            2231,
+            1
+          ],
+          "count": 12,
+          "difference": 12930314192128303104,
+          "operation": "adaptive_symbol",
+          "parameter": 12,
+          "range": 60128,
+          "step": 6,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            30656,
+            27893,
+            25437,
+            9680,
+            5599,
+            2472,
+            1
+          ],
+          "count": 11,
+          "difference": 15578910434969763840,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 55466,
+          "step": 7,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            27354,
+            12583,
+            12314,
+            12161,
+            11955,
+            11332,
+            11208,
+            10964,
+            10336,
+            8274,
+            7823,
+            5557,
+            3193,
+            1
+          ],
+          "count": 8,
+          "difference": 17265468363245486080,
+          "operation": "adaptive_symbol",
+          "parameter": 13,
+          "range": 62288,
+          "step": 8,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 8,
+          "difference": 16614698217090449408,
+          "operation": "fixed",
+          "parameter": 1220,
+          "range": 59976,
+          "step": 9,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1144,
+            1
+          ],
+          "count": 8,
+          "difference": 16614698217090449408,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 59976,
+          "step": 10,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            32452,
+            23223,
+            17570,
+            17137,
+            13075,
+            5117,
+            1
+          ],
+          "count": 6,
+          "difference": 17169146746605404160,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 61792,
+          "step": 11,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            31426,
+            31262,
+            30678,
+            30016,
+            28582,
+            24229,
+            1
+          ],
+          "count": 0,
+          "difference": 1125899873288192,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 50880,
+          "step": 12,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            27408,
+            7945,
+            1
+          ],
+          "count": -2,
+          "difference": 4503599627370495,
+          "operation": "adaptive_symbol",
+          "parameter": 2,
+          "range": 38824,
+          "step": 13,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            18812,
+            12557,
+            9116,
+            1
+          ],
+          "count": -4,
+          "difference": 18014398509481980,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 39276,
+          "step": 14,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19248,
+            13188,
+            9855,
+            2
+          ],
+          "count": -6,
+          "difference": 72057594037927920,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 43468,
+          "step": 15,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19670,
+            13799,
+            10571,
+            3
+          ],
+          "count": -8,
+          "difference": 288230376151711680,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 51728,
+          "step": 16,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 576460752303423360,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 33338,
+          "step": 17,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 576460752303423360,
+          "operation": "high_token",
+          "parameter": 3,
+          "range": 33338,
+          "step": 18,
+          "value": 15
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -10,
+          "difference": 1152921504606846720,
+          "operation": "fixed",
+          "parameter": 16768,
+          "range": 34068,
+          "step": 19,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            17768,
+            1
+          ],
+          "count": -10,
+          "difference": 1152921504606846720,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 34068,
+          "step": 20,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -11,
+          "difference": 2305843009213693440,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 34056,
+          "step": 21,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "fixed",
+          "parameter": 25114,
+          "range": 52144,
+          "step": 22,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            25592,
+            1
+          ],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 52144,
+          "step": 23,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "fixed",
+          "parameter": 25592,
+          "range": 40502,
+          "step": 24,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            26040,
+            2
+          ],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 40502,
+          "step": 25,
+          "value": 1
+        }
+      ],
+      "entropy_states": [
+        {
+          "label": "skip",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "cdef_idx",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "delta_q",
+          "range": 41736,
+          "value": "-2->2"
+        },
+        {
+          "label": "ymode",
+          "range": 60128,
+          "value": "1"
+        },
+        {
+          "label": "uvmode",
+          "range": 62288,
+          "value": "0"
+        },
+        {
+          "label": "tx",
+          "range": 62288,
+          "value": "1"
+        },
+        {
+          "label": "dc_residual",
+          "range": 34056,
+          "value": "0->15"
+        },
+        {
+          "label": "y-cf-blk",
+          "range": 34056,
+          "value": "tx=1,txtp=0,eob=0"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 52144,
+          "value": "pl=0,tx=0,txtp=0,eob=-1"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 40502,
+          "value": "pl=1,tx=0,txtp=0,eob=-1"
+        }
+      ],
+      "first_block": {
+        "context": 0,
+        "level": 4,
+        "partition": 0,
+        "poc": 0,
+        "range": 38248,
+        "x": 0,
+        "y": 0
+      },
+      "fixture": "portable_lossy_420_q99_gray_125_control.avif",
+      "fixture_sha256": "43e09f9447cb94aaa979956887dad091ec1f630f6dab5e33eb68dfbc989537fa",
+      "partition_blocks": [
+        {
+          "context": 0,
+          "level": 4,
+          "partition": 0,
+          "poc": 0,
+          "range": 38248,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "pillow": {
+        "bytes": 48,
+        "mode": "RGB",
+        "row_bytes": [
+          "7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d"
+        ],
+        "sha256": "e82feb502523b0e30e96c557012bbc79208f186e3fcb858916b2972db760aac1",
+        "size": [
+          4,
+          4
+        ]
+      },
+      "portable_color": {
+        "bit_depth": 8,
+        "color_primaries": 1,
+        "color_range": true,
+        "height": 4,
+        "matrix_coefficients": 6,
+        "monochrome": false,
+        "subsampling_x": true,
+        "subsampling_y": true,
+        "transfer_characteristics": 13,
+        "width": 4
+      }
+    },
+    {
+      "dav1d_debug_log": [
+        "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248",
+        "Post-skip[0]: r=36978",
+        "Post-cdef_idx[0]: r=36978",
+        "Post-delta_q[-2->2]: r=41736",
+        "Post-ymode[1]: r=60128",
+        "Post-uvmode[0]: r=62288",
+        "Post-tx[1]: r=62288",
+        "l",
+        " 00 00 00 00 00 00 00 00",
+        " 00 7f 7f 7f 7f 7f 7f 7f",
+        "tl",
+        " 00",
+        "t",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 00 00 00 00 00 00 00 00",
+        "y-intra-pred",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        "Start: r=62288",
+        "Post-non-zero[1][0][0]: r=59976",
+        "Post-txtp-intra[1->1][1][1->0]: r=61792",
+        "Post-eob_bin_64[0][0][0]: r=50880",
+        "Post-dc_lo_tok[1][0][0][3]: r=38824",
+        "Post-dc_hi_tok[1][0][0][15]: r=33338",
+        "Post-dc_sign[0][0][1]: r=34068",
+        "Post-dc_residual[0->15]: r=34056",
+        "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=34056",
+        "dq",
+        " -120   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "recon",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        " 7d 7d 7d 7d 7d 7d 7d 7d",
+        "l",
+        " 00 00 00 00",
+        " 00 7f 7f 7f",
+        "tl",
+        " 00",
+        "t",
+        " 7f 7f 7f 7f",
+        " 7f 7f 7f 7f",
+        "u-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=34056",
+        "Post-non-zero[0][7][1]: r=52144",
+        "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=52144 [x=0,cbx4=0]",
+        "l",
+        " 00 00 00 00",
+        " 00 7f 7f 7f",
+        "tl",
+        " 00",
+        "t",
+        " 7f 7f 7f 7f",
+        " 7f 7f 7f 7f",
+        "v-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=52144",
+        "Post-non-zero[0][7][1]: r=40502",
+        "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=40502 [x=0,cbx4=0]"
+      ],
+      "decoded_planes": [
+        {
+          "height": 8,
+          "name": "y",
+          "row_bytes": [
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d",
+            "7d7d7d7d7d7d7d7d"
+          ],
+          "sha256": "4a95ade13abf1e946b30c731baab7cde0f7f1a1cc580b5132ee2c99c8e3199c7",
+          "width": 8
+        },
+        {
+          "height": 4,
+          "name": "u",
+          "row_bytes": [
+            "80808080",
+            "80808080",
+            "80808080",
+            "80808080"
+          ],
+          "sha256": "4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916",
+          "width": 4
+        },
+        {
+          "height": 4,
+          "name": "v",
+          "row_bytes": [
+            "80808080",
+            "80808080",
+            "80808080",
+            "80808080"
+          ],
+          "sha256": "4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916",
+          "width": 4
+        }
+      ],
+      "decoder_events": [
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 25,
+            "difference": 4053457976244043775,
+            "operation": "init",
+            "parameter": 0,
+            "range": 32768,
+            "step": 0,
+            "value": -1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              13210,
+              7032,
+              2302,
+              1
+            ],
+            "count": 24,
+            "difference": 426026788007706622,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 38248,
+            "step": 1,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 24,
+            "difference": 68553567585173502,
+            "operation": "fixed",
+            "parameter": 1097,
+            "range": 36978,
+            "step": 2,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1029,
+              1
+            ],
+            "count": 24,
+            "difference": 68553567585173502,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 36978,
+            "step": 3,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-skip[0]: r=36978"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-cdef_idx[0]: r=36978"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              5488,
+              1651,
+              89,
+              1
+            ],
+            "count": 18,
+            "difference": 3018334038730473344,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 41728,
+            "step": 4,
+            "value": 2
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 17,
+            "difference": 6036668077460946688,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 41736,
+            "step": 5,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-delta_q[-2->2]: r=41736"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              17667,
+              15250,
+              13011,
+              12158,
+              11709,
+              11294,
+              10602,
+              9227,
+              8311,
+              4460,
+              3561,
+              2231,
+              1
+            ],
+            "count": 12,
+            "difference": 12930314192128303104,
+            "operation": "adaptive_symbol",
+            "parameter": 12,
+            "range": 60128,
+            "step": 6,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-ymode[1]: r=60128"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              30656,
+              27893,
+              25437,
+              9680,
+              5599,
+              2472,
+              1
+            ],
+            "count": 11,
+            "difference": 15578910434969763840,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 55466,
+            "step": 7,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              27354,
+              12583,
+              12314,
+              12161,
+              11955,
+              11332,
+              11208,
+              10964,
+              10336,
+              8274,
+              7823,
+              5557,
+              3193,
+              1
+            ],
+            "count": 8,
+            "difference": 17265468363245486080,
+            "operation": "adaptive_symbol",
+            "parameter": 13,
+            "range": 62288,
+            "step": 8,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uvmode[0]: r=62288"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-tx[1]: r=62288"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "y-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=62288"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 8,
+            "difference": 16614698217090449408,
+            "operation": "fixed",
+            "parameter": 1220,
+            "range": 59976,
+            "step": 9,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1144,
+              1
+            ],
+            "count": 8,
+            "difference": 16614698217090449408,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 59976,
+            "step": 10,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[1][0][0]: r=59976"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              32452,
+              23223,
+              17570,
+              17137,
+              13075,
+              5117,
+              1
+            ],
+            "count": 6,
+            "difference": 17169146746605404160,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 61792,
+            "step": 11,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-txtp-intra[1->1][1][1->0]: r=61792"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              31426,
+              31262,
+              30678,
+              30016,
+              28582,
+              24229,
+              1
+            ],
+            "count": 0,
+            "difference": 1125899873288192,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 50880,
+            "step": 12,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-eob_bin_64[0][0][0]: r=50880"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              27408,
+              7945,
+              1
+            ],
+            "count": -2,
+            "difference": 4503599627370495,
+            "operation": "adaptive_symbol",
+            "parameter": 2,
+            "range": 38824,
+            "step": 13,
+            "value": 2
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_lo_tok[1][0][0][3]: r=38824"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              18812,
+              12557,
+              9116,
+              1
+            ],
+            "count": -4,
+            "difference": 18014398509481980,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 39276,
+            "step": 14,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19248,
+              13188,
+              9855,
+              2
+            ],
+            "count": -6,
+            "difference": 72057594037927920,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 43468,
+            "step": 15,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19670,
+              13799,
+              10571,
+              3
+            ],
+            "count": -8,
+            "difference": 288230376151711680,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 51728,
+            "step": 16,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 576460752303423360,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 33338,
+            "step": 17,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 576460752303423360,
+            "operation": "high_token",
+            "parameter": 3,
+            "range": 33338,
+            "step": 18,
+            "value": 15
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_hi_tok[1][0][0][15]: r=33338"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -10,
+            "difference": 1152921504606846720,
+            "operation": "fixed",
+            "parameter": 16768,
+            "range": 34068,
+            "step": 19,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              17768,
+              1
+            ],
+            "count": -10,
+            "difference": 1152921504606846720,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 34068,
+            "step": 20,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_sign[0][0][1]: r=34068"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -11,
+            "difference": 2305843009213693440,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 34056,
+            "step": 21,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_residual[0->15]: r=34056"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=34056"
+        },
+        {
+          "kind": "debug",
+          "line": "dq"
+        },
+        {
+          "kind": "debug",
+          "line": " -120   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "recon"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": " 7d 7d 7d 7d 7d 7d 7d 7d"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "u-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=34056"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "fixed",
+            "parameter": 25114,
+            "range": 52144,
+            "step": 22,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              25592,
+              1
+            ],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 52144,
+            "step": 23,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=52144"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=52144 [x=0,cbx4=0]"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": " 7f 7f 7f 7f"
+        },
+        {
+          "kind": "debug",
+          "line": "v-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=52144"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "fixed",
+            "parameter": 25592,
+            "range": 40502,
+            "step": 24,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              26040,
+              2
+            ],
+            "count": -12,
+            "difference": 4611686018427386880,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 40502,
+            "step": 25,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=40502"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=40502 [x=0,cbx4=0]"
+        }
+      ],
+      "encoded_item": {
+        "length": 27,
+        "sha256": "2f69874f7bb4fe5a87d23f113f724ef698d999f94e8d3d8cced39151d8ecace6",
+        "spans": [
+          {
+            "length": 27,
+            "offset": 275
+          }
+        ]
+      },
+      "entropy_operations": [
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 25,
+          "difference": 4053457976244043775,
+          "operation": "init",
+          "parameter": 0,
+          "range": 32768,
+          "step": 0,
+          "value": -1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            13210,
+            7032,
+            2302,
+            1
+          ],
+          "count": 24,
+          "difference": 426026788007706622,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 38248,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 24,
+          "difference": 68553567585173502,
+          "operation": "fixed",
+          "parameter": 1097,
+          "range": 36978,
+          "step": 2,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1029,
+            1
+          ],
+          "count": 24,
+          "difference": 68553567585173502,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 36978,
+          "step": 3,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            5488,
+            1651,
+            89,
+            1
+          ],
+          "count": 18,
+          "difference": 3018334038730473344,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 41728,
+          "step": 4,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 17,
+          "difference": 6036668077460946688,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 41736,
+          "step": 5,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            17667,
+            15250,
+            13011,
+            12158,
+            11709,
+            11294,
+            10602,
+            9227,
+            8311,
+            4460,
+            3561,
+            2231,
+            1
+          ],
+          "count": 12,
+          "difference": 12930314192128303104,
+          "operation": "adaptive_symbol",
+          "parameter": 12,
+          "range": 60128,
+          "step": 6,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            30656,
+            27893,
+            25437,
+            9680,
+            5599,
+            2472,
+            1
+          ],
+          "count": 11,
+          "difference": 15578910434969763840,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 55466,
+          "step": 7,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            27354,
+            12583,
+            12314,
+            12161,
+            11955,
+            11332,
+            11208,
+            10964,
+            10336,
+            8274,
+            7823,
+            5557,
+            3193,
+            1
+          ],
+          "count": 8,
+          "difference": 17265468363245486080,
+          "operation": "adaptive_symbol",
+          "parameter": 13,
+          "range": 62288,
+          "step": 8,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 8,
+          "difference": 16614698217090449408,
+          "operation": "fixed",
+          "parameter": 1220,
+          "range": 59976,
+          "step": 9,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1144,
+            1
+          ],
+          "count": 8,
+          "difference": 16614698217090449408,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 59976,
+          "step": 10,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            32452,
+            23223,
+            17570,
+            17137,
+            13075,
+            5117,
+            1
+          ],
+          "count": 6,
+          "difference": 17169146746605404160,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 61792,
+          "step": 11,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            31426,
+            31262,
+            30678,
+            30016,
+            28582,
+            24229,
+            1
+          ],
+          "count": 0,
+          "difference": 1125899873288192,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 50880,
+          "step": 12,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            27408,
+            7945,
+            1
+          ],
+          "count": -2,
+          "difference": 4503599627370495,
+          "operation": "adaptive_symbol",
+          "parameter": 2,
+          "range": 38824,
+          "step": 13,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            18812,
+            12557,
+            9116,
+            1
+          ],
+          "count": -4,
+          "difference": 18014398509481980,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 39276,
+          "step": 14,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19248,
+            13188,
+            9855,
+            2
+          ],
+          "count": -6,
+          "difference": 72057594037927920,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 43468,
+          "step": 15,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19670,
+            13799,
+            10571,
+            3
+          ],
+          "count": -8,
+          "difference": 288230376151711680,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 51728,
+          "step": 16,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 576460752303423360,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 33338,
+          "step": 17,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 576460752303423360,
+          "operation": "high_token",
+          "parameter": 3,
+          "range": 33338,
+          "step": 18,
+          "value": 15
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -10,
+          "difference": 1152921504606846720,
+          "operation": "fixed",
+          "parameter": 16768,
+          "range": 34068,
+          "step": 19,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            17768,
+            1
+          ],
+          "count": -10,
+          "difference": 1152921504606846720,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 34068,
+          "step": 20,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -11,
+          "difference": 2305843009213693440,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 34056,
+          "step": 21,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "fixed",
+          "parameter": 25114,
+          "range": 52144,
+          "step": 22,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            25592,
+            1
+          ],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 52144,
+          "step": 23,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "fixed",
+          "parameter": 25592,
+          "range": 40502,
+          "step": 24,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            26040,
+            2
+          ],
+          "count": -12,
+          "difference": 4611686018427386880,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 40502,
+          "step": 25,
+          "value": 1
+        }
+      ],
+      "entropy_states": [
+        {
+          "label": "skip",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "cdef_idx",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "delta_q",
+          "range": 41736,
+          "value": "-2->2"
+        },
+        {
+          "label": "ymode",
+          "range": 60128,
+          "value": "1"
+        },
+        {
+          "label": "uvmode",
+          "range": 62288,
+          "value": "0"
+        },
+        {
+          "label": "tx",
+          "range": 62288,
+          "value": "1"
+        },
+        {
+          "label": "dc_residual",
+          "range": 34056,
+          "value": "0->15"
+        },
+        {
+          "label": "y-cf-blk",
+          "range": 34056,
+          "value": "tx=1,txtp=0,eob=0"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 52144,
+          "value": "pl=0,tx=0,txtp=0,eob=-1"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 40502,
+          "value": "pl=1,tx=0,txtp=0,eob=-1"
+        }
+      ],
+      "first_block": {
+        "context": 0,
+        "level": 4,
+        "partition": 0,
+        "poc": 0,
+        "range": 38248,
+        "x": 0,
+        "y": 0
+      },
+      "fixture": "portable_lossy_420_q99_8x8_gray_125_control.avif",
+      "fixture_sha256": "70b97a8ecfdca48dadf67624fe03db3fa4672dfd921f11f7da1396c393c0b7be",
+      "partition_blocks": [
+        {
+          "context": 0,
+          "level": 4,
+          "partition": 0,
+          "poc": 0,
+          "range": 38248,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "pillow": {
+        "bytes": 192,
+        "mode": "RGB",
+        "row_bytes": [
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d",
+          "7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d"
+        ],
+        "sha256": "4d11382e9da0a7e9facadaf22c7d9036b341797376ecc5a77c2779e1884e1ec5",
+        "size": [
+          8,
+          8
+        ]
+      },
+      "portable_color": {
+        "bit_depth": 8,
+        "color_primaries": 1,
+        "color_range": true,
+        "height": 8,
+        "matrix_coefficients": 6,
+        "monochrome": false,
+        "subsampling_x": true,
+        "subsampling_y": true,
+        "transfer_characteristics": 13,
+        "width": 8
+      }
+    },
+    {
+      "dav1d_debug_log": [
+        "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248",
+        "Post-skip[0]: r=36978",
+        "Post-cdef_idx[0]: r=36978",
+        "Post-delta_q[-2->2]: r=41736",
+        "Post-ymode[1]: r=60128",
+        "Post-uvmode[0]: r=62288",
+        "Post-tx[1]: r=62288",
+        "l",
+        " 00 00 00 00 00 00 00 00",
+        " 00 7f 7f 7f 7f 7f 7f 7f",
+        "tl",
+        " 00",
+        "t",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 00 00 00 00 00 00 00 00",
+        "y-intra-pred",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        " 7f 7f 7f 7f 7f 7f 7f 7f",
+        "Start: r=62288",
+        "Post-non-zero[1][0][0]: r=59976",
+        "Post-txtp-intra[1->1][1][1->0]: r=61792",
+        "Post-eob_bin_64[0][0][0]: r=50880",
+        "Post-dc_lo_tok[1][0][0][3]: r=38824",
         "Post-dc_hi_tok[1][0][0][8]: r=33080",
         "Post-dc_sign[0][0][1]: r=33806",
         "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=33806",
@@ -31584,6 +34460,2982 @@
           "828282828282828282828282828282828282828282828282"
         ],
         "sha256": "4371170b5239419060ed559afe13157740d69ef2aee0592cf4fc71c47dff58a5",
+        "size": [
+          8,
+          8
+        ]
+      },
+      "portable_color": {
+        "bit_depth": 8,
+        "color_primaries": 1,
+        "color_range": true,
+        "height": 8,
+        "matrix_coefficients": 6,
+        "monochrome": false,
+        "subsampling_x": true,
+        "subsampling_y": true,
+        "transfer_characteristics": 13,
+        "width": 8
+      }
+    },
+    {
+      "dav1d_debug_log": [
+        "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248",
+        "Post-skip[0]: r=36978",
+        "Post-cdef_idx[0]: r=36978",
+        "Post-delta_q[-2->2]: r=41736",
+        "Post-ymode[2]: r=47008",
+        "Post-uvmode[0]: r=55208",
+        "Post-tx[1]: r=55208",
+        "l",
+        " 81 81 81 81 81 81 81 81",
+        " 00 00 00 00 00 00 00 00",
+        "tl",
+        " 00",
+        "t",
+        " 00 00 00 00 00 00 00 00",
+        " 00 00 00 00 00 00 00 00",
+        "y-intra-pred",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        "Start: r=55208",
+        "Post-non-zero[1][0][0]: r=53162",
+        "Post-txtp-intra[1->1][2][1->0]: r=45972",
+        "Post-eob_bin_64[0][0][0]: r=42304",
+        "Post-dc_lo_tok[1][0][0][3]: r=64712",
+        "Post-dc_hi_tok[1][0][0][15]: r=55784",
+        "Post-dc_sign[0][0][0]: r=54706",
+        "Post-dc_residual[1->16]: r=54792",
+        "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=54792",
+        "dq",
+        " 128   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "recon",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        "l",
+        " 81 81 81 81",
+        " 00 00 00 00",
+        "tl",
+        " 00",
+        "t",
+        " 00 00 00 00",
+        " 00 00 00 00",
+        "u-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=54792",
+        "Post-non-zero[0][7][1]: r=41948",
+        "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=41948 [x=0,cbx4=0]",
+        "l",
+        " 81 81 81 81",
+        " 00 00 00 00",
+        "tl",
+        " 00",
+        "t",
+        " 00 00 00 00",
+        " 00 00 00 00",
+        "v-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=41948",
+        "Post-non-zero[0][7][1]: r=65044",
+        "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=65044 [x=0,cbx4=0]"
+      ],
+      "decoded_planes": [
+        {
+          "height": 4,
+          "name": "y",
+          "row_bytes": [
+            "83838383",
+            "83838383",
+            "83838383",
+            "83838383"
+          ],
+          "sha256": "942110fe58e512ec68fcca4f8223a7175981fa22fd6b8d829c392bcbb0f9a618",
+          "width": 4
+        },
+        {
+          "height": 2,
+          "name": "u",
+          "row_bytes": [
+            "8080",
+            "8080"
+          ],
+          "sha256": "8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222",
+          "width": 2
+        },
+        {
+          "height": 2,
+          "name": "v",
+          "row_bytes": [
+            "8080",
+            "8080"
+          ],
+          "sha256": "8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222",
+          "width": 2
+        }
+      ],
+      "decoder_events": [
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 25,
+            "difference": 4050997060034363391,
+            "operation": "init",
+            "parameter": 0,
+            "range": 32768,
+            "step": 0,
+            "value": -1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              13210,
+              7032,
+              2302,
+              1
+            ],
+            "count": 24,
+            "difference": 421104955588345854,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 38248,
+            "step": 1,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 24,
+            "difference": 63631735165812734,
+            "operation": "fixed",
+            "parameter": 1097,
+            "range": 36978,
+            "step": 2,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1029,
+              1
+            ],
+            "count": 24,
+            "difference": 63631735165812734,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 36978,
+            "step": 3,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-skip[0]: r=36978"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-cdef_idx[0]: r=36978"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              5488,
+              1651,
+              89,
+              1
+            ],
+            "count": 18,
+            "difference": 2703336763891384192,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 41728,
+            "step": 4,
+            "value": 2
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 17,
+            "difference": 5406673527782768384,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 41736,
+            "step": 5,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-delta_q[-2->2]: r=41736"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              17667,
+              16273,
+              13011,
+              12158,
+              11709,
+              11294,
+              10602,
+              9227,
+              8311,
+              4460,
+              3561,
+              2231,
+              1
+            ],
+            "count": 13,
+            "difference": 9616820006427815936,
+            "operation": "adaptive_symbol",
+            "parameter": 12,
+            "range": 47008,
+            "step": 6,
+            "value": 2
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-ymode[2]: r=47008"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              30538,
+              27335,
+              24242,
+              8991,
+              5613,
+              2362,
+              1
+            ],
+            "count": 12,
+            "difference": 11758227581374029824,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 41916,
+            "step": 7,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              26636,
+              26534,
+              12198,
+              12108,
+              11997,
+              11944,
+              11450,
+              10727,
+              10651,
+              9330,
+              8246,
+              7813,
+              5899,
+              1
+            ],
+            "count": 9,
+            "difference": 15219050174803279872,
+            "operation": "adaptive_symbol",
+            "parameter": 13,
+            "range": 55208,
+            "step": 8,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uvmode[0]: r=55208"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-tx[1]: r=55208"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "y-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=55208"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 9,
+            "difference": 14643152372453277696,
+            "operation": "fixed",
+            "parameter": 1220,
+            "range": 53162,
+            "step": 9,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1144,
+              1
+            ],
+            "count": 9,
+            "difference": 14643152372453277696,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 53162,
+            "step": 10,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[1][0][0]: r=53162"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              32299,
+              24405,
+              24273,
+              17753,
+              13184,
+              9859,
+              1
+            ],
+            "count": 7,
+            "difference": 12754112780852527104,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 45972,
+            "step": 11,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-txtp-intra[1->1][2][1->0]: r=45972"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              31426,
+              31262,
+              30678,
+              30016,
+              28582,
+              24229,
+              1
+            ],
+            "count": 1,
+            "difference": 12807111423557632,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 42304,
+            "step": 12,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-eob_bin_64[0][0][0]: r=42304"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              27408,
+              7945,
+              1
+            ],
+            "count": -2,
+            "difference": 102456891522678783,
+            "operation": "adaptive_symbol",
+            "parameter": 2,
+            "range": 64712,
+            "step": 13,
+            "value": 2
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_lo_tok[1][0][0][3]: r=64712"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              18812,
+              12557,
+              9116,
+              1
+            ],
+            "count": -3,
+            "difference": 204913783045357566,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 32768,
+            "step": 14,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19248,
+              13188,
+              9855,
+              2
+            ],
+            "count": -5,
+            "difference": 819655132181430264,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 36368,
+            "step": 15,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19670,
+              13799,
+              10571,
+              3
+            ],
+            "count": -7,
+            "difference": 3278620528725721056,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 43468,
+            "step": 16,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 13114482114902884224,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 55784,
+            "step": 17,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 13114482114902884224,
+            "operation": "high_token",
+            "parameter": 3,
+            "range": 55784,
+            "step": 18,
+            "value": 15
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_hi_tok[1][0][0][15]: r=55784"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -10,
+            "difference": 10223734104084446976,
+            "operation": "fixed",
+            "parameter": 16768,
+            "range": 54706,
+            "step": 19,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              15720,
+              1
+            ],
+            "count": -10,
+            "difference": 10223734104084446976,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 54706,
+            "step": 20,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_sign[0][0][0]: r=54706"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -11,
+            "difference": 5096948878276558336,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 54876,
+            "step": 21,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -12,
+            "difference": 10193897756553116672,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 54792,
+            "step": 22,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -13,
+            "difference": 4965218589175969792,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 54792,
+            "step": 23,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_residual[1->16]: r=54792"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=54792"
+        },
+        {
+          "kind": "debug",
+          "line": "dq"
+        },
+        {
+          "kind": "debug",
+          "line": " 128   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "recon"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "u-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=54792"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -13,
+            "difference": 4965218589175969792,
+            "operation": "fixed",
+            "parameter": 25114,
+            "range": 41948,
+            "step": 24,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              25592,
+              1
+            ],
+            "count": -13,
+            "difference": 4965218589175969792,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 41948,
+            "step": 25,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=41948"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=41948 [x=0,cbx4=0]"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "v-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=41948"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -14,
+            "difference": 9930437178351939584,
+            "operation": "fixed",
+            "parameter": 25592,
+            "range": 65044,
+            "step": 26,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              26040,
+              2
+            ],
+            "count": -14,
+            "difference": 9930437178351939584,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 65044,
+            "step": 27,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=65044"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=65044 [x=0,cbx4=0]"
+        }
+      ],
+      "encoded_item": {
+        "length": 27,
+        "sha256": "e273c3937e76e48a440971559827d3c6090d14b0f6d07a8b8fd8ba96a58ca3d6",
+        "spans": [
+          {
+            "length": 27,
+            "offset": 275
+          }
+        ]
+      },
+      "entropy_operations": [
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 25,
+          "difference": 4050997060034363391,
+          "operation": "init",
+          "parameter": 0,
+          "range": 32768,
+          "step": 0,
+          "value": -1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            13210,
+            7032,
+            2302,
+            1
+          ],
+          "count": 24,
+          "difference": 421104955588345854,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 38248,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 24,
+          "difference": 63631735165812734,
+          "operation": "fixed",
+          "parameter": 1097,
+          "range": 36978,
+          "step": 2,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1029,
+            1
+          ],
+          "count": 24,
+          "difference": 63631735165812734,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 36978,
+          "step": 3,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            5488,
+            1651,
+            89,
+            1
+          ],
+          "count": 18,
+          "difference": 2703336763891384192,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 41728,
+          "step": 4,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 17,
+          "difference": 5406673527782768384,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 41736,
+          "step": 5,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            17667,
+            16273,
+            13011,
+            12158,
+            11709,
+            11294,
+            10602,
+            9227,
+            8311,
+            4460,
+            3561,
+            2231,
+            1
+          ],
+          "count": 13,
+          "difference": 9616820006427815936,
+          "operation": "adaptive_symbol",
+          "parameter": 12,
+          "range": 47008,
+          "step": 6,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            30538,
+            27335,
+            24242,
+            8991,
+            5613,
+            2362,
+            1
+          ],
+          "count": 12,
+          "difference": 11758227581374029824,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 41916,
+          "step": 7,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            26636,
+            26534,
+            12198,
+            12108,
+            11997,
+            11944,
+            11450,
+            10727,
+            10651,
+            9330,
+            8246,
+            7813,
+            5899,
+            1
+          ],
+          "count": 9,
+          "difference": 15219050174803279872,
+          "operation": "adaptive_symbol",
+          "parameter": 13,
+          "range": 55208,
+          "step": 8,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 9,
+          "difference": 14643152372453277696,
+          "operation": "fixed",
+          "parameter": 1220,
+          "range": 53162,
+          "step": 9,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1144,
+            1
+          ],
+          "count": 9,
+          "difference": 14643152372453277696,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 53162,
+          "step": 10,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            32299,
+            24405,
+            24273,
+            17753,
+            13184,
+            9859,
+            1
+          ],
+          "count": 7,
+          "difference": 12754112780852527104,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 45972,
+          "step": 11,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            31426,
+            31262,
+            30678,
+            30016,
+            28582,
+            24229,
+            1
+          ],
+          "count": 1,
+          "difference": 12807111423557632,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 42304,
+          "step": 12,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            27408,
+            7945,
+            1
+          ],
+          "count": -2,
+          "difference": 102456891522678783,
+          "operation": "adaptive_symbol",
+          "parameter": 2,
+          "range": 64712,
+          "step": 13,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            18812,
+            12557,
+            9116,
+            1
+          ],
+          "count": -3,
+          "difference": 204913783045357566,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 32768,
+          "step": 14,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19248,
+            13188,
+            9855,
+            2
+          ],
+          "count": -5,
+          "difference": 819655132181430264,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 36368,
+          "step": 15,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19670,
+            13799,
+            10571,
+            3
+          ],
+          "count": -7,
+          "difference": 3278620528725721056,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 43468,
+          "step": 16,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 13114482114902884224,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 55784,
+          "step": 17,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 13114482114902884224,
+          "operation": "high_token",
+          "parameter": 3,
+          "range": 55784,
+          "step": 18,
+          "value": 15
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -10,
+          "difference": 10223734104084446976,
+          "operation": "fixed",
+          "parameter": 16768,
+          "range": 54706,
+          "step": 19,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            15720,
+            1
+          ],
+          "count": -10,
+          "difference": 10223734104084446976,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 54706,
+          "step": 20,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -11,
+          "difference": 5096948878276558336,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 54876,
+          "step": 21,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -12,
+          "difference": 10193897756553116672,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 54792,
+          "step": 22,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -13,
+          "difference": 4965218589175969792,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 54792,
+          "step": 23,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -13,
+          "difference": 4965218589175969792,
+          "operation": "fixed",
+          "parameter": 25114,
+          "range": 41948,
+          "step": 24,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            25592,
+            1
+          ],
+          "count": -13,
+          "difference": 4965218589175969792,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 41948,
+          "step": 25,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -14,
+          "difference": 9930437178351939584,
+          "operation": "fixed",
+          "parameter": 25592,
+          "range": 65044,
+          "step": 26,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            26040,
+            2
+          ],
+          "count": -14,
+          "difference": 9930437178351939584,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 65044,
+          "step": 27,
+          "value": 1
+        }
+      ],
+      "entropy_states": [
+        {
+          "label": "skip",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "cdef_idx",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "delta_q",
+          "range": 41736,
+          "value": "-2->2"
+        },
+        {
+          "label": "ymode",
+          "range": 47008,
+          "value": "2"
+        },
+        {
+          "label": "uvmode",
+          "range": 55208,
+          "value": "0"
+        },
+        {
+          "label": "tx",
+          "range": 55208,
+          "value": "1"
+        },
+        {
+          "label": "dc_residual",
+          "range": 54792,
+          "value": "1->16"
+        },
+        {
+          "label": "y-cf-blk",
+          "range": 54792,
+          "value": "tx=1,txtp=0,eob=0"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 41948,
+          "value": "pl=0,tx=0,txtp=0,eob=-1"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 65044,
+          "value": "pl=1,tx=0,txtp=0,eob=-1"
+        }
+      ],
+      "first_block": {
+        "context": 0,
+        "level": 4,
+        "partition": 0,
+        "poc": 0,
+        "range": 38248,
+        "x": 0,
+        "y": 0
+      },
+      "fixture": "portable_lossy_420_q99_gray_131_control.avif",
+      "fixture_sha256": "ff49a749f44a139b697671a2c21032ff0a3298a0fb749ed7d9a7c193fbbeacfb",
+      "partition_blocks": [
+        {
+          "context": 0,
+          "level": 4,
+          "partition": 0,
+          "poc": 0,
+          "range": 38248,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "pillow": {
+        "bytes": 48,
+        "mode": "RGB",
+        "row_bytes": [
+          "838383838383838383838383",
+          "838383838383838383838383",
+          "838383838383838383838383",
+          "838383838383838383838383"
+        ],
+        "sha256": "d8044c92ef2a961ebee78d49908caae12338872a8cb36675ef6dbfb0f244e2e9",
+        "size": [
+          4,
+          4
+        ]
+      },
+      "portable_color": {
+        "bit_depth": 8,
+        "color_primaries": 1,
+        "color_range": true,
+        "height": 4,
+        "matrix_coefficients": 6,
+        "monochrome": false,
+        "subsampling_x": true,
+        "subsampling_y": true,
+        "transfer_characteristics": 13,
+        "width": 4
+      }
+    },
+    {
+      "dav1d_debug_log": [
+        "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248",
+        "Post-skip[0]: r=36978",
+        "Post-cdef_idx[0]: r=36978",
+        "Post-delta_q[-2->2]: r=41736",
+        "Post-ymode[2]: r=47008",
+        "Post-uvmode[0]: r=55208",
+        "Post-tx[1]: r=55208",
+        "l",
+        " 81 81 81 81 81 81 81 81",
+        " 00 00 00 00 00 00 00 00",
+        "tl",
+        " 00",
+        "t",
+        " 00 00 00 00 00 00 00 00",
+        " 00 00 00 00 00 00 00 00",
+        "y-intra-pred",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        " 81 81 81 81 81 81 81 81",
+        "Start: r=55208",
+        "Post-non-zero[1][0][0]: r=53162",
+        "Post-txtp-intra[1->1][2][1->0]: r=45972",
+        "Post-eob_bin_64[0][0][0]: r=42304",
+        "Post-dc_lo_tok[1][0][0][3]: r=64712",
+        "Post-dc_hi_tok[1][0][0][15]: r=55784",
+        "Post-dc_sign[0][0][0]: r=54706",
+        "Post-dc_residual[1->16]: r=54792",
+        "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=54792",
+        "dq",
+        " 128   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "   0   0   0   0   0   0   0   0",
+        "recon",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        " 83 83 83 83 83 83 83 83",
+        "l",
+        " 81 81 81 81",
+        " 00 00 00 00",
+        "tl",
+        " 00",
+        "t",
+        " 00 00 00 00",
+        " 00 00 00 00",
+        "u-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=54792",
+        "Post-non-zero[0][7][1]: r=41948",
+        "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=41948 [x=0,cbx4=0]",
+        "l",
+        " 81 81 81 81",
+        " 00 00 00 00",
+        "tl",
+        " 00",
+        "t",
+        " 00 00 00 00",
+        " 00 00 00 00",
+        "v-intra-pred",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        " 80 80 80 80",
+        "Start: r=41948",
+        "Post-non-zero[0][7][1]: r=65044",
+        "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=65044 [x=0,cbx4=0]"
+      ],
+      "decoded_planes": [
+        {
+          "height": 8,
+          "name": "y",
+          "row_bytes": [
+            "8383838383838383",
+            "8383838383838383",
+            "8383838383838383",
+            "8383838383838383",
+            "8383838383838383",
+            "8383838383838383",
+            "8383838383838383",
+            "8383838383838383"
+          ],
+          "sha256": "d856170c5ecea6fe72b3dde89ee757ec0b249737a9e04b845d42abe7f6f60e11",
+          "width": 8
+        },
+        {
+          "height": 4,
+          "name": "u",
+          "row_bytes": [
+            "80808080",
+            "80808080",
+            "80808080",
+            "80808080"
+          ],
+          "sha256": "4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916",
+          "width": 4
+        },
+        {
+          "height": 4,
+          "name": "v",
+          "row_bytes": [
+            "80808080",
+            "80808080",
+            "80808080",
+            "80808080"
+          ],
+          "sha256": "4e972baaee2ad54f78153134ef6484cd1a8e383d21582a21a481d4d214161916",
+          "width": 4
+        }
+      ],
+      "decoder_events": [
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 25,
+            "difference": 4050997060034363391,
+            "operation": "init",
+            "parameter": 0,
+            "range": 32768,
+            "step": 0,
+            "value": -1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              13210,
+              7032,
+              2302,
+              1
+            ],
+            "count": 24,
+            "difference": 421104955588345854,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 38248,
+            "step": 1,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "poc=0,y=0,x=0,bl=4,ctx=0,bp=0: r=38248"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 24,
+            "difference": 63631735165812734,
+            "operation": "fixed",
+            "parameter": 1097,
+            "range": 36978,
+            "step": 2,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1029,
+              1
+            ],
+            "count": 24,
+            "difference": 63631735165812734,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 36978,
+            "step": 3,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-skip[0]: r=36978"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-cdef_idx[0]: r=36978"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              5488,
+              1651,
+              89,
+              1
+            ],
+            "count": 18,
+            "difference": 2703336763891384192,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 41728,
+            "step": 4,
+            "value": 2
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 17,
+            "difference": 5406673527782768384,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 41736,
+            "step": 5,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-delta_q[-2->2]: r=41736"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              17667,
+              16273,
+              13011,
+              12158,
+              11709,
+              11294,
+              10602,
+              9227,
+              8311,
+              4460,
+              3561,
+              2231,
+              1
+            ],
+            "count": 13,
+            "difference": 9616820006427815936,
+            "operation": "adaptive_symbol",
+            "parameter": 12,
+            "range": 47008,
+            "step": 6,
+            "value": 2
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-ymode[2]: r=47008"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              30538,
+              27335,
+              24242,
+              8991,
+              5613,
+              2362,
+              1
+            ],
+            "count": 12,
+            "difference": 11758227581374029824,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 41916,
+            "step": 7,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              26636,
+              26534,
+              12198,
+              12108,
+              11997,
+              11944,
+              11450,
+              10727,
+              10651,
+              9330,
+              8246,
+              7813,
+              5899,
+              1
+            ],
+            "count": 9,
+            "difference": 15219050174803279872,
+            "operation": "adaptive_symbol",
+            "parameter": 13,
+            "range": 55208,
+            "step": 8,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uvmode[0]: r=55208"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-tx[1]: r=55208"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "y-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=55208"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": 9,
+            "difference": 14643152372453277696,
+            "operation": "fixed",
+            "parameter": 1220,
+            "range": 53162,
+            "step": 9,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              1144,
+              1
+            ],
+            "count": 9,
+            "difference": 14643152372453277696,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 53162,
+            "step": 10,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[1][0][0]: r=53162"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              32299,
+              24405,
+              24273,
+              17753,
+              13184,
+              9859,
+              1
+            ],
+            "count": 7,
+            "difference": 12754112780852527104,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 45972,
+            "step": 11,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-txtp-intra[1->1][2][1->0]: r=45972"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              31426,
+              31262,
+              30678,
+              30016,
+              28582,
+              24229,
+              1
+            ],
+            "count": 1,
+            "difference": 12807111423557632,
+            "operation": "adaptive_symbol",
+            "parameter": 6,
+            "range": 42304,
+            "step": 12,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-eob_bin_64[0][0][0]: r=42304"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              27408,
+              7945,
+              1
+            ],
+            "count": -2,
+            "difference": 102456891522678783,
+            "operation": "adaptive_symbol",
+            "parameter": 2,
+            "range": 64712,
+            "step": 13,
+            "value": 2
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_lo_tok[1][0][0][3]: r=64712"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              18812,
+              12557,
+              9116,
+              1
+            ],
+            "count": -3,
+            "difference": 204913783045357566,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 32768,
+            "step": 14,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19248,
+              13188,
+              9855,
+              2
+            ],
+            "count": -5,
+            "difference": 819655132181430264,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 36368,
+            "step": 15,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              19670,
+              13799,
+              10571,
+              3
+            ],
+            "count": -7,
+            "difference": 3278620528725721056,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 43468,
+            "step": 16,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 13114482114902884224,
+            "operation": "adaptive_symbol",
+            "parameter": 3,
+            "range": 55784,
+            "step": 17,
+            "value": 3
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              20079,
+              14391,
+              11264,
+              4
+            ],
+            "count": -9,
+            "difference": 13114482114902884224,
+            "operation": "high_token",
+            "parameter": 3,
+            "range": 55784,
+            "step": 18,
+            "value": 15
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_hi_tok[1][0][0][15]: r=55784"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -10,
+            "difference": 10223734104084446976,
+            "operation": "fixed",
+            "parameter": 16768,
+            "range": 54706,
+            "step": 19,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              15720,
+              1
+            ],
+            "count": -10,
+            "difference": 10223734104084446976,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 54706,
+            "step": 20,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_sign[0][0][0]: r=54706"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -11,
+            "difference": 5096948878276558336,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 54876,
+            "step": 21,
+            "value": 0
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -12,
+            "difference": 10193897756553116672,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 54792,
+            "step": 22,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -13,
+            "difference": 4965218589175969792,
+            "operation": "equal",
+            "parameter": -1,
+            "range": 54792,
+            "step": 23,
+            "value": 0
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-dc_residual[1->16]: r=54792"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-y-cf-blk[tx=1,txtp=0,eob=0]: r=54792"
+        },
+        {
+          "kind": "debug",
+          "line": "dq"
+        },
+        {
+          "kind": "debug",
+          "line": " 128   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "   0   0   0   0   0   0   0   0"
+        },
+        {
+          "kind": "debug",
+          "line": "recon"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": " 83 83 83 83 83 83 83 83"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "u-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=54792"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -13,
+            "difference": 4965218589175969792,
+            "operation": "fixed",
+            "parameter": 25114,
+            "range": 41948,
+            "step": 24,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              25592,
+              1
+            ],
+            "count": -13,
+            "difference": 4965218589175969792,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 41948,
+            "step": 25,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=41948"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=41948 [x=0,cbx4=0]"
+        },
+        {
+          "kind": "debug",
+          "line": "l"
+        },
+        {
+          "kind": "debug",
+          "line": " 81 81 81 81"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "tl"
+        },
+        {
+          "kind": "debug",
+          "line": " 00"
+        },
+        {
+          "kind": "debug",
+          "line": "t"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": " 00 00 00 00"
+        },
+        {
+          "kind": "debug",
+          "line": "v-intra-pred"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": " 80 80 80 80"
+        },
+        {
+          "kind": "debug",
+          "line": "Start: r=41948"
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [],
+            "count": -14,
+            "difference": 9930437178351939584,
+            "operation": "fixed",
+            "parameter": 25592,
+            "range": 65044,
+            "step": 26,
+            "value": 1
+          }
+        },
+        {
+          "kind": "entropy",
+          "operation": {
+            "byte_position": 5,
+            "cdf": [
+              26040,
+              2
+            ],
+            "count": -14,
+            "difference": 9930437178351939584,
+            "operation": "adaptive_bool",
+            "parameter": 1,
+            "range": 65044,
+            "step": 27,
+            "value": 1
+          }
+        },
+        {
+          "kind": "debug",
+          "line": "Post-non-zero[0][7][1]: r=65044"
+        },
+        {
+          "kind": "debug",
+          "line": "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=65044 [x=0,cbx4=0]"
+        }
+      ],
+      "encoded_item": {
+        "length": 27,
+        "sha256": "64282fac510487674cc451cf09ee0fff4e31ae365a5131497d95296c1a199209",
+        "spans": [
+          {
+            "length": 27,
+            "offset": 275
+          }
+        ]
+      },
+      "entropy_operations": [
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 25,
+          "difference": 4050997060034363391,
+          "operation": "init",
+          "parameter": 0,
+          "range": 32768,
+          "step": 0,
+          "value": -1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            13210,
+            7032,
+            2302,
+            1
+          ],
+          "count": 24,
+          "difference": 421104955588345854,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 38248,
+          "step": 1,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 24,
+          "difference": 63631735165812734,
+          "operation": "fixed",
+          "parameter": 1097,
+          "range": 36978,
+          "step": 2,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1029,
+            1
+          ],
+          "count": 24,
+          "difference": 63631735165812734,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 36978,
+          "step": 3,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            5488,
+            1651,
+            89,
+            1
+          ],
+          "count": 18,
+          "difference": 2703336763891384192,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 41728,
+          "step": 4,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 17,
+          "difference": 5406673527782768384,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 41736,
+          "step": 5,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            17667,
+            16273,
+            13011,
+            12158,
+            11709,
+            11294,
+            10602,
+            9227,
+            8311,
+            4460,
+            3561,
+            2231,
+            1
+          ],
+          "count": 13,
+          "difference": 9616820006427815936,
+          "operation": "adaptive_symbol",
+          "parameter": 12,
+          "range": 47008,
+          "step": 6,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            30538,
+            27335,
+            24242,
+            8991,
+            5613,
+            2362,
+            1
+          ],
+          "count": 12,
+          "difference": 11758227581374029824,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 41916,
+          "step": 7,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            26636,
+            26534,
+            12198,
+            12108,
+            11997,
+            11944,
+            11450,
+            10727,
+            10651,
+            9330,
+            8246,
+            7813,
+            5899,
+            1
+          ],
+          "count": 9,
+          "difference": 15219050174803279872,
+          "operation": "adaptive_symbol",
+          "parameter": 13,
+          "range": 55208,
+          "step": 8,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": 9,
+          "difference": 14643152372453277696,
+          "operation": "fixed",
+          "parameter": 1220,
+          "range": 53162,
+          "step": 9,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            1144,
+            1
+          ],
+          "count": 9,
+          "difference": 14643152372453277696,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 53162,
+          "step": 10,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            32299,
+            24405,
+            24273,
+            17753,
+            13184,
+            9859,
+            1
+          ],
+          "count": 7,
+          "difference": 12754112780852527104,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 45972,
+          "step": 11,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            31426,
+            31262,
+            30678,
+            30016,
+            28582,
+            24229,
+            1
+          ],
+          "count": 1,
+          "difference": 12807111423557632,
+          "operation": "adaptive_symbol",
+          "parameter": 6,
+          "range": 42304,
+          "step": 12,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            27408,
+            7945,
+            1
+          ],
+          "count": -2,
+          "difference": 102456891522678783,
+          "operation": "adaptive_symbol",
+          "parameter": 2,
+          "range": 64712,
+          "step": 13,
+          "value": 2
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            18812,
+            12557,
+            9116,
+            1
+          ],
+          "count": -3,
+          "difference": 204913783045357566,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 32768,
+          "step": 14,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19248,
+            13188,
+            9855,
+            2
+          ],
+          "count": -5,
+          "difference": 819655132181430264,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 36368,
+          "step": 15,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            19670,
+            13799,
+            10571,
+            3
+          ],
+          "count": -7,
+          "difference": 3278620528725721056,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 43468,
+          "step": 16,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 13114482114902884224,
+          "operation": "adaptive_symbol",
+          "parameter": 3,
+          "range": 55784,
+          "step": 17,
+          "value": 3
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            20079,
+            14391,
+            11264,
+            4
+          ],
+          "count": -9,
+          "difference": 13114482114902884224,
+          "operation": "high_token",
+          "parameter": 3,
+          "range": 55784,
+          "step": 18,
+          "value": 15
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -10,
+          "difference": 10223734104084446976,
+          "operation": "fixed",
+          "parameter": 16768,
+          "range": 54706,
+          "step": 19,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            15720,
+            1
+          ],
+          "count": -10,
+          "difference": 10223734104084446976,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 54706,
+          "step": 20,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -11,
+          "difference": 5096948878276558336,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 54876,
+          "step": 21,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -12,
+          "difference": 10193897756553116672,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 54792,
+          "step": 22,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -13,
+          "difference": 4965218589175969792,
+          "operation": "equal",
+          "parameter": -1,
+          "range": 54792,
+          "step": 23,
+          "value": 0
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -13,
+          "difference": 4965218589175969792,
+          "operation": "fixed",
+          "parameter": 25114,
+          "range": 41948,
+          "step": 24,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            25592,
+            1
+          ],
+          "count": -13,
+          "difference": 4965218589175969792,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 41948,
+          "step": 25,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [],
+          "count": -14,
+          "difference": 9930437178351939584,
+          "operation": "fixed",
+          "parameter": 25592,
+          "range": 65044,
+          "step": 26,
+          "value": 1
+        },
+        {
+          "byte_position": 5,
+          "cdf": [
+            26040,
+            2
+          ],
+          "count": -14,
+          "difference": 9930437178351939584,
+          "operation": "adaptive_bool",
+          "parameter": 1,
+          "range": 65044,
+          "step": 27,
+          "value": 1
+        }
+      ],
+      "entropy_states": [
+        {
+          "label": "skip",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "cdef_idx",
+          "range": 36978,
+          "value": "0"
+        },
+        {
+          "label": "delta_q",
+          "range": 41736,
+          "value": "-2->2"
+        },
+        {
+          "label": "ymode",
+          "range": 47008,
+          "value": "2"
+        },
+        {
+          "label": "uvmode",
+          "range": 55208,
+          "value": "0"
+        },
+        {
+          "label": "tx",
+          "range": 55208,
+          "value": "1"
+        },
+        {
+          "label": "dc_residual",
+          "range": 54792,
+          "value": "1->16"
+        },
+        {
+          "label": "y-cf-blk",
+          "range": 54792,
+          "value": "tx=1,txtp=0,eob=0"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 41948,
+          "value": "pl=0,tx=0,txtp=0,eob=-1"
+        },
+        {
+          "label": "uv-cf-blk",
+          "range": 65044,
+          "value": "pl=1,tx=0,txtp=0,eob=-1"
+        }
+      ],
+      "first_block": {
+        "context": 0,
+        "level": 4,
+        "partition": 0,
+        "poc": 0,
+        "range": 38248,
+        "x": 0,
+        "y": 0
+      },
+      "fixture": "portable_lossy_420_q99_8x8_gray_131_control.avif",
+      "fixture_sha256": "f238b91f4c6b225691933fc5a46a1c2b42dd2460bdc3567a92dcd907fb8ac7bb",
+      "partition_blocks": [
+        {
+          "context": 0,
+          "level": 4,
+          "partition": 0,
+          "poc": 0,
+          "range": 38248,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "pillow": {
+        "bytes": 192,
+        "mode": "RGB",
+        "row_bytes": [
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383",
+          "838383838383838383838383838383838383838383838383"
+        ],
+        "sha256": "831ca0567d6d09bf16b7c76da27026347d9000d12ca92f486dd9c56b4226055e",
         "size": [
           8,
           8

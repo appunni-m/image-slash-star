@@ -1647,6 +1647,10 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_base, 2) == 2).then_some(())?;
     let token = decode_high_token(decoder, &mut cdfs.lossy_luma_8x8_high_token);
     let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:597-643. DC sign is decoded
+    // before token fifteen's Golomb extension. Slice 36 admits only extension
+    // zero or one; the adjacent manifest controls decode extension nine.
+    let token = extend_high_token(decoder, token);
 
     // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:54-73,
     // src/dequant_tables.c, src/qm.c:1604-1692, and
@@ -1655,6 +1659,8 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     let magnitude: i32 = match token {
         8 => 64,
         9 => 72,
+        15 => 120,
+        16 => 128,
         _ => return None,
     };
     let mut coefficients = [[0_i32; 16]; 16];
