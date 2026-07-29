@@ -457,6 +457,8 @@ pub(super) struct FirstBlockContext {
     pub(super) segmentation_enabled: bool,
     pub(super) skip_mode_enabled: bool,
     pub(super) allow_intrabc: bool,
+    pub(super) allow_screen_content_tools: bool,
+    pub(super) enable_filter_intra: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -744,6 +746,10 @@ fn recursive_split_dimensions(context: &FirstBlockContext) -> bool {
     )
 }
 
+fn square_recursive_split_dimensions(context: &FirstBlockContext) -> bool {
+    (context.frame_width, context.frame_height) == (16, 16)
+}
+
 fn closed_reconstruction_context(context: &FirstBlockContext) -> bool {
     (context.bit_depth == 8)
         & context.all_lossless
@@ -768,6 +774,10 @@ fn decode_closed_leaf(
         context.frame_width,
         context.frame_height,
         transform_grid,
+        super::block::BlockTools {
+            allow_screen_content_tools: context.allow_screen_content_tools,
+            enable_filter_intra: context.enable_filter_intra,
+        },
     );
     finish_closed_leaf(decoder, reconstructed)
 }
@@ -837,6 +847,35 @@ pub(super) fn validate_first_partition(
                     };
                     return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
                 }
+                let reconstruct_square_split = (partition == 3)
+                    & closed_reconstruction_context(context)
+                    & (level == 3)
+                    & square_recursive_split_dimensions(context);
+                if reconstruct_square_split {
+                    // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:2117-2380 and
+                    // the pinned Slice 18 scalar traces. The four level-4
+                    // child symbols are interleaved with their leaf syntax and
+                    // mutate one shared partition CDF.
+                    let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
+                    if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
+                        return Some(None);
+                    }
+                    let reconstructed = super::block::decode_four_lossless_444_leaves(
+                        &mut decoder,
+                        context.frame_width,
+                        context.frame_height,
+                        super::block::BlockTools {
+                            allow_screen_content_tools: context.allow_screen_content_tools,
+                            enable_filter_intra: context.enable_filter_intra,
+                        },
+                        |decoder| {
+                            (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
+                                == 0)
+                                .then_some(())
+                        },
+                    );
+                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                }
             } else {
                 let probability = if horizontal_split {
                     top_partition_probability(&cdf, level)
@@ -887,6 +926,10 @@ pub(super) fn validate_first_partition(
                         context.frame_width,
                         context.frame_height,
                         orientation,
+                        super::block::BlockTools {
+                            allow_screen_content_tools: context.allow_screen_content_tools,
+                            enable_filter_intra: context.enable_filter_intra,
+                        },
                         |decoder| {
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
                                 == 0)
@@ -1116,6 +1159,8 @@ fn coverage_context() -> FirstBlockContext {
         segmentation_enabled: false,
         skip_mode_enabled: false,
         allow_intrabc: false,
+        allow_screen_content_tools: false,
+        enable_filter_intra: true,
     }
 }
 

@@ -3026,3 +3026,251 @@ The eight-pixel two-leaf visibility extension is accepted:
   `50a0d22f-8b21-4167-8722-f6605e30201b`, passes all seven test binaries with
   36,064/36,064 lines, 5,324/5,324 branches, 1,820/1,820 functions, and
   59,641/59,641 regions.
+
+## Slice 18 Exploration Plan: Square Multi-Leaf Partitioning
+
+Status: exploration in progress; no production change approved.
+
+### Current mismatch
+
+The portable decoder accepts one level-3 `PARTITION_NONE` 16x16 coded leaf and
+the one-axis level-3 split into two 8x8 children. It does not reconstruct a
+level-3 partition tree when both the horizontal and vertical split conditions
+are true. The smallest missing square topology is therefore a 12x12 or 16x16
+declared frame whose root selects `PARTITION_SPLIT` and whose four level-4
+children select `PARTITION_NONE`.
+
+A deterministic 22-color constant corpus at both dimensions selected
+`PARTITION_NONE` in every case. Constant images cannot prove square recursion,
+so enabling a square split from dimensions alone would be a fixture-selected
+shortcut rather than an AV1 implementation.
+
+### Reverse-mapping corpus
+
+Before production changes, add a diagnostic pattern corpus generated from
+already accepted source colors and Pillow's pinned AVIF encoder settings:
+
+1. left/right halves to isolate vertical partition selection;
+2. top/bottom halves to isolate horizontal partition selection;
+3. four constant quadrants to target a four-child square split;
+4. 8x8 and 4x4 checkerboards to expose deeper or asymmetric partition trees;
+5. one changed quadrant and one changed sample to find the minimum boundary
+   that changes the root partition.
+
+Generate every input twice and reject nondeterministic bytes. Trace the full
+partition tree, scalar entropy operations, prediction state, coefficient
+state, reconstructed Y/U/V planes, and Pillow RGB bytes through scalar dav1d
+commit `b546257f770768b2c88258c533da38b91a06f737`.
+
+The pinned Pillow/libaom bridge accepts the development-only advanced options
+`min-partition-size=8` and `max-partition-size=8` (hyphenated spellings; the
+underscore spellings are rejected). Add one constant-color candidate with
+both constraints. This is a reverse-mapping fixture-generation control only:
+it may isolate a four-child traversal whose leaf syntax is already proved, but
+it must not become a public encoder option or a dimension/case special branch
+in the portable decoder.
+
+Result: libaom accepts the two controls but its lossless still-image decision
+remains one level-3 `PARTITION_NONE` leaf. At 12x12 and 16x16 the outputs are
+byte-identical to the accepted constant-A fixtures
+(`daccd674b98dc26baad851ef95d75e6099c0397db5d8e28fb7f5f1f6eef9ac6c`
+and
+`04de5e1b6e056c08fdb33131d04dec6708b1ee4912c515fda6d973a29e592381`).
+The options bound permitted partitions; they do not force a split, so this
+candidate is rejected.
+
+The natural-pattern sweep selects `changed_bottom_right` as the smallest
+four-child trace so far: 431 scalar entropy operations at 16x16. Its first
+three children reuse the accepted constant-A reconstruction, but the changed
+bottom-right child introduces multiple nonzero transform residuals. Before
+approving that syntax, sweep deterministic replacement colors around A one
+channel at a time and retain only candidates that select the same five-node
+partition tree. Rank them by entropy-operation count, then rerun the smallest
+closed candidate with the complete scalar trace.
+
+The one-channel sweep found `(17,96,203)` at the first split boundary, reducing
+the full trace to 272 operations. It is not a closed extension of the accepted
+coefficient class: its bottom-right transforms decode high-token values 12, 4,
+and 8, whereas the retained implementation proves only token 15 followed by
+its Golomb extension. Reject operation count as the sole ranking metric.
+Re-rank split candidates by exact syntax reuse and accept only a candidate
+whose nonzero transforms stay in the already-proven token-15 DC path.
+
+### Selected closed class
+
+The deterministic syntax sweep report
+`c694729770205db94ab8cdfcf0db5d57688a4571a240877e5121bb85fc7b6819`
+selects three 16x16 bottom-right-quadrant cases:
+
+| Replacement RGB | File SHA-256 | AV1 item SHA-256 | Y/U/V plane SHA-256 | Pillow RGB SHA-256 | Entropy operations |
+| --- | --- | --- | --- | --- | ---: |
+| `(17,64,203)` | `4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7` | `2a970e96bba9c9e4890b80d3bc19f798d3282ac80a5f190528816c69711b3916` | `862462637f7b4afe86e2be91b212c34bd8db25383d8837333e035923e73e4fbe` / `941f432301170594563b3f1671f07f6c7e1b1053f8266080ea619795af0ec6ee` / `fa0bfcec1e33bfe2f27bff2dc47dd4a23aeb9b59ed45428ac2a1c65b2f7bfe09` | `d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe` | 363 |
+| `(64,91,203)` | `fe7610630b212d87a5b9b9650fa156be9729e1bd49d8c01df5df416e5e524898` | `b6cc6afcd313c1117b1ca08fa827047b187387821f33bfe2bf9056c4afbad215` | `25660b9d240cebe64635b95718d50d50d80971172345d925cc052e038254675d` / `1027085f57119f35d66a03d1215f6d350d2bb591c9e38d7ba944106ed9ab8695` / `fab0aa558c5445a153519685611a63ef8bbf69a3607d7eebefeaf727504e0dad` | `6492bb904bafc0a5c8acedff1fd7cd70965e3be844e8fd19d0e04a6bd63e2017` | 369 |
+| `(17,127,203)` | `4085fdb230e1bcc93a3a3be408d5fbbf0a5c740590df3983c07b191d3b59ba08` | `f974f3c11523d00b6064fab24b0de724c964948c5979d82ebb22e0914449c0df` | `00d80b1fdf83911abbe4f71cbe488c6499186f8269924a28831df0a4d4bf94d9` / `63c0ecc9d42fbd0e65dfa75c28ec022eaf922a88bfea6dfb3579dd5cb83b2e96` / `862462637f7b4afe86e2be91b212c34bd8db25383d8837333e035923e73e4fbe` | `d1ce3617b6228d74d2b208847c20486f1a6301cf8b0708242c0019894eeb055e` | 379 |
+
+The complete trace reports were each generated twice and were byte-identical:
+`70d1b6e2fa54b0191fe444f2297dfcbf5ee877f7745ebc294d0bbe1d7dbb1ce6`
+for the first case and
+`3e5b66e8c419d3ce81995edc6ac9a6dadcfbb8bfbe15a981b0ce44e653f94cf1`
+for the two sign variants. All three have exactly the same partition topology:
+
+1. level-3 root `PARTITION_SPLIT`;
+2. level-4 top-left `PARTITION_NONE`;
+3. level-4 top-right `PARTITION_NONE`;
+4. level-4 bottom-left `PARTITION_NONE`;
+5. level-4 bottom-right `PARTITION_NONE`.
+
+The top-left leaf reuses the accepted vertical-predictor DC-only path. The
+top-right and bottom-left leaves select DC prediction and skip all four
+transforms on all planes. The bottom-right leaf selects DC prediction; each
+plane has EOB sequence `0,0,0,-1`, every nonzero transform selects high token
+15, and the fourth transform is skipped. The three colors cover positive and
+negative DC residuals and both derived sign contexts.
+
+The half-boundary 12x12 input is explicitly rejected from this slice. Its
+six-pixel source boundary cuts through the coded 8x8 children, causing non-DC
+EOB values and high-token values 9, 10, and 12 in the first three leaves. It is
+not the same syntax class.
+
+### Slice 18 implementation plan
+
+Status: accepted.
+
+1. Admit only a 16x16, eight-bit, full-range, lossless 4:4:4 root split with
+   four level-4 `PARTITION_NONE` children. Keep 12x12 and every other square
+   recursive topology unsupported.
+2. Interleave all four child partition symbols with their leaf syntax while
+   sharing the same child-partition CDF and block CDF state.
+3. Retain the proved top-left `DcOrSkipped` policy and the all-skipped
+   top-right/bottom-left policies. Add one bottom-right policy requiring
+   token-15 DC-only coefficients for transforms zero through two and a skipped
+   transform three on every plane.
+4. Model the exact coefficient-skip contexts used by the trace: luma contexts
+   1, 3, and 6 and chroma contexts 10, 11, and 12. Retain independent,
+   adaptively updated DC-sign CDFs for contexts zero through two.
+5. Retain the frame's `allow_screen_content_tools` and sequence
+   `enable_filter_intra` flags in the block context. For each DC child, decode
+   the 8x8 luma-palette, chroma-palette, and filter-intra decisions through
+   their own shared CDFs when the corresponding tools are enabled, and require
+   all three decisions to be false. Chroma mode is independently DC for the
+   accepted top-left vertical leaf, so its chroma-palette decision is also
+   consumed even though no luma-palette or filter-intra decision exists there.
+6. Reconstruct the bottom-right leaf one 4x4 transform at a time. Compute each
+   DC predictor from its real top and left four-sample edges, then apply the
+   existing lossless inverse WHT. Do not expose this codec reconstruction as a
+   reusable image-processing operation.
+7. Compose the four coded 8x8 leaves into one 16x16 plane and require exact
+   Y/U/V, Pillow RGB, entropy-operation, topology, and encoded-file hashes for
+   all three fixtures.
+8. Add the three inputs and exact Pillow references through the manifest
+   generator, extend the independent dav1d reconstruction oracle, and keep
+   structured unsupported behavior for every syntax outside the closed class.
+9. Run rustfmt, strict native and WASM Clippy, strict rustdoc, legal/package
+   verification, and Coverage MCP with exact line, branch, function, and
+   region coverage.
+
+### Selection and debugging rules
+
+Prefer the smallest topology whose leaves use already proved prediction and
+coefficient syntax. For each candidate:
+
+1. compare the root and child partition sequence with dav1d;
+2. compare adaptive state at each leaf boundary;
+3. find the first prediction-mode or coefficient operation that differs from
+   an accepted single- or two-leaf trace;
+4. reverse-map a smaller input if the candidate introduces more than one new
+   syntax class; and
+5. document exact hashes and per-stage evidence before proposing production
+   code.
+
+The next implementation slice will be defined only after this sweep identifies
+one closed class. Unsupported partitions, predictors, coefficients, filters,
+and transforms must remain portable misses. Square composition remains private
+codec reconstruction and must not expose a public image-processing operation.
+
+### Slice 18 coverage-closure plan
+
+The first exact-parity Coverage MCP run leaves six lines, one branch, and
+twenty-three regions uncovered. Every gap is an unsupported-syntax exit around
+the newly accepted four-leaf path, not an untested successful reconstruction:
+
+| Gap | Reverse-mapped reason | Fixture-driven closure |
+| --- | --- | --- |
+| First level-4 child partition is not `PARTITION_NONE` | All three accepted square fixtures correctly select zero, so only the rejection side is missing. | Feed the accepted `partitioned_square_16x16_g64.avif` fixture through the existing deterministic AV1 sample mutation sweep. Mutate every byte in its coded span through every replacement byte and retain production validation as the observation point. |
+| Syntax decode fails in the top-left, top-right, bottom-left, or bottom-right leaf | The manifest fixtures prove every success stage. Their coded span is the nearest valid prefix for reverse-mapping each staged failure. | Use the same square-fixture mutation sweep so corruptions cross each leaf boundary while preserving the real container, sequence, frame, and partition prefix whenever possible. |
+| Bottom-right spatial context receives any predictor pair other than DC/DC | The closed class deliberately accepts only DC/DC, so no valid fixture should manufacture this private invalid state. | Extend the existing coverage-only private-branch hook with one direct non-DC neighbor-context probe. Keep the production predicate counted and the hook itself excluded. |
+
+Acceptance remains exact 100% line, branch, function, and region coverage from
+Coverage MCP. If the mutation sweep does not reach one of the staged exits,
+inspect the first surviving scalar entropy prefix and reverse-map the smallest
+deterministic mutation for that exact stage before changing production code.
+
+The first mutation sweep closes every missing line and branch, but LLVM retains
+seven uncovered expression regions. Region inspection shows that four are
+redundant late checks after the square path has already established its closed
+syntax invariants:
+
+- top-right and bottom-left may currently decode a non-DC luma predictor only
+  to be rejected when deriving the bottom-right context;
+- the bottom-right leaf may currently decode a non-DC luma predictor only to be
+  rejected during reconstruction; and
+- the second of three identical child-partition callback propagations has its
+  own source region even though the same callback failure is proved at the
+  other child boundaries.
+
+Refine the implementation before the next run:
+
+1. distinguish the square side-leaf skipped policy from the generic two-leaf
+   skipped policy and require DC prediction for both square side leaves;
+2. require DC prediction as part of the boundary-DC syntax policy, making the
+   later neighbor-context and reconstruction checks impossible by
+   construction;
+3. decode each following square child through one shared
+   partition-advance-plus-syntax helper, so all three boundaries use one
+   production failure propagation; and
+4. retain and directly exercise the private 2x2 coefficient-grid guard. Remove
+   the duplicate 16x16 guard inside the closure-generic four-leaf decoder:
+   its sole production caller is already dominated by the exact 16x16
+   topology gate in `validate_first_partition`, while keeping both creates an
+   unreachable rejection in a distinct generic monomorph.
+
+This does not broaden the accepted AV1 class. It moves rejection to the first
+decoded syntax fact that violates the class and leaves the fixture-visible
+success bytes unchanged.
+
+### Accepted result
+
+The first four-leaf square reconstruction slice is accepted:
+
+- all three generated 16x16 fixtures match their documented file, AV1-item,
+  five-node partition topology, scalar entropy-operation, reconstructed Y/U/V
+  plane, and Pillow RGB hashes exactly;
+- the independent reconstruction oracle expands from 86 to 89 positive cases.
+  Its committed JSON has SHA-256
+  `6dfc80be1a457e541fb0f6f902f53e5a9a849e9522ce1c7aa8bde772bbbc76de`,
+  and every prior case remains byte-exact;
+- production admits only the level-3 16x16 square split with four level-4
+  `PARTITION_NONE` children. Child partition symbols and leaf syntax share
+  adaptive state, square side leaves and the boundary leaf require DC
+  prediction, and the boundary leaf accepts only the proved token-15 DC
+  coefficient sequence;
+- exact bottom/right edge prediction and lossless inverse-WHT reconstruction
+  compose four private coded 8x8 leaves without exposing an image-processing
+  API;
+- the manifest now has 1,119 active rows: 841 decode and 278 encode. AVIF
+  contributes 99 decode and 23 encode rows, with zero planned, skipped, or
+  unwired rows;
+- no dependency, unsafe Rust, public raster operation, target fork,
+  fixture-selected production branch, or unlicensed source was added. The
+  generated fixture provenance is recorded alongside the inputs, and the
+  19-file third-party legal inventory passes;
+- strict Clippy passes for no features, every individual codec feature,
+  default features, and all features on both native and
+  `wasm32-unknown-unknown`; formatting, strict rustdoc, whitespace, and the
+  source-package verification also pass; and
+- the source package contains 132 files, is 2.0 MiB unpacked, and is 427,076
+  bytes (417.1 KiB) compressed. Coverage MCP run
+  `0285d4e6-a959-47b8-af84-6e777e3b0ded`, snapshot
+  `7f5dc69d-64d0-4055-b2a1-e347ab88d3f2`, passes all seven test binaries with
+  36,366/36,366 lines, 5,334/5,334 branches, 1,834/1,834 functions, and
+  60,026/60,026 regions.

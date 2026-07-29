@@ -472,6 +472,57 @@
       ]
     },
     {
+      "id": "partitioned_square_16x16_g64",
+      "asset": "partitioned_square_16x16_g64.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_16x16_g64.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_16x16_r64",
+      "asset": "partitioned_square_16x16_r64.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_16x16_r64.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "partitioned_square_16x16_g127",
+      "asset": "partitioned_square_16x16_g127.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/partitioned_square_16x16_g127.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossless_12x16_a",
       "asset": "portable_lossless_12x16_a.avif",
       "expect_error": false,

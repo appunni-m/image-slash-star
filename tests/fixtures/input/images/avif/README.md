@@ -1,7 +1,8 @@
 # AVIF fixture provenance
 
-These files are fixed inputs for the Pillow 12.2.0 parity manifest. Names are
-local semantic aliases; the bytes are unmodified from the listed upstream tag.
+These files are fixed inputs for the Pillow 12.2.0 parity manifest. Copied
+upstream inputs are listed first; repository-generated inputs and their exact
+generation provenance follow.
 
 | Local file | Upstream file | Tag / commit | SHA-256 | License |
 | --- | --- | --- | --- | --- |
@@ -114,10 +115,24 @@ The eight-pixel cases also coexist with the accepted partition-symbol-1 and
 partition-symbol-2 leaves at identical dimensions, proving that decoded syntax
 rather than geometry chooses the reconstruction path.
 
-`scripts/generate_av1_reconstruction_refs.py` checks all eighty-six positive
+`partitioned_square_16x16_g64.avif`
+(`4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7`),
+`partitioned_square_16x16_r64.avif`
+(`fe7610630b212d87a5b9b9650fa156be9729e1bd49d8c01df5df416e5e524898`),
+and `partitioned_square_16x16_g127.avif`
+(`4085fdb230e1bcc93a3a3be408d5fbbf0a5c740590df3983c07b191d3b59ba08`)
+are repository-generated from a constant `(17,91,203)` 16x16 source whose
+bottom-right 8x8 quadrant is replaced by `(17,64,203)`, `(64,91,203)`, or
+`(17,127,203)`. They use the same pinned deterministic lossless 4:4:4 encoder
+settings and select one level-3 square split with four level-4 8x8 leaves.
+Their encoded AV1 syntax and Pillow output are observations of the pinned
+oracle; the generator and source rasters are original project material under
+the repository's MIT/Apache licensing.
+
+`scripts/generate_av1_reconstruction_refs.py` checks all eighty-nine positive
 file hashes, builds an instrumented scalar copy of exact dav1d 1.5.3 commit
 `b546257f770768b2c88258c533da38b91a06f737` outside the repository, and writes
 `tests/fixtures/outputs/av1_reconstruction.json`. That oracle records all
 partition-block headers, scalar entropy operations, reconstructed Y/U/V plane
 rows and hashes, and Pillow RGB rows and hashes. The Rust integration test
-consumes this JSON and the eighty-six AVIF fixtures directly.
+consumes this JSON and the eighty-nine AVIF fixtures directly.

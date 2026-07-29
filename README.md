@@ -30,9 +30,11 @@ including nonzero DC-only and zero-residual transforms for the accepted DC,
 vertical, and horizontal luma predictor modes. It also covers the first closed
 two-leaf recursive split in 12x4, 16x4, 12x8, 16x8, 4x12, 4x16, 8x12, and
 8x16 frames, including shared adaptive CDF state, reconstructed left/top edge
-prediction, and partial or full visibility on both axes. Other recursive
-partitions and AVIF pixel decode classes, plus AVIF encoding, still report an
-unsupported codec operation on that target.
+prediction, and partial or full visibility on both axes. A 16x16 four-leaf
+square split is also portable when its four coded 8x8 leaves remain inside the
+proved DC-only/zero-residual syntax class. Other recursive partitions and AVIF
+pixel decode classes, plus AVIF encoding, still report an unsupported codec
+operation on that target.
 
 The crate publishes one canonical codec API: format detection, inspection,
 still-image decode/encode, and sequence decode/encode over encoded bytes and
@@ -52,15 +54,15 @@ The manifest-driven parity matrix is the source of truth.
 
 | Metric | Count |
 | --- | ---: |
-| Manifest rows | 1,116 |
-| Active manifest rows | 1,116 |
-| Active decode rows | 838 |
+| Manifest rows | 1,119 |
+| Active manifest rows | 1,119 |
+| Active decode rows | 841 |
 | Active encode rows | 278 |
 | Planned or skipped rows | 0 |
 | Formats tracked | 8 |
 
 All rows compare exact decoded pixels, exact sequence frames, exact encoded
-files, or an exact oracle success/error outcome. AVIF contributes 96 decode
+files, or an exact oracle success/error outcome. AVIF contributes 99 decode
 rows and 23 encode rows, including five-frame animation and invalid-input
 behavior.
 
@@ -78,7 +80,7 @@ opt-in because it links a fixed native stack.
 | `tiff` | yes | parity rows active | libtiff 4.7.1 |
 | `webp` | yes | parity rows active | libwebp 1.6.0 |
 | `ico` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `avif` | no | parity rows active; portable inspection plus closed lossless single- and two-leaf decode classes | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 / libyuv 1922 |
+| `avif` | no | parity rows active; portable inspection plus closed lossless single-, two-, and four-leaf decode classes | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 / libyuv 1922 |
 
 Select only the formats an application needs by disabling default features and
 enabling the relevant format features.
@@ -125,9 +127,9 @@ operation checks the loaded libavif and codec versions at runtime. On macOS
 arm64, the pinned oracle environment described below supplies the same bundled
 library used to create the references. AVIF compiles on `wasm32` so feature
 unification remains safe. Detection and inspection use the portable in-tree
-parser there. The first closed portable AV1 decode class is active; inputs
-outside that proven class and all AVIF encoding remain unsupported pending
-later portable slices.
+parser there. The closed portable AV1 single-, two-, and four-leaf decode
+classes described above are active; inputs outside those proven classes and
+all AVIF encoding remain unsupported pending later portable slices.
 
 Linux contributors can build the complete pinned stack with the same flags as
 Pillow's wheel build:

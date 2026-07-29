@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 86);
+    assert_eq!(expected.cases.len(), 89);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2414,6 +2414,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_8x16_green.avif" => Some([46_608, 54_426, 61_946]),
             _ => None,
         };
+        let square_recursive_ranges = match case.fixture.as_str() {
+            "partitioned_square_16x16_g64.avif"
+            | "partitioned_square_16x16_r64.avif"
+            | "partitioned_square_16x16_g127.avif" => {
+                Some([34_880, 40_768, 50_626, 52_336, 54_330])
+            }
+            _ => None,
+        };
         if let Some(ranges) = recursive_ranges {
             let horizontal = case.portable_color.width > case.portable_color.height;
             let expected_blocks = [
@@ -2448,6 +2456,58 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             assert_eq!(
                 case.partition_blocks, expected_blocks,
                 "AV1 recursive partition topology case {case_index}"
+            );
+        } else if let Some(ranges) = square_recursive_ranges {
+            let expected_blocks = [
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 3,
+                    range: ranges[0],
+                },
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 4,
+                    context: 0,
+                    partition: 0,
+                    range: ranges[1],
+                },
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 2,
+                    y: 0,
+                    level: 4,
+                    context: 0,
+                    partition: 0,
+                    range: ranges[2],
+                },
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 2,
+                    level: 4,
+                    context: 0,
+                    partition: 0,
+                    range: ranges[3],
+                },
+                Av1PartitionBlock {
+                    poc: 0,
+                    x: 2,
+                    y: 2,
+                    level: 4,
+                    context: 0,
+                    partition: 0,
+                    range: ranges[4],
+                },
+            ];
+            assert_eq!(
+                case.partition_blocks, expected_blocks,
+                "AV1 square partition topology case {case_index}"
             );
         } else {
             assert_eq!(
@@ -2606,6 +2666,15 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "portable_probe_16x16_gray_129.avif" => {
                 "15dc2c3b0ea25a84b4994b9a73dbcf65eef174bad152c689cc1945843b543657"
             }
+            "partitioned_square_16x16_g64.avif" => {
+                "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe"
+            }
+            "partitioned_square_16x16_r64.avif" => {
+                "6492bb904bafc0a5c8acedff1fd7cd70965e3be844e8fd19d0e04a6bd63e2017"
+            }
+            "partitioned_square_16x16_g127.avif" => {
+                "d1ce3617b6228d74d2b208847c20486f1a6301cf8b0708242c0019894eeb055e"
+            }
             "portable_lossless_12x16_a.avif" | "portable_lossless_16x12_a.avif" => {
                 "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
             }
@@ -2742,7 +2811,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         if case_index == 0
             || matches!(
                 case.fixture.as_str(),
-                "partitioned_12x4_a.avif" | "partitioned_4x12_a.avif"
+                "partitioned_12x4_a.avif"
+                    | "partitioned_4x12_a.avif"
+                    | "partitioned_square_16x16_g64.avif"
             )
         {
             img::__coverage_sweep_av1_first_leaf(&input);

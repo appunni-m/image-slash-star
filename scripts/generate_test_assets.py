@@ -4028,6 +4028,38 @@ def gen_avif():
             raise RuntimeError(f"AVIF fixture {name} is not deterministic")
         (d / name).write_bytes(first)
 
+    def write_square_partition(name, replacement):
+        size = (16, 16)
+        source = (17, 91, 203)
+        pixels = bytes(
+            component
+            for y in range(size[1])
+            for x in range(size[0])
+            for component in (
+                replacement if x >= 8 and y >= 8 else source
+            )
+        )
+        image = Image.frombytes("RGB", size, pixels)
+
+        def encode():
+            output = BytesIO()
+            image.save(
+                output,
+                format="AVIF",
+                quality=100,
+                speed=8,
+                max_threads=1,
+                subsampling="4:4:4",
+                autotiling=False,
+            )
+            return output.getvalue()
+
+        first = encode()
+        second = encode()
+        if first != second:
+            raise RuntimeError(f"AVIF fixture {name} is not deterministic")
+        (d / name).write_bytes(first)
+
     write_portable_lossless("portable_lossless_a.avif", (17, 91, 203))
     write_portable_lossless("portable_lossless_b.avif", (199, 37, 83))
     write_portable_lossless("portable_lossless_gray_32.avif", (32, 32, 32))
@@ -4090,6 +4122,9 @@ def gen_avif():
             (129, 129, 129),
             size=size,
         )
+    write_square_partition("partitioned_square_16x16_g64.avif", (17, 64, 203))
+    write_square_partition("partitioned_square_16x16_r64.avif", (64, 91, 203))
+    write_square_partition("partitioned_square_16x16_g127.avif", (17, 127, 203))
     for orientation, size in (("12x16", (12, 16)), ("16x12", (16, 12))):
         write_portable_lossless(
             f"portable_lossless_{orientation}_a.avif",

@@ -1,7 +1,15 @@
 # image-slash-star Backend Migration Spec
 
-Status: active migration; Phases 1 and 2 complete, Phase 3 implemented and
-awaiting the downstream Coverage MCP gate.
+Status: completed cross-repository migration contract. This document is
+retained to explain ownership between the codec crate and its downstream
+consumers; it is not an `image-slash-star` processing roadmap.
+
+Scope notice: every image-operation, pipeline, palette-operation, and
+materialization requirement below belongs exclusively to `pillow-rs`.
+`image-slash-star` ends at detection, inspection, validated decode models, and
+encoding. References to downstream operations document integration behavior
+only and cannot authorize a public or reusable image-processing API in this
+repository.
 
 This spec describes the intended migration from local codec logic in
 `pillow-rs` to `image-slash-star` as the shared codec and decoded-buffer
