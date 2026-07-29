@@ -2574,6 +2574,102 @@ formats:
       description: Independent 8x8 lossless 4:2:0 key frame preventing dimension-specific materialization
       test_assets:
       - portable_lossless_420_8x8_b.avif
+    - id: portable_lossless_420_leaf_4x8_a
+      description: 4x8 visible lossless 4:2:0 frame cropped from one coded 8x8 leaf
+      test_assets:
+      - portable_lossless_420_leaf_4x8_a.avif
+    - id: portable_lossless_420_leaf_8x4_a
+      description: 8x4 visible lossless 4:2:0 frame cropped from one coded 8x8 leaf
+      test_assets:
+      - portable_lossless_420_leaf_8x4_a.avif
+    - id: portable_lossless_420_rect_12x4_gray_127
+      description: 12x4 visible lossless 4:2:0 horizontal rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_12x4_gray_127.avif
+    - id: portable_lossless_420_rect_16x4_gray_127
+      description: 16x4 visible lossless 4:2:0 horizontal rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_16x4_gray_127.avif
+    - id: portable_lossless_420_rect_12x8_gray_127
+      description: 12x8 visible lossless 4:2:0 horizontal rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_12x8_gray_127.avif
+    - id: portable_lossless_420_rect_16x8_gray_127
+      description: 16x8 lossless 4:2:0 horizontal rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_16x8_gray_127.avif
+    - id: portable_lossless_420_rect_4x12_gray_127
+      description: 4x12 visible lossless 4:2:0 vertical rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_4x12_gray_127.avif
+    - id: portable_lossless_420_rect_4x16_gray_127
+      description: 4x16 visible lossless 4:2:0 vertical rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_4x16_gray_127.avif
+    - id: portable_lossless_420_rect_8x12_gray_127
+      description: 8x12 visible lossless 4:2:0 vertical rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_8x12_gray_127.avif
+    - id: portable_lossless_420_rect_8x16_gray_127
+      description: 8x16 lossless 4:2:0 vertical rectangular leaf with skipped residuals
+      test_assets:
+      - portable_lossless_420_rect_8x16_gray_127.avif
+    - id: portable_lossless_420_split_12x4_a
+      description: 12x4 visible lossless 4:2:0 frame with two horizontal coded children
+      test_assets:
+      - portable_lossless_420_split_12x4_a.avif
+    - id: portable_lossless_420_split_16x4_a
+      description: 16x4 visible lossless 4:2:0 frame with two horizontal coded children
+      test_assets:
+      - portable_lossless_420_split_16x4_a.avif
+    - id: portable_lossless_420_split_12x8_a
+      description: 12x8 visible lossless 4:2:0 frame with two horizontal coded children
+      test_assets:
+      - portable_lossless_420_split_12x8_a.avif
+    - id: portable_lossless_420_split_16x8_a
+      description: 16x8 lossless 4:2:0 frame with two horizontal coded children
+      test_assets:
+      - portable_lossless_420_split_16x8_a.avif
+    - id: portable_lossless_420_split_4x12_a
+      description: 4x12 visible lossless 4:2:0 frame with two vertical coded children
+      test_assets:
+      - portable_lossless_420_split_4x12_a.avif
+    - id: portable_lossless_420_split_4x16_a
+      description: 4x16 visible lossless 4:2:0 frame with two vertical coded children
+      test_assets:
+      - portable_lossless_420_split_4x16_a.avif
+    - id: portable_lossless_420_split_8x12_a
+      description: 8x12 visible lossless 4:2:0 frame with two vertical coded children
+      test_assets:
+      - portable_lossless_420_split_8x12_a.avif
+    - id: portable_lossless_420_split_8x16_a
+      description: 8x16 lossless 4:2:0 frame with two vertical coded children
+      test_assets:
+      - portable_lossless_420_split_8x16_a.avif
+    - id: portable_lossless_420_square_12x12_a
+      description: 12x12 visible lossless 4:2:0 frame cropped from one coded 16x16 leaf
+      test_assets:
+      - portable_lossless_420_square_12x12_a.avif
+    - id: portable_lossless_420_square_12x16_a
+      description: 12x16 visible lossless 4:2:0 frame cropped from one coded 16x16 leaf
+      test_assets:
+      - portable_lossless_420_square_12x16_a.avif
+    - id: portable_lossless_420_square_16x12_a
+      description: 16x12 visible lossless 4:2:0 frame cropped from one coded 16x16 leaf
+      test_assets:
+      - portable_lossless_420_square_16x12_a.avif
+    - id: portable_lossless_420_square_16x16_a
+      description: 16x16 lossless 4:2:0 frame with one complete coded 16x16 leaf
+      test_assets:
+      - portable_lossless_420_square_16x16_a.avif
+    - id: partitioned_square_420_16x16_rgb_delta
+      description: 16x16 lossless 4:2:0 four-leaf square split with bottom-right luma DC residuals
+      test_assets:
+      - partitioned_square_420_16x16_rgb_delta.avif
+    - id: partitioned_square_420_16x16_g96
+      description: 16x16 lossless 4:2:0 four-leaf square split with bottom-right luma and chroma DC residuals
+      test_assets:
+      - partitioned_square_420_16x16_g96.avif
     - id: portable_lossless_gray_32
       description: Minimal 4x4 lossless 4:4:4 key frame with nonzero luma and zero chroma residuals
       test_assets:

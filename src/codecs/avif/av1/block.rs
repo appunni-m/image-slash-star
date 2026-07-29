@@ -22,6 +22,27 @@ enum ChromaSampling {
     Subsampled420,
 }
 
+impl ChromaSampling {
+    const fn transform_grid(
+        self,
+        luma_grid_width: usize,
+        luma_grid_height: usize,
+        plane: usize,
+    ) -> (usize, usize) {
+        if plane != 0 && matches!(self, Self::Subsampled420) {
+            (luma_grid_width.div_ceil(2), luma_grid_height.div_ceil(2))
+        } else {
+            (luma_grid_width, luma_grid_height)
+        }
+    }
+
+    const fn cfl_allowed(self, luma_grid_width: usize, luma_grid_height: usize) -> bool {
+        let (chroma_grid_width, chroma_grid_height) =
+            self.transform_grid(luma_grid_width, luma_grid_height, 1);
+        matches!(self, Self::Subsampled420) && chroma_grid_width == 1 && chroma_grid_height == 1
+    }
+}
+
 /// Complete set of coded transform grids admitted by the closed AV1 class.
 #[derive(Clone, Copy)]
 pub(super) enum TransformGrid {
@@ -135,6 +156,7 @@ enum CoefficientPolicy {
     SquareContextual {
         neighbor_contexts: [[u8; 2]; 3],
         orientation: SplitOrientation,
+        require_skipped: bool,
     },
     BoundaryContextual {
         above_contexts: [[u8; 2]; 3],
@@ -147,6 +169,8 @@ enum CoefficientSkipCdf {
     Base,
     OneNonzeroNeighbor,
     TwoNonzeroNeighbors,
+    SubsampledNoNonzeroNeighbor,
+    SubsampledOneNonzeroNeighbor,
 }
 
 /// Frame-level coding tools that change one intra leaf's entropy syntax.
@@ -186,12 +210,12 @@ struct BlockCdfs {
     luma_mode: [[u16; 13]; 6],
     luma_angle: [[u16; 7]; 2],
     chroma_mode: [[u16; 13]; 3],
-    subsampled_chroma_mode: [u16; 14],
+    subsampled_chroma_mode: [[u16; 14]; 3],
     palette_y: [u16; 2],
     palette_uv: [u16; 2],
     use_filter_intra: [u16; 2],
     coefficient_skip: [[u16; 2]; 2],
-    subsampled_chroma_coefficient_skip: [u16; 2],
+    subsampled_chroma_coefficient_skip: [[u16; 2]; 2],
     trailing_coefficient_skip: [[u16; 2]; 2],
     double_neighbor_coefficient_skip: [[u16; 2]; 2],
     eob_bin_luma: [u16; 5],
@@ -259,14 +283,24 @@ impl BlockCdfs {
                 ],
             ],
             subsampled_chroma_mode: [
-                28_236, 12_988, 12_711, 12_553, 12_340, 11_697, 11_569, 11_317, 10_669, 8_540,
-                8_075, 5_736, 3_296, 0,
+                [
+                    22_361, 21_560, 19_868, 19_587, 18_945, 18_593, 17_869, 17_112, 16_782, 12_682,
+                    11_773, 10_313, 8_556, 0,
+                ],
+                [
+                    28_236, 12_988, 12_711, 12_553, 12_340, 11_697, 11_569, 11_317, 10_669, 8_540,
+                    8_075, 5_736, 3_296, 0,
+                ],
+                [
+                    27_495, 27_389, 12_591, 12_498, 12_383, 12_329, 11_819, 11_073, 10_994, 9_630,
+                    8_512, 8_065, 6_089, 0,
+                ],
             ],
             palette_y: [1_092, 0],
             palette_uv: [307, 0],
             use_filter_intra,
             coefficient_skip: [[26_876, 0], [22_807, 0]],
-            subsampled_chroma_coefficient_skip: [25_114, 0],
+            subsampled_chroma_coefficient_skip: [[25_114, 0], [13_295, 0]],
             trailing_coefficient_skip: [[10_833, 0], [2_526, 0]],
             double_neighbor_coefficient_skip: [[281, 0], [651, 0]],
             eob_bin_luma: [31_928, 31_729, 30_788, 27_873, 0],
@@ -1120,16 +1154,16 @@ fn decode_dc_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
-    subsampled_chroma: bool,
+    single_subsampled_chroma_transform: bool,
 ) -> Option<PlaneCoefficients> {
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
     let mut coefficients = [[0_i32; 16]; 16];
     let coefficient_context = usize::from(plane != 0);
-    let first_zero = if subsampled_chroma {
+    let first_zero = if single_subsampled_chroma_transform {
         // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:328-345 and the pinned
         // Slice 32 scalar traces. The sole 4:2:0 chroma transform in an 8x8
         // lossless block selects coefficient-skip context seven.
-        decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip)
+        decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[0])
     } else {
         decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
     };
@@ -1197,6 +1231,18 @@ fn chroma_contextual_skip_cdf(above: u8, left: u8) -> CoefficientSkipCdf {
     }
 }
 
+fn subsampled_chroma_contextual_skip_cdf(above: u8, left: u8) -> Option<CoefficientSkipCdf> {
+    // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:59-105. A single 4x4
+    // chroma transform in one 8x8 4:2:0 luma leaf uses context seven with no
+    // nonzero external neighbor and context eight with exactly one. Context
+    // nine remains outside the closed fixture-proved class.
+    match (above == 0x40, left == 0x40) {
+        (true, true) => Some(CoefficientSkipCdf::SubsampledNoNonzeroNeighbor),
+        (false, false) => None,
+        _ => Some(CoefficientSkipCdf::SubsampledOneNonzeroNeighbor),
+    }
+}
+
 fn contextual_skip_cdf(plane: usize, above: u8, left: u8) -> Option<CoefficientSkipCdf> {
     if plane != 0 {
         return Some(chroma_contextual_skip_cdf(above, left));
@@ -1237,6 +1283,12 @@ fn decode_contextual_skip(
         }
         CoefficientSkipCdf::TwoNonzeroNeighbors => {
             decoder.adaptive_bool(&mut cdfs.double_neighbor_coefficient_skip[coefficient_context])
+        }
+        CoefficientSkipCdf::SubsampledNoNonzeroNeighbor => {
+            decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[0])
+        }
+        CoefficientSkipCdf::SubsampledOneNonzeroNeighbor => {
+            decoder.adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[1])
         }
     }
 }
@@ -1279,14 +1331,19 @@ fn decode_contextual_top_left_coefficients(
 fn coefficient_edge_contexts(
     coefficients: &[PlaneCoefficients; 3],
     orientation: SplitOrientation,
+    chroma_sampling: ChromaSampling,
 ) -> [[u8; 2]; 3] {
     let transform_indices = match orientation {
         SplitOrientation::Horizontal => [1, 3],
         SplitOrientation::Vertical => [2, 3],
     };
-    coefficients
-        .each_ref()
-        .map(|plane| transform_indices.map(|index| coefficient_residual_context(&plane[index])))
+    std::array::from_fn(|plane| {
+        if plane != 0 && matches!(chroma_sampling, ChromaSampling::Subsampled420) {
+            [coefficient_residual_context(&coefficients[plane][0]); 2]
+        } else {
+            transform_indices.map(|index| coefficient_residual_context(&coefficients[plane][index]))
+        }
+    })
 }
 
 fn decode_contextual_following_coefficients(
@@ -1295,6 +1352,10 @@ fn decode_contextual_following_coefficients(
     cdfs: &mut BlockCdfs,
     neighbor_contexts: [u8; 2],
     orientation: SplitOrientation,
+    transform_grid_width: usize,
+    transform_grid_height: usize,
+    single_subsampled_chroma_transform: bool,
+    require_skipped: bool,
 ) -> Option<PlaneCoefficients> {
     let coefficient_context = usize::from(plane != 0);
     let mut coefficients = [[0_i32; 16]; 16];
@@ -1303,10 +1364,12 @@ fn decode_contextual_following_coefficients(
         SplitOrientation::Vertical => neighbor_contexts,
     };
     let mut left_context = 0x40;
+    let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
 
-    for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(4) {
-        let column = transform_index % 2;
-        let row = transform_index / 2;
+    for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(transform_count)
+    {
+        let column = transform_index.rem_euclid(transform_grid_width);
+        let row = transform_index.div_euclid(transform_grid_width);
         if column == 0 {
             left_context = match orientation {
                 SplitOrientation::Horizontal => neighbor_contexts[row],
@@ -1314,7 +1377,9 @@ fn decode_contextual_following_coefficients(
             };
         }
         let above_context = above_contexts[column];
-        let skip_cdf = if plane == 0 {
+        let skip_cdf = if single_subsampled_chroma_transform {
+            subsampled_chroma_contextual_skip_cdf(above_context, left_context)?
+        } else if plane == 0 {
             // Following luma is required skipped, so it can retain only its
             // one external coded edge and never has two nonzero neighbors.
             if above_context == 0x40 && left_context == 0x40 {
@@ -1327,12 +1392,13 @@ fn decode_contextual_following_coefficients(
         };
         let skipped = decode_contextual_skip(decoder, coefficient_context, skip_cdf, cdfs);
         let chroma_ac_position = match orientation {
-            SplitOrientation::Horizontal => transform_index >= 2,
-            SplitOrientation::Vertical => transform_index == 1 || transform_index == 3,
+            SplitOrientation::Horizontal => transform_index >= transform_grid_width,
+            SplitOrientation::Vertical => column != 0,
         };
         let residual_context = if skipped {
             0x40
         } else {
+            (!require_skipped).then_some(())?;
             (plane != 0 && chroma_ac_position).then_some(())?;
             let sign_context = coefficient_dc_sign_context(above_context, left_context);
             let transform =
@@ -1353,9 +1419,30 @@ fn decode_contextual_boundary_coefficients(
     cdfs: &mut BlockCdfs,
     above_contexts: [u8; 2],
     left_contexts: [u8; 2],
+    transform_grid_width: usize,
+    transform_grid_height: usize,
+    single_subsampled_chroma_transform: bool,
 ) -> Option<PlaneCoefficients> {
+    if single_subsampled_chroma_transform {
+        let skip_cdf = subsampled_chroma_contextual_skip_cdf(above_contexts[0], left_contexts[0])?;
+        let skipped = decode_contextual_skip(decoder, 1, skip_cdf, cdfs);
+        let mut coefficients = [[0_i32; 16]; 16];
+        if !skipped {
+            let sign_context = coefficient_dc_sign_context(above_contexts[0], left_contexts[0]);
+            coefficients[0] =
+                decode_nonzero_lossless_transform(decoder, plane, sign_context, false, cdfs)?;
+        }
+        return Some(coefficients);
+    }
+
     if plane == 0 || (above_contexts == [0x40; 2] && left_contexts == [0x40; 2]) {
-        return decode_boundary_coefficients(decoder, plane, cdfs, 2, 2);
+        return decode_boundary_coefficients(
+            decoder,
+            plane,
+            cdfs,
+            transform_grid_width,
+            transform_grid_height,
+        );
     }
 
     let coefficient_context = usize::from(plane != 0);
@@ -1480,12 +1567,17 @@ fn decode_syntax(
         }
         ChromaSampling::Subsampled420 => {
             // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:1072-1078,
-            // src/cdf.c:113-177, and the pinned Slice 32 scalar traces.
-            // Lossless 8x8 luma with one 4x4 chroma block permits CFL, so the
-            // vertical-luma row has thirteen coded symbols even though this
-            // closed class retains only decoded DC chroma.
-            matches!(luma_predictor, LumaPredictor::Vertical).then_some(())?;
-            (decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode, 13) == 0).then_some(())?;
+            // src/cdf.c:113-177, and the pinned Slice 32/33 scalar traces.
+            // CFL is available only when the subsampled chroma block is one
+            // 4x4 transform. Larger leaves use the ordinary twelve-symbol row.
+            let predictor_index = luma_predictor.cdf_index();
+            let chroma_dc =
+                if chroma_sampling.cfl_allowed(transform_grid_width, transform_grid_height) {
+                    decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
+                } else {
+                    decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
+                };
+            (chroma_dc == 0).then_some(())?;
         }
     }
     if tools.allow_screen_content_tools {
@@ -1498,13 +1590,12 @@ fn decode_syntax(
         (!decoder.adaptive_bool(&mut cdfs.use_filter_intra)).then_some(())?;
     }
     let decode_plane = |decoder: &mut RangeDecoder<'_, '_, '_>, plane, cdfs: &mut BlockCdfs| {
-        let subsampled_chroma =
-            plane != 0 && matches!(chroma_sampling, ChromaSampling::Subsampled420);
-        let (plane_grid_width, plane_grid_height) = if subsampled_chroma {
-            (1, 1)
-        } else {
-            (transform_grid_width, transform_grid_height)
-        };
+        let (plane_grid_width, plane_grid_height) =
+            chroma_sampling.transform_grid(transform_grid_width, transform_grid_height, plane);
+        let single_subsampled_chroma_transform = plane != 0
+            && matches!(chroma_sampling, ChromaSampling::Subsampled420)
+            && plane_grid_width == 1
+            && plane_grid_height == 1;
         match coefficient_policy {
             CoefficientPolicy::DcOrSkipped => decode_dc_coefficients(
                 decoder,
@@ -1512,7 +1603,7 @@ fn decode_syntax(
                 cdfs,
                 plane_grid_width,
                 plane_grid_height,
-                subsampled_chroma,
+                single_subsampled_chroma_transform,
             ),
             CoefficientPolicy::DcThenLumaAc => {
                 decode_contextual_top_left_coefficients(decoder, plane, cdfs)
@@ -1521,18 +1612,23 @@ fn decode_syntax(
                 decoder,
                 plane,
                 cdfs,
-                transform_grid_width,
-                transform_grid_height,
+                plane_grid_width,
+                plane_grid_height,
             ),
             CoefficientPolicy::SquareContextual {
                 neighbor_contexts,
                 orientation,
+                require_skipped,
             } => decode_contextual_following_coefficients(
                 decoder,
                 plane,
                 cdfs,
                 neighbor_contexts[plane],
                 orientation,
+                plane_grid_width,
+                plane_grid_height,
+                single_subsampled_chroma_transform,
+                require_skipped,
             ),
             CoefficientPolicy::BoundaryContextual {
                 above_contexts,
@@ -1543,6 +1639,9 @@ fn decode_syntax(
                 cdfs,
                 above_contexts[plane],
                 left_contexts[plane],
+                plane_grid_width,
+                plane_grid_height,
+                single_subsampled_chroma_transform,
             ),
         }
     };
@@ -1773,11 +1872,43 @@ fn adjacent_edge(plane: &ReconstructedPlane, orientation: SplitOrientation) -> [
     }
 }
 
+fn bottom_edge_4(plane: &ReconstructedPlane) -> [u16; 4] {
+    [
+        plane.samples[12],
+        plane.samples[13],
+        plane.samples[14],
+        plane.samples[15],
+    ]
+}
+
+fn right_edge_4(plane: &ReconstructedPlane) -> [u16; 4] {
+    [
+        plane.samples[3],
+        plane.samples[7],
+        plane.samples[11],
+        plane.samples[15],
+    ]
+}
+
+fn adjacent_edge_4(plane: &ReconstructedPlane, orientation: SplitOrientation) -> [u16; 4] {
+    match orientation {
+        SplitOrientation::Horizontal => right_edge_4(plane),
+        SplitOrientation::Vertical => bottom_edge_4(plane),
+    }
+}
+
 fn one_sided_dc_predictor(edge: [u16; 8]) -> u16 {
     let sum = edge
         .iter()
         .fold(0_u32, |sum, sample| sum.saturating_add(u32::from(*sample)));
     u16::try_from(sum.saturating_add(4).div_euclid(8)).unwrap_or(128)
+}
+
+fn one_sided_dc_predictor_4(edge: [u16; 4]) -> u16 {
+    let sum = edge
+        .iter()
+        .fold(0_u32, |sum, sample| sum.saturating_add(u32::from(*sample)));
+    u16::try_from(sum.saturating_add(2).div_euclid(4)).unwrap_or(128)
 }
 
 fn reconstruct_directional_plane(
@@ -1863,6 +1994,18 @@ fn reconstruct_boundary_plane(
     ReconstructedPlane { samples }
 }
 
+fn reconstruct_subsampled_boundary_plane(
+    above: &ReconstructedPlane,
+    left: &ReconstructedPlane,
+    coefficients: PlaneCoefficients,
+) -> ReconstructedPlane {
+    let transform =
+        reconstruct_dc_transform(bottom_edge_4(above), right_edge_4(left), coefficients[0]);
+    ReconstructedPlane {
+        samples: transform.to_vec(),
+    }
+}
+
 fn reconstruct_following_square_leaf(
     syntax: BlockSyntax,
     neighbor: &ClosedLeaf,
@@ -1909,6 +2052,42 @@ fn reconstruct_following_square_leaf(
     }
 }
 
+fn reconstruct_following_420_leaf(
+    syntax: BlockSyntax,
+    neighbor: &ClosedLeaf,
+    orientation: SplitOrientation,
+) -> ClosedLeaf {
+    let luma_edge = adjacent_edge(&neighbor.planes[0], orientation);
+    let chroma_edges = [
+        adjacent_edge_4(&neighbor.planes[1], orientation),
+        adjacent_edge_4(&neighbor.planes[2], orientation),
+    ];
+    let planes = [
+        reconstruct_coded_plane(
+            one_sided_dc_predictor(luma_edge),
+            syntax.coefficients[0],
+            syntax.transform_grid,
+            ChromaSampling::Full,
+        ),
+        reconstruct_coded_plane(
+            one_sided_dc_predictor_4(chroma_edges[0]),
+            syntax.coefficients[1],
+            syntax.transform_grid,
+            ChromaSampling::Subsampled420,
+        ),
+        reconstruct_coded_plane(
+            one_sided_dc_predictor_4(chroma_edges[1]),
+            syntax.coefficients[2],
+            syntax.transform_grid,
+            ChromaSampling::Subsampled420,
+        ),
+    ];
+    ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes,
+    }
+}
+
 fn reconstruct_boundary_leaf(
     syntax: BlockSyntax,
     above: &ClosedLeaf,
@@ -1925,10 +2104,35 @@ fn reconstruct_boundary_leaf(
     }
 }
 
+fn reconstruct_boundary_420_leaf(
+    syntax: BlockSyntax,
+    above: &ClosedLeaf,
+    left: &ClosedLeaf,
+) -> ClosedLeaf {
+    let planes = [
+        reconstruct_boundary_plane(&above.planes[0], &left.planes[0], syntax.coefficients[0]),
+        reconstruct_subsampled_boundary_plane(
+            &above.planes[1],
+            &left.planes[1],
+            syntax.coefficients[1],
+        ),
+        reconstruct_subsampled_boundary_plane(
+            &above.planes[2],
+            &left.planes[2],
+            syntax.coefficients[2],
+        ),
+    ];
+    ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes,
+    }
+}
+
 fn decode_following_square_syntax<F>(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
     spatial_luma_context: SpatialLumaContext,
     coefficient_policy: CoefficientPolicy,
     tools: BlockTools,
@@ -1942,7 +2146,7 @@ where
         decoder,
         cdfs,
         transform_grid,
-        ChromaSampling::Full,
+        chroma_sampling,
         spatial_luma_context,
         coefficient_policy,
         tools,
@@ -2022,14 +2226,14 @@ pub(super) fn decode_first_lossless_444_leaf(
     ))
 }
 
-/// Decode the minimal closed 4:2:0 lossless leaf class.
+/// Decode one closed 4:2:0 lossless leaf.
 pub(super) fn decode_first_lossless_420_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     width: u32,
     height: u32,
+    transform_grid: TransformGrid,
     tools: BlockTools,
 ) -> Option<FirstLeaf> {
-    let transform_grid = TransformGrid::Square8;
     let (_, _, use_filter_intra) = transform_grid.properties();
     let mut cdfs = BlockCdfs::defaults(use_filter_intra);
     let syntax = decode_syntax(
@@ -2057,13 +2261,23 @@ fn compose_split_plane(
     second: &ReconstructedPlane,
     orientation: SplitOrientation,
 ) -> ReconstructedPlane {
+    compose_split_plane_with_width(first, second, orientation, 8)
+}
+
+fn compose_split_plane_with_width(
+    first: &ReconstructedPlane,
+    second: &ReconstructedPlane,
+    orientation: SplitOrientation,
+    child_width: usize,
+) -> ReconstructedPlane {
     let samples = match orientation {
         SplitOrientation::Horizontal => {
-            let mut samples = Vec::with_capacity(128);
+            let mut samples =
+                Vec::with_capacity(first.samples.len().saturating_add(second.samples.len()));
             for (first_row, second_row) in first
                 .samples
-                .chunks_exact(8)
-                .zip(second.samples.chunks_exact(8))
+                .chunks_exact(child_width)
+                .zip(second.samples.chunks_exact(child_width))
             {
                 samples.extend_from_slice(first_row);
                 samples.extend_from_slice(second_row);
@@ -2086,9 +2300,34 @@ fn compose_square_plane(
     bottom_left: &ReconstructedPlane,
     bottom_right: &ReconstructedPlane,
 ) -> ReconstructedPlane {
-    let top = compose_split_plane(top_left, top_right, SplitOrientation::Horizontal);
-    let bottom = compose_split_plane(bottom_left, bottom_right, SplitOrientation::Horizontal);
-    compose_split_plane(&top, &bottom, SplitOrientation::Vertical)
+    compose_square_plane_with_width(top_left, top_right, bottom_left, bottom_right, 8)
+}
+
+fn compose_square_plane_with_width(
+    top_left: &ReconstructedPlane,
+    top_right: &ReconstructedPlane,
+    bottom_left: &ReconstructedPlane,
+    bottom_right: &ReconstructedPlane,
+    child_width: usize,
+) -> ReconstructedPlane {
+    let top = compose_split_plane_with_width(
+        top_left,
+        top_right,
+        SplitOrientation::Horizontal,
+        child_width,
+    );
+    let bottom = compose_split_plane_with_width(
+        bottom_left,
+        bottom_right,
+        SplitOrientation::Horizontal,
+        child_width,
+    );
+    compose_split_plane_with_width(
+        &top,
+        &bottom,
+        SplitOrientation::Vertical,
+        child_width.saturating_mul(2),
+    )
 }
 
 /// Decode and compose the smallest closed two-leaf recursive split.
@@ -2155,6 +2394,93 @@ where
     })
 }
 
+/// Decode and compose the closed two-leaf 4:2:0 recursive split.
+pub(super) fn decode_two_lossless_420_leaves<F>(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    width: u32,
+    height: u32,
+    orientation: SplitOrientation,
+    tools: BlockTools,
+    between_leaves: F,
+) -> Option<FirstLeaf>
+where
+    F: FnOnce(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+{
+    let transform_grid = TransformGrid::Square8;
+    let (_, _, use_filter_intra) = transform_grid.properties();
+    let mut cdfs = BlockCdfs::defaults(use_filter_intra);
+
+    let first_syntax = decode_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        SpatialLumaContext::Origin,
+        CoefficientPolicy::DcOrSkipped,
+        tools,
+    )?;
+    let second_neighbor_contexts = coefficient_edge_contexts(
+        &first_syntax.coefficients,
+        orientation,
+        ChromaSampling::Subsampled420,
+    );
+    let first_predictors = origin_predictors(first_syntax.luma_predictor);
+    let first = reconstruct_leaf(first_syntax, first_predictors);
+
+    between_leaves(decoder)?;
+
+    let spatial_luma_context = SpatialLumaContext::from_neighbor(orientation, first.luma_predictor);
+    let second_syntax = decode_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        spatial_luma_context,
+        CoefficientPolicy::SquareContextual {
+            neighbor_contexts: second_neighbor_contexts,
+            orientation,
+            require_skipped: true,
+        },
+        tools,
+    )?;
+    matches!(second_syntax.luma_predictor, LumaPredictor::Dc).then_some(())?;
+    let second = reconstruct_following_420_leaf(second_syntax, &first, orientation);
+
+    let (luma_coded_width, chroma_coded_width) = match orientation {
+        SplitOrientation::Horizontal => (16, 8),
+        SplitOrientation::Vertical => (8, 4),
+    };
+    let coded_planes = [
+        compose_split_plane_with_width(&first.planes[0], &second.planes[0], orientation, 8),
+        compose_split_plane_with_width(&first.planes[1], &second.planes[1], orientation, 4),
+        compose_split_plane_with_width(&first.planes[2], &second.planes[2], orientation, 4),
+    ];
+    let chroma_width = width.div_ceil(2);
+    let chroma_height = height.div_ceil(2);
+    let planes = [
+        visible_plane(&coded_planes[0], luma_coded_width, width, height),
+        visible_plane(
+            &coded_planes[1],
+            chroma_coded_width,
+            chroma_width,
+            chroma_height,
+        ),
+        visible_plane(
+            &coded_planes[2],
+            chroma_coded_width,
+            chroma_width,
+            chroma_height,
+        ),
+    ];
+    Some(FirstLeaf {
+        width,
+        height,
+        planes,
+        #[cfg(coverage)]
+        entropy_operations: Vec::new(),
+    })
+}
+
 /// Decode and compose the first closed four-leaf square recursive split.
 pub(super) fn decode_four_lossless_444_leaves<F>(
     decoder: &mut RangeDecoder<'_, '_, '_>,
@@ -2179,10 +2505,16 @@ where
         CoefficientPolicy::DcThenLumaAc,
         tools,
     )?;
-    let top_right_neighbor_contexts =
-        coefficient_edge_contexts(&top_left_syntax.coefficients, SplitOrientation::Horizontal);
-    let bottom_left_neighbor_contexts =
-        coefficient_edge_contexts(&top_left_syntax.coefficients, SplitOrientation::Vertical);
+    let top_right_neighbor_contexts = coefficient_edge_contexts(
+        &top_left_syntax.coefficients,
+        SplitOrientation::Horizontal,
+        ChromaSampling::Full,
+    );
+    let bottom_left_neighbor_contexts = coefficient_edge_contexts(
+        &top_left_syntax.coefficients,
+        SplitOrientation::Vertical,
+        ChromaSampling::Full,
+    );
     let top_left_predictors = origin_predictors(top_left_syntax.luma_predictor);
     let top_left = reconstruct_leaf(top_left_syntax, top_left_predictors);
 
@@ -2192,16 +2524,21 @@ where
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         top_right_context,
         CoefficientPolicy::SquareContextual {
             neighbor_contexts: top_right_neighbor_contexts,
             orientation: SplitOrientation::Horizontal,
+            require_skipped: false,
         },
         tools,
         &mut between_leaves,
     )?;
-    let bottom_right_above_contexts =
-        coefficient_edge_contexts(&top_right_syntax.coefficients, SplitOrientation::Vertical);
+    let bottom_right_above_contexts = coefficient_edge_contexts(
+        &top_right_syntax.coefficients,
+        SplitOrientation::Vertical,
+        ChromaSampling::Full,
+    );
     let top_right = reconstruct_following_square_leaf(
         top_right_syntax,
         &top_left,
@@ -2214,10 +2551,12 @@ where
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         bottom_left_context,
         CoefficientPolicy::SquareContextual {
             neighbor_contexts: bottom_left_neighbor_contexts,
             orientation: SplitOrientation::Vertical,
+            require_skipped: false,
         },
         tools,
         &mut between_leaves,
@@ -2225,6 +2564,7 @@ where
     let bottom_right_left_contexts = coefficient_edge_contexts(
         &bottom_left_syntax.coefficients,
         SplitOrientation::Horizontal,
+        ChromaSampling::Full,
     );
     let bottom_left = reconstruct_following_square_leaf(
         bottom_left_syntax,
@@ -2240,6 +2580,7 @@ where
         decoder,
         &mut cdfs,
         transform_grid,
+        ChromaSampling::Full,
         bottom_right_context,
         CoefficientPolicy::BoundaryContextual {
             above_contexts: bottom_right_above_contexts,
@@ -2273,6 +2614,151 @@ where
     let planes = coded_planes
         .each_ref()
         .map(|plane| visible_plane(plane, 16, width, height));
+    Some(FirstLeaf {
+        width,
+        height,
+        planes,
+        #[cfg(coverage)]
+        entropy_operations: Vec::new(),
+    })
+}
+
+/// Decode and compose the closed four-leaf 4:2:0 square split.
+pub(super) fn decode_four_lossless_420_leaves<F>(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    width: u32,
+    height: u32,
+    tools: BlockTools,
+    mut between_leaves: F,
+) -> Option<FirstLeaf>
+where
+    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+{
+    let transform_grid = TransformGrid::Square8;
+    let (_, _, use_filter_intra) = transform_grid.properties();
+    let mut cdfs = BlockCdfs::defaults(use_filter_intra);
+
+    let top_left_syntax = decode_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        SpatialLumaContext::Origin,
+        CoefficientPolicy::DcOrSkipped,
+        tools,
+    )?;
+    let top_right_neighbor_contexts = coefficient_edge_contexts(
+        &top_left_syntax.coefficients,
+        SplitOrientation::Horizontal,
+        ChromaSampling::Subsampled420,
+    );
+    let bottom_left_neighbor_contexts = coefficient_edge_contexts(
+        &top_left_syntax.coefficients,
+        SplitOrientation::Vertical,
+        ChromaSampling::Subsampled420,
+    );
+    let top_left_predictors = origin_predictors(top_left_syntax.luma_predictor);
+    let top_left = reconstruct_leaf(top_left_syntax, top_left_predictors);
+
+    let top_right_context =
+        SpatialLumaContext::from_neighbor(SplitOrientation::Horizontal, top_left.luma_predictor);
+    let top_right_syntax = decode_following_square_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        top_right_context,
+        CoefficientPolicy::SquareContextual {
+            neighbor_contexts: top_right_neighbor_contexts,
+            orientation: SplitOrientation::Horizontal,
+            require_skipped: true,
+        },
+        tools,
+        &mut between_leaves,
+    )?;
+    matches!(top_right_syntax.luma_predictor, LumaPredictor::Dc).then_some(())?;
+    let bottom_right_above_contexts = coefficient_edge_contexts(
+        &top_right_syntax.coefficients,
+        SplitOrientation::Vertical,
+        ChromaSampling::Subsampled420,
+    );
+    let top_right =
+        reconstruct_following_420_leaf(top_right_syntax, &top_left, SplitOrientation::Horizontal);
+
+    let bottom_left_context =
+        SpatialLumaContext::from_neighbor(SplitOrientation::Vertical, top_left.luma_predictor);
+    let bottom_left_syntax = decode_following_square_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        bottom_left_context,
+        CoefficientPolicy::SquareContextual {
+            neighbor_contexts: bottom_left_neighbor_contexts,
+            orientation: SplitOrientation::Vertical,
+            require_skipped: true,
+        },
+        tools,
+        &mut between_leaves,
+    )?;
+    matches!(bottom_left_syntax.luma_predictor, LumaPredictor::Dc).then_some(())?;
+    let bottom_right_left_contexts = coefficient_edge_contexts(
+        &bottom_left_syntax.coefficients,
+        SplitOrientation::Horizontal,
+        ChromaSampling::Subsampled420,
+    );
+    let bottom_left =
+        reconstruct_following_420_leaf(bottom_left_syntax, &top_left, SplitOrientation::Vertical);
+
+    let bottom_right_context = SpatialLumaContext::from_two_neighbors(
+        top_right.luma_predictor,
+        bottom_left.luma_predictor,
+    )?;
+    let bottom_right_syntax = decode_following_square_syntax(
+        decoder,
+        &mut cdfs,
+        transform_grid,
+        ChromaSampling::Subsampled420,
+        bottom_right_context,
+        CoefficientPolicy::BoundaryContextual {
+            above_contexts: bottom_right_above_contexts,
+            left_contexts: bottom_right_left_contexts,
+        },
+        tools,
+        &mut between_leaves,
+    )?;
+    let bottom_right = reconstruct_boundary_420_leaf(bottom_right_syntax, &top_right, &bottom_left);
+
+    let coded_planes = [
+        compose_square_plane_with_width(
+            &top_left.planes[0],
+            &top_right.planes[0],
+            &bottom_left.planes[0],
+            &bottom_right.planes[0],
+            8,
+        ),
+        compose_square_plane_with_width(
+            &top_left.planes[1],
+            &top_right.planes[1],
+            &bottom_left.planes[1],
+            &bottom_right.planes[1],
+            4,
+        ),
+        compose_square_plane_with_width(
+            &top_left.planes[2],
+            &top_right.planes[2],
+            &bottom_left.planes[2],
+            &bottom_right.planes[2],
+            4,
+        ),
+    ];
+    let chroma_width = width.div_ceil(2);
+    let chroma_height = height.div_ceil(2);
+    let planes = [
+        visible_plane(&coded_planes[0], 16, width, height),
+        visible_plane(&coded_planes[1], 8, chroma_width, chroma_height),
+        visible_plane(&coded_planes[2], 8, chroma_width, chroma_height),
+    ];
     Some(FirstLeaf {
         width,
         height,

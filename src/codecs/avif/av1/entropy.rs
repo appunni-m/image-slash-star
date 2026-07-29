@@ -773,7 +773,7 @@ fn closed_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     closed_reconstruction_context(context)
         & context.subsampling_x
         & context.subsampling_y
-        & matches!((context.frame_width, context.frame_height), (4, 4) | (8, 8))
+        & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context))
 }
 
 fn decode_closed_leaf(
@@ -797,11 +797,13 @@ fn decode_closed_leaf(
 fn decode_closed_420_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
+    transform_grid: super::block::TransformGrid,
 ) -> Option<super::block::FirstLeaf> {
     let reconstructed = super::block::decode_first_lossless_420_leaf(
         decoder,
         context.frame_width,
         context.frame_height,
+        transform_grid,
         super::block::BlockTools {
             allow_screen_content_tools: context.allow_screen_content_tools,
             enable_filter_intra: context.enable_filter_intra,
@@ -876,10 +878,21 @@ pub(super) fn validate_first_partition(
                     };
                     return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
                 }
-                let reconstruct_closed_420_leaf =
-                    (partition == 0) & closed_420_reconstruction_context(context) & (level == 4);
+                let reconstruct_closed_420_leaf = (partition == 0)
+                    & closed_420_reconstruction_context(context)
+                    & closed_leaf_dimensions(context)
+                    & closed_leaf_level_dimensions(context, level);
                 if reconstruct_closed_420_leaf {
-                    return Some(decode_closed_420_leaf(&mut decoder, context));
+                    let transform_grid = if level == 4 {
+                        super::block::TransformGrid::Square8
+                    } else {
+                        super::block::TransformGrid::Square16
+                    };
+                    return Some(decode_closed_420_leaf(
+                        &mut decoder,
+                        context,
+                        transform_grid,
+                    ));
                 }
                 let reconstruct_square_split = (partition == 3)
                     & closed_444_reconstruction_context(context)
@@ -895,6 +908,35 @@ pub(super) fn validate_first_partition(
                         return Some(None);
                     }
                     let reconstructed = super::block::decode_four_lossless_444_leaves(
+                        &mut decoder,
+                        context.frame_width,
+                        context.frame_height,
+                        super::block::BlockTools {
+                            allow_screen_content_tools: context.allow_screen_content_tools,
+                            enable_filter_intra: context.enable_filter_intra,
+                        },
+                        |decoder| {
+                            (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
+                                == 0)
+                                .then_some(())
+                        },
+                    );
+                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                }
+                let reconstruct_420_square_split = (partition == 3)
+                    & closed_420_reconstruction_context(context)
+                    & (level == 3)
+                    & matches!((context.frame_width, context.frame_height), (16, 16));
+                if reconstruct_420_square_split {
+                    // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:2117-2380 and
+                    // the pinned Slice 33 scalar traces. The four 8x8 luma
+                    // children carry matching 4x4 4:2:0 chroma children and
+                    // mutate one shared partition CDF between leaf payloads.
+                    let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
+                    if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
+                        return Some(None);
+                    }
+                    let reconstructed = super::block::decode_four_lossless_420_leaves(
                         &mut decoder,
                         context.frame_width,
                         context.frame_height,
@@ -937,6 +979,22 @@ pub(super) fn validate_first_partition(
                     };
                     return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
                 }
+                let reconstruct_420_rectangular_leaf = !split
+                    & closed_420_reconstruction_context(context)
+                    & (level == 3)
+                    & rectangular_leaf_dimensions(context);
+                if reconstruct_420_rectangular_leaf {
+                    let transform_grid = if horizontal_split {
+                        super::block::TransformGrid::Horizontal16x8
+                    } else {
+                        super::block::TransformGrid::Vertical8x16
+                    };
+                    return Some(decode_closed_420_leaf(
+                        &mut decoder,
+                        context,
+                        transform_grid,
+                    ));
+                }
                 let reconstruct_recursive_split = split
                     & closed_444_reconstruction_context(context)
                     & (level == 3)
@@ -956,6 +1014,37 @@ pub(super) fn validate_first_partition(
                         super::block::SplitOrientation::Vertical
                     };
                     let reconstructed = super::block::decode_two_lossless_444_leaves(
+                        &mut decoder,
+                        context.frame_width,
+                        context.frame_height,
+                        orientation,
+                        super::block::BlockTools {
+                            allow_screen_content_tools: context.allow_screen_content_tools,
+                            enable_filter_intra: context.enable_filter_intra,
+                        },
+                        |decoder| {
+                            (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
+                                == 0)
+                                .then_some(())
+                        },
+                    );
+                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                }
+                let reconstruct_420_recursive_split = split
+                    & closed_420_reconstruction_context(context)
+                    & (level == 3)
+                    & recursive_split_dimensions(context);
+                if reconstruct_420_recursive_split {
+                    let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
+                    if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
+                        return Some(None);
+                    }
+                    let orientation = if horizontal_split {
+                        super::block::SplitOrientation::Horizontal
+                    } else {
+                        super::block::SplitOrientation::Vertical
+                    };
+                    let reconstructed = super::block::decode_two_lossless_420_leaves(
                         &mut decoder,
                         context.frame_width,
                         context.frame_height,

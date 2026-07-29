@@ -24,6 +24,7 @@ from generate_av1_reconstruction_refs import (
     build_dav1d,
     extract_color_item,
     parse_debug_log,
+    portable_color_reference,
     resolve_tool,
     run,
     verify_source,
@@ -98,6 +99,7 @@ def encode(
     replacement: tuple[int, int, int],
     size: tuple[int, int],
     origin: tuple[int, int],
+    subsampling: str,
 ) -> bytes:
     """Encode one deterministic two-color rectangle."""
 
@@ -119,7 +121,7 @@ def encode(
             quality=100,
             speed=8,
             max_threads=1,
-            subsampling="4:4:4",
+            subsampling=subsampling,
             autotiling=False,
         )
         return output.getvalue()
@@ -140,14 +142,22 @@ def decode_case(
     replacement: tuple[int, int, int],
     size: tuple[int, int],
     origin: tuple[int, int],
+    subsampling: str,
+    retain_dir: Path | None,
 ) -> dict[str, object]:
     """Encode and trace one corpus member."""
 
-    encoded = encode(source, replacement, size, origin)
+    encoded = encode(source, replacement, size, origin, subsampling)
     stem = (
         f"rgb_{replacement[0]}_{replacement[1]}_{replacement[2]}"
         f"_origin_{origin[0]}_{origin[1]}"
     )
+    if retain_dir is not None:
+        retain_dir.mkdir(parents=True, exist_ok=True)
+        retained_stem = (
+            f"{stem}_{size[0]}x{size[1]}_{subsampling.replace(':', '')}"
+        )
+        (retain_dir / f"{retained_stem}.avif").write_bytes(encoded)
     path = work / f"{stem}.avif"
     path.write_bytes(encoded)
     sample, _ = extract_color_item(path)
@@ -176,12 +186,33 @@ def decode_case(
         env=environment,
     )
     debug_log, _, entropy_operations, blocks, _ = parse_debug_log(result.stdout)
+    portable_color = portable_color_reference(path)
+    expected_subsampling = {
+        "4:4:4": (False, False),
+        "4:2:0": (True, True),
+    }[subsampling]
+    actual_subsampling = (
+        bool(portable_color["subsampling_x"]),
+        bool(portable_color["subsampling_y"]),
+    )
+    if actual_subsampling != expected_subsampling:
+        raise RuntimeError(
+            f"unexpected subsampling for {stem}: {actual_subsampling}"
+        )
     yuv = output_path.read_bytes()
-    plane_length = size[0] * size[1]
-    if len(yuv) != plane_length * 3:
+    y_length = size[0] * size[1]
+    chroma_size = (
+        ((size[0] + 1) // 2, (size[1] + 1) // 2)
+        if subsampling == "4:2:0"
+        else size
+    )
+    chroma_length = chroma_size[0] * chroma_size[1]
+    if len(yuv) != y_length + 2 * chroma_length:
         raise RuntimeError(f"unexpected decoded YUV length for {stem}: {len(yuv)}")
     plane_bytes = [
-        yuv[index * plane_length : (index + 1) * plane_length] for index in range(3)
+        yuv[:y_length],
+        yuv[y_length : y_length + chroma_length],
+        yuv[y_length + chroma_length :],
     ]
     with Image.open(path) as image:
         image.load()
@@ -214,9 +245,15 @@ def main() -> None:
     parser.add_argument("--ninja", default="ninja")
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--retain-dir", type=Path)
     parser.add_argument("--source", type=parse_color, default=(17, 91, 203))
     parser.add_argument("--replacement", type=parse_color, action="append", required=True)
     parser.add_argument("--size", type=parse_pair, default=(12, 12))
+    parser.add_argument(
+        "--subsampling",
+        choices=("4:4:4", "4:2:0"),
+        default="4:4:4",
+    )
     origins = parser.add_mutually_exclusive_group(required=True)
     origins.add_argument("--origin", type=parse_pair, action="append")
     origins.add_argument("--origin-box", type=parse_origin_box)
@@ -269,6 +306,8 @@ def main() -> None:
                 replacement,
                 args.size,
                 origin,
+                args.subsampling,
+                args.retain_dir.resolve() if args.retain_dir else None,
             )
             for replacement in args.replacement
             for origin in selected_origins
@@ -285,6 +324,8 @@ def main() -> None:
         "size": list(args.size),
         "cases": cases,
     }
+    if args.subsampling != "4:4:4":
+        report["subsampling"] = args.subsampling
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n",
