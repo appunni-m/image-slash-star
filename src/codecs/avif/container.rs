@@ -2,7 +2,7 @@
 //!
 //! Ported from libavif 1.4.1 at commit
 //! 6543b22b5bc706c53f038a16fe515f921556d9b3. Reference locations are recorded
-//! in `docs/portable-avif-progress.md`.
+//! in `docs/avif.md`.
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{ImageFormat, ImageInfo, ImageMode};

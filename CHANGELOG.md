@@ -22,6 +22,8 @@ All notable changes will be documented in this file. This project follows
   decode, sequence, and encode APIs.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
   exact source format and decoded mode.
+- A consolidated open-source documentation set covering architecture, the
+  public contract, AVIF portability, oracle testing, and the release roadmap.
 - Portable AV1 tile-boundary validation with exact multi-tile success/error
   fixtures and pinned dav1d scalar-entropy trace vectors.
 - Portable lossless AVIF materialization for the first closed 4:4:4
@@ -60,3 +62,6 @@ All notable changes will be documented in this file. This project follows
   source-sized entry supplied by the caller.
 - Removed Serde and serde_json from development targets; manifest-driven tests
   use a strict project-owned test-only JSON reader.
+- Removed per-sweep coverage logs and downstream `pillow-rs` migration plans
+  from the maintained documentation tree; their binding decisions now live in
+  four current project documents and historical detail remains in Git.

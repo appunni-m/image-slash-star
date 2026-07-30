@@ -133,7 +133,7 @@ separate non-portable control.
 | `portable_lossy_420_q99_eob_base_control.avif` | gray-126 AV1 item offset 25, `0xe1` to `0x1e` | `ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5` |
 
 The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
-and Pillow RGB hashes are pinned in `docs/portable-avif-progress.md` and
+and Pillow RGB hashes are pinned in `docs/avif.md` and
 `tests/fixtures/outputs/av1_reconstruction.json`.
 
 The EOB controls are selected by
@@ -221,7 +221,7 @@ generated with the same settings from RGB `(17,91,203)`, `(127,127,127)`,
 the padded 8x8 coded leaf, including nonzero and zero residuals and all three
 accepted luma predictors. Their exact file and AV1-item hashes are pinned in
 `scripts/generate_av1_reconstruction_refs.py` and
-`docs/portable-avif-progress.md`.
+`docs/avif.md`.
 
 The eight `portable_*_12x12_*.avif` and `portable_*_16x16_*.avif` fixtures
 use the same four RGB sources and deterministic settings. They select the

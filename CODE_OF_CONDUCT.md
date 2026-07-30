@@ -9,7 +9,7 @@ publication of another person's private information are not acceptable.
 Maintainers may edit or remove contributions and temporarily or permanently
 exclude participants whose conduct harms the community.
 
-Report conduct concerns privately to the repository owner through the contact
-options on their GitHub profile. Reports will be handled confidentially and
-fairly. This policy applies in project spaces and when someone officially
-represents the project elsewhere.
+Report conduct concerns privately through the contact options on the
+[repository owner's GitHub profile](https://github.com/appunni-m). Reports
+will be handled confidentially and fairly. This policy applies in project
+spaces and when someone officially represents the project elsewhere.

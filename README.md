@@ -1,323 +1,218 @@
 # image-slash-star
 
 [![CI](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml/badge.svg)](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml)
-[![License: multi-license](https://img.shields.io/badge/license-see%20NOTICE-blue.svg)](#license)
+[![License: multi-license](https://img.shields.io/badge/license-see%20NOTICE-blue.svg)](#license-and-attribution)
 
-Image codec implementation with byte-exact parity against a pinned Pillow
-oracle.
+Dependency-constrained Rust codecs for detecting, inspecting, decoding, and
+encoding JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and AVIF bytes.
 
-The Cargo package is `image-slash-star`; Rust source imports it as
-`image_slash_star`.
+The crate targets exact observable compatibility with a pinned Pillow 12.2.0
+oracle for every active manifest case: success or error, format, mode,
+dimensions, metadata, frames, pixels, palettes, and deterministic encoded
+bytes.
 
-This crate is intentionally limited to encoded-image detection, inspection,
-decoding, and encoding. It does not provide resizing, cropping, rotation,
-flipping, compositing, drawing, color adjustment, filters, or a mutable
-`DynamicImage`-style processing layer. Applications should keep those concerns
-in a downstream crate.
+> **Pre-release status:** version 0.1.0 is not published to crates.io. The
+> compatibility guarantee is limited to committed manifest cases, not every
+> legal file in each format specification. Caller-controlled decode limits are
+> not implemented, so the current crate should not be treated as hardened for
+> arbitrary hostile inputs. Breaking API changes may occur before 1.0.
 
-The default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO codecs are 100% Rust:
-zero Pillow imports and zero native codec libraries. `bytemuck` remains the
-only Cargo dependency, including development targets. The opt-in `avif`
-feature uses the
-exact native library stack used by the oracle because a different AV1 encoder
-cannot produce libaom-identical bytes. That native AVIF implementation is
-current compatibility behavior, not the final portable release design: it
-compiles on `wasm32-unknown-unknown`, where detection, bounded container
-inspection, and a growing manifest-bounded still-decode subset are portable.
-That subset includes closed lossless full-range YUV 4:4:4 and 4:2:0
-single-leaf, two-leaf, and four-leaf classes over the documented 4x4 through
-16x16 geometries, plus the first 4x4 and 8x8 lossy 4:2:0 directional-predictor
-classes with skipped, direct-token, or token-15 Golomb DC-only luma residuals.
-That closed residual map implements dav1d's complete quality-99 Golomb
-dequantization sequence: 20-bit token masking, dequantization by eight,
-24-bit product masking, sign-dependent coefficient clamping, and sign
-application. Exact fixtures cover the natural token domain, the ten-to-eleven
-bit Golomb boundary, both clamp signs, and a non-clamped 20-bit-mask wrap.
-Other recursive partitions and AVIF pixel decode classes, plus AVIF encoding,
-still report an unsupported codec operation on that target. The exact accepted
-AV1 boundary is tracked in `docs/portable-avif-progress.md`; it is deliberately
-narrower than general AVIF support.
+## Why use it?
 
-The crate publishes one canonical codec API: format detection, inspection,
-still-image decode/encode, and sequence decode/encode over encoded bytes and
-decoded samples. Its public result types retain pixels, modes, palettes, frame
-timing, disposal, background metadata, and encoder options. Codec algorithms
-and format dispatchers are private so malformed input cannot lose its
-structured error merely because a caller selected a lower-level entry point.
+- One auto-detecting, structured `Result` API across all codecs.
+- Rust-only default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO execution.
+- `bytemuck` as the only Cargo dependency.
+- Independent per-format Cargo features.
+- Exact fixture-backed success, error, pixel, frame, and encoded-byte checks.
+- Byte-buffer APIs that work without filesystem or networking assumptions.
+- Default codec feature combinations cross-compile to
+  `wasm32-unknown-unknown`.
 
-Project goal: exact Pillow 12.2.0 parity across public codec behavior — success
-or error, mode, dimensions, metadata, frame data, decoded pixels, and
-deterministic encoded file bytes. Pillow itself remains fixture-only; the
-explicitly enabled AVIF feature is the sole native runtime boundary.
+The crate deliberately does not resize, crop, rotate, draw, filter, adjust, or
+otherwise process decoded images. Applications keep image processing in a
+downstream library.
 
-## Status
+## Quick start
 
-The manifest-driven parity matrix is the source of truth.
-
-| Metric | Count |
-| --- | ---: |
-| Manifest rows | 1,201 |
-| Active manifest rows | 1,201 |
-| Active decode rows | 923 |
-| Active encode rows | 278 |
-| Planned or skipped rows | 0 |
-| Formats tracked | 8 |
-
-All rows compare exact decoded pixels, exact sequence frames, exact encoded
-files, or an exact oracle success/error outcome. AVIF contributes 181 decode
-rows and 23 encode rows, including five-frame animation and invalid-input
-behavior.
-
-## Format features
-
-Default features enable JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO. AVIF is
-opt-in because it links a fixed native stack.
-
-| Feature | Default | Status | Pinned oracle implementation |
-| --- | --- | --- | --- |
-| `jpeg` | yes | parity rows active | libjpeg-turbo 3.1.4.1 |
-| `png` | yes | parity rows active | Pillow libImaging 12.2.0 / zlib-ng 2.3.3 |
-| `gif` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `bmp` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `tiff` | yes | parity rows active | libtiff 4.7.1 |
-| `webp` | yes | parity rows active | libwebp 1.6.0 |
-| `ico` | yes | parity rows active | Pillow libImaging 12.2.0 |
-| `avif` | no | parity rows active; portable inspection plus closed lossless and initial lossy 4:2:0 still-decode classes | libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2 / libyuv 1922 |
-
-Select only the formats an application needs by disabling default features and
-enabling the relevant format features.
-
-Until the first crates.io release, add the repository directly:
+Until the first registry release, depend on the repository:
 
 ```toml
 [dependencies.image-slash-star]
 git = "https://github.com/appunni-m/image-slash-star"
 default-features = false
-features = ["jpeg", "png"]
+features = ["png", "jpeg"]
 ```
 
-The Cargo package name contains hyphens; Rust code imports it as
-`image_slash_star`.
-
-ICO still-image encoding writes one entry at the source raster's existing
-dimensions. If the `sizes` compatibility option is supplied, it must name that
-same single size. The codec rejects different, multiple, empty, or
-over-256-pixel requests instead of resizing pixels. A future multi-resolution
-ICO API must accept independently supplied, already-sized entries.
-
-## From source
-
-```bash
-git clone git@github.com:appunni-m/image-slash-star.git
-cd image-slash-star
-cargo check --all-targets
-```
-
-The repository uses the Rust 2024 edition. The required Rust release and
-components are pinned in `rust-toolchain.toml`.
-
-To enable AVIF on a native target, install libavif 1.4.1 built with dav1d
-1.5.3 and libaom 3.13.2, or point the build at its library directory:
-
-```bash
-export IMAGE_SLASH_STAR_AVIF_LIB_DIR=/path/to/the/exact/libavif/lib
-cargo test --all-features --test coverage_matrix_tests
-```
-
-The build also accepts an exact `pkg-config` `libavif` installation. Every
-operation checks the loaded libavif and codec versions at runtime. On macOS
-arm64, the pinned oracle environment described below supplies the same bundled
-library used to create the references. AVIF compiles on `wasm32` so feature
-unification remains safe. Detection and inspection use the portable in-tree
-parser there. The closed portable AV1 single-, two-, and four-leaf decode
-classes described above are active; inputs outside those proven classes and
-all AVIF encoding remain unsupported pending later portable slices.
-
-Linux contributors can build the complete pinned stack with the same flags as
-Pillow's wheel build:
-
-```bash
-scripts/build_avif_stack.sh /tmp/image-star-avif /tmp/image-star-avif-build
-IMAGE_SLASH_STAR_AVIF_LIB_DIR=/tmp/image-star-avif/lib \
-  cargo test --all-features --test coverage_matrix_tests
-```
-
-## API at a glance
-
-The high-level API detects image format from input bytes, decodes still images
-without discarding animation-aware metadata, and keeps sequence APIs separate so
-frames are never silently dropped.
-
-Primary entry points:
-
-| Function | Purpose |
-| --- | --- |
-| `detect_format(&[u8])` | Detect JPEG, PNG, GIF, BMP, WebP, TIFF, ICO, or AVIF from magic bytes. |
-| `inspect(&[u8])` | Read format, dimensions, mode, depth, palette, and frame count without decoding pixels. |
-| `decode(&[u8])` | Decode one still image from auto-detected bytes. |
-| `decode_sequence(&[u8])` | Decode retained frames and animation metadata. |
-| `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode with explicit format options. |
-| `encode_default(&DecodedImage, ImageFormat)` | Encode a still image with default options. |
-| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode still or animated sequences while retaining frame metadata. |
+Cargo package names use hyphens; Rust imports use underscores.
 
 ```rust,no_run
-use image_slash_star::{decode, encode_default, inspect, ImageFormat, ImageResult};
+use image_slash_star::{decode, encode_default, ImageFormat, ImageResult};
 
-fn transcode_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
-    let info = inspect(input)?;
-    assert_eq!(info.format, ImageFormat::Png);
-
+fn png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
     let decoded = decode(input)?;
-    assert_eq!(decoded.format, info.format);
+
+    assert_eq!(decoded.format, ImageFormat::Png);
     encode_default(&decoded.content, ImageFormat::Jpeg)
 }
 ```
 
-All inputs and outputs are byte buffers. Native applications may wrap the API
-with `std::fs`; browser and worker applications may pass fetched or uploaded
-bytes directly. The crate itself does not open paths or apply host filesystem
-policy.
+`decode` detects the source format from the complete byte slice and preserves
+that format separately from the decoded sample mode. Encoding always requires
+an explicit output format.
 
-## Parity harness
+For a full program, read bytes with `std::fs`, call the function above, and
+write the returned bytes. The crate itself never opens paths.
 
-The authoritative oracle is the Pillow 12.2.0 CPython 3.12 macOS arm64 wheel.
-Its wheel hash, extension hash, bundled codec versions, and public comparison
-contract are pinned in `pillow-oracle.lock.yaml` and `manifest.yaml`.
+## Supported features
 
+Default features enable every codec except AVIF.
+
+| Feature | Default | Native behavior | `wasm32-unknown-unknown` |
+| --- | --- | --- | --- |
+| `jpeg` | yes | Rust inspect/decode/encode | Build-verified Rust path |
+| `png` | yes | Rust inspect/decode/encode | Build-verified Rust path |
+| `gif` | yes | Rust still/sequence decode and encode | Build-verified Rust path |
+| `bmp` | yes | Rust inspect/decode/encode | Build-verified Rust path |
+| `tiff` | yes | Rust inspect/decode/encode | Build-verified Rust path |
+| `webp` | yes | Rust still/sequence decode and still encode | Build-verified Rust path |
+| `ico` | yes | Rust inspect/decode and source-sized encode | Build-verified Rust path |
+| `avif` | no | Fixed native inspect/decode/sequence/encode stack | Portable inspect and restricted still decode; sequence decode and encode unsupported |
+
+ICO enables PNG and BMP because an icon entry can use either representation.
+ICO encoding writes one entry at the supplied raster dimensions and never
+resizes pixels.
+
+WASM feature combinations are cross-compiled in CI. Executing the complete
+semantic fixture matrix in a WASM runtime remains planned.
+
+AVIF is the remaining portability boundary. Native parity uses fixed
+libavif 1.4.1, dav1d 1.5.3, and libaom 3.13.2 builds. The WASM path has a
+growing in-tree AV1 subset. See [AVIF support](docs/avif.md) for exact
+capabilities and setup.
+
+## API and data model
+
+| API | Purpose |
+| --- | --- |
+| `detect_format(&[u8])` | Identify a supported container signature |
+| `inspect(&[u8])` | Read `ImageInfo` without decoding compressed pixels |
+| `decode(&[u8])` | Decode the still/first-image view and retain source format |
+| `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
+| `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
+| `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
+| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF/native AVIF |
+| `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
+
+The core model separates:
+
+```text
+ImageFormat                ImageMode + ColorType
+encoded container         decoded sample-byte layout
+PNG / JPEG / GIF / ...    P8 / L8 / RGB8 / RGBA8 / ...
+             \             /
+              Decoded<T>
 ```
-manifest.yaml
-       ↓
-scripts/generate_test_assets.py
-       ↓
-tests/fixtures/input/
-       ↓
-scripts/generate_decode_refs.py
-       ↓
-tests/fixtures/outputs/
-       ↓
-tests/coverage_matrix_tests.rs
-```
 
-The generated fixture tree contains deterministic source images, normalized
-expected metadata, raw Pillow pixels, and exact Pillow encoder output. Hashes,
-file sizes, and approximate visual similarity are not accepted as parity
-substitutes.
+`DecodedImage::pixels` is tightly packed and row-major. Indexed samples use
+`ImageMode::P8` and retain an `ImagePalette` when the source exposes one; they
+are not silently interpreted as grayscale. Caller-built images and sequences
+are validated before encoding.
 
-### Running the parity gate
-
-Create the pinned oracle environment on macOS arm64:
+See [architecture and public contract](docs/architecture.md) for byte layouts,
+validation invariants, lazy source lifecycle, memory behavior, feature
+dispatch, and internal boundaries. Generate declaration-level API
+documentation with:
 
 ```bash
-python3.12 -m venv .oracle-venv
-.oracle-venv/bin/python -m pip install --require-hashes -r oracle-requirements.txt
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked
 ```
 
-Regenerate deterministic assets and references, then run the parity suite:
+## Errors
+
+Every canonical fallible API returns `ImageResult<T>`.
+
+| Error | Meaning |
+| --- | --- |
+| `UnknownFormat` | No supported signature matched |
+| `FeatureDisabled` | The format is recognized but its Cargo feature is off |
+| `Malformed` | The selected codec rejected the encoded bytes |
+| `Unsupported` | The requested operation or valid input class is unavailable |
+| `Dimensions` | Dimensions, frame bounds, or sample length are invalid |
+| `Parameter` | An option, palette, mode combination, or other parameter is invalid |
+
+`ImageError` is non-exhaustive; downstream `match` expressions need a fallback
+arm. Unchanged malformed bytes should not be retried. Feature and unsupported
+errors can usually be handled by selecting another compiled capability.
+
+## Correctness evidence
+
+At implementation revision `d7e60df`, the generated matrix contains 1,261
+active cases: 970 decode/inspect/verify cases and 291 encode cases, with zero
+planned or unwired rows. Expected errors are active fixture outcomes.
+
+The accepted Coverage MCP snapshot for that implementation state reports 100%
+line, branch, function, and region coverage. Coverage proves execution under
+the retained suite; it does not prove complete format support or security.
+
+The oracle identity, regeneration workflow, exact comparison contract, test
+tiers, current run identifiers, and troubleshooting are in
+[oracle, fixtures, tests, and coverage](docs/testing.md).
+
+## Build from source
+
+The Rust version and WASM target are pinned in `rust-toolchain.toml`.
 
 ```bash
-.oracle-venv/bin/python scripts/generate_test_assets.py
-.oracle-venv/bin/python scripts/generate_decode_refs.py
-cargo test --all-features --test coverage_matrix_tests
+git clone https://github.com/appunni-m/image-slash-star.git
+cd image-slash-star
+cargo check --locked
 ```
 
-The matrix target requires every format feature by design; partial-feature
-builds are checked independently and never reinterpret unavailable codecs as
-passing or skipped parity rows.
+Native builds using default features need no external codec library. Enabling
+`avif` requires the exact native stack described in
+[AVIF support](docs/avif.md#native-setup).
 
-The generator refuses to rewrite references if the Python version, platform,
-Pillow wheel hash, extension hash, or bundled codec versions differ from the
-lock file. A different wheel is a different oracle.
+## Documentation
 
-## Development
+- [Architecture and public contract](docs/architecture.md)
+- [Oracle, fixtures, tests, and coverage](docs/testing.md)
+- [AVIF support and portability boundary](docs/avif.md)
+- [Roadmap](docs/roadmap.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Third-party provenance](third_party/README.md)
 
-Before submitting a change, run:
+Current behavior belongs in the README, architecture reference, rustdoc, and
+testing contract. Planned work belongs only in the roadmap. Historical
+investigation logs remain available through Git history rather than the active
+documentation tree.
 
-```bash
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-cargo test --all-features --test coverage_matrix_tests
-cargo check --no-default-features
-python3 scripts/verify_third_party_licenses.py
-```
+## Support, contributing, and security
 
-Coverage work should first add manifest-backed Pillow fixtures when a missing
-path is public codec behavior. `cfg(coverage)` hooks are reserved for private
-state machines, generated helper states, or defensive limits that cannot be
-represented as a public Pillow fixture.
+Use [GitHub issues](https://github.com/appunni-m/image-slash-star/issues) for
+questions, non-sensitive bugs, and feature proposals. Include the commit,
+target, enabled features, smallest non-sensitive fixture, expected Pillow
+result, and actual Rust result.
 
-## Architecture
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing codecs, fixtures, or
+ported code. The repository requires strict Clippy, exact manifest parity,
+feature/target checks, complete retained coverage, and provenance updates.
 
-Each format owns its implementation under `src/codecs/<format>/`, with
-format-local encode and decode modules. Cargo features select those modules at
-compile time. Shared code is limited to image types and compression primitives
-that genuinely cross format boundaries.
+Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md). Do not publish exploit details or malicious
+fixtures in an issue.
 
-```
-&[u8]
-  ├─ detect_format()
-  ├─ decode()          → DecodedImage { dimensions, mode, palette, pixels }
-  └─ decode_sequence() → DecodedSequence { frames, timing, disposal, background }
+## License and attribution
 
-DecodedImage / DecodedSequence
-  └─ encode*()         → exact Pillow-observable container bytes
-```
+Original project code is available under your choice of Apache-2.0 or MIT.
+The combined distribution also includes source-derived portions under
+BSD-2-Clause, BSD-3-Clause, Zlib, IJG, and MIT-CMU terms.
 
-Transforms intrinsic to a codec—such as JPEG IDCT, PNG filtering, YUV/RGB
-sample reconstruction, and animation disposal needed to reproduce decoded
-frames—remain private implementation details. They do not constitute a general
-image-processing API. Container convenience behavior that transforms an
-arbitrary source raster is excluded: in particular, ICO encoding never creates
-smaller entries by resampling the input.
-
-The AVIF boundary is deliberately strict. A small repository-owned C bridge
-uses libavif 1.4.1 for container/color behavior, dav1d 1.5.3 for decoding, and
-libaom 3.13.2 for encoding. Unsafe Rust is isolated to one ownership wrapper;
-all other code remains under the crate-wide unsafe-code denial. Substituting a
-different encoder or version is rejected rather than treated as parity.
-
-## Fixtures
-
-Fixture inputs are generated from `manifest.yaml`. Generated references are
-stored under `tests/fixtures/outputs/` and are version-controlled because they
-define the byte contract.
-
-When adding or changing fixtures:
-
-- Add the public behavior to `manifest.yaml`.
-- Regenerate assets and oracle outputs with the pinned Python environment.
-- Keep the row only if Rust matches the exact Pillow status, metadata, pixels,
-  or encoded bytes required by the row.
-- Document non-fixture coverage work in `docs/coverage-branch-attack-plan.md`.
-
-## Contributing
-
-Start with `CONTRIBUTING.md`. The short version:
-
-- Keep default runtime codec execution pure Rust and do not add public image
-  processing.
-- Treat the fixed, opt-in native AVIF boundary as migration debt until a
-  portable in-tree AV1 implementation replaces it.
-- Keep Pillow as offline oracle tooling and native codec calls confined to
-  the AVIF feature.
-- Prefer manifest-driven fixtures over narrow implementation probes.
-- Do not weaken byte expectations, fixture metadata, or failure checks.
-- Run the parity gate before claiming correctness.
-
-Security issues should follow `SECURITY.md`.
-
-## License
-
-Original project code is available under your choice of
-[Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT). The crate as a combined
-distribution is also subject to BSD-2-Clause, BSD-3-Clause, Zlib, IJG, and
-MIT-CMU terms for ported, derived, and retained portions.
-[NOTICE.md](NOTICE.md) maps repository paths to those terms, and the
-[third-party provenance inventory](third_party/README.md) records exact
-versions, revisions, hashes, roles, and retained files.
-
-The portable AV1 implementation and optional native AVIF stack are also
-distributed with the [Alliance for Open Media Patent License 1.0](PATENTS).
-Keep that file with source distributions; follow its written-notice
-requirements when distributing an AV1 implementation in another form.
+[NOTICE.md](NOTICE.md) maps repository paths to applicable terms.
+[third_party/README.md](third_party/README.md) records exact upstream versions,
+revisions, hashes, roles, and retained texts. The root [PATENTS](PATENTS) file
+contains the Alliance for Open Media patent license required for AV1
+distribution.
 
 This software is based in part on the work of the Independent JPEG Group.
