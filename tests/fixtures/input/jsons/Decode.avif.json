@@ -710,6 +710,91 @@
       ]
     },
     {
+      "id": "portable_lossy_420_q99_token_2061",
+      "asset": "portable_lossy_420_q99_token_2061.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_token_2061.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_token_2988",
+      "asset": "portable_lossy_420_q99_token_2988.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_token_2988.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_token_7940",
+      "asset": "portable_lossy_420_q99_token_7940.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_token_7940.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_token_7764",
+      "asset": "portable_lossy_420_q99_token_7764.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_token_7764.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_token_2097724_masked_572",
+      "asset": "portable_lossy_420_q99_token_2097724_masked_572.avif",
+      "expect_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_token_2097724_masked_572.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossy_420_q99_eob_bin_control",
       "asset": "portable_lossy_420_q99_eob_bin_control.avif",
       "expect_error": true,

@@ -63,9 +63,10 @@ use token 15 with Golomb extensions zero and one; and gray 124 and 132 use
 Golomb extension nine and final token 24. Gray 123 and 133 extend the same
 DC-only class through final tokens 32 and 33. An exhaustive gray-0-through-255
 sweep proves the same coefficient rule from final token 8 through 1,047.
-Gray 0, 64, 122, 134, 192, and 255 retain its endpoints and interiors. A
-one-byte gray-zero mutation selects final token 1,048 as the adjacent
-non-portable control. Gray 128 changes the luma predictor and remains a
+Gray 0, 64, 122, 134, 192, and 255 retain its endpoints and interiors.
+Deterministic coded-tile mutations extend that same closed class through the
+ten-to-eleven-bit Golomb boundary, both coefficient clamps, and a non-clamped
+20-bit token-mask wrap. Gray 128 changes the luma predictor and remains a
 separate non-portable control.
 
 | Fixture | Source RGB | SHA-256 |
@@ -104,6 +105,11 @@ separate non-portable control.
 | `portable_lossy_420_q99_gray_255.avif` | `(255,255,255)` | `e1c3b423417b18795071054196ce1f95e6cf19a841a632c616ab3a96969d6e3f` |
 | `portable_lossy_420_q99_8x8_gray_255.avif` | `(255,255,255)` | `cf7660907939a12972c8ba2def48cb0b8b6014cc24bd75ab82cd0ffe1162f6c5` |
 | `portable_lossy_420_q99_token_1048_control.avif` | gray-zero AV1 item offset 28, `0x42` to `0x43` | `1097067dca85e499768a40e15232dce3602afbb1cabcbf485e8a14bf83e9bb73` |
+| `portable_lossy_420_q99_token_2061.avif` | final ten-bit Golomb token | `bc97b1f2ca96f6072239101e096e1b18fe87cb6ecf13b48188b37b52a50d761e` |
+| `portable_lossy_420_q99_token_2988.avif` | eleven-bit Golomb interior | `0153d56609f86e637159836af94d103523853c9002c92dc7411925d97a919250` |
+| `portable_lossy_420_q99_token_7940.avif` | positive coefficient clamp | `503ca52689395ec769b5453f7a30b4340f4234132338b1dd16e6a945ab34c37a` |
+| `portable_lossy_420_q99_token_7764.avif` | negative coefficient clamp | `15822dfb32fea6432adf1c7ddb9ea648dd6d2e028b12c9f117c6031420760367` |
+| `portable_lossy_420_q99_token_2097724_masked_572.avif` | raw token 2,097,724 masked to 572 | `d492c364655cad1f950bd37fbf63b1b9eecc42dff0bae3f95d2d15d8f0f86f63` |
 | `portable_lossy_420_q99_eob_bin_control.avif` | gray-126 AV1 item offset 24, `0x72` to `0x73` | `0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea` |
 | `portable_lossy_420_q99_eob_base_control.avif` | gray-126 AV1 item offset 25, `0xe1` to `0x1e` | `ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5` |
 
@@ -111,7 +117,7 @@ The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
 and Pillow RGB hashes are pinned in `docs/portable-avif-progress.md` and
 `tests/fixtures/outputs/av1_reconstruction.json`.
 
-The final two controls are selected by
+The EOB controls are selected by
 `scripts/explore_avif_sample_mutations.py`, which exhaustively replaces every
 AV1 item byte with every other byte value and retains only exact scalar syntax
 prefix matches. The EOB-bin mutation is a Pillow error fixture; the EOB-base
