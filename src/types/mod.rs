@@ -66,6 +66,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ] {
         let _ = ImagePalette::new(rgb, alpha);
     }
+    let palette =
+        ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage palette should be valid");
+    let _ = palette.len();
+    let _ = palette.is_empty();
 
     let errors = [
         ImageError::UnknownFormat,
@@ -485,17 +489,19 @@ impl ImageMode {
         }
     }
 
-    fn expected_bytes(self, width: u32, height: u32) -> Option<usize> {
+    fn expected_bytes(self, width: u32, height: u32) -> ImageResult<usize> {
         let width = width as usize;
         let height = height as usize;
         if self == Self::L1 {
-            return width.div_ceil(8).checked_mul(height);
+            return width
+                .div_ceil(8)
+                .checked_mul(height)
+                .ok_or(ImageError::Dimensions);
         }
-        #[cfg(target_pointer_width = "64")]
-        let pixels = width.saturating_mul(height);
-        #[cfg(not(target_pointer_width = "64"))]
-        let pixels = width.checked_mul(height)?;
-        pixels.checked_mul(usize::from(self.color_type().bytes_per_pixel()))
+        width
+            .checked_mul(height)
+            .and_then(|pixels| pixels.checked_mul(usize::from(self.color_type().bytes_per_pixel())))
+            .ok_or(ImageError::Dimensions)
     }
 }
 
@@ -511,12 +517,21 @@ pub struct ImagePalette {
 impl ImagePalette {
     /// Construct a palette when its table lengths are structurally valid.
     pub fn new(rgb: Vec<u8>, alpha: Vec<u8>) -> ImageResult<Self> {
-        let entries = rgb.len() / 3;
-        if rgb.is_empty() || !rgb.len().is_multiple_of(3) || entries > 256 || alpha.len() > entries
+        let palette = Self { rgb, alpha };
+        palette.validate()?;
+        Ok(palette)
+    }
+
+    fn validate(&self) -> ImageResult<()> {
+        let entries = self.rgb.len() / 3;
+        if self.rgb.is_empty()
+            || !self.rgb.len().is_multiple_of(3)
+            || entries > 256
+            || self.alpha.len() > entries
         {
             return Err(ImageError::Parameter("invalid indexed palette".to_owned()));
         }
-        Ok(Self { rgb, alpha })
+        Ok(())
     }
 
     /// Number of RGB entries in this palette.
@@ -583,10 +598,7 @@ impl DecodedImage {
 
     /// Verify dimensions, byte layout, mode, and palette invariants.
     pub fn validate(&self) -> ImageResult<()> {
-        let expected = self
-            .mode
-            .expected_bytes(self.width, self.height)
-            .ok_or(ImageError::Dimensions)?;
+        let expected = self.mode.expected_bytes(self.width, self.height)?;
         if self.width == 0 || self.height == 0 || self.pixels.len() != expected {
             return Err(ImageError::Dimensions);
         }
@@ -597,11 +609,11 @@ impl DecodedImage {
         }
         match &self.palette {
             Some(palette) if self.mode == ImageMode::P8 => {
-                if palette.is_empty()
-                    || self
-                        .pixels
-                        .iter()
-                        .any(|&index| usize::from(index) >= palette.len())
+                palette.validate()?;
+                if self
+                    .pixels
+                    .iter()
+                    .any(|&index| usize::from(index) >= palette.len())
                 {
                     return Err(ImageError::Parameter(
                         "palette index is outside the retained palette".to_owned(),

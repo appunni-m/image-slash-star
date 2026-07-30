@@ -48,6 +48,71 @@ def stable_error_message(error):
         str(error),
     )
 
+
+def decode_error_kind(detects_format, error):
+    """Map a Pillow decode/open failure to the canonical public error category."""
+    if not detects_format:
+        return "unknown_format"
+    message = stable_error_message(error)
+    qualified = f"{type(error).__module__}.{type(error).__name__}"
+    if qualified == "PIL.Image.DecompressionBombError" or message in {
+        "Invalid dimensions",
+        "Invalid tile dimensions",
+        "tile cannot extend outside image",
+    }:
+        return "dimensions"
+    if message.startswith("Unsupported "):
+        return "unsupported"
+    return "malformed"
+
+
+def encode_error_kind(row, error):
+    """Map a Pillow save failure using its manifest-declared caller input."""
+    params = row.get("params", {})
+    message = stable_error_message(error)
+    if "source_dimensions" in params:
+        return "dimensions"
+    if params.get("truncate_pixels"):
+        return "dimensions"
+    if (
+        "cannot write mode " in message
+        or "image has wrong mode" in message
+        or message == "'CMYK'"
+        or "encoder error" in message
+    ):
+        return "unsupported"
+    return "parameter"
+
+
+def pillow_detects_format(fmt_name, data):
+    """Apply the pinned Pillow plugin's public registration predicate."""
+    from PIL import (
+        AvifImagePlugin,
+        BmpImagePlugin,
+        CurImagePlugin,
+        GifImagePlugin,
+        IcoImagePlugin,
+        JpegImagePlugin,
+        PngImagePlugin,
+        TiffImagePlugin,
+        WebPImagePlugin,
+    )
+
+    prefix = data[:16]
+    if fmt_name == "ico":
+        return bool(IcoImagePlugin._accept(prefix) or CurImagePlugin._accept(prefix))
+    accepts = {
+        "jpeg": JpegImagePlugin._accept,
+        "png": PngImagePlugin._accept,
+        "gif": GifImagePlugin._accept,
+        "bmp": BmpImagePlugin._accept,
+        "tiff": TiffImagePlugin._accept,
+        "webp": WebPImagePlugin._accept,
+        "avif": AvifImagePlugin._accept,
+    }
+    return bool(accepts[fmt_name](prefix))
+
+
 def mode_name(img):
     m = {"L": "L8", "LA": "La8", "RGB": "Rgb8", "RGBA": "Rgba8", "1": "1", "P": "P"}
     return m.get(img.mode, img.mode)
@@ -78,6 +143,9 @@ def ensure_decode_row(matrix, fmt_name, case, asset_name):
                     "category": case["id"].split("_", 1)[0],
                     "description": case.get("description", ""),
                     "expect_error": bool(case.get("expect_error", False)),
+                    "expect_sequence_error": bool(
+                        case.get("expect_sequence_error", False)
+                    ),
                     "status": case.get("status", "active"),
                 }
             )
@@ -91,6 +159,7 @@ def ensure_decode_row(matrix, fmt_name, case, asset_name):
         "description": case.get("description", ""),
         "asset": asset_name,
         "expect_error": bool(case.get("expect_error", False)),
+        "expect_sequence_error": bool(case.get("expect_sequence_error", False)),
         "status": "active",
     }
     rows.append(row)
@@ -129,6 +198,9 @@ def sync_decode_rows(manifest, matrix):
                         "description": case.get("description", ""),
                         "asset": asset_name,
                         "expect_error": bool(case.get("expect_error", False)),
+                        "expect_sequence_error": bool(
+                            case.get("expect_sequence_error", False)
+                        ),
                         "status": case_status,
                     }
                 )
@@ -180,6 +252,8 @@ def encode_params(fmt, params):
         "alpha",
         "truncate_pixels",
         "source_dimensions",
+        "oversized_palette",
+        "palette_on_nonindexed",
         "encoded_only",
     ):
         take(source_property)
@@ -766,6 +840,19 @@ def preflight_decode_cases(manifest, target_format=None):
                 if pillow_error is not None:
                     failures.append(f"{case_name}: Pillow rejects active input: {pillow_error}")
                     continue
+                if case.get("expect_sequence_error"):
+                    try:
+                        with pillow_open_asset(path) as image:
+                            for index in range(image.n_frames):
+                                image.seek(index)
+                                image.load()
+                    except Exception:
+                        pass
+                    else:
+                        failures.append(
+                            f"{case_name}: Pillow accepts declared sequence error input"
+                        )
+                    continue
                 try:
                     data = path.read_bytes()
                     if fmt_name == "png":
@@ -843,6 +930,28 @@ def write_sequence_ref(row, image, fmt_name, asset_name):
     }
 
 
+def write_sequence_error_ref(row, image_path):
+    """Record a Pillow error that appears only while materializing later frames."""
+    row.pop("sequence", None)
+    try:
+        with pillow_open_asset(image_path) as image:
+            for index in range(image.n_frames):
+                image.seek(index)
+                image.load()
+    except Exception as error:
+        row["sequence_status"] = "error"
+        row["sequence_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
+        row["sequence_error_message"] = stable_error_message(error)
+        row["sequence_error_kind"] = decode_error_kind(
+            row["oracle_detects_format"], error
+        )
+    else:
+        row["sequence_status"] = "ok"
+        row.pop("sequence_error_type", None)
+        row.pop("sequence_error_message", None)
+        row.pop("sequence_error_kind", None)
+
+
 def clear_pixel_ref(row):
     row.pop("ref_sha256", None)
     row.pop("ref_path", None)
@@ -854,6 +963,25 @@ def clear_pixel_ref(row):
     row.pop("sequence", None)
 
 
+def write_inspect_ref(row, image_path):
+    """Record Pillow's lazy Image.open outcome without materializing pixels."""
+    try:
+        with pillow_open_asset(image_path):
+            pass
+    except Exception as error:
+        row["inspect_status"] = "error"
+        row["inspect_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
+        row["inspect_error_message"] = stable_error_message(error)
+        row["inspect_error_kind"] = decode_error_kind(
+            row["oracle_detects_format"], error
+        )
+    else:
+        row["inspect_status"] = "ok"
+        row.pop("inspect_error_type", None)
+        row.pop("inspect_error_message", None)
+        row.pop("inspect_error_kind", None)
+
+
 def write_verify_ref(row, image_path):
     """Record the pinned Pillow plugin's exact Image.verify outcome."""
     try:
@@ -863,10 +991,14 @@ def write_verify_ref(row, image_path):
         row["verify_status"] = "error"
         row["verify_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
         row["verify_error_message"] = stable_error_message(error)
+        row["verify_error_kind"] = decode_error_kind(
+            row["oracle_detects_format"], error
+        )
     else:
         row["verify_status"] = "ok"
         row.pop("verify_error_type", None)
         row.pop("verify_error_message", None)
+        row.pop("verify_error_kind", None)
 
 
 def clear_encoded_ref(row):
@@ -933,7 +1065,22 @@ def json_pillow_value(value):
 
 
 def describe_encode_call(fmt_name, row):
-    kwargs = encode_params(fmt_name, dict(row.get("params", {})))
+    try:
+        kwargs = encode_params(fmt_name, dict(row.get("params", {})))
+    except Exception as error:
+        if not row.get("expect_error"):
+            raise
+        return {
+            "open": f"tests/fixtures/input/images/{row['source_format']}/{row['source_asset']}",
+            "method": "manifest parameter adapter",
+            "format": fmt_pil(fmt_name),
+            "params": json_pillow_value(dict(row.get("params", {}))),
+            "error": {
+                "type": f"{type(error).__module__}.{type(error).__name__}",
+                "message": stable_error_message(error),
+            },
+            "roundtrip": None,
+        }
     animated = kwargs.pop("_manifest_animated", None)
     frame_count = kwargs.pop("_manifest_frames", None)
     preserve_duration = kwargs.pop("_manifest_preserve_duration", False)
@@ -973,6 +1120,10 @@ def describe_encode_call(fmt_name, row):
             "mode": "source mode",
             "size": source_dimensions,
         }
+    if row.get("params", {}).get("oversized_palette"):
+        call["source_transform"] = "PIL.Image.Image.putpalette(bytes(771))"
+    if row.get("params", {}).get("palette_on_nonindexed"):
+        call["source_transform"] = "PIL.Image.Image.putpalette(bytes(768))"
     return call
 
 
@@ -1070,10 +1221,12 @@ def update_summary(matrix):
     }
 
 
-def validate_generated_outputs(matrix):
+def validate_generated_outputs(matrix, target_format=None):
     """Require complete evidence for every active row and none for planned rows."""
     failures = []
     for fmt_name, fmt_data in matrix.get("formats", {}).items():
+        if target_format and fmt_name != target_format:
+            continue
         for row in fmt_data.get("decode", []):
             case_name = f"{fmt_name}/{row['id']}"
             if row.get("status") == "planned":
@@ -1084,11 +1237,23 @@ def validate_generated_outputs(matrix):
                 continue
             if row.get("verify_status") not in {"ok", "error"}:
                 failures.append(f"{case_name}: active decode row lacks Pillow verify evidence")
-            if row.get("verify_status") == "error" and not row.get("verify_error_type"):
-                failures.append(f"{case_name}: verify error lacks Pillow exception evidence")
+            if row.get("inspect_status") not in {"ok", "error"}:
+                failures.append(f"{case_name}: active decode row lacks Pillow inspect evidence")
+            if row.get("inspect_status") == "error" and (
+                not row.get("inspect_error_type") or not row.get("inspect_error_kind")
+            ):
+                failures.append(f"{case_name}: inspect error lacks Pillow exception mapping")
+            if row.get("verify_status") == "error" and (
+                not row.get("verify_error_type") or not row.get("verify_error_kind")
+            ):
+                failures.append(f"{case_name}: verify error lacks Pillow exception mapping")
             if row.get("expect_error"):
-                if row.get("oracle_status") != "error" or not row.get("oracle_error_type"):
-                    failures.append(f"{case_name}: error row lacks Pillow exception evidence")
+                if (
+                    row.get("oracle_status") != "error"
+                    or not row.get("oracle_error_type")
+                    or not row.get("oracle_error_kind")
+                ):
+                    failures.append(f"{case_name}: error row lacks Pillow exception mapping")
                 continue
             reference = row.get("ref_path")
             if not reference:
@@ -1097,6 +1262,20 @@ def validate_generated_outputs(matrix):
             path = ROOT / reference
             if not path.exists() or path.stat().st_size != row.get("ref_bytes"):
                 failures.append(f"{case_name}: decode pixel evidence is missing or has wrong size")
+            if row.get("expect_sequence_error"):
+                if (
+                    row.get("sequence_status") != "error"
+                    or not row.get("sequence_error_type")
+                    or not row.get("sequence_error_kind")
+                ):
+                    failures.append(
+                        f"{case_name}: sequence error row lacks Pillow exception mapping"
+                    )
+                if row.get("sequence"):
+                    failures.append(
+                        f"{case_name}: sequence error row retains successful frame evidence"
+                    )
+                continue
             sequence = row.get("sequence")
             if sequence:
                 frames = sequence.get("frames", [])
@@ -1121,8 +1300,12 @@ def validate_generated_outputs(matrix):
                     failures.append(f"{case_name}: planned encode row retains oracle evidence")
                 continue
             if row.get("expect_error"):
-                if row.get("oracle_status") != "error" or not row.get("oracle_error_type"):
-                    failures.append(f"{case_name}: error row lacks Pillow exception evidence")
+                if (
+                    row.get("oracle_status") != "error"
+                    or not row.get("oracle_error_type")
+                    or not row.get("oracle_error_kind")
+                ):
+                    failures.append(f"{case_name}: error row lacks Pillow exception mapping")
                 continue
             evidence = [("encoded_ref_path", "encoded_ref_bytes", "encoded bytes")]
             if not row.get("params", {}).get("encoded_only"):
@@ -1174,6 +1357,8 @@ def preflight_encode_cases(matrix, target_format=None):
                     validate_source_params(image, row.get("params", {}), fmt_name)
                     prepare_multiframe_call(image, kwargs)
             except Exception as error:
+                if row.get("expect_error"):
+                    continue
                 failures.append(f"{case_name}: {error}")
     if failures:
         detail = "\n  - ".join(failures)
@@ -1197,10 +1382,19 @@ def generate_decode(manifest, matrix, target_format=None):
                     row.pop("verify_status", None)
                     row.pop("verify_error_type", None)
                     row.pop("verify_error_message", None)
+                    row.pop("verify_error_kind", None)
+                    row.pop("inspect_status", None)
+                    row.pop("inspect_error_type", None)
+                    row.pop("inspect_error_message", None)
+                    row.pop("inspect_error_kind", None)
                     continue
                 img_path = ASSETS_DIR / fmt_name / asset_name
                 if not img_path.exists():
                     continue
+                row["oracle_detects_format"] = pillow_detects_format(
+                    fmt_name, img_path.read_bytes()
+                )
+                write_inspect_ref(row, img_path)
                 write_verify_ref(row, img_path)
                 if row.get("expect_error"):
                     clear_pixel_ref(row)
@@ -1215,6 +1409,9 @@ def generate_decode(manifest, matrix, target_format=None):
                             f"{type(error).__module__}.{type(error).__name__}"
                         )
                         row["oracle_error_message"] = stable_error_message(error)
+                        row["oracle_error_kind"] = decode_error_kind(
+                            row["oracle_detects_format"], error
+                        )
                     continue
                 try:
                     from PIL import Image
@@ -1225,8 +1422,16 @@ def generate_decode(manifest, matrix, target_format=None):
                     row["oracle_status"] = "ok"
                     row.pop("oracle_error_type", None)
                     row.pop("oracle_error_message", None)
+                    row.pop("oracle_error_kind", None)
                     write_pixel_ref(row, img, ref_name)
-                    write_sequence_ref(row, img, fmt_name, asset_name)
+                    if row.get("expect_sequence_error"):
+                        write_sequence_error_ref(row, img_path)
+                    else:
+                        row.pop("sequence_status", None)
+                        row.pop("sequence_error_type", None)
+                        row.pop("sequence_error_message", None)
+                        row.pop("sequence_error_kind", None)
+                        write_sequence_ref(row, img, fmt_name, asset_name)
                     generated += 1
                 except Exception as e:
                     print(f"  SKIP decode {asset_name}: {e}", file=sys.stderr)
@@ -1239,6 +1444,9 @@ def generate_decode(manifest, matrix, target_format=None):
                 "id": r["id"],
                 "asset": r["asset"],
                 "expect_error": bool(r.get("expect_error", False)),
+                "expect_sequence_error": bool(
+                    r.get("expect_sequence_error", False)
+                ),
                 "pillow_call": {
                     "open": f"tests/fixtures/input/images/{fmt_name}/{r['asset']}",
                     "operations": ["PIL.Image.open", "load", "tobytes"],
@@ -1262,15 +1470,25 @@ def generate_decode(manifest, matrix, target_format=None):
                 "status": r.get("oracle_status"),
                 "error_type": r.get("oracle_error_type"),
                 "error_message": r.get("oracle_error_message"),
+                "error_kind": r.get("oracle_error_kind"),
+                "inspect_status": r.get("inspect_status"),
+                "inspect_error_type": r.get("inspect_error_type"),
+                "inspect_error_message": r.get("inspect_error_message"),
+                "inspect_error_kind": r.get("inspect_error_kind"),
                 "verify_status": r.get("verify_status"),
                 "verify_error_type": r.get("verify_error_type"),
                 "verify_error_message": r.get("verify_error_message"),
+                "verify_error_kind": r.get("verify_error_kind"),
                 "ref_path": r.get("ref_path"),
                 "ref_bytes": r.get("ref_bytes"),
                 "ref_mode": r.get("ref_mode"),
                 "ref_size": r.get("ref_size"),
                 "ref_frame_count": r.get("ref_frame_count"),
                 "ref_is_animated": r.get("ref_is_animated"),
+                "sequence_status": r.get("sequence_status"),
+                "sequence_error_type": r.get("sequence_error_type"),
+                "sequence_error_message": r.get("sequence_error_message"),
+                "sequence_error_kind": r.get("sequence_error_kind"),
                 **({"sequence": r["sequence"]} if r.get("sequence") else {}),
             }
             for r in dec_cases
@@ -1306,6 +1524,7 @@ def generate_encode(manifest, matrix, target_format=None):
             row.pop("oracle_status", None)
             row.pop("oracle_error_type", None)
             row.pop("oracle_error_message", None)
+            row.pop("oracle_error_kind", None)
             src_fmt = row.get("source_format") or fmt_name
             src_asset = row.get("source_asset")
             if not src_asset:
@@ -1323,6 +1542,10 @@ def generate_encode(manifest, matrix, target_format=None):
                     img = Image.frombytes(img.mode, img.size, img.tobytes()[:-1])
                 if source_dimensions := params.get("source_dimensions"):
                     img = Image.new(img.mode, tuple(source_dimensions))
+                if params.get("oversized_palette"):
+                    img.putpalette(bytes(771))
+                if params.get("palette_on_nonindexed"):
+                    img.putpalette(bytes(768))
                 image_to_save, kwargs = prepare_multiframe_call(img, kwargs)
                 buf = io.BytesIO()
                 image_to_save.save(buf, format=fmt_pil(fmt_name), **kwargs)
@@ -1354,6 +1577,7 @@ def generate_encode(manifest, matrix, target_format=None):
                     row["oracle_status"] = "error"
                     row["oracle_error_type"] = f"{type(e).__module__}.{type(e).__name__}"
                     row["oracle_error_message"] = stable_error_message(e)
+                    row["oracle_error_kind"] = encode_error_kind(row, e)
                     continue
                 # Lossy formats or unsupported params — skip ref, just verify dimensions
                 print(f"  SKIP encode {row.get('id')}: {e}", file=sys.stderr)
@@ -1395,6 +1619,7 @@ def generate_encode(manifest, matrix, target_format=None):
                             "oracle_status": r.get("oracle_status"),
                             "error_type": r.get("oracle_error_type"),
                             "error_message": r.get("oracle_error_message"),
+                            "error_kind": r.get("oracle_error_kind"),
                         }
                         if r.get("expect_error")
                         else {}
@@ -1434,7 +1659,7 @@ def generate(target_format=None):
     print(f"Encode: {n_enc} refs")
     matrix.pop("operations", None)
     update_summary(matrix)
-    validate_generated_outputs(matrix)
+    validate_generated_outputs(matrix, target_format)
 
     # Save matrix
     MATRIX_PATH.write_text(json.dumps(matrix, indent=2))

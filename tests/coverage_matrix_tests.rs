@@ -83,18 +83,30 @@ struct DecodeRow {
     asset: Option<String>,
     asset_path: Option<String>,
     expect_error: Option<bool>,
+    expect_sequence_error: bool,
+    oracle_detects_format: bool,
     oracle_status: Option<String>,
     oracle_error_type: Option<String>,
     oracle_error_message: Option<String>,
+    oracle_error_kind: Option<String>,
+    inspect_status: String,
+    inspect_error_type: Option<String>,
+    inspect_error_message: Option<String>,
+    inspect_error_kind: Option<String>,
     verify_status: String,
     verify_error_type: Option<String>,
     verify_error_message: Option<String>,
+    verify_error_kind: Option<String>,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
     ref_frame_count: Option<u32>,
     ref_is_animated: Option<bool>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
+    sequence_status: Option<String>,
+    sequence_error_type: Option<String>,
+    sequence_error_message: Option<String>,
+    sequence_error_kind: Option<String>,
     sequence: Option<SequenceParityRef>,
 }
 
@@ -127,6 +139,7 @@ struct EncodeRow {
     oracle_status: Option<String>,
     oracle_error_type: Option<String>,
     oracle_error_message: Option<String>,
+    oracle_error_kind: Option<String>,
     source_format: Option<String>,
     source_asset: Option<String>,
     ref_bytes: Option<usize>,
@@ -301,18 +314,30 @@ impl FromJson for DecodeRow {
             asset: object.take("asset")?,
             asset_path: object.take("asset_path")?,
             expect_error: object.take("expect_error")?,
+            expect_sequence_error: object.take_or_default("expect_sequence_error")?,
+            oracle_detects_format: object.take("oracle_detects_format")?,
             oracle_status: object.take("oracle_status")?,
             oracle_error_type: object.take("oracle_error_type")?,
             oracle_error_message: object.take("oracle_error_message")?,
+            oracle_error_kind: object.take("oracle_error_kind")?,
+            inspect_status: object.take("inspect_status")?,
+            inspect_error_type: object.take("inspect_error_type")?,
+            inspect_error_message: object.take("inspect_error_message")?,
+            inspect_error_kind: object.take("inspect_error_kind")?,
             verify_status: object.take("verify_status")?,
             verify_error_type: object.take("verify_error_type")?,
             verify_error_message: object.take("verify_error_message")?,
+            verify_error_kind: object.take("verify_error_kind")?,
             ref_mode: object.take("ref_mode")?,
             ref_size: object.take("ref_size")?,
             ref_frame_count: object.take("ref_frame_count")?,
             ref_is_animated: object.take("ref_is_animated")?,
             ref_path: object.take("ref_path")?,
             ref_bytes: object.take("ref_bytes")?,
+            sequence_status: object.take("sequence_status")?,
+            sequence_error_type: object.take("sequence_error_type")?,
+            sequence_error_message: object.take("sequence_error_message")?,
+            sequence_error_kind: object.take("sequence_error_kind")?,
             sequence: object.take("sequence")?,
         })
     }
@@ -342,6 +367,7 @@ impl FromJson for EncodeRow {
             oracle_status: object.take("oracle_status")?,
             oracle_error_type: object.take("oracle_error_type")?,
             oracle_error_message: object.take("oracle_error_message")?,
+            oracle_error_kind: object.take("oracle_error_kind")?,
             source_format: object.take("source_format")?,
             source_asset: object.take("source_asset")?,
             ref_bytes: object.take("ref_bytes")?,
@@ -496,7 +522,12 @@ fn option_text(value: &Value) -> String {
 fn extra_encode_options(params: &HashMap<String, Value>) -> HashMap<String, String> {
     params
         .iter()
-        .filter(|(key, _)| key.as_str() != "advanced")
+        .filter(|(key, _)| {
+            !matches!(
+                key.as_str(),
+                "advanced" | "oversized_palette" | "palette_on_nonindexed"
+            )
+        })
         .map(|(key, value)| (key.clone(), option_text(value)))
         .collect()
 }
@@ -1372,6 +1403,25 @@ fn assert_pixel_parity(
 }
 
 fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+    if row.expect_sequence_error {
+        let expected_format = format_from_name(&row.format)
+            .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+        let actual = img::decode_sequence(data);
+        if row.sequence_status.as_deref() == Some("error")
+            && result_matches_oracle(
+                &actual,
+                "error",
+                row.sequence_error_kind.as_deref(),
+                expected_format,
+            )
+        {
+            return Ok(());
+        }
+        return Err(format!(
+            "sequence error differs from Pillow ({actual:?} versus {:?} {:?}: {:?})",
+            row.sequence_status, row.sequence_error_type, row.sequence_error_message
+        ));
+    }
     let Some(expected) = &row.sequence else {
         return Ok(());
     };
@@ -1431,6 +1481,42 @@ fn format_from_name(format: &str) -> Option<img::ImageFormat> {
     img::ImageFormat::from_name(format).ok()
 }
 
+fn error_matches_kind(
+    error: &img::ImageError,
+    expected_kind: Option<&str>,
+    expected_format: img::ImageFormat,
+) -> bool {
+    match (expected_kind, error) {
+        (Some("unknown_format"), img::ImageError::UnknownFormat) => true,
+        (Some("malformed"), img::ImageError::Malformed { format: actual, .. }) => {
+            *actual == expected_format
+        }
+        (
+            Some("unsupported"),
+            img::ImageError::Unsupported {
+                format: Some(actual),
+                ..
+            },
+        ) => *actual == expected_format,
+        (Some("dimensions"), img::ImageError::Dimensions)
+        | (Some("parameter"), img::ImageError::Parameter(_)) => true,
+        _ => false,
+    }
+}
+
+fn result_matches_oracle<T>(
+    result: &img::ImageResult<T>,
+    status: &str,
+    error_kind: Option<&str>,
+    expected_format: img::ImageFormat,
+) -> bool {
+    match (status, result) {
+        ("ok", Ok(_)) => true,
+        ("error", Err(error)) => error_matches_kind(error, error_kind, expected_format),
+        _ => false,
+    }
+}
+
 #[test]
 fn test_decode_matrix() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -1483,6 +1569,44 @@ fn test_decode_matrix() {
                 }
             };
 
+            let expected_format = require_some(
+                format_from_name(fmt_name),
+                "manifest format must be supported",
+            );
+            let detected = img::detect_format(&data);
+            let detection_matches_oracle = if row.oracle_detects_format {
+                detected == Ok(expected_format)
+            } else {
+                detected == Err(img::ImageError::UnknownFormat)
+            };
+            if !detection_matches_oracle {
+                eprintln!(
+                    "  FAIL [{}]: detection result does not match Pillow ({detected:?})",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
+
+            let inspected = img::inspect(&data);
+            if !result_matches_oracle(
+                &inspected,
+                &row.inspect_status,
+                row.inspect_error_kind.as_deref(),
+                expected_format,
+            ) {
+                eprintln!(
+                    "  FAIL [{}]: inspect result does not match Pillow ({:?} versus {} {:?}: {:?})",
+                    row.id,
+                    inspected,
+                    row.inspect_status,
+                    row.inspect_error_type,
+                    row.inspect_error_message
+                );
+                failed += 1;
+                continue;
+            }
+
             let decoded = img::decode(&data);
             let verify_result =
                 img::EncodedImage::new(Arc::<[u8]>::from(data.clone())).and_then(|source| {
@@ -1493,21 +1617,20 @@ fn test_decode_matrix() {
                     );
                     result
                 });
-            let verify_matches_oracle = match row.verify_status.as_str() {
-                "ok" => verify_result.is_ok(),
-                "error" => {
-                    row.verify_error_type
-                        .as_deref()
-                        .is_some_and(|kind| !kind.is_empty())
-                        && row.verify_error_message.as_deref().is_some()
-                        && verify_result.is_err()
-                }
-                _ => false,
-            };
+            let verify_matches_oracle = result_matches_oracle(
+                &verify_result,
+                &row.verify_status,
+                row.verify_error_kind.as_deref(),
+                expected_format,
+            );
             if !verify_matches_oracle {
                 eprintln!(
-                    "  FAIL [{}]: verify result does not match Pillow ({:?} versus {})",
-                    row.id, verify_result, row.verify_status
+                    "  FAIL [{}]: verify result does not match Pillow ({:?} versus {} {:?}: {:?})",
+                    row.id,
+                    verify_result,
+                    row.verify_status,
+                    row.verify_error_type,
+                    row.verify_error_message
                 );
                 failed += 1;
                 continue;
@@ -1515,6 +1638,7 @@ fn test_decode_matrix() {
             if row.expect_error.unwrap_or(false) {
                 if row.oracle_status.as_deref() != Some("error")
                     || row.oracle_error_type.as_deref().is_none_or(str::is_empty)
+                    || row.oracle_error_kind.as_deref().is_none_or(str::is_empty)
                 {
                     eprintln!(
                         "  FAIL [{}]: error fixture lacks Pillow oracle type/status ({:?}: {:?})",
@@ -1523,59 +1647,50 @@ fn test_decode_matrix() {
                     failed += 1;
                     continue;
                 }
-                if matches!(
-                    fmt_name.as_str(),
-                    "png" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "ico" | "avif"
-                ) {
-                    let _ = img::inspect(&data);
-                }
                 let sequence_rejected = match fmt_name.as_str() {
-                    "gif" | "webp" | "avif" => match img::decode_sequence(&data) {
-                        Err(img::ImageError::UnknownFormat) => {
-                            img::detect_format(&data) == Err(img::ImageError::UnknownFormat)
-                        }
-                        Err(img::ImageError::Malformed { format, .. }) => {
-                            format_from_name(fmt_name) == Some(format)
-                        }
-                        _ => false,
-                    },
+                    "gif" | "webp" | "avif" => result_matches_oracle(
+                        &img::decode_sequence(&data),
+                        "error",
+                        row.oracle_error_kind.as_deref(),
+                        expected_format,
+                    ),
                     _ => true,
                 };
-                let expected_format = require_some(
-                    format_from_name(fmt_name),
-                    "manifest format must be supported",
+                let structured_error = result_matches_oracle(
+                    &decoded,
+                    "error",
+                    row.oracle_error_kind.as_deref(),
+                    expected_format,
                 );
-                let structured_error = match img::detect_format(&data) {
-                    Err(img::ImageError::UnknownFormat) => {
-                        matches!(decoded, Err(img::ImageError::UnknownFormat))
-                    }
-                    Ok(format) => {
-                        format == expected_format
-                            && matches!(
-                                decoded,
-                                Err(img::ImageError::Malformed {
-                                    format: error_format,
-                                    ..
-                                }) if error_format == expected_format
-                            )
-                    }
-                    Err(_) => false,
-                };
                 let source_error_is_stable =
                     match img::EncodedImage::new(Arc::<[u8]>::from(data.clone())) {
-                        Err(error) => img::inspect(&data) == Err(error),
+                        Err(error) => {
+                            row.inspect_status == "error"
+                                && error_matches_kind(
+                                    &error,
+                                    row.inspect_error_kind.as_deref(),
+                                    expected_format,
+                                )
+                                && img::inspect(&data) == Err(error)
+                        }
                         Ok(source) => {
                             let clone = source.clone();
                             let verified = source.verify();
                             let first = source.decode();
                             let second = clone.decode();
-                            let verify_is_expected = match row.verify_status.as_str() {
-                                "ok" => verified.is_ok(),
-                                "error" => verified.is_err(),
-                                _ => false,
-                            };
+                            let verify_is_expected = result_matches_oracle(
+                                &verified,
+                                &row.verify_status,
+                                row.verify_error_kind.as_deref(),
+                                expected_format,
+                            );
                             verify_is_expected
-                                && first.is_err()
+                                && result_matches_oracle(
+                                    &first,
+                                    "error",
+                                    row.oracle_error_kind.as_deref(),
+                                    expected_format,
+                                )
                                 && first == second
                                 && !source.is_decoded()
                         }
@@ -1898,7 +2013,13 @@ fn test_encode_matrix() {
             );
             let mut decoded_owned = row
                 .params
-                .contains_key("second_frame_mode")
+                .keys()
+                .any(|key| {
+                    matches!(
+                        key.as_str(),
+                        "second_frame_mode" | "oversized_palette" | "palette_on_nonindexed"
+                    )
+                })
                 .then(|| cached_decoded.clone());
             if let Some(decoded) = decoded_owned.as_mut()
                 && row
@@ -1924,6 +2045,34 @@ fn test_encode_matrix() {
                 frame.image.color = img::ColorType::Cmyk8;
                 frame.image.mode = img::ImageMode::Cmyk8;
                 frame.image.palette = None;
+            }
+            if let Some(decoded) = decoded_owned.as_mut()
+                && row.params.get("oversized_palette").and_then(Value::as_bool) == Some(true)
+            {
+                let frame = require_some(
+                    decoded.frames.get_mut(0),
+                    "palette operation requires a first source frame",
+                );
+                frame.image.palette = Some(img::ImagePalette {
+                    rgb: vec![0; 771],
+                    alpha: Vec::new(),
+                });
+            }
+            if let Some(decoded) = decoded_owned.as_mut()
+                && row
+                    .params
+                    .get("palette_on_nonindexed")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+            {
+                let frame = require_some(
+                    decoded.frames.get_mut(0),
+                    "palette operation requires a first source frame",
+                );
+                frame.image.palette = Some(img::ImagePalette {
+                    rgb: vec![0; 768],
+                    alpha: Vec::new(),
+                });
             }
             let decoded = decoded_owned.as_ref().unwrap_or(cached_decoded);
 
@@ -2017,8 +2166,19 @@ fn test_encode_matrix() {
                     && row
                         .oracle_error_type
                         .as_deref()
+                        .is_some_and(|value| !value.is_empty())
+                    && row
+                        .oracle_error_kind
+                        .as_deref()
                         .is_some_and(|value| !value.is_empty());
-                if encoded.is_err() && fixture_has_oracle_error {
+                if fixture_has_oracle_error
+                    && result_matches_oracle(
+                        &encoded,
+                        "error",
+                        row.oracle_error_kind.as_deref(),
+                        format,
+                    )
+                {
                     eprintln!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
@@ -2354,7 +2514,11 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             ),
             "portable AVIF fixture must be readable",
         );
-        let actual = img::__coverage_av1_reconstruction(&input).unwrap_or_else(|| {
+        let actual = require_ok(
+            img::__coverage_av1_reconstruction(&input),
+            "production AV1 reconstruction validation must succeed",
+        )
+        .unwrap_or_else(|| {
             panic!(
                 "production AV1 path must retain the reconstructed first leaf for {}",
                 case.fixture
@@ -3099,8 +3263,11 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         ),
         "masked-token AVIF fixture must be readable",
     );
-    let masked_trace = img::__coverage_av1_reconstruction(&masked_input)
-        .expect("masked-token AVIF must retain its portable reconstruction");
+    let masked_trace = require_ok(
+        img::__coverage_av1_reconstruction(&masked_input),
+        "masked-token AVIF reconstruction validation must succeed",
+    )
+    .expect("masked-token AVIF must retain its portable reconstruction");
     assert_eq!((masked_trace.width, masked_trace.height), (4, 4));
     assert_eq!(masked_trace.planes[0], vec![199; 16]);
     assert_eq!(masked_trace.planes[1], vec![128; 4]);
@@ -3142,7 +3309,11 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "non-portable AVIF fixture must be readable",
         );
         assert!(
-            img::__coverage_av1_reconstruction(&input).is_none(),
+            require_ok(
+                img::__coverage_av1_reconstruction(&input),
+                "non-portable AVIF reconstruction validation must succeed",
+            )
+            .is_none(),
             "{fixture} must not be classified as the closed portable still"
         );
     }

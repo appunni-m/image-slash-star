@@ -16,6 +16,7 @@
       "id": "single_icon",
       "asset": "single.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/single.ico",
         "operations": [
@@ -33,6 +34,7 @@
       "id": "multi_res",
       "asset": "multi.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/multi.ico",
         "operations": [
@@ -50,6 +52,7 @@
       "id": "multi_res_multi_descending",
       "asset": "multi_descending.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/multi_descending.ico",
         "operations": [
@@ -67,6 +70,7 @@
       "id": "png_entry",
       "asset": "png_entry.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/png_entry.ico",
         "operations": [
@@ -84,6 +88,7 @@
       "id": "bmp_entry",
       "asset": "bmp_entry.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_entry.ico",
         "operations": [
@@ -101,6 +106,7 @@
       "id": "bmp_depths",
       "asset": "bmp_1bit.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_1bit.ico",
         "operations": [
@@ -118,6 +124,7 @@
       "id": "bmp_depths_bmp_4bit",
       "asset": "bmp_4bit.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_4bit.ico",
         "operations": [
@@ -135,6 +142,7 @@
       "id": "bmp_depths_bmp_8bit",
       "asset": "bmp_8bit.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_8bit.ico",
         "operations": [
@@ -152,6 +160,7 @@
       "id": "bmp_depths_bmp_32bit",
       "asset": "bmp_32bit.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_32bit.ico",
         "operations": [
@@ -169,6 +178,7 @@
       "id": "bmp_default_palette",
       "asset": "bmp_default_palette.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_default_palette.ico",
         "operations": [
@@ -186,6 +196,7 @@
       "id": "bmp_mask_transparency",
       "asset": "bmp_24bit_transparent.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_24bit_transparent.ico",
         "operations": [
@@ -203,8 +214,27 @@
       "id": "bmp_odd_width",
       "asset": "bmp_1bit_odd.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_1bit_odd.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "bmp_short_palette_leniency",
+      "asset": "bmp_8bit_short_palette.ico",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_8bit_short_palette.ico",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -220,6 +250,7 @@
       "id": "cursor",
       "asset": "cursor.cur",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor.cur",
         "operations": [
@@ -237,6 +268,7 @@
       "id": "cursor_cursor_default_palette",
       "asset": "cursor_default_palette.cur",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_default_palette.cur",
         "operations": [
@@ -254,6 +286,7 @@
       "id": "cursor_cursor_24bit",
       "asset": "cursor_24bit.cur",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_24bit.cur",
         "operations": [
@@ -271,6 +304,7 @@
       "id": "size_16x16",
       "asset": "16x16.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/16x16.ico",
         "operations": [
@@ -288,6 +322,7 @@
       "id": "size_256x256",
       "asset": "256x256.ico",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/256x256.ico",
         "operations": [
@@ -305,6 +340,7 @@
       "id": "error_malformed",
       "asset": "empty.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/empty.ico",
         "operations": [
@@ -322,6 +358,7 @@
       "id": "error_malformed_invalid_reserved",
       "asset": "invalid_reserved.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/invalid_reserved.ico",
         "operations": [
@@ -339,6 +376,7 @@
       "id": "error_malformed_invalid_type",
       "asset": "invalid_type.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/invalid_type.ico",
         "operations": [
@@ -356,6 +394,7 @@
       "id": "error_malformed_zero_entries",
       "asset": "zero_entries.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/zero_entries.ico",
         "operations": [
@@ -373,6 +412,7 @@
       "id": "error_malformed_truncated_directory",
       "asset": "truncated_directory.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/truncated_directory.ico",
         "operations": [
@@ -390,6 +430,7 @@
       "id": "error_malformed_zero_entry",
       "asset": "zero_entry.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/zero_entry.ico",
         "operations": [
@@ -407,6 +448,7 @@
       "id": "error_malformed_truncated_entry",
       "asset": "truncated_entry.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/truncated_entry.ico",
         "operations": [
@@ -424,6 +466,7 @@
       "id": "error_malformed_short_dib",
       "asset": "short_dib.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/short_dib.ico",
         "operations": [
@@ -441,6 +484,7 @@
       "id": "error_malformed_bmp_32bit_truncated_pixels",
       "asset": "bmp_32bit_truncated_pixels.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_32bit_truncated_pixels.ico",
         "operations": [
@@ -458,6 +502,7 @@
       "id": "error_malformed_bmp_24bit_truncated_pixels",
       "asset": "bmp_24bit_truncated_pixels.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_24bit_truncated_pixels.ico",
         "operations": [
@@ -475,6 +520,7 @@
       "id": "error_malformed_bmp_8bit_truncated_pixels",
       "asset": "bmp_8bit_truncated_pixels.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_8bit_truncated_pixels.ico",
         "operations": [
@@ -492,6 +538,7 @@
       "id": "error_malformed_bmp_4bit_truncated_pixels",
       "asset": "bmp_4bit_truncated_pixels.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_4bit_truncated_pixels.ico",
         "operations": [
@@ -509,8 +556,63 @@
       "id": "error_malformed_bmp_1bit_truncated_pixels",
       "asset": "bmp_1bit_truncated_pixels.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/bmp_1bit_truncated_pixels.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_bmp_1bit_short_palette",
+      "asset": "bmp_1bit_short_palette.ico",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_1bit_short_palette.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_bmp_4bit_short_palette_high",
+      "asset": "bmp_4bit_short_palette_high.ico",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_4bit_short_palette_high.ico",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_bmp_4bit_short_palette_low",
+      "asset": "bmp_4bit_short_palette_low.ico",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/ico/bmp_4bit_short_palette_low.ico",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -526,6 +628,7 @@
       "id": "error_malformed_zero_width",
       "asset": "zero_width.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/zero_width.ico",
         "operations": [
@@ -543,6 +646,7 @@
       "id": "error_malformed_zero_height",
       "asset": "zero_height.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/zero_height.ico",
         "operations": [
@@ -560,6 +664,7 @@
       "id": "error_malformed_oversized_width",
       "asset": "oversized_width.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/oversized_width.ico",
         "operations": [
@@ -577,6 +682,7 @@
       "id": "error_malformed_oversized_height",
       "asset": "oversized_height.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/oversized_height.ico",
         "operations": [
@@ -594,6 +700,7 @@
       "id": "error_malformed_unsupported_bpp",
       "asset": "unsupported_bpp.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/unsupported_bpp.ico",
         "operations": [
@@ -611,6 +718,7 @@
       "id": "error_malformed_cursor_short_header",
       "asset": "cursor_short_header.cur",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_short_header.cur",
         "operations": [
@@ -628,6 +736,7 @@
       "id": "error_malformed_cursor_header_oob",
       "asset": "cursor_header_oob.cur",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_header_oob.cur",
         "operations": [
@@ -645,6 +754,7 @@
       "id": "error_malformed_cursor_truncated_dib",
       "asset": "cursor_truncated_dib.cur",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_truncated_dib.cur",
         "operations": [
@@ -662,6 +772,7 @@
       "id": "error_malformed_cursor_palette_overflow",
       "asset": "cursor_palette_overflow.cur",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/cursor_palette_overflow.cur",
         "operations": [
@@ -679,6 +790,7 @@
       "id": "error_malformed_png_short_header",
       "asset": "png_short_header.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/png_short_header.ico",
         "operations": [
@@ -696,6 +808,7 @@
       "id": "error_malformed_zero_offset",
       "asset": "zero_offset.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/zero_offset.ico",
         "operations": [
@@ -713,6 +826,7 @@
       "id": "error_malformed_too_many_entries",
       "asset": "too_many_entries.ico",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/ico/too_many_entries.ico",
         "operations": [

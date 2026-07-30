@@ -3,6 +3,7 @@
 //! Frames retain palette indices, palette tables, timing, offsets, disposal,
 //! and loop metadata required for deterministic re-encoding.
 
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
     ImagePalette,
@@ -12,23 +13,23 @@ const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
 const TRAILER: u8 = 0x3b;
 const MAX_LZW_CODE: usize = 4096;
+const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Decode the first image frame in a GIF87a or GIF89a stream.
 ///
-pub fn decode(data: &[u8]) -> Option<DecodedImage> {
-    decode_sequence(data)?
-        .frames
-        .into_iter()
-        .next()
-        .map(|frame| frame.image)
+pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+    let mut sequence = decode_sequence(data)?;
+    // `decode_sequence` rejects a GIF without an image descriptor before
+    // constructing its return value, so the first frame is a local invariant.
+    Ok(sequence.frames.remove(0).image)
 }
 
 /// Decode every image descriptor and its presentation metadata.
-pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
+pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
     let mut input = Input::new(data);
     let signature = input.read_bytes(6)?;
     if signature != b"GIF87a" && signature != b"GIF89a" {
-        return None;
+        return Err(CodecError::Malformed("invalid GIF signature".to_owned()));
     }
 
     let logical_width = input.read_u16()?;
@@ -45,13 +46,14 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
     let mut graphic_control = GraphicControl::default();
     let mut frames = Vec::new();
     let mut loop_count = None;
+    let mut recovering_from_bad_gce = false;
 
     loop {
         match input.read_u8()? {
             EXTENSION_INTRODUCER => {
                 let label = input.read_u8()?;
                 if label == 0xf9 {
-                    graphic_control = read_graphic_control(&mut input)?;
+                    (graphic_control, recovering_from_bad_gce) = read_graphic_control(&mut input)?;
                 } else if label == 0xff {
                     let identifier_len = usize::from(input.read_u8()?);
                     let identifier = input.read_bytes(identifier_len)?;
@@ -80,13 +82,17 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
                     interlaced,
                 });
                 graphic_control = GraphicControl::default();
+                recovering_from_bad_gce = false;
             }
             TRAILER => break,
-            _ => return None,
+            _ if recovering_from_bad_gce => {}
+            _ => {
+                return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
+            }
         }
     }
 
-    let first_frame = frames.first()?;
+    let first_frame = frames.first().malformed("GIF contains no image frame")?;
     let mut fallback_width = first_frame.left.saturating_add(first_frame.image.width);
     let mut fallback_height = first_frame.top.saturating_add(first_frame.image.height);
     for frame in &frames[1..] {
@@ -102,7 +108,7 @@ pub fn decode_sequence(data: &[u8]) -> Option<DecodedSequence> {
         loop_count,
         background: Some(AnimationBackground::PaletteIndex(background_index)),
     };
-    Some(sequence)
+    Ok(sequence)
 }
 
 #[derive(Clone, Copy)]
@@ -122,13 +128,20 @@ impl Default for GraphicControl {
     }
 }
 
-fn read_graphic_control(input: &mut Input<'_>) -> Option<GraphicControl> {
+fn read_graphic_control(input: &mut Input<'_>) -> CodecResult<(GraphicControl, bool)> {
     let _declared_size = input.read_u8()?;
     let packed = input.read_u8()?;
     let delay_cs = input.read_u16()?;
     let index = input.read_u8()?;
-    if input.read_u8()? != 0 {
-        return None;
+    let terminator = input.read_u8()?;
+    let recovering = terminator != 0;
+    if recovering {
+        // Pillow treats the byte as another sub-block length, consumes that
+        // payload and its terminating sub-block, then scans for a recognized
+        // marker. Retaining that behavior is observable for malformed files:
+        // the resynchronized descriptor can trigger the decompression limit.
+        input.skip(usize::from(terminator))?;
+        input.skip_sub_blocks()?;
     }
     let disposal = match (packed >> 2) & 7 {
         0 => FrameDisposal::Unspecified,
@@ -137,24 +150,34 @@ fn read_graphic_control(input: &mut Input<'_>) -> Option<GraphicControl> {
         3 => FrameDisposal::Previous,
         value => FrameDisposal::Reserved(value),
     };
-    Some(GraphicControl {
-        delay_cs,
-        transparent_index: (packed & 1 != 0).then_some(index),
-        disposal,
-    })
+    Ok((
+        GraphicControl {
+            delay_cs,
+            transparent_index: (packed & 1 != 0).then_some(index),
+            disposal,
+        },
+        recovering,
+    ))
 }
 
 fn decode_image(
     input: &mut Input<'_>,
     global_palette: Option<&[u8]>,
     transparent_index: Option<u8>,
-) -> Option<(DecodedImage, u16, u16, bool)> {
+) -> CodecResult<(DecodedImage, u16, u16, bool)> {
     let left = input.read_u16()?;
     let top = input.read_u16()?;
     let width = input.read_u16()?;
     let height = input.read_u16()?;
     if width == 0 || height == 0 {
-        return None;
+        return Err(CodecError::Dimensions(
+            "GIF frame dimensions must be nonzero".to_owned(),
+        ));
+    }
+    if u64::from(width).saturating_mul(u64::from(height)) > PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS {
+        return Err(CodecError::Dimensions(
+            "GIF frame expands beyond Pillow's decompression-bomb limit".to_owned(),
+        ));
     }
 
     let packed = input.read_u8()?;
@@ -199,7 +222,7 @@ fn decode_image(
     } else {
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::L8)
     };
-    Some((image, left, top, interlaced))
+    Ok((image, left, top, interlaced))
 }
 
 fn color_table_len(packed: u8) -> usize {
@@ -210,9 +233,11 @@ fn color_table_len(packed: u8) -> usize {
 ///
 /// The fixed-size prefix/suffix tables mirror the 12-bit dictionary described
 /// by GIF89a Appendix F without allocating per-code strings.
-fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option<Vec<u8>> {
+fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> CodecResult<Vec<u8>> {
     if !(2..=8).contains(&minimum_code_size) {
-        return None;
+        return Err(CodecError::Malformed(
+            "invalid GIF LZW minimum code size".to_owned(),
+        ));
     }
 
     let clear_code = 1u16 << minimum_code_size;
@@ -231,7 +256,8 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
         suffixes[usize::from(value)] = value.to_le_bytes()[0];
     }
 
-    while let Some(code) = bits.read(code_size) {
+    loop {
+        let code = bits.read(code_size)?;
         if code == clear_code {
             code_size = minimum_code_size.saturating_add(1);
             next_code = first_free_code;
@@ -239,16 +265,24 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
             continue;
         }
         if code == end_code {
-            return (output.len() == expected_len).then_some(output);
+            return if output.len() == expected_len {
+                Ok(output)
+            } else {
+                Err(CodecError::Malformed(
+                    "GIF LZW stream ended before filling the frame".to_owned(),
+                ))
+            };
         }
 
         let Some(previous) = previous_code else {
             if code >= clear_code || output.len() >= expected_len {
-                return None;
+                return Err(CodecError::Malformed(
+                    "invalid first GIF LZW code".to_owned(),
+                ));
             }
             output.push(code.to_le_bytes()[0]);
             if output.len() == expected_len {
-                return Some(output);
+                return Ok(output);
             }
             previous_code = Some(code);
             continue;
@@ -279,11 +313,13 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
             }
             first
         } else {
-            return None;
+            return Err(CodecError::Malformed(
+                "GIF LZW code references a future dictionary entry".to_owned(),
+            ));
         };
 
         if output.len() == expected_len {
-            return Some(output);
+            return Ok(output);
         }
 
         if usize::from(next_code) < MAX_LZW_CODE {
@@ -298,8 +334,6 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> Option
 
         previous_code = Some(code);
     }
-
-    None
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -331,10 +365,12 @@ fn append_code(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode_sequence(b"").is_none());
-    assert!(decode_sequence(b"not gif").is_none());
-    assert!(decode_sequence(b"GIF89a").is_none());
-    assert!(decode_lzw(&[0], 2, 0).is_none());
+    assert!(decode_sequence(b"").is_err());
+    assert!(decode_sequence(b"not gif").is_err());
+    assert!(decode_sequence(b"GIF89a").is_err());
+    assert!(decode_sequence(b"GIF89a\x01\0\x01\0\0\0\0\x7f").is_err());
+    assert!(decode_lzw(&[0], 2, 0).is_err());
+    assert_eq!(decode_lzw(&[0x2c], 2, 0), Ok(Vec::new()));
 }
 
 fn deinterlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
@@ -365,47 +401,50 @@ impl<'a> Input<'a> {
         Self { data, position: 0 }
     }
 
-    fn read_u8(&mut self) -> Option<u8> {
-        let value = *self.data.get(self.position)?;
+    fn read_u8(&mut self) -> CodecResult<u8> {
+        let value = *self
+            .data
+            .get(self.position)
+            .malformed("truncated GIF byte field")?;
         self.position = self.position.saturating_add(1);
-        Some(value)
+        Ok(value)
     }
 
-    fn read_u16(&mut self) -> Option<u16> {
+    fn read_u16(&mut self) -> CodecResult<u16> {
         let bytes = self.read_bytes(2)?;
-        Some(u16::from_le_bytes([bytes[0], bytes[1]]))
+        Ok(u16::from_le_bytes([bytes[0], bytes[1]]))
     }
 
-    fn read_bytes(&mut self, len: usize) -> Option<&'a [u8]> {
+    fn read_bytes(&mut self, len: usize) -> CodecResult<&'a [u8]> {
         if len > self.data.len().saturating_sub(self.position) {
-            return None;
+            return Err(CodecError::Malformed("truncated GIF field".to_owned()));
         }
         let end = self.position.saturating_add(len);
         let bytes = &self.data[self.position..end];
         self.position = end;
-        Some(bytes)
+        Ok(bytes)
     }
 
-    fn skip(&mut self, len: usize) -> Option<()> {
+    fn skip(&mut self, len: usize) -> CodecResult<()> {
         self.read_bytes(len).map(|_| ())
     }
 
-    fn read_sub_blocks(&mut self) -> Option<Vec<u8>> {
+    fn read_sub_blocks(&mut self) -> CodecResult<Vec<u8>> {
         let mut output = Vec::new();
         loop {
             let len = usize::from(self.read_u8()?);
             if len == 0 {
-                return Some(output);
+                return Ok(output);
             }
             output.extend_from_slice(self.read_bytes(len)?);
         }
     }
 
-    fn skip_sub_blocks(&mut self) -> Option<()> {
+    fn skip_sub_blocks(&mut self) -> CodecResult<()> {
         loop {
             let len = usize::from(self.read_u8()?);
             if len == 0 {
-                return Some(());
+                return Ok(());
             }
             self.skip(len)?;
         }
@@ -425,10 +464,12 @@ impl<'a> BitReader<'a> {
         }
     }
 
-    fn read(&mut self, width: u8) -> Option<u16> {
+    fn read(&mut self, width: u8) -> CodecResult<u16> {
         let end = self.bit_position.saturating_add(usize::from(width));
         if end > self.data.len().saturating_mul(8) {
-            return None;
+            return Err(CodecError::Malformed(
+                "truncated GIF LZW bitstream".to_owned(),
+            ));
         }
 
         let mut value = 0u16;
@@ -438,6 +479,6 @@ impl<'a> BitReader<'a> {
             value |= u16::from(bit) << shift;
             self.bit_position = self.bit_position.saturating_add(1);
         }
-        Some(value)
+        Ok(value)
     }
 }

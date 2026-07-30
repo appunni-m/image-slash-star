@@ -890,6 +890,67 @@
       }
     },
     {
+      "id": "enc_indexed_missing_palette",
+      "source_asset": "palette_missing_plte.png",
+      "source_format": "png",
+      "params": {
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_missing_plte.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_oversized_public_palette",
+      "source_asset": "indexed.png",
+      "source_format": "png",
+      "params": {
+        "oversized_palette": true
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": "PIL.Image.Image.putpalette(bytes(771))"
+      }
+    },
+    {
+      "id": "enc_error_palette_on_nonindexed",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "params": {
+        "palette_on_nonindexed": true
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": "PIL.Image.Image.putpalette(bytes(768))"
+      }
+    },
+    {
       "id": "enc_1bit",
       "source_asset": "1bit.png",
       "source_format": "png",

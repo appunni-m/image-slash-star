@@ -1,6 +1,7 @@
 //! PNG encoder using the internal zlib/DEFLATE implementation.
 
 use crate::codecs::compression::deflate::compress_zlib_chunked;
+use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage, ImageMode};
 
@@ -10,8 +11,8 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// Pillow ignores PNG interlace save options, so this encoder also always
 /// emits non-interlaced rows. Compression levels select the corresponding
 /// strategy in the internal zlib/DEFLATE implementation.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    img.validate().ok()?;
+pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    img.validate().map_err(CodecError::from_image_error)?;
 
     let width = bounded_usize(img.width);
     let height = bounded_usize(img.height);
@@ -35,7 +36,11 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 ColorType::La8 => (4, 2),
                 ColorType::Rgb8 => (2, 3),
                 ColorType::Rgba8 => (6, 4),
-                _ => return None,
+                _ => {
+                    return Err(CodecError::Unsupported(
+                        "PNG cannot encode this image mode".to_owned(),
+                    ));
+                }
             };
             (
                 png_color,
@@ -64,7 +69,9 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             "none" => 0,
             "default" => 6,
             "max" => 9,
-            _ => value.parse().ok()?,
+            _ => value
+                .parse()
+                .map_err(|_| CodecError::Parameter("invalid PNG compression level".to_owned()))?,
         }
     } else {
         6
@@ -79,16 +86,21 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let mut output = PNG_SIGNATURE.to_vec();
     write_bounded_chunk(&mut output, *b"IHDR", &header);
     if img.mode == ImageMode::P8 {
-        let palette = img.palette.as_ref()?;
-        write_bounded_chunk(&mut output, *b"PLTE", &palette.rgb);
-        if !palette.alpha.is_empty() {
-            write_bounded_chunk(&mut output, *b"tRNS", &palette.alpha);
+        if let Some(palette) = img.palette.as_ref() {
+            write_bounded_chunk(&mut output, *b"PLTE", &palette.rgb);
+            if !palette.alpha.is_empty() {
+                write_bounded_chunk(&mut output, *b"tRNS", &palette.alpha);
+            }
+        } else {
+            // Pillow saves a palette-less P image with its implicit all-black
+            // 256-entry palette.
+            write_bounded_chunk(&mut output, *b"PLTE", &[0; 256 * 3]);
         }
     }
     write_requested_ancillary_chunks(&mut output, opts);
     write_idat_chunks(&mut output, &compressed);
     write_bounded_chunk(&mut output, *b"IEND", &[]);
-    Some(output)
+    Ok(output)
 }
 
 #[cfg(coverage)]

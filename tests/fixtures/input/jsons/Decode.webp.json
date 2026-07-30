@@ -16,6 +16,7 @@
       "id": "lossy_vp8",
       "asset": "lossy.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy.webp",
         "operations": [
@@ -33,6 +34,7 @@
       "id": "lossy_vp8_lossy_q10",
       "asset": "lossy_q10.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_q10.webp",
         "operations": [
@@ -50,6 +52,7 @@
       "id": "lossy_vp8_lossy_q50",
       "asset": "lossy_q50.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_q50.webp",
         "operations": [
@@ -67,6 +70,7 @@
       "id": "lossy_vp8_lossy_q90",
       "asset": "lossy_q90.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_q90.webp",
         "operations": [
@@ -84,6 +88,7 @@
       "id": "lossy_vp8_lossy_q100",
       "asset": "lossy_q100.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_q100.webp",
         "operations": [
@@ -101,6 +106,7 @@
       "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
       "asset": "lossy_solid_17x19_q90_m0.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_solid_17x19_q90_m0.webp",
         "operations": [
@@ -118,6 +124,7 @@
       "id": "lossy_vp8_lossy_checker_17x19_q1_m0",
       "asset": "lossy_checker_17x19_q1_m0.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp",
         "operations": [
@@ -135,6 +142,7 @@
       "id": "lossy_vp8_filter_variants",
       "asset": "lossy_simple_filter.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_simple_filter.webp",
         "operations": [
@@ -152,6 +160,7 @@
       "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
       "asset": "lossy_strong_sharp7.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_strong_sharp7.webp",
         "operations": [
@@ -169,6 +178,7 @@
       "id": "lossy_vp8_filter_variants_lossy_filter_off",
       "asset": "lossy_filter_off.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_filter_off.webp",
         "operations": [
@@ -186,6 +196,7 @@
       "id": "lossy_vp8_filter_variants_lossy_segment_one",
       "asset": "lossy_segment_one.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_segment_one.webp",
         "operations": [
@@ -203,6 +214,7 @@
       "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
       "asset": "lossy_partitions_eight.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossy_partitions_eight.webp",
         "operations": [
@@ -220,6 +232,7 @@
       "id": "lossless_vp8l",
       "asset": "lossless.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless.webp",
         "operations": [
@@ -237,6 +250,7 @@
       "id": "lossless_transform_variants",
       "asset": "lossless_solid.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_solid.webp",
         "operations": [
@@ -254,6 +268,7 @@
       "id": "lossless_transform_variants_lossless_horizontal",
       "asset": "lossless_horizontal.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_horizontal.webp",
         "operations": [
@@ -271,6 +286,7 @@
       "id": "lossless_transform_variants_lossless_vertical",
       "asset": "lossless_vertical.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_vertical.webp",
         "operations": [
@@ -288,6 +304,7 @@
       "id": "lossless_transform_variants_lossless_diagonal",
       "asset": "lossless_diagonal.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_diagonal.webp",
         "operations": [
@@ -305,6 +322,7 @@
       "id": "lossless_transform_variants_lossless_checker2",
       "asset": "lossless_checker2.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_checker2.webp",
         "operations": [
@@ -322,6 +340,7 @@
       "id": "lossless_transform_variants_lossless_palette4",
       "asset": "lossless_palette4.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_palette4.webp",
         "operations": [
@@ -339,6 +358,7 @@
       "id": "lossless_transform_variants_lossless_palette16",
       "asset": "lossless_palette16.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_palette16.webp",
         "operations": [
@@ -356,6 +376,7 @@
       "id": "lossless_transform_variants_lossless_palette17",
       "asset": "lossless_palette17.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_palette17.webp",
         "operations": [
@@ -373,6 +394,7 @@
       "id": "lossless_transform_variants_lossless_palette32",
       "asset": "lossless_palette32.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_palette32.webp",
         "operations": [
@@ -390,6 +412,7 @@
       "id": "lossless_transform_variants_lossless_palette64",
       "asset": "lossless_palette64.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_palette64.webp",
         "operations": [
@@ -407,6 +430,7 @@
       "id": "lossless_transform_variants_lossless_palette256",
       "asset": "lossless_palette256.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_palette256.webp",
         "operations": [
@@ -424,6 +448,7 @@
       "id": "lossless_transform_variants_lossless_noise",
       "asset": "lossless_noise.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_noise.webp",
         "operations": [
@@ -441,6 +466,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode0",
       "asset": "lossless_predictor_mode0.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode0.webp",
         "operations": [
@@ -458,6 +484,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
       "asset": "lossless_predictor_mode0_hybrid.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode0_hybrid.webp",
         "operations": [
@@ -475,6 +502,7 @@
       "id": "lossless_transform_variants_lossless_predictor_diag_reverse",
       "asset": "lossless_predictor_diag_reverse.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_diag_reverse.webp",
         "operations": [
@@ -492,6 +520,7 @@
       "id": "lossless_transform_variants_lossless_predictor_xor",
       "asset": "lossless_predictor_xor.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_xor.webp",
         "operations": [
@@ -509,6 +538,7 @@
       "id": "lossless_transform_variants_lossless_predictor_product",
       "asset": "lossless_predictor_product.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_product.webp",
         "operations": [
@@ -526,6 +556,7 @@
       "id": "lossless_transform_variants_lossless_predictor_radial",
       "asset": "lossless_predictor_radial.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_radial.webp",
         "operations": [
@@ -543,6 +574,7 @@
       "id": "lossless_transform_variants_lossless_predictor_diamond",
       "asset": "lossless_predictor_diamond.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_diamond.webp",
         "operations": [
@@ -560,6 +592,7 @@
       "id": "lossless_transform_variants_lossless_predictor_bilinear",
       "asset": "lossless_predictor_bilinear.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_bilinear.webp",
         "operations": [
@@ -577,6 +610,7 @@
       "id": "lossless_transform_variants_lossless_predictor_stripes",
       "asset": "lossless_predictor_stripes.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_stripes.webp",
         "operations": [
@@ -594,6 +628,7 @@
       "id": "lossless_transform_variants_lossless_predictor_steps",
       "asset": "lossless_predictor_steps.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_steps.webp",
         "operations": [
@@ -611,6 +646,7 @@
       "id": "lossless_transform_variants_lossless_predictor_saw",
       "asset": "lossless_predictor_saw.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_saw.webp",
         "operations": [
@@ -628,6 +664,7 @@
       "id": "lossless_transform_variants_lossless_predictor_quadrants",
       "asset": "lossless_predictor_quadrants.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_quadrants.webp",
         "operations": [
@@ -645,6 +682,7 @@
       "id": "lossless_transform_variants_lossless_predictor_random_walk",
       "asset": "lossless_predictor_random_walk.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_random_walk.webp",
         "operations": [
@@ -662,6 +700,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode5",
       "asset": "lossless_predictor_mode5.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode5.webp",
         "operations": [
@@ -679,6 +718,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode6",
       "asset": "lossless_predictor_mode6.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode6.webp",
         "operations": [
@@ -696,6 +736,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode7",
       "asset": "lossless_predictor_mode7.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode7.webp",
         "operations": [
@@ -713,6 +754,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode8",
       "asset": "lossless_predictor_mode8.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode8.webp",
         "operations": [
@@ -730,6 +772,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode9",
       "asset": "lossless_predictor_mode9.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode9.webp",
         "operations": [
@@ -747,6 +790,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode10",
       "asset": "lossless_predictor_mode10.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode10.webp",
         "operations": [
@@ -764,6 +808,7 @@
       "id": "lossless_transform_variants_lossless_predictor_mode13",
       "asset": "lossless_predictor_mode13.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_mode13.webp",
         "operations": [
@@ -781,6 +826,7 @@
       "id": "lossless_transform_variants_lossless_predictor_sparse",
       "asset": "lossless_predictor_sparse.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/lossless_predictor_sparse.webp",
         "operations": [
@@ -798,6 +844,7 @@
       "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
       "asset": "vp8l_plane_distance_clamp.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_plane_distance_clamp.webp",
         "operations": [
@@ -815,6 +862,7 @@
       "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
       "asset": "vp8l_meta_cache_fast_fill.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_meta_cache_fast_fill.webp",
         "operations": [
@@ -832,6 +880,7 @@
       "id": "lossless_transform_variants_vp8l_single_cache_peek",
       "asset": "vp8l_single_cache_peek.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_single_cache_peek.webp",
         "operations": [
@@ -849,6 +898,7 @@
       "id": "extended",
       "asset": "extended.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended.webp",
         "operations": [
@@ -866,6 +916,7 @@
       "id": "no_alpha",
       "asset": "no_alpha.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/no_alpha.webp",
         "operations": [
@@ -883,6 +934,7 @@
       "id": "with_alpha",
       "asset": "with_alpha.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/with_alpha.webp",
         "operations": [
@@ -900,6 +952,7 @@
       "id": "with_alpha_alpha_lossy",
       "asset": "alpha_lossy.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy.webp",
         "operations": [
@@ -917,6 +970,7 @@
       "id": "alpha_lossless",
       "asset": "alpha_lossless.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossless.webp",
         "operations": [
@@ -934,6 +988,7 @@
       "id": "alpha_lossless_alpha_lossy_horizontal",
       "asset": "alpha_lossy_horizontal.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy_horizontal.webp",
         "operations": [
@@ -951,6 +1006,7 @@
       "id": "alpha_lossless_alpha_lossy_vertical",
       "asset": "alpha_lossy_vertical.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy_vertical.webp",
         "operations": [
@@ -968,6 +1024,7 @@
       "id": "alpha_lossless_alpha_lossy_gradient",
       "asset": "alpha_lossy_gradient.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy_gradient.webp",
         "operations": [
@@ -985,6 +1042,7 @@
       "id": "alpha_lossless_alpha_lossy_noise",
       "asset": "alpha_lossy_noise.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy_noise.webp",
         "operations": [
@@ -1002,6 +1060,7 @@
       "id": "alpha_lossless_alpha_lossy_vertical_filter",
       "asset": "alpha_lossy_vertical_filter.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy_vertical_filter.webp",
         "operations": [
@@ -1019,6 +1078,7 @@
       "id": "alpha_lossless_alpha_lossy_gradient_filter",
       "asset": "alpha_lossy_gradient_filter.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_lossy_gradient_filter.webp",
         "operations": [
@@ -1036,6 +1096,7 @@
       "id": "alpha_lossless_alpha_uncompressed",
       "asset": "alpha_uncompressed.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_uncompressed.webp",
         "operations": [
@@ -1053,6 +1114,7 @@
       "id": "alpha_lossless_alpha_preprocessing",
       "asset": "alpha_preprocessing.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_preprocessing.webp",
         "operations": [
@@ -1070,6 +1132,7 @@
       "id": "animated",
       "asset": "animated.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated.webp",
         "operations": [
@@ -1087,6 +1150,7 @@
       "id": "animated_animated_alpha",
       "asset": "animated_alpha.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha.webp",
         "operations": [
@@ -1104,6 +1168,7 @@
       "id": "animated_animated_alpha_holes_partial_background",
       "asset": "animated_alpha_holes_partial_background.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_holes_partial_background.webp",
         "operations": [
@@ -1121,6 +1186,7 @@
       "id": "animated_animated_alpha_holes_opaque_background",
       "asset": "animated_alpha_holes_opaque_background.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_holes_opaque_background.webp",
         "operations": [
@@ -1138,6 +1204,7 @@
       "id": "animated_animated_rgb_opaque_background",
       "asset": "animated_rgb_opaque_background.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_opaque_background.webp",
         "operations": [
@@ -1155,6 +1222,7 @@
       "id": "animated_animated_rgb_palette_background",
       "asset": "animated_rgb_palette_background.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_palette_background.webp",
         "operations": [
@@ -1172,6 +1240,7 @@
       "id": "animated_animated_rgb_full_delta",
       "asset": "animated_rgb_full_delta.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_full_delta.webp",
         "operations": [
@@ -1189,6 +1258,7 @@
       "id": "animated_animated_alpha_lossy",
       "asset": "animated_alpha_lossy.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_lossy.webp",
         "operations": [
@@ -1206,6 +1276,7 @@
       "id": "animated_animated_alpha_overlap",
       "asset": "animated_alpha_overlap.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_overlap.webp",
         "operations": [
@@ -1223,6 +1294,7 @@
       "id": "animated_animated_alpha_holes",
       "asset": "animated_alpha_holes.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_holes.webp",
         "operations": [
@@ -1240,6 +1312,7 @@
       "id": "animated_animated_loop_twice",
       "asset": "animated_loop_twice.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_loop_twice.webp",
         "operations": [
@@ -1257,6 +1330,7 @@
       "id": "animated_animated_blend",
       "asset": "animated_blend.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_blend.webp",
         "operations": [
@@ -1274,6 +1348,7 @@
       "id": "animated_animated_alpha_full",
       "asset": "animated_alpha_full.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_full.webp",
         "operations": [
@@ -1291,6 +1366,7 @@
       "id": "animated_animated_alpha_full_dispose",
       "asset": "animated_alpha_full_dispose.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_full_dispose.webp",
         "operations": [
@@ -1308,6 +1384,7 @@
       "id": "animated_animated_alpha_full_blend_after_dispose",
       "asset": "animated_alpha_full_blend_after_dispose.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_full_blend_after_dispose.webp",
         "operations": [
@@ -1325,6 +1402,7 @@
       "id": "animated_animated_dispose",
       "asset": "animated_dispose.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_dispose.webp",
         "operations": [
@@ -1342,6 +1420,7 @@
       "id": "animated_animated_rgb_full_dispose",
       "asset": "animated_rgb_full_dispose.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_full_dispose.webp",
         "operations": [
@@ -1359,6 +1438,7 @@
       "id": "animated_animated_rgb_partial_dispose",
       "asset": "animated_rgb_partial_dispose.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_partial_dispose.webp",
         "operations": [
@@ -1376,6 +1456,7 @@
       "id": "size_small",
       "asset": "16x16.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/16x16.webp",
         "operations": [
@@ -1393,6 +1474,7 @@
       "id": "size_odd",
       "asset": "odd.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/odd.webp",
         "operations": [
@@ -1410,6 +1492,7 @@
       "id": "icc_profile",
       "asset": "icc.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/icc.webp",
         "operations": [
@@ -1427,6 +1510,7 @@
       "id": "xmp_metadata",
       "asset": "xmp.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/xmp.webp",
         "operations": [
@@ -1444,6 +1528,7 @@
       "id": "exif_metadata",
       "asset": "exif.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/exif.webp",
         "operations": [
@@ -1461,6 +1546,7 @@
       "id": "error_truncated",
       "asset": "truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/truncated.webp",
         "operations": [
@@ -1478,6 +1564,7 @@
       "id": "error_vp8_magic",
       "asset": "bad_vp8_magic.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_vp8_magic.webp",
         "operations": [
@@ -1495,6 +1582,7 @@
       "id": "error_animated_vp8_magic",
       "asset": "bad_animated_vp8_magic.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_animated_vp8_magic.webp",
         "operations": [
@@ -1512,6 +1600,7 @@
       "id": "error_malformed_container",
       "asset": "bad_riff_chunk.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_riff_chunk.webp",
         "operations": [
@@ -1529,6 +1618,7 @@
       "id": "error_malformed_container_bad_webp_signature",
       "asset": "bad_webp_signature.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_webp_signature.webp",
         "operations": [
@@ -1546,6 +1636,7 @@
       "id": "error_malformed_container_short_riff",
       "asset": "short_riff.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/short_riff.webp",
         "operations": [
@@ -1563,6 +1654,7 @@
       "id": "error_malformed_container_vp8_interframe",
       "asset": "vp8_interframe.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_interframe.webp",
         "operations": [
@@ -1580,6 +1672,7 @@
       "id": "error_malformed_container_vp8_zero_width",
       "asset": "vp8_zero_width.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_zero_width.webp",
         "operations": [
@@ -1597,6 +1690,7 @@
       "id": "error_malformed_container_vp8_zero_height",
       "asset": "vp8_zero_height.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_zero_height.webp",
         "operations": [
@@ -1614,6 +1708,7 @@
       "id": "error_malformed_container_bad_vp8l_signature",
       "asset": "bad_vp8l_signature.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_vp8l_signature.webp",
         "operations": [
@@ -1631,6 +1726,7 @@
       "id": "error_malformed_container_bad_vp8l_version",
       "asset": "bad_vp8l_version.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_vp8l_version.webp",
         "operations": [
@@ -1648,6 +1744,7 @@
       "id": "error_malformed_container_bad_initial_chunk",
       "asset": "bad_initial_chunk.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_initial_chunk.webp",
         "operations": [
@@ -1665,6 +1762,7 @@
       "id": "error_malformed_container_extended_vp8l_alpha_header_only",
       "asset": "extended_vp8l_alpha_header_only.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_vp8l_alpha_header_only.webp",
         "operations": [
@@ -1682,6 +1780,7 @@
       "id": "error_malformed_container_extended_missing_image_chunk",
       "asset": "extended_missing_image_chunk.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_image_chunk.webp",
         "operations": [
@@ -1699,6 +1798,7 @@
       "id": "error_malformed_container_extended_vp8x_no_chunks",
       "asset": "extended_vp8x_no_chunks.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_vp8x_no_chunks.webp",
         "operations": [
@@ -1716,8 +1816,27 @@
       "id": "error_malformed_container_extended_vp8x_truncated_chunk_header",
       "asset": "extended_vp8x_truncated_chunk_header.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_vp8x_truncated_chunk_header.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_container_partial_first_chunk_header",
+      "asset": "partial_first_chunk_header.webp",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/partial_first_chunk_header.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1733,6 +1852,7 @@
       "id": "error_malformed_container_vp8x_short_header",
       "asset": "vp8x_short_header.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8x_short_header.webp",
         "operations": [
@@ -1750,6 +1870,7 @@
       "id": "error_malformed_container_animated_short_anmf_header",
       "asset": "animated_short_anmf_header.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_short_anmf_header.webp",
         "operations": [
@@ -1767,6 +1888,7 @@
       "id": "error_malformed_container_animated_missing_anim",
       "asset": "animated_missing_anim.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_missing_anim.webp",
         "operations": [
@@ -1784,6 +1906,7 @@
       "id": "error_malformed_container_animated_missing_anmf",
       "asset": "animated_missing_anmf.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_missing_anmf.webp",
         "operations": [
@@ -1801,6 +1924,7 @@
       "id": "error_malformed_container_animated_anim_payload_eof_after_anmf",
       "asset": "animated_anim_payload_eof_after_anmf.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_anim_payload_eof_after_anmf.webp",
         "operations": [
@@ -1818,6 +1942,7 @@
       "id": "error_malformed_container_animated_alpha_missing_nested_vp8_header",
       "asset": "animated_alpha_missing_nested_vp8_header.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_missing_nested_vp8_header.webp",
         "operations": [
@@ -1835,6 +1960,7 @@
       "id": "error_malformed_container_extended_vp8_dimension_mismatch",
       "asset": "extended_vp8_dimension_mismatch.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_vp8_dimension_mismatch.webp",
         "operations": [
@@ -1852,8 +1978,27 @@
       "id": "error_malformed_container_extended_canvas_too_large",
       "asset": "extended_canvas_too_large.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_canvas_too_large.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_container_vp8_decompression_bomb",
+      "asset": "vp8_decompression_bomb.webp",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/vp8_decompression_bomb.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1869,6 +2014,7 @@
       "id": "error_malformed_container_bad_anmf_scan_size",
       "asset": "bad_anmf_scan_size.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_anmf_scan_size.webp",
         "operations": [
@@ -1886,6 +2032,7 @@
       "id": "error_malformed_container_bad_anmf_decode_size",
       "asset": "bad_anmf_decode_size.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_anmf_decode_size.webp",
         "operations": [
@@ -1903,6 +2050,7 @@
       "id": "error_malformed_container_anim_chunk_too_small",
       "asset": "anim_chunk_too_small.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/anim_chunk_too_small.webp",
         "operations": [
@@ -1920,6 +2068,7 @@
       "id": "error_malformed_container_animated_frame_outside",
       "asset": "animated_frame_outside.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_frame_outside.webp",
         "operations": [
@@ -1937,6 +2086,7 @@
       "id": "error_malformed_container_animated_nested_chunk_too_large",
       "asset": "animated_nested_chunk_too_large.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_nested_chunk_too_large.webp",
         "operations": [
@@ -1954,6 +2104,7 @@
       "id": "error_malformed_container_animated_alpha_chunk_too_large",
       "asset": "animated_alpha_chunk_too_large.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_chunk_too_large.webp",
         "operations": [
@@ -1971,6 +2122,7 @@
       "id": "error_malformed_container_animated_alpha_vp8_too_large",
       "asset": "animated_alpha_vp8_too_large.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_vp8_too_large.webp",
         "operations": [
@@ -1988,6 +2140,7 @@
       "id": "error_malformed_container_alpha_invalid_preprocessing",
       "asset": "alpha_invalid_preprocessing.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_invalid_preprocessing.webp",
         "operations": [
@@ -2005,6 +2158,7 @@
       "id": "error_malformed_container_alpha_invalid_compression",
       "asset": "alpha_invalid_compression.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_invalid_compression.webp",
         "operations": [
@@ -2022,6 +2176,7 @@
       "id": "error_malformed_container_vp8l_alpha_header_only",
       "asset": "vp8l_alpha_header_only.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_alpha_header_only.webp",
         "operations": [
@@ -2039,6 +2194,7 @@
       "id": "error_malformed_container_vp8l_short_header",
       "asset": "vp8l_short_header.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_short_header.webp",
         "operations": [
@@ -2056,6 +2212,7 @@
       "id": "error_malformed_container_vp8l_truncated_6",
       "asset": "vp8l_truncated_6.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_6.webp",
         "operations": [
@@ -2073,6 +2230,7 @@
       "id": "error_malformed_container_vp8l_truncated_8",
       "asset": "vp8l_truncated_8.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_8.webp",
         "operations": [
@@ -2090,6 +2248,7 @@
       "id": "error_malformed_container_vp8l_truncated_12",
       "asset": "vp8l_truncated_12.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_12.webp",
         "operations": [
@@ -2107,6 +2266,7 @@
       "id": "error_malformed_container_vp8l_truncated_16",
       "asset": "vp8l_truncated_16.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_16.webp",
         "operations": [
@@ -2124,6 +2284,7 @@
       "id": "error_malformed_container_vp8l_truncated_24",
       "asset": "vp8l_truncated_24.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_24.webp",
         "operations": [
@@ -2141,6 +2302,7 @@
       "id": "error_malformed_container_vp8l_truncated_32",
       "asset": "vp8l_truncated_32.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_32.webp",
         "operations": [
@@ -2158,6 +2320,7 @@
       "id": "error_malformed_container_vp8l_truncated_64",
       "asset": "vp8l_truncated_64.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_64.webp",
         "operations": [
@@ -2175,6 +2338,7 @@
       "id": "error_malformed_container_vp8l_truncated_128",
       "asset": "vp8l_truncated_128.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_truncated_128.webp",
         "operations": [
@@ -2192,6 +2356,7 @@
       "id": "error_malformed_container_vp8l_plane_distance_truncated_12",
       "asset": "vp8l_plane_distance_truncated_12.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_plane_distance_truncated_12.webp",
         "operations": [
@@ -2209,6 +2374,7 @@
       "id": "error_malformed_container_vp8l_meta_cache_truncated_10",
       "asset": "vp8l_meta_cache_truncated_10.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_meta_cache_truncated_10.webp",
         "operations": [
@@ -2226,6 +2392,7 @@
       "id": "error_malformed_container_vp8l_single_cache_truncated_18",
       "asset": "vp8l_single_cache_truncated_18.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_single_cache_truncated_18.webp",
         "operations": [
@@ -2243,6 +2410,7 @@
       "id": "error_malformed_container_vp8_empty_payload",
       "asset": "vp8_empty_payload.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_empty_payload.webp",
         "operations": [
@@ -2260,6 +2428,7 @@
       "id": "error_malformed_container_vp8_three_byte_payload",
       "asset": "vp8_three_byte_payload.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_three_byte_payload.webp",
         "operations": [
@@ -2277,6 +2446,7 @@
       "id": "error_malformed_container_vp8_short_header_payload",
       "asset": "vp8_short_header_payload.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_short_header_payload.webp",
         "operations": [
@@ -2294,6 +2464,7 @@
       "id": "error_malformed_container_vp8_short_partition_payload",
       "asset": "vp8_short_partition_payload.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_short_partition_payload.webp",
         "operations": [
@@ -2311,6 +2482,7 @@
       "id": "error_malformed_container_vp8_half_payload",
       "asset": "vp8_half_payload.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_half_payload.webp",
         "operations": [
@@ -2328,6 +2500,7 @@
       "id": "error_malformed_container_vp8_tail_truncated",
       "asset": "vp8_tail_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_tail_truncated.webp",
         "operations": [
@@ -2345,6 +2518,7 @@
       "id": "error_malformed_container_vp8l_header_only",
       "asset": "vp8l_header_only.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_header_only.webp",
         "operations": [
@@ -2362,6 +2536,7 @@
       "id": "error_malformed_container_vp8l_duplicate_transform",
       "asset": "vp8l_duplicate_transform.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_duplicate_transform.webp",
         "operations": [
@@ -2379,6 +2554,7 @@
       "id": "error_malformed_container_vp8l_invalid_color_cache",
       "asset": "vp8l_invalid_color_cache.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_invalid_color_cache.webp",
         "operations": [
@@ -2396,6 +2572,7 @@
       "id": "error_malformed_container_vp8l_invalid_zero_symbol",
       "asset": "vp8l_invalid_zero_symbol.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_invalid_zero_symbol.webp",
         "operations": [
@@ -2413,6 +2590,7 @@
       "id": "error_malformed_container_vp8l_empty_code_length_tree",
       "asset": "vp8l_empty_code_length_tree.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_empty_code_length_tree.webp",
         "operations": [
@@ -2430,6 +2608,7 @@
       "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
       "asset": "vp8l_incomplete_huffman_tree.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_incomplete_huffman_tree.webp",
         "operations": [
@@ -2447,6 +2626,7 @@
       "id": "error_malformed_container_vp8l_invalid_max_symbol",
       "asset": "vp8l_invalid_max_symbol.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_invalid_max_symbol.webp",
         "operations": [
@@ -2464,6 +2644,7 @@
       "id": "error_malformed_container_vp8l_color_index_size_truncated",
       "asset": "vp8l_color_index_size_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_color_index_size_truncated.webp",
         "operations": [
@@ -2481,6 +2662,7 @@
       "id": "error_malformed_container_vp8l_predictor_transform_stream_truncated",
       "asset": "vp8l_predictor_transform_stream_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_predictor_transform_stream_truncated.webp",
         "operations": [
@@ -2498,6 +2680,7 @@
       "id": "error_malformed_container_vp8l_color_transform_stream_truncated",
       "asset": "vp8l_color_transform_stream_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_color_transform_stream_truncated.webp",
         "operations": [
@@ -2515,6 +2698,7 @@
       "id": "error_malformed_container_vp8l_meta_huffman_stream_truncated",
       "asset": "vp8l_meta_huffman_stream_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_meta_huffman_stream_truncated.webp",
         "operations": [
@@ -2532,6 +2716,7 @@
       "id": "error_malformed_container_vp8l_two_symbol_truncated_one_symbol",
       "asset": "vp8l_two_symbol_truncated_one_symbol.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_two_symbol_truncated_one_symbol.webp",
         "operations": [
@@ -2549,6 +2734,7 @@
       "id": "error_malformed_container_vp8l_code_lengths_max_symbol_flag_truncated",
       "asset": "vp8l_code_lengths_max_symbol_flag_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_code_lengths_max_symbol_flag_truncated.webp",
         "operations": [
@@ -2566,6 +2752,7 @@
       "id": "error_malformed_container_vp8l_code_lengths_length_nbits_truncated",
       "asset": "vp8l_code_lengths_length_nbits_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_code_lengths_length_nbits_truncated.webp",
         "operations": [
@@ -2583,6 +2770,7 @@
       "id": "error_malformed_container_vp8l_code_lengths_max_value_truncated",
       "asset": "vp8l_code_lengths_max_value_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_code_lengths_max_value_truncated.webp",
         "operations": [
@@ -2600,6 +2788,7 @@
       "id": "error_malformed_container_vp8l_color_index_stream_truncated",
       "asset": "vp8l_color_index_stream_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_color_index_stream_truncated.webp",
         "operations": [
@@ -2617,6 +2806,7 @@
       "id": "error_malformed_container_vp8l_zero_symbol_truncated",
       "asset": "vp8l_zero_symbol_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_zero_symbol_truncated.webp",
         "operations": [
@@ -2634,6 +2824,7 @@
       "id": "error_malformed_container_vp8l_code_length_alphabet_truncated",
       "asset": "vp8l_code_length_alphabet_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_code_length_alphabet_truncated.webp",
         "operations": [
@@ -2651,6 +2842,7 @@
       "id": "error_malformed_container_vp8l_repeat_code17_extra_truncated",
       "asset": "vp8l_repeat_code17_extra_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_repeat_code17_extra_truncated.webp",
         "operations": [
@@ -2668,6 +2860,7 @@
       "id": "error_malformed_container_vp8l_repeat_code18_extra_truncated",
       "asset": "vp8l_repeat_code18_extra_truncated.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_repeat_code18_extra_truncated.webp",
         "operations": [
@@ -2685,6 +2878,7 @@
       "id": "error_malformed_container_vp8l_repeat_overflow",
       "asset": "vp8l_repeat_overflow.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_repeat_overflow.webp",
         "operations": [
@@ -2702,6 +2896,7 @@
       "id": "error_malformed_container_vp8l_single_backref",
       "asset": "vp8l_single_backref.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_single_backref.webp",
         "operations": [
@@ -2719,6 +2914,7 @@
       "id": "error_malformed_container_vp8l_backref_before_output",
       "asset": "vp8l_backref_before_output.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_backref_before_output.webp",
         "operations": [
@@ -2736,6 +2932,7 @@
       "id": "error_malformed_container_vp8_partition_0",
       "asset": "vp8_partition_0.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_0.webp",
         "operations": [
@@ -2753,6 +2950,7 @@
       "id": "error_malformed_container_vp8_partition_1",
       "asset": "vp8_partition_1.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_1.webp",
         "operations": [
@@ -2770,6 +2968,7 @@
       "id": "error_malformed_container_vp8_partition_2",
       "asset": "vp8_partition_2.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_2.webp",
         "operations": [
@@ -2787,6 +2986,7 @@
       "id": "error_malformed_container_vp8_partition_3",
       "asset": "vp8_partition_3.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_3.webp",
         "operations": [
@@ -2804,6 +3004,7 @@
       "id": "error_malformed_container_vp8_partition_4",
       "asset": "vp8_partition_4.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_4.webp",
         "operations": [
@@ -2821,6 +3022,7 @@
       "id": "error_malformed_container_vp8_partition_5",
       "asset": "vp8_partition_5.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_5.webp",
         "operations": [
@@ -2838,6 +3040,7 @@
       "id": "error_malformed_container_vp8_partition_6",
       "asset": "vp8_partition_6.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_6.webp",
         "operations": [
@@ -2855,6 +3058,7 @@
       "id": "error_malformed_container_vp8_partition_7",
       "asset": "vp8_partition_7.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_7.webp",
         "operations": [
@@ -2872,6 +3076,7 @@
       "id": "error_malformed_container_vp8_partition_8",
       "asset": "vp8_partition_8.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_8.webp",
         "operations": [
@@ -2889,6 +3094,7 @@
       "id": "error_malformed_container_vp8_partition_9",
       "asset": "vp8_partition_9.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_9.webp",
         "operations": [
@@ -2906,6 +3112,7 @@
       "id": "error_malformed_container_vp8_partition_10",
       "asset": "vp8_partition_10.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_10.webp",
         "operations": [
@@ -2923,6 +3130,7 @@
       "id": "error_malformed_container_vp8_partition_11",
       "asset": "vp8_partition_11.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_11.webp",
         "operations": [
@@ -2940,6 +3148,7 @@
       "id": "error_malformed_container_vp8_partition_12",
       "asset": "vp8_partition_12.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_12.webp",
         "operations": [
@@ -2957,6 +3166,7 @@
       "id": "error_malformed_container_vp8_partition_13",
       "asset": "vp8_partition_13.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_13.webp",
         "operations": [
@@ -2974,6 +3184,7 @@
       "id": "error_malformed_container_vp8_partition_14",
       "asset": "vp8_partition_14.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_14.webp",
         "operations": [
@@ -2991,6 +3202,7 @@
       "id": "error_malformed_container_vp8_partition_15",
       "asset": "vp8_partition_15.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_15.webp",
         "operations": [
@@ -3008,6 +3220,7 @@
       "id": "error_malformed_container_vp8_partition_16",
       "asset": "vp8_partition_16.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_16.webp",
         "operations": [
@@ -3025,6 +3238,7 @@
       "id": "error_malformed_container_vp8_partition_17",
       "asset": "vp8_partition_17.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_17.webp",
         "operations": [
@@ -3042,6 +3256,7 @@
       "id": "error_malformed_container_vp8_partition_18",
       "asset": "vp8_partition_18.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_18.webp",
         "operations": [
@@ -3059,6 +3274,7 @@
       "id": "error_malformed_container_vp8_partition_19",
       "asset": "vp8_partition_19.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_19.webp",
         "operations": [
@@ -3076,6 +3292,7 @@
       "id": "error_malformed_container_vp8_partition_20",
       "asset": "vp8_partition_20.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_20.webp",
         "operations": [
@@ -3093,6 +3310,7 @@
       "id": "error_malformed_container_vp8_partition_21",
       "asset": "vp8_partition_21.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_21.webp",
         "operations": [
@@ -3110,6 +3328,7 @@
       "id": "error_malformed_container_vp8_partition_22",
       "asset": "vp8_partition_22.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_22.webp",
         "operations": [
@@ -3127,6 +3346,7 @@
       "id": "error_malformed_container_vp8_partition_23",
       "asset": "vp8_partition_23.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_23.webp",
         "operations": [
@@ -3144,6 +3364,7 @@
       "id": "error_malformed_container_vp8_partition_24",
       "asset": "vp8_partition_24.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_24.webp",
         "operations": [
@@ -3161,6 +3382,7 @@
       "id": "error_malformed_container_vp8_partition_25",
       "asset": "vp8_partition_25.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_25.webp",
         "operations": [
@@ -3178,6 +3400,7 @@
       "id": "error_malformed_container_vp8_partition_26",
       "asset": "vp8_partition_26.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_26.webp",
         "operations": [
@@ -3195,6 +3418,7 @@
       "id": "error_malformed_container_vp8_partition_27",
       "asset": "vp8_partition_27.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_27.webp",
         "operations": [
@@ -3212,6 +3436,7 @@
       "id": "error_malformed_container_vp8_partition_28",
       "asset": "vp8_partition_28.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_28.webp",
         "operations": [
@@ -3229,6 +3454,7 @@
       "id": "error_malformed_container_vp8_partition_29",
       "asset": "vp8_partition_29.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_29.webp",
         "operations": [
@@ -3246,6 +3472,7 @@
       "id": "error_malformed_container_vp8_partition_30",
       "asset": "vp8_partition_30.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_30.webp",
         "operations": [
@@ -3263,6 +3490,7 @@
       "id": "error_malformed_container_vp8_partition_31",
       "asset": "vp8_partition_31.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_31.webp",
         "operations": [
@@ -3280,6 +3508,7 @@
       "id": "error_malformed_container_vp8_partition_32",
       "asset": "vp8_partition_32.webp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_32.webp",
         "operations": [
@@ -3297,6 +3526,7 @@
       "id": "pillow_tolerated_malformed",
       "asset": "bad_anim_size.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/bad_anim_size.webp",
         "operations": [
@@ -3314,6 +3544,7 @@
       "id": "pillow_tolerated_malformed_animated_frame_too_large",
       "asset": "animated_frame_too_large.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_frame_too_large.webp",
         "operations": [
@@ -3331,6 +3562,7 @@
       "id": "pillow_tolerated_malformed_animated_frame_dimension_mismatch",
       "asset": "animated_frame_dimension_mismatch.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_frame_dimension_mismatch.webp",
         "operations": [
@@ -3348,6 +3580,7 @@
       "id": "pillow_tolerated_malformed_animated_bad_nested_chunk",
       "asset": "animated_bad_nested_chunk.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_bad_nested_chunk.webp",
         "operations": [
@@ -3365,6 +3598,7 @@
       "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
       "asset": "extended_missing_exif_chunk.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_exif_chunk.webp",
         "operations": [
@@ -3382,6 +3616,7 @@
       "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
       "asset": "extended_missing_xmp_chunk.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_xmp_chunk.webp",
         "operations": [
@@ -3399,6 +3634,7 @@
       "id": "pillow_tolerated_malformed_alpha_missing_chunk",
       "asset": "alpha_missing_chunk.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/alpha_missing_chunk.webp",
         "operations": [
@@ -3416,6 +3652,7 @@
       "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
       "asset": "vp8_missing_last_byte.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_missing_last_byte.webp",
         "operations": [
@@ -3433,6 +3670,7 @@
       "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
       "asset": "vp8l_unused_invalid_one_symbol.webp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8l_unused_invalid_one_symbol.webp",
         "operations": [

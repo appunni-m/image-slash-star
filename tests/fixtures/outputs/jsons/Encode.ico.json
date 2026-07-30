@@ -46,7 +46,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "height and width must be > 0"
+      "error_message": "height and width must be > 0",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_bmp_entry",
@@ -154,7 +155,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OSError",
-      "error_message": "cannot write mode CMYK as PNG"
+      "error_message": "cannot write mode CMYK as PNG",
+      "error_kind": "unsupported"
     },
     {
       "id": "enc_error_cmyk_bmp",
@@ -166,7 +168,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.KeyError",
-      "error_message": "'CMYK'"
+      "error_message": "'CMYK'",
+      "error_kind": "unsupported"
     }
   ]
 }

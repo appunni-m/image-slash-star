@@ -519,6 +519,30 @@
       }
     },
     {
+      "id": "enc_exif_mixed_hex_case",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "exif_hex": "45786966000049492A000800000000000000abCD"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "exif": {
+            "type": "bytes",
+            "hex": "45786966000049492a000800000000000000abcd"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_xmp",
       "source_asset": "lossless.webp",
       "source_format": "webp",
@@ -564,6 +588,116 @@
           "load",
           "tobytes"
         ]
+      }
+    },
+    {
+      "id": "enc_error_metadata_hex_odd",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "icc_hex": "f"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "manifest parameter adapter",
+        "format": "WEBP",
+        "params": {
+          "icc_hex": "f"
+        },
+        "error": {
+          "type": "builtins.ValueError",
+          "message": "non-hexadecimal number found in fromhex() arg at position 1"
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_error_metadata_hex_invalid",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "icc_hex": "gg"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "manifest parameter adapter",
+        "format": "WEBP",
+        "params": {
+          "icc_hex": "gg"
+        },
+        "error": {
+          "type": "builtins.ValueError",
+          "message": "non-hexadecimal number found in fromhex() arg at position 0"
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_error_metadata_hex_invalid_second_nibble",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "icc_hex": "0g"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "manifest parameter adapter",
+        "format": "WEBP",
+        "params": {
+          "icc_hex": "0g"
+        },
+        "error": {
+          "type": "builtins.ValueError",
+          "message": "non-hexadecimal number found in fromhex() arg at position 1"
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_error_exif_hex_odd",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "exif_hex": "f"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "manifest parameter adapter",
+        "format": "WEBP",
+        "params": {
+          "exif_hex": "f"
+        },
+        "error": {
+          "type": "builtins.ValueError",
+          "message": "non-hexadecimal number found in fromhex() arg at position 1"
+        },
+        "roundtrip": null
+      }
+    },
+    {
+      "id": "enc_error_xmp_hex_odd",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "params": {
+        "xmp_hex": "f"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "manifest parameter adapter",
+        "format": "WEBP",
+        "params": {
+          "xmp_hex": "f"
+        },
+        "error": {
+          "type": "builtins.ValueError",
+          "message": "non-hexadecimal number found in fromhex() arg at position 1"
+        },
+        "roundtrip": null
       }
     },
     {

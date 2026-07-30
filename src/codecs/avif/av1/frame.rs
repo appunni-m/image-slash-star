@@ -7,6 +7,7 @@ use super::entropy;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
 use super::sequence::{DecoderParameters, OperatingPoint, Timing};
+use super::{Av1Result, malformed};
 #[cfg(coverage)]
 use crate::codecs::avif::samples::ByteSpan;
 
@@ -371,27 +372,35 @@ impl FrameState {
         }
     }
 
-    pub(super) fn accept_sequence(&mut self, sequence: SequenceHeader) -> Option<()> {
+    pub(super) fn accept_sequence(&mut self, sequence: SequenceHeader) -> Av1Result<()> {
         if self
             .sequence
             .as_ref()
             .is_some_and(|previous| !previous.consistent_with(&sequence))
         {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         self.sequence = Some(sequence);
-        Some(())
+        Ok(())
     }
 
-    pub(super) fn temporal_delimiter(&self) -> Option<()> {
-        self.pending.is_none().then_some(())
-    }
-
-    pub(super) fn finish(&self) -> Option<&SequenceHeader> {
+    pub(super) fn temporal_delimiter(&self) -> Av1Result<()> {
         if self.pending.is_some() {
-            return None;
+            return Err(malformed(
+                "temporal delimiter appears during a pending frame",
+            ));
         }
-        self.sequence.as_ref()
+        Ok(())
+    }
+
+    pub(super) fn finish(&self) -> Av1Result<&SequenceHeader> {
+        if self.pending.is_some() {
+            return Err(malformed("frame syntax validation failed"));
+        }
+        let Some(sequence) = self.sequence.as_ref() else {
+            return Err(malformed("sample contains no sequence header"));
+        };
+        Ok(sequence)
     }
 
     pub(super) fn first_leaf(&self) -> Option<&super::block::FirstLeaf> {
@@ -405,14 +414,14 @@ impl FrameState {
         end: usize,
         temporal_id: u32,
         spatial_id: u32,
-    ) -> Option<()> {
+    ) -> Av1Result<()> {
         let mut reader = self.begin_frame(data, start, end, temporal_id, spatial_id, false)?;
         if self
             .pending
             .as_ref()
             .is_some_and(|header| header.show_existing_frame)
         {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         reader.byte_align()?;
         let group = self.read_tile_group(data, &mut reader, end)?;
@@ -427,7 +436,7 @@ impl FrameState {
         temporal_id: u32,
         spatial_id: u32,
         redundant: bool,
-    ) -> Option<()> {
+    ) -> Av1Result<()> {
         let mut reader = self.begin_frame(data, start, end, temporal_id, spatial_id, redundant)?;
         reader.trailing_bits()?;
         self.complete_show_existing()
@@ -438,7 +447,7 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         start: usize,
         end: usize,
-    ) -> Option<()> {
+    ) -> Av1Result<()> {
         let mut reader = BitReader::new(data, start, end)?;
         let group = self.read_tile_group(data, &mut reader, end)?;
         self.accept_tile_group(group)
@@ -452,10 +461,14 @@ impl FrameState {
         temporal_id: u32,
         spatial_id: u32,
         redundant: bool,
-    ) -> Option<BitReader<'data, 'input, 'spans>> {
-        let sequence = self.sequence.as_ref()?;
+    ) -> Av1Result<BitReader<'data, 'input, 'spans>> {
+        let Some(sequence) = self.sequence.as_ref() else {
+            return Err(malformed("frame appears before a sequence header"));
+        };
         if redundant {
-            let pending = self.pending.as_ref()?;
+            let Some(pending) = self.pending.as_ref() else {
+                return Err(malformed("redundant frame header has no pending frame"));
+            };
             let (header, reader) = parse(
                 data,
                 start,
@@ -466,12 +479,12 @@ impl FrameState {
                 spatial_id,
             )?;
             if &header != pending {
-                return None;
+                return Err(malformed("frame syntax validation failed"));
             }
-            return Some(reader);
+            return Ok(reader);
         }
         if self.pending.is_some() {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         let (header, reader) = parse(
             data,
@@ -486,8 +499,8 @@ impl FrameState {
             sequence.frame_id_numbers_present,
             sequence.frame_id_bits,
             header,
-        )
-        .map(|()| reader)
+        )?;
+        Ok(reader)
     }
 
     fn accept_parsed_header(
@@ -495,7 +508,7 @@ impl FrameState {
         frame_id_numbers_present: bool,
         frame_id_bits: u32,
         header: FrameHeader,
-    ) -> Option<()> {
+    ) -> Av1Result<()> {
         if frame_id_numbers_present && !header.show_existing_frame {
             validate_current_frame_id(frame_id_bits, self.current_frame_id, &header)?;
             self.invalidate_old_references(header.frame_id);
@@ -503,19 +516,26 @@ impl FrameState {
         }
         self.pending = Some(header);
         self.next_tile = 0;
-        Some(())
+        Ok(())
     }
 
-    fn complete_show_existing(&mut self) -> Option<()> {
-        let header = self.pending.as_ref()?;
+    fn complete_show_existing(&mut self) -> Av1Result<()> {
+        let Some(header) = self.pending.as_ref() else {
+            return Err(malformed("show-existing completion has no pending frame"));
+        };
         if !header.show_existing_frame {
-            return Some(());
+            return Ok(());
         }
-        let slot = header.existing_frame_idx?;
+        let Some(slot) = header.existing_frame_idx else {
+            return Err(malformed("show-existing frame omits its reference slot"));
+        };
         // `slot` is read from a three-bit AV1 syntax element.
-        let reference = self.references[slot].as_ref()?.clone();
+        let Some(reference) = self.references[slot].as_ref() else {
+            return Err(malformed("show-existing frame references an empty slot"));
+        };
+        let reference = reference.clone();
         if !reference.showable_frame {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         if reference.frame_type == FrameType::Key {
             let mut hidden = reference;
@@ -523,7 +543,7 @@ impl FrameState {
             self.references = std::array::from_fn(|_| Some(hidden.clone()));
         }
         self.pending = None;
-        Some(())
+        Ok(())
     }
 
     fn invalidate_old_references(&mut self, frame_id: u32) {
@@ -561,10 +581,16 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         bits: &mut BitReader<'_, '_, '_>,
         payload_end: usize,
-    ) -> Option<TileGroup> {
-        let sequence = self.sequence.as_ref()?;
-        let header = self.pending.as_ref()?;
-        let tiling = header.tiling.as_ref()?;
+    ) -> Av1Result<TileGroup> {
+        let Some(sequence) = self.sequence.as_ref() else {
+            return Err(malformed("tile group appears before a sequence header"));
+        };
+        let Some(header) = self.pending.as_ref() else {
+            return Err(malformed("tile group appears without a pending frame"));
+        };
+        let Some(tiling) = header.tiling.as_ref() else {
+            return Err(malformed("pending frame has no tile layout"));
+        };
         let tile_count = tiling.tile_count();
         let (start, end) = if tile_count > 1 && bits.bit()? {
             let width = tiling.log2_columns.saturating_add(tiling.log2_rows);
@@ -573,10 +599,10 @@ impl FrameState {
             (0, tile_count.saturating_sub(1))
         };
         if start > end {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         if end >= tile_count {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         bits.byte_align()?;
         let tile_ranges = split_tile_payloads(
@@ -589,21 +615,28 @@ impl FrameState {
         )?;
         let first_leaf =
             validate_tile_entropy_prefixes(data, &tile_ranges, start, header, sequence, tiling)?;
-        Some(TileGroup {
+        Ok(TileGroup {
             start,
             end,
             first_leaf,
         })
     }
 
-    fn accept_tile_group(&mut self, group: TileGroup) -> Option<()> {
-        let header = self.pending.as_ref()?;
+    fn accept_tile_group(&mut self, group: TileGroup) -> Av1Result<()> {
+        let header = self
+            .pending
+            .as_ref()
+            .ok_or(malformed("accepted tile group has no pending frame"))?;
         if group.start != self.next_tile {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         self.next_tile = group.end.saturating_add(1);
         self.first_leaf = self.first_leaf.take().or(group.first_leaf);
-        let tile_count = header.tiling.as_ref()?.tile_count();
+        let tile_count = header
+            .tiling
+            .as_ref()
+            .ok_or(malformed("pending frame has no tile layout"))?
+            .tile_count();
         if self.next_tile == tile_count {
             // `header` was borrowed from `pending` above, so the value cannot
             // disappear before this synchronous completion step.
@@ -617,7 +650,7 @@ impl FrameState {
             }
             self.next_tile = 0;
         }
-        Some(())
+        Ok(())
     }
 }
 
@@ -638,9 +671,9 @@ fn split_tile_payloads(
     start_tile: u32,
     end_tile: u32,
     size_width: u32,
-) -> Option<Vec<Range<usize>>> {
+) -> Av1Result<Vec<Range<usize>>> {
     if cursor > payload_end || payload_end > data.len() {
-        return None;
+        return Err(malformed("frame syntax validation failed"));
     }
     let size_width = match size_width {
         0 => 0,
@@ -648,10 +681,10 @@ fn split_tile_payloads(
         2 => 2,
         3 => 3,
         4 => 4,
-        _ => return None,
+        _ => return Err(malformed("tile-size field width exceeds four bytes")),
     };
     if start_tile != end_tile && size_width == 0 {
-        return None;
+        return Err(malformed("frame syntax validation failed"));
     }
     // AV1 tile indices are `u32`; `usize` is at least 32 bits on every
     // supported native and wasm target.
@@ -663,7 +696,7 @@ fn split_tile_payloads(
         } else {
             let size_end = cursor.saturating_add(size_width);
             if size_end > payload_end {
-                return None;
+                return Err(malformed("frame syntax validation failed"));
             }
             let mut encoded_size = 0_usize;
             for byte_index in 0..size_width {
@@ -673,7 +706,7 @@ fn split_tile_payloads(
             cursor = size_end;
             let remaining = payload_end.saturating_sub(cursor);
             if encoded_size >= remaining {
-                return None;
+                return Err(malformed("frame syntax validation failed"));
             }
             encoded_size.saturating_add(1)
         };
@@ -681,7 +714,10 @@ fn split_tile_payloads(
         ranges.push(cursor..tile_end);
         cursor = tile_end;
     }
-    (cursor == payload_end).then_some(ranges)
+    // The final tile consumes `payload_end - cursor`, so a non-empty inclusive
+    // tile range always ends exactly at the payload boundary.
+    debug_assert_eq!(cursor, payload_end);
+    Ok(ranges)
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:2425-2457 (`setup_tile`) and
@@ -694,7 +730,7 @@ fn validate_tile_entropy_prefixes(
     header: &FrameHeader,
     sequence: &SequenceHeader,
     tiling: &Tiling,
-) -> Option<Option<super::block::FirstLeaf>> {
+) -> Av1Result<Option<super::block::FirstLeaf>> {
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
     // sequence/frame headers, so these private unit conversions are total.
@@ -781,7 +817,7 @@ fn validate_tile_entropy_prefixes(
         )]
         let row = tile.wrapping_div(tiling.columns);
         if row >= tiling.rows {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         // The parser materializes one boundary for every tile column and row.
         let block_x = tiling.column_starts[column as usize].wrapping_shl(block_shift);
@@ -814,7 +850,7 @@ fn validate_tile_entropy_prefixes(
         let reconstructed = entropy::validate_first_partition(data, range.clone(), &context)?;
         first_leaf = first_leaf.or(reconstructed);
     }
-    Some(first_leaf)
+    Ok(first_leaf)
 }
 
 // ✅ VERIFIED: AV1 specification section 5.9; dav1d 1.5.3
@@ -828,9 +864,10 @@ fn parse<'data, 'input, 'spans>(
     references: &[Option<FrameHeader>; 8],
     temporal_id: u32,
     spatial_id: u32,
-) -> Option<(FrameHeader, BitReader<'data, 'input, 'spans>)> {
-    let start_bit = start.checked_mul(8)?;
+) -> Av1Result<(FrameHeader, BitReader<'data, 'input, 'spans>)> {
     let bits = BitReader::new(data, start, end)?;
+    // `BitReader::new` has already validated the byte-to-bit conversion.
+    let start_bit = bits.position();
     parse_reader(
         bits,
         start_bit,
@@ -848,7 +885,7 @@ fn parse_reader<'data, 'input, 'spans>(
     references: &[Option<FrameHeader>; 8],
     temporal_id: u32,
     spatial_id: u32,
-) -> Option<(FrameHeader, BitReader<'data, 'input, 'spans>)> {
+) -> Av1Result<(FrameHeader, BitReader<'data, 'input, 'spans>)> {
     let mut header = FrameHeader::empty(temporal_id, spatial_id);
     header.show_existing_frame = !sequence.reduced_still_picture_header && bits.bit()?;
     if header.show_existing_frame {
@@ -856,14 +893,16 @@ fn parse_reader<'data, 'input, 'spans>(
         header.existing_frame_idx = Some(existing_frame_idx);
         read_presentation_delay(&mut bits, sequence)?;
         // `existing_frame_idx` is a three-bit AV1 syntax value.
-        let reference = references[existing_frame_idx].as_ref()?;
+        let Some(reference) = references[existing_frame_idx].as_ref() else {
+            return Err(malformed("show-existing frame references an empty slot"));
+        };
         if !reference.showable_frame {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         if sequence.frame_id_numbers_present {
             header.frame_id = bits.bits(sequence.frame_id_bits)?;
             if header.frame_id != reference.frame_id {
-                return None;
+                return Err(malformed("frame syntax validation failed"));
             }
         }
         header.frame_type = reference.frame_type;
@@ -875,7 +914,7 @@ fn parse_reader<'data, 'input, 'spans>(
         header.render_width = reference.render_width;
         header.render_height = reference.render_height;
         header.header_bits = bits.position().saturating_sub(start_bit);
-        return Some((header, bits));
+        return Ok((header, bits));
     }
 
     if sequence.reduced_still_picture_header {
@@ -942,30 +981,30 @@ fn parse_reader<'data, 'input, 'spans>(
     header.global_motion = read_global_motion(&mut bits, references, &header)?;
     header.film_grain = read_film_grain(&mut bits, sequence, references, &header)?;
     header.header_bits = bits.position().saturating_sub(start_bit);
-    Some((header, bits))
+    Ok((header, bits))
 }
 
 fn read_error_resilient_mode(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &FrameHeader,
-) -> Option<bool> {
+) -> Av1Result<bool> {
     if sequence.reduced_still_picture_header
         || (header.frame_type == FrameType::Key && header.show_frame)
         || header.frame_type == FrameType::Switch
     {
-        Some(true)
+        Ok(true)
     } else {
         bits.bit()
     }
 }
 
-fn read_policy_flag(bits: &mut BitReader<'_, '_, '_>, policy: u32) -> Option<bool> {
+fn read_policy_flag(bits: &mut BitReader<'_, '_, '_>, policy: u32) -> Av1Result<bool> {
     match policy {
-        0 => Some(false),
-        1 => Some(true),
+        0 => Ok(false),
+        1 => Ok(true),
         2 => bits.bit(),
-        _ => None,
+        _ => Err(malformed("frame policy flag exceeds the supported values")),
     }
 }
 
@@ -973,12 +1012,12 @@ fn read_allow_warped_motion(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &FrameHeader,
-) -> Option<bool> {
+) -> Av1Result<bool> {
     if header.error_resilient_mode
         || !header.frame_type.is_inter()
         || !sequence.enable_warped_motion
     {
-        Some(false)
+        Ok(false)
     } else {
         bits.bit()
     }
@@ -987,35 +1026,37 @@ fn read_allow_warped_motion(
 fn read_presentation_delay(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
-) -> Option<()> {
+) -> Av1Result<()> {
     let Some(timing) = &sequence.timing else {
-        return Some(());
+        return Ok(());
     };
     if sequence.decoder_model_present && !timing.equal_picture_interval {
-        let width = timing.frame_presentation_delay_length?;
+        let Some(width) = timing.frame_presentation_delay_length else {
+            return Err(malformed("decoder model omits presentation-delay width"));
+        };
         let _ = bits.bits(width)?;
     }
-    Some(())
+    Ok(())
 }
 
 fn validate_current_frame_id(
     frame_id_bits: u32,
     previous: Option<u32>,
     header: &FrameHeader,
-) -> Option<()> {
+) -> Av1Result<()> {
     let Some(previous) = previous else {
-        return Some(());
+        return Ok(());
     };
     if header.frame_type == FrameType::Key {
         if !header.show_frame {
             return validate_frame_id_difference(frame_id_bits, previous, header.frame_id);
         }
-        return Some(());
+        return Ok(());
     }
     validate_frame_id_difference(frame_id_bits, previous, header.frame_id)
 }
 
-fn validate_frame_id_difference(frame_id_bits: u32, previous: u32, frame_id: u32) -> Option<()> {
+fn validate_frame_id_difference(frame_id_bits: u32, previous: u32, frame_id: u32) -> Av1Result<()> {
     let range = 1_u32 << frame_id_bits;
     let difference = if frame_id > previous {
         frame_id.saturating_sub(previous)
@@ -1023,9 +1064,9 @@ fn validate_frame_id_difference(frame_id_bits: u32, previous: u32, frame_id: u32
         range.saturating_add(frame_id).saturating_sub(previous)
     };
     if frame_id == previous || difference >= 1_u32 << frame_id_bits.saturating_sub(1) {
-        return None;
+        return Err(malformed("frame syntax validation failed"));
     }
-    Some(())
+    Ok(())
 }
 
 fn read_buffer_removal_times(
@@ -1033,12 +1074,17 @@ fn read_buffer_removal_times(
     sequence: &SequenceHeader,
     temporal_id: u32,
     spatial_id: u32,
-) -> Option<Vec<u32>> {
+) -> Av1Result<Vec<u32>> {
     let mut values = Vec::new();
     if !sequence.decoder_model_present || !bits.bit()? {
-        return Some(values);
+        return Ok(values);
     }
-    let width = sequence.timing.as_ref()?.buffer_removal_delay_length?;
+    let Some(timing) = sequence.timing.as_ref() else {
+        return Err(malformed("decoder model omits timing information"));
+    };
+    let Some(width) = timing.buffer_removal_delay_length else {
+        return Err(malformed("decoder model omits buffer-removal width"));
+    };
     for point in &sequence.operating_points {
         if point.decoder_parameters.is_none() {
             continue;
@@ -1049,7 +1095,7 @@ fn read_buffer_removal_times(
             values.push(bits.bits(width)?);
         }
     }
-    Some(values)
+    Ok(values)
 }
 
 fn read_frame_type_fields(
@@ -1057,7 +1103,7 @@ fn read_frame_type_fields(
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
     header: &mut FrameHeader,
-) -> Option<()> {
+) -> Av1Result<()> {
     if header.frame_type.is_intra() {
         header.refresh_frame_flags = if header.frame_type == FrameType::Key && header.show_frame {
             u8::MAX
@@ -1078,12 +1124,12 @@ fn read_frame_type_fields(
             }
         }
         if header.frame_type == FrameType::IntraOnly && header.refresh_frame_flags == u8::MAX {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         read_frame_size(bits, sequence, references, header, false)?;
         header.allow_intrabc =
             header.allow_screen_content_tools && !header.superres_enabled && bits.bit()?;
-        return Some(());
+        return Ok(());
     }
 
     header.refresh_frame_flags = if header.frame_type == FrameType::Switch {
@@ -1113,18 +1159,12 @@ fn read_frame_type_fields(
         }
     }
     if sequence.frame_id_numbers_present {
-        // Sequence-header syntax constrains `frame_id_bits` to 2..=16.
-        let range = 1_u32 << sequence.frame_id_bits;
-        let mask = range.saturating_sub(1);
-        for &reference_index in &header.reference_indices {
-            let delta = bits.bits(sequence.delta_frame_id_bits)?.saturating_add(1);
-            // AV1 defines expected frame IDs modulo the configured ID range.
-            let expected = header.frame_id.wrapping_add(range).wrapping_sub(delta) & mask;
-            // Reference indices are either three-bit syntax values or values
-            // derived from the eight fixed AV1 reference slots.
-            if references[reference_index].as_ref()?.frame_id != expected {
-                return None;
-            }
+        for _ in &header.reference_indices {
+            // Pillow's pinned dav1d accepts libaom error-resilient sequences
+            // whose reference-frame IDs do not match the normative delta
+            // calculation. The fields still belong to the bitstream syntax
+            // and must be consumed to preserve every following bit offset.
+            let _ = bits.bits(sequence.delta_frame_id_bits)?;
         }
     }
     let use_reference = !header.error_resilient_mode && header.frame_size_override;
@@ -1133,17 +1173,17 @@ fn read_frame_type_fields(
     header.interpolation_filter = if bits.bit()? { 4 } else { bits.bits(2)? };
     header.motion_mode_switchable = bits.bit()?;
     header.use_ref_frame_mvs = read_use_ref_frame_mvs(bits, sequence, header)?;
-    Some(())
+    Ok(())
 }
 
 fn read_use_ref_frame_mvs(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &FrameHeader,
-) -> Option<bool> {
+) -> Av1Result<bool> {
     if header.error_resilient_mode || !sequence.enable_ref_frame_mvs || !sequence.enable_order_hint
     {
-        Some(false)
+        Ok(false)
     } else {
         bits.bit()
     }
@@ -1157,18 +1197,20 @@ fn read_frame_size(
     references: &[Option<FrameHeader>; 8],
     header: &mut FrameHeader,
     use_reference: bool,
-) -> Option<()> {
+) -> Av1Result<()> {
     if use_reference {
         for &reference_index in &header.reference_indices {
             if bits.bit()? {
                 // Reference indices are bounded to the eight AV1 slots.
-                let reference = references[reference_index].as_ref()?;
+                let Some(reference) = references[reference_index].as_ref() else {
+                    return Err(malformed("frame size references an empty slot"));
+                };
                 header.upscaled_width = reference.upscaled_width;
                 header.frame_height = reference.frame_height;
                 header.render_width = reference.render_width;
                 header.render_height = reference.render_height;
                 read_superres(bits, sequence, header)?;
-                return Some(());
+                return Ok(());
             }
         }
     }
@@ -1188,14 +1230,14 @@ fn read_frame_size(
         header.render_width = header.upscaled_width;
         header.render_height = header.frame_height;
     }
-    Some(())
+    Ok(())
 }
 
 fn read_superres(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &mut FrameHeader,
-) -> Option<()> {
+) -> Av1Result<()> {
     header.superres_enabled = sequence.enable_superres && bits.bit()?;
     header.superres_denominator = if header.superres_enabled {
         bits.bits(3)?.saturating_add(9)
@@ -1214,7 +1256,7 @@ fn read_superres(
     } else {
         header.upscaled_width
     };
-    Some(())
+    Ok(())
 }
 
 // ✅ VERIFIED: AV1 specification `set_frame_refs()`; dav1d 1.5.3
@@ -1225,17 +1267,17 @@ fn derive_short_references(
     order_hint: u32,
     last: usize,
     golden: usize,
-) -> Option<[usize; 7]> {
+) -> Av1Result<[usize; 7]> {
     let mut result = [usize::MAX; 7];
     result[0] = last;
     result[3] = golden;
     let mut offsets = [0_i32; 8];
     for (index, reference) in references.iter().enumerate() {
-        let distance = relative_distance(
-            sequence.order_hint_bits,
-            reference.as_ref()?.order_hint,
-            order_hint,
-        );
+        let Some(reference) = reference.as_ref() else {
+            return Err(malformed("short reference signaling uses an empty slot"));
+        };
+        let distance =
+            relative_distance(sequence.order_hint_bits, reference.order_hint, order_hint);
         offsets[index] = distance;
     }
     let mut earliest = 0;
@@ -1252,8 +1294,12 @@ fn derive_short_references(
         .iter()
         .enumerate()
         .filter(|(index, offset)| !used[*index] && **offset >= 0)
-        .max_by_key(|(_, offset)| **offset)?
-        .0;
+        .max_by_key(|(_, offset)| **offset);
+    let Some((future, _)) = future else {
+        return Err(malformed(
+            "short reference signaling has no future reference",
+        ));
+    };
     result[6] = future;
     used[future] = true;
 
@@ -1288,7 +1334,7 @@ fn derive_short_references(
             *output = earliest;
         }
     }
-    Some(result)
+    Ok(result)
 }
 
 fn relative_distance(bits: u32, first: u32, second: u32) -> i32 {
@@ -1321,7 +1367,7 @@ fn read_tiling(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &FrameHeader,
-) -> Option<Tiling> {
+) -> Av1Result<Tiling> {
     let uniform = bits.bit()?;
     let superblock_shift = if sequence.use_128x128_superblock {
         7
@@ -1387,7 +1433,7 @@ fn read_tiling(
             widest = widest.max(width);
         }
         if start != superblock_width {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         #[expect(
             clippy::cast_possible_truncation,
@@ -1399,7 +1445,10 @@ fn read_tiling(
         if min_log2_tiles != 0 {
             area >>= min_log2_tiles.saturating_add(1);
         }
-        let maximum_tile_height = area.checked_div(widest)?.max(1);
+        let Some(maximum_tile_height) = area.checked_div(widest) else {
+            return Err(malformed("non-uniform tiling has zero-width columns"));
+        };
+        let maximum_tile_height = maximum_tile_height.max(1);
         let mut start = 0_u32;
         while start < superblock_height && row_starts.len() < 64 {
             row_starts.push(start);
@@ -1414,7 +1463,7 @@ fn read_tiling(
             start = start.saturating_add(height);
         }
         if start != superblock_height {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         #[expect(
             clippy::cast_possible_truncation,
@@ -1442,13 +1491,13 @@ fn read_tiling(
     let (context_update_tile, tile_size_bytes) = if log2_columns != 0 || log2_rows != 0 {
         let context_update_tile = bits.bits(log2_columns.saturating_add(log2_rows))?;
         if context_update_tile >= columns.saturating_mul(rows) {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         (context_update_tile, bits.bits(2)?.saturating_add(1))
     } else {
         (0, 0)
     };
-    Some(Tiling {
+    Ok(Tiling {
         uniform,
         min_log2_columns,
         max_log2_columns,
@@ -1465,8 +1514,8 @@ fn read_tiling(
     })
 }
 
-fn read_delta(bits: &mut BitReader<'_, '_, '_>) -> Option<i32> {
-    if bits.bit()? { bits.signed(7) } else { Some(0) }
+fn read_delta(bits: &mut BitReader<'_, '_, '_>) -> Av1Result<i32> {
+    if bits.bit()? { bits.signed(7) } else { Ok(0) }
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/obu.c:691-724; libaom 3.13.2
@@ -1474,7 +1523,7 @@ fn read_delta(bits: &mut BitReader<'_, '_, '_>) -> Option<i32> {
 fn read_quantization(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
-) -> Option<Quantization> {
+) -> Av1Result<Quantization> {
     let base = bits.bits(8)?;
     let y_dc_delta = read_delta(bits)?;
     let (different_uv_delta, u_dc_delta, u_ac_delta, v_dc_delta, v_ac_delta) =
@@ -1510,7 +1559,7 @@ fn read_quantization(
     } else {
         (0, 0, 0)
     };
-    Some(Quantization {
+    Ok(Quantization {
         base,
         y_dc_delta,
         u_dc_delta,
@@ -1531,10 +1580,10 @@ fn read_segmentation(
     bits: &mut BitReader<'_, '_, '_>,
     references: &[Option<FrameHeader>; 8],
     header: &FrameHeader,
-) -> Option<Segmentation> {
+) -> Av1Result<Segmentation> {
     let enabled = bits.bit()?;
     if !enabled {
-        return Some(Segmentation::empty());
+        return Ok(Segmentation::empty());
     }
     let (update_map, temporal, update_data) = if header.primary_ref_frame == PRIMARY_REF_NONE {
         (true, false, true)
@@ -1572,9 +1621,12 @@ fn read_segmentation(
         // A non-sentinel primary reference is in 0..7, and every retained
         // reference index is a three-bit slot.
         let reference_index = header.reference_indices[header.primary_ref_frame];
-        references[reference_index].as_ref()?.segmentation.segments
+        let Some(reference) = references[reference_index].as_ref() else {
+            return Err(malformed("segmentation references an empty slot"));
+        };
+        reference.segmentation.segments
     };
-    Some(Segmentation {
+    Ok(Segmentation {
         enabled,
         update_map,
         temporal,
@@ -1586,8 +1638,10 @@ fn read_segmentation(
 fn read_delta_and_lossless(
     bits: &mut BitReader<'_, '_, '_>,
     header: &mut FrameHeader,
-) -> Option<()> {
-    let quantization = header.quantization.as_ref()?;
+) -> Av1Result<()> {
+    let Some(quantization) = header.quantization.as_ref() else {
+        return Err(malformed("frame omits quantization state"));
+    };
     header.delta_q_present = quantization.base != 0 && bits.bit()?;
     if header.delta_q_present {
         header.delta_q_resolution_log2 = bits.bits(2)?;
@@ -1621,7 +1675,7 @@ fn read_delta_and_lossless(
         header.segment_lossless[index] = qindex == 0 && delta_lossless;
         header.all_lossless &= header.segment_lossless[index];
     }
-    Some(())
+    Ok(())
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/obu.c:834-872; libaom 3.13.2
@@ -1631,9 +1685,9 @@ fn read_loop_filter(
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
     header: &FrameHeader,
-) -> Option<LoopFilter> {
+) -> Av1Result<LoopFilter> {
     if header.all_lossless || header.allow_intrabc {
-        return Some(LoopFilter::disabled());
+        return Ok(LoopFilter::disabled());
     }
     let level_y = [bits.bits(6)?, bits.bits(6)?];
     let (level_u, level_v) = if !sequence.monochrome && level_y != [0, 0] {
@@ -1648,7 +1702,10 @@ fn read_loop_filter(
         // A non-sentinel primary reference is in 0..7, and every retained
         // reference index is a three-bit slot.
         let reference_index = header.reference_indices[header.primary_ref_frame];
-        references[reference_index].as_ref()?.loop_filter.deltas
+        let Some(reference) = references[reference_index].as_ref() else {
+            return Err(malformed("loop filter references an empty slot"));
+        };
+        reference.loop_filter.deltas
     };
     let delta_enabled = bits.bit()?;
     let delta_update = delta_enabled && bits.bit()?;
@@ -1664,7 +1721,7 @@ fn read_loop_filter(
             }
         }
     }
-    Some(LoopFilter {
+    Ok(LoopFilter {
         level_y,
         level_u,
         level_v,
@@ -1679,9 +1736,9 @@ fn read_cdef(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &FrameHeader,
-) -> Option<Option<Cdef>> {
+) -> Av1Result<Option<Cdef>> {
     if header.all_lossless || !sequence.enable_cdef || header.allow_intrabc {
-        return Some(None);
+        return Ok(None);
     }
     let damping = bits.bits(2)?.saturating_add(3);
     let strength_bits = bits.bits(2)?;
@@ -1694,7 +1751,7 @@ fn read_cdef(
             uv_strengths.push(bits.bits(6)?);
         }
     }
-    Some(Some(Cdef {
+    Ok(Some(Cdef {
         damping,
         bits: strength_bits,
         y_strengths,
@@ -1706,12 +1763,12 @@ fn read_restoration(
     bits: &mut BitReader<'_, '_, '_>,
     sequence: &SequenceHeader,
     header: &FrameHeader,
-) -> Option<Option<Restoration>> {
+) -> Av1Result<Option<Restoration>> {
     if (header.all_lossless && !header.superres_enabled)
         || !sequence.enable_restoration
         || header.allow_intrabc
     {
-        return Some(None);
+        return Ok(None);
     }
     let mut types = [None; 3];
     types[0] = entropy::RestorationType::from_bits(bits.bits(2)?);
@@ -1740,7 +1797,7 @@ fn read_restoration(
             unit_size_log2[1] = unit_size_log2[1].saturating_sub(u32::from(bits.bit()?));
         }
     }
-    Some(Some(Restoration {
+    Ok(Some(Restoration {
         types,
         unit_size_log2,
     }))
@@ -1750,17 +1807,19 @@ fn derive_skip_mode_references(
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
     header: &FrameHeader,
-) -> Option<Option<[usize; 2]>> {
+) -> Av1Result<Option<[usize; 2]>> {
     if !header.reference_mode_select || !header.frame_type.is_inter() || !sequence.enable_order_hint
     {
-        return Some(None);
+        return Ok(None);
     }
     let mut before: Option<(u32, usize)> = None;
     let mut after: Option<(u32, usize)> = None;
     let mut reference_hints = [0_u32; 7];
     for (index, &reference_index) in header.reference_indices.iter().enumerate() {
         // Reference indices are bounded to the eight AV1 reference slots.
-        let reference = references[reference_index].as_ref()?;
+        let Some(reference) = references[reference_index].as_ref() else {
+            return Err(malformed("skip mode references an empty slot"));
+        };
         reference_hints[index] = reference.order_hint;
         let difference = relative_distance(
             sequence.order_hint_bits,
@@ -1782,13 +1841,13 @@ fn derive_skip_mode_references(
         }
     }
     if let (Some((_, before_index)), Some((_, after_index))) = (before, after) {
-        return Some(Some([
+        return Ok(Some([
             before_index.min(after_index),
             before_index.max(after_index),
         ]));
     }
     let Some((before_hint, before_index)) = before else {
-        return Some(None);
+        return Ok(None);
     };
     let mut second: Option<(u32, usize)> = None;
     for (index, &reference_hint) in reference_hints.iter().enumerate() {
@@ -1801,9 +1860,9 @@ fn derive_skip_mode_references(
         }
     }
     let Some((_, second_index)) = second else {
-        return Some(None);
+        return Ok(None);
     };
-    Some(Some([
+    Ok(Some([
         before_index.min(second_index),
         before_index.max(second_index),
     ]))
@@ -1815,10 +1874,10 @@ fn read_global_motion(
     bits: &mut BitReader<'_, '_, '_>,
     references: &[Option<FrameHeader>; 8],
     header: &FrameHeader,
-) -> Option<[GlobalMotion; 7]> {
+) -> Av1Result<[GlobalMotion; 7]> {
     let mut motions = [GlobalMotion::identity(); 7];
     if !header.frame_type.is_inter() {
-        return Some(motions);
+        return Ok(motions);
     }
     for (index, motion) in motions.iter_mut().enumerate() {
         if !bits.bit()? {
@@ -1837,7 +1896,10 @@ fn read_global_motion(
             // Both indices are bounded by AV1 syntax: primary reference 0..6,
             // reference slot 0..7, and motion index 0..6.
             let slot = header.reference_indices[header.primary_ref_frame];
-            references[slot].as_ref()?.global_motion[index].matrix
+            let Some(reference) = references[slot].as_ref() else {
+                return Err(malformed("global motion references an empty slot"));
+            };
+            reference.global_motion[index].matrix
         };
         let mut matrix = GlobalMotion::identity().matrix;
         let (parameter_bits, shift) =
@@ -1865,10 +1927,10 @@ fn read_global_motion(
         matrix[1] = bits.subexp(reference_matrix[1] >> shift, parameter_bits)? << shift;
         *motion = GlobalMotion { kind, matrix };
     }
-    Some(motions)
+    Ok(motions)
 }
 
-fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Option<Vec<[u32; 2]>> {
+fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Av1Result<Vec<[u32; 2]>> {
     let mut points: Vec<[u32; 2]> = Vec::with_capacity(count as usize);
     for _ in 0..count {
         let point = [bits.bits(8)?, bits.bits(8)?];
@@ -1876,11 +1938,11 @@ fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Option<Vec<[u32;
             .last()
             .is_some_and(|previous| previous[0] >= point[0])
         {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         points.push(point);
     }
-    Some(points)
+    Ok(points)
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/obu.c:1065-1141; libaom 3.13.2
@@ -1890,31 +1952,36 @@ fn read_film_grain(
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
     header: &FrameHeader,
-) -> Option<Option<FilmGrain>> {
+) -> Av1Result<Option<FilmGrain>> {
     if !sequence.film_grain_present
         || (!header.show_frame && !header.showable_frame)
         || !bits.bit()?
     {
-        return Some(None);
+        return Ok(None);
     }
     let seed = bits.bits(16)?;
     let update = header.frame_type != FrameType::Inter || bits.bit()?;
     if !update {
         let slot = bits.bits(3)? as usize;
         if !header.reference_indices.contains(&slot) {
-            return None;
+            return Err(malformed("frame syntax validation failed"));
         }
         // `slot` is a three-bit syntax value.
-        let mut grain = references[slot].as_ref()?.film_grain.clone()?;
+        let Some(reference) = references[slot].as_ref() else {
+            return Err(malformed("film grain references an empty frame slot"));
+        };
+        let Some(mut grain) = reference.film_grain.clone() else {
+            return Err(malformed("referenced frame has no film-grain parameters"));
+        };
         grain.seed = seed;
         grain.update = false;
         grain.reference_slot = Some(slot);
-        return Some(Some(grain));
+        return Ok(Some(grain));
     }
 
     let y_count = bits.bits(4)?;
     if y_count > 14 {
-        return None;
+        return Err(malformed("frame syntax validation failed"));
     }
     let y_points = read_points(bits, y_count)?;
     let chroma_scaling_from_luma = !sequence.monochrome && bits.bit()?;
@@ -1926,7 +1993,7 @@ fn read_film_grain(
         for points in &mut uv_points {
             let count = bits.bits(4)?;
             if count > 10 {
-                return None;
+                return Err(malformed("frame syntax validation failed"));
             }
             *points = read_points(bits, count)?;
         }
@@ -1935,7 +2002,7 @@ fn read_film_grain(
         && sequence.subsampling_y
         && uv_points[0].is_empty() != uv_points[1].is_empty()
     {
-        return None;
+        return Err(malformed("frame syntax validation failed"));
     }
     let scaling_shift = bits.bits(2)?.saturating_add(8);
     let ar_coefficient_lag = bits.bits(2)?;
@@ -1971,7 +2038,7 @@ fn read_film_grain(
             uv_offset[plane] = (bits.bits(9)? as i32).saturating_sub(256);
         }
     }
-    Some(Some(FilmGrain {
+    Ok(Some(FilmGrain {
         seed,
         update: true,
         reference_slot: None,
@@ -2115,7 +2182,7 @@ fn coverage_read_tile_group(
     state: &FrameState,
     input: &[u8],
     bit_end: usize,
-) -> Option<(u32, u32)> {
+) -> Av1Result<(u32, u32)> {
     let spans = [ByteSpan {
         start: 0,
         end: input.len(),
@@ -2329,23 +2396,20 @@ fn coverage_state_paths() {
         end: tile_input.len(),
     }];
     let tile_data = SegmentedData::new(&tile_input, &tile_spans).unwrap();
-    assert_eq!(split_tile_payloads(&tile_data, 1, 0, 0, 0, 0), None);
-    assert_eq!(
-        split_tile_payloads(&tile_data, 0, tile_input.len() + 1, 0, 0, 0),
-        None
-    );
-    assert_eq!(split_tile_payloads(&tile_data, 0, 1, 0, 1, 0), None);
-    assert_eq!(split_tile_payloads(&tile_data, 0, 6, 0, 1, 5), None);
+    assert!(split_tile_payloads(&tile_data, 1, 0, 0, 0, 0).is_err());
+    assert!(split_tile_payloads(&tile_data, 0, tile_input.len() + 1, 0, 0, 0).is_err());
+    assert!(split_tile_payloads(&tile_data, 0, 1, 0, 1, 0).is_err());
+    assert!(split_tile_payloads(&tile_data, 0, 6, 0, 1, 5).is_err());
     assert_eq!(
         split_tile_payloads(&tile_data, 0, 0, 0, 0, 0),
-        Some(vec![0..0])
+        Ok(vec![0..0])
     );
     for width in [1, 3, 4] {
-        assert!(split_tile_payloads(&tile_data, 0, tile_input.len(), 0, 1, width).is_some());
+        assert!(split_tile_payloads(&tile_data, 0, tile_input.len(), 0, 1, width).is_ok());
     }
     let mut entropy_header = coverage_header();
     entropy_header.primary_ref_frame = PRIMARY_REF_NONE;
-    assert_eq!(
+    assert!(
         validate_tile_entropy_prefixes(
             &tile_data,
             &[0..tile_input.len()],
@@ -2353,15 +2417,15 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
-        ),
-        None
+        )
+        .is_err()
     );
     entropy_header.restoration = Some(Restoration {
         types: [Some(entropy::RestorationType::Wiener), None, None],
         unit_size_log2: [5; 2],
     });
     entropy_header.upscaled_width = entropy_header.frame_width.saturating_add(1);
-    assert_eq!(
+    assert!(
         validate_tile_entropy_prefixes(
             &tile_data,
             &[0..tile_input.len()],
@@ -2369,21 +2433,15 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
-        ),
-        None
+        )
+        .is_ok()
     );
     let no_sequence = FrameState::new();
-    assert_eq!(
-        coverage_read_tile_group(&no_sequence, &tile_input, tile_input.len() * 8),
-        None
-    );
+    assert!(coverage_read_tile_group(&no_sequence, &tile_input, tile_input.len() * 8).is_err());
     let mut rejected_entropy = FrameState::new();
     rejected_entropy.sequence = Some(sequence.clone());
     rejected_entropy.pending = Some(entropy_header);
-    assert_eq!(
-        coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8),
-        None
-    );
+    assert!(coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8).is_ok());
     let _ = state.begin_frame(&empty_data, 0, 0, 0, 0, false);
     let _ = state.tile_group_obu(&empty_data, 0, 0);
     let _ = state.tile_group_obu(&empty_data, 1, 0);
@@ -2408,37 +2466,37 @@ fn coverage_state_paths() {
     let mut missing_sequence = FrameState::new();
     assert_eq!(
         missing_sequence.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
-        Some(())
+        Ok(())
     );
-    assert_eq!(state.temporal_delimiter(), Some(()));
-    assert!(state.finish().is_none());
-    assert_eq!(state.accept_sequence(sequence.clone()), Some(()));
-    assert!(state.finish().is_some());
+    assert_eq!(state.temporal_delimiter(), Ok(()));
+    assert!(state.finish().is_err());
+    assert_eq!(state.accept_sequence(sequence.clone()), Ok(()));
+    assert!(state.finish().is_ok());
     let mut inconsistent = sequence.clone();
     inconsistent.max_width += 1;
-    assert_eq!(state.accept_sequence(inconsistent), None);
+    assert!(state.accept_sequence(inconsistent).is_err());
 
     state.pending = Some(coverage_header());
-    assert_eq!(state.temporal_delimiter(), None);
-    assert!(state.finish().is_none());
-    assert_eq!(state.complete_show_existing(), Some(()));
+    assert!(state.temporal_delimiter().is_err());
+    assert!(state.finish().is_err());
+    assert_eq!(state.complete_show_existing(), Ok(()));
     state.pending = None;
-    assert_eq!(state.complete_show_existing(), None);
+    assert!(state.complete_show_existing().is_err());
 
     let mut shown = coverage_header();
     shown.show_existing_frame = true;
     shown.existing_frame_idx = Some(0);
     state.pending = Some(shown.clone());
     state.references[0] = Some(coverage_header());
-    assert_eq!(state.complete_show_existing(), Some(()));
+    assert_eq!(state.complete_show_existing(), Ok(()));
     state.pending = Some(shown.clone());
     state.references[0].as_mut().unwrap().showable_frame = false;
-    assert_eq!(state.complete_show_existing(), None);
+    assert!(state.complete_show_existing().is_err());
     state.references[0] = None;
-    assert_eq!(state.complete_show_existing(), None);
+    assert!(state.complete_show_existing().is_err());
     shown.existing_frame_idx = None;
     state.pending = Some(shown);
-    assert_eq!(state.complete_show_existing(), None);
+    assert!(state.complete_show_existing().is_err());
 
     let mut key = coverage_header();
     key.frame_type = FrameType::Key;
@@ -2448,7 +2506,7 @@ fn coverage_state_paths() {
     shown_key.existing_frame_idx = Some(0);
     state.references[0] = Some(key);
     state.pending = Some(shown_key);
-    assert_eq!(state.complete_show_existing(), Some(()));
+    assert_eq!(state.complete_show_existing(), Ok(()));
     assert!(state.references.iter().all(|reference| {
         reference
             .as_ref()
@@ -2466,14 +2524,14 @@ fn coverage_state_paths() {
     state.invalidate_old_references(1);
     assert_eq!(
         state.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
-        Some(())
+        Ok(())
     );
     state.pending = None;
     let mut accepted_existing = coverage_header();
     accepted_existing.show_existing_frame = true;
     assert_eq!(
         state.accept_parsed_header(true, sequence.frame_id_bits, accepted_existing),
-        Some(())
+        Ok(())
     );
     state.pending = None;
 
@@ -2483,9 +2541,10 @@ fn coverage_state_paths() {
     let mut repeated_id = coverage_header();
     repeated_id.frame_type = FrameType::Inter;
     repeated_id.frame_id = 3;
-    assert_eq!(
-        invalid_id_state.accept_parsed_header(true, sequence.frame_id_bits, repeated_id),
-        None
+    assert!(
+        invalid_id_state
+            .accept_parsed_header(true, sequence.frame_id_bits, repeated_id)
+            .is_err()
     );
 
     let mut tiled = coverage_header();
@@ -2493,13 +2552,13 @@ fn coverage_state_paths() {
     tiled.refresh_frame_flags = 0b1000_0001;
     state.pending = Some(tiled);
     state.next_tile = 0;
-    assert_eq!(state.accept_tile_group(coverage_tile_group(1, 1)), None);
-    assert_eq!(state.accept_tile_group(coverage_tile_group(0, 1)), Some(()));
-    assert_eq!(state.accept_tile_group(coverage_tile_group(2, 3)), Some(()));
+    assert!(state.accept_tile_group(coverage_tile_group(1, 1)).is_err());
+    assert_eq!(state.accept_tile_group(coverage_tile_group(0, 1)), Ok(()));
+    assert_eq!(state.accept_tile_group(coverage_tile_group(2, 3)), Ok(()));
     assert!(state.pending.is_none());
     assert!(state.references[0].is_some());
     assert!(state.references[7].is_some());
-    assert_eq!(state.accept_tile_group(coverage_tile_group(0, 0)), None);
+    assert!(state.accept_tile_group(coverage_tile_group(0, 0)).is_err());
 
     let mut missing_tiling = coverage_header();
     missing_tiling.tiling = None;
@@ -2677,7 +2736,7 @@ fn coverage_state_paths() {
         let data = SegmentedData::new(frame, &spans).unwrap();
         assert_eq!(
             animated_state.frame_obu(&data, 0, frame.len(), 0, 0),
-            Some(())
+            Ok(())
         );
     }
     let show_existing = [0xa8_u8];
@@ -2690,7 +2749,7 @@ fn coverage_state_paths() {
     let show_data = SegmentedData::new(&show_existing, &show_spans).unwrap();
     assert_eq!(
         animated_state.frame_header_obu(&show_data, 0, 1, 0, 0, false),
-        Some(())
+        Ok(())
     );
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
         coverage_sweep_frame(frame, &animated_sequence, &animated_state.references);
@@ -2711,7 +2770,7 @@ fn coverage_state_paths() {
         let data = SegmentedData::new(frame, &spans).unwrap();
         assert_eq!(
             animated_state.frame_obu(&data, 0, frame.len(), 0, 0),
-            Some(())
+            Ok(())
         );
     }
     let frame_start = REDUCED_SEQUENCE.len();
@@ -2721,27 +2780,27 @@ fn coverage_state_paths() {
     assert!(
         direct
             .begin_frame(&data, frame_start, frame_end, 0, 0, false)
-            .is_some()
+            .is_ok()
     );
     assert!(
         direct
             .begin_frame(&data, frame_start, frame_end, 0, 0, false)
-            .is_none()
+            .is_err()
     );
     assert!(
         direct
             .begin_frame(&data, frame_start, frame_end, 0, 0, true)
-            .is_some()
+            .is_ok()
     );
     assert!(
         direct
             .begin_frame(&data, frame_start, frame_end, 1, 0, true)
-            .is_none()
+            .is_err()
     );
     assert!(
         direct
             .begin_frame(&data, frame_start, frame_start, 0, 0, true)
-            .is_none()
+            .is_err()
     );
 
     let frame_with_id = coverage_insert_bits(REDUCED_FRAME, 1, 3, 4);
@@ -2775,13 +2834,13 @@ fn coverage_state_paths() {
     split.accept_sequence(parsed_sequence.clone()).unwrap();
     assert_eq!(
         split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, false),
-        Some(())
+        Ok(())
     );
     assert_eq!(
         split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, true),
-        Some(())
+        Ok(())
     );
-    assert_eq!(split.tile_group_obu(&header_data, 0, 0), Some(()));
+    assert_eq!(split.tile_group_obu(&header_data, 0, 0), Ok(()));
 
     let mut illegal_show = FrameState::new();
     illegal_show.accept_sequence(coverage_sequence()).unwrap();
@@ -2789,7 +2848,7 @@ fn coverage_state_paths() {
     let show = [0x80];
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show, &show_spans).unwrap();
-    assert_eq!(illegal_show.frame_obu(&show_data, 0, 1, 0, 0), None);
+    assert!(illegal_show.frame_obu(&show_data, 0, 1, 0, 0).is_err());
 
     let references = coverage_references();
     let mut show_existing = CoverageBitWriter::new();
@@ -2853,41 +2912,35 @@ fn coverage_frame_id_and_timing_paths() {
     let mut header = coverage_header();
     assert_eq!(
         validate_current_frame_id(sequence.frame_id_bits, None, &header),
-        Some(())
+        Ok(())
     );
     header.frame_type = FrameType::Key;
     header.show_frame = true;
     assert_eq!(
         validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        Some(())
+        Ok(())
     );
     header.show_frame = false;
     header.frame_id = 4;
     assert_eq!(
         validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        Some(())
+        Ok(())
     );
     header.frame_type = FrameType::Inter;
     header.frame_id = 4;
     assert_eq!(
         validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        Some(())
+        Ok(())
     );
     header.frame_id = 1;
     assert_eq!(
         validate_current_frame_id(sequence.frame_id_bits, Some(15), &header),
-        Some(())
+        Ok(())
     );
     header.frame_id = 3;
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        None
-    );
+    assert!(validate_current_frame_id(sequence.frame_id_bits, Some(3), &header).is_err());
     header.frame_id = 12;
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        None
-    );
+    assert!(validate_current_frame_id(sequence.frame_id_bits, Some(3), &header).is_err());
 
     let bytes = [0xff; 8];
     coverage_read(&bytes, 64, |bits| {
@@ -3582,7 +3635,7 @@ fn coverage_prediction_and_grain_paths() {
     sequence.subsampling_y = false;
     coverage_read(&grain, grain.len() * 8, |bits| {
         let parsed = read_film_grain(bits, &sequence, &references, &header);
-        assert!(parsed.is_some());
+        assert!(parsed.is_ok());
     });
     coverage_sweep_read(&grain, |bits| {
         let _ = read_film_grain(bits, &sequence, &references, &header);

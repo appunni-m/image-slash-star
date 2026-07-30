@@ -120,6 +120,28 @@ enum IntraMode {
     HU = B_HU_PRED,
 }
 
+const LUMA_MODES: [LumaMode; 5] = [
+    LumaMode::DC,
+    LumaMode::V,
+    LumaMode::H,
+    LumaMode::TM,
+    LumaMode::B,
+];
+const CHROMA_MODES: [ChromaMode; 4] =
+    [ChromaMode::DC, ChromaMode::V, ChromaMode::H, ChromaMode::TM];
+const INTRA_MODES: [IntraMode; 10] = [
+    IntraMode::DC,
+    IntraMode::TM,
+    IntraMode::VE,
+    IntraMode::HE,
+    IntraMode::LD,
+    IntraMode::RD,
+    IntraMode::VR,
+    IntraMode::VL,
+    IntraMode::HD,
+    IntraMode::HU,
+];
+
 type Prob = u8;
 
 #[derive(Clone, Copy)]
@@ -1256,9 +1278,6 @@ impl<R: Read> Vp8Decoder<R> {
         Ok(())
     }
 
-    // The keyframe mode trees contain only values represented by the mode
-    // enums below.
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn read_macroblock_header(&mut self, mbx: usize) -> Result<MacroBlock, DecodingError> {
         let mut mb = MacroBlock::default();
         let mut res = self.b.start_accumulated_result();
@@ -1277,8 +1296,7 @@ impl<R: Read> Vp8Decoder<R> {
         // Only keyframes reach macroblock decoding; interframes are rejected
         // after the frame-level fields have been consumed.
         let luma = (self.b.read_with_tree(&KEYFRAME_YMODE_NODES)).or_accumulate(&mut res);
-        mb.luma_mode =
-            LumaMode::from_i8(luma).expect("keyframe luma mode tree only yields valid modes");
+        mb.luma_mode = LUMA_MODES[usize::from(luma.to_le_bytes()[0])];
 
         match mb.luma_mode.into_intra() {
             // `LumaMode::B` - This is predicted individually
@@ -1291,8 +1309,7 @@ impl<R: Read> Vp8Decoder<R> {
                             &KEYFRAME_BPRED_MODE_NODES[top as usize][left as usize],
                         );
                         let intra = intra.or_accumulate(&mut res);
-                        let bmode = IntraMode::from_i8(intra)
-                            .expect("keyframe intra mode tree only yields valid modes");
+                        let bmode = INTRA_MODES[usize::from(intra.to_le_bytes()[0])];
                         mb.bpred[x + y * 4] = bmode;
 
                         self.top[mbx].bpred[12 + x] = bmode;
@@ -1309,8 +1326,7 @@ impl<R: Read> Vp8Decoder<R> {
         }
 
         let chroma = (self.b.read_with_tree(&KEYFRAME_UV_MODE_NODES)).or_accumulate(&mut res);
-        mb.chroma_mode =
-            ChromaMode::from_i8(chroma).expect("keyframe chroma mode tree only yields valid modes");
+        mb.chroma_mode = CHROMA_MODES[usize::from(chroma.to_le_bytes()[0])];
 
         self.top[mbx].chroma_mode = mb.chroma_mode;
         self.top[mbx].luma_mode = mb.luma_mode;
@@ -1941,17 +1957,6 @@ impl<R: Read> Vp8Decoder<R> {
 }
 
 impl LumaMode {
-    const fn from_i8(val: i8) -> Option<Self> {
-        Some(match val {
-            DC_PRED => Self::DC,
-            V_PRED => Self::V,
-            H_PRED => Self::H,
-            TM_PRED => Self::TM,
-            B_PRED => Self::B,
-            _ => return None,
-        })
-    }
-
     const fn into_intra(self) -> Option<IntraMode> {
         Some(match self {
             Self::DC => IntraMode::DC,
@@ -1959,36 +1964,6 @@ impl LumaMode {
             Self::H => IntraMode::HE,
             Self::TM => IntraMode::TM,
             Self::B => return None,
-        })
-    }
-}
-
-impl ChromaMode {
-    const fn from_i8(val: i8) -> Option<Self> {
-        Some(match val {
-            DC_PRED => Self::DC,
-            V_PRED => Self::V,
-            H_PRED => Self::H,
-            TM_PRED => Self::TM,
-            _ => return None,
-        })
-    }
-}
-
-impl IntraMode {
-    const fn from_i8(val: i8) -> Option<Self> {
-        Some(match val {
-            B_DC_PRED => Self::DC,
-            B_TM_PRED => Self::TM,
-            B_VE_PRED => Self::VE,
-            B_HE_PRED => Self::HE,
-            B_LD_PRED => Self::LD,
-            B_RD_PRED => Self::RD,
-            B_VR_PRED => Self::VR,
-            B_VL_PRED => Self::VL,
-            B_HD_PRED => Self::HD,
-            B_HU_PRED => Self::HU,
-            _ => return None,
         })
     }
 }
@@ -2065,10 +2040,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }
     }
 
-    assert_eq!(LumaMode::from_i8(127), None);
     assert_eq!(LumaMode::B.into_intra(), None);
-    assert_eq!(ChromaMode::from_i8(127), None);
-    assert_eq!(IntraMode::from_i8(127), None);
     assert_eq!(init_top_macroblocks(17).len(), 2);
 
     let mut error_reader = ErrorReader;

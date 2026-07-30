@@ -1,45 +1,59 @@
 //! WebP RIFF and frame-header inspection without pixel decoding.
 
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ImageFormat, ImageInfo, ImageMode};
 
 const RIFF_HEADER_SIZE: usize = 12;
+const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Inspect WebP dimensions, decoded mode, and animation frame count.
-pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
-    let header = data.get(..RIFF_HEADER_SIZE)?;
+pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
+    let header = data
+        .get(..RIFF_HEADER_SIZE)
+        .malformed("truncated WebP RIFF header")?;
     if &header[..4] != b"RIFF" || &header[8..12] != b"WEBP" {
-        return None;
+        return Err(CodecError::Malformed("invalid WebP signature".to_owned()));
     }
     let (kind, payload, next) = read_chunk(&data[RIFF_HEADER_SIZE..], RIFF_HEADER_SIZE)?;
     match &kind {
         b"VP8 " => inspect_vp8(payload),
         b"VP8L" => inspect_vp8l(payload),
         b"VP8X" => inspect_extended(data, payload, next),
-        _ => None,
+        _ => Err(CodecError::Malformed(
+            "WebP contains no recognized image header".to_owned(),
+        )),
     }
 }
 
-fn inspect_vp8(payload: &[u8]) -> Option<ImageInfo> {
-    let header = payload.get(..10)?;
+fn inspect_vp8(payload: &[u8]) -> CodecResult<ImageInfo> {
+    let header = payload.get(..10).malformed("truncated WebP VP8 header")?;
     if header[0] & 1 != 0 || &header[3..6] != b"\x9d\x01\x2a" {
-        return None;
+        return Err(CodecError::Malformed(
+            "invalid WebP VP8 keyframe".to_owned(),
+        ));
     }
     let width = u32::from(u16::from_le_bytes([header[6], header[7]]) & 0x3fff);
     let height = u32::from(u16::from_le_bytes([header[8], header[9]]) & 0x3fff);
     let tag = u32::from(header[0]) | (u32::from(header[1]) << 8) | (u32::from(header[2]) << 16);
     let first_partition_size = (tag >> 5) as usize;
-    payload.get(..10usize.wrapping_add(first_partition_size))?;
+    payload
+        .get(..10usize.wrapping_add(first_partition_size))
+        .malformed("truncated WebP VP8 first partition")?;
     still_info(width, height, ImageMode::Rgb8)
 }
 
-fn inspect_vp8l(payload: &[u8]) -> Option<ImageInfo> {
-    let payload = payload.get(..5)?;
+fn inspect_vp8l(payload: &[u8]) -> CodecResult<ImageInfo> {
+    let payload = payload.get(..5).malformed("truncated WebP VP8L header")?;
     if payload[0] != 0x2f {
-        return None;
+        return Err(CodecError::Malformed(
+            "invalid WebP VP8L signature".to_owned(),
+        ));
     }
     let header = u32::from_le_bytes([payload[1], payload[2], payload[3], payload[4]]);
     if header >> 29 != 0 {
-        return None;
+        return Err(CodecError::Malformed(
+            "invalid WebP VP8L version".to_owned(),
+        ));
     }
     let width = (header & 0x3fff).wrapping_add(1);
     let height = ((header >> 14) & 0x3fff).wrapping_add(1);
@@ -51,11 +65,14 @@ fn inspect_vp8l(payload: &[u8]) -> Option<ImageInfo> {
     still_info(width, height, mode)
 }
 
-fn still_info(width: u32, height: u32, mode: ImageMode) -> Option<ImageInfo> {
+fn still_info(width: u32, height: u32, mode: ImageMode) -> CodecResult<ImageInfo> {
     if width == 0 || height == 0 {
-        return None;
+        return Err(CodecError::Malformed(
+            "WebP dimensions must be nonzero".to_owned(),
+        ));
     }
-    Some(ImageInfo {
+    enforce_dimension_limit(width, height)?;
+    Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
         height,
@@ -67,40 +84,66 @@ fn still_info(width: u32, height: u32, mode: ImageMode) -> Option<ImageInfo> {
     })
 }
 
-fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> Option<ImageInfo> {
-    let header = payload.get(..10)?;
+fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecResult<ImageInfo> {
+    let header = payload.get(..10).malformed("truncated WebP VP8X header")?;
     let flags = header[0];
     let width = le_u24(header, 4).wrapping_add(1);
     let height = le_u24(header, 7).wrapping_add(1);
+    enforce_dimension_limit(width, height)?;
     let declares_animation = flags & 0x02 != 0;
     let mode = if flags & 0x10 != 0 {
         ImageMode::Rgba8
     } else {
         ImageMode::Rgb8
     };
-    let mut frame_count = u32::from(!declares_animation);
+    let mut frame_count = 0u32;
+    let mut saw_image = false;
+    let mut saw_animation_control = false;
     while position < data.len() {
         let (kind, payload, next) = read_chunk(&data[position..], position)?;
         position = next;
         if kind == *b"VP8 " {
             let info = inspect_vp8(payload)?;
             if info.width != width || info.height != height {
-                return None;
+                return Err(CodecError::Malformed(
+                    "WebP VP8 dimensions disagree with the canvas".to_owned(),
+                ));
             }
+            saw_image = true;
+            frame_count = 1;
         } else if kind == *b"VP8L" {
             let info = inspect_vp8l(payload)?;
             if info.width != width || info.height != height {
-                return None;
+                return Err(CodecError::Malformed(
+                    "WebP VP8L dimensions disagree with the canvas".to_owned(),
+                ));
             }
+            saw_image = true;
+            frame_count = 1;
+        } else if kind == *b"ANIM" {
+            if payload.len() < 6 {
+                return Err(CodecError::Malformed(
+                    "invalid WebP animation control chunk".to_owned(),
+                ));
+            }
+            saw_animation_control = true;
         } else if kind == *b"ANMF" && validate_animation_frame(payload, width, height)? {
             frame_count = frame_count.wrapping_add(1);
         }
     }
-    if declares_animation && frame_count == 0 {
-        return None;
+    if declares_animation {
+        if !saw_animation_control || frame_count == 0 {
+            return Err(CodecError::Malformed(
+                "animated WebP lacks animation control or frames".to_owned(),
+            ));
+        }
+    } else if !saw_image {
+        return Err(CodecError::Malformed(
+            "extended WebP contains no image chunk".to_owned(),
+        ));
     }
     let is_animated = frame_count > 1;
-    Some(ImageInfo {
+    Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
         height,
@@ -112,8 +155,14 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> Option<
     })
 }
 
-fn validate_animation_frame(payload: &[u8], canvas_width: u32, canvas_height: u32) -> Option<bool> {
-    let header = payload.get(..16)?;
+fn validate_animation_frame(
+    payload: &[u8],
+    canvas_width: u32,
+    canvas_height: u32,
+) -> CodecResult<bool> {
+    let header = payload
+        .get(..16)
+        .malformed("truncated WebP animation-frame header")?;
     let left = le_u24(header, 0).wrapping_mul(2);
     let top = le_u24(header, 3).wrapping_mul(2);
     let width = le_u24(header, 6).wrapping_add(1);
@@ -122,7 +171,9 @@ fn validate_animation_frame(payload: &[u8], canvas_width: u32, canvas_height: u3
         && height <= canvas_height
         && (left.wrapping_add(width) > canvas_width || top.wrapping_add(height) > canvas_height)
     {
-        return None;
+        return Err(CodecError::Malformed(
+            "WebP animation frame lies outside the canvas".to_owned(),
+        ));
     }
 
     let nested = &payload[16..];
@@ -133,21 +184,35 @@ fn validate_animation_frame(payload: &[u8], canvas_width: u32, canvas_height: u3
     }
     match &kind {
         b"VP8 " => {
-            let header = image_payload.get(..10)?;
-            (&header[3..6] == b"\x9d\x01\x2a").then_some(true)
+            let header = image_payload
+                .get(..10)
+                .malformed("truncated animated WebP VP8 header")?;
+            if &header[3..6] != b"\x9d\x01\x2a" {
+                return Err(CodecError::Malformed(
+                    "invalid animated WebP VP8 keyframe".to_owned(),
+                ));
+            }
+            Ok(true)
         }
         b"VP8L" => {
-            let header = image_payload.get(..5)?;
-            (header[0] == 0x2f
-                && u32::from_le_bytes([header[1], header[2], header[3], header[4]]) >> 29 == 0)
-                .then_some(true)
+            let header = image_payload
+                .get(..5)
+                .malformed("truncated animated WebP VP8L header")?;
+            if header[0] != 0x2f
+                || u32::from_le_bytes([header[1], header[2], header[3], header[4]]) >> 29 != 0
+            {
+                return Err(CodecError::Malformed(
+                    "invalid animated WebP VP8L header".to_owned(),
+                ));
+            }
+            Ok(true)
         }
-        _ => Some(false),
+        _ => Ok(false),
     }
 }
 
-fn read_chunk(chunk: &[u8], position: usize) -> Option<([u8; 4], &[u8], usize)> {
-    let prefix = chunk.get(..8)?;
+fn read_chunk(chunk: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
+    let prefix = chunk.get(..8).malformed("truncated WebP chunk header")?;
     let mut kind = [0; 4];
     kind.copy_from_slice(&prefix[..4]);
     let length = u32::from_le_bytes([prefix[4], prefix[5], prefix[6], prefix[7]]) as usize;
@@ -155,10 +220,21 @@ fn read_chunk(chunk: &[u8], position: usize) -> Option<([u8; 4], &[u8], usize)> 
     let padded_length = length.saturating_add(length & 1);
     #[cfg(not(target_pointer_width = "64"))]
     let padded_length = length.saturating_add(length & 1);
-    let body = chunk[8..].get(..padded_length)?;
+    let body = chunk[8..]
+        .get(..padded_length)
+        .malformed("truncated WebP chunk payload")?;
     let payload = &body[..length];
     let next = position.wrapping_add(8).wrapping_add(padded_length);
-    Some((kind, payload, next))
+    Ok((kind, payload, next))
+}
+
+fn enforce_dimension_limit(width: u32, height: u32) -> CodecResult<()> {
+    if u64::from(width).saturating_mul(u64::from(height)) > PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS {
+        return Err(CodecError::Malformed(
+            "WebP dimensions exceed decoder limits".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn le_u24(data: &[u8], offset: usize) -> u32 {
@@ -182,6 +258,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }
         result
     }
+    let mut unknown = b"RIFF\0\0\0\0WEBP".to_vec();
+    unknown.extend_from_slice(&chunk(b"JUNK", &[]));
+    let _ = inspect(&unknown);
 
     let mut vp8x = [0u8; 10];
     vp8x[0] = 0;

@@ -16,6 +16,7 @@
       "id": "byte_order_le",
       "asset": "le.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/le.tiff",
         "operations": [
@@ -33,8 +34,63 @@
       "id": "byte_order_be",
       "asset": "be.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/be.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "registered_header_variants_over_classic_ifd",
+      "asset": "legacy_le_swapped_magic.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/legacy_le_swapped_magic.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "registered_header_variants_over_classic_ifd_legacy_be_swapped_magic",
+      "asset": "legacy_be_swapped_magic.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/legacy_be_swapped_magic.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "registered_header_variants_over_classic_ifd_bigtiff_be_signature",
+      "asset": "bigtiff_be_signature.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/bigtiff_be_signature.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -50,6 +106,7 @@
       "id": "compression_none",
       "asset": "uncompressed.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/uncompressed.tiff",
         "operations": [
@@ -67,6 +124,7 @@
       "id": "compression_lzw",
       "asset": "lzw.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw.tiff",
         "operations": [
@@ -84,6 +142,7 @@
       "id": "compression_lzw_gray_lzw",
       "asset": "gray_lzw.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray_lzw.tiff",
         "operations": [
@@ -101,6 +160,7 @@
       "id": "compression_lzw_rgba_lzw",
       "asset": "rgba_lzw.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rgba_lzw.tiff",
         "operations": [
@@ -118,6 +178,7 @@
       "id": "compression_lzw_rgb_lzw_predictor",
       "asset": "rgb_lzw_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rgb_lzw_predictor.tiff",
         "operations": [
@@ -135,6 +196,7 @@
       "id": "compression_lzw_gray16_lzw_predictor",
       "asset": "gray16_lzw_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray16_lzw_predictor.tiff",
         "operations": [
@@ -152,6 +214,7 @@
       "id": "compression_lzw_lzw_no_eoi",
       "asset": "lzw_no_eoi.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_no_eoi.tiff",
         "operations": [
@@ -169,6 +232,7 @@
       "id": "compression_lzw_lzw_trailing_code",
       "asset": "lzw_trailing_code.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_trailing_code.tiff",
         "operations": [
@@ -186,6 +250,7 @@
       "id": "compression_lzw_lzw_kwkwk_clipped",
       "asset": "lzw_kwkwk_clipped.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_kwkwk_clipped.tiff",
         "operations": [
@@ -203,6 +268,7 @@
       "id": "compression_lzw_lzw_dictionary_saturation",
       "asset": "lzw_dictionary_saturation.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_dictionary_saturation.tiff",
         "operations": [
@@ -220,6 +286,7 @@
       "id": "compression_lzw_lzw_post_ifd_empty_count",
       "asset": "lzw_post_ifd_empty_count.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_post_ifd_empty_count.tiff",
         "operations": [
@@ -237,6 +304,7 @@
       "id": "compression_deflate",
       "asset": "deflate.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/deflate.tiff",
         "operations": [
@@ -254,6 +322,7 @@
       "id": "compression_deflate_gray_deflate",
       "asset": "gray_deflate.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray_deflate.tiff",
         "operations": [
@@ -271,6 +340,7 @@
       "id": "compression_deflate_rgb_deflate_predictor",
       "asset": "rgb_deflate_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rgb_deflate_predictor.tiff",
         "operations": [
@@ -288,6 +358,7 @@
       "id": "compression_deflate_gray16_deflate_predictor",
       "asset": "gray16_deflate_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray16_deflate_predictor.tiff",
         "operations": [
@@ -305,6 +376,7 @@
       "id": "compression_deflate_float32_deflate_predictor",
       "asset": "float32_deflate_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/float32_deflate_predictor.tiff",
         "operations": [
@@ -322,8 +394,27 @@
       "id": "compression_deflate_be_float32_predictor",
       "asset": "be_float32_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/be_float32_predictor.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "compression_deflate_oversized_output",
+      "asset": "deflate_oversized_stored_output.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_oversized_stored_output.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -339,6 +430,7 @@
       "id": "sample_format_i32",
       "asset": "le_unsigned32_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/le_unsigned32_predictor.tiff",
         "operations": [
@@ -356,6 +448,7 @@
       "id": "sample_format_i32_be_signed32_predictor",
       "asset": "be_signed32_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/be_signed32_predictor.tiff",
         "operations": [
@@ -373,6 +466,7 @@
       "id": "sample_format_i32_signed32",
       "asset": "signed32.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/signed32.tiff",
         "operations": [
@@ -390,6 +484,7 @@
       "id": "compression_packbits",
       "asset": "packbits.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/packbits.tiff",
         "operations": [
@@ -407,6 +502,7 @@
       "id": "compression_packbits_packbits_noop",
       "asset": "packbits_noop.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/packbits_noop.tiff",
         "operations": [
@@ -424,6 +520,7 @@
       "id": "compression_packbits_packbits_literal_overrun",
       "asset": "packbits_literal_overrun.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/packbits_literal_overrun.tiff",
         "operations": [
@@ -441,6 +538,7 @@
       "id": "compression_packbits_packbits_run_overrun",
       "asset": "packbits_run_overrun.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/packbits_run_overrun.tiff",
         "operations": [
@@ -458,6 +556,7 @@
       "id": "bilevel",
       "asset": "bilevel.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/bilevel.tiff",
         "operations": [
@@ -475,8 +574,27 @@
       "id": "photometric_miniswhite",
       "asset": "miniswhite_1bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/miniswhite_1bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "photometric_miniswhite_miniswhite_1bit_aligned",
+      "asset": "miniswhite_1bit_aligned.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_1bit_aligned.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -492,6 +610,7 @@
       "id": "photometric_miniswhite_miniswhite_8bit",
       "asset": "miniswhite_8bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/miniswhite_8bit.tiff",
         "operations": [
@@ -509,6 +628,7 @@
       "id": "photometric_miniswhite_miniswhite_2bit",
       "asset": "miniswhite_2bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/miniswhite_2bit.tiff",
         "operations": [
@@ -526,6 +646,7 @@
       "id": "photometric_miniswhite_miniswhite_4bit",
       "asset": "miniswhite_4bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/miniswhite_4bit.tiff",
         "operations": [
@@ -543,6 +664,7 @@
       "id": "grayscale",
       "asset": "gray.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray.tiff",
         "operations": [
@@ -560,6 +682,7 @@
       "id": "grayscale_alpha",
       "asset": "gray_alpha.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray_alpha.tiff",
         "operations": [
@@ -577,6 +700,7 @@
       "id": "palette",
       "asset": "palette.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/palette.tiff",
         "operations": [
@@ -594,6 +718,7 @@
       "id": "palette_low_depth",
       "asset": "palette2.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/palette2.tiff",
         "operations": [
@@ -611,6 +736,7 @@
       "id": "palette_low_depth_palette4",
       "asset": "palette4.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/palette4.tiff",
         "operations": [
@@ -628,6 +754,7 @@
       "id": "palette_map_leniency",
       "asset": "short_color_map.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/short_color_map.tiff",
         "operations": [
@@ -645,6 +772,7 @@
       "id": "rgb",
       "asset": "rgb.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rgb.tiff",
         "operations": [
@@ -662,6 +790,7 @@
       "id": "rgb_rgb_dpi",
       "asset": "rgb_dpi.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rgb_dpi.tiff",
         "operations": [
@@ -679,6 +808,7 @@
       "id": "rgb_byte_strip_offset",
       "asset": "byte_strip_offset.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/byte_strip_offset.tiff",
         "operations": [
@@ -696,6 +826,7 @@
       "id": "rgb_unknown_field_type",
       "asset": "unknown_field_type.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/unknown_field_type.tiff",
         "operations": [
@@ -713,6 +844,7 @@
       "id": "rgba",
       "asset": "rgba.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rgba.tiff",
         "operations": [
@@ -730,6 +862,7 @@
       "id": "cmyk",
       "asset": "cmyk.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/cmyk.tiff",
         "operations": [
@@ -747,6 +880,7 @@
       "id": "ycbcr",
       "asset": "ycbcr.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ycbcr.tiff",
         "operations": [
@@ -764,6 +898,7 @@
       "id": "depth_1",
       "asset": "1bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/1bit.tiff",
         "operations": [
@@ -781,6 +916,7 @@
       "id": "depth_2",
       "asset": "gray2.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray2.tiff",
         "operations": [
@@ -798,6 +934,7 @@
       "id": "depth_4",
       "asset": "gray4.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/gray4.tiff",
         "operations": [
@@ -815,6 +952,7 @@
       "id": "depth_8",
       "asset": "8bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/8bit.tiff",
         "operations": [
@@ -832,8 +970,27 @@
       "id": "depth_16",
       "asset": "16bit.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/16bit.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "depth_16_miniswhite_16bit",
+      "asset": "miniswhite_16bit.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/miniswhite_16bit.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -849,6 +1006,7 @@
       "id": "depth_float",
       "asset": "float32.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/float32.tiff",
         "operations": [
@@ -866,6 +1024,7 @@
       "id": "stripped",
       "asset": "stripped.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/stripped.tiff",
         "operations": [
@@ -883,6 +1042,7 @@
       "id": "stripped_leniency",
       "asset": "uncompressed_bad_byte_count.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/uncompressed_bad_byte_count.tiff",
         "operations": [
@@ -900,8 +1060,27 @@
       "id": "stripped_leniency_uncompressed_missing_strips",
       "asset": "uncompressed_missing_strips.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/uncompressed_missing_strips.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "stripped_leniency_missing_strip_byte_counts",
+      "asset": "missing_strip_byte_counts.tiff",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/missing_strip_byte_counts.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -917,6 +1096,7 @@
       "id": "tiled",
       "asset": "tiled.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/tiled.tiff",
         "operations": [
@@ -934,6 +1114,7 @@
       "id": "tiled_missing_byte_counts",
       "asset": "empty_tile_byte_counts.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/empty_tile_byte_counts.tiff",
         "operations": [
@@ -951,6 +1132,7 @@
       "id": "tiled_predictor",
       "asset": "tiled_deflate_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/tiled_deflate_predictor.tiff",
         "operations": [
@@ -968,6 +1150,7 @@
       "id": "tiled_predictor_tiled_adobe_deflate_predictor",
       "asset": "tiled_adobe_deflate_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/tiled_adobe_deflate_predictor.tiff",
         "operations": [
@@ -985,6 +1168,7 @@
       "id": "tiled_lzw_predictor",
       "asset": "tiled_lzw_predictor.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/tiled_lzw_predictor.tiff",
         "operations": [
@@ -1002,6 +1186,7 @@
       "id": "compressed_strip_count_leniency",
       "asset": "compressed_empty_strip_counts.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/compressed_empty_strip_counts.tiff",
         "operations": [
@@ -1019,6 +1204,7 @@
       "id": "single_page",
       "asset": "single.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/single.tiff",
         "operations": [
@@ -1036,6 +1222,7 @@
       "id": "multi_page",
       "asset": "multipage.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/multipage.tiff",
         "operations": [
@@ -1053,6 +1240,7 @@
       "id": "cyclic_ifd_leniency",
       "asset": "cyclic_ifd.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/cyclic_ifd.tiff",
         "operations": [
@@ -1070,6 +1258,7 @@
       "id": "truncated_later_ifd_leniency",
       "asset": "truncated_second_ifd.tiff",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/truncated_second_ifd.tiff",
         "operations": [
@@ -1087,6 +1276,7 @@
       "id": "error_bad_ifd",
       "asset": "bad_ifd.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/bad_ifd.tiff",
         "operations": [
@@ -1104,6 +1294,7 @@
       "id": "error_bad_ifd_truncated_signature",
       "asset": "truncated_signature.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/truncated_signature.tiff",
         "operations": [
@@ -1121,6 +1312,7 @@
       "id": "error_bad_ifd_truncated_magic",
       "asset": "truncated_magic.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/truncated_magic.tiff",
         "operations": [
@@ -1138,6 +1330,7 @@
       "id": "error_bad_ifd_truncated_ifd_offset",
       "asset": "truncated_ifd_offset.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/truncated_ifd_offset.tiff",
         "operations": [
@@ -1155,6 +1348,7 @@
       "id": "error_bad_ifd_truncated_ifd_count",
       "asset": "truncated_ifd_count.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/truncated_ifd_count.tiff",
         "operations": [
@@ -1172,6 +1366,7 @@
       "id": "error_bad_ifd_truncated_ifd_entry",
       "asset": "truncated_ifd_entry.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/truncated_ifd_entry.tiff",
         "operations": [
@@ -1189,6 +1384,7 @@
       "id": "error_bad_ifd_oob_tag_value_offset",
       "asset": "oob_tag_value_offset.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/oob_tag_value_offset.tiff",
         "operations": [
@@ -1206,6 +1402,7 @@
       "id": "error_bad_ifd_invalid_endian",
       "asset": "invalid_endian.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/invalid_endian.tiff",
         "operations": [
@@ -1223,6 +1420,7 @@
       "id": "error_bad_ifd_invalid_magic",
       "asset": "invalid_magic.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/invalid_magic.tiff",
         "operations": [
@@ -1240,6 +1438,7 @@
       "id": "error_bad_ifd_zero_width",
       "asset": "zero_width.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/zero_width.tiff",
         "operations": [
@@ -1257,8 +1456,81 @@
       "id": "error_bad_ifd_zero_height",
       "asset": "zero_height.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/zero_height.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_missing_height",
+      "asset": "missing_height.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/missing_height.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_decompression_bomb",
+      "asset": "decompression_bomb.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/decompression_bomb.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_empty_width",
+      "asset": "empty_width.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/empty_width.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_bits_256",
+      "asset": "bits_256.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/bits_256.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1274,6 +1546,7 @@
       "id": "error_bad_ifd_mixed_bits",
       "asset": "mixed_bits.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/mixed_bits.tiff",
         "operations": [
@@ -1291,6 +1564,7 @@
       "id": "error_bad_ifd_empty_bits",
       "asset": "empty_bits.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/empty_bits.tiff",
         "operations": [
@@ -1308,6 +1582,7 @@
       "id": "error_bad_ifd_rows_zero",
       "asset": "rows_zero.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/rows_zero.tiff",
         "operations": [
@@ -1325,6 +1600,7 @@
       "id": "error_bad_ifd_unknown_compression",
       "asset": "unknown_compression.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/unknown_compression.tiff",
         "operations": [
@@ -1342,6 +1618,7 @@
       "id": "error_bad_ifd_unsupported_photometric",
       "asset": "unsupported_photometric.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/unsupported_photometric.tiff",
         "operations": [
@@ -1359,6 +1636,7 @@
       "id": "error_bad_ifd_invalid_predictor",
       "asset": "invalid_predictor.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/invalid_predictor.tiff",
         "operations": [
@@ -1376,6 +1654,7 @@
       "id": "error_bad_ifd_oob_strip",
       "asset": "oob_strip.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/oob_strip.tiff",
         "operations": [
@@ -1393,8 +1672,27 @@
       "id": "error_bad_ifd_empty_strip_offsets",
       "asset": "empty_strip_offsets.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/empty_strip_offsets.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_missing_strip_offsets",
+      "asset": "missing_strip_offsets.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/missing_strip_offsets.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1410,8 +1708,45 @@
       "id": "error_bad_ifd_zero_tile_width",
       "asset": "zero_tile_width.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/zero_tile_width.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_missing_tile_width",
+      "asset": "missing_tile_width.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/missing_tile_width.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_missing_tile_height",
+      "asset": "missing_tile_height.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/missing_tile_height.tiff",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1427,6 +1762,7 @@
       "id": "error_bad_ifd_empty_tile_offsets",
       "asset": "empty_tile_offsets.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/empty_tile_offsets.tiff",
         "operations": [
@@ -1444,6 +1780,7 @@
       "id": "error_bad_ifd_compressed_empty_tile_byte_counts",
       "asset": "compressed_empty_tile_byte_counts.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/compressed_empty_tile_byte_counts.tiff",
         "operations": [
@@ -1461,6 +1798,7 @@
       "id": "error_bad_ifd_miniswhite_gray_alpha",
       "asset": "miniswhite_gray_alpha.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/miniswhite_gray_alpha.tiff",
         "operations": [
@@ -1478,6 +1816,7 @@
       "id": "error_bad_ifd_lzw_invalid_first",
       "asset": "lzw_invalid_first.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_invalid_first.tiff",
         "operations": [
@@ -1495,6 +1834,7 @@
       "id": "error_bad_ifd_lzw_invalid_future_code",
       "asset": "lzw_invalid_future_code.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_invalid_future_code.tiff",
         "operations": [
@@ -1512,6 +1852,7 @@
       "id": "error_bad_ifd_lzw_clear_only",
       "asset": "lzw_clear_only.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_clear_only.tiff",
         "operations": [
@@ -1529,6 +1870,7 @@
       "id": "error_bad_ifd_lzw_end_only",
       "asset": "lzw_end_only.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/lzw_end_only.tiff",
         "operations": [
@@ -1546,6 +1888,7 @@
       "id": "error_bad_ifd_ascii_width",
       "asset": "ascii_width.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_width.tiff",
         "operations": [
@@ -1563,6 +1906,7 @@
       "id": "error_bad_ifd_ascii_height",
       "asset": "ascii_height.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_height.tiff",
         "operations": [
@@ -1580,6 +1924,7 @@
       "id": "error_bad_ifd_ascii_bits",
       "asset": "ascii_bits.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_bits.tiff",
         "operations": [
@@ -1597,6 +1942,7 @@
       "id": "error_bad_ifd_missing_color_map",
       "asset": "missing_color_map.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/missing_color_map.tiff",
         "operations": [
@@ -1614,6 +1960,7 @@
       "id": "error_bad_ifd_ascii_strip_offsets",
       "asset": "ascii_strip_offsets.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_strip_offsets.tiff",
         "operations": [
@@ -1631,6 +1978,7 @@
       "id": "error_bad_ifd_ascii_compressed_strip_byte_counts",
       "asset": "ascii_compressed_strip_byte_counts.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_compressed_strip_byte_counts.tiff",
         "operations": [
@@ -1648,6 +1996,7 @@
       "id": "error_bad_ifd_compressed_descending_strip_offsets",
       "asset": "compressed_descending_strip_offsets.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/compressed_descending_strip_offsets.tiff",
         "operations": [
@@ -1665,6 +2014,7 @@
       "id": "error_bad_ifd_uncompressed_extra_strips",
       "asset": "uncompressed_extra_strips.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/uncompressed_extra_strips.tiff",
         "operations": [
@@ -1682,6 +2032,7 @@
       "id": "error_bad_ifd_compressed_bad_strip_counts",
       "asset": "compressed_bad_strip_counts.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/compressed_bad_strip_counts.tiff",
         "operations": [
@@ -1699,6 +2050,7 @@
       "id": "error_bad_ifd_be_16bit_unsupported_photometric",
       "asset": "be_16bit_unsupported_photometric.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/be_16bit_unsupported_photometric.tiff",
         "operations": [
@@ -1716,6 +2068,7 @@
       "id": "error_bad_ifd_unsupported_sample_format",
       "asset": "unsupported_sample_format.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/unsupported_sample_format.tiff",
         "operations": [
@@ -1733,6 +2086,7 @@
       "id": "error_bad_ifd_ascii_tile_width",
       "asset": "ascii_tile_width.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_tile_width.tiff",
         "operations": [
@@ -1750,8 +2104,153 @@
       "id": "error_bad_ifd_ascii_tile_height",
       "asset": "ascii_tile_height.tiff",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ascii_tile_height.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_bad_ifd_oversized_rgba_tile",
+      "asset": "oversized_rgba_tile.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/oversized_rgba_tile.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream",
+      "asset": "deflate_short_header.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_short_header.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream_deflate_invalid_header",
+      "asset": "deflate_invalid_header.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_invalid_header.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream_deflate_reserved_block",
+      "asset": "deflate_reserved_block.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_reserved_block.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream_deflate_bad_stored_complement",
+      "asset": "deflate_bad_stored_complement.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_bad_stored_complement.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream_deflate_bad_adler",
+      "asset": "deflate_bad_adler.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_bad_adler.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream_deflate_truncated_fixed_block",
+      "asset": "deflate_truncated_fixed_block.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_truncated_fixed_block.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_deflate_stream_deflate_backreference_before_output",
+      "asset": "deflate_backreference_before_output.tiff",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/deflate_backreference_before_output.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

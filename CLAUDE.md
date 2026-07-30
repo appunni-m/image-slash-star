@@ -8,9 +8,17 @@
   image-editor APIs.
 - Codec-mandated transforms such as JPEG IDCT, PNG filtering, sample
   reconstruction, and animation disposal must remain private codec internals.
-- Keep codec algorithm modules private. Every public fallible operation must
-  use the canonical structured `ImageResult` API rather than exposing an
-  `Option`-returning implementation helper.
+- Keep codec algorithm modules private. Every fallible codec operation,
+  including private parser, inspector, decoder, encoder, sequence, compression,
+  and native-wrapper helpers, must return `Result` and preserve a meaningful
+  failure cause. `Option` is reserved for genuine absence such as optional
+  metadata, Pillow-observable palette absence, or an infallible collection
+  lookup. Public operations use the canonical structured `ImageResult` API; do
+  not add duplicate `try_*` APIs.
+- Indexed `P8` data may legitimately have no retained palette when Pillow
+  accepts a malformed source without one. When a palette is present,
+  `DecodedImage::validate` must revalidate its public RGB and alpha fields,
+  entry count, mode compatibility, and every retained index.
 
 ## Correctness Authority
 
@@ -18,6 +26,13 @@
   behavior, including successful pixels/bytes and structured failures.
 - Preserve exact output and error parity when refactoring codec arithmetic,
   parsing, encoding, feature dispatch, or lifecycle code.
+- Detection must match the pinned Pillow plugin predicates. Near-miss signatures
+  and every observable error-category change require a mutated full-file
+  manifest fixture; prefix-only tests are not sufficient evidence.
+- A private `Option` fast path is acceptable only when `None` selects a complete
+  checked fallback or means a documented non-error state. It must never make
+  malformed input indistinguishable from absence. Record every retained
+  `Option` category in the accepted implementation review.
 - Keep codec implementations in `image-slash-star`; downstream crates consume
   the canonical APIs instead of duplicating detection or codec logic.
 
@@ -34,8 +49,12 @@
 
 - Use manifest-driven fixtures for inputs, exact outputs, and errors. Do not
   replace parity assertions with byte-size checks or synthetic magic prefixes.
+- When public transfer-model fields need validation, use the closest complete
+  Pillow source transformation in the manifest wherever Pillow exposes one.
+  Never label a model-only defensive state as Pillow behavior.
 - Use Coverage MCP for coverage runs and analysis. Always request line, branch,
-  and region coverage and restore all three to 100% before accepting a slice.
+  function, and region coverage and restore all four to 100% before accepting
+  a slice.
 - Run formatting and relevant manifest/feature/target tests after changes.
 
 ## Strict Clippy

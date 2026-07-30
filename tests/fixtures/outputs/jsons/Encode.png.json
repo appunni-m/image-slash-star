@@ -382,7 +382,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OSError",
-      "error_message": "codec configuration error when writing image file"
+      "error_message": "codec configuration error when writing image file",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_error_compression_text",
@@ -394,7 +395,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.TypeError",
-      "error_message": "'str' object cannot be interpreted as an integer"
+      "error_message": "'str' object cannot be interpreted as an integer",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_error_cmyk",
@@ -406,7 +408,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OSError",
-      "error_message": "cannot write mode CMYK as PNG"
+      "error_message": "cannot write mode CMYK as PNG",
+      "error_kind": "unsupported"
     },
     {
       "id": "enc_error_truncated_pixels",
@@ -418,7 +421,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "not enough image data"
+      "error_message": "not enough image data",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_error_zero_height",
@@ -430,7 +434,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "cannot write empty image"
+      "error_message": "cannot write empty image",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_l8",
@@ -515,6 +520,44 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_indexed_opaque_trns.bin",
       "encoded_ref_bytes": 1115
+    },
+    {
+      "id": "enc_indexed_missing_palette",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_indexed_missing_palette.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_indexed_missing_palette.bin",
+      "encoded_ref_bytes": 847
+    },
+    {
+      "id": "enc_error_oversized_public_palette",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "invalid palette size",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_palette_on_nonindexed",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "illegal image mode",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_1bit",

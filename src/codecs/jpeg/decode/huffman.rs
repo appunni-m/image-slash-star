@@ -13,6 +13,7 @@
 //   (HUFF_LOOKAHEAD+1) << 8  for codes > HUFF_LOOKAHEAD  (= 0x0900 sentinel)
 
 use super::bit_reader::BitReader;
+use crate::codecs::{CodecError, CodecResult};
 
 const HUFF_LOOKAHEAD: u32 = 8;
 
@@ -130,13 +131,13 @@ impl HuffTable {
     // ── HUFF_DECODE macro, inlined as a method ───────────────────────────
 
     /// Decode one Huffman symbol from the bit stream.
-    /// Returns None if data is exhausted or corrupt.
+    /// Returns a malformed-data error if the entropy stream is exhausted or corrupt.
     ///
     /// Implements the IJG HUFF_DECODE macro:
     ///   1. Fast path: PEEK_BITS(HUFF_LOOKAHEAD), index lookup table.
     ///   2. If code ≤ HUFF_LOOKAHEAD bits: DROP_BITS(nb), return symbol.
     ///   3. Slow path: jpeg_huff_decode — bit-by-bit traversal.
-    pub(super) fn decode(&self, br: &mut BitReader) -> Option<u8> {
+    pub(super) fn decode(&self, br: &mut BitReader) -> CodecResult<u8> {
         // IJG HUFF_DECODE asks jpeg_fill_bit_buffer for lookahead with
         // nbits=0. Near a marker/end of segment, that means "prefetch if
         // bytes exist, but do not synthesize warning zero bits just to satisfy
@@ -156,7 +157,7 @@ impl HuffTable {
         if nb <= HUFF_LOOKAHEAD {
             // Fast path: code fits in lookahead
             br.drop_bits(nb);
-            Some(entry.to_le_bytes()[0])
+            Ok(entry.to_le_bytes()[0])
         } else {
             // Slow path: code is > HUFF_LOOKAHEAD bits. IJG passes the
             // lookup-table sentinel (HUFF_LOOKAHEAD + 1), so the first slow
@@ -169,12 +170,14 @@ impl HuffTable {
 
     /// Slow-path Huffman decode: bit-by-bit traversal up to 16 bits.
     /// `min_bits` is the starting bit count (typically 1 after fast-path miss).
-    fn decode_slow(&self, br: &mut BitReader, min_bits: u32) -> Option<u8> {
+    fn decode_slow(&self, br: &mut BitReader, min_bits: u32) -> CodecResult<u8> {
         // IJG: int l = min_bits; CHECK_BIT_BUFFER(*state, l, return -1);
         //      code = GET_BITS(l);
         let min = min_bits.max(1);
         if !br.ensure(min) {
-            return None;
+            return Err(CodecError::Malformed(
+                "truncated JPEG Huffman code".to_owned(),
+            ));
         }
         let mut code = br.get_bits(min).cast_signed();
         let mut l = usize::from(min.to_le_bytes()[0]);
@@ -194,18 +197,23 @@ impl HuffTable {
             //    aborting the image. Keep synthetic empty tables fatal; those
             //    represent invalid DHT input that libjpeg rejects before
             //    entropy decode.
-            return self.maxcode[1..=16]
-                .iter()
-                .any(|&max| max >= 0)
-                .then_some(0);
+            return if self.maxcode[1..=16].iter().any(|&max| max >= 0) {
+                Ok(0)
+            } else {
+                Err(CodecError::Malformed(
+                    "invalid empty JPEG Huffman table".to_owned(),
+                ))
+            };
         }
 
         // IJG: return htbl->pub->huffval[code + htbl->valoffset[l]];
         let idx = wrapping_usize(code.saturating_add(self.valoffset[l]));
         if idx < self.values.len() {
-            Some(self.values[idx])
+            Ok(self.values[idx])
         } else {
-            None
+            Err(CodecError::Malformed(
+                "JPEG Huffman code references a missing symbol".to_owned(),
+            ))
         }
     }
 }
@@ -247,9 +255,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
 
     let mut br = BitReader::new(&empty, 0, 0);
-    assert_eq!(table.decode_slow(&mut br, 64), None);
+    assert!(table.decode_slow(&mut br, 64).is_err());
 
     let data = [0x00];
     let mut br = BitReader::new(&data, 0, data.len());
-    assert_eq!(table.decode_slow(&mut br, 1), None);
+    assert!(table.decode_slow(&mut br, 1).is_err());
 }

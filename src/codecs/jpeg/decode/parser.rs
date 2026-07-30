@@ -2,6 +2,7 @@
 // Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
 
 use super::huffman::HuffTable;
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 // ── Marker Constants ──────────────────────────────────────────────────────
 
 pub(crate) const M_SOI: u16 = 0xFFD8;
@@ -66,34 +67,42 @@ pub(super) struct JpegInfo {
 
 // ── JPEG Parser ───────────────────────────────────────────────────────────
 
-pub(super) fn read_u16(data: &[u8], pos: &mut usize) -> Option<u16> {
+pub(super) fn read_u16(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     if pos.saturating_add(1) >= data.len() {
-        return None;
+        return Err(CodecError::Malformed(
+            "truncated JPEG 16-bit field".to_owned(),
+        ));
     }
     let val = u16::from_be_bytes([data[*pos], data[pos.saturating_add(1)]]);
     *pos = pos.saturating_add(2);
-    Some(val)
+    Ok(val)
 }
 
-pub(super) fn read_u8(data: &[u8], pos: &mut usize) -> Option<u8> {
+pub(super) fn read_u8(data: &[u8], pos: &mut usize) -> CodecResult<u8> {
     if *pos >= data.len() {
-        return None;
+        return Err(CodecError::Malformed(
+            "truncated JPEG byte field".to_owned(),
+        ));
     }
     let val = data[*pos];
     *pos = pos.saturating_add(1);
-    Some(val)
+    Ok(val)
 }
 
-pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> Option<u16> {
+pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     while *pos < data.len() {
         while *pos < data.len() && data[*pos] != 0xFF {
             *pos = pos.saturating_add(1);
         }
         if *pos >= data.len() {
-            return None;
+            return Err(CodecError::Malformed(
+                "JPEG marker stream ended unexpectedly".to_owned(),
+            ));
         }
         if pos.saturating_add(1) >= data.len() {
-            return None;
+            return Err(CodecError::Malformed(
+                "truncated JPEG marker code".to_owned(),
+            ));
         }
         let marker_byte = data[pos.saturating_add(1)];
         if marker_byte == 0x00 || marker_byte == 0xFF {
@@ -102,9 +111,11 @@ pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> Option<u16> {
         }
         let marker = 0xFF00u16 | u16::from(marker_byte);
         *pos = pos.saturating_add(2);
-        return Some(marker);
+        return Ok(marker);
     }
-    None
+    Err(CodecError::Malformed(
+        "JPEG marker stream ended unexpectedly".to_owned(),
+    ))
 }
 
 pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> usize {
@@ -123,33 +134,41 @@ pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> usize {
     data.len()
 }
 
-pub(super) fn find_eoi(data: &[u8], mut pos: usize) -> Option<usize> {
+pub(super) fn find_eoi(data: &[u8], mut pos: usize) -> CodecResult<usize> {
     while pos.saturating_add(1) < data.len() {
         if data[pos] == 0xFF && data[pos.saturating_add(1)] == 0xD9 {
-            return Some(pos);
+            return Ok(pos);
         }
         pos = pos.saturating_add(1);
     }
-    None
+    Err(CodecError::Malformed(
+        "JPEG entropy stream has no EOI marker".to_owned(),
+    ))
 }
 
 pub(super) fn parse_sof0(
     data: &[u8],
     pos: &mut usize,
-) -> Option<(u16, u16, Vec<FrameComponent>, u8, u8)> {
+) -> CodecResult<(u16, u16, Vec<FrameComponent>, u8, u8)> {
     let _length = read_u16(data, pos)?;
     let precision = read_u8(data, pos)?;
     if precision != 8 {
-        return None;
+        return Err(CodecError::Malformed(
+            "unsupported JPEG sample precision".to_owned(),
+        ));
     }
     let height = read_u16(data, pos)?;
     let width = read_u16(data, pos)?;
     if width == 0 || height == 0 {
-        return None;
+        return Err(CodecError::Malformed(
+            "JPEG frame dimensions must be nonzero".to_owned(),
+        ));
     }
     let num_components = read_u8(data, pos)?;
     if num_components != 1 && num_components != 3 && num_components != 4 {
-        return None;
+        return Err(CodecError::Malformed(
+            "unsupported JPEG component count".to_owned(),
+        ));
     }
 
     let mut components = Vec::with_capacity(num_components as usize);
@@ -163,10 +182,14 @@ pub(super) fn parse_sof0(
         let v_samp = sampling & 0x0F;
         let quant_tbl = read_u8(data, pos)?;
         if !(1..=4).contains(&h_samp) || !(1..=4).contains(&v_samp) {
-            return None;
+            return Err(CodecError::Malformed(
+                "invalid JPEG sampling factor".to_owned(),
+            ));
         }
         if quant_tbl > 3 {
-            return None;
+            return Err(CodecError::Malformed(
+                "invalid JPEG quantization table selector".to_owned(),
+            ));
         }
         max_h_samp = max_h_samp.max(h_samp);
         max_v_samp = max_v_samp.max(v_samp);
@@ -178,14 +201,14 @@ pub(super) fn parse_sof0(
         });
     }
 
-    Some((width, height, components, max_h_samp, max_v_samp))
+    Ok((width, height, components, max_h_samp, max_v_samp))
 }
 
 pub(super) fn parse_dqt(
     data: &[u8],
     pos: &mut usize,
     quant_tables: &mut Vec<Option<[u16; 64]>>,
-) -> Option<()> {
+) -> CodecResult<()> {
     let length = usize::from(read_u16(data, pos)?);
     let end = pos.saturating_add(length.saturating_sub(2));
 
@@ -194,7 +217,9 @@ pub(super) fn parse_dqt(
         let precision = usize::from(info >> 4);
         let table_id = usize::from(info & 0x0F);
         if table_id >= 4 {
-            return None;
+            return Err(CodecError::Malformed(
+                "invalid JPEG quantization table id".to_owned(),
+            ));
         }
 
         let mut table_zigzag = [0u16; 64];
@@ -210,7 +235,7 @@ pub(super) fn parse_dqt(
         }
         quant_tables[table_id] = Some(table_zigzag);
     }
-    Some(())
+    Ok(())
 }
 
 pub(super) fn parse_dht(
@@ -218,7 +243,7 @@ pub(super) fn parse_dht(
     pos: &mut usize,
     dc_tables: &mut Vec<Option<HuffTable>>,
     ac_tables: &mut Vec<Option<HuffTable>>,
-) -> Option<()> {
+) -> CodecResult<()> {
     let length = usize::from(read_u16(data, pos)?);
     let end = pos.saturating_add(length.saturating_sub(2));
 
@@ -227,7 +252,9 @@ pub(super) fn parse_dht(
         let table_class = info >> 4;
         let table_id = usize::from(info & 0x0F);
         if table_id >= 4 {
-            return None;
+            return Err(CodecError::Malformed(
+                "invalid JPEG Huffman table id".to_owned(),
+            ));
         }
 
         let mut counts = [0u8; 16];
@@ -255,18 +282,20 @@ pub(super) fn parse_dht(
             ac_tables[table_id] = Some(table);
         }
     }
-    Some(())
+    Ok(())
 }
 
 pub(super) fn parse_sos(
     data: &[u8],
     pos: &mut usize,
     components: &[FrameComponent],
-) -> Option<(Vec<ScanComponent>, usize, u8, u8, u8, u8)> {
+) -> CodecResult<(Vec<ScanComponent>, usize, u8, u8, u8, u8)> {
     let _len = read_u16(data, pos)?;
     let num_scan_comps = read_u8(data, pos)?;
     if num_scan_comps == 0 {
-        return None;
+        return Err(CodecError::Malformed(
+            "JPEG scan has no components".to_owned(),
+        ));
     }
 
     let mut scan_comps = Vec::with_capacity(num_scan_comps as usize);
@@ -275,9 +304,14 @@ pub(super) fn parse_sos(
         let tbl_info = read_u8(data, pos)?;
         let dc_tbl = tbl_info >> 4;
         let ac_tbl = tbl_info & 0x0F;
-        let comp_index = components.iter().position(|c| c.id == comp_id)?;
+        let comp_index = components
+            .iter()
+            .position(|c| c.id == comp_id)
+            .malformed("JPEG scan references an unknown component")?;
         if dc_tbl > 3 || ac_tbl > 3 {
-            return None;
+            return Err(CodecError::Malformed(
+                "invalid JPEG scan Huffman table selector".to_owned(),
+            ));
         }
         scan_comps.push(ScanComponent {
             comp_index,
@@ -293,21 +327,21 @@ pub(super) fn parse_sos(
     let al = ah_al & 0x0F;
     let entropy_start = *pos;
 
-    Some((scan_comps, entropy_start, ss, se, ah, al))
+    Ok((scan_comps, entropy_start, ss, se, ah, al))
 }
 
-pub(super) fn parse_dri(data: &[u8], pos: &mut usize) -> Option<u16> {
+pub(super) fn parse_dri(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     let _len = read_u16(data, pos)?;
     let restart_interval = read_u16(data, pos)?;
-    Some(restart_interval)
+    Ok(restart_interval)
 }
 
-pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
+pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut pos = 0usize;
 
     let soi = read_u16(data, &mut pos)?;
     if soi != M_SOI {
-        return None;
+        return Err(CodecError::Malformed("invalid JPEG SOI marker".to_owned()));
     }
 
     let mut width = 0u16;
@@ -334,7 +368,9 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
         match marker {
             M_SOF0 | M_SOF2 => {
                 if saw_sof {
-                    return None;
+                    return Err(CodecError::Malformed(
+                        "duplicate JPEG frame header".to_owned(),
+                    ));
                 }
                 progressive = marker == M_SOF2;
                 let result = parse_sof0(data, &mut pos)?;
@@ -354,7 +390,9 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
             }
             M_SOS => {
                 if !saw_sof {
-                    return None;
+                    return Err(CodecError::Malformed(
+                        "JPEG scan precedes the frame header".to_owned(),
+                    ));
                 }
                 let result = parse_sos(data, &mut pos, &components)?;
                 let comps = result.0;
@@ -405,11 +443,15 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 }
                 let payload_len = length.saturating_sub(2);
                 if payload_len > data.len().saturating_sub(pos) {
-                    return None;
+                    return Err(CodecError::Malformed(
+                        "truncated JPEG APP14 payload".to_owned(),
+                    ));
                 }
                 let payload_end = pos.saturating_add(payload_len);
                 if data.get(pos..pos.saturating_add(5)) == Some(b"Adobe") && length >= 14 {
-                    adobe_transform = data.get(pos.saturating_add(11)).copied();
+                    // `payload_len >= 12` and the complete payload range was
+                    // validated above, so the transform byte is present.
+                    adobe_transform = Some(data[pos.saturating_add(11)]);
                 }
                 pos = payload_end;
             }
@@ -417,7 +459,11 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
                 break pos.saturating_sub(2);
             }
             0xFFD0..=0xFFD7 => {}
-            0xFF01 => return None,
+            0xFF01 => {
+                return Err(CodecError::Malformed(
+                    "unexpected JPEG TEM marker".to_owned(),
+                ));
+            }
             _ => {
                 let length = usize::from(read_u16(data, &mut pos)?);
                 if length < 2 {
@@ -429,10 +475,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
     };
 
     if !saw_sos {
-        return None;
+        return Err(CodecError::Malformed("JPEG contains no scan".to_owned()));
     }
 
-    Some(JpegInfo {
+    Ok(JpegInfo {
         width,
         height,
         num_components,
@@ -455,27 +501,27 @@ pub(super) fn parse_jpeg(data: &[u8]) -> Option<JpegInfo> {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut position = 0;
-    assert!(parse_sof0(&[], &mut position).is_none());
+    assert!(parse_sof0(&[], &mut position).is_err());
     let mut position = 0;
-    assert!(parse_sof0(&[0, 2], &mut position).is_none());
+    assert!(parse_sof0(&[0, 2], &mut position).is_err());
 
     let mut position = 0;
-    assert!(parse_dqt(&[], &mut position, &mut Vec::new()).is_none());
+    assert!(parse_dqt(&[], &mut position, &mut Vec::new()).is_err());
     let mut position = 0;
-    assert!(parse_dqt(&[0, 3], &mut position, &mut Vec::new()).is_none());
+    assert!(parse_dqt(&[0, 3], &mut position, &mut Vec::new()).is_err());
 
     let mut position = 0;
-    assert!(parse_dht(&[], &mut position, &mut Vec::new(), &mut Vec::new()).is_none());
+    assert!(parse_dht(&[], &mut position, &mut Vec::new(), &mut Vec::new()).is_err());
     let mut position = 0;
-    assert!(parse_dht(&[0, 3], &mut position, &mut Vec::new(), &mut Vec::new()).is_none());
+    assert!(parse_dht(&[0, 3], &mut position, &mut Vec::new(), &mut Vec::new()).is_err());
 
     let mut position = 0;
-    assert!(parse_dri(&[], &mut position).is_none());
+    assert!(parse_dri(&[], &mut position).is_err());
     let mut position = 0;
-    assert!(parse_dri(&[0, 4], &mut position).is_none());
+    assert!(parse_dri(&[0, 4], &mut position).is_err());
 
     let mut position = 0;
-    assert!(find_next_marker(&[0xff], &mut position).is_none());
+    assert!(find_next_marker(&[0xff], &mut position).is_err());
 
     for data in [&[0xff, 0x00][..], &[0xff, 0xff, 0xff, 0xd8]] {
         let mut position = 0;
@@ -490,6 +536,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &[0xff, 0xd8, 0xff, 0xd0],
         &[0xff, 0xd8, 0xff, 0xe0],
     ] {
-        assert!(parse_jpeg(data).is_none());
+        assert!(parse_jpeg(data).is_err());
     }
 }

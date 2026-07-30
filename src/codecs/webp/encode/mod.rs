@@ -1,8 +1,9 @@
 //! Pure-Rust WebP encoder: internal VP8L lossless and VP8 lossy pipelines.
 
+use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
 use crate::types::{ColorType, DecodedImage};
-use std::io::Cursor;
+use std::borrow::Cow;
 
 pub mod vp8;
 
@@ -10,28 +11,42 @@ pub mod vp8;
 ///
 /// Lossless uses the internal VP8L encoder.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
     let encoded = if opts.lossless == Some(true) {
         encode_lossless(img, opts)
     } else {
         encode_lossy(img, opts)
     }?;
-    attach_metadata(encoded, img.width, img.height, opts)
+    let alpha = img.color == ColorType::Rgba8
+        && img.pixels.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX);
+    attach_metadata(encoded, img.width, img.height, alpha, opts)
 }
 
-fn decode_hex(value: Option<&String>) -> Option<Option<Vec<u8>>> {
+fn decode_hex(value: Option<&String>) -> CodecResult<Option<Vec<u8>>> {
     let Some(value) = value else {
-        return Some(None);
+        return Ok(None);
     };
-    let decoded = (0..value.len())
-        .step_by(2)
-        .map(|index| {
-            value
-                .get(index..index.saturating_add(2))
-                .and_then(|byte| u8::from_str_radix(byte, 16).ok())
-        })
-        .collect::<Option<Vec<_>>>()?;
-    value.len().is_multiple_of(2).then_some(Some(decoded))
+    if !value.len().is_multiple_of(2) {
+        return Err(CodecError::Parameter(
+            "WebP metadata hex must contain complete byte pairs".to_owned(),
+        ));
+    }
+    let mut decoded = Vec::with_capacity(value.len() / 2);
+    for pair in value.as_bytes().chunks_exact(2) {
+        decoded.push((hex_nibble(pair[0])? << 4) | hex_nibble(pair[1])?);
+    }
+    Ok(Some(decoded))
+}
+
+fn hex_nibble(value: u8) -> CodecResult<u8> {
+    match value {
+        b'0'..=b'9' => Ok(value.wrapping_sub(b'0')),
+        b'a'..=b'f' => Ok(value.wrapping_sub(b'a').wrapping_add(10)),
+        b'A'..=b'F' => Ok(value.wrapping_sub(b'A').wrapping_add(10)),
+        _ => Err(CodecError::Parameter(
+            "WebP metadata hex contains a non-hexadecimal byte".to_owned(),
+        )),
+    }
 }
 
 fn write_chunk(output: &mut Vec<u8>, name: &[u8; 4], payload: &[u8]) {
@@ -47,40 +62,27 @@ fn attach_metadata(
     encoded: Vec<u8>,
     width: u32,
     height: u32,
+    alpha: bool,
     opts: &EncodeOptions,
-) -> Option<Vec<u8>> {
+) -> CodecResult<Vec<u8>> {
     let icc = decode_hex(opts.extra.get("icc_hex"))?;
     let exif = decode_hex(opts.extra.get("exif_hex"))?;
     let xmp = decode_hex(opts.extra.get("xmp_hex"))?;
     if icc.is_none() && exif.is_none() && xmp.is_none() {
-        return Some(encoded);
+        return Ok(encoded);
     }
-    let mut chunks = Vec::new();
-    let mut offset = 12usize;
-    let mut flags = 0u8;
-    while offset.saturating_add(8) <= encoded.len() {
-        let name = [
-            encoded[offset],
-            encoded[offset.saturating_add(1)],
-            encoded[offset.saturating_add(2)],
-            encoded[offset.saturating_add(3)],
-        ];
-        let length = bounded_usize(u32::from_le_bytes([
-            encoded[offset.saturating_add(4)],
-            encoded[offset.saturating_add(5)],
-            encoded[offset.saturating_add(6)],
-            encoded[offset.saturating_add(7)],
-        ]));
-        let payload_start = offset.saturating_add(8);
-        let end = payload_start.saturating_add(length);
-        let payload = &encoded[payload_start..end];
-        if &name == b"VP8X" {
-            flags |= encoded[payload_start];
-        } else {
-            chunks.push((name, payload.to_vec()));
-        }
-        offset = end.saturating_add(length & 1);
-    }
+    // Both internal encoders return a complete RIFF header. Lossy alpha output
+    // additionally begins with the fixed 18-byte VP8X chunk constructed by
+    // `encode_vp8_lossy_rgba`; replace that chunk instead of reparsing bytes
+    // emitted by the same implementation.
+    let encoded_chunks = &encoded[12..];
+    let encoded_chunks = if encoded_chunks.starts_with(b"VP8X") {
+        debug_assert!(encoded_chunks.len() >= 18);
+        &encoded_chunks[18..]
+    } else {
+        encoded_chunks
+    };
+    let mut flags = u8::from(alpha).wrapping_shl(4);
     if icc.is_some() {
         flags |= 1u8.wrapping_shl(5);
     }
@@ -101,9 +103,7 @@ fn attach_metadata(
     if let Some(payload) = icc {
         write_chunk(&mut output, b"ICCP", &payload);
     }
-    for (name, payload) in chunks {
-        write_chunk(&mut output, &name, &payload);
-    }
+    output.extend_from_slice(encoded_chunks);
     if let Some(payload) = exif {
         let payload = payload.strip_prefix(b"Exif\0\0").unwrap_or(&payload);
         write_chunk(&mut output, b"EXIF", payload);
@@ -122,42 +122,54 @@ fn attach_metadata(
     };
     #[cfg(not(coverage))]
     let output_len = output.len();
-    let riff_size = u32::try_from(output_len.saturating_sub(8)).ok()?;
+    let riff_size = u32::try_from(output_len.saturating_sub(8)).map_err(|error| {
+        CodecError::Dimensions(format!("WebP RIFF output exceeds format limits: {error}"))
+    })?;
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
-    Some(output)
+    Ok(output)
 }
 
 /// Lossless VP8L encoding via the internal `WebPEncoder`.
-fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> Option<Vec<u8>> {
+fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
     let (width, height) = (img.width, img.height);
-    let converted = match img.color {
-        ColorType::L8 => Some(
-            img.pixels
-                .iter()
-                .flat_map(|&value| [value; 3])
-                .collect::<Vec<_>>(),
+    let (pixels, color) = match img.color {
+        ColorType::L8 => (
+            Cow::Owned(
+                img.pixels
+                    .iter()
+                    .flat_map(|&value| [value; 3])
+                    .collect::<Vec<_>>(),
+            ),
+            super::native::ColorType::Rgb8,
         ),
-        ColorType::Cmyk8 => Some(cmyk_to_rgb(&img.pixels)),
-        _ => None,
-    };
-    let pixels = converted.as_deref().unwrap_or(&img.pixels);
-    let color = match img.color {
-        ColorType::L8 | ColorType::Rgb8 | ColorType::Cmyk8 => super::native::ColorType::Rgb8,
-        ColorType::Rgba8 => super::native::ColorType::Rgba8,
-        _ => return None,
+        ColorType::Cmyk8 => (
+            Cow::Owned(cmyk_to_rgb(&img.pixels)),
+            super::native::ColorType::Rgb8,
+        ),
+        ColorType::Rgb8 => (
+            Cow::Borrowed(img.pixels.as_slice()),
+            super::native::ColorType::Rgb8,
+        ),
+        ColorType::Rgba8 => (
+            Cow::Borrowed(img.pixels.as_slice()),
+            super::native::ColorType::Rgba8,
+        ),
+        _ => {
+            return Err(CodecError::Unsupported(
+                "WebP lossless encoder does not support this image mode".to_owned(),
+            ));
+        }
     };
 
-    let mut out = Cursor::new(Vec::new());
-    let encoder = super::native::WebPEncoder::new(&mut out);
-    encoder.encode(pixels, width, height, color).ok()?;
-
-    Some(out.into_inner())
+    super::native::WebPEncoder::new()
+        .encode(&pixels, width, height, color)
+        .map_err(encode_error)
 }
 
 /// Lossy VP8 encoding — own pure-Rust implementation.
 ///
 /// Encodes VP8 keyframe bitstream in RIFF/WEBP container.
-fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
     let quality = opts.quality.unwrap_or(80).min(100);
     let method = opts.method.unwrap_or(4).min(6);
     let encoded = match img.color {
@@ -202,9 +214,21 @@ fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
             let rgb = cmyk_to_rgb(&img.pixels);
             vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
         }
-        _ => return None,
+        _ => {
+            return Err(CodecError::Unsupported(
+                "WebP lossy encoder does not support this image mode".to_owned(),
+            ));
+        }
     };
-    Some(encoded)
+    Ok(encoded)
+}
+
+fn encode_error(error: super::native::EncodingError) -> CodecError {
+    match error {
+        super::native::EncodingError::InvalidDimensions => {
+            CodecError::Dimensions("WebP lossless dimensions are invalid".to_owned())
+        }
+    }
 }
 
 fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
@@ -221,18 +245,6 @@ fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
             })
         })
         .collect()
-}
-
-fn bounded_usize(value: u32) -> usize {
-    #[cfg(target_pointer_width = "64")]
-    {
-        let [a, b, c, d] = value.to_le_bytes();
-        usize::from_le_bytes([a, b, c, d, 0, 0, 0, 0])
-    }
-    #[cfg(target_pointer_width = "32")]
-    {
-        usize::from_le_bytes(value.to_le_bytes())
-    }
 }
 
 fn low_u32(value: usize) -> u32 {
@@ -257,13 +269,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         extra: HashMap::from([("icc_hex".to_owned(), "f".to_owned())]),
         ..EncodeOptions::default()
     };
-    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+    let _ = attach_metadata(Vec::new(), 1, 1, false, &opts);
 
     opts.extra = HashMap::from([("exif_hex".to_owned(), "f".to_owned())]);
-    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+    let _ = attach_metadata(Vec::new(), 1, 1, false, &opts);
 
     opts.extra = HashMap::from([("xmp_hex".to_owned(), "f".to_owned())]);
-    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+    let _ = attach_metadata(Vec::new(), 1, 1, false, &opts);
 
     opts.extra = HashMap::from([
         ("icc_hex".to_owned(), "00".to_owned()),
@@ -272,7 +284,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             "1".to_owned(),
         ),
     ]);
-    let _ = attach_metadata(Vec::new(), 1, 1, &opts);
+    let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts);
 
     let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::Rgb8);
     let opts = EncodeOptions {

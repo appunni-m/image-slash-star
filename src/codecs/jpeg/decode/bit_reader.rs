@@ -137,14 +137,17 @@ impl<'a> BitReader<'a> {
         self.bits = self.bits.saturating_sub(n);
     }
 
-    /// High-level "read n bits" used by non-Huffman callers (DC refinement, sign bits).
-    /// Returns None if data is exhausted.
-    pub(super) fn read_bits(&mut self, n: u32) -> Option<u32> {
-        debug_assert!(n > 0);
-        if !self.ensure(n) {
-            return None;
-        }
-        Some(self.get_bits(n))
+    /// Read a coefficient-width value after the JPEG entropy-padding
+    /// invariant has been established.
+    ///
+    /// IJG pads an exhausted entropy segment to `MIN_GET_BITS`; JPEG
+    /// coefficient categories use at most 15 bits. Callers that pass those
+    /// syntax-derived widths therefore cannot observe `read_bits()` failure.
+    pub(super) fn read_padded_bits(&mut self, n: u32) -> u32 {
+        debug_assert!((1..=15).contains(&n));
+        let available = self.ensure(n);
+        debug_assert!(available);
+        self.get_bits(n)
     }
 }
 
@@ -161,10 +164,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut br = BitReader::new(&marker_padded, 0, marker_padded.len());
     br.fill(1);
     assert!(br.insufficient_data());
-
-    let empty = [];
-    let mut br = BitReader::new(&empty, 0, 0);
-    assert_eq!(br.read_bits(64), None);
 
     let data = [0b1010_0000];
     let mut br = BitReader::new(&data, 0, data.len());

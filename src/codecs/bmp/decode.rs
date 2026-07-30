@@ -8,6 +8,7 @@
 //! - 4‑byte row padding
 //! - Palette (color table)
 
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
 use std::io::{Cursor, Read};
 
@@ -15,22 +16,25 @@ use std::io::{Cursor, Read};
 // Little‑endian helpers
 // ---------------------------------------------------------------------------
 
-fn read_u16_le<R: Read>(r: &mut R) -> Option<u16> {
+fn read_u16_le<R: Read>(r: &mut R) -> CodecResult<u16> {
     let mut b = [0u8; 2];
-    r.read_exact(&mut b).ok()?;
-    Some(u16::from_le_bytes(b))
+    r.read_exact(&mut b)
+        .map_err(|_| CodecError::Malformed("truncated BMP 16-bit field".to_owned()))?;
+    Ok(u16::from_le_bytes(b))
 }
 
-fn read_u32_le<R: Read>(r: &mut R) -> Option<u32> {
+fn read_u32_le<R: Read>(r: &mut R) -> CodecResult<u32> {
     let mut b = [0u8; 4];
-    r.read_exact(&mut b).ok()?;
-    Some(u32::from_le_bytes(b))
+    r.read_exact(&mut b)
+        .map_err(|_| CodecError::Malformed("truncated BMP 32-bit field".to_owned()))?;
+    Ok(u32::from_le_bytes(b))
 }
 
-fn read_i32_le<R: Read>(r: &mut R) -> Option<i32> {
+fn read_i32_le<R: Read>(r: &mut R) -> CodecResult<i32> {
     let mut b = [0u8; 4];
-    r.read_exact(&mut b).ok()?;
-    Some(i32::from_le_bytes(b))
+    r.read_exact(&mut b)
+        .map_err(|_| CodecError::Malformed("truncated BMP signed field".to_owned()))?;
+    Ok(i32::from_le_bytes(b))
 }
 
 /// Row size in bytes (padded to 4‑byte boundary).
@@ -56,15 +60,19 @@ enum BmpBitDepth {
 }
 
 impl BmpBitDepth {
-    fn from_raw(value: u16) -> Option<Self> {
-        Some(match value {
+    fn from_raw(value: u16) -> CodecResult<Self> {
+        Ok(match value {
             1 => Self::One,
             4 => Self::Four,
             8 => Self::Eight,
             16 => Self::Sixteen,
             24 => Self::TwentyFour,
             32 => Self::ThirtyTwo,
-            _ => return None,
+            _ => {
+                return Err(CodecError::Unsupported(format!(
+                    "unsupported BMP pixel depth {value}"
+                )));
+            }
         })
     }
 
@@ -89,14 +97,19 @@ impl BmpBitDepth {
 // ---------------------------------------------------------------------------
 
 /// Read a Windows RGBQUAD or OS/2 RGBTRIPLE palette.
-fn read_palette(r: &mut Cursor<&[u8]>, count: u32, entry_bytes: usize) -> Option<Vec<[u8; 4]>> {
+fn read_palette(
+    r: &mut Cursor<&[u8]>,
+    count: u32,
+    entry_bytes: usize,
+) -> CodecResult<Vec<[u8; 4]>> {
     let mut pal = Vec::with_capacity(count as usize);
     for _ in 0..count {
         let mut entry = [0u8; 4];
-        r.read_exact(&mut entry[..entry_bytes]).ok()?; // B, G, R, [reserved]
+        r.read_exact(&mut entry[..entry_bytes])
+            .map_err(|_| CodecError::Malformed("truncated BMP palette".to_owned()))?;
         pal.push(entry);
     }
-    Some(pal)
+    Ok(pal)
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +142,7 @@ fn decode_rle(
     height: usize,
     rle4: bool,
     stream_offset: usize,
-) -> Option<Vec<u8>> {
+) -> CodecResult<Vec<u8>> {
     // Pillow 12.2.0 BmpRleDecoder builds one linear index stream. In
     // particular, its RLE4 absolute mode reads floor(pixel_count / 2) bytes,
     // so an unpaired final nibble is deliberately omitted and later row
@@ -140,8 +153,14 @@ fn decode_rle(
     let mut position = 0usize;
 
     while output.len() < destination_length {
-        let count = usize::from(*data.get(position)?);
-        let value = *data.get(position.saturating_add(1))?;
+        let count = usize::from(
+            *data
+                .get(position)
+                .malformed("truncated BMP RLE command count")?,
+        );
+        let value = *data
+            .get(position.saturating_add(1))
+            .malformed("truncated BMP RLE command value")?;
         position = position.saturating_add(2);
 
         if count != 0 {
@@ -177,10 +196,19 @@ fn decode_rle(
             // The loop exits before reading EOB once the declared canvas is
             // complete. Reaching EOB here therefore means Pillow would report
             // insufficient image data rather than pad the missing pixels.
-            1 => return None,
+            1 => {
+                return Err(CodecError::Malformed(
+                    "BMP RLE stream ended before filling the canvas".to_owned(),
+                ));
+            }
             2 => {
-                let right = usize::from(*data.get(position)?);
-                let up = usize::from(*data.get(position.saturating_add(1))?);
+                let right =
+                    usize::from(*data.get(position).malformed("truncated BMP RLE delta x")?);
+                let up = usize::from(
+                    *data
+                        .get(position.saturating_add(1))
+                        .malformed("truncated BMP RLE delta y")?,
+                );
                 position = position.saturating_add(2);
                 let skipped = up.saturating_mul(width).saturating_add(right);
                 output.resize(output.len().saturating_add(skipped), 0);
@@ -193,7 +221,9 @@ fn decode_rle(
                     usize::from(absolute_pixels)
                 };
                 let end = position.saturating_add(byte_count);
-                let literal = data.get(position..end)?;
+                let literal = data
+                    .get(position..end)
+                    .malformed("truncated BMP RLE literal run")?;
                 if rle4 {
                     for &byte in literal {
                         output.extend_from_slice(&[byte >> 4, byte & 0x0f]);
@@ -213,7 +243,7 @@ fn decode_rle(
 
     output.resize(destination_length, 0);
     output.truncate(destination_length);
-    Some(output)
+    Ok(output)
 }
 
 // ---------------------------------------------------------------------------
@@ -222,14 +252,17 @@ fn decode_rle(
 
 // Palette bytes are constructed below in complete RGB triples.
 #[allow(clippy::expect_used)]
-pub fn decode(data: &[u8]) -> Option<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
     let mut r = Cursor::new(data);
 
     // --- BITMAPFILEHEADER (14 bytes) ---
     let mut magic = [0u8; 2];
-    r.read_exact(&mut magic).ok()?;
+    r.read_exact(&mut magic)
+        .map_err(|_| CodecError::Malformed("truncated BMP file signature".to_owned()))?;
     if &magic != b"BM" {
-        return None;
+        return Err(CodecError::Malformed(
+            "invalid BMP file signature".to_owned(),
+        ));
     }
     let _file_size = read_u32_le(&mut r)?; // bytes 2-5
     r.set_position(r.position().saturating_add(4)); // bytes 6-9 (reserved)
@@ -259,7 +292,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
             let _colors_important = read_u32_le(&mut r)?;
             (width, height, bit_depth, compression, colors_used, 4usize)
         } else {
-            return None;
+            return Err(CodecError::Unsupported(format!(
+                "unsupported BMP DIB header size {header_size}"
+            )));
         };
 
     // After the standard 40-byte fields, the cursor is at position 14 + 40 = 54.
@@ -269,15 +304,21 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     let top_down = height < 0;
     let h = height.unsigned_abs();
     if width <= 0 {
-        return None;
+        return Err(CodecError::Malformed(
+            "BMP width must be positive".to_owned(),
+        ));
     }
     let w = width.cast_unsigned();
     if h == 0 || w > 16_384 || h > 16_384 {
-        return None;
+        return Err(CodecError::Malformed(
+            "BMP dimensions are empty or exceed the supported bounds".to_owned(),
+        ));
     }
     let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)?;
     if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
-        return None;
+        return Err(CodecError::Malformed(
+            "BMP RLE compression requires indexed pixels".to_owned(),
+        ));
     }
 
     // --- BI_BITFIELDS masks ---
@@ -302,7 +343,7 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
                 let g0 = read_u32_le(&mut r)?;
                 let b0 = read_u32_le(&mut r)?;
                 let a0 = if bit_depth == BmpBitDepth::ThirtyTwo && header_size >= 56 {
-                    read_u32_le(&mut r).unwrap_or(0)
+                    read_u32_le(&mut r)?
                 } else {
                     0
                 };
@@ -318,7 +359,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         }
     };
     if compression == 3 && (rm == 0 || gm == 0 || bm == 0) {
-        return None;
+        return Err(CodecError::Unsupported(
+            "unsupported BMP bitfields layout".to_owned(),
+        ));
     }
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
@@ -353,7 +396,9 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
     // Pillow configures its raw `P;4` decoder before promoting a grayscale
     // palette and rejects this otherwise well-formed combination.
     if bit_depth == BmpBitDepth::Four && palette_is_grayscale {
-        return None;
+        return Err(CodecError::Malformed(
+            "Pillow rejects four-bit BMP grayscale palettes".to_owned(),
+        ));
     }
 
     // --- Seek to pixel data ---
@@ -405,7 +450,8 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         // BI_RGB or BI_BITFIELDS — uncompressed scanlines
         let stride = row_size(bit_depth.bits_per_pixel(), w);
         let mut raw = vec![0u8; stride.saturating_mul(height_usize)];
-        r.read_exact(&mut raw).ok()?;
+        r.read_exact(&mut raw)
+            .map_err(|_| CodecError::Malformed("truncated BMP pixel data".to_owned()))?;
 
         match bit_depth {
             BmpBitDepth::One => {
@@ -604,11 +650,11 @@ pub fn decode(data: &[u8]) -> Option<DecodedImage> {
         for entry in palette {
             rgb.extend_from_slice(&[entry[2], entry[1], entry[0]]);
         }
-        image = image.with_palette(
-            ImagePalette::new(rgb, Vec::new()).expect("BMP palette is built from RGB triples"),
-        );
+        image = image.with_palette(ImagePalette::new(rgb, Vec::new()).map_err(|_| {
+            CodecError::Malformed("BMP indexed palette contains more than 256 entries".to_owned())
+        })?);
     }
-    Some(image)
+    Ok(image)
 }
 
 fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u8> {
@@ -632,7 +678,7 @@ fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode(b"").is_none());
-    assert!(decode(b"BM").is_none());
-    assert!(decode(b"not a bitmap").is_none());
+    assert!(decode(b"").is_err());
+    assert!(decode(b"BM").is_err());
+    assert!(decode(b"not a bitmap").is_err());
 }

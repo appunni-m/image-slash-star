@@ -16,6 +16,7 @@
       "id": "color_gray",
       "asset": "gray.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gray.png",
         "operations": [
@@ -33,6 +34,7 @@
       "id": "color_gray_alpha",
       "asset": "gray_alpha.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gray_alpha.png",
         "operations": [
@@ -50,6 +52,7 @@
       "id": "color_rgb",
       "asset": "rgb.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/rgb.png",
         "operations": [
@@ -67,6 +70,7 @@
       "id": "color_rgba",
       "asset": "rgba.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/rgba.png",
         "operations": [
@@ -84,6 +88,7 @@
       "id": "color_rgba_alpha_checker",
       "asset": "alpha_checker.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/alpha_checker.png",
         "operations": [
@@ -101,6 +106,7 @@
       "id": "color_rgba_alpha_partial",
       "asset": "alpha_partial.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/alpha_partial.png",
         "operations": [
@@ -118,6 +124,7 @@
       "id": "color_indexed",
       "asset": "indexed.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/indexed.png",
         "operations": [
@@ -135,6 +142,7 @@
       "id": "color_indexed_palette_2color",
       "asset": "palette_2color.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_2color.png",
         "operations": [
@@ -152,6 +160,7 @@
       "id": "color_indexed_palette_256color",
       "asset": "palette_256color.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_256color.png",
         "operations": [
@@ -169,6 +178,7 @@
       "id": "color_indexed_palette_2bit",
       "asset": "palette_2bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_2bit.png",
         "operations": [
@@ -186,6 +196,7 @@
       "id": "color_indexed_palette_4bit",
       "asset": "palette_4bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_4bit.png",
         "operations": [
@@ -203,6 +214,7 @@
       "id": "color_indexed_alpha",
       "asset": "indexed_alpha.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/indexed_alpha.png",
         "operations": [
@@ -220,6 +232,7 @@
       "id": "color_indexed_alpha_palette_trns_opaque",
       "asset": "palette_trns_opaque.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_trns_opaque.png",
         "operations": [
@@ -237,6 +250,7 @@
       "id": "depth_1",
       "asset": "1bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1bit.png",
         "operations": [
@@ -254,6 +268,7 @@
       "id": "depth_2",
       "asset": "2bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/2bit.png",
         "operations": [
@@ -271,6 +286,7 @@
       "id": "depth_4",
       "asset": "4bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/4bit.png",
         "operations": [
@@ -288,6 +304,7 @@
       "id": "depth_8",
       "asset": "8bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/8bit.png",
         "operations": [
@@ -305,6 +322,7 @@
       "id": "depth_16",
       "asset": "16bit.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/16bit.png",
         "operations": [
@@ -322,6 +340,7 @@
       "id": "depth_16_rgb16",
       "asset": "rgb16.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/rgb16.png",
         "operations": [
@@ -339,6 +358,7 @@
       "id": "depth_16_la16",
       "asset": "la16.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/la16.png",
         "operations": [
@@ -356,6 +376,7 @@
       "id": "depth_16_rgba16",
       "asset": "rgba16.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/rgba16.png",
         "operations": [
@@ -373,6 +394,7 @@
       "id": "no_interlace",
       "asset": "no_interlace.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/no_interlace.png",
         "operations": [
@@ -390,6 +412,7 @@
       "id": "interlace_adam7",
       "asset": "adam7.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/adam7.png",
         "operations": [
@@ -407,6 +430,7 @@
       "id": "interlace_adam7_adam7_1x1",
       "asset": "adam7_1x1.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/adam7_1x1.png",
         "operations": [
@@ -424,6 +448,7 @@
       "id": "interlace_adam7_adam7_2x3",
       "asset": "adam7_2x3.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/adam7_2x3.png",
         "operations": [
@@ -441,6 +466,7 @@
       "id": "filter_none",
       "asset": "filter_none.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/filter_none.png",
         "operations": [
@@ -458,6 +484,7 @@
       "id": "filter_sub",
       "asset": "filter_sub.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/filter_sub.png",
         "operations": [
@@ -475,6 +502,7 @@
       "id": "filter_up",
       "asset": "filter_up.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/filter_up.png",
         "operations": [
@@ -492,6 +520,7 @@
       "id": "filter_average",
       "asset": "filter_average.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/filter_average.png",
         "operations": [
@@ -509,6 +538,7 @@
       "id": "filter_paeth",
       "asset": "filter_paeth.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/filter_paeth.png",
         "operations": [
@@ -526,6 +556,7 @@
       "id": "filter_mixed",
       "asset": "filter_mixed.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/filter_mixed.png",
         "operations": [
@@ -543,6 +574,7 @@
       "id": "compress_default",
       "asset": "compress_default.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/compress_default.png",
         "operations": [
@@ -560,6 +592,7 @@
       "id": "compress_default_compress_fast",
       "asset": "compress_fast.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/compress_fast.png",
         "operations": [
@@ -577,6 +610,7 @@
       "id": "compress_default_compress_mid",
       "asset": "compress_mid.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/compress_mid.png",
         "operations": [
@@ -594,6 +628,7 @@
       "id": "compress_none",
       "asset": "compress_none.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/compress_none.png",
         "operations": [
@@ -611,6 +646,7 @@
       "id": "compress_max",
       "asset": "compress_max.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/compress_max.png",
         "operations": [
@@ -628,6 +664,7 @@
       "id": "chunk_gama",
       "asset": "gama.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gama.png",
         "operations": [
@@ -645,6 +682,7 @@
       "id": "chunk_srgb",
       "asset": "srgb.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/srgb.png",
         "operations": [
@@ -662,6 +700,7 @@
       "id": "chunk_iccp",
       "asset": "iccp.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/iccp.png",
         "operations": [
@@ -679,6 +718,7 @@
       "id": "chunk_text",
       "asset": "text_chunks.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/text_chunks.png",
         "operations": [
@@ -696,6 +736,7 @@
       "id": "chunk_time",
       "asset": "time_chunk.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/time_chunk.png",
         "operations": [
@@ -713,6 +754,7 @@
       "id": "chunk_background",
       "asset": "bkgd.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/bkgd.png",
         "operations": [
@@ -730,6 +772,7 @@
       "id": "chunk_phys",
       "asset": "phys.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/phys.png",
         "operations": [
@@ -747,6 +790,7 @@
       "id": "size_1x1",
       "asset": "1x1.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
         "operations": [
@@ -764,6 +808,7 @@
       "id": "size_small",
       "asset": "16x16.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/16x16.png",
         "operations": [
@@ -781,6 +826,7 @@
       "id": "size_large",
       "asset": "large.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/large.png",
         "operations": [
@@ -798,6 +844,7 @@
       "id": "size_odd",
       "asset": "odd_size.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/odd_size.png",
         "operations": [
@@ -815,6 +862,7 @@
       "id": "size_odd_2x3",
       "asset": "2x3.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/2x3.png",
         "operations": [
@@ -832,6 +880,7 @@
       "id": "size_odd_1x255",
       "asset": "1x255.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x255.png",
         "operations": [
@@ -849,6 +898,7 @@
       "id": "size_odd_255x1",
       "asset": "255x1.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/255x1.png",
         "operations": [
@@ -866,6 +916,7 @@
       "id": "error_truncated",
       "asset": "truncated.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/truncated.png",
         "operations": [
@@ -883,6 +934,7 @@
       "id": "error_truncated_short_signature",
       "asset": "short_signature.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/short_signature.png",
         "operations": [
@@ -900,6 +952,7 @@
       "id": "error_corrupt_crc",
       "asset": "bad_crc.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/bad_crc.png",
         "operations": [
@@ -917,6 +970,7 @@
       "id": "error_wrong_magic",
       "asset": "not_a_png.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/not_a_png.png",
         "operations": [
@@ -934,6 +988,7 @@
       "id": "error_malformed_structure",
       "asset": "wrong_ihdr_kind.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/wrong_ihdr_kind.png",
         "operations": [
@@ -951,6 +1006,7 @@
       "id": "error_malformed_structure_short_ihdr",
       "asset": "short_ihdr.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/short_ihdr.png",
         "operations": [
@@ -968,6 +1024,7 @@
       "id": "error_malformed_structure_short_chunk_kind",
       "asset": "short_chunk_kind.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/short_chunk_kind.png",
         "operations": [
@@ -985,6 +1042,7 @@
       "id": "error_malformed_structure_zero_width",
       "asset": "zero_width.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zero_width.png",
         "operations": [
@@ -1002,6 +1060,7 @@
       "id": "error_malformed_structure_zero_height",
       "asset": "zero_height.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zero_height.png",
         "operations": [
@@ -1019,6 +1078,7 @@
       "id": "error_malformed_structure_invalid_filter_method",
       "asset": "invalid_filter_method.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/invalid_filter_method.png",
         "operations": [
@@ -1036,6 +1096,7 @@
       "id": "error_malformed_structure_invalid_interlace",
       "asset": "invalid_interlace.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/invalid_interlace.png",
         "operations": [
@@ -1053,6 +1114,7 @@
       "id": "error_malformed_structure_invalid_color_type",
       "asset": "invalid_color_type.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/invalid_color_type.png",
         "operations": [
@@ -1070,6 +1132,7 @@
       "id": "error_malformed_structure_invalid_color_depth",
       "asset": "invalid_color_depth.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/invalid_color_depth.png",
         "operations": [
@@ -1087,6 +1150,7 @@
       "id": "error_malformed_structure_empty_idat",
       "asset": "empty_idat.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/empty_idat.png",
         "operations": [
@@ -1104,6 +1168,7 @@
       "id": "error_malformed_structure_invalid_scanline_filter",
       "asset": "invalid_scanline_filter.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/invalid_scanline_filter.png",
         "operations": [
@@ -1121,6 +1186,7 @@
       "id": "error_malformed_structure_short_inflated_scanline",
       "asset": "short_inflated_scanline.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/short_inflated_scanline.png",
         "operations": [
@@ -1138,6 +1204,7 @@
       "id": "error_malformed_structure_zlib_short_header",
       "asset": "zlib_short_header.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_short_header.png",
         "operations": [
@@ -1155,6 +1222,7 @@
       "id": "error_malformed_structure_zlib_invalid_header",
       "asset": "zlib_invalid_header.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_invalid_header.png",
         "operations": [
@@ -1172,6 +1240,7 @@
       "id": "error_malformed_structure_zlib_reserved_block",
       "asset": "zlib_reserved_block.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_reserved_block.png",
         "operations": [
@@ -1189,6 +1258,7 @@
       "id": "error_malformed_structure_zlib_bad_stored_complement",
       "asset": "zlib_bad_stored_complement.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_bad_stored_complement.png",
         "operations": [
@@ -1206,6 +1276,7 @@
       "id": "error_malformed_structure_zlib_bad_adler",
       "asset": "zlib_bad_adler.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_bad_adler.png",
         "operations": [
@@ -1223,6 +1294,7 @@
       "id": "error_malformed_structure_zlib_backreference_before_output",
       "asset": "zlib_backreference_before_output.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_backreference_before_output.png",
         "operations": [
@@ -1240,6 +1312,7 @@
       "id": "error_malformed_structure_zlib_reserved_distance_symbol",
       "asset": "zlib_reserved_distance_symbol.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_reserved_distance_symbol.png",
         "operations": [
@@ -1257,6 +1330,7 @@
       "id": "error_malformed_structure_zlib_reserved_literal_symbol",
       "asset": "zlib_reserved_literal_symbol.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_reserved_literal_symbol.png",
         "operations": [
@@ -1274,6 +1348,7 @@
       "id": "error_malformed_structure_zlib_truncated_fixed_block",
       "asset": "zlib_truncated_fixed_block.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_truncated_fixed_block.png",
         "operations": [
@@ -1291,6 +1366,7 @@
       "id": "error_malformed_structure_zlib_empty_code_length_tree",
       "asset": "zlib_empty_code_length_tree.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_empty_code_length_tree.png",
         "operations": [
@@ -1308,6 +1384,7 @@
       "id": "error_malformed_structure_zlib_oversubscribed_code_length_tree",
       "asset": "zlib_oversubscribed_code_length_tree.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_oversubscribed_code_length_tree.png",
         "operations": [
@@ -1325,6 +1402,7 @@
       "id": "error_malformed_structure_zlib_dynamic_repeat_overflow",
       "asset": "zlib_dynamic_repeat_overflow.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_dynamic_repeat_overflow.png",
         "operations": [
@@ -1342,6 +1420,7 @@
       "id": "error_malformed_structure_zlib_undecodable_code_length",
       "asset": "zlib_undecodable_code_length.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_undecodable_code_length.png",
         "operations": [
@@ -1359,6 +1438,7 @@
       "id": "error_malformed_structure_zlib_dynamic_backreference_before_output",
       "asset": "zlib_dynamic_backreference_before_output.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_dynamic_backreference_before_output.png",
         "operations": [
@@ -1376,6 +1456,7 @@
       "id": "error_malformed_structure_adam7_invalid_scanline_filter",
       "asset": "adam7_invalid_scanline_filter.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/adam7_invalid_scanline_filter.png",
         "operations": [
@@ -1393,6 +1474,7 @@
       "id": "error_malformed_structure_adam7_giant_dimensions",
       "asset": "adam7_giant_dimensions.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/adam7_giant_dimensions.png",
         "operations": [
@@ -1410,6 +1492,7 @@
       "id": "error_malformed_structure_palette_overlong_plte",
       "asset": "palette_overlong_plte.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_overlong_plte.png",
         "operations": [
@@ -1427,6 +1510,7 @@
       "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
       "asset": "idat_truncated_chunk_no_iend.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/idat_truncated_chunk_no_iend.png",
         "operations": [
@@ -1444,6 +1528,7 @@
       "id": "error_malformed_structure_ihdr_only",
       "asset": "ihdr_only.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/ihdr_only.png",
         "operations": [
@@ -1461,6 +1546,7 @@
       "id": "error_malformed_structure_ihdr_trailing_byte",
       "asset": "ihdr_trailing_byte.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/ihdr_trailing_byte.png",
         "operations": [
@@ -1478,6 +1564,7 @@
       "id": "error_malformed_structure_truncated_ancillary_chunk",
       "asset": "truncated_ancillary_chunk.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/truncated_ancillary_chunk.png",
         "operations": [
@@ -1495,6 +1582,7 @@
       "id": "error_malformed_structure_actl_short",
       "asset": "actl_short.png",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/actl_short.png",
         "operations": [
@@ -1509,9 +1597,64 @@
       ]
     },
     {
+      "id": "error_malformed_structure_actl_after_idat_short",
+      "asset": "actl_after_idat_short.png",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/actl_after_idat_short.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_structure_iend_without_idat",
+      "asset": "iend_without_idat.png",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/iend_without_idat.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "pillow_tolerated_malformed",
+      "asset": "bad_idat_crc.png",
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/bad_idat_crc.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "pillow_tolerated_malformed_invalid_compression",
       "asset": "invalid_compression.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/invalid_compression.png",
         "operations": [
@@ -1529,6 +1672,7 @@
       "id": "pillow_tolerated_malformed_missing_iend",
       "asset": "missing_iend.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/missing_iend.png",
         "operations": [
@@ -1546,6 +1690,7 @@
       "id": "pillow_tolerated_malformed_palette_trns_too_long",
       "asset": "palette_trns_too_long.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_trns_too_long.png",
         "operations": [
@@ -1563,6 +1708,7 @@
       "id": "pillow_tolerated_malformed_palette_missing_plte",
       "asset": "palette_missing_plte.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_missing_plte.png",
         "operations": [
@@ -1580,6 +1726,7 @@
       "id": "pillow_tolerated_malformed_palette_empty_plte",
       "asset": "palette_empty_plte.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_empty_plte.png",
         "operations": [
@@ -1597,6 +1744,7 @@
       "id": "pillow_tolerated_malformed_palette_short_plte",
       "asset": "palette_short_plte.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_short_plte.png",
         "operations": [
@@ -1614,6 +1762,7 @@
       "id": "pillow_tolerated_malformed_palette_partial_plte",
       "asset": "palette_partial_plte.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_partial_plte.png",
         "operations": [
@@ -1631,6 +1780,7 @@
       "id": "pillow_tolerated_malformed_palette_trns_without_plte",
       "asset": "palette_trns_without_plte.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_trns_without_plte.png",
         "operations": [
@@ -1648,6 +1798,7 @@
       "id": "pillow_tolerated_malformed_duplicate_plte",
       "asset": "duplicate_plte.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/duplicate_plte.png",
         "operations": [
@@ -1665,6 +1816,7 @@
       "id": "pillow_tolerated_malformed_duplicate_trns",
       "asset": "duplicate_trns.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/duplicate_trns.png",
         "operations": [
@@ -1682,6 +1834,7 @@
       "id": "pillow_tolerated_malformed_actl_zero_frames",
       "asset": "actl_zero_frames.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/actl_zero_frames.png",
         "operations": [
@@ -1699,6 +1852,7 @@
       "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
       "asset": "zlib_oversized_scanline.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_oversized_scanline.png",
         "operations": [
@@ -1716,6 +1870,7 @@
       "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
       "asset": "zlib_oversized_stored_scanline.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_oversized_stored_scanline.png",
         "operations": [
@@ -1733,6 +1888,7 @@
       "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
       "asset": "zlib_oversized_backreference_scanline.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_oversized_backreference_scanline.png",
         "operations": [
@@ -1750,6 +1906,7 @@
       "id": "compression_dynamic_manual",
       "asset": "zlib_minimal_dynamic.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/zlib_minimal_dynamic.png",
         "operations": [
@@ -1767,6 +1924,7 @@
       "id": "transparency_rgb",
       "asset": "rgb_trns.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/rgb_trns.png",
         "operations": [
@@ -1784,6 +1942,7 @@
       "id": "apng_static",
       "asset": "apng_static.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/apng_static.png",
         "operations": [
@@ -1801,6 +1960,7 @@
       "id": "apng_animated",
       "asset": "apng_animated.png",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/apng_animated.png",
         "operations": [

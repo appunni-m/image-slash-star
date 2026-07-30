@@ -26,8 +26,6 @@
     clippy::cast_sign_loss
 )]
 
-use std::io::{self, Write};
-
 mod backward_refs;
 pub(super) mod cross_color;
 mod histogram;
@@ -49,14 +47,7 @@ pub enum ColorType {
 /// Error encountered while encoding lossless WebP data.
 #[derive(Debug)]
 pub enum EncodingError {
-    IoError,
     InvalidDimensions,
-}
-
-impl From<io::Error> for EncodingError {
-    fn from(_error: io::Error) -> Self {
-        Self::IoError
-    }
 }
 
 struct BitWriter<'a> {
@@ -1159,29 +1150,26 @@ const fn chunk_size(inner_bytes: usize) -> u32 {
     }
 }
 
-fn write_chunk(w: &mut dyn Write, name: &[u8], data: &[u8]) -> io::Result<()> {
+fn write_chunk(output: &mut Vec<u8>, name: &[u8], data: &[u8]) {
     debug_assert!(name.len() == 4);
 
-    w.write_all(name)?;
-    w.write_all(&(data.len() as u32).to_le_bytes())?;
-    w.write_all(data)?;
+    output.extend_from_slice(name);
+    output.extend_from_slice(&(data.len() as u32).to_le_bytes());
+    output.extend_from_slice(data);
     if data.len() % 2 == 1 {
-        w.write_all(&[0])?;
+        output.push(0);
     }
-    Ok(())
 }
 
 /// WebP Encoder.
-pub struct WebPEncoder<W> {
-    writer: W,
-}
+pub struct WebPEncoder;
 
-impl<W: Write> WebPEncoder<W> {
-    /// Create a new encoder that writes its output to `w`.
+impl WebPEncoder {
+    /// Create a new in-memory lossless encoder.
     ///
     /// Only supports "VP8L" lossless encoding.
-    pub fn new(w: W) -> Self {
-        Self { writer: w }
+    pub const fn new() -> Self {
+        Self
     }
 
     /// Encode image data with the indicated color type.
@@ -1190,119 +1178,41 @@ impl<W: Write> WebPEncoder<W> {
     ///
     /// Panics if the image data is not of the indicated dimensions.
     pub fn encode(
-        mut self,
+        self,
         data: &[u8],
         width: u32,
         height: u32,
         color: ColorType,
-    ) -> Result<(), EncodingError> {
+    ) -> Result<Vec<u8>, EncodingError> {
         let frame = encode_frame(data, width, height, color)?;
 
-        self.writer.write_all(b"RIFF")?;
-        self.writer
-            .write_all(&(chunk_size(frame.len()) + 4).to_le_bytes())?;
-        self.writer.write_all(b"WEBP")?;
-        write_chunk(&mut self.writer, b"VP8L", &frame)?;
-
-        Ok(())
+        let mut output = Vec::with_capacity(frame.len().saturating_add(20));
+        output.extend_from_slice(b"RIFF");
+        output.extend_from_slice(&(chunk_size(frame.len()) + 4).to_le_bytes());
+        output.extend_from_slice(b"WEBP");
+        write_chunk(&mut output, b"VP8L", &frame);
+        Ok(output)
     }
 }
 
 #[cfg(coverage)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use std::io::{Cursor, ErrorKind};
-
-    struct FailOnWrite {
-        call: usize,
-        fail_at: usize,
-    }
-
-    impl Write for FailOnWrite {
-        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-            if self.call == self.fail_at {
-                return Err(io::Error::from(ErrorKind::Other));
-            }
-            self.call += 1;
-            Ok(buf.len())
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
-    }
-
     backward_refs::__coverage_exercise_private_branches();
     cross_color::__coverage_exercise_private_branches();
     histogram::__coverage_exercise_private_branches();
     predictor::__coverage_exercise_private_branches();
 
-    let _ = EncodingError::from(io::Error::from(ErrorKind::Other));
     let _ = length_to_symbol(4);
     let _ = length_to_symbol(300);
     let _ = channels(0x1122_3344);
     let _ = chunk_size(3);
     let _ = chunk_size(4);
     let _ = compressed_huffman_tokens(&[0; 300]);
-    let _ = FailOnWrite {
-        call: 0,
-        fail_at: usize::MAX,
-    }
-    .flush();
-    let rgba_pixel = [0, 0, 0, 255];
-    let _ = WebPEncoder::new(FailOnWrite {
-        call: 0,
-        fail_at: 0,
-    })
-    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
-    let _ = WebPEncoder::new(FailOnWrite {
-        call: 0,
-        fail_at: 1,
-    })
-    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
-    let _ = WebPEncoder::new(FailOnWrite {
-        call: 0,
-        fail_at: 2,
-    })
-    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
-    let _ = WebPEncoder::new(FailOnWrite {
-        call: 0,
-        fail_at: 3,
-    })
-    .encode(&rgba_pixel, 1, 1, ColorType::Rgba8);
     let mut odd_chunk = Vec::new();
-    write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]).unwrap();
+    write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]);
     let mut even_chunk = Vec::new();
-    write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]).unwrap();
-    let mut even_fixed_buffer = [0u8; 12];
-    let mut even_fixed = Cursor::new(&mut even_fixed_buffer[..]);
-    write_chunk(&mut even_fixed, b"EVEN", &[1, 2, 3, 4]).unwrap();
-    let mut invalid_dimension_buffer = [0u8; 0];
-    let _ = WebPEncoder::new(Cursor::new(&mut invalid_dimension_buffer[..])).encode(
-        &[],
-        0,
-        1,
-        ColorType::Rgba8,
-    );
-    let mut odd_fixed_buffer = [0u8; 12];
-    let mut odd_fixed = Cursor::new(&mut odd_fixed_buffer[..]);
-    write_chunk(&mut odd_fixed, b"ODD!", &[1, 2, 3]).unwrap();
-    let mut name_error_buffer = [0u8; 0];
-    let mut name_error = Cursor::new(&mut name_error_buffer[..]);
-    write_chunk(&mut name_error, b"FAIL", &[1, 2, 3])
-        .expect_err("empty fixed buffer must fail on RIFF chunk name");
-    let mut size_error_buffer = [0u8; 4];
-    let mut size_error = Cursor::new(&mut size_error_buffer[..]);
-    write_chunk(&mut size_error, b"FAIL", &[1, 2, 3])
-        .expect_err("short fixed buffer must fail on RIFF chunk size");
-    let mut data_error_buffer = [0u8; 8];
-    let mut data_error = Cursor::new(&mut data_error_buffer[..]);
-    write_chunk(&mut data_error, b"FAIL", &[1, 2, 3])
-        .expect_err("short fixed buffer must fail on RIFF chunk data");
-    let mut padding_error_buffer = [0u8; 11];
-    let mut padding_error = Cursor::new(&mut padding_error_buffer[..]);
-    write_chunk(&mut padding_error, b"PAD!", &[1, 2, 3])
-        .expect_err("short fixed buffer must fail on RIFF padding byte");
+    write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]);
 
     let mut tree_bytes = Vec::new();
     let mut tree_writer = BitWriter {
@@ -1471,39 +1381,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let two_value_alpha = [0, 255, 0, 255];
     let _ = encode_alpha(&two_value_alpha, two_value_alpha.len() as u32, 1);
 
-    let mut output = Vec::new();
-    WebPEncoder::new(&mut output)
+    WebPEncoder::new()
         .encode(&[], 0, 1, ColorType::Rgb8)
         .expect_err("zero-width WebP must be rejected");
-    WebPEncoder::new(&mut output)
+    WebPEncoder::new()
         .encode(&[], 1, 0, ColorType::Rgb8)
         .expect_err("zero-height WebP must be rejected");
-    WebPEncoder::new(&mut output)
+    WebPEncoder::new()
         .encode(&vec![0; 16_385 * 3], 16_385, 1, ColorType::Rgb8)
         .expect_err("too-wide WebP must be rejected");
-    WebPEncoder::new(&mut output)
+    WebPEncoder::new()
         .encode(&vec![0; 16_385 * 3], 1, 16_385, ColorType::Rgb8)
         .expect_err("too-tall WebP must be rejected");
 
     let rgb = [0, 0, 0];
-    let mut riff_name_error = [0u8; 0];
-    WebPEncoder::new(Cursor::new(&mut riff_name_error[..]))
+    WebPEncoder::new()
         .encode(&rgb, 1, 1, ColorType::Rgb8)
-        .expect_err("empty fixed buffer must fail on RIFF signature");
-    let mut riff_size_error = [0u8; 4];
-    WebPEncoder::new(Cursor::new(&mut riff_size_error[..]))
-        .encode(&rgb, 1, 1, ColorType::Rgb8)
-        .expect_err("short fixed buffer must fail on RIFF size");
-    let mut webp_signature_error = [0u8; 8];
-    WebPEncoder::new(Cursor::new(&mut webp_signature_error[..]))
-        .encode(&rgb, 1, 1, ColorType::Rgb8)
-        .expect_err("short fixed buffer must fail on WEBP signature");
-    let mut vp8l_chunk_error = [0u8; 12];
-    WebPEncoder::new(Cursor::new(&mut vp8l_chunk_error[..]))
-        .encode(&rgb, 1, 1, ColorType::Rgb8)
-        .expect_err("short fixed buffer must fail on VP8L chunk");
-    let mut fixed_output = [0u8; 256];
-    WebPEncoder::new(Cursor::new(&mut fixed_output[..]))
-        .encode(&rgb, 1, 1, ColorType::Rgb8)
-        .expect("fixed buffer with enough space must encode WebP");
+        .expect("one-pixel in-memory WebP must encode");
 }

@@ -190,7 +190,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "image has wrong mode"
+      "error_message": "image has wrong mode",
+      "error_kind": "unsupported"
     },
     {
       "id": "enc_error_disposal",
@@ -202,7 +203,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "invalid literal for int() with base 10: 'invalid'"
+      "error_message": "invalid literal for int() with base 10: 'invalid'",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_error_transparency",
@@ -214,7 +216,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.TypeError",
-      "error_message": "unsupported operand type(s) for &: 'str' and 'int'"
+      "error_message": "unsupported operand type(s) for &: 'str' and 'int'",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_error_animated_cmyk",
@@ -226,7 +229,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "image has wrong mode"
+      "error_message": "image has wrong mode",
+      "error_kind": "unsupported"
     },
     {
       "id": "enc_error_zero_width",
@@ -238,7 +242,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "cannot write empty image"
+      "error_message": "cannot write empty image",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_opaque",

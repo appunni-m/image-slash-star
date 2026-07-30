@@ -20,7 +20,7 @@ runtime parity evidence.
 | AVIF still and sequence behavior survives the Result migration | AVIF manifest rows and the all-feature coverage suite exercise decode, sequence decode, encode, and sequence encode | complete |
 | Encoding keeps target format explicit | `encode`, `encode_sequence`, and `encode_default` all require `ImageFormat`; no ambiguous same-source convenience was added | complete |
 | Internal callers and manifests verify detected format, exact mode/pixels, successful output, and structured failures | `tests/coverage_matrix_tests.rs` and `tests/fixtures/coverage_matrix.json` | complete upstream |
-| Formatting and 100% line/branch/function/region coverage | Coverage MCP run `5b0f1ca0-0ecf-433b-a159-722387249757`, snapshot `2a9e4148-d559-44db-8368-57df58bf21fc`: 30,616/30,616 lines, 3,924/3,924 branches, 1,837/1,837 functions, 51,578/51,578 regions | complete upstream |
+| Formatting and 100% line/branch/function/region coverage | Coverage MCP run `65edd371-6a90-49d0-8ce1-51f4801c234e`, snapshot `4ae70741-3fc1-4b45-8154-4d1ed8c2d63b`: 38,652/38,652 lines, 5,532/5,532 branches, 2,044/2,044 functions, 62,400/62,400 regions | complete upstream |
 | `ImageInfo` has a stable metadata contract | `src/types/mod.rs::ImageInfo` records format, dimensions, mode, bit depth, palette, animation, and frame count | complete |
 | Inspection is feature-gated for PNG, JPEG, GIF, BMP, WebP, TIFF, ICO, and AVIF | each codec owns `inspect.rs`; dispatch and feature failures are centralized in `src/codecs/mod.rs` | complete |
 | Every inspection slice has exact Pillow-oracle manifest coverage and 100% Coverage MCP results | all eight formats participate in the manifest-driven inspect loop; upstream snapshot above is exact 100% | complete upstream |

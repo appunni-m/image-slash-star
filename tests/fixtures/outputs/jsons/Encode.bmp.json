@@ -70,7 +70,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OSError",
-      "error_message": "cannot write mode LA as BMP"
+      "error_message": "cannot write mode LA as BMP",
+      "error_kind": "unsupported"
     },
     {
       "id": "enc_error_truncated_pixels",
@@ -82,7 +83,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "not enough image data"
+      "error_message": "not enough image data",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_error_oversized_dimensions",
@@ -94,7 +96,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OverflowError",
-      "error_message": "signed integer is greater than maximum"
+      "error_message": "signed integer is greater than maximum",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_error_oversized_height",
@@ -106,7 +109,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OverflowError",
-      "error_message": "signed integer is greater than maximum"
+      "error_message": "signed integer is greater than maximum",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_error_file_size_overflow",
@@ -118,7 +122,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.MemoryError",
-      "error_message": ""
+      "error_message": "",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_16bit",

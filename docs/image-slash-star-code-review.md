@@ -35,16 +35,102 @@ manifest, add Pillow operations, or redesign the downstream compute pipeline.
 
 - The complete migration diff and relevant call paths were inspected.
 - `git diff --check` passed.
-- Coverage MCP run `5b0f1ca0-0ecf-433b-a159-722387249757`, snapshot
-  `2a9e4148-d559-44db-8368-57df58bf21fc`, passed all six test targets and
-  reports 100% coverage: 30,616 lines, 3,924 branches, 1,837 functions, and
-  51,578 regions.
+- Coverage MCP run `65edd371-6a90-49d0-8ce1-51f4801c234e`, snapshot
+  `4ae70741-3fc1-4b45-8154-4d1ed8c2d63b`, passed all seven test targets and
+  reports 100% coverage: 38,652 lines, 5,532 branches, 2,044 functions, and
+  62,400 regions.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D
   warnings` passes. The library-root and integration-test blanket allowances
   have been removed. The inherited `webp/native` blanket allowance is also
   removed after a file-by-file arithmetic and conversion audit.
 
 ## Findings
+
+### I0 — Accepted Pillow error-contract hardening
+
+Severity: high correctness and maintainability work.
+
+The review found that the public root API returned `ImageResult` while
+codec-private parsers, inspectors, decoders, encoders, compression routines,
+AV1 readers, and native AVIF wrappers still used `Option` for operational
+failure. Dispatch consequently collapsed distinct failures into a generic
+“codec rejected” message. The accepted implementation now uses the private
+`CodecError`/`CodecResult` contract across those fallible boundaries and
+reserves `Option` for an explicitly reviewed absence contract.
+
+The pinned Pillow 12.2.0 plugin predicates also expose detection differences:
+
+- JPEG requires `FF D8 FF`, not only `FF D8`;
+- GIF requires `GIF87a` or `GIF89a`, not every `GIF8` prefix;
+- TIFF accepts its six registered classic/BigTIFF byte-order prefixes; and
+- WebP requires `RIFF`, `WEBP`, and a recognized `VP8 `, `VP8L`, or `VP8X`
+  first chunk.
+
+`ImagePalette::new` validates RGB triplets, entry count, and alpha length. The
+accepted implementation repeats those checks from `DecodedImage::validate`
+because public fields permit direct construction. Pillow-tolerated PNG and TIFF
+fixtures also prove that `P8` may legitimately retain no palette; absence is
+therefore allowed, while every present palette and retained index is validated.
+
+Accepted implementation:
+
+1. Introduce one private typed codec error contract and convert every
+   operationally fallible private helper from `Option` or `Result<T, ()>` to a
+   meaningful `Result`.
+2. Retain `Option` only for genuine absence, including optional metadata,
+   transparency, animation values, and infallible searches.
+3. Map codec errors into the existing canonical `ImageError` categories at the
+   format dispatcher without adding `try_*` entry points or exposing algorithm
+   modules.
+4. Match the pinned Pillow detection predicates using mutated complete image
+   fixtures, never synthetic prefix-only assertions.
+5. Share palette structural validation between `ImagePalette::new` and
+   `DecodedImage::validate`, and prove rejected encode inputs through the
+   manifest.
+6. Migrate shared compression and each independently feature-gated codec as
+   separately reviewable slices, preserving exact pixels, frames, metadata,
+   encoded bytes, feature behavior, WASM behavior, and native AVIF behavior.
+7. Require strict native/WASM formatting, Clippy, and rustdoc gates plus
+   Coverage MCP exact manifest parity and 100% line, branch, function, and
+   region coverage before completion.
+
+Final source audit:
+
+- every public operational entry point returns `ImageResult`, and codec-private
+  failure propagation uses `CodecResult` or a native error converted to it;
+- no production source path calls `.ok()` to erase an error, and there are no
+  duplicate `try_*` entry points;
+- TIFF LZW short reads now return a classified codec error instead of using
+  `Option` as an end-of-stream signal;
+- AVIF detection is proved with complete `avif`, `avis`, `mif1`, `msf1`, and
+  unsupported-major-brand files;
+- TIFF detection is proved with complete files for all six Pillow-registered
+  signatures. The pinned Pillow parser's asymmetric behavior is retained:
+  `II+\0` selects unsupported BigTIFF layout and fails, while `MM\0+` continues
+  through the classic big-endian parser for the manifest payload; and
+- direct public palette mutation is represented by Pillow-oracle encode-error
+  rows where Pillow has an equivalent operation: an oversized palette and a
+  palette attached to non-indexed data. Other model-only validation branches
+  are not described as Pillow behavior.
+
+The remaining production `Option` signatures were reviewed rather than
+mechanically renamed:
+
+| Contract | Retained uses |
+|---|---|
+| Optional observable/container state | palette, palette alpha, loop/background metadata, uninitialized cache, AVIF main/alpha item or track absence, WebP background color |
+| Infallible lookup/search | TIFF tag lookup, GIF palette color lookup, AVIF item/location and reconstructed-leaf lookup |
+| Standard protocol | PNG chunk iterator `Iterator::next` |
+| Closed implementation path | portable AVIF applicability and AV1 restoration applicability; `None` selects the complete native decoder or rejects only the portable reconstruction path |
+| Speculative decoder optimization | WebP Huffman/VP8 fast reads; `None` rolls back and retries the checked decoder, while color-cache absence is `Result<Option<_>>` |
+| Non-error algorithm choice | AV1 restoration disabled, VP8 per-block luma mode, zlib-ng optional tail match, and WebP histogram pruning |
+
+Adjacent non-Pillow work is review-only in this slice. Logging must remain
+application-owned and dependency-free; CPU benchmarks must use fair release
+builds and fixed fixture classes; fuzzing, generic limits, security hardening,
+governance, release automation, and image-processing ownership remain future
+plans documented in `codec-only-productization-plan.md`. They must not be used
+to broaden this parity migration.
 
 ### I1 — “Fully validates” is stronger than the implemented codec contract
 
@@ -187,13 +273,15 @@ case are recorded in `docs/lazy-loading-correctness-proposal.md`.
 
 ## Resolution order
 
-1. Implement and prove the accepted codec-specific `verify()` contract in I1.
-2. Implement the combined codec feature and target matrix from I2.
-3. Align migration and rustdoc claims with those decisions.
-4. Complete the strict Clippy implementation from I3 without suppressing
+1. Implement the I0 typed-error contract, exact Pillow signatures, palette
+   validation, per-codec `Result` migration, and manifest error evidence.
+2. Implement and prove the accepted codec-specific `verify()` contract in I1.
+3. Implement the combined codec feature and target matrix from I2.
+4. Align migration and rustdoc claims with those decisions.
+5. Complete the strict Clippy implementation from I3 without suppressing
    diagnostics or changing parity.
-5. Apply I4 only alongside another relevant format-parsing change.
-6. Rerun formatting, exact manifest tests, isolated feature/target lanes, and Coverage
+6. Apply I4 only alongside another relevant format-parsing change.
+7. Rerun formatting, exact manifest tests, isolated feature/target lanes, and Coverage
    MCP line/branch/region coverage before declaring the upstream slice complete.
 
 ## Review completion rule

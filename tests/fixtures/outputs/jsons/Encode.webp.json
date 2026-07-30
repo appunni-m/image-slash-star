@@ -289,6 +289,18 @@
       "encoded_ref_bytes": 3672
     },
     {
+      "id": "enc_exif_mixed_hex_case",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_exif_mixed_hex_case.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_exif_mixed_hex_case.bin",
+      "encoded_ref_bytes": 3674
+    },
+    {
       "id": "enc_xmp",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_xmp.bin",
       "ref_bytes": 49152,
@@ -311,6 +323,71 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_icc.bin",
       "encoded_ref_bytes": 3674
+    },
+    {
+      "id": "enc_error_metadata_hex_odd",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_metadata_hex_invalid",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 0",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_metadata_hex_invalid_second_nibble",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_exif_hex_odd",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_xmp_hex_odd",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_lossy_cmyk",

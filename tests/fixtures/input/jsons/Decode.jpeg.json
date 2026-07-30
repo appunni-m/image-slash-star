@@ -16,6 +16,7 @@
       "id": "subsampling_444",
       "asset": "baseline_444.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
         "operations": [
@@ -33,6 +34,7 @@
       "id": "subsampling_422",
       "asset": "baseline_422.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_422.jpg",
         "operations": [
@@ -50,6 +52,7 @@
       "id": "subsampling_420",
       "asset": "baseline_420.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_420.jpg",
         "operations": [
@@ -67,6 +70,7 @@
       "id": "subsampling_411",
       "asset": "baseline_411.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_411.jpg",
         "operations": [
@@ -84,6 +88,7 @@
       "id": "subsampling_gray",
       "asset": "baseline_gray.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_gray.jpg",
         "operations": [
@@ -101,6 +106,7 @@
       "id": "color_ycbcr",
       "asset": "baseline_ycbcr.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_ycbcr.jpg",
         "operations": [
@@ -118,6 +124,7 @@
       "id": "color_rgb",
       "asset": "baseline_rgb_jpeg.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_rgb_jpeg.jpg",
         "operations": [
@@ -135,6 +142,7 @@
       "id": "color_cmyk",
       "asset": "baseline_cmyk.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
         "operations": [
@@ -152,6 +160,7 @@
       "id": "color_cmyk_raw",
       "asset": "cmyk_no_adobe_app14.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/cmyk_no_adobe_app14.jpg",
         "operations": [
@@ -169,6 +178,7 @@
       "id": "huffman_default",
       "asset": "baseline_default.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_default.jpg",
         "operations": [
@@ -186,6 +196,7 @@
       "id": "huffman_optimized",
       "asset": "baseline_optimized.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_optimized.jpg",
         "operations": [
@@ -203,6 +214,7 @@
       "id": "huffman_progressive",
       "asset": "progressive.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/progressive.jpg",
         "operations": [
@@ -220,6 +232,7 @@
       "id": "quality_100",
       "asset": "q100.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q100.jpg",
         "operations": [
@@ -237,6 +250,7 @@
       "id": "quality_100_q90",
       "asset": "q90.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q90.jpg",
         "operations": [
@@ -254,6 +268,7 @@
       "id": "quality_100_q75",
       "asset": "q75.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q75.jpg",
         "operations": [
@@ -271,6 +286,7 @@
       "id": "quality_50",
       "asset": "q50.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q50.jpg",
         "operations": [
@@ -288,6 +304,7 @@
       "id": "quality_50_q25",
       "asset": "q25.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q25.jpg",
         "operations": [
@@ -305,6 +322,7 @@
       "id": "quality_10",
       "asset": "q10.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q10.jpg",
         "operations": [
@@ -322,6 +340,7 @@
       "id": "quality_1",
       "asset": "q1.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/q1.jpg",
         "operations": [
@@ -339,6 +358,7 @@
       "id": "size_minimal",
       "asset": "8x8.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/8x8.jpg",
         "operations": [
@@ -356,6 +376,7 @@
       "id": "size_odd",
       "asset": "17x17.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/17x17.jpg",
         "operations": [
@@ -373,6 +394,7 @@
       "id": "size_odd_33x33",
       "asset": "33x33.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/33x33.jpg",
         "operations": [
@@ -390,6 +412,7 @@
       "id": "size_large",
       "asset": "large.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/large.jpg",
         "operations": [
@@ -407,6 +430,7 @@
       "id": "size_1x1",
       "asset": "1x1.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/1x1.jpg",
         "operations": [
@@ -424,6 +448,7 @@
       "id": "narrow_422",
       "asset": "1x8_422.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/1x8_422.jpg",
         "operations": [
@@ -441,6 +466,7 @@
       "id": "unusual_sampling",
       "asset": "sampling_3x1.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sampling_3x1.jpg",
         "operations": [
@@ -458,6 +484,7 @@
       "id": "unusual_sampling_sampling_1x3",
       "asset": "sampling_1x3.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sampling_1x3.jpg",
         "operations": [
@@ -475,6 +502,7 @@
       "id": "restart_none",
       "asset": "baseline_default.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_default.jpg",
         "operations": [
@@ -492,6 +520,7 @@
       "id": "restart_interval",
       "asset": "restart.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/restart.jpg",
         "operations": [
@@ -509,6 +538,7 @@
       "id": "exif_orientation",
       "asset": "exif_orientation.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/exif_orientation.jpg",
         "operations": [
@@ -526,6 +556,7 @@
       "id": "exif_thumbnail",
       "asset": "exif_thumbnail.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/exif_thumbnail.jpg",
         "operations": [
@@ -543,6 +574,7 @@
       "id": "no_exif",
       "asset": "no_exif.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/no_exif.jpg",
         "operations": [
@@ -560,6 +592,7 @@
       "id": "trailing_data",
       "asset": "trailing_data.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/trailing_data.jpg",
         "operations": [
@@ -577,6 +610,7 @@
       "id": "multiple_eoi",
       "asset": "multiple_eoi.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/multiple_eoi.jpg",
         "operations": [
@@ -594,6 +628,7 @@
       "id": "zero_length",
       "asset": "empty.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/empty.jpg",
         "operations": [
@@ -611,6 +646,7 @@
       "id": "truncated",
       "asset": "truncated.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/truncated.jpg",
         "operations": [
@@ -628,6 +664,7 @@
       "id": "corrupt_header",
       "asset": "corrupt.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/corrupt.jpg",
         "operations": [
@@ -645,6 +682,7 @@
       "id": "malformed_markers",
       "asset": "dangling_marker.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dangling_marker.jpg",
         "operations": [
@@ -662,6 +700,7 @@
       "id": "malformed_markers_fill_marker_only",
       "asset": "fill_marker_only.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/fill_marker_only.jpg",
         "operations": [
@@ -679,6 +718,7 @@
       "id": "malformed_markers_markerless_tail",
       "asset": "markerless_tail.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/markerless_tail.jpg",
         "operations": [
@@ -696,6 +736,7 @@
       "id": "malformed_markers_sof_no_length",
       "asset": "sof_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_length.jpg",
         "operations": [
@@ -713,6 +754,7 @@
       "id": "malformed_markers_sof_no_precision",
       "asset": "sof_no_precision.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_precision.jpg",
         "operations": [
@@ -730,6 +772,7 @@
       "id": "malformed_markers_sof_no_height",
       "asset": "sof_no_height.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_height.jpg",
         "operations": [
@@ -747,6 +790,7 @@
       "id": "malformed_markers_sof_no_width",
       "asset": "sof_no_width.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_width.jpg",
         "operations": [
@@ -764,6 +808,7 @@
       "id": "malformed_markers_sof_no_components",
       "asset": "sof_no_components.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_components.jpg",
         "operations": [
@@ -781,6 +826,7 @@
       "id": "malformed_markers_sof_no_comp_id",
       "asset": "sof_no_comp_id.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_comp_id.jpg",
         "operations": [
@@ -798,6 +844,7 @@
       "id": "malformed_markers_sof_no_sampling",
       "asset": "sof_no_sampling.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_sampling.jpg",
         "operations": [
@@ -815,6 +862,7 @@
       "id": "malformed_markers_sof_no_quant",
       "asset": "sof_no_quant.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_no_quant.jpg",
         "operations": [
@@ -832,6 +880,7 @@
       "id": "malformed_markers_sof_precision_12",
       "asset": "sof_precision_12.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_precision_12.jpg",
         "operations": [
@@ -849,6 +898,7 @@
       "id": "malformed_markers_sof_two_components",
       "asset": "sof_two_components.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_two_components.jpg",
         "operations": [
@@ -866,6 +916,7 @@
       "id": "malformed_markers_sof_zero_sampling",
       "asset": "sof_zero_sampling.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_zero_sampling.jpg",
         "operations": [
@@ -883,6 +934,7 @@
       "id": "malformed_markers_sof_high_h_sampling",
       "asset": "sof_high_h_sampling.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_high_h_sampling.jpg",
         "operations": [
@@ -900,6 +952,7 @@
       "id": "malformed_markers_sof_zero_v_sampling",
       "asset": "sof_zero_v_sampling.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_zero_v_sampling.jpg",
         "operations": [
@@ -917,6 +970,7 @@
       "id": "malformed_markers_sof_high_v_sampling",
       "asset": "sof_high_v_sampling.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_high_v_sampling.jpg",
         "operations": [
@@ -934,6 +988,7 @@
       "id": "malformed_markers_sof_bad_quant_table",
       "asset": "sof_bad_quant_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_bad_quant_table.jpg",
         "operations": [
@@ -951,8 +1006,27 @@
       "id": "malformed_markers_sof_missing_quant_table",
       "asset": "sof_missing_quant_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_missing_quant_table.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "malformed_markers_progressive_missing_quant_table",
+      "asset": "progressive_missing_quant_table.jpg",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_missing_quant_table.jpg",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -968,6 +1042,7 @@
       "id": "malformed_markers_sof_sparse_quant_table",
       "asset": "sof_sparse_quant_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_sparse_quant_table.jpg",
         "operations": [
@@ -985,6 +1060,7 @@
       "id": "malformed_markers_dqt_bad_table",
       "asset": "dqt_bad_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dqt_bad_table.jpg",
         "operations": [
@@ -1002,6 +1078,7 @@
       "id": "malformed_markers_dqt_no_length",
       "asset": "dqt_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dqt_no_length.jpg",
         "operations": [
@@ -1019,6 +1096,7 @@
       "id": "malformed_markers_dqt_no_info",
       "asset": "dqt_no_info.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dqt_no_info.jpg",
         "operations": [
@@ -1036,6 +1114,7 @@
       "id": "malformed_markers_dqt_truncated_8bit_value",
       "asset": "dqt_truncated_8bit_value.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dqt_truncated_8bit_value.jpg",
         "operations": [
@@ -1053,6 +1132,7 @@
       "id": "malformed_markers_dqt_truncated_16bit_value",
       "asset": "dqt_truncated_16bit_value.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dqt_truncated_16bit_value.jpg",
         "operations": [
@@ -1070,6 +1150,7 @@
       "id": "malformed_markers_dht_bad_table",
       "asset": "dht_bad_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dht_bad_table.jpg",
         "operations": [
@@ -1087,6 +1168,7 @@
       "id": "malformed_markers_dht_no_length",
       "asset": "dht_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dht_no_length.jpg",
         "operations": [
@@ -1104,6 +1186,7 @@
       "id": "malformed_markers_dht_no_info",
       "asset": "dht_no_info.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dht_no_info.jpg",
         "operations": [
@@ -1121,6 +1204,7 @@
       "id": "malformed_markers_dht_truncated_counts",
       "asset": "dht_truncated_counts.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dht_truncated_counts.jpg",
         "operations": [
@@ -1138,6 +1222,7 @@
       "id": "malformed_markers_dht_truncated_values",
       "asset": "dht_truncated_values.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dht_truncated_values.jpg",
         "operations": [
@@ -1155,6 +1240,7 @@
       "id": "malformed_markers_dht_oversubscribed",
       "asset": "dht_oversubscribed.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dht_oversubscribed.jpg",
         "operations": [
@@ -1172,6 +1258,7 @@
       "id": "malformed_markers_sos_no_length",
       "asset": "sos_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_length.jpg",
         "operations": [
@@ -1189,6 +1276,7 @@
       "id": "malformed_markers_sos_no_component_count",
       "asset": "sos_no_component_count.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_component_count.jpg",
         "operations": [
@@ -1206,6 +1294,7 @@
       "id": "malformed_markers_sos_no_comp_id",
       "asset": "sos_no_comp_id.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_comp_id.jpg",
         "operations": [
@@ -1223,6 +1312,7 @@
       "id": "malformed_markers_sos_no_table",
       "asset": "sos_no_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_table.jpg",
         "operations": [
@@ -1240,6 +1330,7 @@
       "id": "malformed_markers_sos_no_ss",
       "asset": "sos_no_ss.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_ss.jpg",
         "operations": [
@@ -1257,6 +1348,7 @@
       "id": "malformed_markers_sos_no_se",
       "asset": "sos_no_se.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_se.jpg",
         "operations": [
@@ -1274,6 +1366,7 @@
       "id": "malformed_markers_sos_no_ahal",
       "asset": "sos_no_ahal.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_no_ahal.jpg",
         "operations": [
@@ -1291,6 +1384,7 @@
       "id": "malformed_markers_sos_unknown_component",
       "asset": "sos_unknown_component.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_unknown_component.jpg",
         "operations": [
@@ -1308,6 +1402,7 @@
       "id": "malformed_markers_sos_zero_components",
       "asset": "sos_zero_components.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_zero_components.jpg",
         "operations": [
@@ -1325,6 +1420,7 @@
       "id": "malformed_markers_sos_bad_dc_table",
       "asset": "sos_bad_dc_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_bad_dc_table.jpg",
         "operations": [
@@ -1342,6 +1438,7 @@
       "id": "malformed_markers_sos_bad_ac_table",
       "asset": "sos_bad_ac_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_bad_ac_table.jpg",
         "operations": [
@@ -1359,6 +1456,7 @@
       "id": "malformed_markers_sos_missing_dc_table",
       "asset": "sos_missing_dc_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_missing_dc_table.jpg",
         "operations": [
@@ -1376,6 +1474,7 @@
       "id": "malformed_markers_sos_missing_ac_table",
       "asset": "sos_missing_ac_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_missing_ac_table.jpg",
         "operations": [
@@ -1393,6 +1492,7 @@
       "id": "malformed_markers_sos_sparse_dc_table",
       "asset": "sos_sparse_dc_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_sparse_dc_table.jpg",
         "operations": [
@@ -1410,6 +1510,7 @@
       "id": "malformed_markers_sos_sparse_ac_table",
       "asset": "sos_sparse_ac_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_sparse_ac_table.jpg",
         "operations": [
@@ -1427,6 +1528,7 @@
       "id": "malformed_markers_duplicate_sof",
       "asset": "duplicate_sof.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/duplicate_sof.jpg",
         "operations": [
@@ -1444,6 +1546,7 @@
       "id": "malformed_markers_sos_before_sof",
       "asset": "sos_before_sof.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sos_before_sof.jpg",
         "operations": [
@@ -1461,6 +1564,7 @@
       "id": "malformed_markers_eoi_without_sos",
       "asset": "eoi_without_sos.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/eoi_without_sos.jpg",
         "operations": [
@@ -1478,8 +1582,27 @@
       "id": "malformed_markers_wrong_soi",
       "asset": "wrong_soi.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/wrong_soi.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "malformed_markers_near_miss_third_marker",
+      "asset": "near_miss_third_marker.jpg",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/near_miss_third_marker.jpg",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1495,6 +1618,7 @@
       "id": "malformed_markers_truncated_sof_payload",
       "asset": "truncated_sof_payload.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/truncated_sof_payload.jpg",
         "operations": [
@@ -1512,6 +1636,7 @@
       "id": "malformed_markers_sof_short_height",
       "asset": "sof_short_height.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_short_height.jpg",
         "operations": [
@@ -1529,6 +1654,7 @@
       "id": "malformed_markers_sof_partial_height",
       "asset": "sof_partial_height.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_partial_height.jpg",
         "operations": [
@@ -1546,6 +1672,7 @@
       "id": "malformed_markers_sof_short_width",
       "asset": "sof_short_width.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_short_width.jpg",
         "operations": [
@@ -1563,6 +1690,7 @@
       "id": "malformed_markers_sof_short_components",
       "asset": "sof_short_components.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_short_components.jpg",
         "operations": [
@@ -1580,6 +1708,7 @@
       "id": "malformed_markers_sof_short_component_table",
       "asset": "sof_short_component_table.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_short_component_table.jpg",
         "operations": [
@@ -1597,6 +1726,7 @@
       "id": "malformed_markers_fill_marker_truncated",
       "asset": "fill_marker_truncated.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/fill_marker_truncated.jpg",
         "operations": [
@@ -1614,6 +1744,7 @@
       "id": "malformed_markers_dri_no_length",
       "asset": "dri_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dri_no_length.jpg",
         "operations": [
@@ -1631,6 +1762,7 @@
       "id": "malformed_markers_dri_no_value",
       "asset": "dri_no_value.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dri_no_value.jpg",
         "operations": [
@@ -1648,6 +1780,7 @@
       "id": "malformed_markers_app14_no_length",
       "asset": "app14_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_no_length.jpg",
         "operations": [
@@ -1665,6 +1798,7 @@
       "id": "malformed_markers_app14_declared_too_long",
       "asset": "app14_declared_too_long.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_declared_too_long.jpg",
         "operations": [
@@ -1682,6 +1816,7 @@
       "id": "malformed_markers_app14_truncated_payload",
       "asset": "app14_truncated_payload.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_truncated_payload.jpg",
         "operations": [
@@ -1699,6 +1834,7 @@
       "id": "malformed_markers_app14_adobe_short_transform",
       "asset": "app14_adobe_short_transform.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_adobe_short_transform.jpg",
         "operations": [
@@ -1716,6 +1852,7 @@
       "id": "malformed_markers_tem_marker",
       "asset": "tem_marker.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/tem_marker.jpg",
         "operations": [
@@ -1733,6 +1870,7 @@
       "id": "malformed_markers_unknown_no_length",
       "asset": "unknown_no_length.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/unknown_no_length.jpg",
         "operations": [
@@ -1750,6 +1888,7 @@
       "id": "malformed_markers_sof_zero_width",
       "asset": "sof_zero_width.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_zero_width.jpg",
         "operations": [
@@ -1767,6 +1906,7 @@
       "id": "malformed_markers_sof_zero_height",
       "asset": "sof_zero_height.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/sof_zero_height.jpg",
         "operations": [
@@ -1784,6 +1924,7 @@
       "id": "malformed_markers_restart_before_scan",
       "asset": "restart_before_scan.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/restart_before_scan.jpg",
         "operations": [
@@ -1801,6 +1942,7 @@
       "id": "malformed_markers_entropy_unexpected_marker",
       "asset": "entropy_unexpected_marker.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_unexpected_marker.jpg",
         "operations": [
@@ -1818,6 +1960,7 @@
       "id": "pillow_tolerated_malformed",
       "asset": "app14_short_length.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_short_length.jpg",
         "operations": [
@@ -1835,6 +1978,7 @@
       "id": "pillow_tolerated_malformed_unknown_short_length",
       "asset": "unknown_short_length.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/unknown_short_length.jpg",
         "operations": [
@@ -1852,6 +1996,7 @@
       "id": "pillow_tolerated_malformed_app14_non_adobe",
       "asset": "app14_non_adobe.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/app14_non_adobe.jpg",
         "operations": [
@@ -1869,6 +2014,7 @@
       "id": "pillow_tolerated_malformed_prefixed_stuffed_marker",
       "asset": "prefixed_stuffed_marker.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/prefixed_stuffed_marker.jpg",
         "operations": [
@@ -1886,6 +2032,7 @@
       "id": "pillow_tolerated_malformed_entropy_eoi_padding",
       "asset": "entropy_eoi_padding.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_eoi_padding.jpg",
         "operations": [
@@ -1903,6 +2050,7 @@
       "id": "pillow_tolerated_malformed_entropy_empty_scan",
       "asset": "entropy_empty_scan.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_empty_scan.jpg",
         "operations": [
@@ -1920,6 +2068,7 @@
       "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
       "asset": "entropy_early_eoi_1.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_early_eoi_1.jpg",
         "operations": [
@@ -1937,6 +2086,7 @@
       "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
       "asset": "entropy_early_eoi_64.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_early_eoi_64.jpg",
         "operations": [
@@ -1954,6 +2104,7 @@
       "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
       "asset": "entropy_truncated_tail_64.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_truncated_tail_64.jpg",
         "operations": [
@@ -1971,6 +2122,7 @@
       "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
       "asset": "entropy_stuffed_ff_prefix.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_stuffed_ff_prefix.jpg",
         "operations": [
@@ -1988,6 +2140,7 @@
       "id": "pillow_tolerated_malformed_progressive_scan0_empty",
       "asset": "progressive_scan0_empty.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/progressive_scan0_empty.jpg",
         "operations": [
@@ -2005,6 +2158,7 @@
       "id": "dqt_16bit",
       "asset": "dqt_16bit.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/dqt_16bit.jpg",
         "operations": [
@@ -2022,6 +2176,7 @@
       "id": "missing_eoi",
       "asset": "missing_eoi.jpg",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/missing_eoi.jpg",
         "operations": [
@@ -2039,6 +2194,7 @@
       "id": "baseline_standard",
       "asset": "baseline.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline.jpg",
         "operations": [
@@ -2056,6 +2212,7 @@
       "id": "progressive_spectral",
       "asset": "progressive_spectral.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/progressive_spectral.jpg",
         "operations": [
@@ -2073,6 +2230,7 @@
       "id": "progressive_modes",
       "asset": "progressive_gray.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/progressive_gray.jpg",
         "operations": [
@@ -2090,6 +2248,7 @@
       "id": "progressive_modes_progressive_cmyk",
       "asset": "progressive_cmyk.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/progressive_cmyk.jpg",
         "operations": [
@@ -2107,6 +2266,7 @@
       "id": "progressive_restart",
       "asset": "progressive_restart.jpg",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/progressive_restart.jpg",
         "operations": [

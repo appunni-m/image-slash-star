@@ -70,7 +70,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.TypeError",
-      "error_message": "argument 3 must be str, not int"
+      "error_message": "argument 3 must be str, not int",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_packbits_runs",
@@ -358,7 +359,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "struct.error",
-      "error_message": "'H' format requires 0 <= number <= 65535"
+      "error_message": "'H' format requires 0 <= number <= 65535",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_error_bilevel_predictor",
@@ -370,7 +372,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.OSError",
-      "error_message": "encoder error -2 when writing image file"
+      "error_message": "encoder error -2 when writing image file",
+      "error_kind": "unsupported"
     },
     {
       "id": "enc_lzw_predictor_horiz",

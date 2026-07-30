@@ -202,7 +202,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "cannot write empty image"
+      "error_message": "cannot write empty image",
+      "error_kind": "dimensions"
     },
     {
       "id": "enc_8x8",
@@ -239,6 +240,57 @@
       ],
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif.bin",
       "encoded_ref_bytes": 4921
+    },
+    {
+      "id": "enc_exif_mixed_hex_case",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_exif_mixed_hex_case.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif_mixed_hex_case.bin",
+      "encoded_ref_bytes": 4923
+    },
+    {
+      "id": "enc_error_exif_hex_odd",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_exif_hex_invalid",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 0",
+      "error_kind": "parameter"
+    },
+    {
+      "id": "enc_error_exif_hex_non_ascii",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_no_exif",

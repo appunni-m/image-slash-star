@@ -1,26 +1,32 @@
 //! Pillow-compatible AVIF decoding with a portable closed-class fast path.
 
+use crate::codecs::{CodecError, CodecResult};
 use crate::types::{ColorType, DecodedImage, ImageMode};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::types::{DecodedFrame, DecodedSequence, FrameDisposal};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
-#[must_use]
-pub fn decode(data: &[u8]) -> Option<DecodedImage> {
-    let validated = validate_av1(data)?;
-    decode_portable(&validated).or_else(|| decode_native(data))
+pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+    let extracted = extract_av1(data)?;
+    let validated = super::av1::validate_first(&extracted)
+        .map_err(|error| error.context("AVIF AV1 validation failed"))?;
+    match decode_portable(&validated) {
+        Some(image) => Ok(image),
+        None => decode_native(data),
+    }
 }
 
 /// Decode every AVIF frame with its Pillow-observable presentation duration.
-#[must_use]
-pub fn decode_sequence(data: &[u8]) -> Option<crate::types::DecodedSequence> {
-    let validated = validate_av1(data)?;
+pub fn decode_sequence(data: &[u8]) -> CodecResult<crate::types::DecodedSequence> {
+    let extracted = extract_av1(data)?;
+    let validated = super::av1::validate(&extracted)
+        .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     decode_sequence_native(data, &validated)
 }
 
-fn validate_av1(data: &[u8]) -> Option<super::av1::ValidatedAv1> {
-    let extracted = super::samples::validated(data)?;
-    super::av1::validate(&extracted)
+fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
+    super::samples::validated(data)
+        .map_err(|error| error.context("AVIF container validation failed"))
 }
 
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
@@ -44,13 +50,15 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         (16, 16) => (256, 16, 16),
         _ => return None,
     };
-    (still.bit_depth == 8
+    if !(still.bit_depth == 8
         && !still.monochrome
         && still.color_primaries == 1
         && still.transfer_characteristics == 13
         && still.matrix_coefficients == 6
         && still.color_range)
-        .then_some(())?;
+    {
+        return None;
+    }
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
         (false, false) => false,
         (true, true) => true,
@@ -65,10 +73,12 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     let chroma_length = chroma_width.saturating_mul(chroma_height);
 
     let [y_plane, u_plane, v_plane] = &still.planes;
-    (y_plane.samples.len() == plane_length
+    if !(y_plane.samples.len() == plane_length
         && u_plane.samples.len() == chroma_length
         && v_plane.samples.len() == chroma_length)
-        .then_some(())?;
+    {
+        return None;
+    }
     let mut pixels = Vec::with_capacity(plane_length.saturating_mul(3));
     for (index, &y) in y_plane.samples.iter().enumerate() {
         let (u, v) = if subsampled {
@@ -192,22 +202,24 @@ fn libyuv_rgb8(value: i32) -> u8 {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn decode_native(data: &[u8]) -> Option<DecodedImage> {
+fn decode_native(data: &[u8]) -> CodecResult<DecodedImage> {
     let mut decoder = super::native::Decoder::new(data)?;
     let info = decoder.info();
     decoded_first_frame(info, decoder.decode_frame(0))
 }
 
 #[cfg(target_arch = "wasm32")]
-fn decode_native(_data: &[u8]) -> Option<DecodedImage> {
-    None
+fn decode_native(_data: &[u8]) -> CodecResult<DecodedImage> {
+    Err(CodecError::Unsupported(
+        "AVIF input is outside the portable WASM decode subset".to_owned(),
+    ))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn decode_sequence_native(
     data: &[u8],
     validated: &super::av1::ValidatedAv1,
-) -> Option<DecodedSequence> {
+) -> CodecResult<DecodedSequence> {
     let _ = validated.portable_still.as_ref();
     let mut decoder = super::native::Decoder::new(data)?;
     let info = decoder.info();
@@ -217,10 +229,10 @@ fn decode_sequence_native(
 #[cfg(not(target_arch = "wasm32"))]
 fn decoded_first_frame(
     info: super::native::DecodeInfo,
-    decoded: Option<(Vec<u8>, super::native::FrameTiming)>,
-) -> Option<DecodedImage> {
+    decoded: CodecResult<(Vec<u8>, super::native::FrameTiming)>,
+) -> CodecResult<DecodedImage> {
     let (pixels, _) = decoded?;
-    Some(decoded_image(
+    Ok(decoded_image(
         info.width,
         info.height,
         info.has_alpha,
@@ -231,8 +243,8 @@ fn decoded_first_frame(
 #[cfg(not(target_arch = "wasm32"))]
 fn decoded_sequence(
     info: super::native::DecodeInfo,
-    decode_frame: &mut dyn FnMut(u32) -> Option<(Vec<u8>, super::native::FrameTiming)>,
-) -> Option<DecodedSequence> {
+    decode_frame: &mut dyn FnMut(u32) -> CodecResult<(Vec<u8>, super::native::FrameTiming)>,
+) -> CodecResult<DecodedSequence> {
     let mut frames = Vec::with_capacity(info.frame_count as usize);
     for frame_index in 0..info.frame_count {
         let (pixels, timing) = decode_frame(frame_index)?;
@@ -245,7 +257,7 @@ fn decoded_sequence(
             interlaced: false,
         });
     }
-    Some(DecodedSequence {
+    Ok(DecodedSequence {
         width: info.width,
         height: info.height,
         frames,
@@ -258,9 +270,11 @@ fn decoded_sequence(
 fn decode_sequence_native(
     _data: &[u8],
     validated: &super::av1::ValidatedAv1,
-) -> Option<crate::types::DecodedSequence> {
+) -> CodecResult<crate::types::DecodedSequence> {
     let _ = validated.portable_still.as_ref();
-    None
+    Err(CodecError::Unsupported(
+        "AVIF sequence decoding requires the native AVIF stack".to_owned(),
+    ))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -281,7 +295,7 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn duration_ms(duration: u64, timescale: std::num::NonZeroU64) -> Option<u32> {
+fn duration_ms(duration: u64, timescale: std::num::NonZeroU64) -> CodecResult<u32> {
     let numerator = u128::from(duration).saturating_mul(1_000);
     let denominator = u128::from(timescale.get());
     let quotient = numerator.div_euclid(denominator);
@@ -291,7 +305,9 @@ fn duration_ms(duration: u64, timescale: std::num::NonZeroU64) -> Option<u32> {
         doubled_remainder > denominator
             || (doubled_remainder == denominator && !quotient.is_multiple_of(2)),
     ));
-    u32::try_from(rounded).ok()
+    u32::try_from(rounded).map_err(|_| {
+        CodecError::Dimensions("AVIF frame duration exceeds u32 milliseconds".to_owned())
+    })
 }
 
 #[cfg(coverage)]
@@ -379,19 +395,28 @@ pub(crate) fn __coverage_exercise_private_branches() {
         timescale: one,
         pixel_len: 3,
     };
-    let _ = decoded_first_frame(info, None);
     let _ = decoded_first_frame(
         info,
-        Some((
+        Err(CodecError::Malformed(
+            "coverage native frame failure".to_owned(),
+        )),
+    );
+    let _ = decoded_first_frame(
+        info,
+        Ok((
             vec![0; 3],
             FrameTiming {
                 duration_in_timescales: 1,
             },
         )),
     );
-    let _ = decoded_sequence(info, &mut |_| None);
     let _ = decoded_sequence(info, &mut |_| {
-        Some((
+        Err(CodecError::Malformed(
+            "coverage native frame failure".to_owned(),
+        ))
+    });
+    let _ = decoded_sequence(info, &mut |_| {
+        Ok((
             vec![0; 3],
             FrameTiming {
                 duration_in_timescales: u64::MAX,
@@ -399,7 +424,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ))
     });
     let _ = decoded_sequence(info, &mut |_| {
-        Some((
+        Ok((
             vec![0; 3],
             FrameTiming {
                 duration_in_timescales: 1,

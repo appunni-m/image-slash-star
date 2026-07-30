@@ -1,5 +1,17 @@
 //! Internal lossless compression primitives used by image codecs.
 
+use crate::codecs::{CodecError, CodecResult};
+
+type CompressionResult<T> = CodecResult<T>;
+
+fn malformed(stage: &'static str) -> CodecError {
+    CodecError::Malformed(format!("invalid compressed stream: {stage}"))
+}
+
+fn parameter(stage: &'static str) -> CodecError {
+    CodecError::Parameter(format!("invalid compression input: {stage}"))
+}
+
 #[cfg_attr(not(feature = "png"), allow(dead_code))]
 pub(crate) mod deflate;
 #[cfg(any(feature = "png", feature = "tiff"))]

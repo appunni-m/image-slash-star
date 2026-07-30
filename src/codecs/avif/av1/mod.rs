@@ -13,10 +13,17 @@ use super::samples::ByteSpan;
 use super::samples::{EncodedPlane, EncodedSample, ExtractedAvif};
 #[cfg(coverage)]
 use super::samples::{SequencePayload, StillPayload};
+use crate::codecs::{CodecError, CodecResult};
 #[cfg(coverage)]
 use std::num::NonZeroU32;
 
 const MAX_OBUS_PER_SAMPLE: usize = 4_096;
+
+type Av1Result<T> = CodecResult<T>;
+
+fn malformed(stage: &'static str) -> CodecError {
+    CodecError::Malformed(format!("invalid AV1 bitstream: {stage}"))
+}
 
 /// One complete still-image class that the portable decoder can materialize.
 #[derive(Clone)]
@@ -49,35 +56,39 @@ struct ValidatedPlane {
 
 // ✅ VERIFIED: AV1 specification sections 5.3.2-5.3.3; dav1d 1.5.3
 // src/getbits.c:95-112 and src/obu.c:1169-1195.
-fn read_uleb128(data: &SegmentedData<'_, '_>, offset: &mut usize) -> Option<u32> {
+fn read_uleb128(data: &SegmentedData<'_, '_>, offset: &mut usize) -> Av1Result<u32> {
     let mut value = 0_u64;
     for index in 0..8_u32 {
         let byte = data.byte(*offset)?;
         *offset = offset.saturating_add(1);
         value |= u64::from(byte & 0x7f) << index.saturating_mul(7);
         if byte & 0x80 == 0 {
-            return u32::try_from(value).ok();
+            return u32::try_from(value).map_err(|_| malformed("ULEB128 value exceeds u32"));
         }
     }
-    None
+    Err(malformed("ULEB128 value exceeds eight bytes"))
 }
 
 // ✅ VERIFIED: AV1 specification sections 5.3.1-5.3.3 and 6.2.2; dav1d
 // 1.5.3 src/obu.c:1169-1209.
-fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState) -> Option<()> {
+fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState) -> Av1Result<()> {
     let data = SegmentedData::new(input, &sample.spans)?;
+    // The AVIF sample extractor constructs codec-configuration spans only
+    // after validating them against the immutable input buffer.
+    let config = &input[sample.config.start..sample.config.end];
     let mut offset = 0_usize;
     let mut obu_count = 0_usize;
     let mut frame_bearing = false;
     while offset < data.len() {
         obu_count = obu_count.saturating_add(1);
         if obu_count > MAX_OBUS_PER_SAMPLE {
-            return None;
+            return Err(malformed("sample contains too many OBUs"));
         }
-        let header = data.byte(offset).unwrap_or_default();
+        // The loop condition proves the logical OBU header byte is present.
+        let header = data.validated_byte(offset);
         offset = offset.saturating_add(1);
         if header & 0x80 != 0 || header & 1 != 0 {
-            return None;
+            return Err(malformed("OBU header reserved bits are set"));
         }
         let obu_type = (header >> 3) & 0x0f;
         let has_extension = header & 4 != 0;
@@ -88,26 +99,28 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
             let extension = data.byte(offset)?;
             offset = offset.saturating_add(1);
             if extension & 7 != 0 {
-                return None;
+                return Err(malformed("OBU extension reserved bits are set"));
             }
             temporal_id = u32::from(extension >> 5);
             spatial_id = u32::from((extension >> 3) & 3);
         }
         if !has_size_field {
-            return None;
+            return Err(malformed("OBU omits its payload-size field"));
         }
         let payload_size = read_uleb128(&data, &mut offset)? as usize;
         let payload_start = offset;
         let remaining = data.len().saturating_sub(payload_start);
         if payload_size > remaining {
-            return None;
+            return Err(malformed("OBU payload exceeds its sample"));
         }
         let payload_end = payload_start.saturating_add(payload_size);
         match obu_type {
             1 => {
                 let sequence = sequence::parse(&data, payload_start, payload_end)?;
-                if !sequence.matches_config(input, sample.config) {
-                    return None;
+                if !sequence.matches_config(config) {
+                    return Err(malformed(
+                        "sequence header disagrees with the AV1 codec configuration",
+                    ));
                 }
                 state.accept_sequence(sequence)?;
             }
@@ -147,18 +160,18 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
         offset = payload_end;
     }
     if !frame_bearing {
-        return None;
+        return Err(malformed("sample contains no frame-bearing OBU"));
     }
-    Some(())
+    Ok(())
 }
 
-fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Option<ValidatedPlane> {
+fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlane> {
     let mut state = FrameState::new();
     for sample in &plane.samples {
         validate_sample(input, sample, &mut state)?;
     }
     let sequence = state.finish()?.clone();
-    Some(ValidatedPlane {
+    Ok(ValidatedPlane {
         first_leaf: state.first_leaf().cloned(),
         sequence,
     })
@@ -182,7 +195,7 @@ fn portable_still(leaf: block::FirstLeaf, sequence: sequence::SequenceHeader) ->
     }
 }
 
-pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Option<ValidatedAv1> {
+fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableStill>> {
     let mut portable = None;
     if let Some(still) = &extracted.still {
         let color = validate_plane(extracted.input, &still.color)?;
@@ -199,15 +212,23 @@ pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Option<ValidatedAv1> {
             _ => None,
         };
     }
+    Ok(portable)
+}
+
+pub(super) fn validate_first(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
+    let portable_still = validate_still(extracted)?;
+    Ok(ValidatedAv1 { portable_still })
+}
+
+pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
+    let portable_still = validate_still(extracted)?;
     if let Some(sequence) = &extracted.sequence {
         validate_plane(extracted.input, &sequence.color)?;
         if let Some(alpha) = &sequence.alpha {
             validate_plane(extracted.input, alpha)?;
         }
     }
-    Some(ValidatedAv1 {
-        portable_still: portable,
-    })
+    Ok(ValidatedAv1 { portable_still })
 }
 
 #[cfg(coverage)]
@@ -241,24 +262,21 @@ fn coverage_track_prefix(
     target: usize,
     replacement: &[u8],
     config: [u8; 4],
-) -> Option<()> {
+) -> Av1Result<()> {
     let mut state = FrameState::new();
     for (index, sample) in samples.iter().enumerate().take(target.saturating_add(1)) {
         let bytes = if index == target { replacement } else { sample };
         let (input, encoded) = coverage_sample(bytes, config);
         validate_sample(&input, &encoded, &mut state)?;
     }
-    Some(())
+    Ok(())
 }
 
 #[cfg(coverage)]
 #[coverage(off)]
 fn coverage_sweep_track(samples: &[&[u8]], config: [u8; 4]) {
     for (target, sample) in samples.iter().enumerate() {
-        assert_eq!(
-            coverage_track_prefix(samples, target, sample, config),
-            Some(())
-        );
+        assert!(coverage_track_prefix(samples, target, sample, config).is_ok());
         for end in 0..sample.len() {
             let _ = coverage_track_prefix(samples, target, &sample[..end], config);
         }
@@ -289,7 +307,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let (input, sample) = coverage_sample(valid, valid_config);
     assert_eq!(
         validate_sample(&input, &sample, &mut FrameState::new()),
-        Some(())
+        Ok(())
     );
     let header = frame::__coverage_reduced_header_payload();
     let mut split = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
@@ -299,15 +317,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let (input, sample) = coverage_sample(&split, valid_config);
     assert_eq!(
         validate_sample(&input, &sample, &mut FrameState::new()),
-        Some(())
+        Ok(())
     );
     let mut pending_then_delimiter = split[..split.len() - 2].to_vec();
     pending_then_delimiter.extend_from_slice(&[0x12, 0]);
     let (input, sample) = coverage_sample(&pending_then_delimiter, valid_config);
-    assert_eq!(
-        validate_sample(&input, &sample, &mut FrameState::new()),
-        None
-    );
+    assert!(validate_sample(&input, &sample, &mut FrameState::new()).is_err());
     let mut redundant = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
     for obu_type in [0x1a, 0x3a] {
         redundant.extend_from_slice(&[obu_type, u8::try_from(header.len()).unwrap()]);
@@ -317,7 +332,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let (input, sample) = coverage_sample(&redundant, valid_config);
     assert_eq!(
         validate_sample(&input, &sample, &mut FrameState::new()),
-        Some(())
+        Ok(())
     );
     let invalid_span = EncodedSample {
         spans: vec![ByteSpan { start: 0, end: 1 }],
@@ -325,10 +340,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         sync: true,
         duration: 1,
     };
-    assert_eq!(
-        validate_sample(&[], &invalid_span, &mut FrameState::new()),
-        None
-    );
+    assert!(validate_sample(&[], &invalid_span, &mut FrameState::new()).is_err());
     for end in 0..valid.len() {
         let (input, sample) = coverage_sample(&valid[..end], valid_config);
         let _ = validate_sample(&input, &sample, &mut FrameState::new());
@@ -407,20 +419,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let animated_data = SegmentedData::new(animated_payload, &animated_spans).unwrap();
     let animated_header = sequence::parse(&animated_data, 0, animated_payload.len()).unwrap();
     let mut state = FrameState::new();
-    assert_eq!(state.accept_sequence(baseline_header.clone()), Some(()));
-    assert_eq!(state.accept_sequence(baseline_header), Some(()));
-    assert_eq!(state.accept_sequence(animated_header.clone()), None);
+    assert_eq!(state.accept_sequence(baseline_header.clone()), Ok(()));
+    assert_eq!(state.accept_sequence(baseline_header), Ok(()));
+    assert!(state.accept_sequence(animated_header.clone()).is_err());
 
     let (input, sample) = coverage_sample(valid, valid_config);
     let mut inconsistent_state = FrameState::new();
-    assert_eq!(
-        inconsistent_state.accept_sequence(animated_header),
-        Some(())
-    );
-    assert_eq!(
-        validate_sample(&input, &sample, &mut inconsistent_state),
-        None
-    );
+    assert_eq!(inconsistent_state.accept_sequence(animated_header), Ok(()));
+    assert!(validate_sample(&input, &sample, &mut inconsistent_state).is_err());
 
     let _ = validate_plane(
         &[],
@@ -436,14 +442,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
             duration: 1,
         }],
     };
-    assert!(validate_plane(&[], &invalid_plane).is_none());
+    assert!(validate_plane(&[], &invalid_plane).is_err());
     assert!(
         validate(&ExtractedAvif {
             input: &[],
             still: None,
             sequence: None,
         })
-        .is_some()
+        .is_ok()
     );
 
     let invalid_plane = || EncodedPlane {
@@ -463,7 +469,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }),
             sequence: None,
         })
-        .is_none()
+        .is_err()
     );
 
     let valid_plane = || EncodedPlane {
@@ -502,7 +508,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         }),
         sequence: None,
     });
-    assert!(validated_multi_sample.is_some_and(|validated| validated.portable_still.is_none()));
+    assert!(validated_multi_sample.is_ok_and(|validated| validated.portable_still.is_none()));
     assert!(
         validate(&ExtractedAvif {
             input: &input,
@@ -512,7 +518,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }),
             sequence: None,
         })
-        .is_none()
+        .is_err()
     );
     assert!(
         validate(&ExtractedAvif {
@@ -524,7 +530,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 timescale: NonZeroU32::new(1).unwrap(),
             }),
         })
-        .is_none()
+        .is_err()
     );
     assert!(
         validate(&ExtractedAvif {
@@ -536,23 +542,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 timescale: NonZeroU32::new(1).unwrap(),
             }),
         })
-        .is_none()
+        .is_err()
     );
 }
 
 #[cfg(coverage)]
-pub(crate) fn __coverage_entropy_reference_trace()
--> Result<Vec<crate::Av1EntropyTraceState>, &'static str> {
+pub(crate) fn __coverage_entropy_reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>>
+{
     entropy::reference_trace()
 }
 
 #[cfg(coverage)]
 #[coverage(off)]
-pub(crate) fn __coverage_reconstruction(input: &[u8]) -> Option<crate::Av1ReconstructionTrace> {
+pub(crate) fn __coverage_reconstruction(
+    input: &[u8],
+) -> CodecResult<Option<crate::Av1ReconstructionTrace>> {
     let extracted = super::samples::validated(input)?;
     let validated = validate(&extracted)?;
-    let still = validated.portable_still?;
-    Some(crate::Av1ReconstructionTrace {
+    let Some(still) = validated.portable_still else {
+        return Ok(None);
+    };
+    Ok(Some(crate::Av1ReconstructionTrace {
         width: still.width,
         height: still.height,
         bit_depth: still.bit_depth,
@@ -565,7 +575,7 @@ pub(crate) fn __coverage_reconstruction(input: &[u8]) -> Option<crate::Av1Recons
         subsampling_y: still.subsampling_y,
         planes: still.planes.map(|plane| plane.samples),
         entropy_operations: still.entropy_operations,
-    })
+    }))
 }
 
 #[cfg(coverage)]
@@ -599,11 +609,11 @@ pub(crate) fn __coverage_sweep_first_leaf(input: &[u8]) {
         .and_then(|still| still.color.samples.first())
         .map(|sample| sample.spans.clone())
         .expect("portable AVIF fixture must contain one still sample");
-    assert!(validate(&extracted).is_some());
+    assert!(validate(&extracted).is_ok());
     drop(extracted);
 
     let validate_mutation = |mutated: &[u8]| {
-        if let Some(extracted) = super::samples::validated(mutated) {
+        if let Ok(extracted) = super::samples::validated(mutated) {
             let _ = validate(&extracted);
         }
     };

@@ -16,6 +16,7 @@
       "id": "depth_1",
       "asset": "1bit.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/1bit.bmp",
         "operations": [
@@ -33,6 +34,7 @@
       "id": "depth_4",
       "asset": "4bit.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/4bit.bmp",
         "operations": [
@@ -50,6 +52,7 @@
       "id": "depth_8",
       "asset": "8bit.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/8bit.bmp",
         "operations": [
@@ -67,6 +70,7 @@
       "id": "depth_8_gray",
       "asset": "gray.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/gray.bmp",
         "operations": [
@@ -84,6 +88,7 @@
       "id": "depth_8_palette_blue_mismatch",
       "asset": "palette_blue_mismatch.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/palette_blue_mismatch.bmp",
         "operations": [
@@ -101,6 +106,7 @@
       "id": "depth_8_palette_green_mismatch",
       "asset": "palette_green_mismatch.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/palette_green_mismatch.bmp",
         "operations": [
@@ -118,6 +124,7 @@
       "id": "depth_8_palette_red_mismatch",
       "asset": "palette_red_mismatch.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/palette_red_mismatch.bmp",
         "operations": [
@@ -135,6 +142,7 @@
       "id": "depth_8_8bit_implicit_palette",
       "asset": "8bit_implicit_palette.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/8bit_implicit_palette.bmp",
         "operations": [
@@ -152,6 +160,7 @@
       "id": "depth_16",
       "asset": "16bit.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/16bit.bmp",
         "operations": [
@@ -169,6 +178,7 @@
       "id": "depth_24",
       "asset": "24bit.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/24bit.bmp",
         "operations": [
@@ -186,6 +196,7 @@
       "id": "depth_32",
       "asset": "32bit.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/32bit.bmp",
         "operations": [
@@ -203,6 +214,7 @@
       "id": "compression_none",
       "asset": "uncompressed.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/uncompressed.bmp",
         "operations": [
@@ -220,6 +232,7 @@
       "id": "compression_rle8",
       "asset": "rle8.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8.bmp",
         "operations": [
@@ -237,6 +250,7 @@
       "id": "compression_rle8_rle8_mixed",
       "asset": "rle8_mixed.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_mixed.bmp",
         "operations": [
@@ -254,6 +268,7 @@
       "id": "compression_rle8_rle8_top_down",
       "asset": "rle8_top_down.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_top_down.bmp",
         "operations": [
@@ -271,6 +286,7 @@
       "id": "compression_rle8_rle8_delta",
       "asset": "rle8_delta.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_delta.bmp",
         "operations": [
@@ -288,6 +304,7 @@
       "id": "compression_rle8_rle8_absolute_odd",
       "asset": "rle8_absolute_odd.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_absolute_odd.bmp",
         "operations": [
@@ -305,6 +322,7 @@
       "id": "compression_rle4",
       "asset": "rle4.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4.bmp",
         "operations": [
@@ -322,6 +340,7 @@
       "id": "compression_rle4_rle4_mixed",
       "asset": "rle4_mixed.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4_mixed.bmp",
         "operations": [
@@ -339,6 +358,7 @@
       "id": "compression_bitfields",
       "asset": "bitfields.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields.bmp",
         "operations": [
@@ -356,6 +376,7 @@
       "id": "compression_bitfields_bitfields_v2_32_no_alpha",
       "asset": "bitfields_v2_32_no_alpha.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_v2_32_no_alpha.bmp",
         "operations": [
@@ -373,6 +394,7 @@
       "id": "compression_bitfields_v4header16",
       "asset": "v4header16.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/v4header16.bmp",
         "operations": [
@@ -390,6 +412,7 @@
       "id": "top_down",
       "asset": "top_down.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down.bmp",
         "operations": [
@@ -407,6 +430,7 @@
       "id": "top_down_top_down_1",
       "asset": "top_down_1.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_1.bmp",
         "operations": [
@@ -424,6 +448,7 @@
       "id": "top_down_top_down_1_canonical",
       "asset": "top_down_1_canonical.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_1_canonical.bmp",
         "operations": [
@@ -441,6 +466,7 @@
       "id": "top_down_top_down_4",
       "asset": "top_down_4.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_4.bmp",
         "operations": [
@@ -458,6 +484,7 @@
       "id": "top_down_top_down_8",
       "asset": "top_down_8.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_8.bmp",
         "operations": [
@@ -475,6 +502,7 @@
       "id": "top_down_top_down_16",
       "asset": "top_down_16.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_16.bmp",
         "operations": [
@@ -492,6 +520,7 @@
       "id": "top_down_top_down_32",
       "asset": "top_down_32.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/top_down_32.bmp",
         "operations": [
@@ -509,6 +538,7 @@
       "id": "bottom_up",
       "asset": "bottom_up.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bottom_up.bmp",
         "operations": [
@@ -526,6 +556,7 @@
       "id": "bottom_up_bottom_up_1_palette",
       "asset": "bottom_up_1_palette.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bottom_up_1_palette.bmp",
         "operations": [
@@ -543,6 +574,7 @@
       "id": "os2_v1",
       "asset": "os2v1.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/os2v1.bmp",
         "operations": [
@@ -560,6 +592,7 @@
       "id": "v4_header",
       "asset": "v4header.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/v4header.bmp",
         "operations": [
@@ -577,6 +610,7 @@
       "id": "v5_header",
       "asset": "v5header.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/v5header.bmp",
         "operations": [
@@ -594,6 +628,7 @@
       "id": "size_1x1",
       "asset": "1x1.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/1x1.bmp",
         "operations": [
@@ -611,6 +646,7 @@
       "id": "size_odd",
       "asset": "odd_width.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/odd_width.bmp",
         "operations": [
@@ -628,6 +664,7 @@
       "id": "size_odd_width2",
       "asset": "width2.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/width2.bmp",
         "operations": [
@@ -645,6 +682,7 @@
       "id": "size_odd_width3",
       "asset": "width3.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/width3.bmp",
         "operations": [
@@ -662,6 +700,7 @@
       "id": "size_odd_width31",
       "asset": "width31.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/width31.bmp",
         "operations": [
@@ -679,6 +718,7 @@
       "id": "planes_nonstandard",
       "asset": "invalid_planes.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_planes.bmp",
         "operations": [
@@ -696,6 +736,7 @@
       "id": "data_offset_before_header",
       "asset": "data_offset_before_header.bmp",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/data_offset_before_header.bmp",
         "operations": [
@@ -713,6 +754,7 @@
       "id": "error_not_bmp",
       "asset": "not_bmp.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/not_bmp.bmp",
         "operations": [
@@ -730,6 +772,7 @@
       "id": "error_malformed",
       "asset": "invalid_header_size.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_header_size.bmp",
         "operations": [
@@ -747,6 +790,7 @@
       "id": "error_malformed_core_zero_width",
       "asset": "core_zero_width.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/core_zero_width.bmp",
         "operations": [
@@ -764,6 +808,7 @@
       "id": "error_malformed_4bit_gray",
       "asset": "4bit_gray.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/4bit_gray.bmp",
         "operations": [
@@ -781,6 +826,7 @@
       "id": "error_malformed_invalid_width",
       "asset": "invalid_width.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_width.bmp",
         "operations": [
@@ -798,6 +844,7 @@
       "id": "error_malformed_invalid_height",
       "asset": "invalid_height.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_height.bmp",
         "operations": [
@@ -815,6 +862,7 @@
       "id": "error_malformed_oversized_width",
       "asset": "oversized_width.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/oversized_width.bmp",
         "operations": [
@@ -832,6 +880,7 @@
       "id": "error_malformed_oversized_height",
       "asset": "oversized_height.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/oversized_height.bmp",
         "operations": [
@@ -849,6 +898,7 @@
       "id": "error_malformed_invalid_depth",
       "asset": "invalid_depth.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/invalid_depth.bmp",
         "operations": [
@@ -866,6 +916,7 @@
       "id": "error_malformed_2bit",
       "asset": "2bit.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/2bit.bmp",
         "operations": [
@@ -883,6 +934,7 @@
       "id": "error_malformed_2bit_gray",
       "asset": "2bit_gray.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/2bit_gray.bmp",
         "operations": [
@@ -900,6 +952,7 @@
       "id": "error_malformed_truncated_magic",
       "asset": "truncated_magic.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_magic.bmp",
         "operations": [
@@ -917,6 +970,7 @@
       "id": "error_malformed_truncated_file_size",
       "asset": "truncated_file_size.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_file_size.bmp",
         "operations": [
@@ -934,6 +988,7 @@
       "id": "error_malformed_truncated_data_offset",
       "asset": "truncated_data_offset.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_data_offset.bmp",
         "operations": [
@@ -951,6 +1006,7 @@
       "id": "error_malformed_truncated_dib_header_size",
       "asset": "truncated_dib_header_size.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_dib_header_size.bmp",
         "operations": [
@@ -968,6 +1024,7 @@
       "id": "error_malformed_core_header_truncated_width",
       "asset": "core_header_truncated_width.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/core_header_truncated_width.bmp",
         "operations": [
@@ -985,6 +1042,7 @@
       "id": "error_malformed_core_header_truncated_height",
       "asset": "core_header_truncated_height.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/core_header_truncated_height.bmp",
         "operations": [
@@ -1002,6 +1060,7 @@
       "id": "error_malformed_core_header_truncated_planes",
       "asset": "core_header_truncated_planes.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/core_header_truncated_planes.bmp",
         "operations": [
@@ -1019,6 +1078,7 @@
       "id": "error_malformed_core_header_truncated_depth",
       "asset": "core_header_truncated_depth.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/core_header_truncated_depth.bmp",
         "operations": [
@@ -1036,6 +1096,7 @@
       "id": "error_malformed_info_header_truncated_height",
       "asset": "info_header_truncated_height.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_height.bmp",
         "operations": [
@@ -1053,6 +1114,7 @@
       "id": "error_malformed_info_header_truncated_planes",
       "asset": "info_header_truncated_planes.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_planes.bmp",
         "operations": [
@@ -1070,6 +1132,7 @@
       "id": "error_malformed_info_header_truncated_depth",
       "asset": "info_header_truncated_depth.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_depth.bmp",
         "operations": [
@@ -1087,6 +1150,7 @@
       "id": "error_malformed_info_header_truncated_compression",
       "asset": "info_header_truncated_compression.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_compression.bmp",
         "operations": [
@@ -1104,6 +1168,7 @@
       "id": "error_malformed_info_header_truncated_image_size",
       "asset": "info_header_truncated_image_size.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_image_size.bmp",
         "operations": [
@@ -1121,6 +1186,7 @@
       "id": "error_malformed_info_header_truncated_x_pels",
       "asset": "info_header_truncated_x_pels.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_x_pels.bmp",
         "operations": [
@@ -1138,6 +1204,7 @@
       "id": "error_malformed_info_header_truncated_y_pels",
       "asset": "info_header_truncated_y_pels.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_y_pels.bmp",
         "operations": [
@@ -1155,6 +1222,7 @@
       "id": "error_malformed_info_header_truncated_colors_used",
       "asset": "info_header_truncated_colors_used.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_colors_used.bmp",
         "operations": [
@@ -1172,6 +1240,7 @@
       "id": "error_malformed_info_header_truncated_colors_important",
       "asset": "info_header_truncated_colors_important.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/info_header_truncated_colors_important.bmp",
         "operations": [
@@ -1189,6 +1258,7 @@
       "id": "error_malformed_bitfields_truncated_masks",
       "asset": "bitfields_truncated_masks.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_truncated_masks.bmp",
         "operations": [
@@ -1206,6 +1276,7 @@
       "id": "error_malformed_bitfields_truncated_green_mask",
       "asset": "bitfields_truncated_green_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_truncated_green_mask.bmp",
         "operations": [
@@ -1223,6 +1294,7 @@
       "id": "error_malformed_bitfields_truncated_blue_mask",
       "asset": "bitfields_truncated_blue_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_truncated_blue_mask.bmp",
         "operations": [
@@ -1240,6 +1312,7 @@
       "id": "error_malformed_v4_bitfields_truncated_masks",
       "asset": "v4_bitfields_truncated_masks.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/v4_bitfields_truncated_masks.bmp",
         "operations": [
@@ -1257,6 +1330,7 @@
       "id": "error_malformed_v4_bitfields_truncated_green_mask",
       "asset": "v4_bitfields_truncated_green_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/v4_bitfields_truncated_green_mask.bmp",
         "operations": [
@@ -1274,8 +1348,45 @@
       "id": "error_malformed_v4_bitfields_truncated_blue_mask",
       "asset": "v4_bitfields_truncated_blue_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/v4_bitfields_truncated_blue_mask.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_v4_bitfields_truncated_alpha_mask",
+      "asset": "v4_bitfields_truncated_alpha_mask.bmp",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/v4_bitfields_truncated_alpha_mask.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_oversized_palette",
+      "asset": "oversized_palette.bmp",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/oversized_palette.bmp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1291,6 +1402,7 @@
       "id": "error_malformed_rle8_empty_stream",
       "asset": "rle8_empty_stream.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_empty_stream.bmp",
         "operations": [
@@ -1308,6 +1420,7 @@
       "id": "error_malformed_rle8_short_pair",
       "asset": "rle8_short_pair.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_short_pair.bmp",
         "operations": [
@@ -1325,6 +1438,7 @@
       "id": "error_malformed_rle8_delta_missing_payload",
       "asset": "rle8_delta_missing_payload.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_delta_missing_payload.bmp",
         "operations": [
@@ -1342,6 +1456,7 @@
       "id": "error_malformed_truncated_header",
       "asset": "truncated_header.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_header.bmp",
         "operations": [
@@ -1359,6 +1474,7 @@
       "id": "error_malformed_truncated_pixels",
       "asset": "truncated_pixels.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_pixels.bmp",
         "operations": [
@@ -1376,6 +1492,7 @@
       "id": "error_malformed_truncated_palette",
       "asset": "truncated_palette.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/truncated_palette.bmp",
         "operations": [
@@ -1393,6 +1510,7 @@
       "id": "error_malformed_rle8_invalid_depth",
       "asset": "rle8_invalid_depth.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_invalid_depth.bmp",
         "operations": [
@@ -1410,6 +1528,7 @@
       "id": "error_malformed_rle4_invalid_depth",
       "asset": "rle4_invalid_depth.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4_invalid_depth.bmp",
         "operations": [
@@ -1427,6 +1546,7 @@
       "id": "error_malformed_rle8_early_eob",
       "asset": "rle8_early_eob.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_early_eob.bmp",
         "operations": [
@@ -1444,6 +1564,7 @@
       "id": "error_malformed_rle4_early_eob",
       "asset": "rle4_early_eob.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4_early_eob.bmp",
         "operations": [
@@ -1461,6 +1582,7 @@
       "id": "error_malformed_rle8_delta_truncated",
       "asset": "rle8_delta_truncated.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_delta_truncated.bmp",
         "operations": [
@@ -1478,6 +1600,7 @@
       "id": "error_malformed_rle8_absolute_truncated",
       "asset": "rle8_absolute_truncated.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle8_absolute_truncated.bmp",
         "operations": [
@@ -1495,6 +1618,7 @@
       "id": "error_malformed_rle4_delta_truncated",
       "asset": "rle4_delta_truncated.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4_delta_truncated.bmp",
         "operations": [
@@ -1512,6 +1636,7 @@
       "id": "error_malformed_rle4_absolute_truncated",
       "asset": "rle4_absolute_truncated.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/rle4_absolute_truncated.bmp",
         "operations": [
@@ -1529,6 +1654,7 @@
       "id": "error_malformed_bitfields_zero_mask",
       "asset": "bitfields_zero_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_zero_mask.bmp",
         "operations": [
@@ -1546,6 +1672,7 @@
       "id": "error_malformed_bitfields_zero_red_mask",
       "asset": "bitfields_zero_red_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_zero_red_mask.bmp",
         "operations": [
@@ -1563,6 +1690,7 @@
       "id": "error_malformed_bitfields_zero_blue_mask",
       "asset": "bitfields_zero_blue_mask.bmp",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/bitfields_zero_blue_mask.bmp",
         "operations": [
