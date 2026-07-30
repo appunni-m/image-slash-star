@@ -1,6 +1,11 @@
 # Contributing
 
-Thank you for helping make `image/*` accurate, portable, and easy to audit.
+Thank you for helping make `image-slash-star` accurate, portable, and easy to
+audit.
+
+By submitting a contribution, you agree that it may be distributed under the
+repository's licensing terms. Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+in project spaces.
 
 ## Before opening a change
 
@@ -14,31 +19,62 @@ Thank you for helping make `image/*` accurate, portable, and easy to audit.
   matching Cargo feature.
 - Record copied or translated code in `NOTICE.md`, retain its license text, and
   identify the exact upstream version in the source comments.
+- Read the current boundaries in
+  [docs/architecture.md](docs/architecture.md) and planned work in
+  [docs/roadmap.md](docs/roadmap.md).
+
+## Set up the repository
+
+The exact Rust toolchain, formatter, Clippy component, and WASM target are
+declared in `rust-toolchain.toml`.
+
+```bash
+git clone https://github.com/appunni-m/image-slash-star.git
+cd image-slash-star
+cargo check --locked
+```
+
+Default codecs need no native library. Native all-feature work requires the
+fixed stack in [docs/avif.md](docs/avif.md#native-setup).
 
 ## Verification
 
-Install the pinned toolchain from `rust-toolchain.toml`, then run:
+For documentation or API-comment changes, run:
 
 ```bash
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets
-cargo check --all-targets --no-default-features
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps --locked
+cargo test --doc --all-features --locked
+python3 scripts/verify_third_party_licenses.py
 ```
 
-Native all-feature checks additionally require libavif 1.4.1 built with dav1d
-1.5.3 and libaom 3.13.2. Follow the AVIF setup in the README, then run the same
-Clippy command with `--all-features` and run
-`cargo test --all-features --test coverage_matrix_tests`.
+Codec, feature, or error behavior additionally requires:
 
-The integration suite is manifest-driven. Add or update a row in
+```bash
+cargo test --locked --all-features --test coverage_matrix_tests
+scripts/test_feature_matrix.sh
+```
+
+Repository agents run coverage only through Coverage MCP. Every accepted codec
+slice must retain 100% line, branch, function, and region coverage.
+
+The integration suite is manifest-driven. Add or update a complete row in
 `manifest.yaml`, generate the exact Pillow reference, and compare actual bytes
-rather than adding isolated unit tests or assertions about file size alone.
-Use the pinned macOS arm64 Pillow oracle described in the README when
-regenerating fixtures.
+rather than adding isolated unit tests, prefix-only probes, or file-size
+assertions. Use the pinned macOS arm64 oracle described in
+[docs/testing.md](docs/testing.md) when regenerating fixtures.
+
+Update current documentation in the same change when a public API, feature,
+target, option, error, package, or scope contract moves. Do not create
+per-sweep progress logs under `docs/`.
 
 ## Pull requests
 
 Keep each pull request focused. Explain the Pillow behavior being matched,
 identify the first divergent pipeline stage when fixing parity, and include
-the verification commands and results. All contributions are accepted under
-the repository's licensing terms.
+the exact verification commands and results. Identify copied or translated
+source and its license, or state that the change is original.
+
+Do not include sensitive or malicious fixtures in a public pull request.
+Follow [SECURITY.md](SECURITY.md) for private vulnerability reports.

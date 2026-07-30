@@ -1,4 +1,4 @@
-# rustfmt.toml — pillow-rs workspace formatting configuration
+# rustfmt.toml — image-slash-star formatting configuration
 # Only stable-rustfmt options; nightly options noted in comments for future use.
 
 # ── Import Management ──

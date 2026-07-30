@@ -1,21 +1,65 @@
 #![cfg_attr(coverage, feature(coverage_attribute))]
 
-//! image-slash-star — dependency-light pixel-perfect image decoders and encoders.
+//! Byte-oriented, dependency-constrained image codecs.
 //!
-//! Goal: produce bit-exact observable output against the pinned Pillow oracle
-//! in `manifest.yaml`. `bytemuck` is the sole third-party Rust runtime utility
-//! dependency. Default codecs are Rust-only and work on WASM; opt-in AVIF uses
-//! the fixed native libavif stack on supported native targets.
+//! `image-slash-star` detects, inspects, decodes, and encodes JPEG, PNG, GIF,
+//! BMP, TIFF, WebP, ICO, and AVIF bytes. Its compatibility target is the exact
+//! observable behavior recorded from the pinned Pillow oracle in the
+//! repository manifest. The guarantee is manifest-bounded rather than a claim
+//! to implement every legal file in every format specification.
 //!
-//! Architecture:
-//!   &[u8] → decode() → `Decoded<DecodedImage>` { format, content }
-//!   &[u8] → decode_sequence() → `Decoded<DecodedSequence>` { format, content }
-//!   downstream consumers own any processing of `DecodedImage`.
+//! # Scope
+//!
+//! The crate owns encoded containers and validated decoded transfer models. It
+//! does not open files or provide resizing, cropping, drawing, filtering,
+//! arbitrary compositing, or another general image-processing layer.
+//! Applications supply and receive byte buffers and keep host I/O policy
+//! outside the codec boundary.
+//!
+//! # Quick start
+//!
+//! ```
+//! use image_slash_star::{decode, encode_default, ImageFormat, ImageResult};
+//!
+//! fn png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
+//!     let decoded = decode(input)?;
+//!     assert_eq!(decoded.format, ImageFormat::Png);
+//!     encode_default(&decoded.content, ImageFormat::Jpeg)
+//! }
+//! ```
+//!
+//! # Data model
+//!
+//! [`decode`] and [`decode_sequence`] auto-detect the input and return a
+//! [`Decoded`] envelope. [`Decoded::format`] retains the source
+//! [`ImageFormat`], while [`DecodedImage::mode`] and
+//! [`DecodedImage::color`] describe the decoded sample bytes. Indexed images
+//! retain their [`ImagePalette`] rather than becoming ambiguous luminance
+//! buffers. Every encode API requires an explicit target [`ImageFormat`].
+//!
+//! [`EncodedImage`] is an immutable source snapshot. It inspects at
+//! construction and shares a once-initialized decode result across clones.
+//!
+//! # Features and targets
+//!
+//! Default features enable the Rust-only `jpeg`, `png`, `gif`, `bmp`, `tiff`,
+//! `webp`, and `ico` codecs. `ico` also enables `png` and `bmp`. The `avif`
+//! feature is opt-in: native builds use a version-locked libavif stack, while
+//! `wasm32-unknown-unknown` currently supports portable inspection and a
+//! documented, manifest-bounded still-decode subset. Portable AVIF sequence
+//! decode and encoding are not complete.
+//!
+//! # Errors
+//!
+//! Canonical fallible operations return [`ImageResult`]. [`ImageError`]
+//! distinguishes unknown signatures, disabled features, malformed data,
+//! unsupported operations, invalid dimensions, and invalid parameters.
 
 // Retained as the project's one explicitly approved byte-layout utility.
 use bytemuck as _;
 
 mod codecs;
+pub mod encode_options;
 pub mod source;
 pub mod types;
 
@@ -102,7 +146,7 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 /// # Errors
 ///
 /// Returns a structured error for an unknown signature, disabled codec feature,
-/// malformed header, or a format whose metadata parser is not implemented yet.
+/// malformed header, or metadata that the selected inspector cannot represent.
 pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
     let format = detect_format(data)?;
     codecs::inspect_format(data, format)
@@ -123,6 +167,14 @@ pub fn encode(
 }
 
 /// Encode a still image or animation while retaining every source frame.
+///
+/// Multi-frame output is currently supported for GIF and native AVIF. Other
+/// formats accept a one-frame sequence and reject additional retained frames.
+///
+/// # Errors
+///
+/// Returns a structured error for an invalid sequence, disabled codec feature,
+/// unsupported multi-frame target, or invalid encoder options.
 pub fn encode_sequence(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -132,6 +184,11 @@ pub fn encode_sequence(
 }
 
 /// Encode with default options.
+///
+/// # Errors
+///
+/// Returns the same structured validation, feature, and codec errors as
+/// [`encode`].
 pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> ImageResult<Vec<u8>> {
     encode(img, format, &EncodeOptions::default())
 }
@@ -251,6 +308,4 @@ pub fn __coverage_exercise_private_branches() {
     codecs::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }
-pub mod encode_options;
-
 use crate::encode_options::EncodeOptions;

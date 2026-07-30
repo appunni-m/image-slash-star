@@ -516,6 +516,12 @@ pub struct ImagePalette {
 
 impl ImagePalette {
     /// Construct a palette when its table lengths are structurally valid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Parameter`] when RGB bytes are empty or not
+    /// complete triplets, more than 256 entries are supplied, or the alpha
+    /// table is longer than the RGB table.
     pub fn new(rgb: Vec<u8>, alpha: Vec<u8>) -> ImageResult<Self> {
         let palette = Self { rgb, alpha };
         palette.validate()?;
@@ -565,7 +571,11 @@ pub struct DecodedImage {
 }
 
 impl DecodedImage {
-    /// Create a new decoded image.
+    /// Create an unpacked decoded image.
+    ///
+    /// This constructor records the buffer without validating its dimensions
+    /// or length. Call [`Self::validate`] before handing caller-built samples
+    /// to code that relies on those invariants; encoders validate inputs.
     pub fn new(width: u32, height: u32, pixels: Vec<u8>, color: ColorType) -> Self {
         Self {
             width,
@@ -578,6 +588,10 @@ impl DecodedImage {
     }
 
     /// Create an image with an exact packed or indexed mode.
+    ///
+    /// This constructor does not attach an optional [`ImageMode::P8`] palette
+    /// and does not validate the byte length. Use [`Self::with_palette`] when a
+    /// source palette is available, then call [`Self::validate`].
     pub fn with_mode(width: u32, height: u32, pixels: Vec<u8>, mode: ImageMode) -> Self {
         Self {
             width,
@@ -597,6 +611,12 @@ impl DecodedImage {
     }
 
     /// Verify dimensions, byte layout, mode, and palette invariants.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] for zero, overflowing, or
+    /// byte-length-mismatched dimensions. Returns [`ImageError::Parameter`]
+    /// for inconsistent modes, color layouts, palettes, or palette indices.
     pub fn validate(&self) -> ImageResult<()> {
         let expected = self.mode.expected_bytes(self.width, self.height)?;
         if self.width == 0 || self.height == 0 || self.pixels.len() != expected {
@@ -630,7 +650,8 @@ impl DecodedImage {
         Ok(())
     }
 
-    /// Return raw pixel bytes for comparison against PIL reference.
+    /// Return the decoded sample bytes without changing their mode.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.pixels
     }
@@ -715,6 +736,12 @@ impl DecodedSequence {
     }
 
     /// Verify canvas, frame bounds, and each frame's sample layout.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] for an empty or zero-sized sequence,
+    /// an overflowing frame rectangle, or a frame outside the canvas. Also
+    /// returns any validation error from a retained frame image.
     pub fn validate(&self) -> ImageResult<()> {
         if self.width == 0 || self.height == 0 || self.frames.is_empty() {
             return Err(ImageError::Dimensions);
@@ -736,7 +763,8 @@ impl DecodedSequence {
         Ok(())
     }
 
-    /// Return the first frame used by still-image APIs.
+    /// Return the first frame used by still-image APIs, or `None` before an
+    /// empty caller-built sequence has been validated.
     #[must_use]
     pub fn first(&self) -> Option<&DecodedImage> {
         self.frames.first().map(|frame| &frame.image)
