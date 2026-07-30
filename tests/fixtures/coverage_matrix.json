@@ -847,13 +847,118 @@
           "type": "decode",
           "format": "avif",
           "category": "portable",
-          "description": "Pillow-decodable one-byte mutation selecting final token 1048 just outside the exhaustive domain",
+          "description": "First Pillow-decodable final token beyond the natural constant-gray domain",
           "asset": "portable_lossy_420_q99_token_1048_control.avif",
           "expect_error": false,
           "status": "active",
           "verify_status": "ok",
           "oracle_status": "ok",
           "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_1048_control_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_token_2061",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Last ten-bit Golomb final token in the closed quality-99 DC reconstruction class",
+          "asset": "portable_lossy_420_q99_token_2061.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_2061_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_token_2988",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Reachable eleven-bit Golomb final token below the coefficient clamp",
+          "asset": "portable_lossy_420_q99_token_2988.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_2988_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_token_7940",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Positive quality-99 DC coefficient clamp",
+          "asset": "portable_lossy_420_q99_token_7940.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_7940_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_token_7764",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Negative quality-99 DC coefficient clamp",
+          "asset": "portable_lossy_420_q99_token_7764.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_7764_avif.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "portable_lossy_420_q99_token_2097724_masked_572",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "Twenty-bit final-token mask producing non-clamped masked token 572",
+          "asset": "portable_lossy_420_q99_token_2097724_masked_572.avif",
+          "expect_error": false,
+          "status": "active",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_2097724_masked_572_avif.bin",
           "ref_bytes": 48,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -24640,12 +24745,12 @@
     }
   },
   "summary": {
-    "total_rows": 1196,
-    "decode_rows": 918,
+    "total_rows": 1201,
+    "decode_rows": 923,
     "encode_rows": 278,
     "formats": 8,
-    "assets_available": 917,
-    "decode_active": 918,
+    "assets_available": 922,
+    "decode_active": 923,
     "decode_planned": 0,
     "encode_not_wired": 0
   }

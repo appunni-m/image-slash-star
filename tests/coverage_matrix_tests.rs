@@ -2290,7 +2290,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 162);
+    assert_eq!(expected.cases.len(), 167);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -2758,6 +2758,15 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "portable_lossy_420_q99_8x8_gray_255.avif" => {
                 "8f62c344eff1568474fb693b8c18526629db443b9653a84264189c97693605de"
             }
+            "portable_lossy_420_q99_token_1048_control.avif"
+            | "portable_lossy_420_q99_token_7764.avif" => {
+                "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"
+            }
+            "portable_lossy_420_q99_token_2061.avif"
+            | "portable_lossy_420_q99_token_2988.avif"
+            | "portable_lossy_420_q99_token_7940.avif" => {
+                "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2"
+            }
             "portable_lossless_gray_32.avif" => {
                 "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
             }
@@ -3079,6 +3088,39 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         }
     }
 
+    let masked_fixture = "portable_lossy_420_q99_token_2097724_masked_572.avif";
+    let masked_input = require_ok(
+        fs::read(
+            fixture_root
+                .join("input")
+                .join("images")
+                .join("avif")
+                .join(masked_fixture),
+        ),
+        "masked-token AVIF fixture must be readable",
+    );
+    let masked_trace = img::__coverage_av1_reconstruction(&masked_input)
+        .expect("masked-token AVIF must retain its portable reconstruction");
+    assert_eq!((masked_trace.width, masked_trace.height), (4, 4));
+    assert_eq!(masked_trace.planes[0], vec![199; 16]);
+    assert_eq!(masked_trace.planes[1], vec![128; 4]);
+    assert_eq!(masked_trace.planes[2], vec![128; 4]);
+    let masked_reference = require_ok(
+        fs::read(
+            fixture_root
+                .join("outputs")
+                .join("raws")
+                .join("Decode.avif_portable_lossy_420_q99_token_2097724_masked_572_avif.bin"),
+        ),
+        "masked-token Pillow reference must be readable",
+    );
+    assert_eq!(masked_reference, vec![199; 48]);
+    let masked_decoded = require_ok(
+        img::decode(&masked_input),
+        "masked-token AVIF must decode through the portable production path",
+    );
+    assert_eq!(masked_decoded.content.pixels, masked_reference);
+
     for fixture in [
         "baseline.avif",
         "alpha.avif",
@@ -3086,7 +3128,6 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         "10bit.avif",
         "multitile.avif",
         "portable_lossy_420_q99_gray_128_control.avif",
-        "portable_lossy_420_q99_token_1048_control.avif",
         "portable_lossy_420_q99_eob_bin_control.avif",
         "portable_lossy_420_q99_eob_base_control.avif",
     ] {

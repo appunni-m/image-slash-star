@@ -46,6 +46,8 @@ SLICE_35_PREFIX = (
     ("adaptive_symbol", 1),
 )
 DC_RESIDUAL_PATTERN = re.compile(r"^Post-dc_residual\[\d+->(?P<token>\d+)\]:")
+DC_SIGN_PATTERN = re.compile(r"^Post-dc_sign\[0\]\[0\]\[(?P<negative>[01])\]:")
+LUMA_MODE_PATTERN = re.compile(r"^Post-ymode\[(?P<mode>[12])\]:")
 
 
 def sha256(data: bytes) -> str:
@@ -101,20 +103,27 @@ def closed_dc_final_token(output: str) -> int | None:
         "Post-skip[0]:",
         "Post-cdef_idx[0]:",
         "Post-delta_q[-2->2]:",
-        "Post-ymode[1]:",
         "Post-uvmode[0]:",
         "Post-tx[1]:",
         "Post-non-zero[1][0][0]:",
-        "Post-txtp-intra[1->1][1][1->0]:",
         "Post-eob_bin_64[0][0][0]:",
         "Post-dc_lo_tok[1][0][0][3]:",
         "Post-dc_hi_tok[1][0][0][15]:",
-        "Post-dc_sign[0][0][1]:",
         "Post-y-cf-blk[tx=1,txtp=0,eob=0]:",
         "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]:",
         "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]:",
     )
     if not all(any(line.startswith(prefix) for line in lines) for prefix in required):
+        return None
+    if not any(LUMA_MODE_PATTERN.match(line) for line in lines):
+        return None
+    if not any(
+        line.startswith("Post-txtp-intra[")
+        and "->1][1][1->0]:" in line
+        for line in lines
+    ):
+        return None
+    if not any(DC_SIGN_PATTERN.match(line) for line in lines):
         return None
     for line in lines:
         if match := DC_RESIDUAL_PATTERN.match(line):
@@ -249,13 +258,24 @@ def main() -> None:
         "--dc-token-min",
         type=int,
         help=(
-            "select the smallest successful closed-class final DC token above "
-            "this value instead of the Slice 35 EOB controls"
+            "select a successful closed-class final DC token above this value "
+            "instead of the Slice 35 EOB controls"
+        ),
+    )
+    parser.add_argument(
+        "--dc-token-selection",
+        choices=("smallest", "largest"),
+        default="smallest",
+        help=(
+            "choose the smallest or largest matching final DC token; applies "
+            "only with --dc-token-min (default: smallest)"
         ),
     )
     args = parser.parse_args()
     if args.dc_token_min is not None and args.dc_token_min < 0:
         parser.error("--dc-token-min must be non-negative")
+    if args.dc_token_min is None and args.dc_token_selection != "smallest":
+        parser.error("--dc-token-selection requires --dc-token-min")
 
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -341,7 +361,18 @@ def main() -> None:
                         matches["dc_token"] += 1
                         if sample_offset in tile_offsets:
                             tile_matches["dc_token"] += 1
-                            if selected_dc_token is None or token < selected_dc_token:
+                            select_token = (
+                                selected_dc_token is None
+                                or (
+                                    args.dc_token_selection == "smallest"
+                                    and token < selected_dc_token
+                                )
+                                or (
+                                    args.dc_token_selection == "largest"
+                                    and token > selected_dc_token
+                                )
+                            )
+                            if select_token:
                                 selected_dc_token = token
                                 selected["dc_token"] = (sample_offset, replacement)
                 elif (stage := rejection_stage(operations)) is not None:

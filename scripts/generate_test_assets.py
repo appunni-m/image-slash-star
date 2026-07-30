@@ -4162,6 +4162,79 @@ def gen_avif():
         token_boundary_bytes
     )
 
+    def write_slice40_token_fixture(name, replacements, expected_sha256, suffix=b""):
+        mutated = bytearray(token_boundary_source.read_bytes())
+        for offset, old, new in replacements:
+            if mutated[offset] != old:
+                raise RuntimeError(
+                    f"Slice 40 mutation source byte differs at {offset}"
+                )
+            mutated[offset] = new
+        mutated.extend(suffix)
+        if hashlib.sha256(mutated).hexdigest() != expected_sha256:
+            raise RuntimeError(f"Slice 40 mutation {name} differs from its pinned hash")
+        (d / name).write_bytes(mutated)
+
+    for name, replacements, expected_sha256, suffix in (
+        (
+            "portable_lossy_420_q99_token_2061.avif",
+            (
+                (301, 0x9E, 0x7E),
+                (302, 0xBF, 0xEB),
+                (303, 0x42, 0x40),
+            ),
+            "bc97b1f2ca96f6072239101e096e1b18fe87cb6ecf13b48188b37b52a50d761e",
+            b"",
+        ),
+        (
+            "portable_lossy_420_q99_token_2988.avif",
+            (
+                (301, 0x9E, 0x7E),
+                (302, 0xBF, 0xE5),
+                (303, 0x42, 0xFF),
+                (304, 0x40, 0x10),
+            ),
+            "0153d56609f86e637159836af94d103523853c9002c92dc7411925d97a919250",
+            b"",
+        ),
+        (
+            "portable_lossy_420_q99_token_7940.avif",
+            (
+                (301, 0x9E, 0x7E),
+                (302, 0xBF, 0xE4),
+                (303, 0x42, 0xFF),
+                (304, 0x40, 0x04),
+            ),
+            "503ca52689395ec769b5453f7a30b4340f4234132338b1dd16e6a945ab34c37a",
+            b"",
+        ),
+        (
+            "portable_lossy_420_q99_token_7764.avif",
+            (
+                (302, 0xBF, 0xBC),
+                (303, 0x42, 0xFF),
+                (304, 0x40, 0x04),
+            ),
+            "15822dfb32fea6432adf1c7ddb9ea648dd6d2e028b12c9f117c6031420760367",
+            b"",
+        ),
+        (
+            "portable_lossy_420_q99_token_2097724_masked_572.avif",
+            (
+                (120, 0x1E, 0x22),
+                (270, 0x26, 0x2A),
+                (288, 0x10, 0x14),
+                (301, 0x9E, 0x7E),
+                (302, 0xBF, 0xE3),
+                (303, 0x42, 0x00),
+                (304, 0x40, 0x84),
+            ),
+            "d492c364655cad1f950bd37fbf63b1b9eecc42dff0bae3f95d2d15d8f0f86f63",
+            b"\x11\x00\x00\x00",
+        ),
+    ):
+        write_slice40_token_fixture(name, replacements, expected_sha256, suffix)
+
     mutation_source = d / "portable_lossy_420_q99_gray_126.avif"
     mutation_source_bytes = mutation_source.read_bytes()
     mutation_source_sha256 = hashlib.sha256(mutation_source_bytes).hexdigest()

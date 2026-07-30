@@ -1648,18 +1648,20 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     let token = decode_high_token(decoder, &mut cdfs.lossy_luma_8x8_high_token);
     let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:597-643. DC sign is decoded
-    // before token fifteen's Golomb extension. Slice 39 exhaustively proves
-    // the final-token domain 8..=1047; a one-byte control selects token 1048.
+    // before token fifteen's Golomb extension, whose addition uses wrapping
+    // C-width arithmetic.
     let token = extend_high_token(decoder, token);
 
     // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:54-73,
     // src/dequant_tables.c, src/qm.c:1604-1692, and
     // src/recon_tmpl.c:597-643. At block qindex two, eight-bit Y-DC dequant
-    // is eight and qmatrix-ten DC weight 32 leaves it unchanged. The complete
-    // 0..=255 constant-gray corpus proves 506 non-skipped reconstructions with
-    // zero `token * 8` mismatches across the retained range.
-    (8..=1_047).contains(&token).then_some(())?;
-    let magnitude = token.wrapping_mul(8).cast_signed();
+    // is eight and qmatrix-ten DC weight 32 leaves it unchanged. Match dav1d's
+    // token mask, product mask, and sign-dependent coefficient clamp in that
+    // exact order.
+    let token = token & 0x000f_ffff;
+    let dequantized = token.wrapping_mul(8) & 0x00ff_ffff;
+    let coefficient_max = 32_767_u32.wrapping_add(u32::from(negative));
+    let magnitude = dequantized.min(coefficient_max).cast_signed();
     let mut coefficients = [[0_i32; 16]; 16];
     coefficients[0][0] = if negative {
         magnitude.wrapping_neg()

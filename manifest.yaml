@@ -2707,9 +2707,29 @@ formats:
       test_assets:
       - portable_lossy_420_q99_8x8_gray_255.avif
     - id: portable_lossy_420_q99_token_1048_control
-      description: Pillow-decodable one-byte mutation selecting final token 1048 just outside the exhaustive domain
+      description: First Pillow-decodable final token beyond the natural constant-gray domain
       test_assets:
       - portable_lossy_420_q99_token_1048_control.avif
+    - id: portable_lossy_420_q99_token_2061
+      description: Last ten-bit Golomb final token in the closed quality-99 DC reconstruction class
+      test_assets:
+      - portable_lossy_420_q99_token_2061.avif
+    - id: portable_lossy_420_q99_token_2988
+      description: Reachable eleven-bit Golomb final token below the coefficient clamp
+      test_assets:
+      - portable_lossy_420_q99_token_2988.avif
+    - id: portable_lossy_420_q99_token_7940
+      description: Positive quality-99 DC coefficient clamp
+      test_assets:
+      - portable_lossy_420_q99_token_7940.avif
+    - id: portable_lossy_420_q99_token_7764
+      description: Negative quality-99 DC coefficient clamp
+      test_assets:
+      - portable_lossy_420_q99_token_7764.avif
+    - id: portable_lossy_420_q99_token_2097724_masked_572
+      description: Twenty-bit final-token mask producing non-clamped masked token 572
+      test_assets:
+      - portable_lossy_420_q99_token_2097724_masked_572.avif
     - id: portable_lossy_420_q99_eob_bin_control
       description: One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two
       test_assets:

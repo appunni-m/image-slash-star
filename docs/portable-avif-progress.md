@@ -7893,3 +7893,143 @@ advisories, bans, licenses, and sources. Offline package verification builds
 135 files, 2.1 MiB unpacked and 431.6 KiB compressed. No dependency, unsafe
 Rust, public processing API, or published diagnostic/fixture artifact was
 added.
+
+## Slice 40: Complete Q99 Golomb Dequantization
+
+Status: accepted on 2026-07-30.
+
+### First divergence and reference rule
+
+Slice 39 proves the complete natural constant-gray domain, but deliberately
+rejects final token 1,048 even though pinned dav1d and Pillow decode it. The
+first divergence is the qmatrix dequantization body in pinned dav1d
+`src/recon_tmpl.c:595-637`, not prediction, inverse transform, color
+conversion, or container parsing.
+
+For a token-fifteen DC coefficient, the pinned reference performs these
+operations in order:
+
+1. decode the sign before the Golomb extension;
+2. add fifteen to the unsigned Golomb result with C-width wrapping;
+3. mask the final token to 20 bits with `0xfffff`;
+4. multiply the effective qindex-two/qmatrix-ten dequant value eight by that
+   token and mask the product to 24 bits with `0xffffff`;
+5. clamp the positive magnitude to 32,767 or the negative magnitude to
+   32,768; and
+6. apply the already decoded sign.
+
+This is the exact portable-Rust target. Accepting only another arbitrary token
+interval would preserve the divergence. The 24-bit product mask is retained
+for source fidelity, although it is mathematically inactive in this fixed
+dequant-eight class: the 20-bit maximum multiplied by eight is 8,388,600,
+which is below `0x1000000`.
+
+### Reverse-mapped boundaries
+
+The deterministic one- and two-byte coded-tile grids preserve the complete
+Slice 39 prefix, DC-only luma body, and skipped chroma state. The ten-bit
+Golomb class ends at final token 2,061; final token 2,062 begins the eleven-bit
+class. Exact tokens 4,095 and 4,096 were not reachable in the retained grid,
+so the smallest retained positive and negative saturation cases replace those
+speculative targets.
+
+| Final token | Sign | Effective token | Coefficient magnitude | Oracle result |
+| ---: | --- | ---: | ---: | --- |
+| 1,048 | negative | 1,048 | 8,384 | dav1d success; Pillow RGB 0 |
+| 2,061 | positive | 2,061 | 16,488 | dav1d success; Pillow RGB 255 |
+| 2,988 | positive | 2,988 | 23,904 | dav1d success; Pillow RGB 255 |
+| 7,940 | positive | 7,940 | clamped to 32,767 | dav1d success; Pillow RGB 255 |
+| 7,764 | negative | 7,764 | clamped to 32,768 | dav1d success; Pillow RGB 0 |
+| 2,097,724 | positive | 572 | 4,576 | Pillow RGB 199 |
+
+The mask case extends the coded tile by four bytes while updating the primary
+`iloc` extent, `mdat` box size, and final OBU payload length. Its raw token has
+two complete 20-bit wraps plus remainder 572. Without the reference mask it
+would saturate to white; Pillow instead materializes sixteen `(199,199,199)`
+pixels, independently proving the non-clamped masked value. Pillow's pinned
+libavif/dav1d stack accepts the complete AVIF, while standalone dav1d rejects
+the extracted section-5 sample after emitting the token trace, so this case is
+a manifest pixel oracle rather than a decoded-plane reconstruction case.
+
+The retained evidence is:
+
+| Token | AVIF SHA-256 | AV1 item SHA-256 | Pillow RGB SHA-256 |
+| ---: | --- | --- | --- |
+| 1,048 | `1097067dca85e499768a40e15232dce3602afbb1cabcbf485e8a14bf83e9bb73` | `aeaf6ab02e6f919e9f9ba083e28d29fdfd9ba4dd82f4df46b582ede1d0477871` | `17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1` |
+| 2,061 | `bc97b1f2ca96f6072239101e096e1b18fe87cb6ecf13b48188b37b52a50d761e` | `75c48c4b09b62e2122cfc61f21d36d8e26cfef50f84ba8a6b1702111bb2b565b` | `80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2` |
+| 2,988 | `0153d56609f86e637159836af94d103523853c9002c92dc7411925d97a919250` | `9f02f20ff45d483606243eb154f4486958949f57ab73307d29fac32fc231495f` | `80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2` |
+| 7,940 | `503ca52689395ec769b5453f7a30b4340f4234132338b1dd16e6a945ab34c37a` | `5d2b582727ea35e46dea777b6f0f297b067f36ad0753069a7bd1d445c3a9a7c2` | `80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2` |
+| 7,764 | `15822dfb32fea6432adf1c7ddb9ea648dd6d2e028b12c9f117c6031420760367` | `74a317f4f956de4775705e0a4fba94de0c9b9671d828dbac89d5e476aae111f5` | `17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1` |
+| 2,097,724 | `d492c364655cad1f950bd37fbf63b1b9eecc42dff0bae3f95d2d15d8f0f86f63` | `e9d4622a9ddb48e4769319bc2a64febf94d722d88267532ff0513c7b5f94def1` | `394404fba7ba437b91cd7c2f06ea53dc5feabcc4b888decb1a3a55a0f7e17356` |
+
+### Fixture-first implementation sequence
+
+Before production changes:
+
+1. generate the six files as checked mutations of the pinned gray-zero AVIF;
+2. retain all six as manifest-driven Pillow success rows;
+3. add tokens 1,048, 2,061, 2,988, 7,940, and 7,764 to the pinned-dav1d
+   reconstruction document;
+4. generate assets, Pillow references, and dav1d references twice and require
+   byte identity; and
+5. run Coverage MCP and require the first failure in the production
+   reconstruction assertion.
+
+Only after that red result may production replace the Slice 39 interval with
+the exact mask, multiply, clamp, and sign operations. Acceptance requires
+exact Pillow pixels, exact pinned-dav1d reconstruction, no fixture-selected
+behavior, no public processing API, no dependency or unsafe expansion, all
+native/WASM Clippy and rustdoc lanes, legal/package gates, and exact 100%
+Coverage MCP line, branch, function, and region coverage.
+
+### Fixture-first failure
+
+The complete AVIF asset corpus is byte-identical across two generations, with
+aggregate digest
+`5c5de6ccd391e348eb7bb69616ca92bf53e26b3e7ba9bc8ecacc3d6cca6aaa17`.
+The manifest, AVIF JSON documents, and Pillow raw references are likewise
+byte-identical, with aggregate digest
+`ab94dbb653eb5c0887e894e4f52d7bcad1669abe3a775855d4bddaa6a31f1191`.
+The reconstruction generator independently builds and runs the pinned scalar
+dav1d reference twice. Its 167-case document has SHA-256
+`18862a144eeae38cd0da1559ae6bd7c5ed3b85cda3ae82649908d6fe83d3e004`.
+
+Coverage MCP run `b1faec2e-b1c9-420c-9a32-069db89e761d` is the intentional
+fixture-first failure. Six test targets pass and only
+`test_av1_reconstruction_matches_pinned_dav1d_fixture` fails. Its first
+failure is:
+
+`production AV1 path must retain the reconstructed first leaf for
+portable_lossy_420_q99_token_1048_control.avif`
+
+This confirms that the Slice 39 interval guard is the first production
+divergence.
+
+### Accepted result
+
+The manifest now contains 1,201 active cases: 923 decode cases and 278 encode
+cases over all eight formats, with no planned cases and no unwired encode
+cases. AVIF contributes 181 decode rows and 23 encode rows. The raw-token
+2,097,724 fixture is reconstructed through the private portable path as Y=199,
+U=128, V=128 and materializes exactly the 48 Pillow RGB bytes with value 199.
+
+Production now follows pinned dav1d's exact operation order: wrapping Golomb
+extension, 20-bit token mask, wrapping dequant-eight multiplication, 24-bit
+product mask, sign-dependent 32,767/32,768 clamp, and sign application. No
+fixture identity, byte pattern, output pixel, or native result influences the
+implementation.
+
+Final Coverage MCP run `70e6e66e-dbbc-4f80-ae64-224b5f74017c`, snapshot
+`4677c566-069e-4ef1-8e47-478d8130975d`, passes all seven test binaries. Its
+LLVM report records exact coverage of 38,274/38,274 lines, 5,464/5,464
+branches, 1,911/1,911 functions, and 62,943/62,943 regions.
+
+All 22 strict Clippy lanes and all 22 strict rustdoc lanes pass across native
+and `wasm32-unknown-unknown`: no features, each individual codec feature,
+default features, and all features. Rustfmt, whitespace, and five diagnostic
+Python syntax checks pass. The retained-license verifier confirms all 22
+legal/provenance files; the dependency graph remains only `bytemuck 1.25.1`;
+and `cargo deny check advisories bans licenses sources` passes. Offline
+package verification builds 135 files, 2.1 MiB unpacked and 431.6 KiB
+compressed. No dependency, unsafe Rust, public image-processing API, or
+unrelated security work was added.

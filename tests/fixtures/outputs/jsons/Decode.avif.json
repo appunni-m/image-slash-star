@@ -751,6 +751,96 @@
       "ref_is_animated": false
     },
     {
+      "id": "portable_lossy_420_q99_token_2061",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_2061_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_token_2988",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_2988_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_token_7940",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_7940_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_token_7764",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_7764_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
+      "id": "portable_lossy_420_q99_token_2097724_masked_572",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_token_2097724_masked_572_avif.bin",
+      "ref_bytes": 48,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false
+    },
+    {
       "id": "portable_lossy_420_q99_eob_bin_control",
       "status": "error",
       "error_type": "builtins.RuntimeError",

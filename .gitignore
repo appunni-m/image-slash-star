@@ -8,4 +8,5 @@ __pycache__/
 lcov.info
 /.idea/
 /.vscode/
+/docs/codec-handbook/
 /target/
