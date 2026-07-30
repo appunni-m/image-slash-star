@@ -1,5 +1,6 @@
 //! Pillow-compatible AVIF encoding through libavif 1.4.1 and libaom 3.13.2.
 
+use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
 use crate::types::{DecodedImage, DecodedSequence};
 
@@ -12,9 +13,8 @@ use std::ffi::CString;
 use crate::types::ImageMode;
 
 /// Encode one image with Pillow's AVIF defaults and option mapping.
-#[must_use]
-pub fn encode(image: &DecodedImage, options: &EncodeOptions) -> Option<Vec<u8>> {
-    image.validate().ok()?;
+pub fn encode(image: &DecodedImage, options: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    image.validate().map_err(CodecError::from_image_error)?;
     encode_images(
         std::slice::from_ref(image),
         std::slice::from_ref(&0),
@@ -23,12 +23,16 @@ pub fn encode(image: &DecodedImage, options: &EncodeOptions) -> Option<Vec<u8>> 
 }
 
 /// Encode all frames in an AVIF image sequence.
-#[must_use]
-pub fn encode_sequence(sequence: &DecodedSequence, options: &EncodeOptions) -> Option<Vec<u8>> {
-    sequence.validate().ok()?;
+pub fn encode_sequence(
+    sequence: &DecodedSequence,
+    options: &EncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    sequence.validate().map_err(CodecError::from_image_error)?;
     for frame in &sequence.frames {
         if frame.left != 0 || frame.top != 0 {
-            return None;
+            return Err(CodecError::Unsupported(
+                "AVIF cannot retain nonzero frame offsets".to_owned(),
+            ));
         }
     }
     let images = sequence
@@ -49,7 +53,7 @@ fn encode_images(
     images: &[DecodedImage],
     durations: &[u32],
     options: &EncodeOptions,
-) -> Option<Vec<u8>> {
+) -> CodecResult<Vec<u8>> {
     let references = images.iter().collect::<Vec<_>>();
     encode_image_refs(&references, durations, options)
 }
@@ -59,8 +63,10 @@ fn encode_images(
     _images: &[DecodedImage],
     _durations: &[u32],
     _options: &EncodeOptions,
-) -> Option<Vec<u8>> {
-    None
+) -> CodecResult<Vec<u8>> {
+    Err(CodecError::Unsupported(
+        "AVIF encoding requires the native extra module".to_owned(),
+    ))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -68,14 +74,20 @@ fn encode_image_refs(
     images: &[&DecodedImage],
     durations: &[u32],
     options: &EncodeOptions,
-) -> Option<Vec<u8>> {
-    let first = *images.first()?;
+) -> CodecResult<Vec<u8>> {
+    let first = *images
+        .first()
+        .ok_or_else(|| CodecError::Dimensions("AVIF sequence has no frames".to_owned()))?;
     if images.len() != durations.len() {
-        return None;
+        return Err(CodecError::Parameter(
+            "AVIF frame and duration counts differ".to_owned(),
+        ));
     }
     for image in images {
         if image.width != first.width || image.height != first.height {
-            return None;
+            return Err(CodecError::Dimensions(
+                "AVIF frames must share one canvas size".to_owned(),
+            ));
         }
     }
     let parsed = ParsedOptions::new(options)?;
@@ -84,7 +96,10 @@ fn encode_image_refs(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn create_encoder(first: &DecodedImage, parsed: &ParsedOptions) -> Option<super::native::Encoder> {
+fn create_encoder(
+    first: &DecodedImage,
+    parsed: &ParsedOptions,
+) -> CodecResult<super::native::Encoder> {
     let config = super::native::EncodeConfig {
         width: first.width,
         height: first.height,
@@ -106,7 +121,7 @@ fn create_encoder(first: &DecodedImage, parsed: &ParsedOptions) -> Option<super:
         xmp: &parsed.xmp,
         advanced: &parsed.advanced,
     };
-    super::native::Encoder::new(&config)
+    super::native::Encoder::new(&config).map_err(|error| error.context("create AVIF encoder"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -115,19 +130,23 @@ fn encode_frames(
     images: &[&DecodedImage],
     durations: &[u32],
     single: bool,
-) -> Option<Vec<u8>> {
+) -> CodecResult<Vec<u8>> {
     for (image, &duration_ms) in images.iter().zip(durations) {
         let prepared = prepare_pixels(image)?;
-        encoder.add_frame(
-            prepared.bytes.as_ref(),
-            image.width,
-            image.height,
-            prepared.channels,
-            u64::from(duration_ms),
-            single,
-        )?;
+        encoder
+            .add_frame(
+                prepared.bytes.as_ref(),
+                image.width,
+                image.height,
+                prepared.channels,
+                u64::from(duration_ms),
+                single,
+            )
+            .map_err(|error| error.context("encode AVIF frame"))?;
     }
-    encoder.finish()
+    encoder
+        .finish()
+        .map_err(|error| error.context("finalize AVIF encoder"))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -135,8 +154,10 @@ fn encode_image_refs(
     _images: &[&DecodedImage],
     _durations: &[u32],
     _options: &EncodeOptions,
-) -> Option<Vec<u8>> {
-    None
+) -> CodecResult<Vec<u8>> {
+    Err(CodecError::Unsupported(
+        "AVIF encoding requires the native extra module".to_owned(),
+    ))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -146,7 +167,7 @@ struct PreparedPixels<'image> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn prepare_pixels(image: &DecodedImage) -> Option<PreparedPixels<'_>> {
+fn prepare_pixels(image: &DecodedImage) -> CodecResult<PreparedPixels<'_>> {
     let prepared = match image.mode {
         ImageMode::Rgb8 => PreparedPixels {
             bytes: Cow::Borrowed(&image.pixels),
@@ -179,22 +200,29 @@ fn prepare_pixels(image: &DecodedImage) -> Option<PreparedPixels<'_>> {
             bytes: Cow::Owned(unpack_l1_to_rgb(image)?),
             channels: 3,
         },
-        _ => return None,
+        _ => {
+            return Err(CodecError::Unsupported(
+                "AVIF cannot encode this image mode".to_owned(),
+            ));
+        }
     };
-    Some(prepared)
+    Ok(prepared)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn prepare_palette_pixels(image: &DecodedImage) -> Option<PreparedPixels<'static>> {
+fn prepare_palette_pixels(image: &DecodedImage) -> CodecResult<PreparedPixels<'static>> {
     prepare_palette_pixels_with_capacity(image, palette_capacity)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn prepare_palette_pixels_with_capacity(
     image: &DecodedImage,
-    capacity_for: fn(usize, usize) -> Option<usize>,
-) -> Option<PreparedPixels<'static>> {
-    let palette = image.palette.as_ref()?;
+    capacity_for: fn(usize, usize) -> CodecResult<usize>,
+) -> CodecResult<PreparedPixels<'static>> {
+    let palette = image
+        .palette
+        .as_ref()
+        .ok_or_else(|| CodecError::Parameter("indexed AVIF input requires a palette".to_owned()))?;
     let has_alpha = palette.alpha.iter().any(|&alpha| alpha != u8::MAX);
     let channels = if has_alpha { 4 } else { 3 };
     let capacity = capacity_for(image.pixels.len(), channels)?;
@@ -203,32 +231,39 @@ fn prepare_palette_pixels_with_capacity(
         let index = usize::from(index);
         let offset = index.saturating_mul(3);
         let end = offset.saturating_add(3);
-        pixels.extend_from_slice(palette.rgb.get(offset..end)?);
+        pixels.extend_from_slice(palette.rgb.get(offset..end).ok_or_else(|| {
+            CodecError::Parameter("AVIF palette index is out of bounds".to_owned())
+        })?);
         if has_alpha {
             pixels.push(palette.alpha.get(index).copied().unwrap_or(u8::MAX));
         }
     }
-    Some(PreparedPixels {
+    Ok(PreparedPixels {
         bytes: Cow::Owned(pixels),
         channels: if has_alpha { 4 } else { 3 },
     })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-const fn palette_capacity(pixel_count: usize, channels: usize) -> Option<usize> {
-    pixel_count.checked_mul(channels)
+fn palette_capacity(pixel_count: usize, channels: usize) -> CodecResult<usize> {
+    pixel_count.checked_mul(channels).ok_or_else(|| {
+        CodecError::Dimensions("AVIF expanded palette buffer is too large".to_owned())
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn unpack_l1_to_rgb(image: &DecodedImage) -> Option<Vec<u8>> {
+fn unpack_l1_to_rgb(image: &DecodedImage) -> CodecResult<Vec<u8>> {
     let width = image.width as usize;
     let source_stride = width.div_ceil(8);
     let product = u64::from(image.width).saturating_mul(u64::from(image.height));
     #[cfg(target_pointer_width = "64")]
     let pixel_count = usize::from_ne_bytes(product.to_ne_bytes());
     #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = usize::try_from(product).ok()?;
-    let capacity = pixel_count.checked_mul(3)?;
+    let pixel_count = usize::try_from(product)
+        .map_err(|_| CodecError::Dimensions("AVIF pixel count is unrepresentable".to_owned()))?;
+    let capacity = pixel_count.checked_mul(3).ok_or_else(|| {
+        CodecError::Dimensions("AVIF expanded bilevel buffer is too large".to_owned())
+    })?;
     let mut pixels = Vec::with_capacity(capacity);
     for row in image.pixels.chunks_exact(source_stride) {
         for x in 0..width {
@@ -242,7 +277,12 @@ fn unpack_l1_to_rgb(image: &DecodedImage) -> Option<Vec<u8>> {
             pixels.extend_from_slice(&[value; 3]);
         }
     }
-    (pixels.len() == capacity).then_some(pixels)
+    if pixels.len() != capacity {
+        return Err(CodecError::Parameter(
+            "AVIF bilevel pixel buffer is truncated".to_owned(),
+        ));
+    }
+    Ok(pixels)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -284,12 +324,14 @@ struct ParsedOptions {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl ParsedOptions {
-    fn new(options: &EncodeOptions) -> Option<Self> {
+    fn new(options: &EncodeOptions) -> CodecResult<Self> {
         if let Some(codec) = options.extra.get("codec")
             && codec != "auto"
             && codec != "aom"
         {
-            return None;
+            return Err(CodecError::Parameter(
+                "invalid AVIF codec option".to_owned(),
+            ));
         }
         let subsampling = options
             .subsampling
@@ -301,12 +343,20 @@ impl ParsedOptions {
             "4:2:2" => 2,
             "4:2:0" => 3,
             "4:0:0" => 4,
-            _ => return None,
+            _ => {
+                return Err(CodecError::Parameter(
+                    "invalid AVIF subsampling option".to_owned(),
+                ));
+            }
         };
         let yuv_range = match options.extra.get("range").map(String::as_str) {
             None | Some("full") => 1,
             Some("limited") => 0,
-            Some(_) => return None,
+            Some(_) => {
+                return Err(CodecError::Parameter(
+                    "invalid AVIF range option".to_owned(),
+                ));
+            }
         };
         let speed = parse_i32(options, "speed")?.unwrap_or(6);
         let max_threads =
@@ -324,14 +374,24 @@ impl ParsedOptions {
         let mut advanced = Vec::with_capacity(options.advanced.len());
         for (key, value) in &options.advanced {
             advanced.push((
-                CString::new(key.as_str()).ok()?,
-                CString::new(value.as_str()).ok()?,
+                CString::new(key.as_str()).map_err(|_| {
+                    CodecError::Parameter("AVIF advanced key contains NUL".to_owned())
+                })?,
+                CString::new(value.as_str()).map_err(|_| {
+                    CodecError::Parameter("AVIF advanced value contains NUL".to_owned())
+                })?,
             ));
         }
-        Some(Self {
+        let quality = options.quality.unwrap_or(75);
+        if quality > 100 {
+            return Err(CodecError::Parameter(
+                "AVIF quality must be between 0 and 100".to_owned(),
+            ));
+        }
+        Ok(Self {
             yuv_format,
             yuv_range,
-            quality: i32::from(options.quality.unwrap_or(75)),
+            quality: i32::from(quality),
             speed,
             max_threads,
             tile_rows_log2,
@@ -349,58 +409,68 @@ impl ParsedOptions {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn parse_i32(options: &EncodeOptions, name: &str) -> Option<Option<i32>> {
+fn parse_i32(options: &EncodeOptions, name: &str) -> CodecResult<Option<i32>> {
     let Some(value) = options.extra.get(name) else {
-        return Some(None);
+        return Ok(None);
     };
-    Some(Some(value.parse().ok()?))
+    value
+        .parse()
+        .map(Some)
+        .map_err(|_| CodecError::Parameter(format!("invalid AVIF {name} option")))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn parse_u64(options: &EncodeOptions, name: &str) -> Option<Option<u64>> {
+fn parse_u64(options: &EncodeOptions, name: &str) -> CodecResult<Option<u64>> {
     let Some(value) = options.extra.get(name) else {
-        return Some(None);
+        return Ok(None);
     };
-    Some(Some(value.parse().ok()?))
+    value
+        .parse()
+        .map(Some)
+        .map_err(|_| CodecError::Parameter(format!("invalid AVIF {name} option")))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn parse_bool(options: &EncodeOptions, name: &str) -> Option<Option<bool>> {
+fn parse_bool(options: &EncodeOptions, name: &str) -> CodecResult<Option<bool>> {
     let Some(value) = options.extra.get(name) else {
-        return Some(None);
+        return Ok(None);
     };
     match value.to_ascii_lowercase().as_str() {
-        "true" | "1" | "yes" | "on" => Some(Some(true)),
-        "false" | "0" | "no" | "off" => Some(Some(false)),
-        _ => None,
+        "true" | "1" | "yes" | "on" => Ok(Some(true)),
+        "false" | "0" | "no" | "off" => Ok(Some(false)),
+        _ => Err(CodecError::Parameter(format!("invalid AVIF {name} option"))),
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn parse_hex_option(options: &EncodeOptions, name: &str) -> Option<Vec<u8>> {
+fn parse_hex_option(options: &EncodeOptions, name: &str) -> CodecResult<Vec<u8>> {
     let Some(value) = options.extra.get(name) else {
-        return Some(Vec::new());
+        return Ok(Vec::new());
     };
     let bytes = value.as_bytes();
     if !bytes.len().is_multiple_of(2) {
-        return None;
+        return Err(CodecError::Parameter(format!(
+            "invalid AVIF {name} hex value"
+        )));
     }
     let mut decoded = Vec::with_capacity(bytes.len() / 2);
     for pair in bytes.chunks_exact(2) {
-        let high = hex_nibble(pair[0])?;
-        let low = hex_nibble(pair[1])?;
+        let high = hex_nibble(pair[0], name)?;
+        let low = hex_nibble(pair[1], name)?;
         decoded.push((high << 4) | low);
     }
-    Some(decoded)
+    Ok(decoded)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-const fn hex_nibble(value: u8) -> Option<u8> {
+fn hex_nibble(value: u8, name: &str) -> CodecResult<u8> {
     match value {
-        b'0'..=b'9' => Some(value.saturating_sub(b'0')),
-        b'a'..=b'f' => Some(value.saturating_sub(b'a').saturating_add(10)),
-        b'A'..=b'F' => Some(value.saturating_sub(b'A').saturating_add(10)),
-        _ => None,
+        b'0'..=b'9' => Ok(value.saturating_sub(b'0')),
+        b'a'..=b'f' => Ok(value.saturating_sub(b'a').saturating_add(10)),
+        b'A'..=b'F' => Ok(value.saturating_sub(b'A').saturating_add(10)),
+        _ => Err(CodecError::Parameter(format!(
+            "invalid AVIF {name} hex value"
+        ))),
     }
 }
 
@@ -482,7 +552,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = prepare_palette_pixels(&short_alpha);
     let _ = prepare_palette_pixels(&invalid_palette);
-    let _ = prepare_palette_pixels_with_capacity(&short_alpha, |_, _| None);
+    let _ = prepare_palette_pixels_with_capacity(&short_alpha, |_, _| {
+        Err(CodecError::Dimensions(
+            "forced AVIF palette capacity failure".to_owned(),
+        ))
+    });
     let delayed_alpha = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8)
         .with_palette(ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![u8::MAX, 0]).unwrap());
     let _ = prepare_palette_pixels(&delayed_alpha);

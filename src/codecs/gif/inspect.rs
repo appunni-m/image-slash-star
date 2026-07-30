@@ -1,18 +1,18 @@
 //! GIF container inspection without LZW pixel decoding.
 
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
 const TRAILER: u8 = 0x3b;
+const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Inspect logical-screen, first-frame palette, and sequence metadata.
-pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
-    let mut input = Input::new(data);
-    let signature = input.bytes(6)?;
-    if signature != b"GIF87a" && signature != b"GIF89a" {
-        return None;
-    }
+pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
+    // The private inspector is reached only after root signature detection,
+    // which proves an exact six-byte GIF87a/GIF89a prefix.
+    let mut input = Input::new(&data[6..]);
     let logical_width = u32::from(input.u16()?);
     let logical_height = u32::from(input.u16()?);
     let screen_packed = input.u8()?;
@@ -27,15 +27,21 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     let mut fallback_width = 0u32;
     let mut fallback_height = 0u32;
     let mut complete = true;
+    let mut recovering_from_bad_gce = false;
 
     loop {
-        let Some(block) = input.u8() else {
+        if input.is_eof() {
             if first_mode.is_some() {
                 complete = false;
                 break;
             }
-            return None;
-        };
+            return Err(CodecError::Malformed(
+                "GIF contains no image frame".to_owned(),
+            ));
+        }
+        // `is_eof()` above proves the marker byte is present.
+        let block = input.data[input.position];
+        input.position = input.position.wrapping_add(1);
         match block {
             EXTENSION_INTRODUCER => {
                 let label = input.u8()?;
@@ -44,8 +50,14 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
                     let packed = input.u8()?;
                     input.skip(2)?;
                     let index = input.u8()?;
-                    if input.u8()? != 0 {
-                        return None;
+                    let terminator = input.u8()?;
+                    if terminator != 0 {
+                        // Pillow treats the nonzero byte as another data-block
+                        // length, consumes that payload and its terminator, and
+                        // then scans for the next recognized block marker.
+                        input.skip(usize::from(terminator))?;
+                        input.skip_sub_blocks()?;
+                        recovering_from_bad_gce = true;
                     }
                     transparent_index = (packed & 1 != 0).then_some(index);
                 } else {
@@ -78,23 +90,36 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
                 frame_count = frame_count.wrapping_add(1);
                 fallback_width = fallback_width.max(left.wrapping_add(width));
                 fallback_height = fallback_height.max(top.wrapping_add(height));
+                let canvas_width = logical_width.max(fallback_width);
+                let canvas_height = logical_height.max(fallback_height);
+                if u64::from(canvas_width).saturating_mul(u64::from(canvas_height))
+                    > PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS
+                {
+                    return Err(CodecError::Dimensions(
+                        "GIF frame expands beyond Pillow's decompression-bomb limit".to_owned(),
+                    ));
+                }
                 transparent_index = None;
+                recovering_from_bad_gce = false;
                 input.skip(1)?;
-                if input.skip_sub_blocks().is_none() {
+                if input.skip_sub_blocks().is_err() {
                     complete = false;
                     break;
                 }
             }
             TRAILER => break,
-            _ => return None,
+            _ if recovering_from_bad_gce => {}
+            _ => {
+                return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
+            }
         }
     }
 
-    Some(ImageInfo {
+    Ok(ImageInfo {
         format: ImageFormat::Gif,
         width: logical_width.max(fallback_width),
         height: logical_height.max(fallback_height),
-        mode: first_mode?,
+        mode: first_mode.malformed("GIF contains no image frame")?,
         bit_depth: first_bit_depth,
         palette: first_palette,
         is_animated: frame_count > 1,
@@ -102,12 +127,12 @@ pub fn inspect(data: &[u8]) -> Option<ImageInfo> {
     })
 }
 
-fn read_color_table(input: &mut Input<'_>, packed: u8) -> Option<Option<Vec<u8>>> {
+fn read_color_table(input: &mut Input<'_>, packed: u8) -> CodecResult<Option<Vec<u8>>> {
     if packed & 0x80 == 0 {
-        return Some(None);
+        return Ok(None);
     }
     let length = (3usize).wrapping_shl(u32::from((packed & 7).wrapping_add(1)));
-    Some(Some(input.bytes(length)?.to_vec()))
+    Ok(Some(input.bytes(length)?.to_vec()))
 }
 
 fn palette_with_alpha(rgb: &[u8], transparent_index: Option<u8>) -> ImagePalette {
@@ -135,33 +160,43 @@ impl<'a> Input<'a> {
         Self { data, position: 0 }
     }
 
-    fn u8(&mut self) -> Option<u8> {
-        let value = *self.data.get(self.position)?;
+    fn is_eof(&self) -> bool {
+        self.position >= self.data.len()
+    }
+
+    fn u8(&mut self) -> CodecResult<u8> {
+        let value = *self
+            .data
+            .get(self.position)
+            .malformed("truncated GIF byte field")?;
         self.position = self.position.wrapping_add(1);
-        Some(value)
+        Ok(value)
     }
 
-    fn u16(&mut self) -> Option<u16> {
+    fn u16(&mut self) -> CodecResult<u16> {
         let bytes = self.bytes(2)?;
-        Some(u16::from_le_bytes([bytes[0], bytes[1]]))
+        Ok(u16::from_le_bytes([bytes[0], bytes[1]]))
     }
 
-    fn bytes(&mut self, length: usize) -> Option<&'a [u8]> {
+    fn bytes(&mut self, length: usize) -> CodecResult<&'a [u8]> {
         let end = self.position.wrapping_add(length);
-        let bytes = self.data.get(self.position..end)?;
+        let bytes = self
+            .data
+            .get(self.position..end)
+            .malformed("truncated GIF field")?;
         self.position = end;
-        Some(bytes)
+        Ok(bytes)
     }
 
-    fn skip(&mut self, length: usize) -> Option<()> {
+    fn skip(&mut self, length: usize) -> CodecResult<()> {
         self.bytes(length).map(|_| ())
     }
 
-    fn skip_sub_blocks(&mut self) -> Option<()> {
+    fn skip_sub_blocks(&mut self) -> CodecResult<()> {
         loop {
             let length = usize::from(self.u8()?);
             if length == 0 {
-                return Some(());
+                return Ok(());
             }
             self.skip(length)?;
         }
@@ -170,11 +205,9 @@ impl<'a> Input<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = inspect(b"");
-    let _ = inspect(b"not gif");
     let _ = inspect(b"GIF89a");
     let mut image = b"GIF89a\x01\0\x01\0\0\0\0,\0\0\0\0\x01\0\x01\0\0\x02\0".to_vec();
-    assert!(inspect(&image).is_some());
+    assert!(inspect(&image).is_ok());
     image.truncate(13);
     let _ = inspect(&image);
 }

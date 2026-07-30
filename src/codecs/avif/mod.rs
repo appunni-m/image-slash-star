@@ -23,12 +23,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
 #[cfg(all(coverage, not(target_arch = "wasm32")))]
 pub(crate) fn __coverage_entropy_reference_trace()
--> Result<Vec<crate::Av1EntropyTraceState>, &'static str> {
+-> crate::codecs::CodecResult<Vec<crate::Av1EntropyTraceState>> {
     av1::__coverage_entropy_reference_trace()
 }
 
 #[cfg(all(coverage, not(target_arch = "wasm32")))]
-pub(crate) fn __coverage_reconstruction(data: &[u8]) -> Option<crate::Av1ReconstructionTrace> {
+pub(crate) fn __coverage_reconstruction(
+    data: &[u8],
+) -> crate::codecs::CodecResult<Option<crate::Av1ReconstructionTrace>> {
     av1::__coverage_reconstruction(data)
 }
 

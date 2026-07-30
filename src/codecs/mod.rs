@@ -8,6 +8,30 @@ use crate::types::{
     DecodedImage, DecodedSequence, ImageError, ImageFormat, ImageInfo, ImageResult,
 };
 
+mod error;
+#[cfg(any(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif"
+))]
+pub(crate) use error::CodecError;
+#[cfg(any(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico"
+))]
+pub(crate) use error::OptionCodecExt;
+pub(crate) use error::{CodecResult, into_image_result};
+
 #[cfg(feature = "avif")]
 mod avif;
 #[cfg(feature = "bmp")]
@@ -32,13 +56,8 @@ mod compression;
 pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<DecodedImage> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
-        return match avif::decode::decode(_data) {
-            Some(image) => validate_decoded_image(image),
-            None => Err(ImageError::Unsupported {
-                format: Some(format),
-                message: AVIF_WASM_UNAVAILABLE.to_owned(),
-            }),
-        };
+        return into_image_result(avif::decode::decode(_data), format)
+            .and_then(validate_decoded_image);
     }
 
     #[cfg(any(
@@ -55,41 +74,57 @@ pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<De
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    let image = match format {
+    let image: CodecResult<DecodedImage> = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::decode::decode(_data),
         #[cfg(not(feature = "jpeg"))]
-        ImageFormat::Jpeg => None,
+        ImageFormat::Jpeg => Err(error::CodecError::Malformed(
+            "JPEG feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "png")]
         ImageFormat::Png => png::decode::decode(_data),
         #[cfg(not(feature = "png"))]
-        ImageFormat::Png => None,
+        ImageFormat::Png => Err(error::CodecError::Malformed(
+            "PNG feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "gif")]
         ImageFormat::Gif => gif::decode::decode(_data),
         #[cfg(not(feature = "gif"))]
-        ImageFormat::Gif => None,
+        ImageFormat::Gif => Err(error::CodecError::Malformed(
+            "GIF feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "bmp")]
         ImageFormat::Bmp => bmp::decode::decode(_data),
         #[cfg(not(feature = "bmp"))]
-        ImageFormat::Bmp => None,
+        ImageFormat::Bmp => Err(error::CodecError::Malformed(
+            "BMP feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "tiff")]
         ImageFormat::Tiff => tiff::decode::decode(_data),
         #[cfg(not(feature = "tiff"))]
-        ImageFormat::Tiff => None,
+        ImageFormat::Tiff => Err(error::CodecError::Malformed(
+            "TIFF feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "webp")]
         ImageFormat::WebP => webp::decode::decode(_data),
         #[cfg(not(feature = "webp"))]
-        ImageFormat::WebP => None,
+        ImageFormat::WebP => Err(error::CodecError::Malformed(
+            "WebP feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "ico")]
         ImageFormat::Ico => ico::decode::decode(_data),
         #[cfg(not(feature = "ico"))]
-        ImageFormat::Ico => None,
+        ImageFormat::Ico => Err(error::CodecError::Malformed(
+            "ICO feature is disabled".to_owned(),
+        )),
         #[cfg(feature = "avif")]
         ImageFormat::Avif => avif::decode::decode(_data),
         #[cfg(not(feature = "avif"))]
-        ImageFormat::Avif => None,
+        ImageFormat::Avif => Err(error::CodecError::Malformed(
+            "AVIF feature is disabled".to_owned(),
+        )),
     };
-    let image = decoded_or_malformed(image, format, "codec rejected image data")?;
+    let image = into_image_result(image.map_err(|error| error.context("decode")), format)?;
     validate_decoded_image(image)
 }
 
@@ -112,81 +147,57 @@ pub(crate) fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<I
     )))]
     ensure_inspection_available(format)?;
 
-    #[cfg(feature = "png")]
-    if format == ImageFormat::Png {
-        return decoded_or_malformed(
-            png::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "jpeg")]
-    if format == ImageFormat::Jpeg {
-        return decoded_or_malformed(
-            jpeg::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "gif")]
-    if format == ImageFormat::Gif {
-        return decoded_or_malformed(
-            gif::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "bmp")]
-    if format == ImageFormat::Bmp {
-        return decoded_or_malformed(
-            bmp::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "webp")]
-    if format == ImageFormat::WebP {
-        return decoded_or_malformed(
-            webp::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "tiff")]
-    if format == ImageFormat::Tiff {
-        return decoded_or_malformed(
-            tiff::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "ico")]
-    if format == ImageFormat::Ico {
-        return decoded_or_malformed(
-            ico::inspect::inspect(_data),
-            format,
-            "codec rejected image metadata",
-        );
-    }
-
-    #[cfg(feature = "avif")]
-    return decoded_or_malformed(
-        avif::inspect::inspect(_data),
-        format,
-        "codec rejected image metadata",
-    );
-
-    #[cfg(not(feature = "avif"))]
-    Err(ImageError::Unsupported {
-        format: Some(format),
-        message: "metadata inspection is not implemented for this format".to_owned(),
-    })
+    let inspected: CodecResult<ImageInfo> = match format {
+        #[cfg(feature = "jpeg")]
+        ImageFormat::Jpeg => jpeg::inspect::inspect(_data),
+        #[cfg(not(feature = "jpeg"))]
+        ImageFormat::Jpeg => Err(error::CodecError::Unsupported(
+            "JPEG metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "png")]
+        ImageFormat::Png => png::inspect::inspect(_data),
+        #[cfg(not(feature = "png"))]
+        ImageFormat::Png => Err(error::CodecError::Unsupported(
+            "PNG metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "gif")]
+        ImageFormat::Gif => gif::inspect::inspect(_data),
+        #[cfg(not(feature = "gif"))]
+        ImageFormat::Gif => Err(error::CodecError::Unsupported(
+            "GIF metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "bmp")]
+        ImageFormat::Bmp => bmp::inspect::inspect(_data),
+        #[cfg(not(feature = "bmp"))]
+        ImageFormat::Bmp => Err(error::CodecError::Unsupported(
+            "BMP metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "tiff")]
+        ImageFormat::Tiff => tiff::inspect::inspect(_data),
+        #[cfg(not(feature = "tiff"))]
+        ImageFormat::Tiff => Err(error::CodecError::Unsupported(
+            "TIFF metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "webp")]
+        ImageFormat::WebP => webp::inspect::inspect(_data),
+        #[cfg(not(feature = "webp"))]
+        ImageFormat::WebP => Err(error::CodecError::Unsupported(
+            "WebP metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "ico")]
+        ImageFormat::Ico => ico::inspect::inspect(_data),
+        #[cfg(not(feature = "ico"))]
+        ImageFormat::Ico => Err(error::CodecError::Unsupported(
+            "ICO metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "avif")]
+        ImageFormat::Avif => avif::inspect::inspect(_data),
+        #[cfg(not(feature = "avif"))]
+        ImageFormat::Avif => Err(error::CodecError::Unsupported(
+            "AVIF metadata inspection is unavailable".to_owned(),
+        )),
+    };
+    into_image_result(inspected.map_err(|error| error.context("inspect")), format)
 }
 
 /// Apply the pinned Pillow oracle's codec-specific verification contract.
@@ -203,46 +214,19 @@ pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()
     )))]
     ensure_inspection_available(format)?;
 
-    #[cfg(feature = "png")]
-    if format == ImageFormat::Png {
-        return decoded_or_malformed(
-            png::decode::verify(_data),
-            format,
-            "codec rejected image structure",
-        );
-    }
-
-    #[cfg(feature = "webp")]
-    if format == ImageFormat::WebP {
-        return decoded_or_malformed(
-            webp::decode::verify(_data),
-            format,
-            "codec rejected image structure",
-        );
-    }
-
-    #[cfg(feature = "jpeg")]
-    if format == ImageFormat::Jpeg {
-        return decoded_or_malformed(
-            jpeg::inspect::verify(_data),
-            format,
-            "codec rejected image structure",
-        );
-    }
-
-    #[cfg(feature = "tiff")]
-    if format == ImageFormat::Tiff {
-        return decoded_or_malformed(
-            tiff::inspect::verify(_data),
-            format,
-            "codec rejected image structure",
-        );
-    }
-
-    // Formats without a manifest-proven structural verifier retain Pillow's
-    // metadata-open verification behavior. EncodedImage construction has
-    // already performed that metadata inspection.
-    Ok(())
+    let verified: CodecResult<()> = match format {
+        #[cfg(feature = "png")]
+        ImageFormat::Png => png::decode::verify(_data),
+        #[cfg(feature = "webp")]
+        ImageFormat::WebP => webp::decode::verify(_data),
+        #[cfg(feature = "jpeg")]
+        ImageFormat::Jpeg => jpeg::inspect::verify(_data),
+        // Formats without a manifest-proven structural verifier retain
+        // Pillow's metadata-open verification behavior. EncodedImage
+        // construction has already performed that inspection.
+        _ => Ok(()),
+    };
+    into_image_result(verified.map_err(|error| error.context("verify")), format)
 }
 
 /// Dispatch decoding while retaining every frame and its presentation data.
@@ -266,28 +250,25 @@ pub(crate) fn decode_sequence_format(
     ensure_available(format)?;
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
-        return decoded_or_malformed(
-            gif::decode::decode_sequence(data),
+        return into_image_result(
+            gif::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
             format,
-            "codec rejected image sequence data",
         );
     }
 
     #[cfg(feature = "webp")]
     if format == ImageFormat::WebP {
-        return decoded_or_malformed(
-            webp::decode::decode_sequence(data),
+        return into_image_result(
+            webp::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
             format,
-            "codec rejected image sequence data",
         );
     }
 
     #[cfg(feature = "avif")]
     if format == ImageFormat::Avif {
-        return decoded_or_malformed(
-            avif::decode::decode_sequence(data),
+        return into_image_result(
+            avif::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
             format,
-            "codec rejected image sequence data",
         );
     }
 
@@ -315,41 +296,57 @@ pub(crate) fn encode_format(
     ))]
     ensure_available(format)?;
     _image.validate()?;
-    let encoded = match format {
+    let encoded: CodecResult<Vec<u8>> = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::encode::encode(_image, _options),
         #[cfg(not(feature = "jpeg"))]
-        ImageFormat::Jpeg => None,
+        ImageFormat::Jpeg => Err(error::CodecError::Unsupported(
+            "JPEG encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "png")]
         ImageFormat::Png => png::encode::encode(_image, _options),
         #[cfg(not(feature = "png"))]
-        ImageFormat::Png => None,
+        ImageFormat::Png => Err(error::CodecError::Unsupported(
+            "PNG encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "gif")]
         ImageFormat::Gif => gif::encode::encode(_image, _options),
         #[cfg(not(feature = "gif"))]
-        ImageFormat::Gif => None,
+        ImageFormat::Gif => Err(error::CodecError::Unsupported(
+            "GIF encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "bmp")]
         ImageFormat::Bmp => bmp::encode::encode(_image, _options),
         #[cfg(not(feature = "bmp"))]
-        ImageFormat::Bmp => None,
+        ImageFormat::Bmp => Err(error::CodecError::Unsupported(
+            "BMP encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "tiff")]
         ImageFormat::Tiff => tiff::encode::encode(_image, _options),
         #[cfg(not(feature = "tiff"))]
-        ImageFormat::Tiff => None,
+        ImageFormat::Tiff => Err(error::CodecError::Unsupported(
+            "TIFF encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "webp")]
         ImageFormat::WebP => webp::encode::encode(_image, _options),
         #[cfg(not(feature = "webp"))]
-        ImageFormat::WebP => None,
+        ImageFormat::WebP => Err(error::CodecError::Unsupported(
+            "WebP encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "ico")]
         ImageFormat::Ico => ico::encode::encode(_image, _options),
         #[cfg(not(feature = "ico"))]
-        ImageFormat::Ico => None,
+        ImageFormat::Ico => Err(error::CodecError::Unsupported(
+            "ICO encoder is unavailable".to_owned(),
+        )),
         #[cfg(feature = "avif")]
         ImageFormat::Avif => avif::encode::encode(_image, _options),
         #[cfg(not(feature = "avif"))]
-        ImageFormat::Avif => None,
+        ImageFormat::Avif => Err(error::CodecError::Unsupported(
+            "AVIF encoder is unavailable".to_owned(),
+        )),
     };
-    encoded_or_unsupported(encoded, format, "encoder rejected image data or options")
+    into_image_result(encoded.map_err(|error| error.context("encode")), format)
 }
 
 /// Dispatch encoding without collapsing an animation to its first frame.
@@ -376,19 +373,19 @@ pub(crate) fn encode_sequence_format(
 
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
-        return encoded_or_unsupported(
-            gif::encode::encode_sequence(sequence, options),
+        return into_image_result(
+            gif::encode::encode_sequence(sequence, options)
+                .map_err(|error| error.context("encode sequence")),
             format,
-            "encoder rejected image sequence or options",
         );
     }
 
     #[cfg(feature = "avif")]
     if format == ImageFormat::Avif {
-        return encoded_or_unsupported(
-            avif::encode::encode_sequence(sequence, options),
+        return into_image_result(
+            avif::encode::encode_sequence(sequence, options)
+                .map_err(|error| error.context("encode sequence")),
             format,
-            "encoder rejected image sequence or options",
         );
     }
 
@@ -399,34 +396,6 @@ pub(crate) fn encode_sequence_format(
         });
     }
     encode_format(&sequence.frames[0].image, format, options)
-}
-
-fn decoded_or_malformed<T>(
-    decoded: Option<T>,
-    format: ImageFormat,
-    message: &'static str,
-) -> ImageResult<T> {
-    match decoded {
-        Some(decoded) => Ok(decoded),
-        None => Err(ImageError::Malformed {
-            format,
-            message: message.to_owned(),
-        }),
-    }
-}
-
-fn encoded_or_unsupported(
-    encoded: Option<Vec<u8>>,
-    format: ImageFormat,
-    message: &'static str,
-) -> ImageResult<Vec<u8>> {
-    match encoded {
-        Some(encoded) => Ok(encoded),
-        None => Err(ImageError::Unsupported {
-            format: Some(format),
-            message: message.to_owned(),
-        }),
-    }
 }
 
 #[cfg(any(
@@ -586,6 +555,7 @@ fn ensure_enabled(format: ImageFormat) -> ImageResult<()> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    error::__coverage_exercise_private_branches();
     let _ = ensure_target_available(ImageFormat::Avif, true);
     let _ = ensure_target_available(ImageFormat::Avif, false);
     let _ = ensure_target_available(ImageFormat::Png, true);
@@ -638,15 +608,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     #[cfg(feature = "avif")]
     let _ = decode_sequence_format(b"not an AVIF container", ImageFormat::Avif);
 
-    let valid_image = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
-    let valid_sequence = DecodedSequence::from_image(valid_image.clone());
-    let _ = decoded_or_malformed(Some(valid_image), ImageFormat::Png, "unused");
-    let _ = decoded_or_malformed::<DecodedImage>(None, ImageFormat::Png, "unused");
-    let _ = decoded_or_malformed(Some(valid_sequence), ImageFormat::Gif, "unused");
-    let _ = decoded_or_malformed::<DecodedSequence>(None, ImageFormat::Gif, "unused");
-    let _ = encoded_or_unsupported(Some(vec![0]), ImageFormat::Png, "unused");
-    let _ = encoded_or_unsupported(None, ImageFormat::Png, "unused");
-
     compression::__coverage_exercise_private_branches();
     #[cfg(feature = "avif")]
     avif::__coverage_exercise_private_branches();
@@ -668,12 +629,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
 #[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
 pub(crate) fn __coverage_av1_entropy_reference_trace()
--> Result<Vec<crate::Av1EntropyTraceState>, &'static str> {
+-> CodecResult<Vec<crate::Av1EntropyTraceState>> {
     avif::__coverage_entropy_reference_trace()
 }
 
 #[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
-pub(crate) fn __coverage_av1_reconstruction(data: &[u8]) -> Option<crate::Av1ReconstructionTrace> {
+pub(crate) fn __coverage_av1_reconstruction(
+    data: &[u8],
+) -> CodecResult<Option<crate::Av1ReconstructionTrace>> {
     avif::__coverage_reconstruction(data)
 }
 

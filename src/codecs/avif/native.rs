@@ -7,7 +7,15 @@ use std::marker::PhantomData;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::ptr::NonNull;
 
+use crate::codecs::{CodecError, CodecResult};
+
 const STATUS_OK: i32 = 0;
+
+#[derive(Clone, Copy)]
+enum NativeOperation {
+    Decode,
+    Encode,
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -137,7 +145,7 @@ pub(crate) struct Decoder<'data> {
 }
 
 impl<'data> Decoder<'data> {
-    pub(crate) fn new(data: &'data [u8]) -> Option<Self> {
+    pub(crate) fn new(data: &'data [u8]) -> CodecResult<Self> {
         let mut raw = std::ptr::null_mut();
         let mut info = FfiDecodeInfo::default();
         let max_threads = default_max_threads();
@@ -148,7 +156,7 @@ impl<'data> Decoder<'data> {
             prs_avif_decoder_create(data.as_ptr(), data.len(), max_threads, &mut raw, &mut info)
         };
         let (raw, info) = checked_decoder_creation(status, raw, info, prs_avif_decoder_destroy)?;
-        Some(Self {
+        Ok(Self {
             raw,
             info,
             _data: PhantomData,
@@ -159,9 +167,11 @@ impl<'data> Decoder<'data> {
         self.info
     }
 
-    pub(crate) fn decode_frame(&mut self, frame_index: u32) -> Option<(Vec<u8>, FrameTiming)> {
+    pub(crate) fn decode_frame(&mut self, frame_index: u32) -> CodecResult<(Vec<u8>, FrameTiming)> {
         if frame_index >= self.info.frame_count {
-            return None;
+            return Err(CodecError::Parameter(
+                "AVIF frame index is outside the decoded sequence".to_owned(),
+            ));
         }
         let mut pixels = vec![0; self.info.pixel_len];
         let mut timing = FfiFrameTiming::default();
@@ -184,9 +194,9 @@ fn decoded_frame_result(
     status: i32,
     pixels: Vec<u8>,
     timing: FfiFrameTiming,
-) -> Option<(Vec<u8>, FrameTiming)> {
-    status_ok(status)?;
-    Some((
+) -> CodecResult<(Vec<u8>, FrameTiming)> {
+    status_ok(status, NativeOperation::Decode)?;
+    Ok((
         pixels,
         FrameTiming {
             duration_in_timescales: timing.duration_in_timescales,
@@ -197,31 +207,60 @@ fn decoded_frame_result(
 fn successful_pointer(
     status: i32,
     raw: *mut core::ffi::c_void,
-) -> Option<NonNull<core::ffi::c_void>> {
-    if status != STATUS_OK {
-        return None;
-    }
-    NonNull::new(raw)
+) -> CodecResult<NonNull<core::ffi::c_void>> {
+    successful_pointer_for(status, raw, NativeOperation::Decode)
 }
 
-fn checked_decode_info(info: FfiDecodeInfo) -> Option<DecodeInfo> {
-    let width = std::num::NonZeroU32::new(info.width)?.get();
-    let height = std::num::NonZeroU32::new(info.height)?.get();
-    let frame_count = std::num::NonZeroU32::new(info.frame_count)?.get();
+fn successful_pointer_for(
+    status: i32,
+    raw: *mut core::ffi::c_void,
+    operation: NativeOperation,
+) -> CodecResult<NonNull<core::ffi::c_void>> {
+    if status != STATUS_OK {
+        return Err(native_status_error(operation, status));
+    }
+    NonNull::new(raw).ok_or_else(|| match operation {
+        NativeOperation::Decode => {
+            CodecError::Malformed("AVIF decoder returned a null native handle".to_owned())
+        }
+        NativeOperation::Encode => {
+            CodecError::Parameter("AVIF encoder returned a null native handle".to_owned())
+        }
+    })
+}
+
+fn checked_decode_info(info: FfiDecodeInfo) -> CodecResult<DecodeInfo> {
+    let width = std::num::NonZeroU32::new(info.width)
+        .ok_or_else(|| CodecError::Malformed("AVIF width is zero".to_owned()))?
+        .get();
+    let height = std::num::NonZeroU32::new(info.height)
+        .ok_or_else(|| CodecError::Malformed("AVIF height is zero".to_owned()))?
+        .get();
+    let frame_count = std::num::NonZeroU32::new(info.frame_count)
+        .ok_or_else(|| CodecError::Malformed("AVIF frame count is zero".to_owned()))?
+        .get();
     let has_alpha = match info.channels {
         3 => false,
         4 => true,
-        _ => return None,
+        _ => {
+            return Err(CodecError::Malformed(
+                "AVIF decoder returned an invalid channel count".to_owned(),
+            ));
+        }
     };
-    let timescale = NonZeroU64::new(info.timescale)?;
+    let timescale = NonZeroU64::new(info.timescale)
+        .ok_or_else(|| CodecError::Malformed("AVIF timescale is zero".to_owned()))?;
     let channels = if has_alpha { 4 } else { 3 };
     let product = u64::from(width).saturating_mul(u64::from(height));
     #[cfg(target_pointer_width = "64")]
     let pixel_count = usize::from_ne_bytes(product.to_ne_bytes());
     #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = usize::try_from(product).ok()?;
-    let pixel_len = pixel_count.checked_mul(channels)?;
-    Some(DecodeInfo {
+    let pixel_count = usize::try_from(product)
+        .map_err(|_| CodecError::Dimensions("AVIF pixel count is unrepresentable".to_owned()))?;
+    let pixel_len = pixel_count
+        .checked_mul(channels)
+        .ok_or_else(|| CodecError::Dimensions("AVIF pixel byte size overflows".to_owned()))?;
+    Ok(DecodeInfo {
         width,
         height,
         frame_count,
@@ -236,13 +275,13 @@ fn checked_decoder_creation(
     raw: *mut core::ffi::c_void,
     info: FfiDecodeInfo,
     destroy: unsafe extern "C" fn(*mut core::ffi::c_void),
-) -> Option<(DecoderHandle, DecodeInfo)> {
+) -> CodecResult<(DecoderHandle, DecodeInfo)> {
     let raw = DecoderHandle {
         raw: successful_pointer(status, raw)?,
         destroy,
     };
     let info = checked_decode_info(info)?;
-    Some((raw, info))
+    Ok((raw, info))
 }
 
 /// Borrowed native encoder settings. Metadata is copied by libavif at create.
@@ -283,7 +322,7 @@ impl Drop for EncoderHandle {
 }
 
 impl Encoder {
-    pub(crate) fn new(config: &EncodeConfig<'_>) -> Option<Self> {
+    pub(crate) fn new(config: &EncodeConfig<'_>) -> CodecResult<Self> {
         let advanced = config
             .advanced
             .iter()
@@ -321,8 +360,12 @@ impl Encoder {
         // SAFETY: all slices outlive the call and libavif copies their contents;
         // `raw` points to initialized local output storage.
         let status = unsafe { prs_avif_encoder_create(&ffi_config, &mut raw) };
-        Some(Self {
-            raw: EncoderHandle(successful_pointer(status, raw)?),
+        Ok(Self {
+            raw: EncoderHandle(successful_pointer_for(
+                status,
+                raw,
+                NativeOperation::Encode,
+            )?),
         })
     }
 
@@ -334,7 +377,7 @@ impl Encoder {
         channels: u32,
         duration_in_timescales: u64,
         is_single_frame: bool,
-    ) -> Option<()> {
+    ) -> CodecResult<()> {
         // SAFETY: `self.raw` is live and unique; `pixels` is borrowed for the
         // synchronous call and its complete length is supplied to the bridge.
         let status = unsafe {
@@ -349,10 +392,10 @@ impl Encoder {
                 i32::from(is_single_frame),
             )
         };
-        status_ok(status)
+        status_ok(status, NativeOperation::Encode)
     }
 
-    pub(crate) fn finish(self) -> Option<Vec<u8>> {
+    pub(crate) fn finish(self) -> CodecResult<Vec<u8>> {
         let mut data = std::ptr::null_mut();
         let mut size = 0usize;
         // SAFETY: the live encoder is uniquely borrowed for the synchronous
@@ -365,8 +408,23 @@ impl Encoder {
     }
 }
 
-fn status_ok(status: i32) -> Option<()> {
-    (status == STATUS_OK).then_some(())
+fn status_ok(status: i32, operation: NativeOperation) -> CodecResult<()> {
+    if status == STATUS_OK {
+        Ok(())
+    } else {
+        Err(native_status_error(operation, status))
+    }
+}
+
+fn native_status_error(operation: NativeOperation, status: i32) -> CodecError {
+    match operation {
+        NativeOperation::Decode => {
+            CodecError::Malformed(format!("AVIF native decoder failed with status {status}"))
+        }
+        NativeOperation::Encode => {
+            CodecError::Parameter(format!("AVIF native encoder failed with status {status}"))
+        }
+    }
 }
 
 /// Copies and releases a bridge-owned successful output.
@@ -381,27 +439,34 @@ unsafe fn take_bridge_output(
     data: *mut u8,
     size: usize,
     free: unsafe extern "C" fn(*mut u8),
-) -> Option<Vec<u8>> {
+) -> CodecResult<Vec<u8>> {
     if status != STATUS_OK {
-        return None;
+        return Err(native_status_error(NativeOperation::Encode, status));
     }
-    let data = NonNull::new(data)?;
+    let data = NonNull::new(data)
+        .ok_or_else(|| CodecError::Unsupported("AVIF encoder returned no output".to_owned()))?;
     if size == 0 || size > isize::MAX as usize {
         // SAFETY: the caller guarantees that successful non-null outputs are
         // owned by `free`, including malformed defensive-boundary states.
         unsafe { free(data.as_ptr()) };
-        return None;
+        return Err(CodecError::Dimensions(
+            "AVIF encoded output size is invalid".to_owned(),
+        ));
     }
     // SAFETY: validated size and the caller's bridge-output contract make the
     // complete allocation readable until `free` is invoked below.
     let output = unsafe { std::slice::from_raw_parts(data.as_ptr(), size) }.to_vec();
     // SAFETY: copying is complete and the allocation is still uniquely owned.
     unsafe { free(data.as_ptr()) };
-    Some(output)
+    Ok(output)
 }
 
 pub(crate) fn default_max_threads() -> i32 {
-    normalize_max_threads(std::thread::available_parallelism().ok())
+    // Thread availability is an optional scheduling hint, not part of the
+    // encoded-data contract. A platform that cannot report it must retain
+    // libavif correctness by using one worker rather than failing decode.
+    let available = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN);
+    normalize_max_threads(Some(available))
 }
 
 fn normalize_max_threads(available: Option<NonZeroUsize>) -> i32 {
@@ -436,6 +501,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = successful_pointer(1, null);
     let _ = successful_pointer(STATUS_OK, null);
     let _ = successful_pointer(STATUS_OK, raw);
+    let _ = successful_pointer_for(1, null, NativeOperation::Encode);
+    let _ = successful_pointer_for(STATUS_OK, null, NativeOperation::Encode);
     let _ = checked_decode_info(FfiDecodeInfo {
         width: 0,
         ..valid_info
@@ -480,8 +547,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = checked_decoder_creation(STATUS_OK, raw, valid_info, coverage_noop_destroy);
 
-    let _ = status_ok(STATUS_OK);
-    let _ = status_ok(1);
+    let _ = status_ok(STATUS_OK, NativeOperation::Decode);
+    let _ = status_ok(1, NativeOperation::Decode);
+    let _ = status_ok(STATUS_OK, NativeOperation::Encode);
+    let _ = status_ok(1, NativeOperation::Encode);
     let timing = FfiFrameTiming {
         pts_in_timescales: 0,
         duration_in_timescales: 1,

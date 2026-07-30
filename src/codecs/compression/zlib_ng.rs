@@ -6,7 +6,6 @@
 //! `third_party/zlib-ng/LICENSE.md`.
 
 use super::deflate::{DISTANCE_BASE, DISTANCE_EXTRA, LENGTH_BASE, LENGTH_EXTRA};
-
 const LITERAL_CODES: usize = 286;
 const DISTANCE_CODES: usize = 30;
 const BIT_LENGTH_CODES: usize = 19;
@@ -58,33 +57,22 @@ enum Token {
 /// fixed Huffman codes directly, and deliberately does not insert positions
 /// skipped by a match.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let mut input_len = 0usize;
-    for &length in input_chunks {
-        input_len = input_len.checked_add(length)?;
-    }
-    if input_len != data.len() {
-        return None;
-    }
-
+pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let (tokens, final_tokens) = tokenize_level1(data, input_chunks);
     let mut writer = BitWriter::default();
     // deflate_quick opens its first block only after a Z_NO_FLUSH call has
     // enough lookahead to process. On Z_FINISH it closes an opened block as
     // non-final, then emits the remaining short lookahead in a final block.
     if tokens.is_empty() {
-        emit_fixed_block(&final_tokens, true, &mut writer)
-            .expect("level-one tokens should emit as fixed Huffman");
+        emit_fixed_block(&final_tokens, true, &mut writer);
     } else {
-        emit_fixed_block(&tokens, false, &mut writer)
-            .expect("level-one tokens should emit as fixed Huffman");
-        emit_fixed_block(&final_tokens, true, &mut writer)
-            .expect("level-one final tokens should emit as fixed Huffman");
+        emit_fixed_block(&tokens, false, &mut writer);
+        emit_fixed_block(&final_tokens, true, &mut writer);
     }
     let mut output = vec![0x78, 0x01];
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Token>) {
@@ -187,7 +175,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut position = 0usize;
     tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens);
     let _ = compress_level1(data, &[data.len()]);
-    let _ = compress_level1(data, &[data.len() - 1]);
     let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
     let _ = tokenize_level1(&level1_reinsert_data, &[MIN_LOOKAHEAD, 3]);
     let _ = tokenize_level1(
@@ -250,8 +237,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         )
         .is_none()
     );
-    let _ = compress_level1(data, &[data.len(), usize::MAX]);
-
     let mut current = MediumMatch {
         match_start: 0,
         length: 4,
@@ -387,116 +372,33 @@ pub(crate) fn __coverage_exercise_private_branches() {
     fizzle_matches(&[b'a'; 260], &mut current, &mut next);
 
     let mut slow = SlowMatcher::new(b"abcdefghijkl", 16, 8, 128, 128);
-    slow.process(0, true)
-        .expect("slow matcher empty finalization should process");
-    slow.quick_insert(4)
-        .expect("slow matcher pre-insert should succeed");
+    slow.process(0, true);
+    slow.quick_insert(4);
     slow.position = 4;
-    let _ = slow
-        .longest_match(slow.position, 8)
-        .expect("slow matcher current-candidate loop exit should process");
-    slow.process(8, true)
-        .expect("slow matcher self-candidate path should process");
+    let _ = slow.longest_match(slow.position, 8);
+    slow.process(8, true);
     assert!(slow.position > 4);
-    let mut slow_underflow = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
-    slow_underflow.position = usize::MAX;
-    let _ = slow_underflow.process(0, true);
     let mut slow_previous = SlowMatcher::new(b"aaaa", 16, 8, 128, 128);
     slow_previous.previous_length = 3;
-    let _ = slow_previous.process(4, true);
-    let mut slow_short = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
-    slow_short.data.truncate(3);
-    let _ = slow_short.quick_insert(0);
+    slow_previous.process(4, true);
     let mut slow_empty_chain = SlowMatcher::new(b"abcxyz", 16, 8, 128, 0);
     slow_empty_chain.position = 3;
     let _ = slow_empty_chain.longest_match(0, 3);
 
     let mut level6 = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
     level6.position = 4;
-    let self_hash = level6.hash(4).expect("level6 self hash should compute");
+    let self_hash = level6.hash(4);
     level6.head[self_hash] = 4;
-    let found = level6
-        .find_match(4, 4)
-        .expect("level6 self-candidate path should process");
+    let found = level6.find_match(4, 4);
     assert_eq!(found.length, 1);
-    let mut level6_underflow = Level6Matcher::new(b"abcd", 128, 128, 16);
-    level6_underflow.window_base = 2;
-    level6_underflow.position = 1;
-    let _ = level6_underflow.slide_window_if_needed();
-    let mut level6_process_underflow = Level6Matcher::new(b"abcd", 128, 128, 16);
-    level6_process_underflow.position = usize::MAX;
-    let _ = level6_process_underflow.process(0, true);
-    let level6_hash_overflow = Level6Matcher::new(b"abcd", 128, 128, 16);
-    let _ = level6_hash_overflow.hash(usize::MAX);
-    let mut level6_find_overflow = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
-    let _ = level6_find_overflow.find_match(usize::MAX, 4);
-    let mut level6_refill_short = Level6Matcher::new(b"abcd", 128, 128, 16);
-    level6_refill_short.data.truncate(3);
-    level6_refill_short.position = 1;
-    let _ = level6_refill_short.refill_boundary();
-    let mut level6_process_slide = Level6Matcher::new(b"abcd", 128, 128, 16);
-    level6_process_slide.window_base = 2;
-    level6_process_slide.position = 1;
-    let _ = level6_process_slide.process(4, true);
-    let mut level6_process_find = Level6Matcher::new(b"abcd", 128, 128, 16);
-    level6_process_find.data.truncate(3);
-    let _ = level6_process_find.process(4, true);
-    let mut level6_literal_short = Level6Matcher::new(b"ab", 128, 128, 16);
-    level6_literal_short.data.truncate(0);
-    let _ = level6_literal_short.process(1, true);
-    let mut level6_missing_hash = Level6Matcher::new(b"abcd", 128, 128, 16);
-    level6_missing_hash.data.truncate(2);
-    let _ = level6_missing_hash.quick_insert(0);
-    let mut level6_missing_head = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
-    level6_missing_head.head.clear();
-    let _ = level6_missing_head.quick_insert(0);
-    let mut level6_missing_previous = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
-    let level6_hash = level6_missing_previous
-        .hash(0)
-        .expect("coverage level6 hash should compute");
-    level6_missing_previous.head[level6_hash] = 1;
-    level6_missing_previous.previous.clear();
-    let _ = level6_missing_previous.quick_insert(0);
-    let mut level6_insert_quick_fail = Level6Matcher::new(b"abcdefgh", 128, 128, 16);
-    level6_insert_quick_fail.data.truncate(4);
-    let _ = level6_insert_quick_fail.insert_match(
-        MediumMatch {
-            match_start: 0,
-            length: 5,
-            start: 0,
-            original_start: 0,
-        },
-        10,
-    );
-    let mut level6_insert_else_fail = Level6Matcher::new(b"abcdefgh", 128, 128, 0);
-    level6_insert_else_fail.data.truncate(6);
-    let _ = level6_insert_else_fail.insert_match(
-        MediumMatch {
-            match_start: 0,
-            length: 5,
-            start: 0,
-            original_start: 0,
-        },
-        10,
-    );
-    let mut level6_empty_previous_chain = Level6Matcher::new(b"abcdwxyz", 2, 128, 16);
-    level6_empty_previous_chain.position = 4;
-    level6_empty_previous_chain.previous.clear();
-    let _ = level6_empty_previous_chain.longest_match(0, 4, 4);
 
     let mut level9 = Level9Matcher::new(b"abcdefghijkl");
-    level9
-        .process(0, true)
-        .expect("level9 empty finalization should process");
+    level9.process(0, true);
     level9.position = 4;
-    level9
-        .refill_boundary()
-        .expect("level9 boundary hash should refresh");
+    level9.refill_boundary();
     let self_hash = rolling_hash(level9.hash, level9.data[6]);
     level9.head[self_hash] = 4;
-    level9
-        .process(8, true)
-        .expect("level9 self-candidate path should process");
+    level9.process(8, true);
     assert!(level9.position > 4);
 
     let mut level9 = Level9Matcher::new(b"aaaaaaaaaaaa");
@@ -506,110 +408,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     hash = rolling_hash(hash, level9.data[6]);
     hash = rolling_hash(hash, level9.data[7]);
     level9.head[hash] = 0;
-    let _ = level9
-        .longest_match(1, 8)
-        .expect("level9 offset-before-candidate exit should process");
-    let _ = level9
-        .longest_match(level9.position, 8)
-        .expect("level9 current-candidate exit should process");
+    let _ = level9.longest_match(1, 8);
+    let _ = level9.longest_match(level9.position, 8);
     let mut level9 = Level9Matcher::new(b"abcdefghijkl");
     level9.position = 4;
-    let _ = level9
-        .longest_match(level9.position, 8)
-        .expect("level9 upper-bound loop exit should process");
-    let mut level9_underflow = Level9Matcher::new(b"abcd");
-    level9_underflow.position = usize::MAX;
-    let _ = level9_underflow.process(0, true);
+    let _ = level9.longest_match(level9.position, 8);
     let mut level9_previous = Level9Matcher::new(b"aaaa");
     level9_previous.previous_length = 3;
-    let _ = level9_previous.process(4, true);
-    let mut level9_short_insert = Level9Matcher::new(b"abcd");
-    level9_short_insert.data.truncate(2);
-    level9_short_insert.position = 1;
-    let _ = level9_short_insert.quick_insert(1);
-    let mut level9_process_short = Level9Matcher::new(b"abcd");
-    level9_process_short.data.truncate(2);
-    let _ = level9_process_short.process(4, true);
-    let mut level9_bad_distance = Level9Matcher::new(b"abcdefgh");
-    level9_bad_distance.position = 4;
-    level9_bad_distance.previous_length = 3;
-    level9_bad_distance.match_start = usize::MAX;
-    let _ = level9_bad_distance.process(5, true);
-    let mut level9_insert_failure = Level9Matcher::new(b"abcdefgh");
-    level9_insert_failure.position = 4;
-    level9_insert_failure.previous_length = 5;
-    level9_insert_failure.data.truncate(7);
-    let _ = level9_insert_failure.process(10, true);
-    let mut level9_hash_overflow = Level9Matcher::new(b"abcd");
-    let _ = level9_hash_overflow.quick_insert(usize::MAX);
-    let mut level9_missing_head = Level9Matcher::new(b"abcdefgh");
-    level9_missing_head.head.clear();
-    let _ = level9_missing_head.quick_insert(0);
-    let mut level9_missing_previous = Level9Matcher::new(b"abcdefgh");
-    let level9_hash = rolling_hash(
-        level9_missing_previous.hash,
-        level9_missing_previous.data[2],
-    );
-    level9_missing_previous.head[level9_hash] = 1;
-    level9_missing_previous.previous.clear();
-    let _ = level9_missing_previous.quick_insert(0);
+    level9_previous.process(4, true);
+
     let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 4, 6, false);
     level3.position = 4;
-    let _ = level3
-        .longest_match(0, 8)
-        .expect("level3 nice-match break should process");
+    let _ = level3.longest_match(0, 8);
     let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 128, 6, false);
     level3.position = 4;
-    let _ = level3
-        .longest_match(0, 4)
-        .expect("level3 lookahead break should process");
-    let mut level3_underflow = Level3Matcher::new(b"abcd", 6, 4, 6, false);
-    level3_underflow.position = usize::MAX;
-    let _ = level3_underflow.process(0, true);
-    let level3_hash_overflow = Level3Matcher::new(b"abcd", 6, 4, 6, false);
-    let _ = level3_hash_overflow.hash(usize::MAX);
-    let mut level3_fast_insert = Level3Matcher::new(b"abcdefgh", 6, 4, 6, true);
-    let _ = level3_fast_insert.insert_match(5, 4);
-    let mut level3_slow_insert = Level3Matcher::new(b"abcdefgh", 6, 4, 6, false);
-    let _ = level3_slow_insert.insert_match(usize::MAX, usize::MAX);
-    level3_slow_insert.position = usize::MAX;
-    let _ = level3_slow_insert.insert_match(4, 16);
+    let _ = level3.longest_match(0, 4);
     let mut level3_empty_chain = Level3Matcher::new(b"abcxyz", 0, 128, 6, false);
     level3_empty_chain.position = 3;
     let _ = level3_empty_chain.longest_match(0, 3);
-    let mut level3_process_short = Level3Matcher::new(b"abc", 6, 128, 6, false);
-    let _ = level3_process_short.process(4, true);
-    let mut level3_distance_underflow = Level3Matcher::new(b"abcd", 6, 128, 6, false);
-    let level3_hash = level3_distance_underflow
-        .hash(0)
-        .expect("coverage level3 hash should compute");
-    level3_distance_underflow.head[level3_hash] = usize::MAX;
-    let _ = level3_distance_underflow.process(4, true);
-    let mut level3_literal_short = Level3Matcher::new(b"", 6, 128, 6, false);
-    let _ = level3_literal_short.process(1, true);
-    let mut level3_missing_hash = Level3Matcher::new(b"abc", 6, 128, 6, false);
-    let _ = level3_missing_hash.quick_insert(0);
-    let mut level3_missing_head = Level3Matcher::new(b"abcdefgh", 6, 128, 6, false);
-    level3_missing_head.head.clear();
-    let _ = level3_missing_head.quick_insert(0);
-    let mut level3_missing_previous = Level3Matcher::new(b"abcdefgh", 6, 128, 6, false);
-    let level3_hash = level3_missing_previous
-        .hash(0)
-        .expect("coverage level3 hash should compute");
-    level3_missing_previous.head[level3_hash] = 1;
-    level3_missing_previous.previous.clear();
-    let _ = level3_missing_previous.quick_insert(0);
-    let mut level3_fast_underflow = Level3Matcher::new(b"abcdefgh", 6, 128, 6, true);
-    let _ = level3_fast_underflow.insert_match(usize::MAX, 0);
-    let mut level3_insert_loop_fail = Level3Matcher::new(b"abcd", 6, 128, 6, false);
-    level3_insert_loop_fail.position = 1;
-    let _ = level3_insert_loop_fail.insert_match(4, 10);
-    let mut level3_insert_end_fail = Level3Matcher::new(b"abcd", 6, 128, 0, false);
-    let _ = level3_insert_end_fail.insert_match(5, 10);
-    let mut level3_empty_previous_chain = Level3Matcher::new(b"abcxyz", 2, 128, 6, false);
-    level3_empty_previous_chain.position = 3;
-    level3_empty_previous_chain.previous.clear();
-    let _ = level3_empty_previous_chain.longest_match(0, 3);
     let mut level3_equal_match = Level3Matcher::new(b"ababxx", 6, 128, 6, false);
     level3_equal_match.position = 2;
     let _ = level3_equal_match.longest_match(0, 2);
@@ -618,281 +434,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = level3_candidate.candidate_can_improve(0, 4);
     let _ = level3_candidate.candidate_can_improve(0, 8);
 
-    let _ = compress_level2(data, &[data.len(), usize::MAX]);
-    let _ = compress_level3(data, &[data.len(), usize::MAX]);
-    let _ = compress_level4(data, &[data.len(), usize::MAX]);
-    let _ = compress_level5(data, &[data.len(), usize::MAX]);
-    let _ = compress_level6(data, &[data.len(), usize::MAX]);
-    let _ = compress_level7(data, &[data.len(), usize::MAX]);
-    let _ = compress_level8(data, &[data.len(), usize::MAX]);
-    let _ = compress_level9(data, &[data.len(), usize::MAX]);
-
     let _ = medium_candidate_can_improve(b"abcdabcd", 0, 4, 2);
     let _ = medium_candidate_can_improve(b"abcdwxyzz", 0, 4, 4);
-
-    let mut short_level6 = Level6Matcher::new(b"abcd", 1, 4, 4);
-    short_level6.data.truncate(3);
-    let _ = short_level6.quick_insert(0);
-
-    let mut short_level9 = Level9Matcher::new(b"abcd");
-    short_level9.data.truncate(3);
-    short_level9.position = 1;
-    let _ = short_level9.refill_boundary();
 
     let mut short_level3 = Level3Matcher::new(b"abcd", 1, 4, 4, false);
     let _ = short_level3.quick_insert(0);
     short_level3.position = 1;
     let _ = short_level3.candidate_can_improve(0, 2);
-
-    let mut slow_process_short = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
-    slow_process_short.data.truncate(3);
-    let _ = slow_process_short.process(4, true);
-    let mut slow_bad_distance = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
-    slow_bad_distance.position = 4;
-    slow_bad_distance.previous_length = 3;
-    slow_bad_distance.match_start = usize::MAX;
-    let _ = slow_bad_distance.process(5, true);
-    let mut slow_insert_failure = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
-    slow_insert_failure.position = 4;
-    slow_insert_failure.previous_length = 5;
-    slow_insert_failure.data.truncate(8);
-    let _ = slow_insert_failure.process(10, true);
-    let mut slow_hash_overflow = SlowMatcher::new(b"abcd", 16, 8, 128, 128);
-    let _ = slow_hash_overflow.quick_insert(usize::MAX);
-    let mut slow_missing_head = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
-    slow_missing_head.head.clear();
-    let _ = slow_missing_head.quick_insert(0);
-    let quick_hash =
-        usize::try_from(u32::from_le_bytes(*b"abcd").wrapping_mul(2_654_435_761) >> 16)
-            .expect("coverage quick hash should fit usize");
-    let mut slow_missing_previous = SlowMatcher::new(b"abcdefgh", 16, 8, 128, 128);
-    slow_missing_previous.head[quick_hash] = 1;
-    slow_missing_previous.previous.clear();
-    let _ = slow_missing_previous.quick_insert(0);
-
-    let mut slow_empty_previous_chain = SlowMatcher::new(b"abcdwxyz", 16, 8, 128, 128);
-    slow_empty_previous_chain.position = 4;
-    slow_empty_previous_chain.previous.clear();
-    let _ = slow_empty_previous_chain.longest_match(0, 4);
-
-    let synthetic_tree = |lengths: &[u16]| {
-        let mut nodes = vec![Node::default(); lengths.len()];
-        for (node, &length) in nodes.iter_mut().zip(lengths) {
-            node.length = length;
-        }
-        HuffmanTree {
-            nodes,
-            max_code: lengths.len().saturating_sub(1),
-            bit_cost: 0,
-            static_cost: 0,
-        }
-    };
-
-    let literal_lengths = [1u16; LITERAL_CODES];
-    let distance_lengths = [1u16; DISTANCE_CODES];
-    let bit_length_lengths = [1u16; BIT_LENGTH_CODES];
-    let literal_tree = synthetic_tree(&literal_lengths);
-    let distance_tree = synthetic_tree(&distance_lengths);
-    let bit_length_tree = synthetic_tree(&bit_length_lengths);
-
-    let _ = expand_tokens(&[Token::Match {
-        length: 1,
-        distance: 1,
-    }]);
-    let _ = expand_tokens(&[Token::Match {
-        length: 1,
-        distance: 0,
-    }]);
-    let mut writer = BitWriter::default();
-    let _ = frequencies(&[Token::Match {
-        length: 0,
-        distance: 1,
-    }]);
-    let _ = frequencies(&[Token::Match {
-        length: MIN_MATCH,
-        distance: 0,
-    }]);
-    let _ = write_block(
-        &[Token::Match {
-            length: 0,
-            distance: 1,
-        }],
-        &[],
-        true,
-        &mut writer,
-    );
-    let _ = write_block(&[], &[], true, &mut writer);
-
-    let _ = build_tree(
-        &[0],
-        TreeSpec {
-            elements: 1,
-            max_length: MAX_BITS,
-            extra_bits: &[],
-            extra_base: 0,
-            static_lengths: None,
-        },
-    );
-    let _ = build_tree(
-        &[u32::MAX, u32::MAX],
-        TreeSpec {
-            elements: 2,
-            max_length: MAX_BITS,
-            extra_bits: &[],
-            extra_base: 0,
-            static_lengths: None,
-        },
-    );
-    let short_static_lengths = [1u8];
-    let _ = build_tree(
-        &[0, 0, 1],
-        TreeSpec {
-            elements: 3,
-            max_length: MAX_BITS,
-            extra_bits: &[],
-            extra_base: 0,
-            static_lengths: Some(&short_static_lengths),
-        },
-    );
-    let _ = build_tree(
-        &[1, 1, 1, 1, 1],
-        TreeSpec {
-            elements: 5,
-            max_length: 1,
-            extra_bits: &[],
-            extra_base: 0,
-            static_lengths: None,
-        },
-    );
-
-    let mut bit_frequencies = [0u32; BIT_LENGTH_CODES];
-    let empty_tree = synthetic_tree(&[]);
-    let _ = scan_tree(&empty_tree.nodes, empty_tree.max_code, &mut bit_frequencies);
-    let individual_tree = synthetic_tree(&[1, 2, 3]);
-    let _ = scan_tree(
-        &individual_tree.nodes,
-        individual_tree.max_code,
-        &mut bit_frequencies,
-    );
-    let nonzero_run_tree = synthetic_tree(&[5, 5, 5, 5, 5]);
-    let _ = scan_tree(
-        &nonzero_run_tree.nodes,
-        nonzero_run_tree.max_code,
-        &mut bit_frequencies,
-    );
-    let short_zero_run_tree = synthetic_tree(&[0, 0, 0, 0, 0]);
-    let _ = scan_tree(
-        &short_zero_run_tree.nodes,
-        short_zero_run_tree.max_code,
-        &mut bit_frequencies,
-    );
-    let long_zero_run_tree = synthetic_tree(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    let _ = scan_tree(
-        &long_zero_run_tree.nodes,
-        long_zero_run_tree.max_code,
-        &mut bit_frequencies,
-    );
-
-    let _ = send_tree(
-        &empty_tree,
-        empty_tree.max_code,
-        &bit_length_tree,
-        &mut writer,
-    );
-    let _ = send_tree(
-        &individual_tree,
-        individual_tree.max_code,
-        &bit_length_tree,
-        &mut writer,
-    );
-    let _ = send_tree(
-        &nonzero_run_tree,
-        nonzero_run_tree.max_code,
-        &bit_length_tree,
-        &mut writer,
-    );
-    let _ = send_tree(
-        &short_zero_run_tree,
-        short_zero_run_tree.max_code,
-        &bit_length_tree,
-        &mut writer,
-    );
-    let _ = send_tree(
-        &long_zero_run_tree,
-        long_zero_run_tree.max_code,
-        &bit_length_tree,
-        &mut writer,
-    );
-
-    let _ = emit_tokens(
-        &[Token::Match {
-            length: 0,
-            distance: 1,
-        }],
-        &literal_tree,
-        &distance_tree,
-        &mut writer,
-    );
-    let _ = emit_tokens(
-        &[Token::Match {
-            length: usize::MAX,
-            distance: 1,
-        }],
-        &literal_tree,
-        &distance_tree,
-        &mut writer,
-    );
-    let _ = emit_tokens(
-        &[Token::Match {
-            length: MIN_MATCH,
-            distance: 0,
-        }],
-        &literal_tree,
-        &distance_tree,
-        &mut writer,
-    );
-    let _ = emit_tokens(
-        &[Token::Match {
-            length: MIN_MATCH,
-            distance: usize::MAX,
-        }],
-        &literal_tree,
-        &distance_tree,
-        &mut writer,
-    );
-
-    let _ = emit_fixed_block(
-        &[Token::Match {
-            length: 0,
-            distance: 1,
-        }],
-        true,
-        &mut writer,
-    );
-    let _ = emit_fixed_block(
-        &[Token::Match {
-            length: usize::MAX,
-            distance: 1,
-        }],
-        true,
-        &mut writer,
-    );
-    let _ = emit_fixed_block(
-        &[Token::Match {
-            length: MIN_MATCH,
-            distance: 0,
-        }],
-        true,
-        &mut writer,
-    );
-    let _ = emit_fixed_block(
-        &[Token::Match {
-            length: MIN_MATCH,
-            distance: usize::MAX,
-        }],
-        true,
-        &mut writer,
-    );
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usize {
@@ -912,76 +460,71 @@ fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usiz
 /// `memLevel=9`. zlib-ng maps level three to `deflate_medium` with the
 /// `{ good: 4, lazy: 6, nice: 16, chain: 6 }` configuration.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false)?;
+pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false);
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("level-three tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-two fast strategy.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true)?;
+pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true);
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("level-two tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-four medium strategy.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false)?;
+pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false);
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("level-four tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-six configuration.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)?;
+pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16);
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("level-six tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-five medium strategy.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16)?;
+pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16);
     let mut output = vec![0x78, 0x5e];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("level-five tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-seven slow strategy.
-pub(super) fn compress_level7(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+pub(super) fn compress_level7(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     compress_slow_level(data, input_chunks, 32, 8, 128, 256, 0xda)
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-eight slow strategy.
-pub(super) fn compress_level8(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
+pub(super) fn compress_level8(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     compress_slow_level(data, input_chunks, 128, 32, 258, 1024, 0xda)
 }
 
@@ -994,21 +537,20 @@ fn compress_slow_level(
     nice_match: usize,
     max_chain: usize,
     header: u8,
-) -> Option<Vec<u8>> {
+) -> Vec<u8> {
     let settings = SlowSettings {
         max_lazy,
         good_match,
         nice_match,
         max_chain,
     };
-    let tokens = slow(data, input_chunks, settings)?;
+    let tokens = slow(data, input_chunks, settings);
     let mut output = vec![0x78, header];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("slow tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 struct SlowSettings {
@@ -1019,7 +561,7 @@ struct SlowSettings {
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Option<Vec<Token>> {
+fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Vec<Token> {
     let mut matcher = SlowMatcher::new(
         data,
         settings.max_lazy,
@@ -1029,17 +571,13 @@ fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Option<V
     );
     let mut available = 0usize;
     for &chunk_length in input_chunks {
-        available = available.checked_add(chunk_length)?;
+        available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
-        matcher
-            .process(available, false)
-            .expect("slow matcher should process validated input window");
+        matcher.process(available, false);
     }
     debug_assert_eq!(available, data.len());
-    matcher
-        .process(available, true)
-        .expect("slow matcher should finish validated input window");
-    Some(matcher.tokens)
+    matcher.process(available, true);
+    matcher.tokens
 }
 
 struct SlowMatcher {
@@ -1085,15 +623,16 @@ impl SlowMatcher {
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+    fn process(&mut self, available: usize, finishing: bool) {
         loop {
-            let lookahead = available.checked_sub(self.position)?;
+            debug_assert!(self.position <= available);
+            let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
                 break;
             }
 
             let candidate = if lookahead >= MIN_MATCH {
-                self.quick_insert(self.position)?
+                self.quick_insert(self.position)
             } else {
                 0
             };
@@ -1104,9 +643,7 @@ impl SlowMatcher {
                 && self.position.wrapping_sub(candidate) <= MAX_DISTANCE
                 && self.previous_length < self.max_lazy
             {
-                let found = self
-                    .longest_match(candidate, lookahead)
-                    .expect("slow matcher should find within a validated hash chain");
+                let found = self.longest_match(candidate, lookahead);
                 match_length = found.0;
                 if match_length > self.previous_length {
                     self.match_start = found.1;
@@ -1119,7 +656,7 @@ impl SlowMatcher {
             if self.previous_length >= 3 && match_length <= self.previous_length {
                 self.tokens.push(Token::Match {
                     length: self.previous_length,
-                    distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
+                    distance: self.position.wrapping_sub(1).wrapping_sub(previous_match),
                 });
                 let maximum_insert = available.wrapping_sub(3);
                 let move_forward = self.previous_length.wrapping_sub(2);
@@ -1127,7 +664,7 @@ impl SlowMatcher {
                 for insert_position in
                     self.position.wrapping_add(1)..=self.position.wrapping_add(insert_count)
                 {
-                    self.quick_insert(insert_position)?;
+                    self.quick_insert(insert_position);
                 }
                 self.position = self
                     .position
@@ -1154,22 +691,21 @@ impl SlowMatcher {
                 .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
             self.match_available = false;
         }
-        Some(())
     }
 
-    fn quick_insert(&mut self, position: usize) -> Option<usize> {
-        let bytes = self.data.get(position..position.checked_add(4)?)?;
+    fn quick_insert(&mut self, position: usize) -> usize {
+        let bytes = &self.data[position..position.wrapping_add(4)];
         let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         let hash = (word.wrapping_mul(2_654_435_761) >> 16) as usize;
-        let candidate = *self.head.get(hash)?;
+        let candidate = self.head[hash];
         if candidate != position {
-            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            self.previous[position & WINDOW_MASK] = candidate;
             self.head[hash] = position;
         }
-        Some(candidate)
+        candidate
     }
 
-    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> Option<(usize, usize)> {
+    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> (usize, usize) {
         let mut best_length = self.previous_length.max(2);
         let mut best_start = self.match_start;
         let mut chain_length = self.max_chain;
@@ -1193,31 +729,29 @@ impl SlowMatcher {
                     }
                 }
             }
-            chain_length = chain_length.checked_sub(1)?;
+            chain_length = chain_length.wrapping_sub(1);
             if chain_length == 0 {
                 break;
             }
-            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            candidate = self.previous[candidate & WINDOW_MASK];
             if candidate <= limit {
                 break;
             }
         }
-        Some((best_length.min(lookahead), best_start))
+        (best_length.min(lookahead), best_start)
     }
 }
 
 #[cfg(feature = "tiff")]
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
-        .expect("TIFF level-six tokenizer should receive validated chunks");
+pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16);
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 16_383, &mut writer)
-        .expect("TIFF level-six tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 16_383, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
@@ -1227,7 +761,7 @@ fn tokenize_lookahead_medium(
     max_chain: usize,
     nice_match: usize,
     max_insert: usize,
-) -> Option<Vec<Token>> {
+) -> Vec<Token> {
     // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:102-128 and
     // deflate_medium.c:160-293. The oracle and Rust models produce the same
     // 2,272 tokens for the level-six PNG parity input.
@@ -1235,21 +769,15 @@ fn tokenize_lookahead_medium(
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         if available != 0 {
-            matcher
-                .refill_boundary()
-                .expect("level-six matcher should refill a validated input boundary");
+            matcher.refill_boundary();
         }
-        available = available.checked_add(chunk_length)?;
+        available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
-        matcher
-            .process(available, false)
-            .expect("level-six matcher should process validated input window");
+        matcher.process(available, false);
     }
     debug_assert_eq!(available, data.len());
-    matcher
-        .process(available, true)
-        .expect("level-six matcher should finish validated input window");
-    Some(matcher.tokens)
+    matcher.process(available, true);
+    matcher.tokens
 }
 
 #[derive(Clone, Copy, Default)]
@@ -1294,19 +822,18 @@ impl Level6Matcher {
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-    fn refill_boundary(&mut self) -> Option<()> {
+    fn refill_boundary(&mut self) {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:1213-1237. fill_window()
         // re-inserts strstart-1 when new input makes a three-byte hash valid.
-        self.slide_window_if_needed()
-            .expect("level-six matcher should slide a validated input boundary");
+        self.slide_window_if_needed();
         if self.position >= 1 {
-            self.quick_insert(self.position.wrapping_sub(1))?;
+            self.quick_insert(self.position.wrapping_sub(1));
         }
-        Some(())
     }
 
-    fn slide_window_if_needed(&mut self) -> Option<()> {
-        if self.position.checked_sub(self.window_base)? >= 32_768_usize.wrapping_add(MAX_DISTANCE) {
+    fn slide_window_if_needed(&mut self) {
+        debug_assert!(self.position >= self.window_base);
+        if self.position.wrapping_sub(self.window_base) >= 32_768_usize.wrapping_add(MAX_DISTANCE) {
             self.window_base = self.window_base.wrapping_add(32_768);
             for position in self.head.iter_mut().chain(&mut self.previous) {
                 if *position < self.window_base {
@@ -1314,21 +841,21 @@ impl Level6Matcher {
                 }
             }
         }
-        Some(())
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+    fn process(&mut self, available: usize, finishing: bool) {
         let mut following = None::<MediumMatch>;
         loop {
-            self.slide_window_if_needed()?;
-            let lookahead = available.checked_sub(self.position)?;
+            self.slide_window_if_needed();
+            debug_assert!(self.position <= available);
+            let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 {
-                return Some(());
+                return;
             }
             if lookahead < MIN_LOOKAHEAD {
                 if !finishing {
-                    return Some(());
+                    return;
                 }
                 // deflate_medium clears its speculative next match after
                 // fill_window observes the final short lookahead. That match
@@ -1337,11 +864,11 @@ impl Level6Matcher {
                 following = None;
             }
 
-            let mut current = following
-                .take()
-                .map_or_else(|| self.find_match(self.position, lookahead), Some)?;
-            self.insert_match(current, lookahead)
-                .expect("level-six matcher should insert a validated match");
+            let mut current = match following.take() {
+                Some(found) => found,
+                None => self.find_match(self.position, lookahead),
+            };
+            self.insert_match(current, lookahead);
 
             if lookahead > MIN_LOOKAHEAD
                 && current.start.wrapping_add(current.length)
@@ -1351,9 +878,7 @@ impl Level6Matcher {
                         .wrapping_sub(MIN_LOOKAHEAD)
             {
                 let future = current.start.wrapping_add(current.length);
-                let mut next = self
-                    .find_match(future, lookahead)
-                    .expect("level-six matcher should find a validated future match");
+                let mut next = self.find_match(future, lookahead);
                 if next.length >= MIN_MATCH {
                     fizzle_matches(&self.data, &mut current, &mut next);
                 }
@@ -1363,7 +888,7 @@ impl Level6Matcher {
             if current.length < MIN_MATCH {
                 for offset in 0..current.length {
                     self.tokens.push(Token::Literal(
-                        *self.data.get(current.start.wrapping_add(offset))?,
+                        self.data[current.start.wrapping_add(offset)],
                     ));
                 }
             } else {
@@ -1377,9 +902,9 @@ impl Level6Matcher {
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-    fn find_match(&mut self, position: usize, lookahead: usize) -> Option<MediumMatch> {
+    fn find_match(&mut self, position: usize, lookahead: usize) -> MediumMatch {
         let candidate = if lookahead >= MIN_MATCH {
-            self.quick_insert(position)?
+            self.quick_insert(position)
         } else {
             0
         };
@@ -1393,9 +918,7 @@ impl Level6Matcher {
             && candidate < position
             && position.wrapping_sub(candidate) <= MAX_DISTANCE
         {
-            let (length, match_start) = self
-                .longest_match(candidate, position, lookahead)
-                .expect("level-six matcher should find within a validated hash chain");
+            let (length, match_start) = self.longest_match(candidate, position, lookahead);
             if length >= MIN_MATCH {
                 // `longest_match` can only return a match start from a prior
                 // candidate accepted by the guard above.
@@ -1403,31 +926,31 @@ impl Level6Matcher {
                 found.length = length;
             }
         }
-        Some(found)
+        found
     }
 
-    fn hash(&self, position: usize) -> Option<usize> {
-        let bytes = self.data.get(position..position.checked_add(4)?)?;
+    fn hash(&self, position: usize) -> usize {
+        let bytes = &self.data[position..position.wrapping_add(4)];
         let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        Some((word.wrapping_mul(2_654_435_761) >> 16) as usize)
+        (word.wrapping_mul(2_654_435_761) >> 16) as usize
     }
 
-    fn quick_insert(&mut self, position: usize) -> Option<usize> {
-        let hash = self.hash(position)?;
-        let candidate = *self.head.get(hash)?;
+    fn quick_insert(&mut self, position: usize) -> usize {
+        let hash = self.hash(position);
+        let candidate = self.head[hash];
         if candidate != position {
-            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            self.previous[position & WINDOW_MASK] = candidate;
             self.head[hash] = position;
         }
-        Some(candidate)
+        candidate
     }
 
-    fn insert_match(&mut self, found: MediumMatch, lookahead: usize) -> Option<()> {
+    fn insert_match(&mut self, found: MediumMatch, lookahead: usize) {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94. In particular,
         // original_start prevents a left-fizzled match from reinserting old
         // positions and creating a cyclic hash chain.
         if lookahead <= found.length.wrapping_add(MIN_MATCH) || found.length < MIN_MATCH {
-            return Some(());
+            return;
         }
         if found.length <= 16_usize.wrapping_mul(self.max_insert) {
             let start = found.start.wrapping_add(1);
@@ -1435,12 +958,11 @@ impl Level6Matcher {
             let insertion_start = start.max(found.original_start);
             let insertion_end = start.wrapping_add(count);
             for position in insertion_start..insertion_end {
-                self.quick_insert(position)?;
+                self.quick_insert(position);
             }
         } else {
-            self.quick_insert(found.start.wrapping_add(found.length).wrapping_sub(1))?;
+            self.quick_insert(found.start.wrapping_add(found.length).wrapping_sub(1));
         }
-        Some(())
     }
 
     fn longest_match(
@@ -1448,7 +970,7 @@ impl Level6Matcher {
         mut candidate: usize,
         position: usize,
         lookahead: usize,
-    ) -> Option<(usize, usize)> {
+    ) -> (usize, usize) {
         // ✅ VERIFIED: zlib-ng 2.3.3 match_tpl.h:38-247 with level-six
         // {good: 8, lazy: 16, nice: 128, chain: 128} configuration.
         let mut best_length = 2usize;
@@ -1474,50 +996,43 @@ impl Level6Matcher {
             if chain_length == 0 {
                 break;
             }
-            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            candidate = self.previous[candidate & WINDOW_MASK];
             if candidate <= limit {
                 break;
             }
         }
-        Some((best_length, best_start))
+        (best_length, best_start)
     }
 }
 
 /// Compress using Pillow's zlib-ng 2.3.3 level-nine `Z_FILTERED`
 /// configuration.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<u8>> {
-    let tokens = tokenize_level9(data, input_chunks)?;
+pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+    let tokens = tokenize_level9(data, input_chunks);
     let mut output = vec![0x78, 0xda];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 32_767, &mut writer)
-        .expect("level-nine tokenizer should emit valid DEFLATE tokens");
+    emit_blocks(&tokens, 32_767, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Some(output)
+    output
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Option<Vec<Token>> {
+fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Vec<Token> {
     let mut matcher = Level9Matcher::new(data);
     let mut available = 0usize;
     for &chunk_length in input_chunks {
         if available != 0 {
-            matcher
-                .refill_boundary()
-                .expect("level-nine matcher should refill a validated input boundary");
+            matcher.refill_boundary();
         }
-        available = available.checked_add(chunk_length)?;
+        available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
-        matcher
-            .process(available, false)
-            .expect("level-nine matcher should process validated input window");
+        matcher.process(available, false);
     }
     debug_assert_eq!(available, data.len());
-    matcher
-        .process(available, true)
-        .expect("level-nine matcher should finish validated input window");
-    Some(matcher.tokens)
+    matcher.process(available, true);
+    matcher.tokens
 }
 
 struct Level9Matcher {
@@ -1551,24 +1066,24 @@ impl Level9Matcher {
         }
     }
 
-    fn refill_boundary(&mut self) -> Option<()> {
+    fn refill_boundary(&mut self) {
         self.hash = rolling_hash(
             usize::from(self.data[self.position]),
             self.data[self.position.wrapping_add(1)],
         );
-        Some(())
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+    fn process(&mut self, available: usize, finishing: bool) {
         loop {
-            let lookahead = available.checked_sub(self.position)?;
+            debug_assert!(self.position <= available);
+            let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
                 break;
             }
 
             let candidate = if lookahead >= MIN_MATCH {
-                self.quick_insert(self.position)?
+                self.quick_insert(self.position)
             } else {
                 0
             };
@@ -1579,9 +1094,7 @@ impl Level9Matcher {
                 && self.position.wrapping_sub(candidate) <= MAX_DISTANCE
                 && self.previous_length < MAX_MATCH
             {
-                let found = self
-                    .longest_match(candidate, lookahead)
-                    .expect("level-nine matcher should find within a validated hash chain");
+                let found = self.longest_match(candidate, lookahead);
                 match_length = found.0;
                 if match_length > self.previous_length {
                     self.match_start = found.1;
@@ -1594,7 +1107,7 @@ impl Level9Matcher {
             if self.previous_length >= 3 && match_length <= self.previous_length {
                 self.tokens.push(Token::Match {
                     length: self.previous_length,
-                    distance: self.position.checked_sub(1)?.checked_sub(previous_match)?,
+                    distance: self.position.wrapping_sub(1).wrapping_sub(previous_match),
                 });
                 let maximum_insert = available.wrapping_sub(3);
                 let move_forward = self.previous_length.wrapping_sub(2);
@@ -1602,7 +1115,7 @@ impl Level9Matcher {
                 for insert_position in
                     self.position.wrapping_add(1)..=self.position.wrapping_add(insert_count)
                 {
-                    self.quick_insert(insert_position)?;
+                    self.quick_insert(insert_position);
                 }
                 self.position = self
                     .position
@@ -1629,20 +1142,20 @@ impl Level9Matcher {
                 .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
             self.match_available = false;
         }
-        Some(())
     }
 
-    fn quick_insert(&mut self, position: usize) -> Option<usize> {
-        self.hash = rolling_hash(self.hash, *self.data.get(position.checked_add(2)?)?);
-        let candidate = *self.head.get(self.hash)?;
+    fn quick_insert(&mut self, position: usize) -> usize {
+        let hash_position = position.wrapping_add(2);
+        self.hash = rolling_hash(self.hash, self.data[hash_position]);
+        let candidate = self.head[self.hash];
         if candidate != position {
-            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            self.previous[position & WINDOW_MASK] = candidate;
             self.head[self.hash] = position;
         }
-        Some(candidate)
+        candidate
     }
 
-    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> Option<(usize, usize)> {
+    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> (usize, usize) {
         let mut best_length = self.previous_length.max(2);
         let mut best_start = self.match_start;
         let mut chain_length = if best_length >= 32 {
@@ -1666,7 +1179,7 @@ impl Level9Matcher {
         }
         let mut limit = base_limit.wrapping_add(match_offset);
         if candidate <= limit {
-            return Some((best_length.min(lookahead), best_start));
+            return (best_length.min(lookahead), best_start);
         }
         // The preceding `candidate <= limit` return also proves
         // `candidate > match_offset`, because `limit >= match_offset`.
@@ -1690,7 +1203,7 @@ impl Level9Matcher {
                                 self.previous[candidate.wrapping_add(index) & WINDOW_MASK];
                             if position < next_position {
                                 if position <= base_limit.wrapping_add(index) {
-                                    return Some((best_length.min(lookahead), best_start));
+                                    return (best_length.min(lookahead), best_start);
                                 }
                                 next_position = position;
                                 match_offset = index;
@@ -1725,7 +1238,7 @@ impl Level9Matcher {
                 break;
             }
         }
-        Some((best_length.min(lookahead), best_start))
+        (best_length.min(lookahead), best_start)
     }
 }
 
@@ -1808,24 +1321,20 @@ fn tokenize_early_matcher(
     nice_match: usize,
     max_insert: usize,
     fast: bool,
-) -> Option<Vec<Token>> {
+) -> Vec<Token> {
     // ⚠️ UNVERIFIED: Rust port of zlib-ng 2.3.3 deflate_medium.c:160-293.
     // The independent oracle model matches all 3,000 level-three tokens; the
     // Rust path still requires the managed byte-parity run.
     let mut matcher = Level3Matcher::new(data, max_chain, nice_match, max_insert, fast);
     let mut available = 0usize;
     for &chunk_length in input_chunks {
-        available = available.checked_add(chunk_length)?;
+        available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
-        matcher
-            .process(available, false)
-            .expect("level-three matcher should process validated input window");
+        matcher.process(available, false);
     }
     debug_assert_eq!(available, data.len());
-    matcher
-        .process(available, true)
-        .expect("level-three matcher should finish validated input window");
-    Some(matcher.tokens)
+    matcher.process(available, true);
+    matcher.tokens
 }
 
 struct Level3Matcher<'a> {
@@ -1862,22 +1371,22 @@ impl<'a> Level3Matcher<'a> {
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-    fn process(&mut self, available: usize, finishing: bool) -> Option<()> {
+    fn process(&mut self, available: usize, finishing: bool) {
         loop {
-            let lookahead = available.checked_sub(self.position)?;
+            debug_assert!(self.position <= available);
+            let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
-                return Some(());
+                return;
             }
 
             let mut length = 1usize;
             let mut match_start = 0usize;
             if lookahead >= MIN_MATCH {
-                let candidate = self.quick_insert(self.position)?;
-                let distance = self.position.checked_sub(candidate)?;
+                let candidate = self.quick_insert(self.position);
+                debug_assert!(candidate <= self.position);
+                let distance = self.position.wrapping_sub(candidate);
                 if candidate != 0 && distance <= MAX_DISTANCE {
-                    (length, match_start) = self
-                        .longest_match(candidate, lookahead)
-                        .expect("level-three matcher should find within a validated hash chain");
+                    (length, match_start) = self.longest_match(candidate, lookahead);
                     if length < MIN_MATCH {
                         length = 1;
                     }
@@ -1889,59 +1398,58 @@ impl<'a> Level3Matcher<'a> {
                     length,
                     distance: self.position.wrapping_sub(match_start),
                 });
-                self.insert_match(length, lookahead)
-                    .expect("level-three matcher should insert a validated match");
+                self.insert_match(length, lookahead);
             } else {
-                self.tokens
-                    .push(Token::Literal(*self.data.get(self.position)?));
+                self.tokens.push(Token::Literal(self.data[self.position]));
             }
             self.position = self.position.wrapping_add(length);
         }
     }
 
-    fn hash(&self, position: usize) -> Option<usize> {
+    fn hash(&self, position: usize) -> usize {
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 insert_string.c:11-16 and
         // insert_string_tpl.h:49-73 (four-byte multiplicative hash).
-        let bytes = self.data.get(position..position.checked_add(4)?)?;
+        let bytes = &self.data[position..position.wrapping_add(4)];
         let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        Some((word.wrapping_mul(2_654_435_761) >> 16) as usize)
+        (word.wrapping_mul(2_654_435_761) >> 16) as usize
     }
 
-    fn quick_insert(&mut self, position: usize) -> Option<usize> {
-        let hash = self.hash(position)?;
-        let candidate = *self.head.get(hash)?;
+    fn quick_insert(&mut self, position: usize) -> usize {
+        let hash = self.hash(position);
+        let candidate = self.head[hash];
         if candidate != position {
-            *self.previous.get_mut(position & WINDOW_MASK)? = candidate;
+            self.previous[position & WINDOW_MASK] = candidate;
             self.head[hash] = position;
         }
-        Some(candidate)
+        candidate
     }
 
-    fn insert_match(&mut self, length: usize, lookahead: usize) -> Option<()> {
+    fn insert_match(&mut self, length: usize, lookahead: usize) {
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94.
         let insert_limit = if self.fast {
-            if lookahead.checked_sub(length)? < MIN_MATCH {
-                return Some(());
+            debug_assert!(length <= lookahead);
+            if lookahead.wrapping_sub(length) < MIN_MATCH {
+                return;
             }
             self.max_insert
         } else {
-            if lookahead <= length.checked_add(MIN_MATCH)? {
-                return Some(());
+            if lookahead <= length.wrapping_add(MIN_MATCH) {
+                return;
             }
             16_usize.wrapping_mul(self.max_insert)
         };
         if length <= insert_limit {
             for offset in 1..length {
-                self.quick_insert(self.position.checked_add(offset)?)?;
+                let position = self.position.wrapping_add(offset);
+                self.quick_insert(position);
             }
         } else {
             let end = self.position.wrapping_add(length);
-            self.quick_insert(end.wrapping_sub(1))?;
+            self.quick_insert(end.wrapping_sub(1));
         }
-        Some(())
     }
 
-    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> Option<(usize, usize)> {
+    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> (usize, usize) {
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 match_tpl.h:38-247, specialized for
         // level three's early-exit, nice-length, and chain limits.
         let mut best_length = 2usize;
@@ -1970,16 +1478,16 @@ impl<'a> Level3Matcher<'a> {
                 }
             }
 
-            chain_length = chain_length.checked_sub(1)?;
+            chain_length = chain_length.wrapping_sub(1);
             if chain_length == 0 {
                 break;
             }
-            candidate = *self.previous.get(candidate & WINDOW_MASK)?;
+            candidate = self.previous[candidate & WINDOW_MASK];
             if candidate <= limit {
                 break;
             }
         }
-        Some((best_length, best_start))
+        (best_length, best_start)
     }
 
     fn candidate_can_improve(&self, candidate: usize, best_length: usize) -> bool {
@@ -2043,8 +1551,7 @@ struct TreeSpec<'a> {
     static_lengths: Option<&'a [u8]>,
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
+fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> HuffmanTree {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:122-345 (heap construction,
     // depth tie-breaking, length overflow repair, and canonical codes).
     let heap_size = spec.elements.wrapping_mul(2).wrapping_add(1);
@@ -2055,23 +1562,27 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     let mut heap = vec![0usize; heap_size];
     let mut heap_len = 0usize;
     let mut heap_max = heap_size;
-    let mut max_code = None;
+    let mut max_code = 0usize;
+    let mut has_code = false;
     for (index, node) in nodes.iter().take(spec.elements).enumerate() {
         if node.frequency != 0 {
             heap_len = heap_len.wrapping_add(1);
             heap[heap_len] = index;
-            max_code = Some(index);
+            max_code = index;
+            has_code = true;
         }
     }
 
     let mut bit_cost = 0i64;
     let mut static_cost = 0i64;
     while heap_len < 2 {
-        let index = match max_code {
-            Some(current_max @ 0..=1) => current_max.wrapping_add(1),
-            Some(_) | None => 0,
+        let index = if has_code && max_code <= 1 {
+            max_code.wrapping_add(1)
+        } else {
+            0
         };
-        max_code = Some(max_code.map_or(index, |current_max| current_max.max(index)));
+        max_code = max_code.max(index);
+        has_code = true;
         heap_len = heap_len.wrapping_add(1);
         heap[heap_len] = index;
         nodes[index].frequency = 1;
@@ -2083,8 +1594,6 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
             .unwrap_or(0);
         static_cost = static_cost.wrapping_sub(i64::from(static_length));
     }
-    let max_code = max_code.expect("tree construction always seeds at least two nodes");
-
     for index in (1..=heap_len / 2).rev() {
         pq_down(&mut heap, heap_len, &nodes, index);
     }
@@ -2097,9 +1606,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
         heap_max = heap_max.wrapping_sub(1);
         heap[heap_max] = second;
 
-        nodes[next_node].frequency = nodes[first]
-            .frequency
-            .checked_add(nodes[second].frequency)?;
+        nodes[next_node].frequency = nodes[first].frequency.wrapping_add(nodes[second].frequency);
         nodes[next_node].depth = nodes[first].depth.max(nodes[second].depth).wrapping_add(1);
         nodes[first].parent = next_node;
         nodes[second].parent = next_node;
@@ -2134,8 +1641,9 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
             frequency.wrapping_mul(i64::from(low_u16(bits.wrapping_add(usize::from(extra))))),
         );
         if let Some(static_lengths) = spec.static_lengths {
+            let static_length = static_lengths[index];
             static_cost = static_cost.wrapping_add(frequency.wrapping_mul(i64::from(low_u16(
-                usize::from(*static_lengths.get(index)?).wrapping_add(usize::from(extra)),
+                usize::from(static_length).wrapping_add(usize::from(extra)),
             ))));
         }
     }
@@ -2144,7 +1652,7 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
         while overflow > 0 {
             let mut bits = spec.max_length.wrapping_sub(1);
             while bit_counts[bits] == 0 {
-                bits = bits.checked_sub(1)?;
+                bits = bits.wrapping_sub(1);
             }
             bit_counts[bits] = bit_counts[bits].wrapping_sub(1);
             let next_bits = bits.wrapping_add(1);
@@ -2178,12 +1686,12 @@ fn build_tree(frequencies: &[u32], spec: TreeSpec<'_>) -> Option<HuffmanTree> {
     }
 
     generate_codes(&mut nodes, max_code, &bit_counts);
-    Some(HuffmanTree {
+    HuffmanTree {
         nodes,
         max_code,
         bit_cost,
         static_cost,
-    })
+    }
 }
 
 fn smaller(nodes: &[Node], left: usize, right: usize) -> bool {
@@ -2236,10 +1744,9 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; BIT_COUNT_
     }
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) -> Option<()> {
+fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) {
     let block_count = tokens.len().div_ceil(block_tokens);
-    let uncompressed = expand_tokens(tokens).expect("generated DEFLATE tokens should expand");
+    let uncompressed = expand_tokens(tokens);
     let mut uncompressed_start = 0usize;
     for (index, block) in tokens.chunks(block_tokens).enumerate() {
         let stored_length = block.iter().fold(0usize, |length, token| {
@@ -2250,43 +1757,31 @@ fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) ->
         });
         let uncompressed_end = uncompressed_start.wrapping_add(stored_length);
         let uncompressed_block = &uncompressed[uncompressed_start..uncompressed_end];
-        write_block(
-            block,
-            uncompressed_block,
-            index.wrapping_add(1) == block_count,
-            writer,
-        )
-        .expect("valid expanded block tokens should emit");
+        let final_block = index.wrapping_add(1) == block_count;
+        write_block(block, uncompressed_block, final_block, writer);
         uncompressed_start = uncompressed_end;
     }
-    Some(())
 }
 
-fn expand_tokens(tokens: &[Token]) -> Option<Vec<u8>> {
+fn expand_tokens(tokens: &[Token]) -> Vec<u8> {
     let mut output = Vec::new();
     for token in tokens {
         match token {
             Token::Literal(value) => output.push(*value),
             Token::Match { length, distance } => {
                 for _ in 0..*length {
-                    let source = output.len().checked_sub(*distance)?;
-                    output.push(*output.get(source)?);
+                    let source = output.len().wrapping_sub(*distance);
+                    output.push(output[source]);
                 }
             }
         }
     }
-    Some(output)
+    output
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn write_block(
-    tokens: &[Token],
-    uncompressed: &[u8],
-    final_block: bool,
-    writer: &mut BitWriter,
-) -> Option<()> {
+fn write_block(tokens: &[Token], uncompressed: &[u8], final_block: bool, writer: &mut BitWriter) {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:628-707.
-    let (literal_frequencies, distance_frequencies) = frequencies(tokens)?;
+    let (literal_frequencies, distance_frequencies) = frequencies(tokens);
     let static_literal_lengths = static_literal_lengths();
     let static_distance_lengths = [5u8; DISTANCE_CODES];
     let literal_spec = TreeSpec {
@@ -2296,8 +1791,7 @@ fn write_block(
         extra_base: 257,
         static_lengths: Some(&static_literal_lengths),
     };
-    let literal_tree = build_tree(&literal_frequencies, literal_spec)
-        .expect("valid literal frequencies build a tree");
+    let literal_tree = build_tree(&literal_frequencies, literal_spec);
     let distance_spec = TreeSpec {
         elements: DISTANCE_CODES,
         max_length: MAX_BITS,
@@ -2305,16 +1799,13 @@ fn write_block(
         extra_base: 0,
         static_lengths: Some(&static_distance_lengths),
     };
-    let distance_tree = build_tree(&distance_frequencies, distance_spec)
-        .expect("valid distance frequencies build a tree");
+    let distance_tree = build_tree(&distance_frequencies, distance_spec);
 
     let mut bit_frequencies = [0u32; BIT_LENGTH_CODES];
     let literal_nodes = &literal_tree.nodes;
-    scan_tree(literal_nodes, literal_tree.max_code, &mut bit_frequencies)
-        .expect("valid literal tree scans into bit-length frequencies");
+    scan_tree(literal_nodes, literal_tree.max_code, &mut bit_frequencies);
     let distance_nodes = &distance_tree.nodes;
-    scan_tree(distance_nodes, distance_tree.max_code, &mut bit_frequencies)
-        .expect("valid distance tree scans into bit-length frequencies");
+    scan_tree(distance_nodes, distance_tree.max_code, &mut bit_frequencies);
     let bit_length_spec = TreeSpec {
         elements: BIT_LENGTH_CODES,
         max_length: MAX_BIT_LENGTH_BITS,
@@ -2322,8 +1813,7 @@ fn write_block(
         extra_base: 0,
         static_lengths: None,
     };
-    let bit_length_tree = build_tree(&bit_frequencies, bit_length_spec)
-        .expect("valid bit-length frequencies build a tree");
+    let bit_length_tree = build_tree(&bit_frequencies, bit_length_spec);
     let max_bit_length_index = (3..BIT_LENGTH_CODES)
         .rev()
         .find(|&index| bit_length_tree.nodes[CODE_LENGTH_ORDER[index]].length != 0)
@@ -2357,24 +1847,20 @@ fn write_block(
         writer.write_aligned_bytes(&length.to_le_bytes());
         writer.write_aligned_bytes(&(!length).to_le_bytes());
         writer.write_aligned_bytes(uncompressed);
-        return Some(());
+        return;
     }
     if static_bytes <= dynamic_bytes {
-        emit_fixed_block(tokens, final_block, writer)
-            .expect("valid block tokens emit as fixed Huffman codes");
+        emit_fixed_block(tokens, final_block, writer);
     } else {
         writer.write_bits(4 | u32::from(final_block), 3); // BTYPE=dynamic (10).
         let trees = [&literal_tree, &distance_tree, &bit_length_tree];
-        send_trees(trees, max_bit_length_index, writer)
-            .expect("valid Huffman trees emit a dynamic tree header");
-        emit_tokens(tokens, &literal_tree, &distance_tree, writer)
-            .expect("valid block tokens emit with generated Huffman trees");
+        send_trees(trees, max_bit_length_index, writer);
+        emit_tokens(tokens, &literal_tree, &distance_tree, writer);
         send_code(writer, &literal_tree, 256);
     }
-    Some(())
 }
 
-fn frequencies(tokens: &[Token]) -> Option<([u32; LITERAL_CODES], [u32; DISTANCE_CODES])> {
+fn frequencies(tokens: &[Token]) -> ([u32; LITERAL_CODES], [u32; DISTANCE_CODES]) {
     let mut literal = [0u32; LITERAL_CODES];
     let mut distance = [0u32; DISTANCE_CODES];
     literal[256] = 1;
@@ -2388,22 +1874,22 @@ fn frequencies(tokens: &[Token]) -> Option<([u32; LITERAL_CODES], [u32; DISTANCE
                 length,
                 distance: match_distance,
             } => {
-                let length_index = length_index(*length)?;
+                let length_index = length_index(*length);
                 let literal_index = 257_usize.wrapping_add(length_index);
                 literal[literal_index] = literal[literal_index].wrapping_add(1);
-                let distance_index = distance_index(*match_distance)?;
+                let distance_index = distance_index(*match_distance);
                 distance[distance_index] = distance[distance_index].wrapping_add(1);
             }
         }
     }
-    Some((literal, distance))
+    (literal, distance)
 }
 
-fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Option<()> {
+fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:348-396.
     let mut previous_length = usize::MAX;
     let mut current_length;
-    let mut next_length = usize::from(nodes.first()?.length);
+    let mut next_length = usize::from(nodes[0].length);
     let mut count = 0usize;
     let mut max_count = if next_length == 0 { 138 } else { 7 };
     let mut min_count = if next_length == 0 { 3 } else { 4 };
@@ -2444,15 +1930,9 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) -> Op
             min_count = 4;
         }
     }
-    Some(())
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn send_trees(
-    trees: [&HuffmanTree; 3],
-    max_bit_length_index: usize,
-    writer: &mut BitWriter,
-) -> Option<()> {
+fn send_trees(trees: [&HuffmanTree; 3], max_bit_length_index: usize, writer: &mut BitWriter) {
     let [literal, distance, bit_length] = trees;
     writer.write_bits(
         low_u32(literal.max_code.wrapping_add(1).wrapping_sub(257)),
@@ -2466,11 +1946,8 @@ fn send_trees(
     for &code in &CODE_LENGTH_ORDER[..=max_bit_length_index] {
         writer.write_bits(u32::from(bit_length.nodes[code].length), 3);
     }
-    send_tree(literal, literal.max_code, bit_length, writer)
-        .expect("generated literal tree emits with generated bit-length tree");
-    send_tree(distance, distance.max_code, bit_length, writer)
-        .expect("generated distance tree emits with generated bit-length tree");
-    Some(())
+    send_tree(literal, literal.max_code, bit_length, writer);
+    send_tree(distance, distance.max_code, bit_length, writer);
 }
 
 fn send_tree(
@@ -2478,10 +1955,10 @@ fn send_tree(
     max_code: usize,
     bit_length: &HuffmanTree,
     writer: &mut BitWriter,
-) -> Option<()> {
+) {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:401-466.
     let mut previous_length = usize::MAX;
-    let mut next_length = usize::from(tree.nodes.first()?.length);
+    let mut next_length = usize::from(tree.nodes[0].length);
     let mut count = 0usize;
     let mut max_count = if next_length == 0 { 138 } else { 7 };
     let mut min_count = if next_length == 0 { 3 } else { 4 };
@@ -2527,7 +2004,6 @@ fn send_tree(
             min_count = 4;
         }
     }
-    Some(())
 }
 
 fn emit_tokens(
@@ -2535,52 +2011,50 @@ fn emit_tokens(
     literal_tree: &HuffmanTree,
     distance_tree: &HuffmanTree,
     writer: &mut BitWriter,
-) -> Option<()> {
+) {
     for token in tokens {
         match token {
             Token::Literal(value) => send_code(writer, literal_tree, usize::from(*value)),
             Token::Match { length, distance } => {
-                let length_index = length_index(*length)?;
+                let length_index = length_index(*length);
                 send_code(writer, literal_tree, 257_usize.wrapping_add(length_index));
                 writer.write_bits(
-                    u32::try_from(length.wrapping_sub(LENGTH_BASE[length_index])).ok()?,
+                    low_u32(length.wrapping_sub(LENGTH_BASE[length_index])),
                     LENGTH_EXTRA[length_index],
                 );
-                let distance_index = distance_index(*distance)?;
+                let distance_index = distance_index(*distance);
                 send_code(writer, distance_tree, distance_index);
                 writer.write_bits(
-                    u32::try_from(distance.wrapping_sub(DISTANCE_BASE[distance_index])).ok()?,
+                    low_u32(distance.wrapping_sub(DISTANCE_BASE[distance_index])),
                     DISTANCE_EXTRA[distance_index],
                 );
             }
         }
     }
-    Some(())
 }
 
-fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter) -> Option<()> {
+fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter) {
     writer.write_bits(2 | u32::from(final_block), 3); // BTYPE=fixed (01).
     for token in tokens {
         match token {
             Token::Literal(value) => write_fixed_symbol(writer, u16::from(*value)),
             Token::Match { length, distance } => {
-                let length_index = length_index(*length)?;
+                let length_index = length_index(*length);
                 write_fixed_symbol(writer, low_u16(257_usize.wrapping_add(length_index)));
                 writer.write_bits(
-                    u32::try_from(length.wrapping_sub(LENGTH_BASE[length_index])).ok()?,
+                    low_u32(length.wrapping_sub(LENGTH_BASE[length_index])),
                     LENGTH_EXTRA[length_index],
                 );
-                let distance_index = distance_index(*distance)?;
+                let distance_index = distance_index(*distance);
                 writer.write_bits(u32::from(reverse_bits(low_u16(distance_index), 5)), 5);
                 writer.write_bits(
-                    u32::try_from(distance.wrapping_sub(DISTANCE_BASE[distance_index])).ok()?,
+                    low_u32(distance.wrapping_sub(DISTANCE_BASE[distance_index])),
                     DISTANCE_EXTRA[distance_index],
                 );
             }
         }
     }
     write_fixed_symbol(writer, 256);
-    Some(())
 }
 
 fn send_code(writer: &mut BitWriter, tree: &HuffmanTree, symbol: usize) {
@@ -2588,20 +2062,20 @@ fn send_code(writer: &mut BitWriter, tree: &HuffmanTree, symbol: usize) {
     writer.write_bits(u32::from(node.code), node.length.to_le_bytes()[0]);
 }
 
-fn length_index(length: usize) -> Option<usize> {
-    LENGTH_BASE
-        .iter()
-        .enumerate()
-        .rev()
-        .find_map(|(index, &base)| (length >= base).then_some(index))
+fn length_index(length: usize) -> usize {
+    let mut index = LENGTH_BASE.len().wrapping_sub(1);
+    while length < LENGTH_BASE[index] {
+        index = index.wrapping_sub(1);
+    }
+    index
 }
 
-fn distance_index(distance: usize) -> Option<usize> {
-    DISTANCE_BASE
-        .iter()
-        .enumerate()
-        .rev()
-        .find_map(|(index, &base)| (distance >= base).then_some(index))
+fn distance_index(distance: usize) -> usize {
+    let mut index = DISTANCE_BASE.len().wrapping_sub(1);
+    while distance < DISTANCE_BASE[index] {
+        index = index.wrapping_sub(1);
+    }
+    index
 }
 
 fn static_literal_lengths() -> [u8; LITERAL_CODES] {

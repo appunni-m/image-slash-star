@@ -1024,6 +1024,7 @@ def parse_frame_header(
                 timing["frame_presentation_delay_length"]
             )
         if sequence["frame_id_numbers_present"]:
+            header["frame_id_bit"] = bits.position
             header["frame_id"] = bits.read(sequence["frame_id_bits"])
             if header["frame_id"] != reference["frame_id"]:
                 raise ValueError("show-existing frame ID mismatch")
@@ -1084,6 +1085,7 @@ def parse_frame_header(
     if frame_type in ("key", "intra_only"):
         force_integer_mv = True
     if sequence["frame_id_numbers_present"]:
+        header["frame_id_bit"] = bits.position
         header["frame_id"] = bits.read(sequence["frame_id_bits"])
     frame_size_override = (
         False
@@ -1175,7 +1177,17 @@ def parse_frame_header(
                 ) & ((1 << sequence["frame_id_bits"]) - 1)
                 reference = references[reference_index]
                 if reference is None or reference["frame_id"] != expected:
-                    raise ValueError("reference frame ID mismatch")
+                    actual = None if reference is None else reference["frame_id"]
+                    header.setdefault("reference_frame_id_mismatches", []).append(
+                        {
+                            "current": header["frame_id"],
+                            "slot": reference_index,
+                            "delta_bits": sequence["delta_frame_id_bits"],
+                            "delta": delta,
+                            "expected": expected,
+                            "actual": actual,
+                        }
+                    )
         use_reference_size = not error_resilient and frame_size_override
         read_frame_size(
             bits, sequence, header, references, use_reference_size

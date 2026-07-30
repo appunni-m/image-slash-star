@@ -1,6 +1,7 @@
 //! Zero-copy bit reads over ordered AVIF item extents.
 
 use super::super::samples::ByteSpan;
+use super::{Av1Result, malformed};
 
 /// A logical byte stream backed by ordered spans in the encoded AVIF input.
 pub(super) struct SegmentedData<'input, 'spans> {
@@ -10,19 +11,23 @@ pub(super) struct SegmentedData<'input, 'spans> {
 }
 
 impl<'input, 'spans> SegmentedData<'input, 'spans> {
-    pub(super) fn new(input: &'input [u8], spans: &'spans [ByteSpan]) -> Option<Self> {
+    pub(super) fn new(input: &'input [u8], spans: &'spans [ByteSpan]) -> Av1Result<Self> {
         for span in spans {
-            let _ = span.bytes(input).ok()?;
+            let _ = span
+                .bytes(input)
+                .map_err(|error| error.context("validate AV1 data spans"))?;
         }
         Self::with_validated_spans(input, spans)
     }
 
-    fn with_validated_spans(input: &'input [u8], spans: &'spans [ByteSpan]) -> Option<Self> {
+    fn with_validated_spans(input: &'input [u8], spans: &'spans [ByteSpan]) -> Av1Result<Self> {
         let mut length = 0_usize;
         for span in spans {
-            length = length.checked_add(span.len())?;
+            length = length
+                .checked_add(span.len())
+                .ok_or_else(|| malformed("segmented data length overflows usize"))?;
         }
-        Some(Self {
+        Ok(Self {
             input,
             spans,
             length,
@@ -33,18 +38,22 @@ impl<'input, 'spans> SegmentedData<'input, 'spans> {
         self.length
     }
 
-    pub(super) fn byte(&self, position: usize) -> Option<u8> {
+    pub(super) fn byte(&self, position: usize) -> Av1Result<u8> {
         let mut logical_start = 0_usize;
         for span in self.spans {
             let logical_end = logical_start.saturating_add(span.len());
             if position < logical_end {
                 let offset = position.saturating_sub(logical_start);
                 let physical = span.start.saturating_add(offset);
-                return self.input.get(physical).copied();
+                return self
+                    .input
+                    .get(physical)
+                    .copied()
+                    .ok_or_else(|| malformed("segmented data points outside the input"));
             }
             logical_start = logical_end;
         }
-        None
+        Err(malformed("byte read exceeds segmented data"))
     }
 
     /// Read a byte after the caller has proved `position < self.len()`.
@@ -68,13 +77,17 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
         data: &'data SegmentedData<'input, 'spans>,
         start: usize,
         end: usize,
-    ) -> Option<Self> {
-        let position = start.checked_mul(8)?;
-        let end_position = end.checked_mul(8)?;
+    ) -> Av1Result<Self> {
+        let position = start
+            .checked_mul(8)
+            .ok_or_else(|| malformed("bit-reader start overflows usize"))?;
+        let end_position = end
+            .checked_mul(8)
+            .ok_or_else(|| malformed("bit-reader end overflows usize"))?;
         if start > end || end > data.len() {
-            return None;
+            return Err(malformed("bit-reader bounds exceed the OBU payload"));
         }
-        Some(Self {
+        Ok(Self {
             data,
             position,
             end: end_position,
@@ -85,24 +98,27 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
     pub(super) fn with_bit_end(
         data: &'data SegmentedData<'input, 'spans>,
         end: usize,
-    ) -> Option<Self> {
+    ) -> Av1Result<Self> {
         if end > data.len() * 8 {
-            return None;
+            return Err(malformed("bit-reader end exceeds segmented data"));
         }
-        Some(Self {
+        Ok(Self {
             data,
             position: 0,
             end,
         })
     }
 
-    pub(super) fn bits(&mut self, count: u32) -> Option<u32> {
+    pub(super) fn bits(&mut self, count: u32) -> Av1Result<u32> {
         if count > 32 {
-            return None;
+            return Err(malformed("bit read requests more than 32 bits"));
         }
-        let next = self.position.checked_add(count as usize)?;
+        let next = self
+            .position
+            .checked_add(count as usize)
+            .ok_or_else(|| malformed("bit position overflows usize"))?;
         if next > self.end {
-            return None;
+            return Err(malformed("bit read exceeds the OBU payload"));
         }
         let mut value = 0_u32;
         for _ in 0..count {
@@ -111,18 +127,18 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
             value = (value << 1) | u32::from((byte >> shift) & 1);
             self.position = self.position.saturating_add(1);
         }
-        Some(value)
+        Ok(value)
     }
 
-    pub(super) fn bit(&mut self) -> Option<bool> {
-        Some(self.bits(1)? != 0)
+    pub(super) fn bit(&mut self) -> Av1Result<bool> {
+        Ok(self.bits(1)? != 0)
     }
 
     // ✅ VERIFIED: AV1 specification section 4.10.6 / dav1d 1.5.3
     // src/getbits.c:92-93.
-    pub(super) fn signed(&mut self, count: u32) -> Option<i32> {
+    pub(super) fn signed(&mut self, count: u32) -> Av1Result<i32> {
         if count == 0 || count > 31 {
-            return None;
+            return Err(malformed("signed bit read width is outside 1..=31"));
         }
         let value = i64::from(self.bits(count)?);
         let sign = 1_i64 << count.saturating_sub(1);
@@ -132,14 +148,15 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
             // `value` and the sign extension are both bounded to 31 bits.
             value.saturating_sub(1_i64 << count)
         };
-        i32::try_from(signed).ok()
+        let [a, b, c, d, _, _, _, _] = signed.to_le_bytes();
+        Ok(i32::from_le_bytes([a, b, c, d]))
     }
 
     // ✅ VERIFIED: AV1 specification section 4.10.8 / dav1d 1.5.3
     // src/getbits.c:114-123.
-    pub(super) fn ns(&mut self, count: u32) -> Option<u32> {
+    pub(super) fn ns(&mut self, count: u32) -> Av1Result<u32> {
         if count <= 1 {
-            return Some(0);
+            return Ok(0);
         }
         let width = u32::BITS.saturating_sub(count.leading_zeros());
         let threshold = (1_u64 << width).saturating_sub(u64::from(count));
@@ -151,14 +168,15 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
                 .saturating_sub(threshold)
                 .saturating_add(u64::from(self.bit()?))
         };
-        u32::try_from(decoded).ok()
+        let [a, b, c, d, _, _, _, _] = decoded.to_le_bytes();
+        Ok(u32::from_le_bytes([a, b, c, d]))
     }
 
     // ✅ VERIFIED: AV1 specification section 4.10.10 / dav1d 1.5.3
     // src/getbits.c:138-164 and include/common/intops.h:75-81.
-    pub(super) fn subexp(&mut self, reference: i32, bits: u32) -> Option<i32> {
+    pub(super) fn subexp(&mut self, reference: i32, bits: u32) -> Av1Result<i32> {
         if bits > 30 {
-            return None;
+            return Err(malformed("subexponential width exceeds 30 bits"));
         }
         // AV1 calls this with a reference inside the signed `bits` range.
         // Use wider intermediates so every shift and boundary sum remains
@@ -167,9 +185,12 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
         let base = 1_i64 << bits;
         // `reference` is i32 and `base` is at most 2^30, so this sum is exact
         // in i64. Conversion still rejects references below the signed range.
-        let recentered_reference = u64::try_from(i64::from(reference).saturating_add(base)).ok()?;
+        let recentered_reference = u64::try_from(i64::from(reference).saturating_add(base))
+            .map_err(|_| malformed("subexponential reference is below its signed range"))?;
         if recentered_reference >= count {
-            return None;
+            return Err(malformed(
+                "subexponential reference is above its signed range",
+            ));
         }
         let mut value = 0_u64;
         let mut index = 0_u32;
@@ -209,18 +230,19 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
         let decoded = i64::try_from(decoded)
             .unwrap_or(i64::MAX)
             .saturating_sub(base);
-        i32::try_from(decoded).ok()
+        let [a, b, c, d, _, _, _, _] = decoded.to_le_bytes();
+        Ok(i32::from_le_bytes([a, b, c, d]))
     }
 
     // ✅ VERIFIED: AV1 specification section 5.3.5 / dav1d 1.5.3
     // src/getbits.h:128-132.
-    pub(super) fn byte_align(&mut self) -> Option<()> {
+    pub(super) fn byte_align(&mut self) -> Av1Result<()> {
         while !self.position.is_multiple_of(8) {
             if self.bit()? {
-                return None;
+                return Err(malformed("byte-alignment padding contains a set bit"));
             }
         }
-        Some(())
+        Ok(())
     }
 
     pub(super) fn position(&self) -> usize {
@@ -229,31 +251,31 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
 
     // ✅ VERIFIED: AV1 specification section 4.10.3 / dav1d 1.5.3
     // src/getbits.c:125-136.
-    pub(super) fn uvlc(&mut self) -> Option<u32> {
+    pub(super) fn uvlc(&mut self) -> Av1Result<u32> {
         let mut leading_zeroes = 0_u32;
         while !self.bit()? {
             leading_zeroes = leading_zeroes.saturating_add(1);
             if leading_zeroes == 32 {
-                return None;
+                return Err(malformed("UVLC leading-zero count reaches 32"));
             }
         }
-        (1_u32 << leading_zeroes)
+        Ok((1_u32 << leading_zeroes)
             .saturating_sub(1)
-            .checked_add(self.bits(leading_zeroes)?)
+            .saturating_add(self.bits(leading_zeroes)?))
     }
 
     // ✅ VERIFIED: AV1 specification section 5.3.4 / dav1d 1.5.3
     // src/obu.c:48-69.
-    pub(super) fn trailing_bits(&mut self) -> Option<()> {
+    pub(super) fn trailing_bits(&mut self) -> Av1Result<()> {
         if !self.bit()? {
-            return None;
+            return Err(malformed("AV1 trailing marker bit is not set"));
         }
         while self.position < self.end {
             if self.bit()? {
-                return None;
+                return Err(malformed("AV1 trailing padding contains a set bit"));
             }
         }
-        Some(())
+        Ok(())
     }
 }
 
@@ -273,9 +295,9 @@ pub(super) fn __coverage_exercise_private_branches() {
     let input = [0b1010_0101, 0b0101_1010];
     let spans = [ByteSpan { start: 0, end: 1 }, ByteSpan { start: 1, end: 2 }];
     let data = SegmentedData::new(&input, &spans).unwrap();
-    assert_eq!(data.byte(0), Some(input[0]));
-    assert_eq!(data.byte(1), Some(input[1]));
-    assert_eq!(data.byte(2), None);
+    assert_eq!(data.byte(0), Ok(input[0]));
+    assert_eq!(data.byte(1), Ok(input[1]));
+    assert!(data.byte(2).is_err());
 
     let _ = SegmentedData::new(&input, &[ByteSpan { start: 0, end: 3 }]);
     let _ = SegmentedData::with_validated_spans(
@@ -295,15 +317,15 @@ pub(super) fn __coverage_exercise_private_branches() {
     let _ = BitReader::with_bit_end(&data, data.len() * 8 + 1);
     let _ = BitReader::with_bit_end(&data, data.len() * 8);
     let mut reader = BitReader::new(&data, 0, data.len()).unwrap();
-    assert_eq!(reader.bits(4), Some(0b1010));
-    assert_eq!(reader.bits(12), Some(0b0101_0101_1010));
-    assert_eq!(reader.bits(1), None);
+    assert_eq!(reader.bits(4), Ok(0b1010));
+    assert_eq!(reader.bits(12), Ok(0b0101_0101_1010));
+    assert!(reader.bits(1).is_err());
     let mut reader = BitReader::new(&data, 0, data.len()).unwrap();
     let _ = reader.bits(33);
     let _ = reader.signed(0);
     let _ = reader.signed(32);
-    assert_eq!(reader.ns(0), Some(0));
-    assert_eq!(reader.ns(1), Some(0));
+    assert_eq!(reader.ns(0), Ok(0));
+    assert_eq!(reader.ns(1), Ok(0));
     let _ = reader.subexp(0, 31);
     let mut reader = BitReader::with_bit_end(&data, 1).unwrap();
     let _ = reader.ns(3);

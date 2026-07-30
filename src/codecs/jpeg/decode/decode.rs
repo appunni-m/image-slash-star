@@ -1,6 +1,7 @@
 // Modified Rust port copyright (c) 2026 Appunni M.
 // Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
 
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ColorType, DecodedImage};
 
 use super::bit_reader::BitReader;
@@ -12,38 +13,32 @@ use super::upsample::{crop_component, fancy_upsample};
 
 // ── Entropy Decoding ──────────────────────────────────────────────────────
 
-// The entropy reader zero-pads coefficient bits to libjpeg's minimum width.
-#[allow(clippy::expect_used)]
 pub(super) fn decode_block(
     br: &mut BitReader,
     dc_table: &HuffTable,
     ac_table: &HuffTable,
     last_dc: &mut i32,
     block_zigzag: &mut [i32; 64],
-) -> bool {
+) -> CodecResult<()> {
     for coeff in block_zigzag.iter_mut() {
         *coeff = 0;
     }
 
-    let dc_cat = match dc_table.decode(br) {
-        Some(cat) => cat,
-        None => return false,
-    };
+    let dc_cat = dc_table.decode(br)?;
+    if dc_cat > 15 {
+        return Err(CodecError::Malformed(
+            "invalid JPEG DC coefficient category".to_owned(),
+        ));
+    }
     if dc_cat > 0 {
-        let bits = match br.read_bits(u32::from(dc_cat)) {
-            Some(b) => b,
-            None => return false,
-        };
+        let bits = br.read_padded_bits(u32::from(dc_cat));
         *last_dc = last_dc.saturating_add(extend(bits, dc_cat));
     }
     block_zigzag[0] = *last_dc;
 
     let mut k = 1usize;
     while k < 64 {
-        let sym = match ac_table.decode(br) {
-            Some(s) => s,
-            None => return false,
-        };
+        let sym = ac_table.decode(br)?;
         if sym == 0x00 {
             break;
         }
@@ -61,23 +56,21 @@ pub(super) fn decode_block(
             // JPEG AC symbols encode at most 15 coefficient bits. The bit
             // reader matches libjpeg by zero-padding exhausted entropy data to
             // MIN_GET_BITS, so this read cannot fail on the AC path.
-            let bits = br
-                .read_bits(u32::from(size))
-                .expect("AC coefficient bit reads are zero-padded");
+            let bits = br.read_padded_bits(u32::from(size));
             block_zigzag[k] = extend(bits, size);
             k = k.saturating_add(1);
         } else {
-            return false;
+            return Err(CodecError::Malformed(
+                "invalid JPEG AC run-length symbol".to_owned(),
+            ));
         }
     }
-    true
+    Ok(())
 }
 
 // ── Image Reconstruction (baseline) ───────────────────────────────────────
 
-// Parsing validates every referenced Huffman and quantization table.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedImage> {
+pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> CodecResult<DecodedImage> {
     let mcu_width = u32::from(info.max_h_samp).saturating_mul(8);
     let mcu_height = u32::from(info.max_v_samp).saturating_mul(8);
     let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
@@ -118,7 +111,9 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
     // Extract entropy segments (between RST markers)
     let entropy_segments = extract_entropy_segments(data, info.entropy_start, info.eoi_pos);
     if entropy_segments.segments.is_empty() {
-        return None;
+        return Err(CodecError::Malformed(
+            "JPEG contains no entropy segment".to_owned(),
+        ));
     }
 
     let total_mcus = bounded_usize(num_mcus_x.saturating_mul(num_mcus_y));
@@ -145,26 +140,32 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
 
             for scan_comp in &info.scan_components {
                 let comp = &info.components[scan_comp.comp_index];
-                let dc_table = info.dc_huff_tables[usize::from(scan_comp.dc_tbl)]
-                    .as_ref()
-                    .expect("baseline DC Huffman table validated before reconstruction");
-                let ac_table = info.ac_huff_tables[usize::from(scan_comp.ac_tbl)]
-                    .as_ref()
-                    .expect("baseline AC Huffman table validated before reconstruction");
-                let quant_table = info.quant_tables[usize::from(comp.quant_tbl)]
-                    .as_ref()
-                    .expect("component quantization table validated before reconstruction");
+                let dc_table = info
+                    .dc_huff_tables
+                    .get(usize::from(scan_comp.dc_tbl))
+                    .and_then(Option::as_ref)
+                    .malformed("missing JPEG DC Huffman table")?;
+                let ac_table = info
+                    .ac_huff_tables
+                    .get(usize::from(scan_comp.ac_tbl))
+                    .and_then(Option::as_ref)
+                    .malformed("missing JPEG AC Huffman table")?;
+                let quant_table = info
+                    .quant_tables
+                    .get(usize::from(comp.quant_tbl))
+                    .and_then(Option::as_ref)
+                    .malformed("missing JPEG quantization table")?;
 
                 for by in 0..usize::from(comp.v_samp) {
                     for bx in 0..usize::from(comp.h_samp) {
-                        if !decode_block(
+                        if let Err(error) = decode_block(
                             &mut br,
                             dc_table,
                             ac_table,
                             &mut dc_predictors[scan_comp.comp_index],
                             &mut block_zigzag,
                         ) {
-                            return None;
+                            return Err(error.context("baseline block"));
                         }
                         // Dequantize and IDCT
                         for (coefficient, &quantizer) in block_zigzag.iter_mut().zip(quant_table) {
@@ -233,7 +234,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                 pixels.push(y_buf[y.saturating_mul(y_w).saturating_add(x)]);
             }
         }
-        Some(DecodedImage::new(
+        Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
             pixels,
@@ -299,7 +300,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                 pixels.push(b);
             }
         }
-        Some(DecodedImage::new(
+        Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
             pixels,
@@ -332,7 +333,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> Option<DecodedI
                 }
             }
         }
-        Some(DecodedImage::new(
+        Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
             pixels,
@@ -437,34 +438,14 @@ pub(super) struct EntropySegments {
 /// - Grayscale (1 component) and YCbCr (3 components)
 /// - Restart markers (DRI)
 /// - Progressive: DC first, DC refine, AC first, AC refine scans
-pub fn decode(data: &[u8]) -> Option<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
     let info = parse_jpeg(data)?;
 
     debug_assert!(!info.scan_components.is_empty());
 
-    for comp in &info.components {
-        if info.quant_tables.len() <= usize::from(comp.quant_tbl)
-            || info.quant_tables[usize::from(comp.quant_tbl)].is_none()
-        {
-            return None;
-        }
-    }
-
     if info.progressive {
         progressive_reconstruct(&info, data)
     } else {
-        for scan_comp in &info.scan_components {
-            if info.dc_huff_tables.len() <= usize::from(scan_comp.dc_tbl)
-                || info.dc_huff_tables[usize::from(scan_comp.dc_tbl)].is_none()
-            {
-                return None;
-            }
-            if info.ac_huff_tables.len() <= usize::from(scan_comp.ac_tbl)
-                || info.ac_huff_tables[usize::from(scan_comp.ac_tbl)].is_none()
-            {
-                return None;
-            }
-        }
         reconstruct_image(&info, data)
     }
 }
@@ -479,56 +460,44 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut block = [0i32; 64];
     let mut last_dc = 0;
-    assert!(!decode_block(
-        &mut br,
-        &dc_cat_64,
-        &ac_eob,
-        &mut last_dc,
-        &mut block,
-    ));
+    assert!(decode_block(&mut br, &dc_cat_64, &ac_eob, &mut last_dc, &mut block,).is_err());
 
     let dc_zero = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
     let ac_run_overflow =
         HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0xF1]);
     let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(decode_block(
-        &mut br,
-        &dc_zero,
-        &ac_run_overflow,
-        &mut last_dc,
-        &mut block,
-    ));
+    assert!(
+        decode_block(
+            &mut br,
+            &dc_zero,
+            &ac_run_overflow,
+            &mut last_dc,
+            &mut block,
+        )
+        .is_ok()
+    );
 
     let ac_literal = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0x01]);
     let mut br = BitReader::new(&[0; 2], 0, 2);
-    assert!(decode_block(
-        &mut br,
-        &dc_zero,
-        &ac_literal,
-        &mut last_dc,
-        &mut block,
-    ));
+    assert!(decode_block(&mut br, &dc_zero, &ac_literal, &mut last_dc, &mut block,).is_ok());
 
     let ac_invalid_zero =
         HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0x10]);
     let mut br = BitReader::new(&[0; 2], 0, 2);
-    assert!(!decode_block(
-        &mut br,
-        &dc_zero,
-        &ac_invalid_zero,
-        &mut last_dc,
-        &mut block,
-    ));
+    assert!(
+        decode_block(
+            &mut br,
+            &dc_zero,
+            &ac_invalid_zero,
+            &mut last_dc,
+            &mut block,
+        )
+        .is_err()
+    );
 
     let ac_missing = HuffTable::build(&[0; 16], &[]);
     let mut br = BitReader::new(&[0; 2], 0, 2);
-    assert!(!decode_block(
-        &mut br,
-        &dc_zero,
-        &ac_missing,
-        &mut last_dc,
-        &mut block,
-    ));
+    assert!(decode_block(&mut br, &dc_zero, &ac_missing, &mut last_dc, &mut block,).is_err());
 
     let segments = extract_entropy_segments(&[0, 0xFF, 0xFF, 0xD9], 0, 4);
     assert_eq!(segments.eoi_pos, 1);

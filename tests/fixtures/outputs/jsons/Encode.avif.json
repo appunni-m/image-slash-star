@@ -226,7 +226,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "Invalid subsampling: invalid"
+      "error_message": "Invalid subsampling: invalid",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_invalid_subsampling_alias",
@@ -238,7 +239,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "Invalid subsampling: 444"
+      "error_message": "Invalid subsampling: 444",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_invalid_range",
@@ -250,7 +252,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "Invalid range"
+      "error_message": "Invalid range",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_decoder_only_codec",
@@ -262,7 +265,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "Invalid saving codec"
+      "error_message": "Invalid saving codec",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_invalid_quality",
@@ -274,7 +278,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "Invalid quality setting"
+      "error_message": "Invalid quality setting",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_invalid_advanced",
@@ -286,7 +291,8 @@
       "encoded_ref_bytes": null,
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
-      "error_message": "Failed to encode image: Invalid codec-specific option"
+      "error_message": "Failed to encode image: Invalid codec-specific option",
+      "error_kind": "parameter"
     }
   ]
 }

@@ -29,35 +29,48 @@ pub use types::*;
 /// Returns [`ImageError::UnknownFormat`] when the signature is incomplete or
 /// does not identify a supported container.
 pub fn detect_format(data: &[u8]) -> ImageResult<ImageFormat> {
-    if data.len() < 8 {
-        return Err(ImageError::UnknownFormat);
-    }
-    if data[0] == 0xFF && data[1] == 0xD8 {
+    if data.starts_with(b"\xff\xd8\xff") {
         return Ok(ImageFormat::Jpeg);
     }
-    if &data[0..8] == b"\x89PNG\r\n\x1a\n" {
+    if data.starts_with(b"\x89PNG\r\n\x1a\n") {
         return Ok(ImageFormat::Png);
     }
-    if &data[0..4] == b"GIF8" {
+    if data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a") {
         return Ok(ImageFormat::Gif);
     }
-    if &data[0..2] == b"BM" {
+    if data.starts_with(b"BM") {
         return Ok(ImageFormat::Bmp);
     }
-    if data.len() >= 12 && &data[8..12] == b"WEBP" {
+    if data.starts_with(b"RIFF")
+        && data.get(8..12) == Some(b"WEBP")
+        && matches!(data.get(12..16), Some(b"VP8 " | b"VP8L" | b"VP8X"))
+    {
         return Ok(ImageFormat::WebP);
     }
-    if &data[0..4] == b"II\x2a\x00" || &data[0..4] == b"MM\x00\x2a" {
+    if matches!(
+        data.get(..4),
+        Some(
+            b"MM\x00\x2a"
+                | b"II\x2a\x00"
+                | b"MM\x2a\x00"
+                | b"II\x00\x2a"
+                | b"MM\x00\x2b"
+                | b"II\x2b\x00"
+        )
+    ) {
         return Ok(ImageFormat::Tiff);
     }
-    if matches!(&data[0..4], b"\x00\x00\x01\x00" | b"\x00\x00\x02\x00") {
+    if matches!(
+        data.get(..4),
+        Some(b"\x00\x00\x01\x00" | b"\x00\x00\x02\x00")
+    ) {
         return Ok(ImageFormat::Ico);
     }
-    if data.len() >= 12 && &data[4..8] == b"ftyp" {
-        let brand = &data[8..12];
-        if matches!(brand, b"avif" | b"avis" | b"mif1" | b"msf1") {
-            return Ok(ImageFormat::Avif);
-        }
+    if matches!(
+        data.get(4..12),
+        Some(b"ftypavif" | b"ftypavis" | b"ftypmif1" | b"ftypmsf1")
+    ) {
+        return Ok(ImageFormat::Avif);
     }
     Err(ImageError::UnknownFormat)
 }
@@ -149,8 +162,11 @@ pub struct Av1EntropyTraceState {
 /// Produce scalar AV1 entropy states for the pinned fixture operation sequence.
 #[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
 #[doc(hidden)]
-pub fn __coverage_av1_entropy_reference_trace() -> Result<Vec<Av1EntropyTraceState>, &'static str> {
-    codecs::__coverage_av1_entropy_reference_trace()
+pub fn __coverage_av1_entropy_reference_trace() -> ImageResult<Vec<Av1EntropyTraceState>> {
+    codecs::into_image_result(
+        codecs::__coverage_av1_entropy_reference_trace(),
+        ImageFormat::Avif,
+    )
 }
 
 /// Codec-private Y/U/V samples reconstructed by the first supported AV1 leaf.
@@ -212,8 +228,11 @@ pub struct Av1EntropyOperationState {
 /// Return the retained production-path AV1 reconstruction for a fixture.
 #[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
 #[doc(hidden)]
-pub fn __coverage_av1_reconstruction(data: &[u8]) -> Option<Av1ReconstructionTrace> {
-    codecs::__coverage_av1_reconstruction(data)
+pub fn __coverage_av1_reconstruction(data: &[u8]) -> ImageResult<Option<Av1ReconstructionTrace>> {
+    codecs::into_image_result(
+        codecs::__coverage_av1_reconstruction(data),
+        ImageFormat::Avif,
+    )
 }
 
 /// Exercise unsupported closed-leaf syntax by mutating one fixture's AV1 item.

@@ -4,6 +4,7 @@
 //! 6543b22b5bc706c53f038a16fe515f921556d9b3. Reference locations are recorded
 //! in `docs/portable-avif-progress.md`.
 
+use crate::codecs::{CodecError, CodecResult};
 use crate::types::{ImageFormat, ImageInfo, ImageMode};
 
 const MAX_BOXES: usize = 4_096;
@@ -13,7 +14,15 @@ const ALPHA_URN_MPEG_B: &[u8] = b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
 const ALPHA_URN_HEVC: &[u8] = b"urn:mpeg:hevc:2015:auxid:1";
 
 type FourCc = [u8; 4];
-type ParseResult<T> = Result<T, ()>;
+type ParseResult<T> = CodecResult<T>;
+
+macro_rules! parse_failure {
+    () => {
+        CodecError::Malformed(
+            concat!("invalid AVIF metadata structure at ", file!(), ":", line!()).to_owned(),
+        )
+    };
+}
 
 #[derive(Clone, Copy)]
 struct BoxView<'a> {
@@ -30,7 +39,7 @@ struct Budget {
 impl Budget {
     fn box_seen(&mut self) -> ParseResult<()> {
         if self.boxes >= MAX_BOXES {
-            return Err(());
+            return Err(parse_failure!());
         }
         self.boxes = self.boxes.saturating_add(1);
         Ok(())
@@ -38,7 +47,7 @@ impl Budget {
 
     fn record_seen(&mut self) -> ParseResult<()> {
         if self.records >= MAX_RECORDS {
-            return Err(());
+            return Err(parse_failure!());
         }
         self.records = self.records.saturating_add(1);
         Ok(())
@@ -65,8 +74,14 @@ impl<'a> Reader<'a> {
     }
 
     fn take(&mut self, length: usize) -> ParseResult<&'a [u8]> {
-        let end = self.offset.checked_add(length).ok_or(())?;
-        let bytes = self.data.get(self.offset..end).ok_or(())?;
+        let end = self
+            .offset
+            .checked_add(length)
+            .ok_or_else(|| parse_failure!())?;
+        let bytes = self
+            .data
+            .get(self.offset..end)
+            .ok_or_else(|| parse_failure!())?;
         self.offset = end;
         Ok(bytes)
     }
@@ -109,8 +124,14 @@ impl<'a> Reader<'a> {
     }
 
     fn c_string(&mut self) -> ParseResult<&'a [u8]> {
-        let remaining = self.data.get(self.offset..).ok_or(())?;
-        let length = remaining.iter().position(|&byte| byte == 0).ok_or(())?;
+        let remaining = self
+            .data
+            .get(self.offset..)
+            .ok_or_else(|| parse_failure!())?;
+        let length = remaining
+            .iter()
+            .position(|&byte| byte == 0)
+            .ok_or_else(|| parse_failure!())?;
         let value = &remaining[..length];
         self.offset = self.offset.saturating_add(length).saturating_add(1);
         Ok(value)
@@ -120,7 +141,6 @@ impl<'a> Reader<'a> {
 #[derive(Clone, Copy)]
 struct Brands {
     major: FourCc,
-    has_avif: bool,
     has_avis: bool,
 }
 
@@ -181,23 +201,23 @@ struct Track {
     handler: FourCc,
     width: u32,
     height: u32,
-    sample_count: Option<u32>,
+    sample_count: u32,
     depth: Option<u8>,
     aux_for_id: Option<u32>,
     aux_is_alpha: Option<bool>,
 }
 
 /// Inspect AVIF container metadata without calling a native codec.
-pub(super) fn inspect(data: &[u8]) -> Option<ImageInfo> {
-    inspect_inner(data).ok()
+pub(super) fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data)
 }
 
 fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
     let mut budget = Budget::default();
     let mut reader = Reader::new(data);
-    let first = next_box(&mut reader, true, &mut budget)?.ok_or(())?;
+    let first = next_box(&mut reader, true, &mut budget)?.ok_or_else(|| parse_failure!())?;
     if first.kind != *b"ftyp" {
-        return Err(());
+        return Err(parse_failure!());
     }
     let brands = parse_ftyp(first.payload)?;
     let mut meta = None;
@@ -207,13 +227,13 @@ fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
         match child.kind {
             kind if kind == *b"meta" => {
                 if meta.is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 meta = Some(parse_meta(child.payload, &mut budget)?);
             }
             kind if kind == *b"moov" => {
                 if movie.is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 movie = Some(parse_movie(child.payload, &mut budget)?);
             }
@@ -221,11 +241,14 @@ fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
         }
     }
 
-    if (brands.has_avif && meta.is_none()) || (brands.has_avis && movie.is_none()) {
-        return Err(());
+    let Some(meta) = meta.as_ref() else {
+        return Err(parse_failure!());
+    };
+    if brands.has_avis && movie.is_none() {
+        return Err(parse_failure!());
     }
 
-    let meta_details = meta.as_ref().and_then(Meta::details);
+    let meta_details = meta.details()?;
     let track_details = movie.as_ref().and_then(Movie::details);
     let prefer_tracks =
         brands.major == *b"avis" || (brands.major != *b"avif" && track_details.is_some());
@@ -235,14 +258,14 @@ fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
         meta_details.or(track_details)
     };
     let Some(details) = details else {
-        return Err(());
+        return Err(parse_failure!());
     };
     image_info(details)
 }
 
 fn image_info(details: Details) -> ParseResult<ImageInfo> {
     if details.width == 0 || details.height == 0 || details.frame_count == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
 
     Ok(ImageInfo {
@@ -284,17 +307,17 @@ fn next_box<'a>(
     let header_size = reader.offset.saturating_sub(start);
     if size == 0 {
         if !top_level {
-            return Err(());
+            return Err(parse_failure!());
         }
         let payload = reader.take_remaining();
         return Ok(Some(BoxView { kind, payload }));
     }
     if size > u64::from(u32::MAX) {
-        return Err(());
+        return Err(parse_failure!());
     }
     let size = bounded_usize_u32(low_u32(size));
     if size < header_size {
-        return Err(());
+        return Err(parse_failure!());
     }
     let payload = reader.take(size.saturating_sub(header_size))?;
     Ok(Some(BoxView { kind, payload }))
@@ -306,7 +329,7 @@ fn parse_ftyp(payload: &[u8]) -> ParseResult<Brands> {
     let major = reader.four_cc()?;
     reader.skip(4)?;
     if !reader.remaining().is_multiple_of(4) {
-        return Err(());
+        return Err(parse_failure!());
     }
     let mut has_avif = major == *b"avif";
     let mut has_avis = major == *b"avis";
@@ -316,13 +339,9 @@ fn parse_ftyp(payload: &[u8]) -> ParseResult<Brands> {
         has_avis |= brand == *b"avis";
     }
     if !has_avif && !has_avis {
-        return Err(());
+        return Err(parse_failure!());
     }
-    Ok(Brands {
-        major,
-        has_avif,
-        has_avis,
-    })
+    Ok(Brands { major, has_avis })
 }
 
 fn parse_full_box(reader: &mut Reader<'_>) -> ParseResult<(u8, u32)> {
@@ -333,7 +352,7 @@ fn parse_full_box(reader: &mut Reader<'_>) -> ParseResult<(u8, u32)> {
 fn parse_full_box_version_zero(reader: &mut Reader<'_>) -> ParseResult<u32> {
     let (version, flags) = parse_full_box(reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(flags)
 }
@@ -342,9 +361,9 @@ fn parse_full_box_version_zero(reader: &mut Reader<'_>) -> ParseResult<u32> {
 fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
     let mut reader = Reader::new(payload);
     let _ = parse_full_box_version_zero(&mut reader)?;
-    let first = next_box(&mut reader, false, budget)?.ok_or(())?;
+    let first = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
     if first.kind != *b"hdlr" || parse_handler(first.payload)? != *b"pict" {
-        return Err(());
+        return Err(parse_failure!());
     }
 
     let mut meta = Meta::default();
@@ -354,31 +373,31 @@ fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
     let mut iref_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
-            kind if kind == *b"hdlr" => return Err(()),
+            kind if kind == *b"hdlr" => return Err(parse_failure!()),
             kind if kind == *b"pitm" => {
                 if pitm_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 pitm_seen = true;
                 meta.primary_item_id = Some(parse_pitm(child.payload)?);
             }
             kind if kind == *b"iinf" => {
                 if iinf_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 iinf_seen = true;
                 parse_iinf(child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iprp" => {
                 if iprp_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 iprp_seen = true;
                 parse_iprp(child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iref" => {
                 if iref_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 iref_seen = true;
                 parse_iref(child.payload, &mut meta, budget)?;
@@ -387,7 +406,7 @@ fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
         }
     }
     if !pitm_seen || !iinf_seen || !iprp_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(meta)
 }
@@ -397,7 +416,7 @@ fn parse_handler(payload: &[u8]) -> ParseResult<FourCc> {
     let mut reader = Reader::new(payload);
     let _ = parse_full_box_version_zero(&mut reader)?;
     if reader.u32()? != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let handler = reader.four_cc()?;
     reader.skip(12)?;
@@ -415,7 +434,7 @@ fn parse_pitm(payload: &[u8]) -> ParseResult<u32> {
         reader.u32()?
     };
     if item_id == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(item_id)
 }
@@ -427,22 +446,22 @@ fn parse_iinf(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
     let entry_count = match version {
         0 => u32::from(reader.u16()?),
         1 => reader.u32()?,
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     };
     for _ in 0..entry_count {
-        let child = next_box(&mut reader, false, budget)?.ok_or(())?;
+        let child = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
         if child.kind != *b"infe" {
-            return Err(());
+            return Err(parse_failure!());
         }
         let item = parse_infe(child.payload)?;
         if meta.items.iter().any(|existing| existing.id == item.id) {
-            return Err(());
+            return Err(parse_failure!());
         }
         budget.record_seen()?;
         meta.items.push(item);
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -453,10 +472,10 @@ fn parse_infe(payload: &[u8]) -> ParseResult<Item> {
     let id = match version {
         2 => u32::from(reader.u16()?),
         3 => reader.u32()?,
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     };
     if id == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let _ = reader.u16()?;
     let kind = reader.four_cc()?;
@@ -470,21 +489,21 @@ fn parse_infe(payload: &[u8]) -> ParseResult<Item> {
 // libavif 1.4.1 src/read.c:2913-3243.
 fn parse_iprp(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResult<()> {
     let mut reader = Reader::new(payload);
-    let ipco = next_box(&mut reader, false, budget)?.ok_or(())?;
+    let ipco = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
     if ipco.kind != *b"ipco" {
-        return Err(());
+        return Err(parse_failure!());
     }
     parse_ipco(ipco.payload, meta, budget)?;
     let mut ipma_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         if child.kind != *b"ipma" || ipma_seen {
-            return Err(());
+            return Err(parse_failure!());
         }
         ipma_seen = true;
         parse_ipma(child.payload, meta, budget)?;
     }
     if !ipma_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -506,7 +525,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
             let width = reader.u32()?;
             let height = reader.u32()?;
             if width == 0 || height == 0 {
-                return Err(());
+                return Err(parse_failure!());
             }
             Ok(Property::Ispe { width, height })
         }
@@ -515,15 +534,15 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
             let _ = parse_full_box_version_zero(&mut reader)?;
             let planes = reader.u8()?;
             if !(1..=4).contains(&planes) {
-                return Err(());
+                return Err(parse_failure!());
             }
             let depth = reader.u8()?;
             if depth == 0 || depth > 16 {
-                return Err(());
+                return Err(parse_failure!());
             }
             for _ in 1..planes {
                 if reader.u8()? != depth {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
             }
             Ok(Property::Pixi { depth })
@@ -545,7 +564,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
 fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     let mut reader = Reader::new(payload);
     if reader.u8()? != 0x81 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let _ = reader.u8()?;
     let flags = reader.u8()?;
@@ -553,7 +572,7 @@ fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     let high_bit_depth = flags & 0x40 != 0;
     let twelve_bit = flags & 0x20 != 0;
     if twelve_bit && !high_bit_depth {
-        return Err(());
+        return Err(parse_failure!());
     }
     let depth = if twelve_bit {
         12
@@ -582,10 +601,10 @@ fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             reader.u32()?
         };
         if item_id == 0 {
-            return Err(());
+            return Err(parse_failure!());
         }
         if item_id <= previous_id {
-            return Err(());
+            return Err(parse_failure!());
         }
         previous_id = item_id;
         let association_count = reader.u8()?;
@@ -601,13 +620,13 @@ fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             let property_index = raw & index_mask;
             if property_index == 0 {
                 if essential {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 continue;
             }
             let property_index = bounded_usize_u32(property_index.saturating_sub(1));
             if property_index >= meta.properties.len() {
-                return Err(());
+                return Err(parse_failure!());
             }
             budget.record_seen()?;
             meta.associations.push(Association {
@@ -617,7 +636,7 @@ fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
         }
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -637,7 +656,7 @@ fn parse_iref(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             references.u32()?
         };
         if from_id == 0 {
-            return Err(());
+            return Err(parse_failure!());
         }
         let count = references.u16()?;
         for _ in 0..count {
@@ -647,7 +666,7 @@ fn parse_iref(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
                 references.u32()?
             };
             if to_id == 0 {
-                return Err(());
+                return Err(parse_failure!());
             }
             budget.record_seen()?;
             meta.references.push(Reference {
@@ -657,21 +676,27 @@ fn parse_iref(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             });
         }
         if !references.is_empty() {
-            return Err(());
+            return Err(parse_failure!());
         }
     }
     Ok(())
 }
 
 impl Meta {
-    fn details(&self) -> Option<Details> {
-        let primary = self.primary_item_id?;
-        let primary_item = self.items.iter().find(|item| item.id == primary)?;
+    fn details(&self) -> CodecResult<Option<Details>> {
+        let Some(primary) = self.primary_item_id else {
+            return Ok(None);
+        };
+        let primary_item = self
+            .items
+            .iter()
+            .find(|item| item.id == primary)
+            .ok_or_else(|| parse_failure!())?;
         if !matches!(
             primary_item.kind,
             [b'a', b'v', b'0', b'1'] | [b'g', b'r', b'i', b'd']
         ) {
-            return None;
+            return Ok(None);
         }
         let dimensions = self.associated(primary).find_map(|property| {
             if let Property::Ispe { width, height } = property {
@@ -680,7 +705,9 @@ impl Meta {
                 None
             }
         });
-        let (width, height) = dimensions?;
+        let Some((width, height)) = dimensions else {
+            return Ok(None);
+        };
         let depth = self
             .associated(primary)
             .find_map(|property| match property {
@@ -688,13 +715,13 @@ impl Meta {
                 _ => None,
             })
             .unwrap_or(8);
-        Some(Details {
+        Ok(Some(Details {
             width,
             height,
             depth,
             has_alpha: self.has_alpha(primary),
             frame_count: 1,
-        })
+        }))
     }
 
     fn associated(&self, item_id: u32) -> impl Iterator<Item = &Property> {
@@ -742,7 +769,7 @@ fn parse_movie(payload: &[u8], budget: &mut Budget) -> ParseResult<Movie> {
         }
     }
     if movie.tracks.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(movie)
 }
@@ -757,21 +784,21 @@ fn parse_track(payload: &[u8], budget: &mut Budget) -> ParseResult<Track> {
         match child.kind {
             kind if kind == *b"tkhd" => {
                 if tkhd_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 tkhd_seen = true;
                 parse_tkhd(child.payload, &mut track)?;
             }
             kind if kind == *b"mdia" => {
                 if mdia_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 mdia_seen = true;
                 parse_mdia(child.payload, &mut track, budget)?;
             }
             kind if kind == *b"tref" => {
                 if tref_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 tref_seen = true;
                 parse_tref(child.payload, &mut track, budget)?;
@@ -780,7 +807,7 @@ fn parse_track(payload: &[u8], budget: &mut Budget) -> ParseResult<Track> {
         }
     }
     if !tkhd_seen || !mdia_seen || track.id == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(track)
 }
@@ -799,7 +826,7 @@ fn parse_tkhd(payload: &[u8], track: &mut Track) -> ParseResult<()> {
             track.id = reader.u32()?;
             reader.skip(12)?;
         }
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     }
     reader.skip(52)?;
     track.width = reader.u32()? >> 16;
@@ -826,14 +853,14 @@ fn parse_mdia(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
         match child.kind {
             kind if kind == *b"hdlr" => {
                 if handler_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 handler_seen = true;
                 track.handler = parse_handler(child.payload)?;
             }
             kind if kind == *b"minf" => {
                 if minf_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 minf_seen = true;
                 parse_minf(child.payload, track, budget)?;
@@ -842,7 +869,7 @@ fn parse_mdia(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
         }
     }
     if !handler_seen || !minf_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -853,14 +880,14 @@ fn parse_minf(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
     while let Some(child) = next_box(&mut reader, false, budget)? {
         if child.kind == *b"stbl" {
             if stbl_seen {
-                return Err(());
+                return Err(parse_failure!());
             }
             stbl_seen = true;
             parse_stbl(child.payload, track, budget)?;
         }
     }
     if !stbl_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -873,14 +900,14 @@ fn parse_stbl(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
         match child.kind {
             kind if kind == *b"stsz" => {
                 if stsz_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stsz_seen = true;
-                track.sample_count = Some(parse_stsz(child.payload)?);
+                track.sample_count = parse_stsz(child.payload)?;
             }
             kind if kind == *b"stsd" => {
                 if stsd_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stsd_seen = true;
                 parse_stsd(child.payload, track, budget)?;
@@ -889,7 +916,7 @@ fn parse_stbl(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
         }
     }
     if !stsz_seen || !stsd_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -900,12 +927,14 @@ fn parse_stsz(payload: &[u8]) -> ParseResult<u32> {
     let sample_size = reader.u32()?;
     let sample_count = reader.u32()?;
     if sample_size == 0 {
-        let entry_bytes = sample_count.checked_mul(4).ok_or(())?;
+        let entry_bytes = sample_count
+            .checked_mul(4)
+            .ok_or_else(|| parse_failure!())?;
         let entry_bytes = bounded_usize_u32(entry_bytes);
         reader.skip(entry_bytes)?;
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(sample_count)
 }
@@ -914,19 +943,22 @@ fn parse_stsd(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
     let mut reader = Reader::new(payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if !matches!(version, 0 | 1) {
-        return Err(());
+        return Err(parse_failure!());
     }
     let entry_count = reader.u32()?;
     for _ in 0..entry_count {
-        let sample = next_box(&mut reader, false, budget)?.ok_or(())?;
+        let sample = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
         if sample.kind != *b"av01" {
             continue;
         }
-        let properties = sample.payload.get(VISUAL_SAMPLE_ENTRY_SIZE..).ok_or(())?;
+        let properties = sample
+            .payload
+            .get(VISUAL_SAMPLE_ENTRY_SIZE..)
+            .ok_or_else(|| parse_failure!())?;
         parse_track_properties(properties, track, budget)?;
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -941,7 +973,7 @@ fn parse_track_properties(
         match parse_property(child)? {
             Property::Av1C { depth } => {
                 if track.depth.is_some_and(|existing| existing != depth) {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 track.depth = Some(depth);
             }
@@ -950,7 +982,7 @@ fn parse_track_properties(
                     .aux_is_alpha
                     .is_some_and(|existing| existing != is_alpha)
                 {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 track.aux_is_alpha = Some(is_alpha);
             }
@@ -978,7 +1010,7 @@ impl Movie {
             height: main.height,
             depth: main.depth.unwrap_or(8),
             has_alpha,
-            frame_count: main.sample_count?,
+            frame_count: main.sample_count,
         })
     }
 }
@@ -1567,7 +1599,7 @@ fn coverage_nested_parser_prefixes() {
     let _ = Movie {
         tracks: vec![Track {
             handler: *b"vide",
-            sample_count: Some(1),
+            sample_count: 1,
             ..Track::default()
         }],
     }
@@ -1884,19 +1916,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = parse_iref(&payload, &mut Meta::default(), &mut Budget::default());
     }
 
-    std::hint::black_box(Meta::default().details());
+    let _ = std::hint::black_box(Meta::default().details());
     let mut details_meta = Meta {
         primary_item_id: Some(1),
         ..Meta::default()
     };
-    std::hint::black_box(details_meta.details());
+    let _ = std::hint::black_box(details_meta.details());
     details_meta.items.push(Item {
         id: 1,
         kind: *b"free",
     });
     let _ = details_meta.details();
     details_meta.items[0].kind = *b"av01";
-    std::hint::black_box(details_meta.details());
+    let _ = std::hint::black_box(details_meta.details());
     details_meta.properties.extend([
         Property::Other,
         Property::Ispe {
@@ -2147,7 +2179,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let _ = parse_movie(&[], &mut Budget::default());
     let _ = parse_movie(&coverage_box(*b"free", &[]), &mut Budget::default());
-    std::hint::black_box(Movie::default().details());
+    let _ = std::hint::black_box(Movie::default().details());
     let _ = Movie {
         tracks: vec![Track {
             handler: *b"free",
@@ -2166,15 +2198,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 handler: *b"pict",
                 width: 2,
                 height: 3,
-                sample_count: None,
+                sample_count: 1,
                 depth: None,
                 aux_for_id: None,
                 aux_is_alpha: None,
             },
         ],
     };
-    std::hint::black_box(movie.details());
-    movie.tracks[1].sample_count = Some(1);
+    let _ = std::hint::black_box(movie.details());
     movie.tracks.push(Track {
         id: 3,
         handler: *b"auxv",

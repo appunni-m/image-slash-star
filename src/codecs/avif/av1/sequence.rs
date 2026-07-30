@@ -1,7 +1,9 @@
 //! AV1 sequence-header syntax needed by the later frame decoder.
 
+#[cfg(coverage)]
 use super::super::samples::ByteSpan;
 use super::bit_reader::{BitReader, SegmentedData};
+use super::{Av1Result, malformed};
 
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Timing {
@@ -106,10 +108,7 @@ impl SequenceHeader {
 
     /// Compare sequence declarations with the four-byte AV1 configuration
     /// record retained by the AVIF container.
-    pub(super) fn matches_config(&self, input: &[u8], config: ByteSpan) -> bool {
-        let Ok(bytes) = config.bytes(input) else {
-            return false;
-        };
+    pub(super) fn matches_config(&self, bytes: &[u8]) -> bool {
         if bytes.len() < 4 || bytes[0] != 0x81 {
             return false;
         }
@@ -143,20 +142,22 @@ pub(super) fn parse(
     data: &SegmentedData<'_, '_>,
     start: usize,
     end: usize,
-) -> Option<SequenceHeader> {
+) -> Av1Result<SequenceHeader> {
     let mut bits = BitReader::new(data, start, end)?;
     parse_bits(&mut bits)
 }
 
-fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
+fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Av1Result<SequenceHeader> {
     let profile = bits.bits(3)?;
     if profile > 2 {
-        return None;
+        return Err(malformed("sequence profile exceeds 2"));
     }
     let still_picture = bits.bit()?;
     let reduced_still_picture_header = bits.bit()?;
     if reduced_still_picture_header && !still_picture {
-        return None;
+        return Err(malformed(
+            "reduced still-picture header is set on a non-still sequence",
+        ));
     }
 
     let mut timing = None;
@@ -178,7 +179,7 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
             let num_units_in_tick = bits.bits(32)?;
             let time_scale = bits.bits(32)?;
             if num_units_in_tick == 0 || time_scale == 0 {
-                return None;
+                return Err(malformed("sequence timing contains a zero rate"));
             }
             let equal_picture_interval = bits.bit()?;
             let num_ticks_per_picture = if equal_picture_interval {
@@ -196,7 +197,7 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
                 decoder_delay_length = bits.bits(5)?.saturating_add(1);
                 let decoding_tick = bits.bits(32)?;
                 if decoding_tick == 0 {
-                    return None;
+                    return Err(malformed("decoder-model timing tick is zero"));
                 }
                 (
                     Some(decoding_tick),
@@ -222,7 +223,7 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
         for _ in 0..operating_point_count {
             let idc = bits.bits(12)?;
             if idc != 0 && (idc & 0xff == 0 || idc & 0xf00 == 0) {
-                return None;
+                return Err(malformed("operating-point IDC is inconsistent"));
             }
             let level = bits.bits(5)?;
             let tier = if level > 7 { bits.bits(1)? } else { 0 };
@@ -239,7 +240,7 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
             let initial_display_delay = if point_display_model_present {
                 let delay = bits.bits(4)?.saturating_add(1);
                 if delay > 10 {
-                    return None;
+                    return Err(malformed("initial display delay exceeds 10"));
                 }
                 delay
             } else {
@@ -265,7 +266,7 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
         let delta = bits.bits(4)?.saturating_add(2);
         let frame = bits.bits(3)?.saturating_add(delta).saturating_add(1);
         if frame > 16 {
-            return None;
+            return Err(malformed("frame ID width exceeds 16 bits"));
         }
         (delta, frame)
     } else {
@@ -353,7 +354,9 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
         (bits.bit()?, true, true, 0)
     } else if color_primaries == 1 && transfer_characteristics == 13 && matrix_coefficients == 0 {
         if profile != 1 && !(profile == 2 && bit_depth == 12) {
-            return None;
+            return Err(malformed(
+                "identity color matrix is invalid for this profile and bit depth",
+            ));
         }
         (true, false, false, 0)
     } else {
@@ -372,13 +375,15 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Option<SequenceHeader> {
         (range, x, y, position)
     };
     if matrix_coefficients == 0 && (subsampling_x | subsampling_y) {
-        return None;
+        return Err(malformed(
+            "identity color matrix cannot use chroma subsampling",
+        ));
     }
     let separate_uv_delta_q = !monochrome && bits.bit()?;
     let film_grain_present = bits.bit()?;
     bits.trailing_bits()?;
 
-    Some(SequenceHeader {
+    Ok(SequenceHeader {
         profile,
         still_picture,
         reduced_still_picture_header,
@@ -458,7 +463,7 @@ impl CoverageBitWriter {
 }
 
 #[cfg(coverage)]
-fn coverage_parse(input: &[u8]) -> Option<SequenceHeader> {
+fn coverage_parse(input: &[u8]) -> Av1Result<SequenceHeader> {
     let spans = [ByteSpan {
         start: 0,
         end: input.len(),
@@ -468,7 +473,7 @@ fn coverage_parse(input: &[u8]) -> Option<SequenceHeader> {
 }
 
 #[cfg(coverage)]
-fn coverage_parse_bits(input: &[u8], bit_end: usize) -> Option<SequenceHeader> {
+fn coverage_parse_bits(input: &[u8], bit_end: usize) -> Av1Result<SequenceHeader> {
     let spans = [ByteSpan {
         start: 0,
         end: input.len(),
@@ -658,20 +663,17 @@ pub(super) fn __coverage_exercise_private_branches() {
     let data = SegmentedData::new(payload, &spans).unwrap();
     let _ = parse(&data, usize::MAX, usize::MAX);
     let header = parse(&data, 0, payload.len()).unwrap();
-    assert!(header.matches_config(&[0x81, 0x00, 0x0c, 0], ByteSpan { start: 0, end: 4 }));
-    assert!(!header.matches_config(&[0x81; 4], ByteSpan { start: 4, end: 5 }));
-    assert!(!header.matches_config(&[0x81], ByteSpan { start: 0, end: 1 }));
-    assert!(!header.matches_config(&[0, 0, 0, 0], ByteSpan { start: 0, end: 4 }));
-    assert!(!header.matches_config(&[0x81, 0x20, 0, 0], ByteSpan { start: 0, end: 4 }));
-    assert!(!header.matches_config(&[0x81, 0x00, 0x1c, 0], ByteSpan { start: 0, end: 4 }));
-    assert!(!header.matches_config(&[0x81, 0x00, 0x04, 0], ByteSpan { start: 0, end: 4 }));
-    assert!(!header.matches_config(&[0x81, 0x00, 0x08, 0], ByteSpan { start: 0, end: 4 }));
-    assert!(!header.matches_config(&[0x81, 0x00, 0x0d, 0], ByteSpan { start: 0, end: 4 }));
+    assert!(header.matches_config(&[0x81, 0x00, 0x0c, 0]));
+    assert!(!header.matches_config(&[0x81]));
+    assert!(!header.matches_config(&[0, 0, 0, 0]));
+    assert!(!header.matches_config(&[0x81, 0x20, 0, 0]));
+    assert!(!header.matches_config(&[0x81, 0x00, 0x1c, 0]));
+    assert!(!header.matches_config(&[0x81, 0x00, 0x04, 0]));
+    assert!(!header.matches_config(&[0x81, 0x00, 0x08, 0]));
+    assert!(!header.matches_config(&[0x81, 0x00, 0x0d, 0]));
     let mut no_operating_point = header;
     no_operating_point.operating_points.clear();
-    assert!(
-        !no_operating_point.matches_config(&[0x81, 0x00, 0x0c, 0], ByteSpan { start: 0, end: 4 })
-    );
+    assert!(!no_operating_point.matches_config(&[0x81, 0x00, 0x0c, 0]));
 
     let mut first = no_operating_point;
     first.operating_points.push(OperatingPoint {
@@ -701,7 +703,7 @@ pub(super) fn __coverage_exercise_private_branches() {
     zero_numerator.push(1, 1);
     zero_numerator.push(0, 32);
     zero_numerator.push(1, 32);
-    assert!(coverage_parse(&zero_numerator.bytes).is_none());
+    assert!(coverage_parse(&zero_numerator.bytes).is_err());
 
     let mut zero_denominator = CoverageBitWriter::new();
     zero_denominator.push(0, 3);
@@ -710,7 +712,7 @@ pub(super) fn __coverage_exercise_private_branches() {
     zero_denominator.push(1, 1);
     zero_denominator.push(1, 32);
     zero_denominator.push(0, 32);
-    assert!(coverage_parse(&zero_denominator.bytes).is_none());
+    assert!(coverage_parse(&zero_denominator.bytes).is_err());
 
     let mut zero_decoding_tick = CoverageBitWriter::new();
     zero_decoding_tick.push(0, 3);
@@ -723,16 +725,16 @@ pub(super) fn __coverage_exercise_private_branches() {
     zero_decoding_tick.push(1, 1);
     zero_decoding_tick.push(0, 5);
     zero_decoding_tick.push(0, 32);
-    assert!(coverage_parse(&zero_decoding_tick.bytes).is_none());
+    assert!(coverage_parse(&zero_decoding_tick.bytes).is_err());
 
-    assert!(coverage_parse(&coverage_reduced_identity(0, false, false)).is_none());
-    assert!(coverage_parse(&coverage_reduced_identity(1, false, false)).is_some());
-    assert!(coverage_parse(&coverage_reduced_identity(2, true, true)).is_some());
-    assert!(coverage_parse(&coverage_reduced_identity(2, true, false)).is_none());
-    assert!(coverage_parse(&coverage_reduced_identity(2, false, false)).is_none());
+    assert!(coverage_parse(&coverage_reduced_identity(0, false, false)).is_err());
+    assert!(coverage_parse(&coverage_reduced_identity(1, false, false)).is_ok());
+    assert!(coverage_parse(&coverage_reduced_identity(2, true, true)).is_ok());
+    assert!(coverage_parse(&coverage_reduced_identity(2, true, false)).is_err());
+    assert!(coverage_parse(&coverage_reduced_identity(2, false, false)).is_err());
 
     let complex = coverage_complex_sequence();
-    assert!(coverage_parse(&complex).is_some());
+    assert!(coverage_parse(&complex).is_ok());
     for bit_end in 0..=complex.len() * 8 {
         let _ = coverage_parse_bits(&complex, bit_end);
     }
@@ -748,5 +750,5 @@ pub(super) fn __coverage_exercise_private_branches() {
     interval_overflow.push(0, 31);
     interval_overflow.push(1, 1);
     interval_overflow.push(0x7fff_ffff, 31);
-    assert!(coverage_parse(&interval_overflow.bytes).is_none());
+    assert!(coverage_parse(&interval_overflow.bytes).is_err());
 }

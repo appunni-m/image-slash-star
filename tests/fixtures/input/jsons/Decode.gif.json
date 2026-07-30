@@ -16,6 +16,7 @@
       "id": "static_gif",
       "asset": "static.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/static.gif",
         "operations": [
@@ -33,6 +34,7 @@
       "id": "animated_gif",
       "asset": "animated.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/animated.gif",
         "operations": [
@@ -50,6 +52,7 @@
       "id": "animated_gif_animated_3frame",
       "asset": "animated_3frame.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/animated_3frame.gif",
         "operations": [
@@ -67,6 +70,7 @@
       "id": "transparent",
       "asset": "transparent.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/transparent.gif",
         "operations": [
@@ -84,6 +88,7 @@
       "id": "interlaced",
       "asset": "interlaced.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/interlaced.gif",
         "operations": [
@@ -101,6 +106,7 @@
       "id": "color_table_global",
       "asset": "global_ct.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/global_ct.gif",
         "operations": [
@@ -118,6 +124,7 @@
       "id": "color_table_local",
       "asset": "local_ct.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/local_ct.gif",
         "operations": [
@@ -135,6 +142,7 @@
       "id": "color_table_local_local_palette_only",
       "asset": "local_palette_only.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/local_palette_only.gif",
         "operations": [
@@ -152,6 +160,7 @@
       "id": "palette_absent",
       "asset": "no_palette.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/no_palette.gif",
         "operations": [
@@ -169,6 +178,7 @@
       "id": "palette_absent_animated_no_palette",
       "asset": "animated_no_palette.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/animated_no_palette.gif",
         "operations": [
@@ -186,6 +196,7 @@
       "id": "ignored_extension",
       "asset": "comment_extension.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/comment_extension.gif",
         "operations": [
@@ -203,6 +214,7 @@
       "id": "ignored_extension_unknown_application",
       "asset": "unknown_application.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/unknown_application.gif",
         "operations": [
@@ -220,6 +232,7 @@
       "id": "alternate_loop_extension",
       "asset": "animext_loop.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/animext_loop.gif",
         "operations": [
@@ -237,6 +250,7 @@
       "id": "alternate_loop_extension_animext_bad_payload",
       "asset": "animext_bad_payload.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/animext_bad_payload.gif",
         "operations": [
@@ -254,6 +268,7 @@
       "id": "alternate_loop_extension_short_loop_payload",
       "asset": "short_loop_payload.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/short_loop_payload.gif",
         "operations": [
@@ -271,6 +286,7 @@
       "id": "extension_gce",
       "asset": "gce.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce.gif",
         "operations": [
@@ -288,6 +304,7 @@
       "id": "extension_gce_gce_previous",
       "asset": "gce_previous.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce_previous.gif",
         "operations": [
@@ -305,6 +322,7 @@
       "id": "extension_gce_disposal_keep",
       "asset": "disposal_keep.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/disposal_keep.gif",
         "operations": [
@@ -322,6 +340,7 @@
       "id": "extension_gce_disposal_reserved",
       "asset": "disposal_reserved.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/disposal_reserved.gif",
         "operations": [
@@ -339,6 +358,7 @@
       "id": "extension_gce_nonstandard_gce_size",
       "asset": "nonstandard_gce_size.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/nonstandard_gce_size.gif",
         "operations": [
@@ -356,6 +376,7 @@
       "id": "logical_canvas_fallback",
       "asset": "zero_logical_size.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/zero_logical_size.gif",
         "operations": [
@@ -373,6 +394,7 @@
       "id": "logical_canvas_fallback_frame_outside_logical",
       "asset": "frame_outside_logical.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/frame_outside_logical.gif",
         "operations": [
@@ -390,6 +412,7 @@
       "id": "transparency_index_leniency",
       "asset": "out_of_range_transparency.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/out_of_range_transparency.gif",
         "operations": [
@@ -407,6 +430,7 @@
       "id": "palette_index_leniency",
       "asset": "palette_index_out_of_range.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/palette_index_out_of_range.gif",
         "operations": [
@@ -424,6 +448,7 @@
       "id": "lzw_boundary_leniency",
       "asset": "lzw_kwkwk.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_kwkwk.gif",
         "operations": [
@@ -441,6 +466,7 @@
       "id": "lzw_boundary_leniency_lzw_kwkwk_clipped",
       "asset": "lzw_kwkwk_clipped.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_kwkwk_clipped.gif",
         "operations": [
@@ -458,6 +484,7 @@
       "id": "lzw_boundary_leniency_lzw_no_eoi",
       "asset": "lzw_no_eoi.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_no_eoi.gif",
         "operations": [
@@ -475,6 +502,7 @@
       "id": "lzw_boundary_leniency_lzw_dictionary_saturation",
       "asset": "lzw_dictionary_saturation.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_dictionary_saturation.gif",
         "operations": [
@@ -492,6 +520,7 @@
       "id": "size_1x1",
       "asset": "1x1.gif",
       "expect_error": false,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/1x1.gif",
         "operations": [
@@ -509,6 +538,7 @@
       "id": "error_empty",
       "asset": "empty.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/empty.gif",
         "operations": [
@@ -526,8 +556,27 @@
       "id": "error_malformed",
       "asset": "invalid_signature.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/invalid_signature.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_near_miss_version",
+      "asset": "near_miss_version.gif",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/near_miss_version.gif",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -543,6 +592,7 @@
       "id": "error_malformed_truncated_signature",
       "asset": "truncated_signature.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_signature.gif",
         "operations": [
@@ -560,6 +610,7 @@
       "id": "error_malformed_truncated_logical_screen",
       "asset": "truncated_logical_screen.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_logical_screen.gif",
         "operations": [
@@ -577,6 +628,7 @@
       "id": "error_malformed_truncated_after_width",
       "asset": "truncated_after_width.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_after_width.gif",
         "operations": [
@@ -594,6 +646,7 @@
       "id": "error_malformed_truncated_after_height",
       "asset": "truncated_after_height.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_after_height.gif",
         "operations": [
@@ -611,6 +664,7 @@
       "id": "error_malformed_truncated_after_packed",
       "asset": "truncated_after_packed.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_after_packed.gif",
         "operations": [
@@ -628,6 +682,7 @@
       "id": "error_malformed_truncated_after_background",
       "asset": "truncated_after_background.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_after_background.gif",
         "operations": [
@@ -645,6 +700,7 @@
       "id": "error_malformed_declared_global_palette_short",
       "asset": "declared_global_palette_short.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/declared_global_palette_short.gif",
         "operations": [
@@ -662,6 +718,7 @@
       "id": "error_malformed_no_frame_trailer",
       "asset": "no_frame_trailer.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/no_frame_trailer.gif",
         "operations": [
@@ -679,6 +736,7 @@
       "id": "error_malformed_no_frame_no_trailer",
       "asset": "no_frame_no_trailer.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/no_frame_no_trailer.gif",
         "operations": [
@@ -696,6 +754,7 @@
       "id": "error_malformed_truncated_global_palette",
       "asset": "truncated_global_palette.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_global_palette.gif",
         "operations": [
@@ -713,6 +772,7 @@
       "id": "error_malformed_unknown_block",
       "asset": "unknown_block.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/unknown_block.gif",
         "operations": [
@@ -730,6 +790,7 @@
       "id": "error_malformed_extension_no_label",
       "asset": "extension_no_label.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/extension_no_label.gif",
         "operations": [
@@ -747,6 +808,7 @@
       "id": "error_malformed_application_no_length",
       "asset": "application_no_length.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/application_no_length.gif",
         "operations": [
@@ -764,6 +826,7 @@
       "id": "error_malformed_truncated_application_identifier",
       "asset": "truncated_application_identifier.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_application_identifier.gif",
         "operations": [
@@ -781,6 +844,7 @@
       "id": "error_malformed_truncated_application_subblock",
       "asset": "truncated_application_subblock.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_application_subblock.gif",
         "operations": [
@@ -798,6 +862,7 @@
       "id": "error_malformed_truncated_comment_subblock",
       "asset": "truncated_comment_subblock.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_comment_subblock.gif",
         "operations": [
@@ -815,6 +880,7 @@
       "id": "error_malformed_comment_no_subblock_length",
       "asset": "comment_no_subblock_length.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/comment_no_subblock_length.gif",
         "operations": [
@@ -832,6 +898,7 @@
       "id": "error_malformed_truncated_image_descriptor",
       "asset": "truncated_image_descriptor.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_image_descriptor.gif",
         "operations": [
@@ -849,6 +916,7 @@
       "id": "error_malformed_image_no_left",
       "asset": "image_no_left.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/image_no_left.gif",
         "operations": [
@@ -866,6 +934,7 @@
       "id": "error_malformed_image_truncated_after_left",
       "asset": "image_truncated_after_left.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/image_truncated_after_left.gif",
         "operations": [
@@ -883,6 +952,7 @@
       "id": "error_malformed_image_truncated_after_top",
       "asset": "image_truncated_after_top.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/image_truncated_after_top.gif",
         "operations": [
@@ -900,6 +970,7 @@
       "id": "error_malformed_image_truncated_after_width",
       "asset": "image_truncated_after_width.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/image_truncated_after_width.gif",
         "operations": [
@@ -917,6 +988,7 @@
       "id": "error_malformed_image_truncated_after_height",
       "asset": "image_truncated_after_height.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/image_truncated_after_height.gif",
         "operations": [
@@ -934,6 +1006,7 @@
       "id": "error_malformed_image_truncated_after_packed",
       "asset": "image_truncated_after_packed.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/image_truncated_after_packed.gif",
         "operations": [
@@ -951,6 +1024,7 @@
       "id": "error_malformed_truncated_local_palette",
       "asset": "truncated_local_palette.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_local_palette.gif",
         "operations": [
@@ -968,6 +1042,7 @@
       "id": "error_malformed_truncated_image_data",
       "asset": "truncated_image_data.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_image_data.gif",
         "operations": [
@@ -985,6 +1060,7 @@
       "id": "error_malformed_truncated_sub_block",
       "asset": "truncated_sub_block.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_sub_block.gif",
         "operations": [
@@ -1002,6 +1078,7 @@
       "id": "error_malformed_truncated_gce",
       "asset": "truncated_gce.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/truncated_gce.gif",
         "operations": [
@@ -1019,6 +1096,7 @@
       "id": "error_malformed_gce_no_size",
       "asset": "gce_no_size.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce_no_size.gif",
         "operations": [
@@ -1036,6 +1114,7 @@
       "id": "error_malformed_gce_truncated_after_size",
       "asset": "gce_truncated_after_size.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce_truncated_after_size.gif",
         "operations": [
@@ -1053,6 +1132,7 @@
       "id": "error_malformed_gce_truncated_after_packed",
       "asset": "gce_truncated_after_packed.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce_truncated_after_packed.gif",
         "operations": [
@@ -1070,6 +1150,7 @@
       "id": "error_malformed_gce_truncated_after_delay",
       "asset": "gce_truncated_after_delay.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce_truncated_after_delay.gif",
         "operations": [
@@ -1087,8 +1168,45 @@
       "id": "error_malformed_gce_truncated_after_index",
       "asset": "gce_truncated_after_index.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/gce_truncated_after_index.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_gce_recovery_payload_truncated",
+      "asset": "gce_recovery_payload_truncated.gif",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_recovery_payload_truncated.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_gce_recovery_subblock_truncated",
+      "asset": "gce_recovery_subblock_truncated.gif",
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/gce_recovery_subblock_truncated.gif",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -1104,6 +1222,7 @@
       "id": "error_malformed_zero_frame_width",
       "asset": "zero_frame_width.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/zero_frame_width.gif",
         "operations": [
@@ -1121,6 +1240,7 @@
       "id": "error_malformed_zero_frame_height",
       "asset": "zero_frame_height.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/zero_frame_height.gif",
         "operations": [
@@ -1138,6 +1258,7 @@
       "id": "error_malformed_min_code_one",
       "asset": "min_code_one.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/min_code_one.gif",
         "operations": [
@@ -1155,6 +1276,7 @@
       "id": "error_malformed_min_code_nine",
       "asset": "min_code_nine.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/min_code_nine.gif",
         "operations": [
@@ -1172,6 +1294,7 @@
       "id": "error_malformed_bad_gce_terminator",
       "asset": "bad_gce_terminator.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/bad_gce_terminator.gif",
         "operations": [
@@ -1189,6 +1312,7 @@
       "id": "error_malformed_lzw_invalid_first",
       "asset": "lzw_invalid_first.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_invalid_first.gif",
         "operations": [
@@ -1206,6 +1330,7 @@
       "id": "error_malformed_lzw_end_only",
       "asset": "lzw_end_only.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_end_only.gif",
         "operations": [
@@ -1223,6 +1348,7 @@
       "id": "error_malformed_lzw_invalid_future",
       "asset": "lzw_invalid_future.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_invalid_future.gif",
         "operations": [
@@ -1240,6 +1366,7 @@
       "id": "error_malformed_lzw_truncated_output",
       "asset": "lzw_truncated_output.gif",
       "expect_error": true,
+      "expect_sequence_error": false,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_truncated_output.gif",
         "operations": [

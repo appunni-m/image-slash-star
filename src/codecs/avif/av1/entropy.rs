@@ -2,7 +2,11 @@
 
 use std::ops::Range;
 
+#[cfg(coverage)]
+use crate::codecs::{CodecError, CodecResult};
+
 use super::bit_reader::SegmentedData;
+use super::{Av1Result, malformed};
 
 const WINDOW_BITS: i32 = 64;
 const WINDOW_OUTPUT_BITS: u32 = 16;
@@ -33,9 +37,9 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
         start: usize,
         end: usize,
         disable_cdf_update: bool,
-    ) -> Option<Self> {
+    ) -> Av1Result<Self> {
         if start > end || end > data.len() {
-            return None;
+            return Err(malformed("entropy range exceeds the tile payload"));
         }
         let mut decoder = Self {
             data,
@@ -51,7 +55,7 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
             operations: None,
         };
         decoder.refill();
-        Some(decoder)
+        Ok(decoder)
     }
 
     #[cfg(coverage)]
@@ -704,7 +708,7 @@ fn restoration_unit_starts_at_first_block(
 fn decode_restoration_prefix(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
-) -> Option<()> {
+) -> bool {
     let mut cdfs = RestorationCdfs::defaults();
     let mut references = [RestorationReference::defaults(); 3];
     let plane_count = if context.monochrome { 1 } else { 3 };
@@ -712,11 +716,15 @@ fn decode_restoration_prefix(
         let Some(restoration_type) = context.restoration_types[plane] else {
             continue;
         };
-        if restoration_unit_starts_at_first_block(context, plane)? {
-            decode_restoration_unit(decoder, &mut cdfs, reference, plane, restoration_type);
+        match restoration_unit_starts_at_first_block(context, plane) {
+            Some(true) => {
+                decode_restoration_unit(decoder, &mut cdfs, reference, plane, restoration_type);
+            }
+            Some(false) => {}
+            None => return false,
         }
     }
-    Some(())
+    true
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:386-433. The values are dav1d's inverse
@@ -725,23 +733,23 @@ const fn square8_partition_cdf() -> ([u16; 10], usize) {
     ([13_636, 7258, 2376, 0, 0, 0, 0, 0, 0, 0], 3)
 }
 
-fn default_partition_cdf(level: u32) -> Option<([u16; 10], usize)> {
+fn default_partition_cdf(level: u32) -> Av1Result<([u16; 10], usize)> {
     match level {
-        0 => Some(([4869, 4549, 4239, 284, 229, 149, 129, 0, 0, 0], 7)),
-        1 => Some((
+        0 => Ok(([4869, 4549, 4239, 284, 229, 149, 129, 0, 0, 0], 7)),
+        1 => Ok((
             [12_631, 11_221, 9690, 3202, 2931, 2507, 2244, 1876, 1044, 0],
             9,
         )),
-        2 => Some((
+        2 => Ok((
             [14_306, 11_848, 9644, 5121, 4541, 3719, 3249, 2590, 1224, 0],
             9,
         )),
-        3 => Some((
+        3 => Ok((
             [17_171, 11_839, 8197, 6062, 5104, 3947, 3167, 2197, 866, 0],
             9,
         )),
-        4 => Some(square8_partition_cdf()),
-        _ => None,
+        4 => Ok(square8_partition_cdf()),
+        _ => Err(malformed("partition level exceeds four")),
     }
 }
 
@@ -899,7 +907,7 @@ fn decode_closed_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
     transform_grid: super::block::TransformGrid,
-) -> Option<super::block::FirstLeaf> {
+) -> Av1Result<Option<super::block::FirstLeaf>> {
     let reconstructed = super::block::decode_first_lossless_444_leaf(
         decoder,
         context.frame_width,
@@ -917,7 +925,7 @@ fn decode_closed_420_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
     transform_grid: super::block::TransformGrid,
-) -> Option<super::block::FirstLeaf> {
+) -> Av1Result<Option<super::block::FirstLeaf>> {
     let reconstructed = super::block::decode_first_lossless_420_leaf(
         decoder,
         context.frame_width,
@@ -934,7 +942,7 @@ fn decode_closed_420_leaf(
 fn decode_closed_lossy_420_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
-) -> Option<super::block::FirstLeaf> {
+) -> Av1Result<Option<super::block::FirstLeaf>> {
     let reconstructed = super::block::decode_first_lossy_420_leaf(
         decoder,
         context.frame_width,
@@ -951,14 +959,22 @@ fn decode_closed_lossy_420_leaf(
 
 fn finish_closed_leaf(
     _decoder: &RangeDecoder<'_, '_, '_>,
-    reconstructed: Option<super::block::FirstLeaf>,
-) -> Option<super::block::FirstLeaf> {
+    reconstructed: super::block::PortableResult<super::block::FirstLeaf>,
+) -> Av1Result<Option<super::block::FirstLeaf>> {
+    #[expect(
+        clippy::manual_ok_err,
+        reason = "PortableUnavailable is the explicit native-fallback outcome, not an erased AV1 failure"
+    )]
+    let reconstructed = match reconstructed {
+        Ok(leaf) => Some(leaf),
+        Err(super::block::PortableUnavailable) => None,
+    };
     #[cfg(coverage)]
     let reconstructed = reconstructed.map(|mut leaf| {
         leaf.entropy_operations = _decoder.operation_trace();
         leaf
     });
-    reconstructed
+    Ok(reconstructed)
 }
 
 /// Decode the first real partition syntax element from one tile.
@@ -969,7 +985,7 @@ pub(super) fn validate_first_partition(
     data: &SegmentedData<'_, '_>,
     range: Range<usize>,
     context: &FirstBlockContext,
-) -> Option<Option<super::block::FirstLeaf>> {
+) -> Av1Result<Option<super::block::FirstLeaf>> {
     let mut decoder = RangeDecoder::new(data, range.start, range.end, context.disable_cdf_update)?;
     #[cfg(coverage)]
     {
@@ -981,7 +997,9 @@ pub(super) fn validate_first_partition(
             decoder.enable_operation_trace();
         }
     }
-    decode_restoration_prefix(&mut decoder, context)?;
+    if !decode_restoration_prefix(&mut decoder, context) {
+        return Ok(None);
+    }
     let mut level = context.level;
     loop {
         // Parsed root levels are 0 or 1. Later iterations are capped below, so
@@ -998,7 +1016,9 @@ pub(super) fn validate_first_partition(
                     && !context.subsampling_y
                     && matches!(partition, 2 | 6 | 7 | 9)
                 {
-                    return None;
+                    return Err(malformed(
+                        "partition syntax is invalid for vertically unsampled chroma",
+                    ));
                 }
                 let reconstruct_closed_leaf = (partition == 0)
                     & closed_444_reconstruction_context(context)
@@ -1014,7 +1034,7 @@ pub(super) fn validate_first_partition(
                     } else {
                         super::block::TransformGrid::Square16
                     };
-                    return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
+                    return decode_closed_leaf(&mut decoder, context, transform_grid);
                 }
                 let reconstruct_closed_420_leaf = (partition == 0)
                     & closed_420_reconstruction_context(context)
@@ -1026,17 +1046,13 @@ pub(super) fn validate_first_partition(
                     } else {
                         super::block::TransformGrid::Square16
                     };
-                    return Some(decode_closed_420_leaf(
-                        &mut decoder,
-                        context,
-                        transform_grid,
-                    ));
+                    return decode_closed_420_leaf(&mut decoder, context, transform_grid);
                 }
                 let reconstruct_closed_lossy_420_leaf = (partition == 0)
                     & (level == 4)
                     & closed_lossy_420_reconstruction_context(context);
                 if reconstruct_closed_lossy_420_leaf {
-                    return Some(decode_closed_lossy_420_leaf(&mut decoder, context));
+                    return decode_closed_lossy_420_leaf(&mut decoder, context);
                 }
                 let reconstruct_square_split = (partition == 3)
                     & closed_444_reconstruction_context(context)
@@ -1049,7 +1065,7 @@ pub(super) fn validate_first_partition(
                     // mutate one shared partition CDF.
                     let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
                     if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
-                        return Some(None);
+                        return Ok(None);
                     }
                     let reconstructed = super::block::decode_four_lossless_444_leaves(
                         &mut decoder,
@@ -1063,9 +1079,10 @@ pub(super) fn validate_first_partition(
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
                                 == 0)
                                 .then_some(())
+                                .ok_or(super::block::PortableUnavailable)
                         },
                     );
-                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                    return finish_closed_leaf(&decoder, reconstructed);
                 }
                 let reconstruct_420_square_split = (partition == 3)
                     & closed_420_reconstruction_context(context)
@@ -1078,7 +1095,7 @@ pub(super) fn validate_first_partition(
                     // mutate one shared partition CDF between leaf payloads.
                     let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
                     if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
-                        return Some(None);
+                        return Ok(None);
                     }
                     let reconstructed = super::block::decode_four_lossless_420_leaves(
                         &mut decoder,
@@ -1092,9 +1109,10 @@ pub(super) fn validate_first_partition(
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
                                 == 0)
                                 .then_some(())
+                                .ok_or(super::block::PortableUnavailable)
                         },
                     );
-                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                    return finish_closed_leaf(&decoder, reconstructed);
                 }
             } else {
                 let probability = if horizontal_split {
@@ -1109,7 +1127,9 @@ pub(super) fn validate_first_partition(
                     && vertical_split
                     && !split
                 {
-                    return None;
+                    return Err(malformed(
+                        "partition syntax is invalid for vertically unsampled chroma",
+                    ));
                 }
                 let reconstruct_rectangular_leaf = !split
                     & closed_444_reconstruction_context(context)
@@ -1121,7 +1141,7 @@ pub(super) fn validate_first_partition(
                     } else {
                         super::block::TransformGrid::Vertical8x16
                     };
-                    return Some(decode_closed_leaf(&mut decoder, context, transform_grid));
+                    return decode_closed_leaf(&mut decoder, context, transform_grid);
                 }
                 let reconstruct_420_rectangular_leaf = !split
                     & closed_420_reconstruction_context(context)
@@ -1133,11 +1153,7 @@ pub(super) fn validate_first_partition(
                     } else {
                         super::block::TransformGrid::Vertical8x16
                     };
-                    return Some(decode_closed_420_leaf(
-                        &mut decoder,
-                        context,
-                        transform_grid,
-                    ));
+                    return decode_closed_420_leaf(&mut decoder, context, transform_grid);
                 }
                 let reconstruct_recursive_split = split
                     & closed_444_reconstruction_context(context)
@@ -1150,7 +1166,7 @@ pub(super) fn validate_first_partition(
                     // with the second symbol occurring after the first leaf.
                     let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
                     if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
-                        return Some(None);
+                        return Ok(None);
                     }
                     let orientation = if horizontal_split {
                         super::block::SplitOrientation::Horizontal
@@ -1170,9 +1186,10 @@ pub(super) fn validate_first_partition(
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
                                 == 0)
                                 .then_some(())
+                                .ok_or(super::block::PortableUnavailable)
                         },
                     );
-                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                    return finish_closed_leaf(&decoder, reconstructed);
                 }
                 let reconstruct_420_recursive_split = split
                     & closed_420_reconstruction_context(context)
@@ -1181,7 +1198,7 @@ pub(super) fn validate_first_partition(
                 if reconstruct_420_recursive_split {
                     let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
                     if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
-                        return Some(None);
+                        return Ok(None);
                     }
                     let orientation = if horizontal_split {
                         super::block::SplitOrientation::Horizontal
@@ -1201,23 +1218,24 @@ pub(super) fn validate_first_partition(
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
                                 == 0)
                                 .then_some(())
+                                .ok_or(super::block::PortableUnavailable)
                         },
                     );
-                    return Some(finish_closed_leaf(&decoder, reconstructed));
+                    return finish_closed_leaf(&decoder, reconstructed);
                 }
             }
-            return Some(None);
+            return Ok(None);
         }
         level = level.wrapping_add(1);
         if level > 4 {
-            return None;
+            return Err(malformed("partition recursion exceeds level four"));
         }
     }
 }
 
 #[cfg(coverage)]
 #[coverage(off)]
-pub(super) fn reference_trace() -> Result<Vec<crate::Av1EntropyTraceState>, &'static str> {
+pub(super) fn reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>> {
     const INPUT: [u8; 32] = [
         0x00, 0xff, 0x81, 0x7e, 0x55, 0xaa, 0x13, 0xec, 0x42, 0xbd, 0x99, 0x66, 0x01, 0x80, 0xfe,
         0x24, 0xdb, 0x10, 0xef, 0x73, 0x8c, 0x31, 0xce, 0x5a, 0xa5, 0x0f, 0xf0, 0x69, 0x96, 0x3c,
@@ -1227,19 +1245,17 @@ pub(super) fn reference_trace() -> Result<Vec<crate::Av1EntropyTraceState>, &'st
         start: 0,
         end: INPUT.len(),
     }];
-    let data = SegmentedData::new(&INPUT, &spans).ok_or("segmented input")?;
+    let data = SegmentedData::new(&INPUT, &spans)?;
     let mut records = Vec::with_capacity(103);
 
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), true).ok_or("equal initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), true)?;
     records.push(decoder.trace_state("equal", 0, -1, &[]));
     for step in 1..=16 {
         let value = i32::from(decoder.equal());
         records.push(decoder.trace_state("equal", step, value, &[]));
     }
 
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), true).ok_or("fixed initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), true)?;
     records.push(decoder.trace_state("fixed", 0, -1, &[]));
     for (index, probability) in [0, 1, 4096, 8192, 16_384, 24_576, 32_767]
         .into_iter()
@@ -1247,15 +1263,14 @@ pub(super) fn reference_trace() -> Result<Vec<crate::Av1EntropyTraceState>, &'st
     {
         let value = i32::from(decoder.fixed(probability));
         let step = u32::try_from(index)
-            .ok()
-            .and_then(|value| value.checked_add(1))
-            .ok_or("fixed step")?;
+            .map_err(|error| CodecError::Dimensions(format!("fixed trace step: {error}")))?
+            .checked_add(1)
+            .ok_or_else(|| malformed("fixed trace step overflows"))?;
         records.push(decoder.trace_state("fixed", step, value, &[]));
     }
 
     let mut cdf = [16_384, 0];
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), false).ok_or("adaptive bool initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), false)?;
     records.push(decoder.trace_state("adaptive_bool", 0, -1, &cdf));
     for step in 1..=16 {
         let value = i32::from(decoder.adaptive_bool(&mut cdf));
@@ -1263,55 +1278,52 @@ pub(super) fn reference_trace() -> Result<Vec<crate::Av1EntropyTraceState>, &'st
     }
 
     let mut cdf = [24_576, 16_384, 8192, 0];
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), false).ok_or("adaptive symbol initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), false)?;
     records.push(decoder.trace_state("adaptive_symbol", 0, -1, &cdf));
     for step in 1..=16 {
         let value = i32::try_from(decoder.adaptive_symbol(&mut cdf, 3))
-            .map_err(|_| "adaptive symbol value")?;
+            .map_err(|error| CodecError::Dimensions(format!("adaptive symbol value: {error}")))?;
         records.push(decoder.trace_state("adaptive_symbol", step, value, &cdf));
     }
 
     let mut cdf = [24_576, 16_384, 8192, 0];
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), true).ok_or("frozen symbol initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), true)?;
     records.push(decoder.trace_state("frozen_symbol", 0, -1, &cdf));
     for step in 1..=8 {
         let value = i32::try_from(decoder.adaptive_symbol(&mut cdf, 3))
-            .map_err(|_| "frozen symbol value")?;
+            .map_err(|error| CodecError::Dimensions(format!("frozen symbol value: {error}")))?;
         records.push(decoder.trace_state("frozen_symbol", step, value, &cdf));
     }
 
     let mut cdf = [24_576, 16_384, 8192, 0];
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), false).ok_or("high token initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), false)?;
     records.push(decoder.trace_state("high_token", 0, -1, &cdf));
     for step in 1..=8 {
-        let value = i32::try_from(decoder.high_token(&mut cdf)).map_err(|_| "high token value")?;
+        let value = i32::try_from(decoder.high_token(&mut cdf))
+            .map_err(|error| CodecError::Dimensions(format!("high token value: {error}")))?;
         records.push(decoder.trace_state("high_token", step, value, &cdf));
     }
 
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), true).ok_or("uniform initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), true)?;
     records.push(decoder.trace_state("uniform", 0, -1, &[]));
     for (index, count) in [2, 3, 5, 17, 255].into_iter().enumerate() {
-        let value = i32::try_from(decoder.uniform(count)).map_err(|_| "uniform value")?;
+        let value = i32::try_from(decoder.uniform(count))
+            .map_err(|error| CodecError::Dimensions(format!("uniform value: {error}")))?;
         let step = u32::try_from(index)
-            .ok()
-            .and_then(|value| value.checked_add(1))
-            .ok_or("uniform step")?;
+            .map_err(|error| CodecError::Dimensions(format!("uniform trace step: {error}")))?
+            .checked_add(1)
+            .ok_or_else(|| malformed("uniform trace step overflows"))?;
         records.push(decoder.trace_state("uniform", step, value, &[]));
     }
 
-    let mut decoder =
-        RangeDecoder::new(&data, 0, INPUT.len(), true).ok_or("subexponential initialization")?;
+    let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), true)?;
     records.push(decoder.trace_state("subexponential", 0, -1, &[]));
     for (index, reference) in [0, 63, 127, 200].into_iter().enumerate() {
         let value = decoder.subexponential(reference, 256, 5);
         let step = u32::try_from(index)
-            .ok()
-            .and_then(|value| value.checked_add(1))
-            .ok_or("subexponential step")?;
+            .map_err(|error| CodecError::Dimensions(format!("subexponential trace step: {error}")))?
+            .checked_add(1)
+            .ok_or_else(|| malformed("subexponential trace step overflows"))?;
         records.push(decoder.trace_state("subexponential", step, value, &[]));
     }
 
@@ -1329,13 +1341,12 @@ pub(super) fn reference_trace() -> Result<Vec<crate::Av1EntropyTraceState>, &'st
             start: 0,
             end: input.len(),
         }];
-        let data = SegmentedData::new(input, &spans).ok_or("partition segmented input")?;
-        let mut decoder =
-            RangeDecoder::new(&data, 0, input.len(), false).ok_or("partition initialization")?;
-        let (mut cdf, symbol_count_minus_one) = default_partition_cdf(1).ok_or("partition CDF")?;
+        let data = SegmentedData::new(input, &spans)?;
+        let mut decoder = RangeDecoder::new(&data, 0, input.len(), false)?;
+        let (mut cdf, symbol_count_minus_one) = default_partition_cdf(1)?;
         records.push(decoder.trace_state(case, 0, -1, &cdf));
         let value = i32::try_from(decoder.adaptive_symbol(&mut cdf, symbol_count_minus_one))
-            .map_err(|_| "partition value")?;
+            .map_err(|error| CodecError::Dimensions(format!("partition value: {error}")))?;
         records.push(decoder.trace_state(case, 1, value, &cdf));
     }
 
@@ -1351,52 +1362,64 @@ pub(super) fn reference_trace() -> Result<Vec<crate::Av1EntropyTraceState>, &'st
         start: 0,
         end: RESTORATION_FRAME_3.len(),
     }];
-    let data =
-        SegmentedData::new(&RESTORATION_FRAME_3, &spans).ok_or("restoration segmented input")?;
-    let mut decoder = RangeDecoder::new(&data, 0, RESTORATION_FRAME_3.len(), false)
-        .ok_or("restoration initialization")?;
+    let data = SegmentedData::new(&RESTORATION_FRAME_3, &spans)?;
+    let mut decoder = RangeDecoder::new(&data, 0, RESTORATION_FRAME_3.len(), false)?;
     let mut sgr_cdf = [15_913, 0];
     let case = "restoration_422_frame_3";
     let mut step = 0_u32;
     records.push(decoder.trace_state(case, step, -1, &sgr_cdf));
-    step = step.checked_add(1).ok_or("restoration step")?;
+    step = step
+        .checked_add(1)
+        .ok_or_else(|| malformed("restoration trace step overflows"))?;
     for _plane in 0..3 {
         let enabled = decoder.adaptive_bool(&mut sgr_cdf);
         records.push(decoder.trace_state(case, step, i32::from(enabled), &sgr_cdf));
-        step = step.checked_add(1).ok_or("restoration step")?;
+        step = step
+            .checked_add(1)
+            .ok_or_else(|| malformed("restoration trace step overflows"))?;
         if !enabled {
             continue;
         }
         let parameter_index = decoder.bits(4);
-        let parameter_index_value =
-            i32::try_from(parameter_index).map_err(|_| "restoration parameter value")?;
+        let parameter_index_value = i32::try_from(parameter_index).map_err(|error| {
+            CodecError::Dimensions(format!("restoration parameter value: {error}"))
+        })?;
         records.push(decoder.trace_state(case, step, parameter_index_value, &[]));
-        step = step.checked_add(1).ok_or("restoration step")?;
+        step = step
+            .checked_add(1)
+            .ok_or_else(|| malformed("restoration trace step overflows"))?;
         let activity = *SGR_PARAMETER_ACTIVITY
-            .get(usize::try_from(parameter_index).map_err(|_| "restoration parameter index")?)
-            .ok_or("restoration activity")?;
+            .get(usize::try_from(parameter_index).map_err(|error| {
+                CodecError::Dimensions(format!("restoration parameter index: {error}"))
+            })?)
+            .ok_or_else(|| malformed("restoration activity is unavailable"))?;
         if activity[0] {
             let weight = decoder
                 .subexponential(64, 128, 4)
                 .checked_sub(96)
-                .ok_or("restoration first weight value")?;
+                .ok_or_else(|| malformed("restoration first weight underflows"))?;
             records.push(decoder.trace_state(case, step, weight, &[]));
-            step = step.checked_add(1).ok_or("restoration step")?;
+            step = step
+                .checked_add(1)
+                .ok_or_else(|| malformed("restoration trace step overflows"))?;
         }
         if activity[1] {
             let weight = decoder
                 .subexponential(63, 128, 4)
                 .checked_sub(32)
-                .ok_or("restoration second weight value")?;
+                .ok_or_else(|| malformed("restoration second weight underflows"))?;
             records.push(decoder.trace_state(case, step, weight, &[]));
-            step = step.checked_add(1).ok_or("restoration step")?;
+            step = step
+                .checked_add(1)
+                .ok_or_else(|| malformed("restoration trace step overflows"))?;
         }
     }
-    let (mut partition_cdf, symbol_count_minus_one) =
-        default_partition_cdf(1).ok_or("restoration partition CDF")?;
+    let (mut partition_cdf, symbol_count_minus_one) = default_partition_cdf(1)?;
     let partition =
         i32::try_from(decoder.adaptive_symbol(&mut partition_cdf, symbol_count_minus_one))
-            .map_err(|_| "restoration partition value")?;
+            .map_err(|error| {
+                CodecError::Dimensions(format!("restoration partition value: {error}"))
+            })?;
     records.push(decoder.trace_state(case, step, partition, &partition_cdf));
 
     Ok(records)
@@ -1560,27 +1583,27 @@ fn coverage_restoration_and_partition_paths() {
     let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
     assert_eq!(
         decode_restoration_prefix(&mut decoder, &active_prefix),
-        Some(())
+        true
     );
     active_prefix.block_y = 1;
     let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
     assert_eq!(
         decode_restoration_prefix(&mut decoder, &active_prefix),
-        Some(())
+        true
     );
     active_prefix.block_y = 0;
     active_prefix.upscaled_width = 65;
     let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
     assert_eq!(
         decode_restoration_prefix(&mut decoder, &active_prefix),
-        None
+        false
     );
     assert_eq!(
         validate_first_partition(&data, 0..input.len(), &active_prefix),
-        None
+        Ok(None)
     );
 
-    assert!(default_partition_cdf(5).is_none());
+    assert!(default_partition_cdf(5).is_err());
     let cdf = default_partition_cdf(0).unwrap().0;
     let _ = left_partition_probability(&cdf, 0);
     let _ = top_partition_probability(&cdf, 0);
@@ -1598,9 +1621,9 @@ fn coverage_restoration_and_partition_paths() {
         end: FORBIDDEN_422.len(),
     }];
     let forbidden_data = SegmentedData::new(&FORBIDDEN_422, &spans).unwrap();
-    assert_eq!(
-        validate_first_partition(&forbidden_data, 0..FORBIDDEN_422.len(), &coverage_context(),),
-        None
+    assert!(
+        validate_first_partition(&forbidden_data, 0..FORBIDDEN_422.len(), &coverage_context(),)
+            .is_err()
     );
 
     let mut horizontal_only = coverage_context();
@@ -1629,7 +1652,7 @@ fn coverage_restoration_and_partition_paths() {
         let _ = validate_first_partition(&data, 0..input.len(), &horizontal_422);
         let _ = validate_first_partition(&data, 0..input.len(), &vertical_444);
         let _ = validate_first_partition(&data, 0..input.len(), &vertical_420);
-        if validate_first_partition(&data, 0..input.len(), &vertical_only).is_some() {
+        if validate_first_partition(&data, 0..input.len(), &vertical_only).is_ok() {
             accepted_vertical = true;
         } else {
             rejected_vertical = true;
@@ -1641,10 +1664,7 @@ fn coverage_restoration_and_partition_paths() {
     no_partition.level = 4;
     no_partition.block_width = 0;
     no_partition.block_height = 0;
-    assert_eq!(
-        validate_first_partition(&data, 0..input.len(), &no_partition),
-        None
-    );
+    assert!(validate_first_partition(&data, 0..input.len(), &no_partition).is_err());
     let mut invalid_level = coverage_context();
     invalid_level.level = 5;
     let _ = validate_first_partition(&data, 0..input.len(), &invalid_level);

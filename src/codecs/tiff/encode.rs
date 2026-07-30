@@ -1,8 +1,11 @@
 //! Classic TIFF encoder with Pillow-compatible compression and predictor options.
 
 use crate::codecs::compression::deflate::compress_zlib_tiff;
+use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage, ImageMode};
+#[cfg(coverage)]
+use crate::types::ColorType;
+use crate::types::{DecodedImage, ImageMode};
 use std::collections::HashMap;
 
 const COMPRESSION_NONE: u16 = 1;
@@ -11,8 +14,8 @@ const COMPRESSION_DEFLATE: u16 = 8;
 const COMPRESSION_PACKBITS: u16 = 32_773;
 
 /// Encode an image as a single-strip classic TIFF.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    img.validate().ok()?;
+pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    img.validate().map_err(CodecError::from_image_error)?;
     let width = img.width as usize;
     let height = img.height as usize;
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
@@ -21,13 +24,15 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         ImageMode::L16 => (1, 1, 16, false, width.saturating_mul(2)),
         ImageMode::F32 => (1, 1, 32, false, width.saturating_mul(4)),
         ImageMode::I32 => (1, 1, 32, false, width.saturating_mul(4)),
-        _ => match img.color {
-            ColorType::L8 => (1, 1, 8, false, width),
-            ColorType::Rgb8 => (2, 3, 8, false, width.saturating_mul(3)),
-            ColorType::Rgba8 => (2, 4, 8, true, width.saturating_mul(4)),
-            ColorType::Cmyk8 => (5, 4, 8, false, width.saturating_mul(4)),
-            _ => return None,
-        },
+        ImageMode::L8 => (1, 1, 8, false, width),
+        ImageMode::Rgb8 => (2, 3, 8, false, width.saturating_mul(3)),
+        ImageMode::Rgba8 => (2, 4, 8, true, width.saturating_mul(4)),
+        ImageMode::Cmyk8 => (5, 4, 8, false, width.saturating_mul(4)),
+        _ => {
+            return Err(CodecError::Unsupported(
+                "TIFF cannot encode this image mode".to_owned(),
+            ));
+        }
     };
     // Pillow 12.2.0 accepts byte_order but always emits little-endian TIFF.
     let endian = Endian::Little;
@@ -36,15 +41,25 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         Some("deflate" | "tiff_adobe_deflate") => COMPRESSION_DEFLATE,
         Some("packbits") => COMPRESSION_PACKBITS,
         Some("none" | "raw") | None => COMPRESSION_NONE,
-        Some(_) => return None,
+        Some(_) => {
+            return Err(CodecError::Parameter(
+                "invalid TIFF compression option".to_owned(),
+            ));
+        }
     };
     let predictor = match opts.extra.get("predictor").map(String::as_str) {
         Some("horizontal" | "2") => 2u16,
         Some("none" | "1") | None => 1,
-        Some(_) => return None,
+        Some(_) => {
+            return Err(CodecError::Parameter(
+                "invalid TIFF predictor option".to_owned(),
+            ));
+        }
     };
     if predictor == 2 && !matches!(bits_per_sample, 8 | 16 | 32) {
-        return None;
+        return Err(CodecError::Unsupported(
+            "TIFF horizontal prediction is incompatible with this bit depth".to_owned(),
+        ));
     }
 
     let mut raw = img.pixels.clone();
@@ -57,7 +72,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         encode_lzw(&raw)
     } else if compression == COMPRESSION_DEFLATE {
         let input_chunks = vec![row_len; height];
-        compress_zlib_tiff_with_options(&raw, &input_chunks, opts)?
+        compress_zlib_tiff(&raw, &input_chunks)
     } else {
         encode_packbits(&raw, row_len)
     };
@@ -79,8 +94,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     let compressed_layout = compression != COMPRESSION_NONE;
     let (short_width, short_height) = if compressed_layout {
         (
-            u16::try_from(img.width).ok()?,
-            u16::try_from(img.height).ok()?,
+            u16::try_from(img.width).map_err(|_| {
+                CodecError::Dimensions("compressed TIFF width exceeds format limits".to_owned())
+            })?,
+            u16::try_from(img.height).map_err(|_| {
+                CodecError::Dimensions("compressed TIFF height exceeds format limits".to_owned())
+            })?,
         )
     } else {
         (0, 0)
@@ -113,7 +132,9 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
     };
     // Classic TIFF stores offsets and byte counts as `u32`; bounding the full
     // output length bounds every offset/count written below.
-    u32::try_from(output_len).ok()?;
+    u32::try_from(output_len).map_err(|_| {
+        CodecError::Dimensions("TIFF output exceeds classic format limits".to_owned())
+    })?;
     let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(match endian {
         Endian::Little => b"II",
@@ -191,28 +212,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
         output.resize(pixel_offset, 0);
         output.extend_from_slice(&encoded);
     }
-    Some(output)
+    Ok(output)
 }
 
 fn bounded_u32(value: usize) -> u32 {
     let bytes = value.to_le_bytes();
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
-}
-
-fn compress_zlib_tiff_with_options(
-    raw: &[u8],
-    input_chunks: &[usize],
-    _opts: &EncodeOptions,
-) -> Option<Vec<u8>> {
-    #[cfg(coverage)]
-    if _opts
-        .extra
-        .contains_key("__coverage_force_tiff_deflate_failure")
-    {
-        return None;
-    }
-
-    compress_zlib_tiff(raw, input_chunks)
 }
 
 #[cfg(coverage)]
@@ -254,12 +259,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for compression in ["lzw", "deflate", "packbits", "raw"] {
         let _ = encode(&rgb, &opt("compression", compression));
     }
-    let mut forced_deflate_failure = opt("compression", "deflate");
-    forced_deflate_failure.extra.insert(
-        "__coverage_force_tiff_deflate_failure".to_owned(),
-        "1".to_owned(),
-    );
-    let _ = encode(&rgb, &forced_deflate_failure);
     let forced_output_overflow = opt("__coverage_force_tiff_output_len_overflow", "1");
     let _ = encode(&rgb, &forced_output_overflow);
     let _ = encode(&wide_rgb, &opt("compression", "packbits"));

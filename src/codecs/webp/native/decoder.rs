@@ -820,6 +820,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     exercise_new(Vec::new());
     exercise_new(b"RIFF\x04\0\0\0WE".to_vec());
     exercise_new(b"RIFF\x04\0\0\0WEBP".to_vec());
+    exercise_new(riff(&[chunk(b"JUNK", &[])]));
 
     let vp8_zero_width = [0, 0, 0, 0x9d, 0x01, 0x2a, 0, 0, 1, 0];
     exercise_new(riff(&[chunk(b"VP8 ", &vp8_zero_width)]));

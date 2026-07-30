@@ -7,25 +7,909 @@ active checklist for getting the remaining LLVM source regions and branch to
 
 ## Current retained baseline
 
-- Coverage MCP run: `059e32bb-8a4b-445e-b514-0e1bd97b58ad`
-- Coverage MCP snapshot: `eb1e5e29-2ab8-4b23-8a9f-8484af4644b2`
+- Coverage MCP run: `76390ba1-bce5-4107-b5ff-bcd3771a199a`
+- Coverage MCP snapshot: `1578ce0f-ff3b-4d3c-a466-119146b675bf`
 - Command: `all-features-llvm-cov-json-nightly-branch`
-- Result: `5 passed / 0 failed`
-- Lines: `27001 / 27001` (100%)
-- Functions: `1630 / 1630` (100%)
-- Branches: `3487 / 3488` (1 missing)
-- Regions: `42737 / 42799` (62 missing)
+- Result: `7 passed / 0 failed`
+- Manifest: `1,237` active rows (`949` decode and `288` encode), `0`
+  planned rows
+- Lines: `38752 / 38752` (100%)
+- Functions: `2048 / 2048` (100%)
+- Branches: `5552 / 5552` (100%)
+- Regions: `62556 / 62599` (43 missing)
+- Dashboard: <http://localhost:59471/>
+
+The current snapshot includes exact first-image and later-frame AVIF failure
+semantics. `animated_repeated_frame_id.avif` decodes frame zero as Pillow does,
+then rejects sequence traversal with a structured malformed-AVIF error. This
+proved that first-image decode must not eagerly validate unobserved later AV1
+samples.
 
 ## Remaining gap map
 
-| File | Missing regions | Missing branches | Current reason |
-| --- | ---: | ---: | --- |
-| `src/codecs/compression/zlib_ng.rs` | 0 | 0 | Complete after converting proven generated-token/matcher invariants to direct operations or invariant `expect(...)` calls. |
-| `src/codecs/webp/native/decoder.rs` | 32 | 0 | Batch 63 cleared all raw zero-line `Read`/`Seek` propagation entries; remaining aggregate debt currently has no raw zero-line entries in the MCP artifact. |
-| `src/codecs/webp/native/lossless.rs` | 21 | 1 | Batch 63 cleared the raw zero-line bit-reader/fill propagation entries; the retained branch gap still maps to `BitReader::read_bits`. |
-| `src/codecs/tiff/decode.rs` | 0 | 0 | Complete after coverage-only malformed header overflow fixtures. |
-| `src/codecs/webp/native/vp8.rs` | 8 | 0 | Batch 64 first-partition fixtures cleared one more VP8 aggregate region; remaining debt is still parser/residual decode propagation. |
-| `src/codecs/webp/native/encoder.rs` | 1 | 0 | Top-level `WebPEncoder::encode()` source-region artifact remains after direct writer-failure hook coverage. |
+Coverage MCP preserves exact per-file aggregate region counts, but its LLVM
+projection normalizes source segments to their start lines. Consequently, a
+file can have 100% lines, branches, and functions while retaining unlocated
+sub-line regions. The table below is authoritative for the remaining aggregate
+debt; source hypotheses must be confirmed by a measured decrease, never treated
+as proof by themselves.
+
+| File | Missing regions | Reverse-mapping focus |
+| --- | ---: | --- |
+| `src/codecs/tiff/decode.rs` | 6 | Remaining strip/tile decompressor propagation and validated layout caller continuations. |
+| `src/codecs/tiff/inspect.rs` | 2 | Remaining header/IFD and mode/palette caller continuations after the detected-marker invariant. |
+| `src/codecs/ico/decode.rs` | 3 | Remaining nested PNG/BMP error propagation after full short-palette fixtures replaced four unproven bounds continuations. |
+| `src/codecs/png/decode.rs` | 3 | Chunk/decompression/filter propagation after construction-critical CRC and ordering validation. The decoder now verifies every non-IDAT CRC itself and retains Pillow's deferred IDAT-CRC policy. |
+| `src/codecs/jpeg/decode/decode.rs` | 5 | Parser, scan, coefficient, and reconstruction caller propagation. |
+| `src/codecs/webp/native/vp8.rs` | 3 | Remaining VP8 header/residual caller regions after the complete partition-size fixture sweep. |
+| `src/codecs/gif/inspect.rs` | 3 | GIF header and extension-size propagation. |
+| `src/codecs/webp/encode/mod.rs` | 2 | Validated mode conversion and encoder propagation after adding exact bad-second-nibble, EXIF, and XMP metadata error rows. |
+| `src/codecs/avif/av1/frame.rs` | 2 | AV1 caller continuations not represented as uncovered lines or branches. |
+| `src/codecs/avif/av1/mod.rs` | 2 | First-image versus full-sequence validator caller continuations. |
+| `src/codecs/webp/inspect.rs` | 2 | RIFF/chunk-size propagation. |
+| `src/codecs/bmp/decode.rs` | 2 | Nested arithmetic or palette/RLE propagation. |
+| `src/codecs/gif/decode.rs` | 2 | Result propagation after removing the redundant inspect-before-decode pass. Full malformed GIF fixtures now reach decoder parsing directly, including Pillow's nonzero-GCE resynchronization and decompression-bomb category. |
+| `src/codecs/avif/container.rs` | 1 | Container caller continuation. |
+| `src/codecs/gif/encode.rs` | 1 | Validated encoder invariant or final writer propagation. |
+| `src/codecs/avif/av1/entropy.rs` | 1 | Entropy-reader caller continuation. |
+| `src/codecs/tiff/encode.rs` | 1 | Validated encoder/compressor propagation. |
+| `src/codecs/jpeg/decode/parser.rs` | 1 | Parser caller continuation. |
+| `src/codecs/avif/decode.rs` | 1 | First-image/full-sequence validation caller continuation. |
+
+## Current sweep rules
+
+1. Work largest-to-smallest in one bulk sweep, but keep each file's change
+   mechanically separable so Coverage MCP comparison can attribute movement.
+2. Reverse-map from a public operation to the earliest failing helper. Generate
+   a complete Pillow-loadable or Pillow-rejected file, record it in
+   `manifest.yaml`, and regenerate exact oracle evidence before retaining the
+   path.
+3. Do not add ordinary unit tests, prefix-only byte probes, byte-size checks,
+   or implementation-only expectations to satisfy a region.
+4. If a propagated error is unreachable because the caller establishes a
+   structural invariant, make the callee genuinely infallible at that boundary
+   or model the validated state explicitly. Do not retain a fake error path.
+5. Preserve `Result` for every genuinely fallible parser, inspector, decoder,
+   encoder, sequence operation, dispatcher, and native wrapper. `Option` remains
+   only for legitimate absence.
+6. After each bulk batch, run formatting/static checks and the single approved
+   Coverage MCP command. Retain only exact parity with no line, branch,
+   function, feature, or output regression and a strictly smaller absolute
+   region deficit.
+
+## Result-migration zlib matcher batch
+
+Goal: remove fake compression failures introduced while converting private
+matcher helpers from `Option` to `Result`, without weakening the real encoder
+error boundary.
+
+Reverse mapping from snapshot
+`a46ccac4-4c00-4455-b04f-59c2e6ce61a8`:
+
+- `src/codecs/compression/zlib_ng.rs` has 42 missing regions with 100% lines,
+  functions, and branches.
+- `compress_zlib_chunked()` is the only PNG entry point and receives
+  `input_chunks` directly from `plain_rows()`. TIFF constructs one chunk per
+  already-validated row. Both callers therefore establish that chunk lengths
+  cover the input before any matcher runs.
+- The Result migration nevertheless added repeated chunk-overflow,
+  position/window, hash-table, and chain-table errors inside
+  `SlowMatcher`, `Level6Matcher`, `Level9Matcher`, and `Level3Matcher`.
+  Those errors require mutating private vectors or positions into states that
+  no encoded image can create.
+- The existing coverage hook manufactured those impossible states by clearing
+  tables, truncating internal windows, and assigning `usize::MAX`; these are
+  implementation-only expectations rather than Pillow-observable behavior.
+
+Applied edit:
+
+- Retained `Result` on the zlib compression entry points and on every genuinely
+  fallible public compression entry point.
+- Made the four private matcher state machines infallible after their
+  caller-established input invariants, using direct bounded table access and
+  debug assertions at the chunk/window boundary.
+- Made private token expansion, tree construction, and block emission
+  infallible because their tokens and tree specifications are constructed only
+  by those validated matchers and fixed internal tables. The zlib-ng frequency
+  accumulation uses the upstream wrapping integer behavior.
+- Kept `compress_zlib_chunked()` fallible for the caller-supplied compression
+  level and kept `compress_zlib_tiff()` inside its canonical `Result` encoder
+  boundary.
+- Removed the private malformed-state probes that corrupted matcher internals
+  or supplied impossible chunk layouts. No replacement unit test or coverage
+  hook was added.
+- Preserved the valid-state matcher probes temporarily; a later fixture-only
+  audit must remove the remaining global coverage-hook surface after matching
+  each observable branch to a full-file Pillow fixture.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `git diff --check`: passed.
+
+Initial Coverage MCP validation:
+
+- Intermediate run: `c2893aa9-4910-4771-afa5-185832704677`.
+- Intermediate snapshot: `81070e26-e4ee-4195-bda8-206c1992a420`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Zlib regions improved from 42 missing to 23 missing.
+- The intermediate run exposed one uncovered line/branch in the stored-block
+  chunk-overflow guard. That guard duplicated the same caller-established
+  chunk-layout invariant and was removed before the final run.
+- Final run: `82df6433-a495-448c-8984-80437f509287`.
+- Final snapshot: `22120a05-a185-4bce-9951-3acb52c064a4`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Lines: `39011 / 39011` (100%).
+- Functions: `2046 / 2046` (100%).
+- Branches: `5574 / 5574` (100%).
+- Regions: `62904 / 63001` (97 missing), improved by 42 from the
+  pre-batch baseline.
+- `src/codecs/compression/zlib_ng.rs`: `2675 / 2675` regions (100%).
+- `src/codecs/compression/deflate.rs`: `1007 / 1007` regions (100%).
+
+## Result-migration TIFF directory batch
+
+Goal: preserve TIFF field-type failures at the parser boundary and remove
+unreachable `Result` propagation from accessors over an already validated IFD.
+
+Reverse mapping from snapshot
+`22120a05-a185-4bce-9951-3acb52c064a4`:
+
+- `src/codecs/tiff/decode.rs` has 22 missing regions and
+  `src/codecs/tiff/inspect.rs` has 8, while both retain 100% line, branch, and
+  function coverage.
+- `Directory::parse()` validates every retained entry's byte range, but
+  `Directory::{one, one_or, values, values_or}` re-read those ranges and
+  returned `Result` for failures that require manually corrupting private
+  `Entry` positions after parsing.
+- Baseline fields with invalid TIFF types are real input failures. They must be
+  rejected by `Directory::parse()` with the same Dimensions-versus-Malformed
+  classification rather than erased into optional absence.
+
+Applied edit:
+
+- Added parser-time field-type validation for baseline tags consumed by both
+  TIFF decode and inspection, preserving Dimensions for image/tile dimension
+  fields and Malformed for other shared numeric fields.
+- Added one decoder-boundary validation pass for decode-only fields. This keeps
+  Pillow's stage distinction: inspection tolerates nonnumeric strip
+  offsets/counts while materialization rejects them with their exact field-type
+  cause.
+- Recorded a validated `NumericKind` on each retained IFD entry.
+- Made `one`, `one_or`, `values`, and `values_or` infallible lookups whose
+  `Option` now means only that a tag or numeric value is absent.
+- Removed the duplicate tile-type validation pass and private coverage states
+  that manufactured overflowing or unsupported `Entry` values without passing
+  through the parser.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- First run `28d38fd8-5206-467d-91e8-766cbbfc77dc` failed two TIFF rows:
+  `error_bad_ifd_ascii_strip_offsets` and
+  `error_bad_ifd_ascii_compressed_strip_byte_counts`. The initial parser-wide
+  validation rejected these during inspection, while Pillow opens them and
+  rejects only during decode.
+- The parser/decode split above corrects that root cause.
+- Final run: `ed85bc11-9998-47e9-860f-e897e2751f7d`.
+- Final snapshot: `639a3b80-14cf-4451-b04d-bad541736fe7`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Lines: `38978 / 38978` (100%).
+- Functions: `2047 / 2047` (100%).
+- Branches: `5578 / 5578` (100%).
+- Regions: `62902 / 62980` (78 missing), improved by 19 from the
+  pre-batch baseline.
+- TIFF decode improved from 22 missing regions to 9; TIFF inspection improved
+  from 8 to 2.
+
+## Result-migration ICO invariant batch
+
+Goal: keep real ICO/CUR payload failures structured while removing
+host-address-space failures that cannot be produced by the on-disk field
+types.
+
+Reverse mapping from snapshot
+`639a3b80-14cf-4451-b04d-bad541736fe7`:
+
+- `src/codecs/ico/decode.rs` has 11 missing regions with 100% lines,
+  functions, and branches.
+- `decode()` validates the complete directory before selecting an index, so
+  the private `decode_entry()` directory slice cannot fail without bypassing
+  that public boundary.
+- CUR payload length, DIB header size, and palette count are all stored as
+  `u32`. The Result migration widened them to `usize` and then added five
+  host-overflow errors that were reachable only by calling
+  `cur_bmp_prefix()` directly with `usize::MAX`.
+- Indexed ICO palette counts are also read from `u32`; multiplying them by
+  four is infallible on the measured 64-bit target. The 32-bit/WASM build
+  retains a checked `Result` boundary because that conversion can fail there.
+
+Applied edit:
+
+- `decode_entry()` now directly accesses the selected directory entry after
+  the public directory validation.
+- CUR length, header size, and palette entries retain their exact on-disk
+  `u32` types through the synthetic BMP-header boundary.
+- `cur_bmp_prefix()` now rejects only the real failure in that boundary: a
+  palette-derived BMP pixel offset that does not fit the format's `u32`
+  field. The delegated BMP parser does not consume the synthetic `bfSize`, so
+  no host-`usize` error is manufactured for it.
+- Removed the direct `usize::MAX` coverage probes. No replacement unit test,
+  prefix-only test, or implementation-only expectation was added.
+- Kept the real 32-bit indexed-palette overflow as a structured Unsupported
+  result so the feature-gated WASM contract is not weakened.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `5b7dc467-aee6-4d09-a136-d58e161ea4a0`.
+- Snapshot: `014acee0-0d39-47fd-beab-4f2688f4b2f3`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Lines: `38958 / 38958` (100%).
+- Functions: `2047 / 2047` (100%).
+- Branches: `5570 / 5570` (100%).
+- Regions: `62890 / 62964` (74 missing), four fewer than the
+  pre-batch baseline.
+- `src/codecs/ico/decode.rs`: improved from 11 missing regions to 7.
+- `src/codecs/ico/inspect.rs`: remains at 100% for every metric.
+
+## Result-migration progressive JPEG invariant batch
+
+Goal: keep malformed progressive Huffman/scanning failures structured without
+pretending that IJG-padded coefficient reads can fail.
+
+Reverse mapping from snapshot
+`014acee0-0d39-47fd-beab-4f2688f4b2f3`:
+
+- `src/codecs/jpeg/decode/progressive.rs` has 9 missing regions with 100%
+  lines, functions, and branches.
+- Eight added Result continuations call `BitReader::read_bits()` with
+  syntax-derived widths from 1 through 15.
+- This reader deliberately implements IJG entropy exhaustion by zero-padding
+  to `MIN_GET_BITS` (49). Those eight calls therefore cannot produce the new
+  error variant.
+- The final missing continuation re-fetches a component quantization table
+  after the public JPEG decoder has already validated every component
+  selector and table presence.
+- Huffman decode, malformed later-scan table presence, and scan helper
+  failures remain genuinely fallible and continue to use `Result`.
+
+Applied edit:
+
+- Added an infallible private `read_padded_bits()` operation constrained to
+  JPEG coefficient widths and replaced only the eight proven padded reads.
+- Restored a documented invariant assertion for the quantization table at the
+  progressive reconstruction boundary.
+- Retained all real malformed-input Result paths; no error case was converted
+  to `Option`, and no fixture or coverage hook was added.
+- Fixed the two strict-Clippy migration findings exposed during validation:
+  one redundant AVIF local and one TIFF optional lookup expressed without
+  `?`.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `cargo clippy --all-features --all-targets -- -D warnings`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `cf4a5848-0dd3-4a28-8892-b62a639f01ac`.
+- Snapshot: `b04846e2-066d-422f-bf07-24d200a3841e`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Lines: `38962 / 38962` (100%).
+- Functions: `2048 / 2048` (100%).
+- Branches: `5568 / 5568` (100%).
+- Regions: `62902 / 62967` (65 missing), exactly nine fewer than the
+  pre-batch baseline.
+- `src/codecs/jpeg/decode/progressive.rs`: `1733 / 1733` regions (100%).
+
+## Result-migration JPEG inspection parse-once batch
+
+Goal: preserve Pillow's first-SOS validation boundary without introducing a
+second set of unreachable parser failures.
+
+Reverse mapping from snapshot
+`b04846e2-066d-422f-bf07-24d200a3841e`:
+
+- `src/codecs/jpeg/inspect.rs` has 8 missing regions with 100% lines,
+  functions, and branches.
+- `inspect()` first called `verify(data)?`, which parsed and bounded every
+  marker through SOS, then restarted at byte two and repeated marker lookup,
+  length reads, and payload slicing to locate SOF.
+- Every failure in that second parser pass was unreachable after the first
+  pass had accepted the identical immutable byte stream.
+- Returning at SOF before checking SOS would be wrong: Pillow does not expose
+  the metadata for an EOI-before-SOS or truncated-SOS input.
+
+Applied edit:
+
+- Added one shared `verify_header()` pass that validates through SOS and
+  retains the first baseline/progressive frame payload.
+- `inspect()` validates the retained frame after the SOS boundary; `verify()`
+  discards the retained payload.
+- Removed the duplicated signature, marker, length, and payload parser pass.
+- Kept every public malformed signature, marker, payload, SOS, missing-frame,
+  and invalid-frame failure as a structured `Result`.
+- Added no fixture or coverage hook.
+
+Fixture reverse mapping for the five remaining SOF-field continuations:
+
+- Updated the existing empty-SOF, short-height, partial-height, short-width,
+  missing-component-count, and short-component-table files so their marker
+  framing reaches SOS. These remain complete files and remain rejected by the
+  pinned Pillow oracle; they now fail at the SOF field each manifest row
+  declares instead of at the absent-next-marker boundary.
+- Oracle regeneration showed that Pillow inspection accepts the
+  short-component-table file after fixed SOF fields are present, while load
+  rejects it. Removed the inspector's premature component-table validation so
+  the stage distinction now matches Pillow exactly.
+- No new manifest category, ordinary unit test, prefix-only input, or
+  implementation-only expectation was added.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `cargo clippy --all-features --all-targets -- -D warnings`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `89fba70c-672a-4a00-9afc-70ee538bff09`.
+- Snapshot: `0decba1e-8f82-4565-9a2b-6441846af071`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Lines: `38949 / 38949` (100%).
+- Functions: `2049 / 2049` (100%).
+- Branches: `5558 / 5558` (100%).
+- Regions: `62879 / 62941` (62 missing), three fewer than the
+  pre-batch baseline.
+- `src/codecs/jpeg/inspect.rs`: improved from 8 missing regions to 5.
+
+Fixture-stage Coverage MCP validation:
+
+- Run: `b749c99f-43ed-4d17-ae60-c00ca9ae6581`.
+- Snapshot: `a6f68374-9706-4f56-baa3-123bf598bbaa`.
+- Result: `7 passed / 0 failed`; all `1,228` manifest rows remained active.
+- Lines: `38946 / 38946` (100%).
+- Functions: `2049 / 2049` (100%).
+- Branches: `5558 / 5558` (100%).
+- Regions: `62877 / 62934` (57 missing), five fewer than the
+  parse-once snapshot.
+- `src/codecs/jpeg/inspect.rs`: `183 / 183` regions (100%).
+
+## Result-migration PNG encoder invariant batch
+
+Goal: keep real PNG input/compression failures structured while restoring
+Pillow's ancillary-option semantics and placing indexed-palette validation at
+the canonical decoded-image boundary.
+
+Reverse mapping from snapshot
+`a6f68374-9706-4f56-baa3-123bf598bbaa`:
+
+- `src/codecs/png/encode.rs` has 7 missing regions with 100% lines, functions,
+  and branches.
+- PNG validated compression level before calling
+  `compress_zlib_chunked()`, leaving the compressor's Result failure
+  unreachable at that call site.
+- PNG separately treated a missing `P8` palette as fallible after
+  `DecodedImage::validate()`, while the canonical validator did not yet
+  enforce palette presence.
+- The Option-to-Result migration made the five manifest-level ancillary
+  booleans reject unrecognized strings. Pillow's oracle adapter treats only a
+  true request as chunk emission; every other value means the chunk was not
+  requested, matching the encoder's previous behavior.
+
+Applied edit:
+
+- Removed the duplicate PNG compression-range check and retained the
+  compressor's single structured Parameter boundary, which is exercised by
+  the existing out-of-range manifest row.
+- Confirmed from the pinned oracle that `P8` with no retained palette is
+  legitimate absence: Pillow tolerates missing PNG PLTE and short TIFF maps.
+  Kept `None` valid while retaining strict validation for every directly
+  constructed `Some(ImagePalette { .. })`.
+- Added a manifest-backed encode row for Pillow's palette-less `P` behavior
+  and emit its exact implicit all-black 256-entry PLTE table.
+- Restored ancillary requests to infallible true/false interpretation and
+  removed the private invalid-string probe that did not correspond to Pillow
+  behavior.
+- Added no ordinary test, prefix-only input, or implementation-only
+  expectation.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `cargo clippy --all-features --all-targets -- -D warnings`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- First run `bb575f66-e235-4707-bf0c-e2e5856f1e9a` correctly failed five
+  Pillow-tolerated palette-absence rows after palette presence was made
+  mandatory. That proved `None` is legitimate absence and prompted the
+  corrected model above; the stale report was not ingested.
+- Final run: `a29299f7-1171-4d98-a421-58b99b772da2`.
+- Final snapshot: `82c1f35d-4b0b-44fd-adf2-4d67270c6c40`.
+- Result: `7 passed / 0 failed`; all `1,229` manifest rows are active.
+- Lines: `38934 / 38934` (100%).
+- Functions: `2049 / 2049` (100%).
+- Branches: `5556 / 5556` (100%).
+- Regions: `62855 / 62905` (50 missing), exactly seven fewer than the
+  pre-batch baseline.
+- `src/codecs/png/encode.rs`: `606 / 606` regions (100%).
+- `src/types/mod.rs`: `439 / 439` regions (100%).
+
+## Result-migration TIFF validated-raster batch
+
+Goal: keep compressed-stream and malformed-layout failures structured while
+removing private failures that require bypassing the validated raster
+boundary.
+
+Reverse mapping from snapshot
+`82c1f35d-4b0b-44fd-adf2-4d67270c6c40`:
+
+- `src/codecs/tiff/decode.rs` has 9 missing regions with 100% lines,
+  functions, and branches.
+- `MsbBits` advances only within a real LZW input slice and the TIFF LZW
+  syntax constrains code width to 9 through 12 bits. Its new
+  `usize::checked_add` error required manually assigning `bit = usize::MAX`.
+  Clean bitstream exhaustion is legitimate absence, not an error.
+- `unpack_indices()` is called only from match arms that constrain bit depth
+  to 1, 2, 4, or 8 after strip assembly has produced or padded the exact
+  validated raster size. Its unsupported-depth and truncated-row errors
+  required direct private calls that bypassed `convert_pixels()`.
+- The decompression-bomb bound also makes packed width/height arithmetic safe
+  on 32-bit/WASM for these bit depths.
+
+Applied edit:
+
+- Restored `MsbBits::read()` to `Option<u16>`, where `None` exclusively means
+  clean input exhaustion. Removed the impossible arithmetic Result and its
+  corrupted-state probe.
+- Made packed-index expansion infallible after its layout/raster invariants,
+  with debug assertions documenting those preconditions.
+- Removed direct invalid-depth and truncated-row helper probes.
+- Retained `Result` for TIFF parsing, strip/tile bounds, PackBits, LZW stream
+  validity, Deflate, layout selection, color-map presence, and every other
+  input-observable failure.
+
+Local validation:
+
+- `cargo fmt --all`: passed.
+- `cargo check --all-features`: passed.
+- `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed.
+- `cargo clippy --all-features --all-targets -- -D warnings`: passed.
+- `git diff --check`: passed.
+
+Coverage MCP validation:
+
+- Run: `7cb3e296-977d-4de2-a2f5-9c0fbe377090`.
+- Snapshot: `78e61c7e-4ddf-410c-8b7a-cea2f7806d32`.
+- Result: `7 passed / 0 failed`; all `1,229` manifest rows remain active.
+- Lines: `38914 / 38914` (100%).
+- Functions: `2049 / 2049` (100%).
+- Branches: `5554 / 5554` (100%).
+- Regions: `62833 / 62883` (50 missing).
+- TIFF decode still has nine missing regions. The batch removed fake
+  fallibility but did not by itself reduce the aggregate region deficit.
+
+## Result-migration TIFF validated-layout and tile-size fixture plan
+
+Goal: align TIFF decoder validation order with Pillow and replace the remaining
+coverage-only oversized-layout probes with a complete, oracle-classified TIFF
+file wherever a real supported layout can reach the failure.
+
+Reverse mapping from snapshot
+`78e61c7e-4ddf-410c-8b7a-cea2f7806d32`:
+
+- `src/codecs/tiff/decode.rs` still has nine missing regions and
+  `src/codecs/tiff/inspect.rs` has two, while both retain 100% lines,
+  functions, and branches.
+- Three historical strip probes use unsupported combinations such as
+  `SamplesPerPixel = u32::MAX` and `BitsPerSample = 255`. Pillow rejects those
+  while selecting its pixel mode, before raster-size arithmetic. The decoder
+  currently calculates row sizes first, so those probes can return
+  `Dimensions` where the Pillow contract requires `Malformed`.
+- A supported TIFF mode has at most four stored bytes per pixel. Combined with
+  Pillow's `178,956,970`-pixel decompression-bomb ceiling, the complete decoded
+  raster is at most `715,827,880` bytes, including the one-byte-per-row upper
+  bound for packed samples. Row sample count, rounded row bytes, and total
+  decoded size therefore fit both 32-bit WASM and 64-bit native `usize` after
+  layout validation.
+- The existing `checked_add(7)` rounding branch is unnecessary; `div_ceil(8)`
+  expresses the operation without inventing a second overflow cause.
+- Tile dimensions remain independent untrusted TIFF `LONG` fields. A valid
+  four-channel, eight-bit layout with `TileWidth = TileLength = u32::MAX`
+  reaches a real tile-size overflow on 64-bit without an unsupported sample
+  declaration. This must be represented by a complete TIFF fixture and
+  classified by the pinned Pillow oracle before retaining the Rust category.
+
+Planned edit and retention gate:
+
+1. Share TIFF mode/palette validation with the decoder and run it before raster
+   arithmetic, preserving Pillow's first-failure ordering.
+2. Replace checked row arithmetic with direct bounded arithmetic plus adjacent
+   invariant comments; keep 32-bit-only checks only where a TIFF `LONG` can
+   exceed the proven decoded-raster bound.
+3. Generate a complete RGBA tiled TIFF whose huge tile geometry reaches the
+   remaining real tile-size failure. Add it to the manifest and regenerate the
+   pinned Pillow decode/inspect/verify oracle.
+4. Remove the obsolete oversized private strip/tile builders and calls that
+   rely on unsupported layouts.
+5. Retain only if strict local checks pass, every manifest row retains exact
+   Pillow status/category parity, and Coverage MCP produces an ingested
+   snapshot with no line, branch, function, output-byte, feature, or AVIF
+   regression.
+
+Applied edit and oracle evidence:
+
+- Added `TiffLayout` as the validated internal TIFF sample-layout state shared
+  by inspection and decode. Unsupported sample declarations now fail before
+  raster arithmetic, matching Pillow's mode-selection order.
+- Made conversion from a validated layout infallible and removed direct
+  coverage-only calls that passed impossible layouts, truncated rasters, or
+  palette values wider than TIFF `SHORT`.
+- Removed the row overflow branches proven unreachable by the supported layout
+  and Pillow pixel ceiling. Replaced byte rounding with `div_ceil(8)`.
+- Kept tile-size arithmetic fallible. The complete
+  `oversized_rgba_tile.tiff` fixture is a valid RGBA declaration with
+  `TileWidth = TileLength = u32::MAX`; Pillow inspection and verify succeed,
+  while load raises `OverflowError: signed integer is greater than maximum`.
+  The oracle classifies that as `malformed`, so Rust now preserves the same
+  category.
+- Added complete successful `miniswhite_1bit_aligned.tiff` and
+  `miniswhite_16bit.tiff` fixtures. The aligned bilevel file proves the
+  no-padding-mask branch. The 16-bit fixture disproved the old private-helper
+  assumption: Pillow retains MINISWHITE `I;16` samples without inversion, so
+  `Gray16` no longer carries an invert flag.
+- Replaced repeated three-condition predictor checks with one validated tuple
+  predicate, retaining the same TIFF compression/sample-width contract without
+  artificial short-circuit branches.
+
+Validation:
+
+- First retained-parity run:
+  `d07d66a1-8c7e-4fea-baf6-f782bc2ff2b3`, snapshot
+  `1ecfa626-046a-4869-a6e5-230f95b35c77`. All seven tests and 1,230 manifest
+  rows passed, but removing direct conversion hooks exposed six real branch
+  gaps, so the coverage result was not accepted.
+- Diagnostic run `97e9d22e-b5a2-4a31-a397-ac5712a1c0f2` failed only the new
+  16-bit MINISWHITE pixel row, with all 32,768 bytes showing the old inversion
+  error. This run produced no fresh snapshot and prompted the correction above.
+- Final run: `b4757113-0081-48d6-a805-f4b5bd6d258a`.
+- Final snapshot: `417a213b-ec0b-41d1-9397-15562e976cef`.
+- Result: `7 passed / 0 failed`; all `1,232` manifest rows are active.
+- Lines: `38743 / 38743` (100%).
+- Functions: `2049 / 2049` (100%).
+- Branches: `5540 / 5540` (100%).
+- Regions: `62564 / 62611` (47 missing), three fewer than the retained
+  pre-batch baseline.
+- TIFF decode improved from nine to six missing regions; TIFF inspection
+  remains at two.
+
+## Result-migration ICO indexed-palette fixture plan
+
+Goal: determine whether the remaining indexed-ICO Result continuations
+represent real Pillow errors or Rust checks that reject Pillow-tolerated
+palette declarations.
+
+Baseline evidence:
+
+- Latest accepted snapshot before this probe:
+  `19276cd0-c75b-46b6-8b31-d7d9e7ff3582`.
+- All `1,233` manifest rows pass with 100% lines, branches, and functions;
+  46 regions remain globally.
+- `src/codecs/ico/decode.rs` retains seven region-only gaps.
+- The decoder has four input-observable palette-index Result sites: one each
+  for 8-bit and 1-bit DIB entries and two for the high/low nibbles of 4-bit
+  entries. Existing fixtures truncate before the indexed pixel loop, so they
+  do not prove Pillow behavior when `ColorsUsed` declares fewer entries than
+  the stored indices reference.
+- The on-disk index width itself bounds indices to the implicit palette size.
+  The unresolved question is whether Pillow treats a shorter explicit
+  `ColorsUsed` table as malformed, pads it, or reads the following bytes as
+  palette entries.
+
+Planned reverse mapping:
+
+1. Generate complete 1-bit, 4-bit, and 8-bit ICO files from the existing
+   Pillow-backed fixtures, changing only the DIB `ColorsUsed` field to one.
+2. Probe all three with the pinned Pillow installation before declaring their
+   manifest status.
+3. If Pillow rejects them, retain them as full-file structured error fixtures
+   and verify the exact Rust category. If Pillow accepts them, add exact pixel
+   fixtures and correct the decoder instead of forcing a palette-index error.
+4. Remove any private palette-index probe made redundant by the retained
+   fixtures and validate through Coverage MCP.
+
+Applied edit and oracle evidence:
+
+- The pinned Pillow oracle rejects one-entry 1-bit and 4-bit DIB palettes with
+  `OSError: codec configuration error when reading image file`, while accepting
+  the equivalent 8-bit declaration and mapping out-of-table indices to opaque
+  black.
+- Added complete error fixtures for the 1-bit index and both 4-bit high/low
+  nibble failures. Added the accepted 8-bit case as an exact 1,024-byte RGBA
+  pixel reference rather than a size-only assertion.
+- Centralized 1-bit and 4-bit palette-reference validation so ICO inspection
+  and decoding preserve the same malformed cause. The decoder converts only
+  after that invariant is established. The 8-bit decoder retains Pillow's
+  black fallback.
+- Removed the obsolete exploratory 4-bit file that was never referenced by
+  the manifest.
+
+Validation:
+
+- Diagnostic run `3db8382b-0307-4ad3-81af-383f8b7d49e6` proved exact 8-bit
+  pixel parity and exposed that inspection had not yet materialized the
+  selected indexed entry as Pillow does.
+- Diagnostic run `6138930a-c9c5-4acc-a55e-cd6fb0210930` exposed a validator
+  placement error before a snapshot was retained; the validator was moved from
+  the 8-bit decoder to the 4-bit decoder.
+- Retained parity run `e029a6fb-66f2-4fc1-b5fc-e14de1bdd556`, snapshot
+  `8d7c0638-ac1e-4e72-b811-83ab50112918`, passed all fixtures and reduced ICO
+  decode from seven missing regions to three. It also exposed the now-removed
+  TIFF private-hook line at the detected-format boundary.
+- Final run `76390ba1-bce5-4107-b5ff-bcd3771a199a`, snapshot
+  `1578ce0f-ff3b-4d3c-a466-119146b675bf`, passed all seven managed tests and
+  all 1,237 manifest rows with 100% lines, branches, and functions. Global
+  region debt is now 43.
+
+## TIFF detected-marker invariant
+
+The public `inspect()` entry point dispatches to TIFF inspection only after
+`detect_format()` has proved that at least four bytes are present and the
+byte-order marker is `II` or `MM`. The old inner invalid-marker error could
+only be reached by a private direct call; the complete `invalid_endian.tiff`
+fixture correctly remains an `UnknownFormat` failure at public detection.
+
+The TIFF inspector now consumes that established invariant directly instead of
+retaining an unobservable second Result branch. Coverage MCP run
+`76390ba1-bce5-4107-b5ff-bcd3771a199a` restored exact line coverage and reduced
+the global region deficit from 45 to 43 without changing Pillow behavior.
+
+## Complete 43-region reverse map
+
+Snapshot `1578ce0f-ff3b-4d3c-a466-119146b675bf` is the authoritative input to
+this sweep. LLVM's zero-count region entries map the complete remaining debt to
+the following source sites; no other file has missing line, branch, function,
+or region coverage.
+
+| File | Zero-count source sites | Classification and planned proof |
+| --- | --- | --- |
+| `avif/av1/entropy.rs` | `1000:57` | `decode_restoration_prefix` has no error return. Make the validated prefix operation infallible. |
+| `avif/av1/frame.rs` | `617:96`, `850:93` | Real tile-prefix/first-partition propagation. Reverse-map complete AVIF tile mutations with the existing AV1 inspection scripts and retain only Pillow-rejected files. |
+| `avif/av1/mod.rs` | `84:39`, `116:66` | The OBU-loop bound proves the header byte exists; extracted AV1 metadata proves the `av1C` span is in input. Consume those validated states without a second fallible edge. |
+| `avif/container.rs` | `253:39` | Real movie-detail propagation. Remove `stsz` from a complete animated AVIF so the main track lacks a sample count, then classify with Pillow. |
+| `avif/decode.rs` | `13:38` | `decode_portable` never returns an error; return `Option<DecodedImage>` directly. |
+| `bmp/decode.rs` | `346:40`, `654:85` | Add complete V4/V5 bitfield-header truncation and oversized explicit indexed-palette fixtures. Use the oracle to choose Malformed/Parameter ordering. |
+| `gif/decode.rs` | `143:44`, `144:32` | Add complete nonzero-GCE recovery files that truncate in the declared recovery payload and in its following sub-block chain. |
+| `gif/encode.rs` | `998:40` | Sequence validation plus the earlier preparation pass proves later frames are preparable. Prepare every frame once and reuse that validated state. |
+| `gif/inspect.rs` | `42:31`, `56:60`, `57:48` | The loop's EOF check proves the next marker byte exists. The two GCE fixtures above cover the remaining real propagation sites in both inspection and decode. |
+| `ico/decode.rs` | `376:50`, `441:50`, `518:50` | A complete XOR-plane slice beginning at `palette_end` proves the preceding palette slice exists. Use direct validated slices for all indexed depths. |
+| `jpeg/decode/decode.rs` | `34:51`, `59:53`, `146:64`, `149:64`, `152:66` | JPEG entropy exhaustion is padded for all coefficient widths, so use `read_padded_bits`. Existing full missing-DC, missing-AC, and missing-quantization fixtures already prove the table failures; remove the earlier duplicate validation so they reach the canonical lookup. |
+| `jpeg/decode/parser.rs` | `455:73` | APP14 payload-length validation plus `length >= 14` proves the Adobe transform byte exists. |
+| `png/decode.rs` | `89:84`, `122:21`, `189:68` | Pillow's pixel ceiling and validated PNG layouts bound inflated/Adam7 arithmetic. Remove fake overflow Results; add a complete detected PNG with a partial first chunk header for the real verifier error. |
+| `tiff/decode.rs` | `101:84`, `104:54`, `204:53`, `207:57`, `407:19`, `874:46` | Add complete missing tile-width, tile-height, strip-offset, and strip-byte-count fixtures. Encode packed palette depth as validated state and remove `numeric_kind`'s invalid-field-to-absence erasure so `Option` means tag absence only. |
+| `tiff/encode.rs` | `75:48` | TIFF's fixed level-six compressor is infallible over already validated row chunks; remove the redundant Result wrapper. |
+| `tiff/inspect.rs` | `18:65`, `85:62` | Detection proves the four-byte TIFF signature/magic slice. Add a complete missing-height-tag TIFF for the real dimension propagation. |
+| `webp/encode/mod.rs` | `45:24`, `45:27` | Add one exact-output WebP metadata fixture containing uppercase hexadecimal nibbles. |
+| `webp/inspect.rs` | `17:88`, `74:43` | Add a detected RIFF/WEBP file with a partial first chunk header and a complete VP8 header exceeding Pillow's decompression-bomb limit. |
+| `webp/native/vp8.rs` | `1277:47`, `1290:62`, `1307:53` | Fixed VP8 mode trees can produce only their declared sequential leaves. Replace arbitrary-i8 fallible conversion and its implementation-only invalid probes with typed constant lookups. |
+
+Retention sequence:
+
+1. Apply all caller-proven infallibility and existing-fixture routing changes
+   as one mechanically reviewable batch.
+2. Generate the BMP/GIF/PNG/TIFF/WebP/AVIF full files, run the pinned Pillow
+   asset/reference scripts, and record exact success/error status in the
+   manifest before changing categories.
+3. Run formatting and strict static checks once after the sweep.
+4. Run the single approved Coverage MCP command. Retain only exact manifest
+   parity, 100% lines/branches/functions, and a strict reduction from 43
+   missing regions.
+5. Repeat this complete extraction/classification cycle from the new ingested
+   snapshot until regions reach 100%.
+
+Applied caller-invariant and fixture batch:
+
+- Made the AV1 restoration-prefix and portable decode helpers infallible where
+  their callers already establish the required state.
+- Consumed detected TIFF/ICO/AVIF spans directly, reused prevalidated GIF
+  frames, used JPEG padded entropy reads, and replaced fixed VP8 mode-tree
+  conversions with typed lookup tables.
+- Made Pillow-bounded PNG raster arithmetic and TIFF's fixed level-six
+  compressor infallible at their validated internal boundaries.
+- Added complete manifest fixtures for:
+  - GIF truncation inside a nonzero-GCE recovery payload and its following
+    sub-block chain;
+  - BMP V4 alpha-mask truncation and a 257-entry explicit palette;
+  - TIFF missing height, tile dimensions, strip offsets, and strip byte
+    counts;
+  - WebP partial first-chunk framing, a VP8 decompression-bomb header, and
+    exact uppercase/lowercase EXIF metadata encoding;
+  - AVIF movie metadata with the sole `stsz` box replaced by a same-size
+    `free` box.
+- The planned PNG verifier case already existed as the full-file manifest row
+  `short_chunk_kind.png`; no duplicate fixture was added.
+- Pinned Pillow preflight rejected every declared error except missing
+  uncompressed TIFF `StripByteCounts`. Pillow accepts that file and derives
+  its row sizes, so the fixture is retained as a success row and the decoder
+  now treats the absent tag as legitimate optional state. Compressed strips
+  retain their existing offset-boundary derivation for absent or empty counts.
+- Regenerated exact Pillow 12.2.0 decode, inspection, verification, sequence,
+  and encode evidence for GIF, BMP, TIFF, WebP, and AVIF.
+- Local gates before Coverage MCP:
+  - `cargo fmt --all -- --check`: passed;
+  - `cargo check --all-features`: passed;
+  - `RUSTFLAGS='--cfg coverage' cargo +nightly check --all-features`: passed;
+  - `git diff --check`: passed.
+
+### Nine-region follow-up map
+
+Coverage MCP run `63aaa492-b0a1-43ef-8f10-c824a6c45666`, snapshot
+`064d0a36-a07a-4621-9195-688129de3a85`, passed all seven managed tests and
+reduced aggregate region debt from 43 to 9. It exposed four uncovered lines,
+two branches, and one closure function introduced by now-redundant validation.
+The MCP-produced LLVM artifact was used only to recover sub-line starts that
+the normalized MCP projection cannot represent:
+
+| Site | Reverse-mapped cause and action |
+| --- | --- |
+| `jpeg/decode/decode.rs:451` | The baseline fixture reached the canonical safe table lookup, but progressive decode retained a duplicate preflight loop. Remove the duplicate, make progressive reconstruction use the same checked lookup, and add a full progressive missing-quantization-table fixture. |
+| `avif/av1/mod.rs:79` (3 regions, 1 closure function) | AVIF extraction already validates the retained `av1C` span. Consume that span directly instead of adding a second fallible read and error-mapping closure. |
+| `avif/container.rs:253` | Replacing only `stsz` fails earlier inside `stbl` parsing. Replace the complete `stbl` box in a second full animated file so the observable missing movie-detail failure reaches the caller boundary. |
+| `png/decode.rs:122` | `EncodedImage::new` must successfully inspect the immutable IHDR before public verification can run, so a first-IHDR iterator failure is unobservable. Start verification at the first post-IHDR chunk, matching the documented inspected-source invariant. |
+| `tiff/decode.rs:879` | `numeric_kind?` conflates an absent tag with a present nonnumeric tag. Change `values`, `one`, and defaulting accessors to `CodecResult<Option<_>>`; absence remains `Ok(None)` and invalid field types retain a structured malformed cause. |
+| `avif/av1/frame.rs:617`, `:850` | Genuine tile-range and first-partition propagation remain. After retaining this invariant/API batch, reverse-map complete AVIF tile mutations using the pinned AV1 inspection scripts. |
+
+Applied before the next managed run:
+
+- Added and oracle-verified
+  `progressive_missing_quant_table.jpg` and
+  `animated_missing_stbl.avif`.
+- Removed duplicate progressive JPEG table validation and made its final table
+  lookup return the canonical malformed error.
+- Consumed the extractor-validated AV1 configuration span directly.
+- Began PNG verification after the already inspected IHDR.
+- Converted TIFF numeric accessors to `CodecResult<Option<_>>` and removed the
+  duplicate broad field-type prevalidation.
+- Regenerated the pinned JPEG and AVIF Pillow evidence.
+- `cargo fmt --all`, all-feature normal/coverage checks, and
+  `git diff --check` pass.
+
+### TIFF accessor and AVIF tile follow-up
+
+Coverage MCP run `ab410542-ba87-41bf-b7b8-c41dc2e33ccd`, snapshot
+`7146e41c-efee-49e7-aa28-fc5eafb6ed89`, passed all seven managed tests:
+
+- Lines: `38,649 / 38,649` (100%).
+- Branches: `5,540 / 5,540` (100%).
+- Functions: `2,043 / 2,043` (100%).
+- Regions: `62,398 / 62,426` (28 missing).
+
+The nine-region follow-up cleared JPEG, PNG, and AVIF configuration routing,
+but independently fallible TIFF accessors expanded one real invalid-field-type
+failure into 25 caller-continuation regions. The exact MCP-produced LLVM
+sub-line map was:
+
+- `tiff/decode.rs`: 16 regions across `one`, `one_or`, `values`, and
+  `values_or` callers;
+- `tiff/inspect.rs`: 9 equivalent regions;
+- `avif/av1/frame.rs`: 2 genuine tile-entropy propagation regions;
+- `avif/container.rs`: 1 movie-details propagation region.
+
+Reverse mapping and applied design:
+
+- `Directory::parse` now retains all tag/type metadata separately from the
+  numeric entries it can decode. Invalid shared baseline field types still
+  fail during parsing.
+- `decode` performs one structured validation of its decode-only numeric tags
+  before any numeric lookup. The accessors are then infallible, and their
+  `Option` means only that a tag is absent. Inspection deliberately retains
+  Pillow's behavior for ASCII strip offsets/counts: open/inspect succeeds,
+  while materialization reaches the decode-boundary malformed error.
+- `parse_stbl` requires and parses `stsz` before a `Track` can be retained.
+  Therefore a parsed movie always has a concrete sample count. `Track` now
+  stores that validated count directly and `Movie::details` is infallible;
+  replacing `stbl` or `stsz` proved those malformed files fail earlier in the
+  parser rather than at the defensive `sample_count` lookup.
+- Added the complete `empty_tile_payload.avif` fixture by shrinking the pinned
+  AV1 item extent and frame OBU to end exactly after its valid tile-group
+  header. The AV1 inspector confirms a zero-byte first tile, and Pillow 12.2.0
+  opens/verifies the container but rejects materialization as malformed. This
+  reaches both remaining tile-range and first-partition Result propagations
+  without a prefix-only or implementation-only probe.
+
+Planned validation:
+
+- Regenerate the pinned AVIF oracle and confirm the new row's exact inspect,
+  verify, and decode outcomes.
+- Run formatting and all-feature native/coverage static checks.
+- Run the single approved Coverage MCP line/branch/function/region command.
+  Retain this batch only if all manifest rows pass and the absolute region
+  deficit decreases without a metric regression.
+
+First retained validation:
+
+- Coverage MCP run `4a646bf8-8b14-48dc-8234-1a2be79630a8`, snapshot
+  `13eb9bad-84f5-40cc-a0ca-4fbb2edbcedf`, passed all seven managed tests.
+- Lines: `38,655 / 38,655`; branches: `5,542 / 5,542`; functions:
+  `2,043 / 2,043`.
+- Regions improved from 28 missing to 2 missing:
+  `62,405 / 62,407`.
+- TIFF decode/inspection and AVIF container are now at 100% for every metric.
+  Only `avif/av1/frame.rs:617` and `:850` remain.
+- The empty-tile file does not reach those error continuations: dav1d-style
+  range initialization deliberately pads an exhausted but in-bounds tile, and
+  the narrow portable reconstruction returns `Ok(None)` before native decode
+  rejects the complete file.
+
+Next reverse-mapping probe:
+
+- `10bit.avif` contains a real 12-bit 4:2:2 first color item with a 14-byte
+  tile. The two remaining entropy errors are reachable only when vertically
+  unsampled chroma decodes a forbidden partition.
+- Temporarily feed that complete retained file through the existing exhaustive
+  coded-span mutation diagnostic and emit only the first offset/replacement
+  that reaches the exact structured AV1 partition error.
+- Use the candidate to generate a deterministic full-file fixture, confirm
+  Pillow rejects it, record it in the manifest, then remove the temporary
+  diagnostic output and prove the fixture alone covers both caller
+  continuations.
+
+Reverse-mapping result:
+
+- Managed diagnostic run `afa11911-4fc1-40d0-9704-c4abecdfcf86`, snapshot
+  `9c44f13e-6efa-4b58-83cc-82ea3e52bab6`, passed all seven tests but found no
+  one-byte mutation that reached the exact forbidden-partition error. Coverage
+  remained `62,405 / 62,407` regions, so the one-byte hypothesis was rejected.
+- The independently pinned scalar dav1d/Rust entropy corpus already contains a
+  byte sequence that reaches the error under the same 64x64 4:2:2 partition
+  context. Its first 14 bytes replace the complete same-length first color tile
+  in licensed `10bit.avif`; every surrounding container and AV1 header byte
+  remains unchanged.
+- The resulting full file is
+  `forbidden_422_partition.avif`, SHA-256
+  `de34b2dc5855166b32e61aadffbead4989db3787e6db26fab77ae7129ec93381`.
+  Pillow opens it as 64x64 RGBA and verifies it successfully, then rejects
+  frame-zero materialization with `Failed to decode frame 0: Decoding of color
+  planes failed`.
+- The temporary diagnostic output and extra mutation-sweep input were removed.
+  The final coverage run must prove that this manifest fixture alone covers
+  both remaining Result continuations.
+
+Final fixture-only validation:
+
+- Coverage MCP run `543aacd7-eaa7-4bf5-a064-a56d83d282dc`, snapshot
+  `651009f6-4bb8-4eb8-b4d7-c3ad625086e7`, passed all seven managed tests.
+- Lines: `38,655 / 38,655` (100%).
+- Branches: `5,542 / 5,542` (100%).
+- Functions: `2,043 / 2,043` (100%).
+- Regions: `62,407 / 62,407` (100%).
+- The snapshot includes the manifest-backed forbidden-partition file and no
+  temporary 10-bit mutation-sweep input or diagnostic output. Every tracked
+  file is at 100% for every metric.
 
 ## Batch 64 plan
 
@@ -4789,3 +5673,56 @@ Retention rule:
   does not increase, and total missing regions does not increase. Prefer a
   reduction, but accept neutral cleanup if raw decoder debt becomes materially
   simpler.
+
+## Error-contract final sweep — 2026-07-30
+
+Goal:
+
+- finish the accepted `ImageResult`/`CodecResult` migration without expanding
+  into non-Pillow features;
+- prove signature and palette behavior with complete manifest assets; and
+- run Coverage MCP only after the implementation review is current.
+
+Reverse-mapped findings and retained fixes:
+
+1. `MsbBits::read` in the TIFF LZW decoder used `Option<u16>` for a short
+   compressed stream. This was operational failure, not absence, so it now
+   returns `CodecResult<u16>` and preserves the malformed-stream cause.
+2. Pillow registers six TIFF signatures. Full-file mutations showed that the
+   post-detection behavior is asymmetric: legacy swapped magic succeeds over
+   the corresponding classic payload, `MM\0+` also succeeds through Pillow's
+   classic big-endian path, and `II+\0` enters unsupported BigTIFF parsing and
+   fails. One shared header parser now retains exactly that behavior.
+3. AVIF `mif1` and `msf1` recognition was previously represented only by the
+   detector expression. Complete baseline mutations now prove those accepted
+   brands, while a complete `heic` mutation proves the rejection side.
+4. `DecodedImage::validate` already revalidates directly constructed palette
+   fields. The manifest now exercises two public-mutation errors that have
+   direct Pillow equivalents: more than 256 RGB entries and a palette attached
+   to RGB data.
+5. The production `Option` inventory was classified in
+   `docs/image-slash-star-code-review.md`. No remaining use erases an
+   operational failure, and a source search finds no production `.ok()` error
+   erasure.
+
+Pre-coverage evidence:
+
+- the generated matrix contains 1,261 active rows across eight formats;
+- every decode row has a Pillow detection/inspect/verify/decode contract;
+- every successful encode row has exact encoded and decoded references, and
+  every encode-error row has Pillow type, message, and canonical category;
+- strict native Clippy and warning-denied rustdoc pass for no features, each
+  isolated codec feature, defaults, and all features;
+- the same strict Clippy and rustdoc lanes pass for
+  `wasm32-unknown-unknown`; and
+- `scripts/test_feature_matrix.sh` now applies `-D warnings` to rustdoc lanes
+  instead of treating warnings as success.
+
+Final validation:
+
+- Coverage MCP run `65edd371-6a90-49d0-8ce1-51f4801c234e`, snapshot
+  `4ae70741-3fc1-4b45-8154-4d1ed8c2d63b`, passed all seven managed targets;
+- lines: `38,652 / 38,652` (100%);
+- branches: `5,532 / 5,532` (100%);
+- functions: `2,044 / 2,044` (100%); and
+- regions: `62,400 / 62,400` (100%).

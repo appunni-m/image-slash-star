@@ -663,19 +663,29 @@ def gen_jpeg():
     d.joinpath("eoi_without_sos.jpg").write_bytes(baseline[:sos_start] + b"\xff\xd9")
     d.joinpath("missing_eoi.jpg").write_bytes(baseline[:-2])
     d.joinpath("wrong_soi.jpg").write_bytes(b"\xff\xd7" + baseline[2:])
-    d.joinpath("truncated_sof_payload.jpg").write_bytes(b"\xff\xd8\xff\xc0\x00\x02")
-    d.joinpath("sof_short_height.jpg").write_bytes(b"\xff\xd8\xff\xc0\x00\x03\x08")
+    near_miss_marker = bytearray(baseline)
+    near_miss_marker[2] = 0
+    d.joinpath("near_miss_third_marker.jpg").write_bytes(near_miss_marker)
+    # Keep marker framing valid through SOS so inspection reaches the malformed
+    # SOF fields instead of failing earlier on an absent next marker.
+    inspection_sos = b"\xff\xda\x00\x02"
+    d.joinpath("truncated_sof_payload.jpg").write_bytes(
+        b"\xff\xd8\xff\xc0\x00\x02" + inspection_sos
+    )
+    d.joinpath("sof_short_height.jpg").write_bytes(
+        b"\xff\xd8\xff\xc0\x00\x03\x08" + inspection_sos
+    )
     d.joinpath("sof_partial_height.jpg").write_bytes(
-        b"\xff\xd8\xff\xc0\x00\x04\x08\x00"
+        b"\xff\xd8\xff\xc0\x00\x04\x08\x00" + inspection_sos
     )
     d.joinpath("sof_short_width.jpg").write_bytes(
-        b"\xff\xd8\xff\xc0\x00\x05\x08\x00\x01"
+        b"\xff\xd8\xff\xc0\x00\x05\x08\x00\x01" + inspection_sos
     )
     d.joinpath("sof_short_components.jpg").write_bytes(
-        b"\xff\xd8\xff\xc0\x00\x07\x08\x00\x01\x00\x01"
+        b"\xff\xd8\xff\xc0\x00\x07\x08\x00\x01\x00\x01" + inspection_sos
     )
     d.joinpath("sof_short_component_table.jpg").write_bytes(
-        b"\xff\xd8\xff\xc0\x00\x08\x08\x00\x01\x00\x01\x03"
+        b"\xff\xd8\xff\xc0\x00\x08\x08\x00\x01\x00\x01\x03" + inspection_sos
     )
     d.joinpath("fill_marker_truncated.jpg").write_bytes(b"\xff\xd8\xff\xff")
     d.joinpath("prefixed_stuffed_marker.jpg").write_bytes(
@@ -721,6 +731,9 @@ def gen_jpeg():
         baseline[:dqt_start] + wide_dqt + baseline[dqt_end:]
     )
     progressive = (d / "progressive.jpg").read_bytes()
+    d.joinpath("progressive_missing_quant_table.jpg").write_bytes(
+        mutate_jpeg_payload(progressive, 0xC2, 8, 2)
+    )
     _, _, progressive_sos_end = jpeg_segment(progressive, 0xDA)
     d.joinpath("progressive_scan0_empty.jpg").write_bytes(
         progressive[:progressive_sos_end] + b"\xff\xd9"
@@ -1014,6 +1027,28 @@ def gen_png():
         + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
         + png_chunk(b"IEND", b"")
     )
+    d.joinpath("actl_after_idat_short.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
+        + png_chunk(b"acTL", b"\0" * 7)
+        + png_chunk(b"IEND", b"")
+    )
+    d.joinpath("iend_without_idat.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IEND", b"")
+    )
+    bad_idat_crc = bytearray(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", rgb_header)
+        + png_chunk(b"IDAT", zlib.compress(b"\x00\x80\x00\x00"))
+        + png_chunk(b"IEND", b"")
+    )
+    idat_kind = bad_idat_crc.index(b"IDAT")
+    idat_length = struct.unpack(">I", bad_idat_crc[idat_kind - 4 : idat_kind])[0]
+    bad_idat_crc[idat_kind + 4 + idat_length] ^= 0xFF
+    d.joinpath("bad_idat_crc.png").write_bytes(bad_idat_crc)
     d.joinpath("actl_zero_frames.png").write_bytes(
         b"\x89PNG\r\n\x1a\n"
         + png_chunk(b"IHDR", rgb_header)
@@ -1338,6 +1373,9 @@ def gen_gif():
     invalid_signature = bytearray(static)
     invalid_signature[:6] = b"NOTGIF"
     (d / "invalid_signature.gif").write_bytes(invalid_signature)
+    near_miss_version = bytearray(static)
+    near_miss_version[:6] = b"GIF80a"
+    (d / "near_miss_version.gif").write_bytes(near_miss_version)
     unknown_block = bytearray(static)
     unknown_block[image_offset] = 0
     (d / "unknown_block.gif").write_bytes(unknown_block)
@@ -1428,6 +1466,12 @@ def gen_gif():
     bad_gce_terminator = bytearray(gce)
     bad_gce_terminator[gce_offset + 7] = 1
     (d / "bad_gce_terminator.gif").write_bytes(bad_gce_terminator)
+    (d / "gce_recovery_payload_truncated.gif").write_bytes(
+        bytes(gce[: gce_offset + 7]) + b"\x04\x01\x02"
+    )
+    (d / "gce_recovery_subblock_truncated.gif").write_bytes(
+        bytes(gce[: gce_offset + 7]) + b"\x01\xaa\x04\x01\x02"
+    )
     (d / "truncated_gce.gif").write_bytes(bytes(gce[: gce_offset + 5]))
     (d / "gce_no_size.gif").write_bytes(bytes(static[:image_offset]) + b"\x21\xf9")
     (d / "gce_truncated_after_size.gif").write_bytes(
@@ -2000,6 +2044,18 @@ def gen_bmp():
         bytes(v4_truncated),
         b"",
         masks=struct.pack("<II", 0x00FF_0000, 0x0000_FF00),
+    )
+    write_bmp(
+        d / "v4_bitfields_truncated_alpha_mask.bmp",
+        bytes(v4_truncated),
+        b"",
+        masks=struct.pack("<III", 0x00FF_0000, 0x0000_FF00, 0x0000_00FF),
+    )
+    write_bmp(
+        d / "oversized_palette.bmp",
+        bmp_info_header(1, 1, 8, 0, 4, 257),
+        b"\0\0\0\0",
+        bmp_palette(257),
     )
     write_bmp(d / "rle8_empty_stream.bmp", bmp_info_header(4, 2, 8, 1, 0, 256), b"", bmp_palette(256))
     write_bmp(
@@ -2884,6 +2940,22 @@ def gen_webp():
 
     write_vp8x_container("extended_vp8x_no_chunks.webp")
     write_vp8x_container("extended_vp8x_truncated_chunk_header.webp", trailing=b"JUNK")
+    partial_first_chunk_payload = b"WEBPVP8 "
+    (d / "partial_first_chunk_header.webp").write_bytes(
+        b"RIFF"
+        + struct.pack("<I", len(partial_first_chunk_payload))
+        + partial_first_chunk_payload
+    )
+    bomb_vp8_header = (
+        b"\0\0\0"
+        + b"\x9d\x01\x2a"
+        + struct.pack("<HH", 16_383, 16_383)
+    )
+    bomb_vp8_payload = b"WEBPVP8 " + struct.pack("<I", len(bomb_vp8_header))
+    bomb_vp8_payload += bomb_vp8_header
+    (d / "vp8_decompression_bomb.webp").write_bytes(
+        b"RIFF" + struct.pack("<I", len(bomb_vp8_payload)) + bomb_vp8_payload
+    )
     short_vp8x = b"VP8X" + struct.pack("<I", 9) + b"\0" * 9 + b"\0"
     short_vp8x_payload = b"WEBP" + short_vp8x
     (d / "vp8x_short_header.webp").write_bytes(
@@ -3662,6 +3734,44 @@ def write_descending_strip_offsets_tiff(path):
     path.write_bytes(out)
 
 
+def write_oversized_rgba_tile_tiff(path):
+    """Write a valid RGBA layout whose TIFF LONG tile geometry overflows."""
+    entries = [
+        (256, 4, 1, 1),
+        (257, 4, 1, 1),
+        (258, 3, 4, "bits"),
+        (259, 3, 1, 1),
+        (262, 3, 1, 2),
+        (277, 3, 1, 4),
+        (284, 3, 1, 1),
+        (322, 4, 1, 0xFFFF_FFFF),
+        (323, 4, 1, 0xFFFF_FFFF),
+        (324, 4, 1, "pixels"),
+        (325, 4, 1, 0),
+        (338, 3, 1, 2),
+    ]
+    entries.sort()
+    external_start = 8 + 2 + len(entries) * 12 + 4
+    bits = struct.pack("<HHHH", 8, 8, 8, 8)
+    pixel_offset = external_start + len(bits)
+    out = bytearray(b"II*\0\x08\0\0\0")
+    out.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, value in entries:
+        out.extend(struct.pack("<HHI", tag, field_type, count))
+        if value == "bits":
+            out.extend(struct.pack("<I", external_start))
+        elif value == "pixels":
+            out.extend(struct.pack("<I", pixel_offset))
+        elif field_type == 3:
+            out.extend(struct.pack("<H", value) + b"\0\0")
+        else:
+            out.extend(struct.pack("<I", value))
+    out.extend(struct.pack("<I", 0))
+    out.extend(bits)
+    out.extend(b"\0")
+    path.write_bytes(out)
+
+
 def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -3681,6 +3791,12 @@ def gen_tiff():
     img.convert("1").save(d / "bilevel.tiff")
     low_depth = img.convert("L").resize((17, 13))
     write_low_depth_tiff(d / "miniswhite_1bit.tiff", low_depth, 1, 0)
+    write_low_depth_tiff(
+        d / "miniswhite_1bit_aligned.tiff",
+        low_depth.resize((16, 8)),
+        1,
+        0,
+    )
     write_low_depth_tiff(d / "miniswhite_8bit.tiff", low_depth, 8, 0)
     write_low_depth_tiff(d / "gray2.tiff", low_depth, 2, 1)
     write_low_depth_tiff(d / "gray4.tiff", low_depth, 4, 1)
@@ -3695,6 +3811,48 @@ def gen_tiff():
     write_packbits_tiff(d / "packbits_noop.tiff", b"\x80\x00\x7f")
     write_packbits_tiff(d / "packbits_literal_overrun.tiff", b"\x01\x00\x01")
     write_packbits_tiff(d / "packbits_run_overrun.tiff", b"\xff\x00")
+    write_compressed_grayscale_tiff(
+        d / "deflate_short_header.tiff",
+        b"\x78\x01\x00\x00\x00",
+        8,
+    )
+    write_compressed_grayscale_tiff(
+        d / "deflate_invalid_header.tiff",
+        b"\x00\x00\x00\x00\x00\x00",
+        8,
+    )
+    write_compressed_grayscale_tiff(
+        d / "deflate_reserved_block.tiff",
+        b"\x78\x01\x07\x00\x00\x00\x00",
+        8,
+    )
+    write_compressed_grayscale_tiff(
+        d / "deflate_bad_stored_complement.tiff",
+        b"\x78\x01\x01\x01\x00\x01\x00\x00\x00\x00\x00\x00",
+        8,
+    )
+    bad_tiff_adler = bytearray(zlib.compress(b"\x80", level=0))
+    bad_tiff_adler[-1] ^= 0x01
+    write_compressed_grayscale_tiff(
+        d / "deflate_bad_adler.tiff",
+        bytes(bad_tiff_adler),
+        8,
+    )
+    write_compressed_grayscale_tiff(
+        d / "deflate_truncated_fixed_block.tiff",
+        b"\x78\x01\x03\x00\x00\x00\x01",
+        8,
+    )
+    write_compressed_grayscale_tiff(
+        d / "deflate_backreference_before_output.tiff",
+        malformed_fixed_zlib([257, 256], distances=[0]),
+        8,
+    )
+    write_compressed_grayscale_tiff(
+        d / "deflate_oversized_stored_output.tiff",
+        zlib.compress(b"\x80\x81", level=0),
+        8,
+    )
     write_lzw_tiff(d / "lzw_no_eoi.tiff", [256, 7])
     write_lzw_tiff(d / "lzw_trailing_code.tiff", [256, 0, 300])
     write_lzw_tiff(d / "lzw_kwkwk_clipped.tiff", [256, 0, 258, 257], width=2)
@@ -3789,11 +3947,31 @@ def gen_tiff():
     invalid_magic = bytearray((d / "rgb.tiff").read_bytes())
     invalid_magic[2:4] = b"+\0"
     (d / "invalid_magic.tiff").write_bytes(invalid_magic)
+    for source, name, signature in (
+        ("le.tiff", "legacy_le_swapped_magic.tiff", b"II\0*"),
+        ("be.tiff", "legacy_be_swapped_magic.tiff", b"MM*\0"),
+        ("be.tiff", "bigtiff_be_signature.tiff", b"MM\0+"),
+    ):
+        variant = bytearray((d / source).read_bytes())
+        variant[:4] = signature
+        (d / name).write_bytes(variant)
     invalid_endian = bytearray((d / "rgb.tiff").read_bytes())
     invalid_endian[:2] = b"ZZ"
     (d / "invalid_endian.tiff").write_bytes(invalid_endian)
     mutate_tiff_tag(d / "rgb.tiff", d / "zero_width.tiff", 256, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "zero_height.tiff", 257, 0)
+    mutate_tiff_tag_id(d / "rgb.tiff", d / "missing_height.tiff", 257, 65_000)
+    mutate_tiff_tag(d / "rgb.tiff", d / "decompression_bomb.tiff", 256, 0xFFFF_FFFF)
+    mutate_tiff_tag(
+        d / "decompression_bomb.tiff",
+        d / "decompression_bomb.tiff",
+        257,
+        0xFFFF_FFFF,
+    )
+    mutate_tiff_tag_count(d / "gray.tiff", d / "empty_width.tiff", 256, 0)
+    mutate_tiff_tag_type(d / "gray.tiff", d / "bits_256.tiff", 258, 4)
+    mutate_tiff_tag(d / "bits_256.tiff", d / "bits_256.tiff", 258, 256)
+    mutate_tiff_tag(d / "16bit.tiff", d / "miniswhite_16bit.tiff", 262, 0)
     mutate_tiff_tag(d / "rgb.tiff", d / "mixed_bits.tiff", 258, 16, 1)
     mutate_tiff_tag_count(d / "rgb.tiff", d / "empty_bits.tiff", 258, 0)
     mutate_tiff_next_ifd(d / "rgb.tiff", d / "cyclic_ifd.tiff", 8)
@@ -3838,11 +4016,24 @@ def gen_tiff():
     )
     mutate_tiff_tag(d / "rgb.tiff", d / "oob_strip.tiff", 273, 0xFFFF_FFF0)
     mutate_tiff_tag_count(d / "rgb.tiff", d / "empty_strip_offsets.tiff", 273, 0)
+    mutate_tiff_tag_id(
+        d / "rgb.tiff", d / "missing_strip_offsets.tiff", 273, 65_000
+    )
+    mutate_tiff_tag_id(
+        d / "rgb.tiff", d / "missing_strip_byte_counts.tiff", 279, 65_000
+    )
     mutate_tiff_tag(d / "tiled.tiff", d / "zero_tile_width.tiff", 322, 0)
+    mutate_tiff_tag_id(
+        d / "tiled.tiff", d / "missing_tile_width.tiff", 322, 65_000
+    )
+    mutate_tiff_tag_id(
+        d / "tiled.tiff", d / "missing_tile_height.tiff", 323, 65_000
+    )
     mutate_tiff_tag_type(d / "tiled.tiff", d / "ascii_tile_width.tiff", 322, 2)
     mutate_tiff_tag_type(d / "tiled.tiff", d / "ascii_tile_height.tiff", 323, 2)
     mutate_tiff_tag_count(d / "tiled.tiff", d / "empty_tile_offsets.tiff", 324, 0)
     mutate_tiff_tag_count(d / "tiled.tiff", d / "empty_tile_byte_counts.tiff", 325, 0)
+    write_oversized_rgba_tile_tiff(d / "oversized_rgba_tile.tiff")
     mutate_tiff_tag_count(
         d / "tiled_deflate_predictor.tiff",
         d / "compressed_empty_tile_byte_counts.tiff",
@@ -3928,6 +4119,28 @@ def gen_ico():
     struct.pack_into("<I", odd_1bit, 22 + 4, 15)
     (d / "bmp_1bit_odd.ico").write_bytes(odd_1bit)
 
+    for source_name, destination_name in [
+        ("bmp_1bit.ico", "bmp_1bit_short_palette.ico"),
+        ("bmp_8bit.ico", "bmp_8bit_short_palette.ico"),
+    ]:
+        short_palette = bytearray((d / source_name).read_bytes())
+        payload_offset = struct.unpack_from("<I", short_palette, 18)[0]
+        struct.pack_into("<I", short_palette, payload_offset + 32, 1)
+        (d / destination_name).write_bytes(short_palette)
+    short_palette_1bit = bytearray((d / "bmp_1bit_short_palette.ico").read_bytes())
+    short_palette_1bit_offset = struct.unpack_from("<I", short_palette_1bit, 18)[0]
+    short_palette_1bit[short_palette_1bit_offset + 44] = 0x80
+    (d / "bmp_1bit_short_palette.ico").write_bytes(short_palette_1bit)
+    for name, first_index_byte in [
+        ("bmp_4bit_short_palette_high.ico", 0x10),
+        ("bmp_4bit_short_palette_low.ico", 0x01),
+    ]:
+        short_palette_4bit = bytearray((d / "bmp_4bit.ico").read_bytes())
+        payload_offset = struct.unpack_from("<I", short_palette_4bit, 18)[0]
+        struct.pack_into("<I", short_palette_4bit, payload_offset + 32, 1)
+        short_palette_4bit[payload_offset + 44] = first_index_byte
+        (d / name).write_bytes(short_palette_4bit)
+
     def write_truncated_payload(name, source_name, payload_len):
         truncated = bytearray((d / source_name).read_bytes())
         data_offset = struct.unpack_from("<I", truncated, 18)[0]
@@ -3995,6 +4208,36 @@ def gen_avif():
     d.mkdir(parents=True, exist_ok=True)
     from PIL import _avif, features
 
+    def replace_top_level_box_kind(data, old_kind, new_kind):
+        if len(old_kind) != 4 or len(new_kind) != 4:
+            raise RuntimeError("AVIF box kinds must contain exactly four bytes")
+        output = bytearray(data)
+        cursor = 0
+        replacements = 0
+        while cursor < len(data):
+            if len(data) - cursor < 8:
+                raise RuntimeError("AVIF top-level box header is truncated")
+            size = struct.unpack_from(">I", data, cursor)[0]
+            header_size = 8
+            if size == 1:
+                if len(data) - cursor < 16:
+                    raise RuntimeError("AVIF top-level large box header is truncated")
+                size = struct.unpack_from(">Q", data, cursor + 8)[0]
+                header_size = 16
+            elif size == 0:
+                size = len(data) - cursor
+            if size < header_size or size > len(data) - cursor:
+                raise RuntimeError("AVIF top-level box size is invalid")
+            if data[cursor + 4 : cursor + 8] == old_kind:
+                output[cursor + 4 : cursor + 8] = new_kind
+                replacements += 1
+            cursor += size
+        if replacements != 1:
+            raise RuntimeError(
+                f"expected one top-level {old_kind!r} box, found {replacements}"
+            )
+        return bytes(output)
+
     codec_versions = _avif.codec_versions()
     if features.version("avif") != "1.4.1":
         raise RuntimeError(
@@ -4006,6 +4249,110 @@ def gen_avif():
             raise RuntimeError(
                 f"AVIF fixture oracle requires {expected}, found {codec_versions}"
             )
+
+    forbidden_422_source = d / "10bit.avif"
+    forbidden_422_partition = bytearray(forbidden_422_source.read_bytes())
+    if hashlib.sha256(forbidden_422_partition).hexdigest() != (
+        "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
+    ):
+        raise RuntimeError("forbidden 4:2:2 partition source differs")
+    original_422_tile = bytes.fromhex("00e234fe35f6ba4026a9e0b77e80")
+    if forbidden_422_partition[2047:2061] != original_422_tile:
+        raise RuntimeError("forbidden 4:2:2 partition tile moved")
+    # The pinned scalar dav1d/Rust entropy oracle proves that this same-length
+    # prefix selects a partition forbidden for horizontally subsampled 4:2:2
+    # chroma. Retain the complete licensed AVIF container and frame header.
+    forbidden_422_partition[2047:2061] = bytes.fromhex(
+        "f83f9ffd73c02fa55948fac5e574"
+    )
+    if hashlib.sha256(forbidden_422_partition).hexdigest() != (
+        "de34b2dc5855166b32e61aadffbead4989db3787e6db26fab77ae7129ec93381"
+    ):
+        raise RuntimeError("forbidden 4:2:2 partition mutation differs")
+    (d / "forbidden_422_partition.avif").write_bytes(forbidden_422_partition)
+
+    animated_source = d / "animated.avif"
+    animated_bytes = animated_source.read_bytes()
+    if hashlib.sha256(animated_bytes).hexdigest() != (
+        "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+    ):
+        raise RuntimeError("animated AVIF source differs from the pinned libavif fixture")
+    animated_track_only = replace_top_level_box_kind(
+        animated_bytes,
+        b"meta",
+        b"free",
+    )
+    (d / "animated_track_only.avif").write_bytes(animated_track_only)
+    if animated_bytes.count(b"stsz") != 1:
+        raise RuntimeError("animated AVIF must contain exactly one stsz box")
+    animated_missing_stsz = animated_bytes.replace(b"stsz", b"free", 1)
+    (d / "animated_missing_stsz.avif").write_bytes(animated_missing_stsz)
+    if animated_bytes.count(b"stbl") != 1:
+        raise RuntimeError("animated AVIF must contain exactly one stbl box")
+    animated_missing_stbl = animated_bytes.replace(b"stbl", b"free", 1)
+    (d / "animated_missing_stbl.avif").write_bytes(animated_missing_stbl)
+
+    def encode_error_resilient_animation():
+        first_frame = Image.new("RGB", (16, 16), (10, 20, 30))
+        second_frame = Image.new("RGB", (16, 16), (40, 50, 60))
+        output = BytesIO()
+        first_frame.save(
+            output,
+            format="AVIF",
+            save_all=True,
+            append_images=[second_frame],
+            duration=[100, 100],
+            quality=80,
+            speed=8,
+            max_threads=1,
+            advanced={"error-resilient": "1"},
+        )
+        encoded = bytearray(output.getvalue())
+        for box_kind in (b"mvhd", b"tkhd", b"mdhd"):
+            kind_offset = encoded.find(box_kind)
+            if kind_offset < 4 or encoded[kind_offset + 4] != 1:
+                raise RuntimeError(
+                    f"error-resilient AVIF lacks one version-one {box_kind!r} box"
+                )
+            if encoded.find(box_kind, kind_offset + 4) != -1:
+                raise RuntimeError(
+                    f"error-resilient AVIF contains multiple {box_kind!r} boxes"
+                )
+            encoded[kind_offset + 8 : kind_offset + 24] = bytes(16)
+        return bytes(encoded)
+
+    error_resilient_animation = encode_error_resilient_animation()
+    if error_resilient_animation != encode_error_resilient_animation():
+        raise RuntimeError("error-resilient AVIF fixture is not deterministic")
+    if hashlib.sha256(error_resilient_animation).hexdigest() != (
+        "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0"
+    ):
+        raise RuntimeError("error-resilient AVIF fixture differs from its pinned hash")
+    (d / "animated_error_resilient.avif").write_bytes(error_resilient_animation)
+
+    repeated_frame_id = bytearray(error_resilient_animation)
+    frame_id_start_bit = 1042 * 8 + 7
+    frame_id_width = 15
+    original_frame_id = 0
+    for index in range(frame_id_width):
+        bit_position = frame_id_start_bit + index
+        original_frame_id = (original_frame_id << 1) | (
+            (repeated_frame_id[bit_position // 8] >> (7 - bit_position % 8)) & 1
+        )
+    if original_frame_id != 4627:
+        raise RuntimeError("error-resilient AVIF second frame ID moved")
+    for index in range(frame_id_width):
+        bit_position = frame_id_start_bit + index
+        replacement = (4626 >> (frame_id_width - index - 1)) & 1
+        mask = 1 << (7 - bit_position % 8)
+        repeated_frame_id[bit_position // 8] = (
+            repeated_frame_id[bit_position // 8] & ~mask
+        ) | (replacement * mask)
+    if hashlib.sha256(repeated_frame_id).hexdigest() != (
+        "34ba8322879102ee291f9ec06703f20973c16475a0ebafb1c763e89ee9c73427"
+    ):
+        raise RuntimeError("repeated-frame-ID AVIF mutation differs")
+    (d / "animated_repeated_frame_id.avif").write_bytes(repeated_frame_id)
 
     def write_portable(
         name,
@@ -4115,6 +4462,29 @@ def gen_avif():
         size=(8, 8),
         subsampling="4:2:0",
     )
+    empty_tile_source = d / "portable_lossless_420_8x8_a.avif"
+    empty_tile_payload = bytearray(empty_tile_source.read_bytes())
+    if hashlib.sha256(empty_tile_payload).hexdigest() != (
+        "21d453da436be1bbb47238e35d919499c7814a2a8073550b9ae958cafe78d15e"
+    ):
+        raise RuntimeError("empty-tile AVIF source differs from its pinned fixture")
+    extent = (275).to_bytes(4, "big") + (32).to_bytes(4, "big")
+    if empty_tile_payload.count(extent) != 1:
+        raise RuntimeError("empty-tile AVIF item extent moved")
+    extent_offset = empty_tile_payload.index(extent)
+    empty_tile_payload[extent_offset + 4 : extent_offset + 8] = (17).to_bytes(
+        4, "big"
+    )
+    if empty_tile_payload[287:289] != b"\x32\x12":
+        raise RuntimeError("empty-tile AVIF frame OBU moved")
+    # Keep the complete frame header and tile-group header while ending the
+    # item extent exactly where the first tile entropy payload would begin.
+    empty_tile_payload[288] = 3
+    if hashlib.sha256(empty_tile_payload).hexdigest() != (
+        "03203e35905a79b9556e19f2e3925abc1c1f7541c431eee556637d59cfee1f52"
+    ):
+        raise RuntimeError("empty-tile AVIF mutation differs from its pinned hash")
+    (d / "empty_tile_payload.avif").write_bytes(empty_tile_payload)
     for gray in (0, 64, 126, 127, 129, 130, 192, 255):
         write_portable(
             f"portable_lossy_420_q99_gray_{gray}.avif",
@@ -4574,9 +4944,19 @@ def gen_avif():
     malformed[size_spans[0]["offset"] + size_spans[0]["length"] - 1] = 0xFF
     (d / "invalid_tile_size.avif").write_bytes(malformed)
 
-    (d / "unsupported_major_brand.avif").write_bytes(b"\0\0\0\x18ftypheic")
     baseline_path = d / "baseline.avif"
     baseline = bytearray(baseline_path.read_bytes())
+    for brand in (b"mif1", b"msf1"):
+        accepted_major_brand = bytearray(baseline)
+        if accepted_major_brand[4:8] != b"ftyp":
+            raise RuntimeError("baseline AVIF must begin with an ftyp box")
+        accepted_major_brand[8:12] = brand
+        (d / f"major_brand_{brand.decode('ascii')}.avif").write_bytes(accepted_major_brand)
+    unsupported_major_brand = bytearray(baseline)
+    if unsupported_major_brand[4:8] != b"ftyp":
+        raise RuntimeError("baseline AVIF must begin with an ftyp box")
+    unsupported_major_brand[8:12] = b"heic"
+    (d / "unsupported_major_brand.avif").write_bytes(unsupported_major_brand)
     sequence_marker = bytes.fromhex("0a091819bfff6880868342")
     sequence_offset = baseline.index(sequence_marker) + 2
     baseline[sequence_offset] = (baseline[sequence_offset] & 0x1f) | 0xe0

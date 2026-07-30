@@ -2,6 +2,8 @@
 
 use std::num::NonZeroU32;
 
+use crate::codecs::{CodecError, CodecResult};
+
 const MAX_BOXES: usize = 4_096;
 const MAX_RECORDS: usize = 4_096;
 const VISUAL_SAMPLE_ENTRY_SIZE: usize = 78;
@@ -9,11 +11,19 @@ const ALPHA_URN_MPEG_B: &[u8] = b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
 const ALPHA_URN_HEVC: &[u8] = b"urn:mpeg:hevc:2015:auxid:1";
 
 type FourCc = [u8; 4];
-type ParseResult<T> = Result<T, ()>;
+type ParseResult<T> = CodecResult<T>;
+
+macro_rules! parse_failure {
+    () => {
+        CodecError::Malformed(
+            concat!("invalid AVIF sample structure at ", file!(), ":", line!()).to_owned(),
+        )
+    };
+}
 
 #[cfg(target_pointer_width = "32")]
 fn usize_from_u64(value: u64) -> ParseResult<usize> {
-    usize::try_from(value).map_err(|_| ())
+    usize::try_from(value).map_err(|_| parse_failure!())
 }
 
 #[cfg(target_pointer_width = "64")]
@@ -29,7 +39,7 @@ pub(super) struct ByteSpan {
 
 impl ByteSpan {
     fn from_offset_size(offset: u64, size: u64, limit: usize) -> ParseResult<Self> {
-        let end = offset.checked_add(size).ok_or(())?;
+        let end = offset.checked_add(size).ok_or_else(|| parse_failure!())?;
         #[cfg(target_pointer_width = "32")]
         let start = usize_from_u64(offset)?;
         #[cfg(target_pointer_width = "64")]
@@ -39,13 +49,15 @@ impl ByteSpan {
         #[cfg(target_pointer_width = "64")]
         let end = usize_from_u64(end);
         if end > limit {
-            return Err(());
+            return Err(parse_failure!());
         }
         Ok(Self { start, end })
     }
 
     pub(super) fn bytes(self, input: &[u8]) -> ParseResult<&[u8]> {
-        input.get(self.start..self.end).ok_or(())
+        input
+            .get(self.start..self.end)
+            .ok_or_else(|| parse_failure!())
     }
 
     pub(super) fn len(self) -> usize {
@@ -87,9 +99,12 @@ impl<'input> Reader<'input> {
     }
 
     fn take_span(&mut self, length: usize) -> ParseResult<ByteSpan> {
-        let end = self.offset.checked_add(length).ok_or(())?;
+        let end = self
+            .offset
+            .checked_add(length)
+            .ok_or_else(|| parse_failure!())?;
         if end > self.end {
-            return Err(());
+            return Err(parse_failure!());
         }
         let span = ByteSpan {
             start: self.offset,
@@ -130,7 +145,7 @@ impl<'input> Reader<'input> {
             0 => Ok(0),
             4 => Ok(u64::from(self.u32()?)),
             8 => self.u64(),
-            _ => Err(()),
+            _ => Err(parse_failure!()),
         }
     }
 
@@ -140,8 +155,14 @@ impl<'input> Reader<'input> {
     }
 
     fn c_string(&mut self) -> ParseResult<&'input [u8]> {
-        let remaining = self.input.get(self.offset..self.end).ok_or(())?;
-        let length = remaining.iter().position(|&byte| byte == 0).ok_or(())?;
+        let remaining = self
+            .input
+            .get(self.offset..self.end)
+            .ok_or_else(|| parse_failure!())?;
+        let length = remaining
+            .iter()
+            .position(|&byte| byte == 0)
+            .ok_or_else(|| parse_failure!())?;
         let value = &remaining[..length];
         self.offset = self.offset.saturating_add(length).saturating_add(1);
         Ok(value)
@@ -156,17 +177,20 @@ struct Budget {
 
 impl Budget {
     fn box_seen(&mut self) -> ParseResult<()> {
-        self.boxes = self.boxes.checked_add(1).ok_or(())?;
+        self.boxes = self.boxes.checked_add(1).ok_or_else(|| parse_failure!())?;
         if self.boxes > MAX_BOXES {
-            return Err(());
+            return Err(parse_failure!());
         }
         Ok(())
     }
 
     fn records_seen(&mut self, count: usize) -> ParseResult<()> {
-        self.records = self.records.checked_add(count).ok_or(())?;
+        self.records = self
+            .records
+            .checked_add(count)
+            .ok_or_else(|| parse_failure!())?;
         if self.records > MAX_RECORDS {
-            return Err(());
+            return Err(parse_failure!());
         }
         Ok(())
     }
@@ -194,7 +218,7 @@ fn next_box(
     let header_size = reader.offset.saturating_sub(start);
     let size = if size == 0 {
         if !top_level {
-            return Err(());
+            return Err(parse_failure!());
         }
         reader.end.saturating_sub(start)
     } else {
@@ -205,7 +229,7 @@ fn next_box(
         converted
     };
     if size < header_size {
-        return Err(());
+        return Err(parse_failure!());
     }
     let payload = reader.take_span(size.saturating_sub(header_size))?;
     Ok(Some(BoxSpan { kind, payload }))
@@ -229,18 +253,20 @@ fn parse_ftyp(input: &[u8], payload: ByteSpan) -> ParseResult<Brands> {
     let major = reader.four_cc()?;
     reader.skip(4)?;
     if !(reader.end.saturating_sub(reader.offset)).is_multiple_of(4) {
-        return Err(());
+        return Err(parse_failure!());
     }
     let mut has_avif = major == *b"avif";
     let mut has_avis = major == *b"avis";
-    let compatible = input.get(reader.offset..reader.end).ok_or(())?;
+    let compatible = input
+        .get(reader.offset..reader.end)
+        .ok_or_else(|| parse_failure!())?;
     for bytes in compatible.chunks_exact(4) {
         let brand = [bytes[0], bytes[1], bytes[2], bytes[3]];
         has_avif |= brand == *b"avif";
         has_avis |= brand == *b"avis";
     }
     if !has_avif && !has_avis {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(Brands {
         major,
@@ -301,7 +327,7 @@ fn parse_meta(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
 
     let mut meta = Meta::default();
@@ -317,46 +343,46 @@ fn parse_meta(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
         match child.kind {
             kind if kind == *b"hdlr" => {
                 if handler_seen || parse_handler(input, child.payload)? != *b"pict" {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 handler_seen = true;
             }
             kind if kind == *b"pitm" => {
                 if pitm_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 pitm_seen = true;
                 meta.primary_item_id = Some(parse_pitm(input, child.payload)?);
             }
             kind if kind == *b"iinf" => {
                 if iinf_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 iinf_seen = true;
                 parse_iinf(input, child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iprp" => {
                 if iprp_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 iprp_seen = true;
                 parse_iprp(input, child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iref" => {
                 if iref_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 iref_seen = true;
                 parse_iref(input, child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iloc" => {
                 if iloc.replace(child.payload).is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
             }
             kind if kind == *b"idat" => {
                 if idat.is_some() || child.payload.len() == 0 {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 idat = Some(child.payload);
             }
@@ -365,9 +391,9 @@ fn parse_meta(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     }
 
     if !handler_seen || !pitm_seen || !iinf_seen || !iprp_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
-    let iloc = iloc.ok_or(())?;
+    let iloc = iloc.ok_or_else(|| parse_failure!())?;
     parse_iloc(input, iloc, idat, &mut meta, budget)?;
     Ok(meta)
 }
@@ -376,7 +402,7 @@ fn parse_handler(input: &[u8], payload: ByteSpan) -> ParseResult<FourCc> {
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 || reader.u32()? != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let handler = reader.four_cc()?;
     reader.skip(12)?;
@@ -393,7 +419,7 @@ fn parse_pitm(input: &[u8], payload: ByteSpan) -> ParseResult<u32> {
         reader.u32()?
     };
     if item_id == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(item_id)
 }
@@ -409,23 +435,23 @@ fn parse_iinf(
     let entry_count = match version {
         0 => usize::from(reader.u16()?),
         1 => reader.u32()? as usize,
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     };
     budget.records_seen(entry_count)?;
     meta.items.reserve(entry_count);
     for _ in 0..entry_count {
-        let child = next_box(&mut reader, false, budget)?.ok_or(())?;
+        let child = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
         if child.kind != *b"infe" {
-            return Err(());
+            return Err(parse_failure!());
         }
         let item = parse_infe(input, child.payload)?;
         if meta.items.iter().any(|existing| existing.id == item.id) {
-            return Err(());
+            return Err(parse_failure!());
         }
         meta.items.push(item);
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -436,10 +462,10 @@ fn parse_infe(input: &[u8], payload: ByteSpan) -> ParseResult<Item> {
     let id = match version {
         2 => u32::from(reader.u16()?),
         3 => reader.u32()?,
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     };
     if id == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let _ = reader.u16()?;
     let kind = reader.four_cc()?;
@@ -457,21 +483,21 @@ fn parse_iprp(
     budget: &mut Budget,
 ) -> ParseResult<()> {
     let mut reader = Reader::new(input, payload);
-    let ipco = next_box(&mut reader, false, budget)?.ok_or(())?;
+    let ipco = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
     if ipco.kind != *b"ipco" {
-        return Err(());
+        return Err(parse_failure!());
     }
     parse_ipco(input, ipco.payload, meta, budget)?;
     let mut ipma_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         if child.kind != *b"ipma" || ipma_seen {
-            return Err(());
+            return Err(parse_failure!());
         }
         ipma_seen = true;
         parse_ipma(input, child.payload, meta, budget)?;
     }
     if !ipma_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -495,7 +521,7 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
         kind if kind == *b"av1C" => {
             let mut reader = Reader::new(input, property.payload);
             if reader.u8()? != 0x81 {
-                return Err(());
+                return Err(parse_failure!());
             }
             reader.skip(3)?;
             Ok(Property::Av1C(property.payload))
@@ -504,7 +530,7 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             let mut reader = Reader::new(input, property.payload);
             let (version, _) = parse_full_box(&mut reader)?;
             if version != 0 {
-                return Err(());
+                return Err(parse_failure!());
             }
             let urn = reader.c_string()?;
             Ok(Property::AuxC {
@@ -534,7 +560,7 @@ fn parse_ipma(
             reader.u32()?
         };
         if item_id == 0 || item_id <= previous_id {
-            return Err(());
+            return Err(parse_failure!());
         }
         previous_id = item_id;
         let association_count = usize::from(reader.u8()?);
@@ -550,13 +576,13 @@ fn parse_ipma(
             let property_index = raw & index_mask;
             if property_index == 0 {
                 if raw & essential_mask != 0 {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 continue;
             }
             let property_index = property_index.saturating_sub(1) as usize;
             if property_index >= meta.properties.len() {
-                return Err(());
+                return Err(parse_failure!());
             }
             meta.associations.push(Association {
                 item_id,
@@ -565,7 +591,7 @@ fn parse_ipma(
         }
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -590,7 +616,7 @@ fn parse_iref(
         };
         let count = usize::from(references.u16()?);
         if from_id == 0 {
-            return Err(());
+            return Err(parse_failure!());
         }
         budget.records_seen(count)?;
         for _ in 0..count {
@@ -600,7 +626,7 @@ fn parse_iref(
                 references.u32()?
             };
             if to_id == 0 {
-                return Err(());
+                return Err(parse_failure!());
             }
             meta.references.push(Reference {
                 kind: child.kind,
@@ -609,7 +635,7 @@ fn parse_iref(
             });
         }
         if !references.is_empty() {
-            return Err(());
+            return Err(parse_failure!());
         }
     }
     Ok(())
@@ -627,7 +653,7 @@ fn parse_iloc(
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version > 2 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let field_sizes = reader.u16()?;
     let offset_size = field_sizes.to_be_bytes()[0] >> 4;
@@ -642,7 +668,7 @@ fn parse_iloc(
         .into_iter()
         .any(|width| !matches!(width, 0 | 4 | 8))
     {
-        return Err(());
+        return Err(parse_failure!());
     }
     let item_count = if version < 2 {
         usize::from(reader.u16()?)
@@ -663,12 +689,12 @@ fn parse_iloc(
                 .iter()
                 .any(|location| location.item_id == item_id)
         {
-            return Err(());
+            return Err(parse_failure!());
         }
         let method = if matches!(version, 1 | 2) {
             let construction = reader.u16()?;
             if construction & 0xfff0 != 0 {
-                return Err(());
+                return Err(parse_failure!());
             }
             construction.to_be_bytes()[1] & 0x0f
         } else {
@@ -677,10 +703,10 @@ fn parse_iloc(
         let source = match method {
             0 => ExtentSource::File,
             1 => ExtentSource::Idat,
-            _ => return Err(()),
+            _ => return Err(parse_failure!()),
         };
         if reader.u16()? != 0 {
-            return Err(());
+            return Err(parse_failure!());
         }
         let base_offset = reader.uint(base_offset_size)?;
         let extent_count = usize::from(reader.u16()?);
@@ -692,14 +718,18 @@ fn parse_iloc(
             }
             let extent_offset = reader.uint(offset_size)?;
             let extent_length = reader.uint(length_size)?;
-            let relative = base_offset.checked_add(extent_offset).ok_or(())?;
+            let relative = base_offset
+                .checked_add(extent_offset)
+                .ok_or_else(|| parse_failure!())?;
             let span = match source {
                 ExtentSource::File => {
                     ByteSpan::from_offset_size(relative, extent_length, input.len())?
                 }
                 ExtentSource::Idat => {
-                    let idat = idat.ok_or(())?;
-                    let start = (idat.start as u64).checked_add(relative).ok_or(())?;
+                    let idat = idat.ok_or_else(|| parse_failure!())?;
+                    let start = (idat.start as u64)
+                        .checked_add(relative)
+                        .ok_or_else(|| parse_failure!())?;
                     ByteSpan::from_offset_size(start, extent_length, idat.end)?
                 }
             };
@@ -712,7 +742,7 @@ fn parse_iloc(
         });
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -748,9 +778,9 @@ impl Meta {
                 None
             }
         });
-        let config = configs.next().ok_or(())?;
+        let config = configs.next().ok_or_else(|| parse_failure!())?;
         if configs.next().is_some() {
-            return Err(());
+            return Err(parse_failure!());
         }
         Ok(config)
     }
@@ -775,7 +805,7 @@ impl Meta {
             .map(|reference| reference.from_id);
         let result = matches.next();
         if matches.next().is_some() {
-            return Err(());
+            return Err(parse_failure!());
         }
         Ok(result)
     }
@@ -810,16 +840,20 @@ pub(super) struct ExtractedAvif<'input> {
 }
 
 impl ExtractedAvif<'_> {
-    pub(super) fn validate(&self) -> Option<()> {
+    pub(super) fn validate(&self) -> CodecResult<()> {
         if self.still.is_none() && self.sequence.is_none() {
-            return None;
+            return Err(CodecError::Malformed(
+                "AVIF container has neither a still image nor an image sequence".to_owned(),
+            ));
         }
         if let Some(still) = &self.still {
             validate_plane(self.input, &still.color)?;
             if let Some(alpha) = &still.alpha {
                 validate_plane(self.input, alpha)?;
                 if alpha.samples.len() != still.color.samples.len() {
-                    return None;
+                    return Err(CodecError::Malformed(
+                        "AVIF still color and alpha sample counts differ".to_owned(),
+                    ));
                 }
             }
         }
@@ -829,38 +863,49 @@ impl ExtractedAvif<'_> {
             if let Some(alpha) = &sequence.alpha {
                 validate_plane(self.input, alpha)?;
                 if alpha.samples.len() != sequence.color.samples.len() {
-                    return None;
+                    return Err(CodecError::Malformed(
+                        "AVIF sequence color and alpha sample counts differ".to_owned(),
+                    ));
                 }
             }
         }
-        Some(())
+        Ok(())
     }
 }
 
-fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Option<()> {
+fn validate_plane(input: &[u8], plane: &EncodedPlane) -> CodecResult<()> {
     if plane.samples.is_empty() {
-        return None;
+        return Err(CodecError::Malformed(
+            "AVIF sample plane is empty".to_owned(),
+        ));
     }
     for sample in &plane.samples {
         if sample.spans.is_empty() || sample.spans.iter().all(|span| span.len() == 0) {
-            return None;
+            return Err(CodecError::Malformed(
+                "AVIF sample has no encoded payload".to_owned(),
+            ));
         }
-        let _ = sample.config.bytes(input).ok()?;
+        let _ = sample
+            .config
+            .bytes(input)
+            .map_err(|error| error.context("validate AVIF sample configuration"))?;
         let _ = sample.sync;
         let _ = sample.duration;
         for span in &sample.spans {
-            let _ = span.bytes(input).ok()?;
+            let _ = span
+                .bytes(input)
+                .map_err(|error| error.context("validate AVIF sample payload"))?;
         }
     }
-    Some(())
+    Ok(())
 }
 
 fn item_sample(meta: &Meta, item_id: u32) -> ParseResult<EncodedSample> {
-    let item = meta.item(item_id).ok_or(())?;
+    let item = meta.item(item_id).ok_or_else(|| parse_failure!())?;
     if item.kind != *b"av01" {
-        return Err(());
+        return Err(parse_failure!());
     }
-    let location = meta.location(item_id).ok_or(())?;
+    let location = meta.location(item_id).ok_or_else(|| parse_failure!())?;
     let _ = location.source;
     Ok(EncodedSample {
         spans: location.extents.clone(),
@@ -871,22 +916,22 @@ fn item_sample(meta: &Meta, item_id: u32) -> ParseResult<EncodedSample> {
 }
 
 fn item_ids(meta: &Meta, item_id: u32) -> ParseResult<Vec<u32>> {
-    let item = meta.item(item_id).ok_or(())?;
+    let item = meta.item(item_id).ok_or_else(|| parse_failure!())?;
     match item.kind {
         kind if kind == *b"av01" => Ok(vec![item_id]),
         kind if kind == *b"grid" => {
             let children = meta.dimg_children(item_id);
             if children.is_empty() {
-                return Err(());
+                return Err(parse_failure!());
             }
             Ok(children)
         }
-        _ => Err(()),
+        _ => Err(parse_failure!()),
     }
 }
 
 fn still_payload(meta: &Meta) -> ParseResult<StillPayload> {
-    let primary = meta.primary_item_id.ok_or(())?;
+    let primary = meta.primary_item_id.ok_or_else(|| parse_failure!())?;
     let color_ids = item_ids(meta, primary)?;
     let color = EncodedPlane {
         samples: color_ids
@@ -911,7 +956,7 @@ fn still_payload(meta: &Meta) -> ParseResult<StillPayload> {
         None
     } else {
         if alpha_ids.len() != color_ids.len() {
-            return Err(());
+            return Err(parse_failure!());
         }
         Some(EncodedPlane {
             samples: alpha_ids
@@ -978,7 +1023,7 @@ fn parse_movie(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
         }
     }
     if movie.tracks.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(movie)
 }
@@ -993,21 +1038,21 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
         match child.kind {
             kind if kind == *b"tkhd" => {
                 if tkhd_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 tkhd_seen = true;
                 track.id = parse_tkhd(input, child.payload)?;
             }
             kind if kind == *b"mdia" => {
                 if mdia_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 mdia_seen = true;
                 parse_mdia(input, child.payload, &mut track, budget)?;
             }
             kind if kind == *b"tref" => {
                 if tref_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 tref_seen = true;
                 track.aux_for_id = parse_tref(input, child.payload, budget)?;
@@ -1016,7 +1061,7 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
         }
     }
     if !tkhd_seen || !mdia_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(track)
 }
@@ -1027,11 +1072,11 @@ fn parse_tkhd(input: &[u8], payload: ByteSpan) -> ParseResult<u32> {
     match version {
         0 => reader.skip(8)?,
         1 => reader.skip(16)?,
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     }
     let track_id = reader.u32()?;
     if track_id == 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(track_id)
 }
@@ -1042,12 +1087,12 @@ fn parse_tref(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     while let Some(child) = next_box(&mut reader, false, budget)? {
         if child.kind == *b"auxl" {
             if aux_for.is_some() {
-                return Err(());
+                return Err(parse_failure!());
             }
             let mut ids = Reader::new(input, child.payload);
             let id = ids.u32()?;
             if id == 0 {
-                return Err(());
+                return Err(parse_failure!());
             }
             aux_for = Some(id);
         }
@@ -1069,21 +1114,21 @@ fn parse_mdia(
         match child.kind {
             kind if kind == *b"mdhd" => {
                 if mdhd_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 mdhd_seen = true;
                 track.timescale = Some(parse_mdhd(input, child.payload)?);
             }
             kind if kind == *b"hdlr" => {
                 if handler_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 handler_seen = true;
                 track.handler = parse_handler(input, child.payload)?;
             }
             kind if kind == *b"minf" => {
                 if minf_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 minf_seen = true;
                 track.table = Some(parse_minf(input, child.payload, budget)?);
@@ -1092,7 +1137,7 @@ fn parse_mdia(
         }
     }
     if !mdhd_seen || !handler_seen || !minf_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -1104,9 +1149,9 @@ fn parse_mdhd(input: &[u8], payload: ByteSpan) -> ParseResult<NonZeroU32> {
     match version {
         0 => reader.skip(8)?,
         1 => reader.skip(16)?,
-        _ => return Err(()),
+        _ => return Err(parse_failure!()),
     }
-    NonZeroU32::new(reader.u32()?).ok_or(())
+    NonZeroU32::new(reader.u32()?).ok_or_else(|| parse_failure!())
 }
 
 fn parse_minf(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<SampleTable> {
@@ -1115,12 +1160,12 @@ fn parse_minf(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     while let Some(child) = next_box(&mut reader, false, budget)? {
         if child.kind == *b"stbl" {
             if table.is_some() {
-                return Err(());
+                return Err(parse_failure!());
             }
             table = Some(parse_stbl(input, child.payload, budget)?);
         }
     }
-    table.ok_or(())
+    table.ok_or_else(|| parse_failure!())
 }
 
 fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<SampleTable> {
@@ -1136,42 +1181,42 @@ fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
         match child.kind {
             [b's', b't', b'c', b'o'] | [b'c', b'o', b'6', b'4'] => {
                 if offsets_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 offsets_seen = true;
                 table.chunk_offsets = parse_chunk_offsets(input, child, &mut table, budget)?;
             }
             kind if kind == *b"stsc" => {
                 if stsc_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stsc_seen = true;
                 table.mappings = parse_stsc(input, child.payload, budget)?;
             }
             kind if kind == *b"stsz" => {
                 if stsz_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stsz_seen = true;
                 table.sample_sizes = parse_stsz(input, child.payload, budget)?;
             }
             kind if kind == *b"stss" => {
                 if stss_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stss_seen = true;
                 table.sync_samples = parse_u32_records(input, child.payload, budget)?;
             }
             kind if kind == *b"stts" => {
                 if stts_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stts_seen = true;
                 table.timings = parse_stts(input, child.payload, budget)?;
             }
             kind if kind == *b"stsd" => {
                 if stsd_seen {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 stsd_seen = true;
                 table.descriptions = parse_stsd(input, child.payload, budget)?;
@@ -1180,7 +1225,7 @@ fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
         }
     }
     if !offsets_seen || !stsc_seen || !stsz_seen || !stsd_seen {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(table)
 }
@@ -1195,7 +1240,7 @@ fn parse_chunk_offsets(
     let mut reader = Reader::new(input, child.payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let count = reader.u32()? as usize;
     budget.records_seen(count)?;
@@ -1208,7 +1253,7 @@ fn parse_chunk_offsets(
         });
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(offsets)
 }
@@ -1222,7 +1267,7 @@ fn parse_stsc(
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let count = reader.u32()? as usize;
     budget.records_seen(count)?;
@@ -1238,12 +1283,12 @@ fn parse_stsc(
                 .last()
                 .is_some_and(|previous: &SampleToChunk| entry.first_chunk <= previous.first_chunk)
         {
-            return Err(());
+            return Err(parse_failure!());
         }
         entries.push(entry);
     }
     if !reader.is_empty() || entries.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(entries)
 }
@@ -1253,7 +1298,7 @@ fn parse_stsz(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let common_size = reader.u32()?;
     let count = reader.u32()? as usize;
@@ -1267,7 +1312,7 @@ fn parse_stsz(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
         sizes.resize(count, common_size);
     }
     if !reader.is_empty() || sizes.is_empty() || sizes.contains(&0) {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(sizes)
 }
@@ -1280,7 +1325,7 @@ fn parse_u32_records(
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let count = reader.u32()? as usize;
     budget.records_seen(count)?;
@@ -1289,7 +1334,7 @@ fn parse_u32_records(
         values.push(reader.u32()?);
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(values)
 }
@@ -1303,7 +1348,7 @@ fn parse_stts(
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
-        return Err(());
+        return Err(parse_failure!());
     }
     let count = reader.u32()? as usize;
     budget.records_seen(count)?;
@@ -1315,7 +1360,7 @@ fn parse_stts(
         });
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(entries)
 }
@@ -1328,13 +1373,13 @@ fn parse_stsd(
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if !matches!(version, 0 | 1) {
-        return Err(());
+        return Err(parse_failure!());
     }
     let count = reader.u32()? as usize;
     budget.records_seen(count)?;
     let mut descriptions = Vec::with_capacity(count);
     for _ in 0..count {
-        let sample = next_box(&mut reader, false, budget)?.ok_or(())?;
+        let sample = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
         if sample.kind != *b"av01" {
             descriptions.push(SampleDescription {
                 config: None,
@@ -1343,7 +1388,7 @@ fn parse_stsd(
             continue;
         }
         if sample.payload.len() < VISUAL_SAMPLE_ENTRY_SIZE {
-            return Err(());
+            return Err(parse_failure!());
         }
         let properties = ByteSpan {
             start: sample
@@ -1355,7 +1400,7 @@ fn parse_stsd(
         descriptions.push(parse_sample_description(input, properties, budget)?);
     }
     if !reader.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(descriptions)
 }
@@ -1372,12 +1417,12 @@ fn parse_sample_description(
         match parse_property(input, child)? {
             Property::Av1C(span) => {
                 if config.replace(span).is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
             }
             Property::AuxC { is_alpha } => {
                 if aux_is_alpha.replace(is_alpha).is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
             }
             Property::Other => {}
@@ -1406,7 +1451,7 @@ fn duration_at(timings: &[TimeToSample], sample_index: usize) -> u32 {
 // ✅ VERIFIED: libavif 1.4.1 read.c:520-607. Chunk mappings expand in
 // declaration order, and the first sample is sync even without stss.
 fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
-    let table = track.table.as_ref().ok_or(())?;
+    let table = track.table.as_ref().ok_or_else(|| parse_failure!())?;
     let mut samples = Vec::with_capacity(table.sample_sizes.len());
     let mut sample_index = 0_usize;
     let mut mapping_index = 0_usize;
@@ -1419,19 +1464,28 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
             }
             mapping_index = mapping_index.saturating_add(1);
         }
-        let mapping = table.mappings.get(mapping_index).ok_or(())?;
+        let mapping = table
+            .mappings
+            .get(mapping_index)
+            .ok_or_else(|| parse_failure!())?;
         if mapping.first_chunk > chunk_number || mapping.samples_per_chunk == 0 {
-            return Err(());
+            return Err(parse_failure!());
         }
         let description_index = mapping.description_index.saturating_sub(1) as usize;
         if mapping.description_index == 0 {
-            return Err(());
+            return Err(parse_failure!());
         }
-        let description = table.descriptions.get(description_index).ok_or(())?;
-        let config = description.config.ok_or(())?;
+        let description = table
+            .descriptions
+            .get(description_index)
+            .ok_or_else(|| parse_failure!())?;
+        let config = description.config.ok_or_else(|| parse_failure!())?;
         let mut sample_offset = chunk_offset;
         for _ in 0..mapping.samples_per_chunk {
-            let size = *table.sample_sizes.get(sample_index).ok_or(())?;
+            let size = *table
+                .sample_sizes
+                .get(sample_index)
+                .ok_or_else(|| parse_failure!())?;
             let span = ByteSpan::from_offset_size(sample_offset, u64::from(size), input.len())?;
             #[allow(clippy::cast_possible_truncation)]
             let sample_number = (sample_index as u32).saturating_add(1);
@@ -1446,7 +1500,7 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
         }
     }
     if sample_index != table.sample_sizes.len() || samples.is_empty() {
-        return Err(());
+        return Err(parse_failure!());
     }
     Ok(EncodedPlane { samples })
 }
@@ -1461,8 +1515,8 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
                 [b'p', b'i', b'c', b't'] | [b'v', b'i', b'd', b'e']
             )
         })
-        .ok_or(())?;
-    let timescale = color_track.timescale.ok_or(())?;
+        .ok_or_else(|| parse_failure!())?;
+    let timescale = color_track.timescale.ok_or_else(|| parse_failure!())?;
     let color = track_plane(input, color_track)?;
     let mut alpha_tracks = movie.tracks.iter().filter(|track| {
         track.handler == *b"auxv"
@@ -1480,15 +1534,15 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
     });
     let alpha_track = alpha_tracks.next();
     if alpha_tracks.next().is_some() {
-        return Err(());
+        return Err(parse_failure!());
     }
     let alpha = if let Some(track) = alpha_track {
         if track.timescale != Some(timescale) {
-            return Err(());
+            return Err(parse_failure!());
         }
         let plane = track_plane(input, track)?;
         if plane.samples.len() != color.samples.len() {
-            return Err(());
+            return Err(parse_failure!());
         }
         Some(plane)
     } else {
@@ -1504,9 +1558,9 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
 fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
     let mut budget = Budget::default();
     let mut reader = Reader::whole(input);
-    let first = next_box(&mut reader, true, &mut budget)?.ok_or(())?;
+    let first = next_box(&mut reader, true, &mut budget)?.ok_or_else(|| parse_failure!())?;
     if first.kind != *b"ftyp" {
-        return Err(());
+        return Err(parse_failure!());
     }
     let brands = parse_ftyp(input, first.payload)?;
     let mut meta = None;
@@ -1515,13 +1569,13 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         match child.kind {
             kind if kind == *b"meta" => {
                 if meta.is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 meta = Some(parse_meta(input, child.payload, &mut budget)?);
             }
             kind if kind == *b"moov" => {
                 if movie.is_some() {
-                    return Err(());
+                    return Err(parse_failure!());
                 }
                 movie = Some(parse_movie(input, child.payload, &mut budget)?);
             }
@@ -1529,7 +1583,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         }
     }
     if (brands.has_avif && meta.is_none()) || (brands.has_avis && movie.is_none()) {
-        return Err(());
+        return Err(parse_failure!());
     }
     let still = meta.as_ref().map(still_payload).transpose()?;
     let sequence = movie
@@ -1544,14 +1598,14 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
     })
 }
 
-pub(super) fn extract(input: &[u8]) -> Option<ExtractedAvif<'_>> {
-    extract_inner(input).ok()
+pub(super) fn extract(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
+    extract_inner(input)
 }
 
-pub(super) fn validated(input: &[u8]) -> Option<ExtractedAvif<'_>> {
+pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
     let extracted = extract(input)?;
     extracted.validate()?;
-    Some(extracted)
+    Ok(extracted)
 }
 
 #[cfg(coverage)]

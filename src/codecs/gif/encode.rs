@@ -5,6 +5,7 @@
 //! - `Rgb8`: quantized to a 256-color palette
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
 
+use crate::codecs::error::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
 use crate::types::{
     AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
@@ -23,8 +24,8 @@ const MAX_LZW_CODE: u16 = 4095;
 /// grayscale palette. RGB8 and RGBA8 images are quantized to a palette of at
 /// most 256 unique colors using a simple nearest-neighbor approach.
 ///
-/// Returns `None` for unsupported color types or images with no pixels.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+/// Returns a classified failure for invalid images, modes, or options.
+pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
     encode_sequence(&DecodedSequence::from_image(img.clone()), opts)
 }
 
@@ -38,7 +39,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    assert!(encode_sequence(&invalid_sequence, &EncodeOptions::none()).is_none());
+    assert!(encode_sequence(&invalid_sequence, &EncodeOptions::none()).is_err());
 
     let identical = [0u8, 0, 0, 255];
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -236,6 +237,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .extra
         .insert("loop".to_owned(), "forever-ish".to_owned());
     let _ = encode_sequence(&still, &invalid_loop);
+    let mut oversized_loop = still.clone();
+    oversized_loop.loop_count = Some(u32::MAX);
+    let _ = encode_sequence(&oversized_loop, &EncodeOptions::none());
+    let mut invalid_color_table = EncodeOptions::none();
+    invalid_color_table
+        .extra
+        .insert("color_table".to_owned(), "invalid".to_owned());
+    let _ = encode_sequence(&still, &invalid_color_table);
     let _ = parse_disposal("keep");
     let _ = parse_loop_count(&{
         let mut opts = EncodeOptions::none();
@@ -486,8 +495,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 /// Encode a still image or animation without discarding source frames.
-pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Option<Vec<u8>> {
-    sequence.validate().ok()?;
+pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    sequence.validate().map_err(CodecError::from_image_error)?;
     let animated = option_bool(opts, "animated")?.unwrap_or(sequence.frames.len() > 1);
     let requested_frames = if animated { sequence.frames.len() } else { 1 };
 
@@ -498,16 +507,25 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Opti
     };
     let loop_count = match parse_loop_count(opts)? {
         Some(value) => Some(value),
-        None => sequence
-            .loop_count
-            .and_then(|value| u16::try_from(value).ok()),
+        None => match sequence.loop_count {
+            Some(value) => Some(u16::try_from(value).map_err(|_| {
+                CodecError::Parameter("GIF loop count exceeds format limits".to_owned())
+            })?),
+            None => None,
+        },
+    };
+    let local_color_table = match opts.extra.get("color_table").map(String::as_str) {
+        None | Some("global") => false,
+        Some("local") => true,
+        Some(_) => {
+            return Err(CodecError::Parameter(
+                "invalid GIF color_table option".to_owned(),
+            ));
+        }
     };
     let settings = GifSettings {
         interlaced: opts.interlace,
-        local_color_table: opts
-            .extra
-            .get("color_table")
-            .is_some_and(|value| value == "local"),
+        local_color_table,
         disposal_override,
         loop_count,
         transparency_override: option_bool(opts, "transparency")?,
@@ -522,21 +540,26 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Opti
 fn coalesce_identical_frames(
     sequence: &DecodedSequence,
     requested_frames: usize,
-) -> Option<Vec<crate::types::DecodedFrame>> {
+) -> CodecResult<Vec<crate::types::DecodedFrame>> {
     if requested_frames == 1 {
-        return Some(vec![sequence.frames[0].clone()]);
+        return Ok(vec![sequence.frames[0].clone()]);
     }
     #[cfg(target_pointer_width = "64")]
     let width = sequence.width as usize;
     #[cfg(target_pointer_width = "64")]
     let height = sequence.height as usize;
     #[cfg(not(target_pointer_width = "64"))]
-    let width = usize::try_from(sequence.width).ok()?;
+    let width = usize::try_from(sequence.width)
+        .map_err(|_| CodecError::Dimensions("GIF canvas width is unrepresentable".to_owned()))?;
     #[cfg(not(target_pointer_width = "64"))]
-    let height = usize::try_from(sequence.height).ok()?;
+    let height = usize::try_from(sequence.height)
+        .map_err(|_| CodecError::Dimensions("GIF canvas height is unrepresentable".to_owned()))?;
     // Two u32 dimensions always multiply without overflowing a 64-bit usize.
     // The RGBA byte multiplier can still overflow and remains fallible.
-    let canvas_bytes = width.saturating_mul(height).checked_mul(4)?;
+    let canvas_bytes = width
+        .saturating_mul(height)
+        .checked_mul(4)
+        .ok_or_else(|| CodecError::Dimensions("GIF canvas byte size overflows".to_owned()))?;
     let mut canvas = vec![0u8; canvas_bytes];
     let mut previous_frame = None::<&crate::types::DecodedFrame>;
     let mut previous_render = None::<Vec<u8>>;
@@ -559,7 +582,10 @@ fn coalesce_identical_frames(
             let previous = output
                 .last_mut()
                 .expect("identical GIF frame must have a previous output frame");
-            previous.duration_ms = previous.duration_ms.checked_add(frame.duration_ms)?;
+            previous.duration_ms = previous
+                .duration_ms
+                .checked_add(frame.duration_ms)
+                .ok_or_else(|| CodecError::Parameter("GIF frame duration overflows".to_owned()))?;
         } else {
             let mut output_frame = frame.clone();
             if !output.is_empty() {
@@ -619,7 +645,7 @@ fn coalesce_identical_frames(
         }
         previous_frame = Some(frame);
     }
-    Some(output)
+    Ok(output)
 }
 
 fn rgba_difference_bounds(
@@ -676,7 +702,7 @@ fn composite_frame(
     canvas: &mut [u8],
     canvas_width: usize,
     frame: &crate::types::DecodedFrame,
-) -> Option<()> {
+) -> CodecResult<()> {
     let image = &frame.image;
     let left = frame.left as usize;
     let top = frame.top as usize;
@@ -723,7 +749,11 @@ fn composite_frame(
                         image.pixels[offset.saturating_add(3)],
                     ]
                 }
-                _ => return None,
+                _ => {
+                    return Err(CodecError::Unsupported(
+                        "GIF cannot composite this image mode".to_owned(),
+                    ));
+                }
             };
             if rgba[3] == 0 && image.mode == ImageMode::P8 {
                 continue;
@@ -737,13 +767,15 @@ fn composite_frame(
             canvas[destination..destination.saturating_add(4)].copy_from_slice(&rgba);
         }
     }
-    Some(())
+    Ok(())
 }
 
-fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
+fn prepare_image(img: &DecodedImage) -> CodecResult<PreparedImage> {
     let (palette, indices, transparent) = match (img.mode, img.color) {
         (ImageMode::P8, ColorType::L8) => {
-            let palette = img.palette.as_ref()?;
+            let palette = img.palette.as_ref().ok_or_else(|| {
+                CodecError::Parameter("indexed GIF input requires a palette".to_owned())
+            })?;
             let transparent = palette.alpha.iter().position(|&alpha| alpha == 0);
             (
                 palette.rgb.clone(),
@@ -755,7 +787,9 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             #[cfg(target_pointer_width = "64")]
             let pixel_count = (img.width as usize).saturating_mul(img.height as usize);
             #[cfg(not(target_pointer_width = "64"))]
-            let pixel_count = (img.width as usize).checked_mul(img.height as usize)?;
+            let pixel_count = (img.width as usize)
+                .checked_mul(img.height as usize)
+                .ok_or_else(|| CodecError::Dimensions("GIF pixel count overflows".to_owned()))?;
             debug_assert_eq!(img.pixels.len(), pixel_count);
             // Pillow converts L input to a compact P palette containing only
             // the used grayscale values, ordered by their original index.
@@ -788,14 +822,20 @@ fn prepare_image(img: &DecodedImage) -> Option<PreparedImage> {
             let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels);
             (palette, indices, transparent_idx)
         }
-        _ => return None,
+        _ => {
+            return Err(CodecError::Unsupported(
+                "GIF cannot encode this image mode".to_owned(),
+            ));
+        }
     };
     #[cfg(target_pointer_width = "64")]
     let pixel_count = (img.width as usize).saturating_mul(img.height as usize);
     #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = (img.width as usize).checked_mul(img.height as usize)?;
+    let pixel_count = (img.width as usize)
+        .checked_mul(img.height as usize)
+        .ok_or_else(|| CodecError::Dimensions("GIF pixel count overflows".to_owned()))?;
     debug_assert_eq!(indices.len(), pixel_count);
-    Some(PreparedImage {
+    Ok(PreparedImage {
         palette,
         indices,
         transparent,
@@ -837,35 +877,40 @@ fn bounded_u32(value: usize) -> u32 {
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
 
-fn option_bool(opts: &EncodeOptions, key: &str) -> Option<Option<bool>> {
+fn option_bool(opts: &EncodeOptions, key: &str) -> CodecResult<Option<bool>> {
     let Some(value) = opts.extra.get(key) else {
-        return Some(None);
+        return Ok(None);
     };
     match value.as_str() {
-        "true" | "1" | "yes" => Some(Some(true)),
-        "false" | "0" | "no" => Some(Some(false)),
-        _ => None,
+        "true" | "1" | "yes" => Ok(Some(true)),
+        "false" | "0" | "no" => Ok(Some(false)),
+        _ => Err(CodecError::Parameter(format!("invalid GIF {key} option"))),
     }
 }
 
-fn parse_disposal(value: &str) -> Option<u8> {
+fn parse_disposal(value: &str) -> CodecResult<u8> {
     match value {
-        "none" | "0" => Some(0),
-        "keep" | "1" => Some(1),
-        "background" | "2" => Some(2),
-        "previous" | "3" => Some(3),
-        _ => None,
+        "none" | "0" => Ok(0),
+        "keep" | "1" => Ok(1),
+        "background" | "2" => Ok(2),
+        "previous" | "3" => Ok(3),
+        _ => Err(CodecError::Parameter(
+            "invalid GIF disposal option".to_owned(),
+        )),
     }
 }
 
-fn parse_loop_count(opts: &EncodeOptions) -> Option<Option<u16>> {
+fn parse_loop_count(opts: &EncodeOptions) -> CodecResult<Option<u16>> {
     let Some(value) = opts.extra.get("loop") else {
-        return Some(None);
+        return Ok(None);
     };
     match value.as_str() {
-        "true" | "infinite" => Some(Some(0)),
-        "false" => Some(None),
-        number => number.parse().ok().map(Some),
+        "true" | "infinite" => Ok(Some(0)),
+        "false" => Ok(None),
+        number => number
+            .parse()
+            .map(Some)
+            .map_err(|_| CodecError::Parameter("invalid GIF loop option".to_owned())),
     }
 }
 
@@ -890,11 +935,21 @@ fn write_gif(
     sequence: &DecodedSequence,
     frames: &[crate::types::DecodedFrame],
     settings: GifSettings,
-) -> Option<Vec<u8>> {
-    let width = u16::try_from(sequence.width).ok()?;
-    let height = u16::try_from(sequence.height).ok()?;
-    let first_frame = frames.first()?;
-    let mut first = prepare_image(&first_frame.image)?;
+) -> CodecResult<Vec<u8>> {
+    let width = u16::try_from(sequence.width)
+        .map_err(|_| CodecError::Dimensions("GIF width exceeds format limits".to_owned()))?;
+    let height = u16::try_from(sequence.height)
+        .map_err(|_| CodecError::Dimensions("GIF height exceeds format limits".to_owned()))?;
+    let first_frame = frames
+        .first()
+        .ok_or_else(|| CodecError::Dimensions("GIF sequence has no frames".to_owned()))?;
+    let prepared_frames = frames
+        .iter()
+        .map(|frame| prepare_image(&frame.image))
+        .collect::<CodecResult<Vec<_>>>()?;
+    // `first_frame` above proves the prepared vector has the same nonzero
+    // length as `frames`.
+    let mut first = prepared_frames[0].clone();
     let background = prepare_background(&mut first, first_frame.image.mode, sequence.background);
     let (global_count, global_size, _) = table_parameters(&first.palette);
     // Pillow always writes the global palette for a single frame. Its
@@ -902,12 +957,13 @@ fn write_gif(
     // replacing the global one.
     let global_table = true;
 
+    let has_transparency = prepared_frames
+        .iter()
+        .any(|prepared| prepared.transparent.is_some());
     let needs_89a = frames.len() > 1
         || settings.loop_count.is_some()
         || settings.transparency_override == Some(true)
-        || frames.iter().any(|frame| {
-            prepare_image(&frame.image).is_some_and(|image| image.transparent.is_some())
-        });
+        || has_transparency;
     let mut output = Vec::new();
     output.extend_from_slice(if needs_89a { b"GIF89a" } else { b"GIF87a" });
     output.extend_from_slice(&width.to_le_bytes());
@@ -940,11 +996,11 @@ fn write_gif(
     }
 
     let mut previous_quantized_rgb = None::<Vec<u8>>;
-    for (frame_index, frame) in frames.iter().enumerate() {
+    for (frame_index, (frame, prepared)) in frames.iter().zip(&prepared_frames).enumerate() {
         let mut prepared = if frame_index == 0 {
             first.clone()
         } else {
-            prepare_image(&frame.image)?
+            prepared.clone()
         };
         let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette);
         if let Some(previous) = previous_quantized_rgb.as_deref()
@@ -971,7 +1027,9 @@ fn write_gif(
             transparent = requested.then_some(transparent.unwrap_or(0));
         }
         let disposal = settings.disposal_override.unwrap_or(0);
-        let delay_cs = u16::try_from(frame.duration_ms / 10).ok()?;
+        let delay_cs = u16::try_from(frame.duration_ms / 10).map_err(|_| {
+            CodecError::Parameter("GIF frame duration exceeds format limits".to_owned())
+        })?;
         if transparent.is_some() || disposal != 0 || delay_cs != 0 {
             output.extend_from_slice(&[
                 EXTENSION_INTRODUCER,
@@ -984,10 +1042,26 @@ fn write_gif(
         }
 
         output.push(IMAGE_SEPARATOR);
-        output.extend_from_slice(&u16::try_from(frame.left).ok()?.to_le_bytes());
-        output.extend_from_slice(&u16::try_from(frame.top).ok()?.to_le_bytes());
-        let frame_width = u16::try_from(frame.image.width).ok()?;
-        let frame_height = u16::try_from(frame.image.height).ok()?;
+        output.extend_from_slice(
+            &u16::try_from(frame.left)
+                .map_err(|_| {
+                    CodecError::Dimensions("GIF frame left offset exceeds format limits".to_owned())
+                })?
+                .to_le_bytes(),
+        );
+        output.extend_from_slice(
+            &u16::try_from(frame.top)
+                .map_err(|_| {
+                    CodecError::Dimensions("GIF frame top offset exceeds format limits".to_owned())
+                })?
+                .to_le_bytes(),
+        );
+        let frame_width = u16::try_from(frame.image.width).map_err(|_| {
+            CodecError::Dimensions("GIF frame width exceeds format limits".to_owned())
+        })?;
+        let frame_height = u16::try_from(frame.image.height).map_err(|_| {
+            CodecError::Dimensions("GIF frame height exceeds format limits".to_owned())
+        })?;
         output.extend_from_slice(&frame_width.to_le_bytes());
         output.extend_from_slice(&frame_height.to_le_bytes());
         let local_table = settings.local_color_table || prepared.palette != first.palette;
@@ -1018,7 +1092,7 @@ fn write_gif(
         write_sub_blocks(&mut output, &compressed);
     }
     output.push(GIF_TRAILER);
-    Some(output)
+    Ok(output)
 }
 
 fn prepare_background(
@@ -1547,7 +1621,14 @@ fn quantize_rgba(pixels: &[u8]) -> (Vec<u8>, Vec<u8>, Option<u8>) {
         .any(|color| color[3] == 0)
         .then(|| rgba_palette.iter().position(|color| color[3] == 0))
         .flatten()
-        .and_then(|index| u8::try_from(index).ok());
+        .map(|index| {
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "FASTOCTREE is explicitly limited to 256 palette entries"
+            )]
+            let index = index as u8;
+            index
+        });
 
     compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent);
     let palette = rgba_palette

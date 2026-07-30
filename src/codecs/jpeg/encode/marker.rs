@@ -3,6 +3,8 @@
 
 // ── JPEG marker writing (libjpeg-turbo 3.1.4.1 jcmarker.c) ───────────────
 
+use crate::codecs::{CodecError, CodecResult};
+
 /// Helper: write a big-endian u16.
 #[inline]
 pub(crate) fn w16(out: &mut Vec<u8>, v: u16) {
@@ -33,15 +35,13 @@ pub(crate) fn write_jfif_app0(out: &mut Vec<u8>) {
 }
 
 /// APP1 segment containing caller-provided EXIF bytes.
-pub(crate) fn write_exif_app1(out: &mut Vec<u8>, exif: &[u8]) -> Option<()> {
-    let length = exif
-        .len()
-        .checked_add(2)
-        .and_then(|value| u16::try_from(value).ok())?;
+pub(crate) fn write_exif_app1(out: &mut Vec<u8>, exif: &[u8]) -> CodecResult<()> {
+    let length = u16::try_from(exif.len().saturating_add(2))
+        .map_err(|_| CodecError::Parameter("JPEG EXIF payload is too large".to_owned()))?;
     out.extend_from_slice(&[0xFF, 0xE1]);
     w16(out, length);
     out.extend_from_slice(exif);
-    Some(())
+    Ok(())
 }
 
 /// EOI (End Of Image).

@@ -1,5 +1,6 @@
 //! Pure-Rust BMP encoder for indexed grayscale and true-color images.
 
+use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
 use crate::types::{DecodedImage, ImageMode, ImagePalette};
 
@@ -21,15 +22,17 @@ fn row_size(bits_per_pixel: usize, width: usize) -> usize {
 ///
 /// Pillow derives 1/8/24/32-bit output from the source mode and ignores save
 /// options requesting compression, row direction, or alternate DIB headers.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
     let _ = opts;
     if !bmp_file_fits(img) {
-        return None;
+        return Err(CodecError::Dimensions(
+            "BMP dimensions or file size exceed the container limits".to_owned(),
+        ));
     }
-    img.validate().ok()?;
+    img.validate().map_err(CodecError::from_image_error)?;
     match img.mode {
-        ImageMode::L1 => Some(encode_1bit(img.width, img.height, &img.pixels)),
-        ImageMode::P8 | ImageMode::L8 => Some(encode_l8(
+        ImageMode::L1 => Ok(encode_1bit(img.width, img.height, &img.pixels)),
+        ImageMode::P8 | ImageMode::L8 => Ok(encode_l8(
             img.width,
             img.height,
             &img.pixels,
@@ -37,9 +40,12 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
                 .then_some(img.palette.as_ref())
                 .flatten(),
         )),
-        ImageMode::Rgb8 => Some(encode_rgb24(img.width, img.height, &img.pixels)),
-        ImageMode::Rgba8 => Some(encode_rgb32(img.width, img.height, &img.pixels)),
-        _ => None,
+        ImageMode::Rgb8 => Ok(encode_rgb24(img.width, img.height, &img.pixels)),
+        ImageMode::Rgba8 => Ok(encode_rgb32(img.width, img.height, &img.pixels)),
+        _ => Err(CodecError::Unsupported(format!(
+            "BMP cannot encode mode {:?}",
+            img.mode
+        ))),
     }
 }
 
@@ -73,7 +79,7 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
 pub(crate) fn __coverage_exercise_private_branches() {
     for (width, height) in [(u32::MAX, 1), (1, u32::MAX), (i32::MAX as u32, 1)] {
         let image = DecodedImage::new(width, height, Vec::new(), crate::types::ColorType::L8);
-        assert!(encode(&image, &EncodeOptions::none()).is_none());
+        assert!(encode(&image, &EncodeOptions::none()).is_err());
     }
 }
 

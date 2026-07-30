@@ -270,15 +270,40 @@ covered.
 Formats that Pillow does not support need a separate approved oracle. Do not
 silently substitute image-rs output and call it Pillow parity.
 
-### 2.5 Public fallibility uses `Result`
+### 2.5 All codec fallibility uses `Result`
 
 `Option` is valid for absence, such as “this file has no ICC profile.” It is
 not valid for malformed data, an unsupported mode, a disabled feature, a
 limit violation, or encoder failure.
 
 There should be one canonical public path for each operation. Low-level codec
-helpers must either be private or return the same structured `ImageResult`
-contract as the root API. Do not create duplicate `try_*` APIs.
+helpers may use a private typed codec error, but they must return `Result` and
+retain enough cause to map consistently into the structured `ImageResult`
+contract at the root API. Privacy is not permission to erase failure causes
+with `Option`. Do not create duplicate `try_*` APIs.
+
+Legitimate `Option` uses include optional metadata, palette transparency,
+animation loop/background values, cached state that has not been initialized,
+Pillow-observable palette absence on tolerated malformed indexed inputs,
+optimizer pruning, speculative fast paths that retry a complete decoder, and
+infallible searches whose absence is itself the returned value. A short read,
+invalid marker/chunk/tag, arithmetic failure, malformed table, unsupported
+mode, rejected option, native status, or encoder failure is operational
+fallibility and therefore returns `Result`.
+
+The accepted July 2026 audit records the exact retained `Option` inventory in
+`docs/image-slash-star-code-review.md`. In particular, AVIF portable-decode
+applicability and WebP speculative reads are not error-return shortcuts:
+`None` selects a complete checked fallback. WebP's zero-sized `BitResult`
+token likewise defers one EOF check across a hot arithmetic-decoder span; the
+enclosing operation must call `ArithmeticDecoder::check`, which returns
+`Result<T, DecodingError>`, before any value crosses the decoder boundary.
+
+The audit also requires a source search showing no production `.ok()` error
+erasure and full-file manifest rows for every observable detection or error
+classification. TIFF's six registered signatures are not assumed to share one
+post-detection interpretation: the pinned Pillow byte-two BigTIFF selection is
+matched exactly.
 
 ### 2.6 Validate before allocation and before output
 
@@ -527,8 +552,9 @@ portable features.
 
 Complete. `codecs` and its dispatchers are private, the duplicate public
 decode/encode facades were removed, and the root `ImageResult` functions are
-the only public codec operations. Internal `Option` helpers remain
-implementation details and cannot be named by downstream crates.
+the only public codec operations. A follow-up accepted hardening slice now
+removes internal fallible `Option` helpers as well; private lookup and optional
+metadata values may remain `Option`.
 
 **Problem**
 
@@ -542,12 +568,14 @@ types, and format implementation details.
 - Keep root detect/inspect/decode/encode functions canonical.
 - If advanced callers need codec-specific state, design a stable public wrapper
   rather than exposing implementation modules.
-- Convert any intentionally public fallible helper to `ImageResult`.
+- Convert every fallible helper to `Result`; use a private typed error where the
+  public `ImageError` needs the selected format supplied by dispatch.
 
 **Acceptance**
 
-Malformed input cannot lose its error category merely because the caller chose
-a format-specific entry point.
+Malformed input cannot lose its error category or causal stage at any private
+or public codec boundary. A source search and file-by-file audit prove that
+remaining `Option` signatures model absence rather than operational failure.
 
 ### C2. Replace stringly encoder options
 

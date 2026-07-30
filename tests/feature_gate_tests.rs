@@ -29,6 +29,7 @@ struct DecodeRow {
     status: String,
     asset: Option<String>,
     expect_error: bool,
+    oracle_detects_format: bool,
     ref_mode: Option<String>,
     ref_size: Option<[u32; 2]>,
     verify_status: Option<String>,
@@ -59,6 +60,7 @@ impl FromJson for DecodeRow {
             status: object.take("status")?,
             asset: object.take("asset")?,
             expect_error: object.take_or_default("expect_error")?,
+            oracle_detects_format: object.take("oracle_detects_format")?,
             ref_mode: object.take("ref_mode")?,
             ref_size: object.take("ref_size")?,
             verify_status: object.take("verify_status")?,
@@ -164,6 +166,10 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
         let Some(asset) = row.asset.as_deref() else {
             panic!("selected {name} row has no fixture asset");
         };
+        assert!(
+            row.oracle_detects_format,
+            "selected successful {name} fixture must satisfy Pillow detection"
+        );
         let bytes = fs::read(
             root.join("tests/fixtures/input/images")
                 .join(&name)

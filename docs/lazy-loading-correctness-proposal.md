@@ -61,9 +61,9 @@ The accepted implementation follows this contract at both ownership layers:
   backend and through downstream feature forwarding.
 
 The backend acceptance run is Coverage MCP run
-`5b0f1ca0-0ecf-433b-a159-722387249757`, immutable snapshot
-`2a9e4148-d559-44db-8368-57df58bf21fc`: 30,616/30,616 lines,
-3,924/3,924 branches, 1,837/1,837 functions, and 51,578/51,578 regions.
+`65edd371-6a90-49d0-8ce1-51f4801c234e`, immutable snapshot
+`4ae70741-3fc1-4b45-8154-4d1ed8c2d63b`: 38,652/38,652 lines,
+5,532/5,532 branches, 2,044/2,044 functions, and 62,400/62,400 regions.
 The downstream integration is deliberately validated with its maintained
 Makefile targets rather than Coverage MCP.
 
@@ -496,9 +496,9 @@ Implementation evidence (July 2026):
 - `src/lib.rs`, `tests/coverage_matrix_tests.rs`, and
   `tests/feature_gate_tests.rs` no longer use blanket `unwrap`/`expect`
   suppressions;
-- Coverage MCP run `adaeffb3-8de6-4481-99c3-770b056df56e`, snapshot
-  `e4631526-ec4d-4e47-a77d-2ceffcafc037`, passes six test targets at 100%:
-  30,616 lines, 3,924 branches, 1,837 functions, and 51,578 regions;
+- Coverage MCP run `65edd371-6a90-49d0-8ce1-51f4801c234e`, snapshot
+  `4ae70741-3fc1-4b45-8154-4d1ed8c2d63b`, passes seven test targets at 100%:
+  38,652 lines, 5,532 branches, 2,044 functions, and 62,400 regions;
 - the inherited `src/codecs/webp/native/mod.rs` blanket allowance is removed.
   Every native WebP child owns a strict file policy with only adjacent,
   invariant-backed reference-kernel exceptions.

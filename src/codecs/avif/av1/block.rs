@@ -5,6 +5,21 @@
 
 use super::entropy::RangeDecoder;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PortableUnavailable;
+
+pub(super) type PortableResult<T> = Result<T, PortableUnavailable>;
+
+trait PortableOptionExt<T> {
+    fn portable(self) -> PortableResult<T>;
+}
+
+impl<T> PortableOptionExt<T> for Option<T> {
+    fn portable(self) -> PortableResult<T> {
+        self.ok_or(PortableUnavailable)
+    }
+}
+
 type TransformCoefficients = [i32; 16];
 type PlaneCoefficients = [TransformCoefficients; 16];
 
@@ -125,13 +140,13 @@ impl SpatialLumaContext {
         }
     }
 
-    const fn from_two_neighbors(above: LumaPredictor, left: LumaPredictor) -> Option<Self> {
+    const fn from_two_neighbors(above: LumaPredictor, left: LumaPredictor) -> PortableResult<Self> {
         match (above, left) {
-            (LumaPredictor::Dc, LumaPredictor::Dc) => Some(Self::Origin),
+            (LumaPredictor::Dc, LumaPredictor::Dc) => Ok(Self::Origin),
             (LumaPredictor::Horizontal, LumaPredictor::Vertical) => {
-                Some(Self::AboveHorizontalLeftVertical)
+                Ok(Self::AboveHorizontalLeftVertical)
             }
-            _ => None,
+            _ => Err(PortableUnavailable),
         }
     }
 
@@ -511,13 +526,13 @@ fn decode_dc_only_after_eob(
     plane: usize,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     let base_token = if plane == 0 {
         decoder.adaptive_symbol(&mut cdfs.eob_base_luma[0], 2)
     } else {
         decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[0], 2)
     };
-    (base_token == 2).then_some(())?;
+    (base_token == 2).then_some(()).portable()?;
     let token = if plane == 0 {
         decode_high_token(decoder, &mut cdfs.high_luma[0])
     } else {
@@ -532,7 +547,7 @@ fn decode_dc_only_after_eob(
     let token = extend_high_token(decoder, token);
     let mut coefficients = [0_i32; 16];
     coefficients[0] = dequantize_lossless_coefficient(token, negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_dc_after_ac(
@@ -540,18 +555,18 @@ fn decode_luma_dc_after_ac(
     sign_context: usize,
     cdfs: &mut BlockCdfs,
     high_context: usize,
-) -> Option<(u32, bool)> {
+) -> PortableResult<(u32, bool)> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:526-546. Once EOB is nonzero,
     // DC uses base_tok rather than eob_base_tok, and its high-token context
     // is derived from the preceding AC level neighborhood.
     let dc_base_token = decoder.adaptive_symbol(&mut cdfs.base_luma[0], 3);
-    (dc_base_token == 3).then_some(())?;
+    (dc_base_token == 3).then_some(()).portable()?;
     let dc_token = decode_high_token(decoder, &mut cdfs.high_luma[high_context]);
 
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:596-718. DC sign and a possible
     // DC Golomb extension precede every equiprobable AC sign and extension.
     let dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][sign_context]);
-    Some((extend_high_token(decoder, dc_token), dc_negative))
+    Ok((extend_high_token(decoder, dc_token), dc_negative))
 }
 
 fn decode_luma_direct_ac_and_dc(
@@ -560,7 +575,7 @@ fn decode_luma_direct_ac_and_dc(
     cdfs: &mut BlockCdfs,
     ac_token: u32,
     ac_coefficient_index: usize,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:526-546 and the pinned Slice
     // 21 trace. The DC high-token context is derived from the preceding AC
     // magnitude. This closed class admits only direct AC token ten, which
@@ -573,24 +588,24 @@ fn decode_luma_direct_ac_and_dc(
     let mut coefficients = [0_i32; 16];
     coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
     coefficients[ac_coefficient_index] = dequantize_lossless_coefficient(ac_token, ac_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_direct_ac_token(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
-) -> Option<u32> {
+) -> PortableResult<u32> {
     let ac_base_token = decoder.adaptive_symbol(&mut cdfs.eob_base_luma[1], 2);
-    (ac_base_token == 2).then_some(())?;
+    (ac_base_token == 2).then_some(()).portable()?;
     let ac_token = decode_high_token(decoder, &mut cdfs.high_luma[7]);
-    (ac_token == 10).then_some(ac_token)
+    (ac_token == 10).then_some(ac_token).portable()
 }
 
 fn decode_luma_eob_one_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:443-480 and pinned Slice 21
     // traces. EOB one uses context one, scan_4x4[1] == 4, and the high-token
     // context seven for its final AC base token.
@@ -602,13 +617,17 @@ fn decode_luma_eob_two_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:407-564, src/scan.c:35-40,
     // and the pinned Slice 22 scalar trace. EOB-bin symbol two uses high-bit
     // context zero, scan_4x4[2] == 1, then visits scan_4x4[1] == 4 in reverse.
-    (!decoder.adaptive_bool(&mut cdfs.eob_high_luma[0])).then_some(())?;
+    (!decoder.adaptive_bool(&mut cdfs.eob_high_luma[0]))
+        .then_some(())
+        .portable()?;
     let ac_token = decode_luma_direct_ac_token(decoder, cdfs)?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0)
+        .then_some(())
+        .portable()?;
     decode_luma_direct_ac_and_dc(decoder, sign_context, cdfs, ac_token, 1)
 }
 
@@ -616,25 +635,37 @@ fn decode_luma_eob_four_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-545, src/scan.c:35-40,
     // and the pinned Slice 23 scalar trace. scan_4x4[4] == 5 is the final
     // coefficient and uses EOB-base context two. The reverse loop then visits
     // raster 2, 1, and 4 with contexts six, three, and three respectively.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[2], 2) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[2], 2) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_five_token = decode_high_token(decoder, &mut cdfs.high_luma[7]);
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3)
+        .then_some(())
+        .portable()?;
     let high_context = match coefficient_five_token {
         3 => 9,
         5 => 10,
-        _ => return None,
+        _ => return Err(PortableUnavailable),
     };
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[high_context]);
-    (coefficient_one_token == coefficient_five_token).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3).then_some(())?;
+    (coefficient_one_token == coefficient_five_token)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[high_context]);
-    (coefficient_four_token == coefficient_five_token).then_some(())?;
+    (coefficient_four_token == coefficient_five_token)
+        .then_some(())
+        .portable()?;
 
     // The three direct AC magnitudes select DC high-token context five for
     // token three and context six for token five.
@@ -643,7 +674,7 @@ fn decode_luma_eob_four_coefficients(
     let (dc_token, dc_negative) =
         decode_luma_dc_after_ac(decoder, sign_context, cdfs, dc_high_context)?;
     if coefficient_five_token == 3 {
-        (dc_token == 3).then_some(())?;
+        (dc_token == 3).then_some(()).portable()?;
     }
     let coefficient_four_negative = decoder.equal();
     let coefficient_four_token = extend_high_token(decoder, coefficient_four_token);
@@ -660,29 +691,41 @@ fn decode_luma_eob_four_coefficients(
         dequantize_lossless_coefficient(coefficient_four_token, coefficient_four_negative);
     coefficients[5] =
         dequantize_lossless_coefficient(coefficient_five_token, coefficient_five_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_eob_six_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // and the pinned Slice 24 scalar trace. scan_4x4[6] == 12 is final, then
     // the reverse loop visits raster 8, 5, 2, 1, and 4.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
-    (coefficient_twelve_token == 5).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3).then_some(())?;
+    (coefficient_twelve_token == 5).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
-    (coefficient_eight_token == 5).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3).then_some(())?;
+    (coefficient_eight_token == 5).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
-    (coefficient_four_token == 5).then_some(())?;
+    (coefficient_four_token == 5).then_some(()).portable()?;
 
     // Three direct AC magnitudes select DC high-token context three. The
     // first pinned transform exercises token fifteen's Golomb extension; the
@@ -703,19 +746,19 @@ fn decode_luma_eob_six_coefficients(
         dequantize_lossless_coefficient(coefficient_eight_token, coefficient_eight_negative);
     coefficients[12] =
         dequantize_lossless_coefficient(coefficient_twelve_token, coefficient_twelve_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_eob_four_or_six_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-435 and pinned Slice
     // 23/24 traces. Symbol three shares high-bit context one and one
     // equiprobable extra bit: high zero is EOB four and high one is EOB six.
     let high = decoder.adaptive_bool(&mut cdfs.eob_high_luma[1]);
-    (!decoder.equal()).then_some(())?;
+    (!decoder.equal()).then_some(()).portable()?;
     if high {
         decode_luma_eob_six_coefficients(decoder, sign_context, cdfs)
     } else {
@@ -727,24 +770,34 @@ fn decode_luma_eob_nine_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // and the pinned Slice 25 scalar trace. scan_4x4[9] == 3 is final. The
     // reverse loop then visits raster 6, 9, 12, 8, 5, 2, 1, and 4 with
     // contexts 6, 6, 6, 6, 6, 8, 4, and 1.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
-    (coefficient_three_token == 6).then_some(())?;
+    (coefficient_three_token == 6).then_some(()).portable()?;
     for _ in 0..5 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+            .then_some(())
+            .portable()?;
     }
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
-    (coefficient_two_token == 6).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3).then_some(())?;
+    (coefficient_two_token == 6).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
-    (coefficient_one_token == 6).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0).then_some(())?;
+    (coefficient_one_token == 6).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0)
+        .then_some(())
+        .portable()?;
 
     // One neighboring direct magnitude selects DC high-token context three.
     // The first pinned transform exercises token fifteen plus Golomb one;
@@ -765,45 +818,61 @@ fn decode_luma_eob_nine_coefficients(
         dequantize_lossless_coefficient(coefficient_two_token, coefficient_two_negative);
     coefficients[3] =
         dequantize_lossless_coefficient(coefficient_three_token, coefficient_three_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_eob_ten_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // src/cdf.c:881-894, 1316-1340, and the pinned Slice 26 scalar trace.
     // scan_4x4[10] == 7 is final. The reverse loop then visits raster 3, 6,
     // 9, 12, 8, 5, 2, 1, and 4.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_seven_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
-    (coefficient_seven_token == 3).then_some(())?;
+    (coefficient_seven_token == 3).then_some(()).portable()?;
 
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[16]);
-    (coefficient_three_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3).then_some(())?;
+    (coefficient_three_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_six_token = decode_high_token(decoder, &mut cdfs.high_luma[16]);
-    (coefficient_six_token == 3).then_some(())?;
+    (coefficient_six_token == 3).then_some(()).portable()?;
 
     for _ in 0..3 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+            .then_some(())
+            .portable()?;
     }
 
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_five_token = decode_high_token(decoder, &mut cdfs.high_luma[9]);
-    (coefficient_five_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3).then_some(())?;
+    (coefficient_five_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[19]);
-    (coefficient_two_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    (coefficient_two_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[12]);
-    (coefficient_one_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3).then_some(())?;
+    (coefficient_one_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[9]);
-    (coefficient_four_token == 8).then_some(())?;
+    (coefficient_four_token == 8).then_some(()).portable()?;
 
     // The three DC-neighbor levels select high-token context six. dav1d's
     // nonzero link chain reads signs in raster order 4, 1, 2, 5, 6, 3, and 7.
@@ -839,26 +908,32 @@ fn decode_luma_eob_ten_coefficients(
         dequantize_lossless_coefficient(coefficient_six_token, coefficient_six_negative);
     coefficients[7] =
         dequantize_lossless_coefficient(coefficient_seven_token, coefficient_seven_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_eob_twelve_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // src/cdf.c:881-905, 1316-1340, and the pinned Slice 27 scalar trace.
     // scan_4x4[12] == 13 is final. The reverse loop then visits raster 10,
     // 7, 3, 6, 9, 12, 8, 5, 2, 1, and 4.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 1).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 1)
+        .then_some(())
+        .portable()?;
     let coefficient_thirteen_token = 2;
 
     for _ in 0..2 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[21], 3) == 0).then_some(())?;
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[21], 3) == 0)
+            .then_some(())
+            .portable()?;
     }
     for _ in 0..2 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+            .then_some(())
+            .portable()?;
     }
 
     let coefficient_nine_base = decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3);
@@ -870,23 +945,35 @@ fn decode_luma_eob_twelve_coefficients(
             coefficient_thirteen_token,
         );
     }
-    (coefficient_nine_base == 2).then_some(())?;
+    (coefficient_nine_base == 2).then_some(()).portable()?;
     let coefficient_nine_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
-    (coefficient_twelve_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3).then_some(())?;
+    (coefficient_twelve_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[18]);
-    (coefficient_eight_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 2).then_some(())?;
+    (coefficient_eight_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_five_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[8]);
-    (coefficient_one_token == 7).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    (coefficient_one_token == 7).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[11]);
-    (coefficient_four_token == 3).then_some(())?;
+    (coefficient_four_token == 3).then_some(()).portable()?;
 
     // The three DC-neighbor levels select high-token context six. dav1d's
     // nonzero link chain reads signs in raster order 4, 1, 5, 8, 12, 9, and
@@ -923,7 +1010,7 @@ fn decode_luma_eob_twelve_coefficients(
         dequantize_lossless_coefficient(coefficient_twelve_token, coefficient_twelve_negative);
     coefficients[13] =
         dequantize_lossless_coefficient(coefficient_thirteen_token, coefficient_thirteen_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_alternate_eob_twelve_coefficients(
@@ -931,27 +1018,39 @@ fn decode_luma_alternate_eob_twelve_coefficients(
     sign_context: usize,
     cdfs: &mut BlockCdfs,
     coefficient_thirteen_token: u32,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718,
     // src/scan.c:35-40, and the two byte-identical pinned Slice 30 traces.
     // The caller consumed the common EOB-12 prefix and coefficient-nine base
     // value three. The remaining reverse scan visits raster 12, 8, 5, 2, 1,
     // and 4 before DC.
     let coefficient_nine_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
-    (coefficient_nine_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    (coefficient_nine_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
-    (coefficient_twelve_token == 3).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 2).then_some(())?;
+    (coefficient_twelve_token == 3).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_eight_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_five_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_one_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[11]);
-    (coefficient_four_token == 3).then_some(())?;
+    (coefficient_four_token == 3).then_some(()).portable()?;
 
     // Raster one, four, and five store levels 130, 195, and 130. Their
     // masked sum is seven, selecting DC high-token context four. The nonzero
@@ -988,48 +1087,72 @@ fn decode_luma_alternate_eob_twelve_coefficients(
         dequantize_lossless_coefficient(coefficient_twelve_token, coefficient_twelve_negative);
     coefficients[13] =
         dequantize_lossless_coefficient(coefficient_thirteen_token, coefficient_thirteen_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_eob_fifteen_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // src/cdf.c:881-907, 1316-1340, and the pinned Slice 28 scalar trace.
     // scan_4x4[15] == 15 is final. The reverse loop visits every remaining
     // AC raster position through contexts proved by the trace.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 0).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_luma[3], 2) == 0)
+        .then_some(())
+        .portable()?;
 
     for _ in 0..3 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1).then_some(())?;
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1)
+            .then_some(())
+            .portable()?;
     }
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[23], 3) == 1).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[23], 3) == 1)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1)
+        .then_some(())
+        .portable()?;
 
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
-    (coefficient_three_token == 4).then_some(())?;
+    (coefficient_three_token == 4).then_some(()).portable()?;
     for _ in 0..2 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 1).then_some(())?;
+        (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 1)
+            .then_some(())
+            .portable()?;
     }
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
-    (coefficient_twelve_token == 4).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3).then_some(())?;
+    (coefficient_twelve_token == 4).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
-    (coefficient_eight_token == 4).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 1).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3).then_some(())?;
+    (coefficient_eight_token == 4).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 1)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
-    (coefficient_two_token == 4).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    (coefficient_two_token == 4).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
-    (coefficient_one_token == 4).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3).then_some(())?;
+    (coefficient_one_token == 4).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
-    (coefficient_four_token == 4).then_some(())?;
+    (coefficient_four_token == 4).then_some(()).portable()?;
 
     // The neighboring levels select DC high-token context five. The nonzero
     // link chain visits all AC positions in raster order 4, 1, 2, 5, 8, 12,
@@ -1074,31 +1197,31 @@ fn decode_luma_eob_fifteen_coefficients(
     coefficients[13] = dequantize_lossless_coefficient(1, coefficient_thirteen_negative);
     coefficients[14] = dequantize_lossless_coefficient(1, coefficient_fourteen_negative);
     coefficients[15] = dequantize_lossless_coefficient(1, coefficient_fifteen_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_luma_eob_nine_ten_twelve_or_fifteen_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-438 and pinned Slice
     // 25-28 traces. Symbol four uses high-bit context two and two
     // equiprobable extra bits. The closed combinations are EOB nine, ten,
     // twelve, and fifteen; EOB eleven, thirteen, and fourteen remain rejected.
     if decoder.adaptive_bool(&mut cdfs.eob_high_luma[2]) {
         if decoder.equal() {
-            decoder.equal().then_some(())?;
+            decoder.equal().then_some(()).portable()?;
             decode_luma_eob_fifteen_coefficients(decoder, sign_context, cdfs)
         } else {
-            (!decoder.equal()).then_some(())?;
+            (!decoder.equal()).then_some(()).portable()?;
             decode_luma_eob_twelve_coefficients(decoder, sign_context, cdfs)
         }
     } else if decoder.equal() {
-        (!decoder.equal()).then_some(())?;
+        (!decoder.equal()).then_some(()).portable()?;
         decode_luma_eob_ten_coefficients(decoder, sign_context, cdfs)
     } else {
-        decoder.equal().then_some(())?;
+        decoder.equal().then_some(()).portable()?;
         decode_luma_eob_nine_coefficients(decoder, sign_context, cdfs)
     }
 }
@@ -1107,25 +1230,29 @@ fn decode_chroma_high_dc_after_ac(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<(u32, bool)> {
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3) == 3).then_some(())?;
+) -> PortableResult<(u32, bool)> {
+    (decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3) == 3)
+        .then_some(())
+        .portable()?;
     let dc_token = decode_high_token(decoder, &mut cdfs.high_chroma[2]);
-    (dc_token == 4).then_some(())?;
+    (dc_token == 4).then_some(()).portable()?;
     let dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[1][sign_context]);
-    Some((dc_token, dc_negative))
+    Ok((dc_token, dc_negative))
 }
 
 fn decode_chroma_eob_one_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:443-718, src/scan.c:35-40,
     // and the pinned Slice 31 scalar trace. Chroma EOB one ends at raster
     // four and uses EOB-base context one plus high-token context seven.
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[1], 2) == 2).then_some(())?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[1], 2) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_chroma[7]);
-    (coefficient_four_token == 4).then_some(())?;
+    (coefficient_four_token == 4).then_some(()).portable()?;
     let (dc_token, dc_negative) = decode_chroma_high_dc_after_ac(decoder, sign_context, cdfs)?;
     let coefficient_four_negative = decoder.equal();
 
@@ -1133,22 +1260,28 @@ fn decode_chroma_eob_one_after_eob(
     coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
     coefficients[4] =
         dequantize_lossless_coefficient(coefficient_four_token, coefficient_four_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_chroma_eob_two_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // and the pinned Slice 31 scalar trace. EOB two ends at raster one and
     // then visits raster four with base-token context one.
-    (!decoder.adaptive_bool(&mut cdfs.eob_high_chroma[0])).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[1], 2) == 2).then_some(())?;
+    (!decoder.adaptive_bool(&mut cdfs.eob_high_chroma[0]))
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[1], 2) == 2)
+        .then_some(())
+        .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_chroma[7]);
-    (coefficient_one_token == 4).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[1], 3) == 0).then_some(())?;
+    (coefficient_one_token == 4).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_chroma[1], 3) == 0)
+        .then_some(())
+        .portable()?;
     let (dc_token, dc_negative) = decode_chroma_high_dc_after_ac(decoder, sign_context, cdfs)?;
     let coefficient_one_negative = decoder.equal();
 
@@ -1156,24 +1289,36 @@ fn decode_chroma_eob_two_after_eob(
     coefficients[0] = dequantize_lossless_coefficient(dc_token, dc_negative);
     coefficients[1] =
         dequantize_lossless_coefficient(coefficient_one_token, coefficient_one_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_chroma_eob_four_after_eob(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     sign_context: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:403-718, src/scan.c:35-40,
     // and the pinned Slice 31 scalar trace. This direct-token EOB-four body
     // visits rasters five, two, one, and four before DC.
-    (!decoder.adaptive_bool(&mut cdfs.eob_high_chroma[1])).then_some(())?;
-    (!decoder.equal()).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[2], 2) == 1).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[6], 3) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[2], 3) == 2).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[2], 3) == 2).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3) == 2).then_some(())?;
+    (!decoder.adaptive_bool(&mut cdfs.eob_high_chroma[1]))
+        .then_some(())
+        .portable()?;
+    (!decoder.equal()).then_some(()).portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[2], 2) == 1)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_chroma[6], 3) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_chroma[2], 3) == 2)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_chroma[2], 3) == 2)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3) == 2)
+        .then_some(())
+        .portable()?;
     let dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[1][sign_context]);
     let coefficient_four_negative = decoder.equal();
     let coefficient_one_negative = decoder.equal();
@@ -1184,7 +1329,7 @@ fn decode_chroma_eob_four_after_eob(
     coefficients[1] = dequantize_lossless_coefficient(2, coefficient_one_negative);
     coefficients[4] = dequantize_lossless_coefficient(2, coefficient_four_negative);
     coefficients[5] = dequantize_lossless_coefficient(2, coefficient_five_negative);
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_nonzero_lossless_transform(
@@ -1193,7 +1338,7 @@ fn decode_nonzero_lossless_transform(
     sign_context: usize,
     allow_ac: bool,
     cdfs: &mut BlockCdfs,
-) -> Option<TransformCoefficients> {
+) -> PortableResult<TransformCoefficients> {
     match decode_eob_bin(decoder, plane, cdfs) {
         0 => decode_dc_only_after_eob(decoder, plane, sign_context, cdfs),
         1 if allow_ac && plane == 0 => decode_luma_eob_one_after_eob(decoder, sign_context, cdfs),
@@ -1207,7 +1352,7 @@ fn decode_nonzero_lossless_transform(
         1 if allow_ac => decode_chroma_eob_one_after_eob(decoder, sign_context, cdfs),
         2 if allow_ac => decode_chroma_eob_two_after_eob(decoder, sign_context, cdfs),
         3 if allow_ac => decode_chroma_eob_four_after_eob(decoder, sign_context, cdfs),
-        _ => None,
+        _ => Err(PortableUnavailable),
     }
 }
 
@@ -1218,7 +1363,7 @@ fn decode_dc_coefficients(
     transform_grid_width: usize,
     transform_grid_height: usize,
     single_subsampled_chroma_transform: bool,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
     let mut coefficients = [[0_i32; 16]; 16];
     let coefficient_context = usize::from(plane != 0);
@@ -1237,9 +1382,10 @@ fn decode_dc_coefficients(
         for _ in 1..transform_count {
             decoder
                 .adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
-                .then_some(())?;
+                .then_some(())
+                .portable()?;
         }
-        return Some(coefficients);
+        return Ok(coefficients);
     }
     coefficients[0] = decode_nonzero_lossless_transform(decoder, plane, 0, false, cdfs)?;
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:754-838. A nonzero top-left
@@ -1251,9 +1397,9 @@ fn decode_dc_coefficients(
         } else {
             decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
         };
-        skipped.then_some(())?;
+        skipped.then_some(()).portable()?;
     }
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn coefficient_residual_context(coefficients: &TransformCoefficients) -> u8 {
@@ -1306,9 +1452,9 @@ fn subsampled_chroma_one_neighbor_skip_cdf(context: u8) -> CoefficientSkipCdf {
     }
 }
 
-fn contextual_skip_cdf(plane: usize, above: u8, left: u8) -> Option<CoefficientSkipCdf> {
+fn contextual_skip_cdf(plane: usize, above: u8, left: u8) -> PortableResult<CoefficientSkipCdf> {
     if plane != 0 {
-        return Some(chroma_contextual_skip_cdf(above, left));
+        return Ok(chroma_contextual_skip_cdf(above, left));
     }
 
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:101-137 and
@@ -1325,9 +1471,9 @@ fn contextual_skip_cdf(plane: usize, above: u8, left: u8) -> Option<CoefficientS
     let above_magnitude = usize::from((above & 63).min(4));
     let left_magnitude = usize::from((left & 63).min(4));
     match LUMA_SKIP_CONTEXTS[above_magnitude][left_magnitude] {
-        1 => Some(CoefficientSkipCdf::Base),
-        3 => Some(CoefficientSkipCdf::OneNonzeroNeighbor),
-        _ => None,
+        1 => Ok(CoefficientSkipCdf::Base),
+        3 => Ok(CoefficientSkipCdf::OneNonzeroNeighbor),
+        _ => Err(PortableUnavailable),
     }
 }
 
@@ -1360,7 +1506,7 @@ fn decode_contextual_top_left_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     let coefficient_context = usize::from(plane != 0);
     let mut coefficients = [[0_i32; 16]; 16];
     let mut above_contexts = [0x40_u8; 2];
@@ -1388,7 +1534,7 @@ fn decode_contextual_top_left_coefficients(
         above_contexts[column] = residual_context;
         left_context = residual_context;
     }
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn coefficient_edge_contexts(
@@ -1414,7 +1560,7 @@ fn decode_contextual_following_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     context: FollowingCoefficientContext,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     let FollowingCoefficientContext {
         neighbor_contexts,
         orientation,
@@ -1468,8 +1614,10 @@ fn decode_contextual_following_coefficients(
         let residual_context = if skipped {
             0x40
         } else {
-            (!require_skipped).then_some(())?;
-            (plane != 0 && chroma_ac_position).then_some(())?;
+            (!require_skipped).then_some(()).portable()?;
+            (plane != 0 && chroma_ac_position)
+                .then_some(())
+                .portable()?;
             let sign_context = coefficient_dc_sign_context(above_context, left_context);
             let transform =
                 decode_nonzero_lossless_transform(decoder, plane, sign_context, true, cdfs)?;
@@ -1480,7 +1628,7 @@ fn decode_contextual_following_coefficients(
         left_context = residual_context;
     }
 
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_contextual_boundary_coefficients(
@@ -1491,7 +1639,7 @@ fn decode_contextual_boundary_coefficients(
     left_contexts: [u8; 2],
     transform_grid_width: usize,
     transform_grid_height: usize,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     if plane == 0 || (above_contexts == [0x40; 2] && left_contexts == [0x40; 2]) {
         return decode_boundary_coefficients(
             decoder,
@@ -1512,18 +1660,18 @@ fn decode_contextual_boundary_coefficients(
         }
         let skip_cdf = chroma_contextual_skip_cdf(above_contexts[column], left_context);
         let skipped = decode_contextual_skip(decoder, coefficient_context, skip_cdf, cdfs);
-        skipped.then_some(())?;
+        skipped.then_some(()).portable()?;
         above_contexts[column] = 0x40;
         left_context = 0x40;
     }
-    Some([[0_i32; 16]; 16])
+    Ok([[0_i32; 16]; 16])
 }
 
 fn decode_subsampled_boundary_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:59-105 and the Slice 33
     // scalar traces. Both side leaves are decoded with `require_skipped`, so
     // their single chroma transforms are neutral by construction. The
@@ -1539,7 +1687,7 @@ fn decode_subsampled_boundary_coefficients(
     if !skipped {
         coefficients[0] = decode_nonzero_lossless_transform(decoder, plane, 0, false, cdfs)?;
     }
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_boundary_coefficients(
@@ -1548,8 +1696,10 @@ fn decode_boundary_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
-) -> Option<PlaneCoefficients> {
-    ((transform_grid_width, transform_grid_height) == (2, 2)).then_some(())?;
+) -> PortableResult<PlaneCoefficients> {
+    ((transform_grid_width, transform_grid_height) == (2, 2))
+        .then_some(())
+        .portable()?;
     let coefficient_context = usize::from(plane != 0);
     let first_skipped = decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context]);
     let mut coefficients = [[0_i32; 16]; 16];
@@ -1560,9 +1710,10 @@ fn decode_boundary_coefficients(
         for _ in 1..4 {
             decoder
                 .adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
-                .then_some(())?;
+                .then_some(())
+                .portable()?;
         }
-        return Some(coefficients);
+        return Ok(coefficients);
     }
     coefficients[0] = decode_nonzero_lossless_transform(decoder, plane, 0, true, cdfs)?;
     let sign_context = if coefficients[0][0].is_negative() {
@@ -1572,13 +1723,15 @@ fn decode_boundary_coefficients(
     };
     for coefficient in &mut coefficients[1..3] {
         (!decoder.adaptive_bool(&mut cdfs.trailing_coefficient_skip[coefficient_context]))
-            .then_some(())?;
+            .then_some(())
+            .portable()?;
         *coefficient = decode_nonzero_lossless_transform(decoder, plane, sign_context, true, cdfs)?;
     }
     decoder
         .adaptive_bool(&mut cdfs.double_neighbor_coefficient_skip[coefficient_context])
-        .then_some(())?;
-    Some(coefficients)
+        .then_some(())
+        .portable()?;
+    Ok(coefficients)
 }
 
 fn decode_skipped_coefficients(
@@ -1587,15 +1740,16 @@ fn decode_skipped_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
     let coefficient_context = usize::from(plane != 0);
     for _ in 0..transform_count {
         decoder
             .adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
-            .then_some(())?;
+            .then_some(())
+            .portable()?;
     }
-    Some([[0_i32; 16]; 16])
+    Ok([[0_i32; 16]; 16])
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:963-983 and src/cdf.c:410-411.
@@ -1606,12 +1760,14 @@ fn decode_delta_q(
     cdfs: &mut BlockCdfs,
     initial_qindex: u32,
     resolution_log2: u32,
-) -> Option<()> {
+) -> PortableResult<()> {
     let magnitude = decoder.adaptive_symbol(&mut cdfs.delta_q, 3);
-    (magnitude == 2).then_some(())?;
-    decoder.equal().then_some(())?;
+    (magnitude == 2).then_some(()).portable()?;
+    decoder.equal().then_some(()).portable()?;
     let delta = magnitude.wrapping_shl(resolution_log2);
-    (initial_qindex.wrapping_sub(delta) == 2).then_some(())
+    (initial_qindex.wrapping_sub(delta) == 2)
+        .then_some(())
+        .portable()
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:318-643,
@@ -1624,14 +1780,15 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     plane: usize,
     luma_predictor: LumaPredictor,
     cdfs: &mut BlockCdfs,
-) -> Option<PlaneCoefficients> {
+) -> PortableResult<PlaneCoefficients> {
     if plane != 0 {
         return decoder
             .adaptive_bool(&mut cdfs.subsampled_chroma_coefficient_skip[0])
-            .then_some([[0_i32; 16]; 16]);
+            .then_some([[0_i32; 16]; 16])
+            .portable();
     }
     if decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip) {
-        return Some([[0_i32; 16]; 16]);
+        return Ok([[0_i32; 16]; 16]);
     }
 
     // Slice 35 admits only directional lossy predictors. Their AV1 mode
@@ -1642,9 +1799,14 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
         &mut cdfs.lossy_luma_8x8_transform_type[transform_context],
         6,
     ) == 1)
-        .then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_bin, 6) == 0).then_some(())?;
-    (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_base, 2) == 2).then_some(())?;
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_bin, 6) == 0)
+        .then_some(())
+        .portable()?;
+    (decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_base, 2) == 2)
+        .then_some(())
+        .portable()?;
     let token = decode_high_token(decoder, &mut cdfs.lossy_luma_8x8_high_token);
     let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:597-643. DC sign is decoded
@@ -1668,7 +1830,7 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     } else {
         magnitude
     };
-    Some(coefficients)
+    Ok(coefficients)
 }
 
 fn decode_syntax(
@@ -1678,14 +1840,16 @@ fn decode_syntax(
     chroma_sampling: ChromaSampling,
     policy: SyntaxPolicy,
     tools: BlockTools,
-) -> Option<BlockSyntax> {
+) -> PortableResult<BlockSyntax> {
     let SyntaxPolicy {
         spatial_luma_context,
         coefficient_policy,
         quantization_syntax,
     } = policy;
     let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
-    (!decoder.adaptive_bool(&mut cdfs.skip)).then_some(())?;
+    (!decoder.adaptive_bool(&mut cdfs.skip))
+        .then_some(())
+        .portable()?;
     if let QuantizationSyntax::DeltaQ {
         initial_qindex,
         resolution_log2,
@@ -1714,9 +1878,12 @@ fn decode_syntax(
             {
                 LumaPredictor::Horizontal
             }
-            _ => return None,
+            _ => return Err(PortableUnavailable),
         };
-    spatial_luma_context.accepts(luma_predictor).then_some(())?;
+    spatial_luma_context
+        .accepts(luma_predictor)
+        .then_some(())
+        .portable()?;
     if let LumaPredictor::Vertical | LumaPredictor::Horizontal = luma_predictor {
         let angle_index = luma_predictor.cdf_index().wrapping_sub(1);
         #[expect(
@@ -1725,13 +1892,14 @@ fn decode_syntax(
         )]
         let luma_angle_delta =
             (decoder.adaptive_symbol(&mut cdfs.luma_angle[angle_index], 6) as i32).wrapping_sub(3);
-        (luma_angle_delta == 0).then_some(())?;
+        (luma_angle_delta == 0).then_some(()).portable()?;
     }
     match chroma_sampling {
         ChromaSampling::Full => {
             let predictor_index = luma_predictor.cdf_index();
             (decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12) == 0)
-                .then_some(())?;
+                .then_some(())
+                .portable()?;
         }
         ChromaSampling::Subsampled420 => {
             // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:1072-1078,
@@ -1747,17 +1915,23 @@ fn decode_syntax(
             } else {
                 decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
             };
-            (chroma_dc == 0).then_some(())?;
+            (chroma_dc == 0).then_some(()).portable()?;
         }
     }
     if tools.allow_screen_content_tools {
         if matches!(luma_predictor, LumaPredictor::Dc) {
-            (!decoder.adaptive_bool(&mut cdfs.palette_y)).then_some(())?;
+            (!decoder.adaptive_bool(&mut cdfs.palette_y))
+                .then_some(())
+                .portable()?;
         }
-        (!decoder.adaptive_bool(&mut cdfs.palette_uv)).then_some(())?;
+        (!decoder.adaptive_bool(&mut cdfs.palette_uv))
+            .then_some(())
+            .portable()?;
     }
     if matches!(luma_predictor, LumaPredictor::Dc) && tools.enable_filter_intra {
-        (!decoder.adaptive_bool(&mut cdfs.use_filter_intra)).then_some(())?;
+        (!decoder.adaptive_bool(&mut cdfs.use_filter_intra))
+            .then_some(())
+            .portable()?;
     }
     let decode_plane = |decoder: &mut RangeDecoder<'_, '_, '_>, plane, cdfs: &mut BlockCdfs| {
         let (plane_grid_width, plane_grid_height) =
@@ -1857,7 +2031,7 @@ fn decode_syntax(
         decode_plane(decoder, 1, cdfs)?,
         decode_plane(decoder, 2, cdfs)?,
     ];
-    Some(BlockSyntax {
+    Ok(BlockSyntax {
         luma_predictor,
         coefficients,
         transform_grid,
@@ -2395,9 +2569,9 @@ fn decode_following_square_syntax<F>(
     cdfs: &mut BlockCdfs,
     context: FollowingSyntaxContext,
     between_leaves: &mut F,
-) -> Option<BlockSyntax>
+) -> PortableResult<BlockSyntax>
 where
-    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
     let FollowingSyntaxContext {
         transform_grid,
@@ -2471,7 +2645,7 @@ pub(super) fn decode_first_lossless_444_leaf(
     height: u32,
     transform_grid: TransformGrid,
     tools: BlockTools,
-) -> Option<FirstLeaf> {
+) -> PortableResult<FirstLeaf> {
     let (_, _, use_filter_intra) = transform_grid.properties();
     let mut cdfs = BlockCdfs::defaults(use_filter_intra);
     let syntax = decode_syntax(
@@ -2488,7 +2662,7 @@ pub(super) fn decode_first_lossless_444_leaf(
     )?;
     let predictors = origin_predictors(syntax.luma_predictor);
     let leaf = reconstruct_leaf(syntax, predictors);
-    Some(visible_leaf(
+    Ok(visible_leaf(
         leaf,
         transform_grid,
         width,
@@ -2504,7 +2678,7 @@ pub(super) fn decode_first_lossless_420_leaf(
     height: u32,
     transform_grid: TransformGrid,
     tools: BlockTools,
-) -> Option<FirstLeaf> {
+) -> PortableResult<FirstLeaf> {
     let (_, _, use_filter_intra) = transform_grid.properties();
     let mut cdfs = BlockCdfs::defaults(use_filter_intra);
     let syntax = decode_syntax(
@@ -2521,7 +2695,7 @@ pub(super) fn decode_first_lossless_420_leaf(
     )?;
     let predictors = origin_predictors(syntax.luma_predictor);
     let leaf = reconstruct_leaf(syntax, predictors);
-    Some(visible_leaf(
+    Ok(visible_leaf(
         leaf,
         transform_grid,
         width,
@@ -2538,7 +2712,7 @@ pub(super) fn decode_first_lossy_420_leaf(
     initial_qindex: u32,
     delta_q_resolution_log2: u32,
     tools: BlockTools,
-) -> Option<FirstLeaf> {
+) -> PortableResult<FirstLeaf> {
     let transform_grid = TransformGrid::Square8;
     let (_, _, use_filter_intra) = transform_grid.properties();
     let mut cdfs = BlockCdfs::defaults(use_filter_intra);
@@ -2559,7 +2733,7 @@ pub(super) fn decode_first_lossy_420_leaf(
     )?;
     let predictors = origin_predictors(syntax.luma_predictor);
     let leaf = reconstruct_leaf(syntax, predictors);
-    Some(visible_leaf(
+    Ok(visible_leaf(
         leaf,
         transform_grid,
         width,
@@ -2650,9 +2824,9 @@ pub(super) fn decode_two_lossless_444_leaves<F>(
     orientation: SplitOrientation,
     tools: BlockTools,
     between_leaves: F,
-) -> Option<FirstLeaf>
+) -> PortableResult<FirstLeaf>
 where
-    F: FnOnce(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+    F: FnOnce(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
     let transform_grid = TransformGrid::Square8;
     let (_, _, use_filter_intra) = transform_grid.properties();
@@ -2703,7 +2877,7 @@ where
     let planes = coded_planes
         .each_ref()
         .map(|plane| visible_plane(plane, coded_width, width, height));
-    Some(FirstLeaf {
+    Ok(FirstLeaf {
         width,
         height,
         planes,
@@ -2720,9 +2894,9 @@ pub(super) fn decode_two_lossless_420_leaves<F>(
     orientation: SplitOrientation,
     tools: BlockTools,
     between_leaves: F,
-) -> Option<FirstLeaf>
+) -> PortableResult<FirstLeaf>
 where
-    F: FnOnce(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+    F: FnOnce(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
     let transform_grid = TransformGrid::Square8;
     let (_, _, use_filter_intra) = transform_grid.properties();
@@ -2794,7 +2968,7 @@ where
             chroma_height,
         ),
     ];
-    Some(FirstLeaf {
+    Ok(FirstLeaf {
         width,
         height,
         planes,
@@ -2810,9 +2984,9 @@ pub(super) fn decode_four_lossless_444_leaves<F>(
     height: u32,
     tools: BlockTools,
     mut between_leaves: F,
-) -> Option<FirstLeaf>
+) -> PortableResult<FirstLeaf>
 where
-    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
     let transform_grid = TransformGrid::Square8;
     let (_, _, use_filter_intra) = transform_grid.properties();
@@ -2943,7 +3117,7 @@ where
     let planes = coded_planes
         .each_ref()
         .map(|plane| visible_plane(plane, 16, width, height));
-    Some(FirstLeaf {
+    Ok(FirstLeaf {
         width,
         height,
         planes,
@@ -2959,9 +3133,9 @@ pub(super) fn decode_four_lossless_420_leaves<F>(
     height: u32,
     tools: BlockTools,
     mut between_leaves: F,
-) -> Option<FirstLeaf>
+) -> PortableResult<FirstLeaf>
 where
-    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> Option<()>,
+    F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
     let transform_grid = TransformGrid::Square8;
     let (_, _, use_filter_intra) = transform_grid.properties();
@@ -3092,7 +3266,7 @@ where
         visible_plane(&coded_planes[1], 8, chroma_width, chroma_height),
         visible_plane(&coded_planes[2], 8, chroma_width, chroma_height),
     ];
-    Some(FirstLeaf {
+    Ok(FirstLeaf {
         width,
         height,
         planes,

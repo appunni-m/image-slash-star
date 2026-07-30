@@ -17,8 +17,9 @@ mod huffman;
 mod marker;
 mod quant;
 
+use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
-use crate::types::DecodedImage;
+use crate::types::{DecodedImage, ImageMode};
 
 /// Zigzag scan order (matches idct.rs JPEG_NATURAL_ORDER).
 const ZIGZAG: [usize; 64] = [
@@ -42,26 +43,33 @@ struct CompData {
     ac_tbl: u8,
 }
 
-pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>> {
+pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    img.validate().map_err(CodecError::from_image_error)?;
     let w = bounded_usize(img.width);
     let h = bounded_usize(img.height);
-    debug_assert!(w > 0 && h > 0);
     let pixels = img.as_bytes();
 
-    let num_components: u8 = match img.color {
-        crate::types::ColorType::L8 => 1,
-        _ => 3,
+    let num_components: u8 = match img.mode {
+        ImageMode::L8 => 1,
+        ImageMode::Rgb8 => 3,
+        _ => {
+            return Err(CodecError::Unsupported(format!(
+                "JPEG cannot encode mode {:?}",
+                img.mode
+            )));
+        }
     };
 
     let quality = opts.quality.unwrap_or(75);
     let progressive = opts.progressive.unwrap_or(false);
     let optimize = opts.optimize.unwrap_or(false);
     let subsampling = opts.subsampling.as_deref().unwrap_or("420");
-    let restart_rows = opts
-        .extra
-        .get("restart_interval")
-        .and_then(|value| value.parse::<usize>().ok())
-        .unwrap_or(0);
+    let restart_rows = match opts.extra.get("restart_interval") {
+        Some(value) => value.parse::<usize>().map_err(|_| {
+            CodecError::Parameter("invalid JPEG restart_interval option".to_owned())
+        })?,
+        None => 0,
+    };
 
     let params = quant::build_params(quality, subsampling, usize::from(num_components));
 
@@ -173,7 +181,12 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     let restart_interval = if restart_rows == 0 {
         0
     } else {
-        u16::try_from(restart_rows.checked_mul(mcu_columns)?).ok()?
+        let interval = restart_rows
+            .checked_mul(mcu_columns)
+            .ok_or_else(|| CodecError::Parameter("JPEG restart interval overflows".to_owned()))?;
+        u16::try_from(interval).map_err(|_| {
+            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
+        })?
     };
 
     // Derive standard Huffman tables.
@@ -313,7 +326,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> Option<Vec<u8>
     }
 
     marker::write_eoi(&mut out);
-    Some(out)
+    Ok(out)
 }
 
 #[cfg(coverage)]
@@ -340,6 +353,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = encode(&gray, &EncodeOptions::default());
     let _ = encode(&rgb, &EncodeOptions::default());
+    let grayscale_alpha = DecodedImage::new(1, 1, vec![0, 255], crate::types::ColorType::La8);
+    let _ = encode(&grayscale_alpha, &EncodeOptions::default());
     let mut progressive = EncodeOptions {
         progressive: Some(true),
         ..EncodeOptions::default()
@@ -362,6 +377,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .extra
         .insert("restart_interval".to_owned(), "70000".to_owned());
     let _ = encode(&rgb, &bad_restart);
+    let mut nonnumeric_restart = restart.clone();
+    nonnumeric_restart
+        .extra
+        .insert("restart_interval".to_owned(), "invalid".to_owned());
+    let _ = encode(&rgb, &nonnumeric_restart);
     let wide_rgb = DecodedImage::new(17, 1, vec![128; 17 * 3], crate::types::ColorType::Rgb8);
     let mut overflowing_restart = restart.clone();
     overflowing_restart
@@ -378,6 +398,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&gray, &oversized_exif_options);
     let _ = decode_hex("ff00");
     let _ = decode_hex("f");
+    let _ = decode_hex("aéx");
     let mut marker_bytes = Vec::new();
     let _ = marker::write_exif_app1(&mut marker_bytes, b"Exif\0\0");
     let oversized_exif = vec![0u8; usize::from(u16::MAX)];
@@ -466,14 +487,28 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
 }
 
-fn decode_hex(value: &str) -> Option<Vec<u8>> {
-    (0..value.len())
-        .step_by(2)
-        .map(|index| {
-            let end = index.saturating_add(2);
-            u8::from_str_radix(value.get(index..end)?, 16).ok()
-        })
-        .collect()
+fn decode_hex(value: &str) -> CodecResult<Vec<u8>> {
+    if !value.len().is_multiple_of(2) {
+        return Err(CodecError::Parameter(
+            "JPEG hexadecimal option must contain complete bytes".to_owned(),
+        ));
+    }
+    let mut decoded = Vec::with_capacity(value.len() / 2);
+    for pair in value.as_bytes().chunks_exact(2) {
+        decoded.push((hex_nibble(pair[0])? << 4) | hex_nibble(pair[1])?);
+    }
+    Ok(decoded)
+}
+
+fn hex_nibble(value: u8) -> CodecResult<u8> {
+    match value {
+        b'0'..=b'9' => Ok(value.wrapping_sub(b'0')),
+        b'a'..=b'f' => Ok(value.wrapping_sub(b'a').wrapping_add(10)),
+        b'A'..=b'F' => Ok(value.wrapping_sub(b'A').wrapping_add(10)),
+        _ => Err(CodecError::Parameter(
+            "invalid JPEG hexadecimal option".to_owned(),
+        )),
+    }
 }
 
 fn bounded_usize(value: u32) -> usize {

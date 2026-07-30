@@ -19,6 +19,7 @@ use super::idct::{JPEG_NATURAL_ORDER, YccColorConverter, extend, jpeg_idct_islow
 use super::implementation::extract_entropy_segments;
 use super::parser::JpegInfo;
 use super::upsample::{crop_component, fancy_upsample};
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ColorType, DecodedImage};
 
 struct ProgressiveState {
@@ -42,24 +43,23 @@ impl ProgressiveState {
 }
 
 /// Process one DC-first block (decode_mcu_DC_first).
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn dc_first_block(
     br: &mut BitReader,
     dc_table: &super::huffman::HuffTable,
     dc_pred: &mut i32,
     al: u8,
-) -> Option<i32> {
+) -> CodecResult<i32> {
     let dc_cat = dc_table.decode(br)?;
     if dc_cat > 0 {
         if dc_cat > 15 {
-            return None;
+            return Err(CodecError::Malformed(
+                "invalid progressive JPEG DC coefficient category".to_owned(),
+            ));
         }
-        let bits = br
-            .read_bits(u32::from(dc_cat))
-            .expect("progressive DC coefficient bits are zero-padded");
+        let bits = br.read_padded_bits(u32::from(dc_cat));
         *dc_pred = dc_pred.saturating_add(extend(bits, dc_cat));
     }
-    Some(dc_pred.wrapping_shl(u32::from(al)))
+    Ok(dc_pred.wrapping_shl(u32::from(al)))
 }
 
 /// Process one DC-refinement block (decode_mcu_DC_refine).
@@ -70,7 +70,6 @@ fn dc_refine_block(coeff: &mut i32, p1: i32) {
 
 /// Process one AC-first block (decode_mcu_AC_first).
 /// Updates eobrun.  Returns the number of coefficients decoded (for debugging).
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn ac_first_block(
     br: &mut BitReader,
     ac_table: &super::huffman::HuffTable,
@@ -79,10 +78,10 @@ fn ac_first_block(
     al: u8,
     coeffs: &mut [i32; 64],
     eobrun: &mut u32,
-) -> Option<usize> {
+) -> CodecResult<usize> {
     if *eobrun > 0 {
         *eobrun = eobrun.saturating_sub(1);
-        return Some(0); // entire block zero in this band
+        return Ok(0); // entire block zero in this band
     }
     let ss = usize::from(ss);
     let se = usize::from(se);
@@ -101,10 +100,7 @@ fn ac_first_block(
             // EOB: EOBRUN = (1<<run) + extra_bits
             *eobrun = 1u32.wrapping_shl(run_bits);
             if run > 0 {
-                *eobrun = eobrun.saturating_add(
-                    br.read_bits(run_bits)
-                        .expect("progressive AC EOBRUN bits are zero-padded"),
-                );
+                *eobrun = eobrun.saturating_add(br.read_padded_bits(run_bits));
             }
             *eobrun = eobrun.saturating_sub(1); // this block consumes one from the run
             break;
@@ -114,19 +110,16 @@ fn ac_first_block(
         if k > se || k >= 64 {
             break;
         }
-        let bits = br
-            .read_bits(u32::from(size))
-            .expect("progressive AC coefficient bits are zero-padded");
+        let bits = br.read_padded_bits(u32::from(size));
         coeffs[k] = extend(bits, size).wrapping_shl(u32::from(al));
         ncoeffs = ncoeffs.saturating_add(1);
         k = k.saturating_add(1);
     }
-    Some(ncoeffs)
+    Ok(ncoeffs)
 }
 
 /// Process one AC-refinement block (decode_mcu_AC_refine).
 /// Updates eobrun.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn ac_refine_block(
     br: &mut BitReader,
     ac_table: &super::huffman::HuffTable,
@@ -135,7 +128,7 @@ fn ac_refine_block(
     al: u8,
     coeffs: &mut [i32; 64],
     eobrun: &mut u32,
-) -> Option<()> {
+) -> CodecResult<()> {
     let p1 = 1i32.wrapping_shl(u32::from(al));
     let m1 = (-1i32).wrapping_shl(u32::from(al));
     let ss = usize::from(ss);
@@ -151,18 +144,13 @@ fn ac_refine_block(
 
             // New coefficient value
             let new_val = if size != 0 {
-                let bit = br
-                    .read_bits(1)
-                    .expect("progressive AC refinement sign bits are zero-padded");
+                let bit = br.read_padded_bits(1);
                 Some(if bit != 0 { p1 } else { m1 })
             } else {
                 if r != 15 {
                     *eobrun = 1u32.wrapping_shl(r.cast_unsigned());
                     if r > 0 {
-                        *eobrun = eobrun.saturating_add(
-                            br.read_bits(r.cast_unsigned())
-                                .expect("progressive AC refinement EOBRUN bits are zero-padded"),
-                        );
+                        *eobrun = eobrun.saturating_add(br.read_padded_bits(r.cast_unsigned()));
                     }
                     break; // → Phase 2
                 }
@@ -175,9 +163,7 @@ fn ac_refine_block(
                     break;
                 }
                 if coeffs[k] != 0 {
-                    let bit = br
-                        .read_bits(1)
-                        .expect("progressive AC refinement bits are zero-padded");
+                    let bit = br.read_padded_bits(1);
                     if bit != 0 && (coeffs[k] & p1) == 0 {
                         coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
                     }
@@ -204,9 +190,7 @@ fn ac_refine_block(
     if *eobrun > 0 {
         while k <= se && k < 64 {
             if coeffs[k] != 0 {
-                let bit = br
-                    .read_bits(1)
-                    .expect("progressive AC refinement bits are zero-padded");
+                let bit = br.read_padded_bits(1);
                 if bit != 0 && (coeffs[k] & p1) == 0 {
                     coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
                 }
@@ -216,7 +200,7 @@ fn ac_refine_block(
         *eobrun = eobrun.saturating_sub(1);
     }
 
-    Some(())
+    Ok(())
 }
 
 fn smooth_pred(num: i64, quant: i64, al: i32) -> i32 {
@@ -602,8 +586,7 @@ fn smooth_dc_only_block(
 }
 
 // Progressive scan parsing validates tables and uses a zero-padding bit reader.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<DecodedImage> {
+pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> CodecResult<DecodedImage> {
     let mcu_width = u32::from(info.max_h_samp).saturating_mul(8);
     let mcu_height = u32::from(info.max_v_samp).saturating_mul(8);
     let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
@@ -747,7 +730,8 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                         let dc_table = scan
                             .dc_huff_tables
                             .get(usize::from(scan_comp.dc_tbl))
-                            .and_then(Option::as_ref)?;
+                            .and_then(Option::as_ref)
+                            .malformed("missing progressive JPEG DC Huffman table")?;
                         for &block_idx in &block_list {
                             coeff_storage[comp_idx][block_idx][0] = dc_first_block(
                                 &mut br,
@@ -760,9 +744,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                         let p1 = 1i32.wrapping_shl(u32::from(scan.al));
                         for &block_idx in &block_list {
                             // DC refine: read 1 bit, OR into coefficient
-                            let bit = br
-                                .read_bits(1)
-                                .expect("progressive DC refinement bits are zero-padded");
+                            let bit = br.read_padded_bits(1);
                             if bit != 0 {
                                 dc_refine_block(&mut coeff_storage[comp_idx][block_idx][0], p1);
                             }
@@ -771,7 +753,8 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                         let ac_table = scan
                             .ac_huff_tables
                             .get(usize::from(scan_comp.ac_tbl))
-                            .and_then(Option::as_ref)?;
+                            .and_then(Option::as_ref)
+                            .malformed("missing progressive JPEG AC Huffman table")?;
                         for &block_idx in &block_list {
                             ac_first_block(
                                 &mut br,
@@ -787,7 +770,8 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                         let ac_table = scan
                             .ac_huff_tables
                             .get(usize::from(scan_comp.ac_tbl))
-                            .and_then(Option::as_ref)?;
+                            .and_then(Option::as_ref)
+                            .malformed("missing progressive JPEG AC Huffman table")?;
                         for &block_idx in &block_list {
                             ac_refine_block(
                                 &mut br,
@@ -818,9 +802,11 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
         let buf_w = comp_buf_width[comp_idx];
         let blocks_x = buf_w.div_euclid(8);
         let blocks_y = comp_buf_height[comp_idx].div_euclid(8);
-        let quant_table = info.quant_tables[usize::from(comp.quant_tbl)]
-            .as_ref()
-            .expect("component quantization table validated before progressive reconstruction");
+        let quant_table = info
+            .quant_tables
+            .get(usize::from(comp.quant_tbl))
+            .and_then(Option::as_ref)
+            .malformed("missing JPEG quantization table")?;
         let mut quant_natural = [0u16; 64];
         for i in 0..64 {
             quant_natural[JPEG_NATURAL_ORDER[i]] = quant_table[i];
@@ -874,7 +860,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                 pixels.push(y_buf[y.saturating_mul(y_w).saturating_add(x)]);
             }
         }
-        Some(DecodedImage::new(
+        Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
             pixels,
@@ -933,7 +919,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                 pixels.push(b);
             }
         }
-        Some(DecodedImage::new(
+        Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
             pixels,
@@ -967,7 +953,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> Option<De
                 }
             }
         }
-        Some(DecodedImage::new(
+        Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
             pixels,
@@ -1010,57 +996,54 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut dc_pred = 0;
-    assert_eq!(
-        dc_first_block(&mut br, &invalid_dc_category, &mut dc_pred, 0),
-        None
-    );
+    assert!(dc_first_block(&mut br, &invalid_dc_category, &mut dc_pred, 0).is_err());
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut coeffs = [0i32; 64];
     let mut eobrun = 0;
     assert_eq!(
         ac_first_block(&mut br, &zero, 64, 63, 0, &mut coeffs, &mut eobrun),
-        Some(0)
+        Ok(0)
     );
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun),
-        Some(0)
+        Ok(0)
     );
 
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun),
-        Some(0)
+        Ok(0)
     );
 
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &eob, 1, 1, 0, &mut coeffs, &mut eobrun),
-        Some(0)
+        Ok(0)
     );
     eobrun = 0;
 
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &overflow, 63, 63, 0, &mut coeffs, &mut eobrun),
-        Some(0)
+        Ok(0)
     );
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &overflow, 63, 80, 0, &mut coeffs, &mut eobrun),
-        Some(0)
+        Ok(0)
     );
 
     let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(ac_refine_block(&mut br, &zero, 63, 63, 0, &mut coeffs, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &zero, 63, 63, 0, &mut coeffs, &mut eobrun).is_ok());
     let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_ok());
     let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
     let entropy_ones = [0xff; 16];
     let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
     coeffs[1] = 2;
-    assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
     let mut coeffs_bit_false = [0i32; 64];
     coeffs_bit_false[1] = 2;
     let mut br = BitReader::new(&entropy, 0, entropy.len());
@@ -1074,7 +1057,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_bit_false,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let mut coeffs_masked = [0i32; 64];
     coeffs_masked[1] = 1;
@@ -1089,7 +1072,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_masked,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let entropy_valid_one_bit_false = [0b1000_0000; 16];
     let mut coeffs_valid_bit_false = [0i32; 64];
@@ -1110,7 +1093,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_valid_bit_false,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let mut coeffs_valid_mask_false = [0i32; 64];
     coeffs_valid_mask_false[1] = 1;
@@ -1126,7 +1109,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_valid_mask_false,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let entropy_symbol_one_then_bit_one = [0b1110_0000u8; 16];
     let mut coeffs_non_marker_mask_false = [0i32; 64];
@@ -1147,7 +1130,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_non_marker_mask_false,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let mut coeffs_boundary = [0i32; 64];
     coeffs_boundary[63] = 1;
@@ -1162,19 +1145,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_boundary,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
     eobrun = 1;
-    assert!(ac_refine_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
     let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
     eobrun = 1;
-    assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_ok());
     let mut coeffs_phase2 = [0i32; 64];
     coeffs_phase2[1] = 1;
     let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
     eobrun = 1;
-    assert!(ac_refine_block(&mut br, &zero, 1, 1, 0, &mut coeffs_phase2, &mut eobrun).is_some());
+    assert!(ac_refine_block(&mut br, &zero, 1, 1, 0, &mut coeffs_phase2, &mut eobrun).is_ok());
     let mut coeffs_phase2_false = [0i32; 64];
     coeffs_phase2_false[1] = 2;
     let mut br = BitReader::new(&entropy, 0, entropy.len());
@@ -1189,7 +1172,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_phase2_false,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
     let entropy_refine_bit_one = [0b1000_0000u8; 16];
     let mut coeffs_phase2_mask_false = [0i32; 64];
@@ -1206,7 +1189,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut coeffs_phase2_mask_false,
             &mut eobrun
         )
-        .is_some()
+        .is_ok()
     );
 
     let component = FrameComponent {
