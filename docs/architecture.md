@@ -263,6 +263,15 @@ each frame image, and rejects frame rectangles outside the canvas.
 
 ## Errors and recovery
 
+Codec-dispatched failures attach the public operation that was executing when
+the failure escaped (`ImageError::stage()`): inspection, still decode, still
+encode, sequence decode, sequence encode, or verification. Caller-built
+validation failures, option-construction errors, and target/availability
+checks remain intentionally stage-free because they do not belong to one
+operation; `UnknownFormat` and `FeatureDisabled` have no stage, and
+`LimitExceeded` already carries the typed `CodecOperation` instead. Stages are
+stable recovery fields; the diagnostic message remains non-contractual prose.
+
 All canonical fallible operations return `ImageResult<T>`. `ImageError` is
 non-exhaustive so downstream matches need a fallback arm.
 

@@ -298,6 +298,7 @@ fn extension_aliases_and_mime_queries_match_the_public_contract() {
         Err(ImageError::Unsupported {
             format: None,
             message: "unknown extension: dib".to_owned(),
+            stage: None,
         })
     );
 }
@@ -477,6 +478,7 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
             let expected = ImageError::Unsupported {
                 format: Some(format),
                 message: AVIF_WASM_UNAVAILABLE.to_owned(),
+                stage: None,
             };
             let info = image_slash_star::inspect(&bytes)?;
             let Some(expected_size) = row.ref_size else {
@@ -687,5 +689,101 @@ fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
     assert!(VerificationScope::Structure.provides(VerificationScope::HeaderOnly));
     assert!(!VerificationScope::Structure.provides(VerificationScope::FullPixels));
     assert!(VerificationScope::FullPixels.provides(VerificationScope::FullPixels));
+    Ok(())
+}
+
+#[test]
+fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{
+        ColorType, DecodedFrame, DecodedImage, DecodedSequence, EncodeOptions, FrameBlend,
+        FrameDisposal, FrameDuration, FrameRect, ImageErrorKind, ImageErrorStage, ImageFormat,
+    };
+
+    if !cfg!(feature = "png") || !cfg!(feature = "jpeg") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let malformed = fs::read(root.join("tests/fixtures/input/images/png/truncated.png"))?;
+    let verify_only = fs::read(root.join("tests/fixtures/input/images/png/bad_idat_crc.png"))?;
+
+    let inspect_error = match image_slash_star::inspect(&malformed) {
+        Err(error) => error,
+        Ok(_) => panic!("truncated PNG must fail inspection"),
+    };
+    assert_eq!(inspect_error.kind(), ImageErrorKind::Malformed);
+    assert_eq!(inspect_error.stage(), Some(ImageErrorStage::Inspection));
+
+    let decode_error = match image_slash_star::decode(&malformed) {
+        Err(error) => error,
+        Ok(_) => panic!("truncated PNG must fail still decode"),
+    };
+    assert_eq!(decode_error.kind(), ImageErrorKind::Malformed);
+    assert_eq!(decode_error.stage(), Some(ImageErrorStage::StillDecode));
+
+    let sequence_error = match image_slash_star::decode_sequence(&malformed) {
+        Err(error) => error,
+        Ok(_) => panic!("truncated PNG must fail sequence decode"),
+    };
+    assert_eq!(sequence_error.kind(), ImageErrorKind::Malformed);
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceDecode)
+    );
+
+    let source_error = match image_slash_star::EncodedImage::new(malformed) {
+        Err(error) => error,
+        Ok(_) => panic!("truncated PNG must fail source construction"),
+    };
+    assert_eq!(source_error.kind(), ImageErrorKind::Malformed);
+    assert_eq!(source_error.stage(), Some(ImageErrorStage::Inspection));
+
+    let source = image_slash_star::EncodedImage::new(verify_only)?;
+    let verify_error = match source.verify() {
+        Err(error) => error,
+        Ok(_) => panic!("bad IDAT CRC must fail verification"),
+    };
+    assert_eq!(verify_error.kind(), ImageErrorKind::Malformed);
+    assert_eq!(verify_error.stage(), Some(ImageErrorStage::Verification));
+
+    let cmyk = DecodedImage::new(1, 1, vec![0; 4], ColorType::Cmyk8);
+    let encode_error = match image_slash_star::encode_default(&cmyk, ImageFormat::Png) {
+        Err(error) => error,
+        Ok(_) => panic!("PNG must reject CMYK input"),
+    };
+    assert_eq!(encode_error.kind(), ImageErrorKind::Unsupported);
+    assert_eq!(encode_error.stage(), Some(ImageErrorStage::StillEncode));
+
+    let frame = DecodedFrame::rendered_canvas(
+        DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        FrameRect {
+            left: 0,
+            top: 0,
+            width: 1,
+            height: 1,
+        },
+        FrameDuration::ZERO,
+        FrameDisposal::Unspecified,
+        FrameBlend::Unspecified,
+    );
+    let sequence = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![frame.clone(), frame],
+        loop_count: None,
+        background: None,
+    };
+    let sequence_error = match image_slash_star::encode_sequence(
+        &sequence,
+        ImageFormat::Jpeg,
+        &EncodeOptions::for_format(ImageFormat::Jpeg),
+    ) {
+        Err(error) => error,
+        Ok(_) => panic!("JPEG must reject multi-frame sequences"),
+    };
+    assert_eq!(sequence_error.kind(), ImageErrorKind::Unsupported);
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
     Ok(())
 }

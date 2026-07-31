@@ -6,7 +6,8 @@
 use crate::SequenceDecodeBudget;
 use crate::encode_options::EncodeOptions;
 use crate::types::{
-    DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageFormat, ImageInfo, ImageResult,
+    DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageErrorStage, ImageFormat,
+    ImageInfo, ImageResult,
 };
 
 mod error;
@@ -60,7 +61,11 @@ pub(crate) fn decode_format(
 ) -> ImageResult<(DecodedImage, Option<usize>)> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
-        let (image, consumed) = into_image_result(avif::decode::decode(_data), format)?;
+        let (image, consumed) = into_image_result(
+            avif::decode::decode(_data),
+            format,
+            ImageErrorStage::StillDecode,
+        )?;
         return validate_decoded_image(image).map(|image| (image, Some(consumed)));
     }
 
@@ -142,7 +147,11 @@ pub(crate) fn decode_format(
     };
     let (image, consumed) = match decoded {
         Ok(decoded) => decoded,
-        Err(error) => return Err(error.context("decode").into_image_error(format)),
+        Err(error) => {
+            return Err(error
+                .context("decode")
+                .into_image_error(format, ImageErrorStage::StillDecode));
+        }
     };
     validate_decoded_image(image).map(|image| (image, consumed))
 }
@@ -216,7 +225,11 @@ pub(crate) fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<I
             "AVIF metadata inspection is unavailable".to_owned(),
         )),
     };
-    into_image_result(inspected.map_err(|error| error.context("inspect")), format)
+    into_image_result(
+        inspected.map_err(|error| error.context("inspect")),
+        format,
+        ImageErrorStage::Inspection,
+    )
 }
 
 /// Apply the pinned Pillow oracle's codec-specific verification contract.
@@ -245,7 +258,11 @@ pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()
         // construction has already performed that inspection.
         _ => Ok(()),
     };
-    into_image_result(verified.map_err(|error| error.context("verify")), format)
+    into_image_result(
+        verified.map_err(|error| error.context("verify")),
+        format,
+        ImageErrorStage::Verification,
+    )
 }
 
 /// Dispatch decoding while retaining every frame and its presentation data.
@@ -275,6 +292,7 @@ pub(crate) fn decode_sequence_format(
                 .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
+            ImageErrorStage::SequenceDecode,
         );
     }
 
@@ -285,6 +303,7 @@ pub(crate) fn decode_sequence_format(
                 .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
+            ImageErrorStage::SequenceDecode,
         );
     }
 
@@ -295,6 +314,7 @@ pub(crate) fn decode_sequence_format(
                 .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
+            ImageErrorStage::SequenceDecode,
         );
     }
 
@@ -305,6 +325,7 @@ pub(crate) fn decode_sequence_format(
                 .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
+            ImageErrorStage::SequenceDecode,
         );
     }
 
@@ -315,6 +336,7 @@ pub(crate) fn decode_sequence_format(
                 .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
+            ImageErrorStage::SequenceDecode,
         );
     }
 
@@ -381,9 +403,19 @@ pub(crate) fn encode_format(
             (ImageFormat::Avif, EncodeOptions::Avif(options)) => {
                 avif::encode::encode(_image, options)
             }
-            _ => return Err(option_format_mismatch(format, _options)),
+            _ => {
+                return Err(option_format_mismatch(
+                    format,
+                    _options,
+                    ImageErrorStage::StillEncode,
+                ));
+            }
         };
-        into_image_result(encoded.map_err(|error| error.context("encode")), format)
+        into_image_result(
+            encoded.map_err(|error| error.context("encode")),
+            format,
+            ImageErrorStage::StillEncode,
+        )
     }
     #[cfg(not(any(
         feature = "jpeg",
@@ -395,7 +427,11 @@ pub(crate) fn encode_format(
         feature = "ico",
         feature = "avif"
     )))]
-    Err(option_format_mismatch(format, _options))
+    Err(option_format_mismatch(
+        format,
+        _options,
+        ImageErrorStage::StillEncode,
+    ))
 }
 
 /// Dispatch encoding without collapsing an animation to its first frame.
@@ -428,6 +464,7 @@ pub(crate) fn encode_sequence_format(
                 gif::encode::encode_sequence(sequence, options)
                     .map_err(|error| error.context("encode sequence")),
                 format,
+                ImageErrorStage::SequenceEncode,
             );
         }
         #[cfg(feature = "avif")]
@@ -436,6 +473,7 @@ pub(crate) fn encode_sequence_format(
                 avif::encode::encode_sequence(sequence, options)
                     .map_err(|error| error.context("encode sequence")),
                 format,
+                ImageErrorStage::SequenceEncode,
             );
         }
         #[cfg(feature = "tiff")]
@@ -444,6 +482,7 @@ pub(crate) fn encode_sequence_format(
                 tiff::encode::encode_sequence(sequence, options)
                     .map_err(|error| error.context("encode sequence")),
                 format,
+                ImageErrorStage::SequenceEncode,
             );
         }
         #[cfg(feature = "webp")]
@@ -452,10 +491,15 @@ pub(crate) fn encode_sequence_format(
                 webp::encode::encode_sequence(sequence, options)
                     .map_err(|error| error.context("encode sequence")),
                 format,
+                ImageErrorStage::SequenceEncode,
             );
         }
         (_, supplied) if supplied.format() != format => {
-            return Err(option_format_mismatch(format, supplied));
+            return Err(option_format_mismatch(
+                format,
+                supplied,
+                ImageErrorStage::SequenceEncode,
+            ));
         }
         _ => {}
     }
@@ -464,6 +508,7 @@ pub(crate) fn encode_sequence_format(
         return Err(ImageError::Unsupported {
             format: Some(format),
             message: "format cannot encode multiple retained frames".to_owned(),
+            stage: Some(ImageErrorStage::SequenceEncode),
         });
     }
     let frame = &sequence.frames[0];
@@ -471,12 +516,17 @@ pub(crate) fn encode_sequence_format(
         return Err(ImageError::Unsupported {
             format: Some(format),
             message: "still-image format cannot represent retained sequence metadata".to_owned(),
+            stage: Some(ImageErrorStage::SequenceEncode),
         });
     }
     encode_format(&frame.image, format, options)
 }
 
-fn option_format_mismatch(format: ImageFormat, options: &EncodeOptions) -> ImageError {
+fn option_format_mismatch(
+    format: ImageFormat,
+    options: &EncodeOptions,
+    stage: ImageErrorStage,
+) -> ImageError {
     ImageError::Parameter {
         format: Some(format),
         message: format!(
@@ -484,6 +534,7 @@ fn option_format_mismatch(format: ImageFormat, options: &EncodeOptions) -> Image
             options.format(),
             format
         ),
+        stage: Some(stage),
     }
 }
 
@@ -601,6 +652,7 @@ fn ensure_target_available(format: ImageFormat, avif_unavailable: bool) -> Image
         return Err(ImageError::Unsupported {
             format: Some(format),
             message: AVIF_WASM_UNAVAILABLE.to_owned(),
+            stage: None,
         });
     }
     Ok(())

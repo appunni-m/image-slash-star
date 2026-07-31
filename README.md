@@ -309,6 +309,13 @@ Every canonical fallible API returns `ImageResult<T>`.
 | `Parameter` | An option, palette, mode combination, or other parameter is invalid |
 | `LimitExceeded` | A caller-configured resource maximum was exceeded |
 
+Codec-dispatched failures additionally report the public operation that
+produced them through `ImageError::stage()` (`Inspection`, `StillDecode`,
+`StillEncode`, `SequenceDecode`, `SequenceEncode`, or `Verification`).
+Caller-built validation and option-construction errors remain stage-free;
+`UnknownFormat`, `FeatureDisabled`, and `LimitExceeded` keep their existing
+contracts (`LimitExceeded` already carries the typed operation).
+
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
 errors can usually be handled by selecting another compiled capability.

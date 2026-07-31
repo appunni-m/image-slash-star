@@ -29,12 +29,14 @@
 //!         return Err(ImageError::Unsupported {
 //!             format: Some(decoded.format),
 //!             message: "expected a PNG source".to_owned(),
+//!             stage: None,
 //!         });
 //!     }
 //!     if decoded.content.mode != ImageMode::Rgb8 {
 //!         return Err(ImageError::Unsupported {
 //!             format: Some(ImageFormat::Jpeg),
 //!             message: "JPEG example requires opaque RGB8 input".to_owned(),
+//!             stage: None,
 //!         });
 //!     }
 //!     encode_default(&decoded.content, ImageFormat::Jpeg)
@@ -339,6 +341,7 @@ pub fn __coverage_av1_entropy_reference_trace() -> ImageResult<Vec<Av1EntropyTra
     codecs::into_image_result(
         codecs::__coverage_av1_entropy_reference_trace(),
         ImageFormat::Avif,
+        ImageErrorStage::StillDecode,
     )
 }
 
@@ -405,6 +408,7 @@ pub fn __coverage_av1_reconstruction(data: &[u8]) -> ImageResult<Option<Av1Recon
     codecs::into_image_result(
         codecs::__coverage_av1_reconstruction(data),
         ImageFormat::Avif,
+        ImageErrorStage::StillDecode,
     )
 }
 

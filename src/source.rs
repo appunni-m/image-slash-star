@@ -3,8 +3,8 @@
 use std::sync::{Arc, OnceLock};
 
 use crate::{
-    CodecOperation, DecodePolicy, Decoded, DecodedImage, ImageError, ImageFormat, ImageInfo,
-    ImageResult, VerificationScope,
+    CodecOperation, DecodePolicy, Decoded, DecodedImage, ImageError, ImageErrorStage, ImageFormat,
+    ImageInfo, ImageResult, VerificationScope,
 };
 
 #[derive(Debug)]
@@ -166,6 +166,7 @@ impl EncodedImage {
                     "{requested:?} verification is not provided; {} provides {provided:?}",
                     self.format().as_str(),
                 ),
+                stage: Some(ImageErrorStage::Verification),
             });
         }
         self.verify()

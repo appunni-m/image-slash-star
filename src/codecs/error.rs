@@ -1,5 +1,6 @@
 //! Private codec failures retained until format dispatch selects a public error.
 
+use crate::types::ImageErrorStage;
 use crate::types::{ImageError, ImageFormat, ImageResult};
 
 /// Operational failure produced below the public format dispatcher.
@@ -43,20 +44,31 @@ impl CodecError {
     }
 
     /// Attach the selected format and convert to the canonical public error.
-    pub(crate) fn into_image_error(self, format: ImageFormat) -> ImageError {
+    pub(crate) fn into_image_error(
+        self,
+        format: ImageFormat,
+        stage: ImageErrorStage,
+    ) -> ImageError {
         match self {
-            Self::Malformed(message) => ImageError::Malformed { format, message },
+            Self::Malformed(message) => ImageError::Malformed {
+                format,
+                message,
+                stage: Some(stage),
+            },
             Self::Unsupported(message) => ImageError::Unsupported {
                 format: Some(format),
                 message,
+                stage: Some(stage),
             },
             Self::Dimensions(message) => ImageError::Dimensions {
                 format: Some(format),
                 message,
+                stage: Some(stage),
             },
             Self::Parameter(message) => ImageError::Parameter {
                 format: Some(format),
                 message,
+                stage: Some(stage),
             },
             Self::LimitExceeded(error) => error,
         }
@@ -123,8 +135,12 @@ impl<T> OptionCodecExt<T> for Option<T> {
 }
 
 /// Convert a private codec result after the dispatcher supplies its format.
-pub(crate) fn into_image_result<T>(result: CodecResult<T>, format: ImageFormat) -> ImageResult<T> {
-    result.map_err(|error| error.into_image_error(format))
+pub(crate) fn into_image_result<T>(
+    result: CodecResult<T>,
+    format: ImageFormat,
+    stage: ImageErrorStage,
+) -> ImageResult<T> {
+    result.map_err(|error| error.into_image_error(format, stage))
 }
 
 #[cfg(coverage)]
@@ -135,10 +151,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ImageError::Malformed {
             format: ImageFormat::Png,
             message: "malformed".to_owned(),
+            stage: Some(ImageErrorStage::StillDecode),
         },
         ImageError::Unsupported {
             format: Some(ImageFormat::Png),
             message: "unsupported".to_owned(),
+            stage: Some(ImageErrorStage::StillEncode),
         },
         ImageError::dimensions("dimensions"),
         ImageError::parameter("parameter"),
@@ -164,6 +182,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         maximum: 1,
         observed: 2,
     });
-    let _ = limit.clone().into_image_error(ImageFormat::Png);
+    let _ = limit
+        .clone()
+        .into_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
     let _ = limit.context("decode sequence");
 }
