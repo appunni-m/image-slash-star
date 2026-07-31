@@ -291,6 +291,11 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         return Err(parse_failure!());
     }
 
+    let source = if details.has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
     Ok(ImageInfo {
         format: ImageFormat::Avif,
         width: details.width,
@@ -305,7 +310,7 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         is_animated: details.frame_count > 1,
         frame_count: Some(details.frame_count),
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source,
     })
 }
 

@@ -339,6 +339,11 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
     } else {
         (ColorType::Rgb8, ImageMode::Rgb8)
     };
+    let source_descriptor = if has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
     DecodedImage {
         width,
         height,
@@ -347,7 +352,7 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
         mode,
         palette: None,
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source: source_descriptor,
     }
 }
 

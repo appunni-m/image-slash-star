@@ -245,6 +245,11 @@ fn decode_image(
         indices = deinterlace(&indices, usize::from(width), usize::from(height));
     }
 
+    let source_descriptor = if transparent_index.is_some() {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::BinaryMask)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
     let image = if let Some(palette_rgb) = palette_rgb {
         let entries = palette_rgb.len().div_euclid(3);
         let required_entries = indices
@@ -266,8 +271,10 @@ fn decode_image(
         let palette = ImagePalette { rgb, alpha };
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
             .with_palette(palette)
+            .with_source_descriptor(source_descriptor)
     } else {
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::L8)
+            .with_source_descriptor(source_descriptor)
     };
     Ok((image, left, top, interlaced))
 }

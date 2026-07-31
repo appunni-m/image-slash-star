@@ -67,6 +67,10 @@ All notable changes will be documented in this file. This project follows
   animation (GIF, APNG, animated WebP, AVIF), untimed TIFF pages, and
   single-frame still fallbacks, so TIFF pages are never described as timed
   animation.
+- Source alpha semantics on `SourceDescriptor` (`SourceAlpha::Straight`,
+  `Premultiplied`, `BinaryMask`, and reserved `Auxiliary`), recorded from GIF
+  transparency, PNG/WebP/AVIF alpha, and TIFF `ExtraSamples`, without changing
+  the normalized unassociated decoded transfer layout.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

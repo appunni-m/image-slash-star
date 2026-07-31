@@ -206,11 +206,19 @@ sequences; and `SingleFrame` for still decode fallbacks and caller-built still
 sequences. TIFF pages always retain exact zero durations and are never
 described as timed animation.
 
+`SourceDescriptor::alpha()` reports the alpha association declared by the
+encoded container: straight/unassociated alpha (PNG alpha channels and palette
+tRNS, WebP VP8X/VP8L alpha, TIFF `ExtraSamples` 2, AVIF alpha items), TIFF
+`ExtraSamples` 1 as premultiplied/associated, GIF transparency as a binary
+mask, and a reserved auxiliary variant for future separate alpha channels.
+Decoded transfer bytes remain the documented normalized unassociated layout;
+the descriptor records only what the source declares.
+
 Codec/capability vocabulary enums are non-exhaustive, including `ImageFormat`,
-`VerificationScope`, `ImageMode`, `SequenceKind`, and animation presentation
-enums. Downstream `match` expressions must include a fallback so a later
-format or transfer mode does not become an accidental source break. Closed
-domains such as `SourceByteOrder` remain exhaustive.
+`VerificationScope`, `ImageMode`, `SequenceKind`, `SourceAlpha`, and animation
+presentation enums. Downstream `match` expressions must include a fallback so
+a later format or transfer mode does not become an accidental source break.
+Closed domains such as `SourceByteOrder` remain exhaustive.
 
 ### Typed encoder options
 

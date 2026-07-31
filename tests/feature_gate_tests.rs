@@ -694,6 +694,119 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::SourceAlpha;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
+        (
+            "gif binary mask",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/transparent.gif",
+            Some(SourceAlpha::BinaryMask),
+        ),
+        (
+            "gif opaque",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+            None,
+        ),
+        (
+            "png straight rgba",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/alpha_checker.png",
+            Some(SourceAlpha::Straight),
+        ),
+        (
+            "png straight gray-alpha",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/gray_alpha.png",
+            Some(SourceAlpha::Straight),
+        ),
+        (
+            "png straight palette tRNS",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/apng_palette_over.png",
+            Some(SourceAlpha::Straight),
+        ),
+        (
+            "png opaque",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+            None,
+        ),
+        (
+            "webp straight alpha",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/alpha_uncompressed.webp",
+            Some(SourceAlpha::Straight),
+        ),
+        (
+            "webp opaque",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+            None,
+        ),
+        (
+            "tiff straight alpha",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/gray_alpha.tiff",
+            Some(SourceAlpha::Straight),
+        ),
+        (
+            "tiff opaque",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/gray.tiff",
+            None,
+        ),
+        (
+            "jpeg no alpha",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+            None,
+        ),
+        (
+            "bmp no alpha",
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+            None,
+        ),
+        (
+            "ico no alpha",
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+            None,
+        ),
+    ];
+    if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
+        cases.push((
+            "avif straight alpha",
+            true,
+            "tests/fixtures/input/images/avif/alpha.avif",
+            Some(SourceAlpha::Straight),
+        ));
+        cases.push((
+            "avif opaque",
+            true,
+            "tests/fixtures/input/images/avif/baseline.avif",
+            None,
+        ));
+    }
+
+    for &(name, enabled, path, expected) in &cases {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        let info = image_slash_star::inspect(&bytes)?;
+        assert_eq!(info.source.alpha(), expected, "{name} inspect");
+        let decoded = image_slash_star::decode(&bytes)?;
+        assert_eq!(decoded.content.source.alpha(), expected, "{name} decode");
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;

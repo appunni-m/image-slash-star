@@ -34,7 +34,15 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         ColorType::Rgb8
     };
 
-    Ok((DecodedImage::new(width, height, pixels, color), consumed))
+    let source_descriptor = if has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
+    Ok((
+        DecodedImage::new(width, height, pixels, color).with_source_descriptor(source_descriptor),
+        consumed,
+    ))
 }
 
 /// Validate the RIFF container and encoded frame headers without decoding pixels.
@@ -79,8 +87,14 @@ pub fn decode_sequence(
         }
         let mut pixels = vec![0; buffer_size];
         let frame = decoder.read_frame(&mut pixels).map_err(decode_error)?;
+        let source_descriptor = if decoder.has_alpha() {
+            crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+        } else {
+            crate::types::SourceDescriptor::new()
+        };
         frames.push(DecodedFrame::rendered_canvas(
-            DecodedImage::new(width, height, pixels, color),
+            DecodedImage::new(width, height, pixels, color)
+                .with_source_descriptor(source_descriptor),
             FrameRect {
                 left: frame.left,
                 top: frame.top,
