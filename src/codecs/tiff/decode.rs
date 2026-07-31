@@ -72,6 +72,7 @@ pub fn decode_sequence(
             frames,
             loop_count: None,
             background: None,
+            kind: crate::types::SequenceKind::UntimedPages,
         },
         consumed,
     ))

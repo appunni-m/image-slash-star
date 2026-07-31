@@ -251,6 +251,7 @@ pub fn decode_sequence(
             frames: output_frames,
             loop_count: Some(loop_count),
             background: None,
+            kind: crate::types::SequenceKind::TimedAnimation,
         },
         consumed,
     ))

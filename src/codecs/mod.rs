@@ -792,6 +792,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: Vec::new(),
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::SingleFrame,
     };
     let _ = encode_sequence_format(
         &invalid_sequence,
@@ -831,6 +832,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = encode_sequence_format(
         &two_frame_sequence,

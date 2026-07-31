@@ -180,6 +180,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: Vec::new(),
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let _ = DecodedSequence {
@@ -188,6 +189,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: Vec::new(),
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let _ = DecodedSequence {
@@ -196,6 +198,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: Vec::new(),
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let frame = DecodedFrame::source_rectangle(
@@ -213,6 +216,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![frame],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let right_outside_frame = DecodedFrame::source_rectangle(
@@ -230,6 +234,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![right_outside_frame],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let invalid_frame = DecodedFrame::source_rectangle(
@@ -247,6 +252,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![invalid_frame],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let right_overflow_frame = DecodedFrame::source_rectangle(
@@ -264,6 +270,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![right_overflow_frame],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let bottom_overflow_frame = DecodedFrame::source_rectangle(
@@ -281,6 +288,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![bottom_overflow_frame],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
 
@@ -301,6 +309,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![zero_denominator],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
 
@@ -320,6 +329,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![zero_rect],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let mut zero_rect_height = DecodedFrame::source_rectangle(
@@ -338,6 +348,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![zero_rect_height],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
 
@@ -357,6 +368,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![mismatched_source],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let mut mismatched_source_height = DecodedFrame::source_rectangle(
@@ -375,6 +387,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![mismatched_source_height],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
 
@@ -396,6 +409,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![rendered],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
     let rendered_height = DecodedFrame::rendered_canvas(
@@ -416,6 +430,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![rendered_height],
         loop_count: None,
         background: None,
+        kind: SequenceKind::SingleFrame,
     }
     .validate();
 
@@ -1300,6 +1315,24 @@ pub enum AnimationBackground {
     Rgba([u8; 4]),
 }
 
+/// Container meaning of a retained multi-image sequence.
+///
+/// The kind is part of the decoded contract: TIFF pages are untimed pages,
+/// never timed animation, even when a page carries a zero or non-zero frame
+/// duration in the common model. Caller-built sequences choose the variant
+/// that describes their own contract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SequenceKind {
+    /// Frames form a timed animation (GIF, APNG, animated WebP, animated AVIF).
+    TimedAnimation,
+    /// Frames are untimed pages of one container (TIFF).
+    UntimedPages,
+    /// One retained frame from a source that defines no multi-image meaning
+    /// (still decode fallback or a caller-built still sequence).
+    SingleFrame,
+}
+
 /// A still image or animation with all frames retained for re-encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodedSequence {
@@ -1313,6 +1346,8 @@ pub struct DecodedSequence {
     pub loop_count: Option<u32>,
     /// Container background metadata, when the source format defines it.
     pub background: Option<AnimationBackground>,
+    /// Container meaning of this sequence.
+    pub kind: SequenceKind,
 }
 
 impl DecodedSequence {
@@ -1338,6 +1373,7 @@ impl DecodedSequence {
             )],
             loop_count: None,
             background: None,
+            kind: SequenceKind::SingleFrame,
         }
     }
 

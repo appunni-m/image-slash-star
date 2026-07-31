@@ -313,6 +313,7 @@ fn decoded_sequence(
             frames,
             loop_count: None,
             background: None,
+            kind: crate::types::SequenceKind::TimedAnimation,
         },
         consumed,
     ))

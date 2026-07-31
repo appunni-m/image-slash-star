@@ -200,11 +200,17 @@ source and presentation metadata. `first_image()` is available when a caller
 intentionally wants only the first frame's pixels and accepts that metadata
 loss.
 
+`DecodedSequence::kind` names the container meaning: `TimedAnimation` for GIF,
+APNG, animated WebP, and AVIF sequences; `UntimedPages` for TIFF multipage
+sequences; and `SingleFrame` for still decode fallbacks and caller-built still
+sequences. TIFF pages always retain exact zero durations and are never
+described as timed animation.
+
 Codec/capability vocabulary enums are non-exhaustive, including `ImageFormat`,
-`VerificationScope`, `ImageMode`, and animation presentation enums. Downstream
-`match` expressions must include a fallback so a later format or transfer mode
-does not become an accidental source break. Closed domains such as
-`SourceByteOrder` remain exhaustive.
+`VerificationScope`, `ImageMode`, `SequenceKind`, and animation presentation
+enums. Downstream `match` expressions must include a fallback so a later
+format or transfer mode does not become an accidental source break. Closed
+domains such as `SourceByteOrder` remain exhaustive.
 
 ### Typed encoder options
 

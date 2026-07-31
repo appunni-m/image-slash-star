@@ -8,7 +8,7 @@ use bytemuck as _;
 use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
     DecodedImage, DecodedSequence, EncodeOptions, EncodedImage, ImageError, ImageErrorStage,
-    ImageFormat, ImageMode,
+    ImageFormat, ImageMode, SequenceKind,
 };
 
 mod support;
@@ -606,6 +606,94 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 }
 
 #[test]
+fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut cases: Vec<(&str, bool, &str, SequenceKind)> = vec![
+        (
+            "gif animation",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/animated_3frame.gif",
+            SequenceKind::TimedAnimation,
+        ),
+        (
+            "apng animation",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/apng_l_over.png",
+            SequenceKind::TimedAnimation,
+        ),
+        (
+            "webp animation",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+            SequenceKind::TimedAnimation,
+        ),
+        (
+            "tiff pages",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/multipage.tiff",
+            SequenceKind::UntimedPages,
+        ),
+        (
+            "jpeg still fallback",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+            SequenceKind::SingleFrame,
+        ),
+        (
+            "png still fallback",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+            SequenceKind::SingleFrame,
+        ),
+        (
+            "webp still fallback",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+            SequenceKind::SingleFrame,
+        ),
+        (
+            "bmp still fallback",
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+            SequenceKind::SingleFrame,
+        ),
+        (
+            "ico still fallback",
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+            SequenceKind::SingleFrame,
+        ),
+    ];
+    if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
+        cases.push((
+            "avif animation",
+            true,
+            "tests/fixtures/input/images/avif/animated.avif",
+            SequenceKind::TimedAnimation,
+        ));
+    }
+
+    for &(name, enabled, path, expected) in &cases {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        let sequence = image_slash_star::decode_sequence(&bytes)?;
+        assert_eq!(sequence.content.kind, expected, "{name}");
+        if expected == SequenceKind::UntimedPages {
+            for frame in &sequence.content.frames {
+                assert_eq!(
+                    frame.source.duration,
+                    image_slash_star::FrameDuration::ZERO,
+                    "{name} pages must never carry timed durations"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;
@@ -811,6 +899,7 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         frames: vec![frame.clone(), frame],
         loop_count: None,
         background: None,
+        kind: image_slash_star::SequenceKind::TimedAnimation,
     };
     let sequence_error = match image_slash_star::encode_sequence(
         &sequence,
