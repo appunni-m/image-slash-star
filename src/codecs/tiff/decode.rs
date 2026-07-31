@@ -23,6 +23,29 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         .map(|(image, _, directory_end)| (image, directory_end))
 }
 
+/// Decode exactly one page by walking the classic IFD chain to its directory.
+///
+/// Only the selected IFD's pixels are decompressed, so later pages are not
+/// materialized. The returned consumed extent is that page's directory end.
+pub(crate) fn decode_page(data: &[u8], page_index: u32) -> CodecResult<(DecodedImage, usize)> {
+    let (endian, first_offset) = parse_header(data)?;
+    let mut offset = first_offset;
+    let mut seen = Vec::new();
+    let mut index = 0u32;
+    while offset != 0 && !seen.contains(&offset) {
+        seen.push(offset);
+        let (image, next_offset, directory_end) = decode_ifd(data, offset, endian, None)?;
+        if index == page_index {
+            return Ok((image, directory_end));
+        }
+        index = index.saturating_add(1);
+        offset = next_offset;
+    }
+    Err(CodecError::Parameter(format!(
+        "TIFF page index {page_index} is out of range"
+    )))
+}
+
 /// Decode every unique IFD in the classic TIFF main-directory chain.
 pub fn decode_sequence(
     data: &[u8],

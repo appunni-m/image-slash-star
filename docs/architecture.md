@@ -209,6 +209,7 @@ translation cannot be bypassed.
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
 | `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; no cache, so decodes reparse |
+| `EncodedImage::decode_frame(index)` | Return the exact frame at an index; TIFF decodes only that page's IFD, other sequence formats currently use an eager fallback that matches `decode_sequence` |
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns

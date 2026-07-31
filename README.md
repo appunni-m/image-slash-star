@@ -147,6 +147,7 @@ capabilities and setup.
 | `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
 | `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
 | `EncodedImageView::new(&[u8])` | Borrow an immutable encoded view with the same inspect/verify/decode operations and no copy or cache |
+| `EncodedImage::decode_frame(index)`, `EncodedImageView::decode_frame(index)` | Decode exactly one retained frame/page with stable per-frame errors; TIFF uses a genuine per-page path |
 
 `Decoded::consumed_bytes` reports the encoded bytes of the container-defined
 extent when the container defines one unambiguously (JPEG after EOI, PNG after

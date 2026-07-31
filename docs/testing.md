@@ -303,6 +303,12 @@ still and sequence decode, policy variants, verification scope behavior,
 transfer layout, and resource-limit rejection, without copying the borrowed
 bytes.
 
+The frame-decode contract is table-driven: `EncodedImage::decode_frame` and
+`EncodedImageView::decode_frame` over animated GIF/APNG/WebP and multipage
+TIFF fixtures must return exactly the corresponding `decode_sequence` frame,
+out-of-range indices must fail with `Parameter`, and still formats must report
+exactly one frame.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

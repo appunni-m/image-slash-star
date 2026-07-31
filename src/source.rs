@@ -137,6 +137,19 @@ impl<'a> EncodedImageView<'a> {
         crate::decode_sequence_with_policy(self.bytes, policy)
     }
 
+    /// Decode exactly one retained frame or page by index.
+    ///
+    /// TIFF decodes only the selected page's IFD; other sequence formats
+    /// currently decode the full sequence and return the indexed frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Parameter`] when the index is out of range, and
+    /// the format's structured decode error for the selected frame otherwise.
+    pub fn decode_frame(&self, index: u32) -> ImageResult<crate::DecodedFrame> {
+        crate::codecs::decode_frame_format(self.bytes, self.format, index)
+    }
+
     /// Verify the borrowed bytes under the format's default scope.
     ///
     /// # Errors
@@ -284,6 +297,21 @@ impl EncodedImage {
             .get_or_init(|| crate::decode(&self.inner.bytes))
             .as_ref()
             .map_err(Clone::clone)
+    }
+
+    /// Decode exactly one retained frame or page by index.
+    ///
+    /// TIFF decodes only the selected page's IFD; other sequence formats
+    /// currently decode the full sequence and return the indexed frame, so
+    /// the returned frame always matches [`crate::decode_sequence`] ordering
+    /// and per-frame content exactly.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Parameter`] when the index is out of range, and
+    /// the format's structured decode error for the selected frame otherwise.
+    pub fn decode_frame(&self, index: u32) -> ImageResult<crate::DecodedFrame> {
+        crate::codecs::decode_frame_format(&self.inner.bytes, self.format(), index)
     }
 
     /// Applies the format-specific Pillow verification contract to the snapshot.

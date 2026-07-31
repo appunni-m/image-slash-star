@@ -2484,6 +2484,86 @@ fn borrowed_view_matches_the_owned_snapshot_contract() -> Result<(), Box<dyn std
 }
 
 #[test]
+fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{EncodedImage, EncodedImageView};
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, bool, &str)] = &[
+        (
+            "gif animated",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/animated_3frame.gif",
+        ),
+        (
+            "tiff multipage",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/multipage.tiff",
+        ),
+        (
+            "png apng",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/apng_l_over.png",
+        ),
+        (
+            "webp animated",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        ),
+    ];
+    for &(name, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let data = fs::read(root.join(path))?;
+        let source = EncodedImage::new(data.clone())?;
+        let count = source.info().frame_count.unwrap_or(1);
+        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
+        assert_eq!(
+            u32::try_from(sequence.frames.len()).unwrap_or(u32::MAX),
+            count,
+            "{name} frame count"
+        );
+        let view = EncodedImageView::new(&data)?;
+        for (index, frame) in sequence.frames.iter().enumerate() {
+            let index_u32 = u32::try_from(index).unwrap_or(u32::MAX);
+            assert_eq!(
+                source.decode_frame(index_u32)?,
+                *frame,
+                "{name} owned frame {index}"
+            );
+            assert_eq!(
+                view.decode_frame(index_u32)?,
+                *frame,
+                "{name} view frame {index}"
+            );
+        }
+        assert!(
+            matches!(
+                source.decode_frame(count),
+                Err(ImageError::Parameter { .. })
+            ),
+            "{name} out-of-range frame must fail"
+        );
+    }
+
+    if cfg!(feature = "png") {
+        let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let source = EncodedImage::new(data)?;
+        let still = source.decode()?;
+        assert_eq!(
+            source.decode_frame(0)?.image.pixels,
+            still.content.pixels,
+            "still frame zero"
+        );
+        assert!(
+            matches!(source.decode_frame(1), Err(ImageError::Parameter { .. })),
+            "still format has only one frame"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;
