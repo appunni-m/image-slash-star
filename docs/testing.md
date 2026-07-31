@@ -210,6 +210,14 @@ fixture and asserts `ImageFormat::verification_scope()` and
 `verify_with_scope` success, stronger-request failure with the exact format
 and a non-empty diagnostic, and the never-provided `FullPixels` boundary.
 
+The sequence-kind contract is also table-driven rather than manifest rows:
+one animated or multipage fixture per sequence-capable format plus every still
+fallback asserts `DecodedSequence::kind` (`TimedAnimation` for GIF, APNG,
+animated WebP, and AVIF; `UntimedPages` for TIFF; `SingleFrame` for still
+fallbacks), and TIFF pages additionally assert exact zero durations so they
+are never described as timed animation. AVIF sequence decode is native-only,
+so its row is skipped on `wasm32` targets.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

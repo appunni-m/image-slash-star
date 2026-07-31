@@ -63,6 +63,10 @@ All notable changes will be documented in this file. This project follows
 - Runtime capability tables emitted per feature lane by a probe test,
   committed as a fixture, and regenerated in CI on the native host and
   `wasm32-wasip1` with a no-drift check.
+- An explicit `DecodedSequence::kind` (`SequenceKind`) distinguishing timed
+  animation (GIF, APNG, animated WebP, AVIF), untimed TIFF pages, and
+  single-frame still fallbacks, so TIFF pages are never described as timed
+  animation.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

@@ -60,6 +60,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: Vec::new(),
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     assert!(encode_sequence(&invalid_sequence, &GifEncodeOptions::default()).is_err());
 
@@ -121,6 +122,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames,
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let coalesced =
         coalesce_identical_frames(&sequence, 2, None).expect("coverage RGB frames coalesce");
@@ -146,6 +148,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![still.frames[0].clone(), still.frames[0].clone()],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = coalesce_identical_frames(&huge_canvas_sequence, 2, None);
 
@@ -160,6 +163,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             frames: identical_frames,
             loop_count: None,
             background: None,
+            kind: crate::types::SequenceKind::TimedAnimation,
         },
         2,
         None,
@@ -187,6 +191,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: background_frames,
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = coalesce_identical_frames(&background_sequence, 2, None);
 
@@ -296,6 +301,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: invalid_disposal_frames,
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = coalesce_identical_frames(&invalid_disposal_sequence, 2, None);
     let _ = write_gif(
@@ -321,6 +327,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = coalesce_identical_frames(&invalid_duration_sequence, 2, None);
 
@@ -350,6 +357,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: still.frames.clone(),
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &oversized_sequence,
@@ -368,6 +376,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: still.frames.clone(),
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &height_oversized_sequence,
@@ -405,6 +414,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![bad_offset_frame],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &bad_offset_sequence,
@@ -430,6 +440,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![bad_top_frame],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &bad_top_sequence,
@@ -455,6 +466,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![wide_frame],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &wide_sequence,
@@ -480,6 +492,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![tall_frame],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &tall_sequence,
@@ -507,6 +520,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             frames: cmyk_second_frames.clone(),
             loop_count: None,
             background: None,
+            kind: crate::types::SequenceKind::TimedAnimation,
         },
         2,
         None,
@@ -529,6 +543,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frames: vec![long_delay_frame],
         loop_count: None,
         background: None,
+        kind: crate::types::SequenceKind::TimedAnimation,
     };
     let _ = write_gif(
         &long_delay_sequence,

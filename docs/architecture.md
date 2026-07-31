@@ -92,12 +92,19 @@ source rectangle, duration, disposal, blend, interlace, default-image state,
 and pixel-layout identity. Internal sequence-to-still fallback validation does
 not use that convenience.
 
+`DecodedSequence::kind` distinguishes the container meaning of a retained
+sequence: `TimedAnimation` (GIF, APNG, animated WebP, and AVIF), `UntimedPages`
+(TIFF), and `SingleFrame` (still decode fallback or caller-built still
+sequence). TIFF pages keep exact zero durations and are never described as
+timed animation.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
-blend, frame layout, backgrounds, capabilities, errors, limits, and encoder
-options. Downstream matches require a fallback; internal dispatch matches stay
-exhaustive so each new variant forces a codec review. `SourceByteOrder` remains
-exhaustive because its represented domain is exactly little- or big-endian.
+blend, frame layout, backgrounds, sequence kinds, capabilities, errors,
+limits, and encoder options. Downstream matches require a fallback; internal
+dispatch matches stay exhaustive so each new variant forces a codec review.
+`SourceByteOrder` remains exhaustive because its represented domain is exactly
+little- or big-endian.
 
 `ImageFormat::from_name` accepts the canonical format names and every
 Pillow-recognized extension alias except headerless DIB: JPEG
