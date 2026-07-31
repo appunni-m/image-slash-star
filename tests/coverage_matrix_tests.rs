@@ -2755,6 +2755,7 @@ fn test_decode_matrix() {
                             message:
                                 "encoded source verification capability differs from the manifest"
                                     .to_owned(),
+                            stage: None,
                         });
                     }
                     let result = source.verify();

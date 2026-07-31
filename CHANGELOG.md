@@ -42,6 +42,10 @@ All notable changes will be documented in this file. This project follows
   resource, plus the documented allocation policy: checked preflight gates
   hostile input while codec-internal allocations remain infallible with
   Rust's default OOM abort.
+- Stable `ImageError::stage()` on codec-dispatched failures, naming the public
+  operation (`Inspection`, `StillDecode`, `StillEncode`, `SequenceDecode`,
+  `SequenceEncode`, or `Verification`) while caller-built errors stay
+  stage-free.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains

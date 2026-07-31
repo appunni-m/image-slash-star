@@ -4,7 +4,7 @@ mod color_type;
 mod error;
 
 pub use self::color_type::ColorType;
-pub use self::error::{ImageError, ImageErrorKind, ImageResult, ResourceLimit};
+pub use self::error::{ImageError, ImageErrorKind, ImageErrorStage, ImageResult, ResourceLimit};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
@@ -94,24 +94,29 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ImageError::Malformed {
             format: ImageFormat::Png,
             message: "coverage".to_owned(),
+            stage: Some(ImageErrorStage::StillDecode),
         },
         ImageError::Unsupported {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
+            stage: Some(ImageErrorStage::StillEncode),
         },
         ImageError::Unsupported {
             format: None,
             message: "coverage".to_owned(),
+            stage: None,
         },
         ImageError::dimensions("coverage"),
         ImageError::parameter("coverage"),
         ImageError::Dimensions {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
+            stage: Some(ImageErrorStage::Inspection),
         },
         ImageError::Parameter {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
+            stage: Some(ImageErrorStage::SequenceDecode),
         },
     ];
     for error in errors {
@@ -119,6 +124,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = error.format();
         let _ = error.message();
         let _ = error.to_string();
+        let _ = error.stage();
         let _ = error.with_format(ImageFormat::Png);
     }
 
@@ -770,6 +776,7 @@ impl ImageFormat {
         Self::from_name(ext).map_err(|_| ImageError::Unsupported {
             format: None,
             message: format!("unknown extension: {}", ext.to_ascii_lowercase()),
+            stage: None,
         })
     }
 }

@@ -4,6 +4,29 @@ use super::ImageFormat;
 use crate::CodecOperation;
 use std::fmt;
 
+/// Public operation that produced a structured error, when known.
+///
+/// Codec-dispatch failures attach the operation that was executing when the
+/// failure escaped; caller-built validation failures and option-construction
+/// errors may not belong to one operation and remain `None`. This is a stable
+/// recovery field, unlike the diagnostic prose in [`ImageError::message`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ImageErrorStage {
+    /// Header inspection without pixel materialization.
+    Inspection,
+    /// Still or first-image decode.
+    StillDecode,
+    /// Still-image encode.
+    StillEncode,
+    /// Multi-image sequence decode.
+    SequenceDecode,
+    /// Multi-image sequence encode.
+    SequenceEncode,
+    /// Format-specific verification.
+    Verification,
+}
+
 /// Caller-controlled resource whose configured maximum was exceeded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -71,6 +94,8 @@ pub enum ImageError {
         format: ImageFormat,
         /// High-level diagnostic suitable for logs.
         message: String,
+        /// Public operation that produced the failure.
+        stage: Option<ImageErrorStage>,
     },
     /// Valid input, options, or output cannot be represented by the selected codec.
     Unsupported {
@@ -78,6 +103,8 @@ pub enum ImageError {
         format: Option<ImageFormat>,
         /// High-level diagnostic suitable for logs.
         message: String,
+        /// Public operation that produced the failure.
+        stage: Option<ImageErrorStage>,
     },
     /// The operation dimensions are out of bounds or mismatched.
     Dimensions {
@@ -85,6 +112,8 @@ pub enum ImageError {
         format: Option<ImageFormat>,
         /// High-level diagnostic suitable for logs.
         message: String,
+        /// Public operation that produced the failure.
+        stage: Option<ImageErrorStage>,
     },
     /// A parameter error.
     Parameter {
@@ -92,6 +121,8 @@ pub enum ImageError {
         format: Option<ImageFormat>,
         /// High-level diagnostic suitable for logs.
         message: String,
+        /// Public operation that produced the failure.
+        stage: Option<ImageErrorStage>,
     },
     /// A caller-configured resource maximum was exceeded.
     LimitExceeded {
@@ -158,6 +189,7 @@ impl ImageError {
         Self::Dimensions {
             format: None,
             message: message.into(),
+            stage: None,
         }
     }
 
@@ -165,6 +197,19 @@ impl ImageError {
         Self::Parameter {
             format: None,
             message: message.into(),
+            stage: None,
+        }
+    }
+
+    /// Return the public operation that produced this failure, when known.
+    #[must_use]
+    pub const fn stage(&self) -> Option<ImageErrorStage> {
+        match self {
+            Self::Malformed { stage, .. }
+            | Self::Unsupported { stage, .. }
+            | Self::Dimensions { stage, .. }
+            | Self::Parameter { stage, .. } => *stage,
+            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
         }
     }
 
@@ -173,16 +218,20 @@ impl ImageError {
             Self::Dimensions {
                 format: None,
                 message,
+                stage,
             } => Self::Dimensions {
                 format: Some(selected),
                 message,
+                stage,
             },
             Self::Parameter {
                 format: None,
                 message,
+                stage,
             } => Self::Parameter {
                 format: Some(selected),
                 message,
+                stage,
             },
             error => error,
         }
@@ -196,18 +245,26 @@ impl fmt::Display for ImageError {
             ImageError::FeatureDisabled { format, feature } => {
                 write!(f, "codec feature `{feature}` is disabled for {format:?}")
             }
-            ImageError::Malformed { format, message } => {
+            ImageError::Malformed {
+                format, message, ..
+            } => {
                 write!(f, "malformed {format:?} image data: {message}")
             }
-            ImageError::Unsupported { format, message } => match format {
+            ImageError::Unsupported {
+                format, message, ..
+            } => match format {
                 Some(format) => write!(f, "unsupported {format:?}: {message}"),
                 None => write!(f, "unsupported: {message}"),
             },
-            ImageError::Dimensions { format, message } => match format {
+            ImageError::Dimensions {
+                format, message, ..
+            } => match format {
                 Some(format) => write!(f, "invalid {format:?} dimensions: {message}"),
                 None => write!(f, "invalid image dimensions: {message}"),
             },
-            ImageError::Parameter { format, message } => match format {
+            ImageError::Parameter {
+                format, message, ..
+            } => match format {
                 Some(format) => write!(f, "invalid {format:?} parameter: {message}"),
                 None => write!(f, "invalid image parameter: {message}"),
             },

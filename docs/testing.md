@@ -177,6 +177,13 @@ fixture and asserts `ImageFormat::verification_scope()` and
 `verify_with_scope` success, stronger-request failure with the exact format
 and a non-empty diagnostic, and the never-provided `FullPixels` boundary.
 
+The operation-stage contract is a separate feature-gate test: one real
+failure is driven through inspection, still decode, sequence decode, source
+construction, verification, still encode, and sequence encode, and each error
+must report the exact `ImageErrorStage` alongside its stable kind. Caller-built
+validation and option-construction errors remain stage-free by design, so the
+test also pins which public paths produce a stage.
+
 The malformed-class ledger is generated from the coverage matrix by
 `scripts/generate_malformed_ledger.py` and checked in CI with `--check`, so
 every active decode-error class must stay catalogued. Each class records the
@@ -209,17 +216,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,466 | 41,466 |
+| Lines | 41,550 | 41,550 |
 | Branches | 5,934 | 5,934 |
-| Functions | 2,257 | 2,257 |
-| Regions | 65,973 | 65,973 |
+| Functions | 2,258 | 2,258 |
+| Regions | 66,026 | 66,026 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `c8c6c0a6-4b9a-4e16-bdeb-0b559b5a4eb8`
+Coverage MCP run: `c90664bf-612f-4603-8ba9-110675f6f5c1`
 
-Snapshot: `02297241-54cf-4d43-9546-33b4192a2474`
+Snapshot: `ac8eedd2-d07f-4db7-a3d8-2f36a1fdb483`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

@@ -526,6 +526,7 @@ fn parameter(format: ImageFormat, message: impl Into<String>) -> ImageError {
     ImageError::Parameter {
         format: Some(format),
         message: message.into(),
+        stage: None,
     }
 }
 
