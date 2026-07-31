@@ -18,6 +18,9 @@ pub enum ResourceLimit {
     Pixels,
     /// Decoded transfer-byte length of the inspected primary image.
     PrimaryDecodedBytes,
+    /// Number of frames or pages the policy permits to be inspected or
+    /// materialized.
+    Frames,
 }
 
 /// Stable category of an [`ImageError`].

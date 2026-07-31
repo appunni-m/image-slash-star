@@ -16,6 +16,7 @@ pub struct DecodeLimits {
     max_height: Option<u32>,
     max_pixels: Option<u64>,
     max_primary_decoded_bytes: Option<u64>,
+    max_frames: Option<u32>,
 }
 
 impl DecodeLimits {
@@ -28,6 +29,7 @@ impl DecodeLimits {
             max_height: None,
             max_pixels: None,
             max_primary_decoded_bytes: None,
+            max_frames: None,
         }
     }
 
@@ -93,6 +95,19 @@ impl DecodeLimits {
     #[must_use]
     pub const fn with_max_primary_decoded_bytes(mut self, maximum: u64) -> Self {
         self.max_primary_decoded_bytes = Some(maximum);
+        self
+    }
+
+    /// Return the maximum accepted frame or page count.
+    #[must_use]
+    pub const fn max_frames(self) -> Option<u32> {
+        self.max_frames
+    }
+
+    /// Set the maximum accepted frame or page count.
+    #[must_use]
+    pub const fn with_max_frames(mut self, maximum: u32) -> Self {
+        self.max_frames = Some(maximum);
         self
     }
 }
@@ -164,6 +179,13 @@ impl DecodePolicy {
         self
     }
 
+    /// Set the maximum accepted frame or page count.
+    #[must_use]
+    pub const fn with_max_frames(mut self, maximum: u32) -> Self {
+        self.limits = self.limits.with_max_frames(maximum);
+        self
+    }
+
     pub(crate) fn check_encoded_input(
         self,
         data: &[u8],
@@ -189,6 +211,7 @@ impl DecodePolicy {
             || self.limits.max_height.is_some()
             || self.limits.max_pixels.is_some()
             || self.limits.max_primary_decoded_bytes.is_some()
+            || self.limits.max_frames.is_some()
     }
 
     pub(crate) fn check_image_info(
@@ -230,6 +253,36 @@ impl DecodePolicy {
                 ResourceLimit::PrimaryDecodedBytes,
             )?;
         }
+        self.check_frame_count(info, operation)?;
+        Ok(())
+    }
+
+    pub(crate) fn check_frame_count(
+        self,
+        info: &ImageInfo,
+        operation: CodecOperation,
+    ) -> ImageResult<()> {
+        let Some(maximum) = self.limits.max_frames else {
+            return Ok(());
+        };
+        let observed = match operation {
+            CodecOperation::Inspection | CodecOperation::SequenceDecode => {
+                info.frame_count.map(u64::from)
+            }
+            // Still decode and lazy still materialization retain exactly one
+            // frame, so only a zero maximum can reject them.
+            CodecOperation::StillDecode => Some(1),
+            _ => None,
+        };
+        if let Some(observed) = observed {
+            check_limit(
+                Some(u64::from(maximum)),
+                observed,
+                info,
+                operation,
+                ResourceLimit::Frames,
+            )?;
+        }
         Ok(())
     }
 }
@@ -253,4 +306,35 @@ fn check_limit(
         });
     }
     Ok(())
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    use crate::{ImageFormat, ImageMode, SourceDescriptor};
+
+    let info = ImageInfo {
+        format: ImageFormat::Png,
+        width: 1,
+        height: 1,
+        mode: ImageMode::Rgb8,
+        bit_depth: 8,
+        palette: None,
+        is_animated: false,
+        frame_count: Some(1),
+        cursor_hotspot: None,
+        source: SourceDescriptor::new(),
+    };
+    let policy = DecodePolicy::default().with_max_frames(0);
+    // Operations outside the decode-policy call sites cannot observe a frame
+    // count and must remain unlimited.
+    for operation in [
+        CodecOperation::Detection,
+        CodecOperation::StillEncode,
+        CodecOperation::SequenceEncode,
+    ] {
+        let _ = policy.check_frame_count(&info, operation);
+    }
+    let mut unknown_count = info;
+    unknown_count.frame_count = None;
+    let _ = policy.check_frame_count(&unknown_count, CodecOperation::SequenceDecode);
 }

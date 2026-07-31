@@ -14,10 +14,10 @@ bytes.
 > **Pre-release status:** version 0.1.0 is not published to crates.io. The
 > compatibility guarantee is limited to committed manifest cases, not every
 > legal file in each format specification. Encoded-input bytes and inspected
-> primary-canvas dimensions/pixels/decoded bytes can be bounded, but later
-> pages/frames, total decoded memory, metadata, and codec work are not yet fully
-> limited. The current crate should not be treated as hardened for arbitrary
-> hostile inputs.
+> primary-canvas dimensions/pixels/decoded bytes and the inspected frame count
+> can be bounded, but later-frame/page byte lengths, total sequence memory,
+> metadata, and codec work are not yet fully limited. The current crate should
+> not be treated as hardened for arbitrary hostile inputs.
 > Breaking API changes may occur before 1.0.
 
 ## Why use it?
@@ -213,7 +213,7 @@ string keys. New integrations should construct codec records directly.
 The unlimited entry points remain convenient for trusted inputs.
 `DecodePolicy` provides inclusive maxima for the complete encoded byte slice,
 inspected canvas width, height, and pixel count, and the primary image's
-decoded transfer-byte length:
+decoded transfer-byte length, plus the inspected frame/page count:
 
 ```rust
 use image_slash_star::{decode_with_policy, DecodePolicy, ImageResult};
@@ -226,7 +226,8 @@ fn decode_at_most_one_mebibyte(
         .with_max_width(4096)
         .with_max_height(4096)
         .with_max_pixels(16_000_000)
-        .with_max_primary_decoded_bytes(64 * 1024 * 1024);
+        .with_max_primary_decoded_bytes(64 * 1024 * 1024)
+        .with_max_frames(1000);
     decode_with_policy(input, &policy)
 }
 ```
@@ -243,14 +244,21 @@ inspection and before primary pixel materialization, so their errors retain
 the selected format. Policy-aware direct decode may inspect then parse again;
 unlimited wrappers do not gain that additional pass.
 
+`max_frames` uses the exact inspected frame/page count and runs after the
+canvas checks but before sequence materialization. Inspection and sequence
+decode reject a source whose declared count exceeds the maximum; still decode
+and lazy still materialization retain exactly one frame, so only a zero frame
+maximum rejects them. Sources whose inspection cannot prove an exact count
+remain unlimited for this resource.
+
 `inspect_with_policy`, `decode_sequence_with_policy`,
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
 same boundary. A rejected lazy decode is not cached, and an already cached
-decode cannot bypass a later stricter policy. The primary-byte limit does not
-claim to cover later pages/frames or cumulative sequence allocation. This is
-not yet a complete hostile-input budget: those later dimensions and bytes,
-frame counts, metadata, nesting, codec work, other allocations, and encoded
-output remain unbounded.
+decode cannot bypass a later stricter policy. The primary-byte and frame-count
+limits do not claim to cover later-frame/page byte lengths or cumulative
+sequence allocation. This is not yet a complete hostile-input budget: those
+later dimensions and bytes, metadata, nesting, codec work, other allocations,
+and encoded output remain unbounded.
 
 See [architecture and public contract](docs/architecture.md) for byte layouts,
 validation invariants, lazy source lifecycle, memory behavior, feature

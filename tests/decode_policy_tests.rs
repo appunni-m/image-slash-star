@@ -7,6 +7,8 @@ use std::path::Path;
 use bytemuck as _;
 use image_slash_star as img;
 
+#[path = "support/sha256.rs"]
+mod sha256;
 #[allow(dead_code)]
 mod support;
 
@@ -76,6 +78,85 @@ impl FromJson for Case {
     }
 }
 
+struct SequenceManifest {
+    format_version: u32,
+    assertion_origin: String,
+    source_case_id: String,
+    asset_path: String,
+    encoded_bytes: u64,
+    asset_sha256: String,
+    frame_count: u32,
+    decoded_path: String,
+    decoded_bytes: u64,
+    decoded_sha256: String,
+    unknown_asset_path: String,
+    unknown_encoded_bytes: u64,
+    expected_format: String,
+    expected_mode: String,
+    expected_size: [u32; 2],
+    cases: Vec<SequenceCase>,
+}
+
+struct SequenceCase {
+    id: String,
+    operation: String,
+    resource: String,
+    maximum: u32,
+    status: String,
+    also_max_pixels: u64,
+    also_max_primary_decoded_bytes: u64,
+    also_max_encoded_bytes: u64,
+    expected_resource: String,
+    expected_maximum: u64,
+    observed: u64,
+    expected_format: String,
+}
+
+impl FromJson for SequenceManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            source_case_id: object.take("source_case_id")?,
+            asset_path: object.take("asset_path")?,
+            encoded_bytes: object.take("encoded_bytes")?,
+            asset_sha256: object.take("asset_sha256")?,
+            frame_count: object.take("frame_count")?,
+            decoded_path: object.take("decoded_path")?,
+            decoded_bytes: object.take("decoded_bytes")?,
+            decoded_sha256: object.take("decoded_sha256")?,
+            unknown_asset_path: object.take("unknown_asset_path")?,
+            unknown_encoded_bytes: object.take("unknown_encoded_bytes")?,
+            expected_format: object.take("expected_format")?,
+            expected_mode: object.take("expected_mode")?,
+            expected_size: object.take("expected_size")?,
+            cases: object.take("cases")?,
+        })
+    }
+}
+
+impl FromJson for SequenceCase {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            operation: object.take("operation")?,
+            resource: object.take("resource")?,
+            maximum: object.take("maximum")?,
+            status: object.take("status")?,
+            also_max_pixels: object.take_or_default("also_max_pixels")?,
+            also_max_primary_decoded_bytes: object
+                .take_or_default("also_max_primary_decoded_bytes")?,
+            also_max_encoded_bytes: object.take_or_default("also_max_encoded_bytes")?,
+            expected_resource: object.take_or_default("expected_resource")?,
+            expected_maximum: object.take_or_default("expected_maximum")?,
+            observed: object.take_or_default("observed")?,
+            expected_format: object.take_or_default("expected_format")?,
+        })
+    }
+}
+
 fn assert_info(info: &img::ImageInfo, expected_size: [u32; 2]) {
     assert_eq!(info.format, img::ImageFormat::Png);
     assert_eq!([info.width, info.height], expected_size);
@@ -116,6 +197,58 @@ fn assert_sequence(
         decoded.content.first().map(|frame| &frame.image),
         decoded.content.first_image()
     );
+}
+
+fn assert_gif_info(info: &img::ImageInfo) {
+    assert_eq!(info.format, img::ImageFormat::Gif);
+    assert_eq!([info.width, info.height], [128, 128]);
+    assert_eq!(info.mode, img::ImageMode::P8);
+    assert_eq!(info.bit_depth, 8);
+    assert!(info.is_animated);
+    assert_eq!(info.frame_count, Some(3));
+    assert!(info.has_palette_table());
+}
+
+fn assert_gif_image(decoded: &img::Decoded<img::DecodedImage>, expected_pixels: &[u8]) {
+    assert_eq!(decoded.format, img::ImageFormat::Gif);
+    assert_eq!([decoded.content.width, decoded.content.height], [128, 128]);
+    assert_eq!(decoded.content.mode, img::ImageMode::P8);
+    assert_eq!(decoded.content.pixels, expected_pixels);
+}
+
+fn assert_gif_sequence(decoded: &img::Decoded<img::DecodedSequence>) {
+    use img::{AnimationBackground, FrameBlend, FrameDisposal, FramePixelLayout};
+
+    assert_eq!(decoded.format, img::ImageFormat::Gif);
+    let sequence = &decoded.content;
+    assert_eq!([sequence.width, sequence.height], [128, 128]);
+    assert_eq!(sequence.loop_count, Some(0));
+    assert_eq!(
+        sequence.background,
+        Some(AnimationBackground::PaletteIndex(0))
+    );
+    assert_eq!(sequence.frames.len(), 3);
+    let expected_durations: &[(u64, u64)] = &[(2, 100), (8, 100), (16, 100)];
+    for (frame, &(numerator, denominator)) in sequence.frames.iter().zip(expected_durations) {
+        assert_eq!(frame.pixel_layout, FramePixelLayout::SourceRectangle);
+        assert_eq!(
+            frame.source.rect,
+            img::FrameRect {
+                left: 0,
+                top: 0,
+                width: 128,
+                height: 128,
+            }
+        );
+        assert_eq!(frame.source.duration.numerator, numerator);
+        assert_eq!(frame.source.duration.denominator, denominator);
+        assert_eq!(frame.source.disposal, FrameDisposal::Unspecified);
+        assert_eq!(frame.source.blend, FrameBlend::Unspecified);
+        assert!(!frame.source.interlaced);
+        assert!(!frame.source.is_default_image);
+    }
+    assert_eq!(sequence.first(), Some(&sequence.frames[0]));
+    assert_eq!(sequence.first_image(), Some(&sequence.frames[0].image));
 }
 
 fn assert_limit_error(
@@ -397,5 +530,186 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
         }
     }
     assert_eq!(ids.len(), 79);
+    Ok(())
+}
+
+#[test]
+fn sequence_frame_limit_manifest_matches_the_public_contract()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "gif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest: SequenceManifest = json::from_str(&fs::read_to_string(
+        root.join("tests/fixtures/sequence_policy_manifest.json"),
+    )?)?;
+    assert_eq!(manifest.format_version, 1);
+    assert_eq!(manifest.assertion_origin, "defensive_model");
+    assert_eq!(manifest.source_case_id, "animated_3frame");
+    assert_eq!(manifest.expected_format, "gif");
+    assert_eq!(manifest.expected_mode, "P8");
+    assert_eq!(manifest.expected_size, [128, 128]);
+
+    let bytes = fs::read(root.join(&manifest.asset_path))?;
+    let unknown_bytes = fs::read(root.join(&manifest.unknown_asset_path))?;
+    let expected_pixels = fs::read(root.join(&manifest.decoded_path))?;
+    assert_eq!(bytes.len() as u64, manifest.encoded_bytes);
+    assert_eq!(unknown_bytes.len() as u64, manifest.unknown_encoded_bytes);
+    assert_eq!(expected_pixels.len() as u64, manifest.decoded_bytes);
+    assert_eq!(sha256::digest_hex(&bytes), manifest.asset_sha256);
+    assert_eq!(
+        sha256::digest_hex(&expected_pixels),
+        manifest.decoded_sha256
+    );
+
+    let mut ids = HashSet::new();
+    for case in manifest.cases {
+        assert!(ids.insert(case.id.clone()), "duplicate case {}", case.id);
+        assert!(matches!(case.status.as_str(), "ok" | "error" | "unknown"));
+
+        let mut policy = img::DecodePolicy::default().with_max_frames(case.maximum);
+        if case.also_max_pixels != 0 {
+            policy = policy.with_max_pixels(case.also_max_pixels);
+        }
+        if case.also_max_primary_decoded_bytes != 0 {
+            policy = policy.with_max_primary_decoded_bytes(case.also_max_primary_decoded_bytes);
+        }
+        if case.also_max_encoded_bytes != 0 {
+            policy = policy.with_max_encoded_bytes(case.also_max_encoded_bytes);
+        }
+        assert_eq!(policy.limits().max_frames(), Some(case.maximum));
+        assert_eq!(img::DecodeLimits::new().max_frames(), None);
+
+        let default_observed = match case.operation.as_str() {
+            "decode" | "source_decode" => 1,
+            _ => u64::from(manifest.frame_count),
+        };
+        let (expected_resource, expected_maximum, observed) = if case.expected_resource.is_empty() {
+            (
+                case.resource.as_str(),
+                u64::from(case.maximum),
+                default_observed,
+            )
+        } else {
+            (
+                case.expected_resource.as_str(),
+                case.expected_maximum,
+                case.observed,
+            )
+        };
+        let expected_resource = match expected_resource {
+            "frames" => img::ResourceLimit::Frames,
+            "encoded_bytes" => img::ResourceLimit::EncodedBytes,
+            "pixels" => img::ResourceLimit::Pixels,
+            "primary_decoded_bytes" => img::ResourceLimit::PrimaryDecodedBytes,
+            resource => panic!("unknown resource `{resource}`"),
+        };
+        let expected_operation = match case.operation.as_str() {
+            "inspect" | "source_new" => img::CodecOperation::Inspection,
+            "decode" | "source_decode" | "decode_unknown" => img::CodecOperation::StillDecode,
+            "decode_sequence" => img::CodecOperation::SequenceDecode,
+            operation => panic!("unknown operation `{operation}`"),
+        };
+        let expected_format = match case.expected_format.as_str() {
+            "" => Some(img::ImageFormat::Gif),
+            "none" => None,
+            format => panic!("unknown expected format `{format}`"),
+        };
+
+        match case.operation.as_str() {
+            "inspect" => match img::inspect_with_policy(&bytes, &policy) {
+                Ok(info) if case.status == "ok" => assert_gif_info(&info),
+                Err(error) if case.status == "error" => assert_limit_error(
+                    error,
+                    expected_operation,
+                    expected_resource,
+                    expected_maximum,
+                    observed,
+                    expected_format,
+                ),
+                Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+            },
+            "decode" => match img::decode_with_policy(&bytes, &policy) {
+                Ok(decoded) if case.status == "ok" => {
+                    assert_gif_image(&decoded, &expected_pixels);
+                }
+                Err(error) if case.status == "error" => assert_limit_error(
+                    error,
+                    expected_operation,
+                    expected_resource,
+                    expected_maximum,
+                    observed,
+                    expected_format,
+                ),
+                Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+            },
+            "decode_unknown" => match img::decode_with_policy(&unknown_bytes, &policy) {
+                Err(error) if case.status == "unknown" => {
+                    assert_eq!(error.kind(), img::ImageErrorKind::UnknownFormat);
+                    assert_eq!(error.format(), None);
+                    assert_eq!(error.message(), None);
+                }
+                Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+            },
+            "decode_sequence" => match img::decode_sequence_with_policy(&bytes, &policy) {
+                Ok(decoded) if case.status == "ok" => assert_gif_sequence(&decoded),
+                Err(error) if case.status == "error" => assert_limit_error(
+                    error,
+                    expected_operation,
+                    expected_resource,
+                    expected_maximum,
+                    observed,
+                    expected_format,
+                ),
+                Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+            },
+            "source_new" => match img::EncodedImage::new_with_policy(bytes.clone(), &policy) {
+                Ok(source) if case.status == "ok" => {
+                    assert_gif_info(source.info());
+                    assert!(!source.is_decoded());
+                }
+                Err(error) if case.status == "error" => assert_limit_error(
+                    error,
+                    expected_operation,
+                    expected_resource,
+                    expected_maximum,
+                    observed,
+                    expected_format,
+                ),
+                Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+            },
+            "source_decode" => {
+                let source = img::EncodedImage::new(bytes.clone())?;
+                match source.decode_with_policy(&policy) {
+                    Ok(decoded) if case.status == "ok" => {
+                        assert_gif_image(decoded, &expected_pixels);
+                        assert!(source.is_decoded());
+                    }
+                    Err(error) if case.status == "error" => {
+                        assert_limit_error(
+                            error,
+                            expected_operation,
+                            expected_resource,
+                            expected_maximum,
+                            observed,
+                            expected_format,
+                        );
+                        assert!(!source.is_decoded());
+                        assert_gif_image(source.decode()?, &expected_pixels);
+                        assert!(source.is_decoded());
+                    }
+                    Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                    Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+                }
+            }
+            operation => panic!("unknown operation `{operation}`"),
+        }
+    }
+    assert_eq!(ids.len(), 19);
     Ok(())
 }

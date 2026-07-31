@@ -132,6 +132,19 @@ that an unrepresentable primary transfer length remains a format-qualified
 `Dimensions` failure. Error paths assert the complete typed limit fields and
 retry-safe lazy-cache behavior.
 
+The sequence-policy manifest adds 19 `defensive_model` cases for the
+frame-count resource. It covers below, at, and above a three-frame GIF's
+declared count for inspection, sequence decode, and immutable-source
+construction; the zero/one/two boundaries for still and lazy still
+materialization; unknown-signature precedence; and encoded-bytes, pixels, and
+primary-bytes precedence rows. Success paths reuse Pillow case
+`animated_3frame` and compare exact inspected metadata, still pixels, and all
+three retained frame source/presentation contracts. Frame-count rejection
+happens after encoded-input and primary-canvas checks and before sequence
+materialization; GIF/TIFF chains whose inspection cannot prove an exact count
+remain governed by the inspection-completeness model rather than this
+resource.
+
 The counts are reproducible from the generated artifact:
 
 ```bash
@@ -142,17 +155,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,012 | 41,012 |
-| Branches | 5,876 | 5,876 |
-| Functions | 2,221 | 2,221 |
-| Regions | 65,414 | 65,414 |
+| Lines | 41,074 | 41,074 |
+| Branches | 5,882 | 5,882 |
+| Functions | 2,226 | 2,226 |
+| Regions | 65,480 | 65,480 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `af65c766-6bf6-45c7-85aa-010a6e09d9e9`
+Coverage MCP run: `bc415f6b-e2e7-4375-bdfd-37411870e625`
 
-Snapshot: `cad869e4-e001-4a2d-a8fd-15a47ac33640`
+Snapshot: `6581c790-8ca1-4f37-87ce-cd545dcf2778`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -168,6 +181,9 @@ Typed-option error manifest SHA-256:
 
 Decode-policy manifest SHA-256:
 `cba48670d83d797cf519cb9e37bf683ba7d9354bf879655e1c2b7000a54fc937`
+
+Sequence-policy manifest SHA-256:
+`8d702829e5bcc52e2040197050990321a67911bb514c8e8adc6cbe06fede1adb`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

@@ -1,0 +1,168 @@
+{
+  "format_version": 1,
+  "assertion_origin": "defensive_model",
+  "source_case_id": "animated_3frame",
+  "asset_path": "tests/fixtures/input/images/gif/animated_3frame.gif",
+  "encoded_bytes": 25932,
+  "asset_sha256": "277269d44f5f529dc1e7a618e20a98b0479b5888744fbc530b6cc520d0640d9c",
+  "frame_count": 3,
+  "decoded_path": "tests/fixtures/outputs/raws/Decode.gif_animated_3frame_gif.bin",
+  "decoded_bytes": 16384,
+  "decoded_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
+  "unknown_asset_path": "tests/fixtures/input/images/png/not_a_png.png",
+  "unknown_encoded_bytes": 8,
+  "expected_format": "gif",
+  "expected_mode": "P8",
+  "expected_size": [
+    128,
+    128
+  ],
+  "cases": [
+    {
+      "id": "inspect_frames_below",
+      "operation": "inspect",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error"
+    },
+    {
+      "id": "inspect_frames_at",
+      "operation": "inspect",
+      "resource": "frames",
+      "maximum": 3,
+      "status": "ok"
+    },
+    {
+      "id": "inspect_frames_above",
+      "operation": "inspect",
+      "resource": "frames",
+      "maximum": 4,
+      "status": "ok"
+    },
+    {
+      "id": "decode_frames_zero",
+      "operation": "decode",
+      "resource": "frames",
+      "maximum": 0,
+      "status": "error"
+    },
+    {
+      "id": "decode_frames_one",
+      "operation": "decode",
+      "resource": "frames",
+      "maximum": 1,
+      "status": "ok"
+    },
+    {
+      "id": "decode_frames_two",
+      "operation": "decode",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "ok"
+    },
+    {
+      "id": "decode_sequence_frames_below",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error"
+    },
+    {
+      "id": "decode_sequence_frames_at",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 3,
+      "status": "ok"
+    },
+    {
+      "id": "decode_sequence_frames_above",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 4,
+      "status": "ok"
+    },
+    {
+      "id": "source_new_frames_below",
+      "operation": "source_new",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error"
+    },
+    {
+      "id": "source_new_frames_at",
+      "operation": "source_new",
+      "resource": "frames",
+      "maximum": 3,
+      "status": "ok"
+    },
+    {
+      "id": "source_new_frames_above",
+      "operation": "source_new",
+      "resource": "frames",
+      "maximum": 4,
+      "status": "ok"
+    },
+    {
+      "id": "source_decode_frames_zero",
+      "operation": "source_decode",
+      "resource": "frames",
+      "maximum": 0,
+      "status": "error"
+    },
+    {
+      "id": "source_decode_frames_one",
+      "operation": "source_decode",
+      "resource": "frames",
+      "maximum": 1,
+      "status": "ok"
+    },
+    {
+      "id": "source_decode_frames_two",
+      "operation": "source_decode",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "ok"
+    },
+    {
+      "id": "decode_unknown_frames_zero",
+      "operation": "decode_unknown",
+      "resource": "frames",
+      "maximum": 0,
+      "status": "unknown"
+    },
+    {
+      "id": "decode_sequence_frames_after_pixels",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error",
+      "also_max_pixels": 16383,
+      "expected_resource": "pixels",
+      "expected_maximum": 16383,
+      "observed": 16384
+    },
+    {
+      "id": "inspect_frames_after_primary_bytes",
+      "operation": "inspect",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error",
+      "also_max_primary_decoded_bytes": 16383,
+      "expected_resource": "primary_decoded_bytes",
+      "expected_maximum": 16383,
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_frames_after_encoded",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error",
+      "also_max_encoded_bytes": 25931,
+      "expected_resource": "encoded_bytes",
+      "expected_maximum": 25931,
+      "observed": 25932,
+      "expected_format": "none"
+    }
+  ]
+}
