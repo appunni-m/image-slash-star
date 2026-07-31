@@ -1237,6 +1237,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             base_scan(1, 1, 1, 0, 0, 5),
         ],
         adobe_transform: None,
+        metadata: Vec::new(),
     };
     let _ = progressive_reconstruct(&info, &[0, 0, 0xFF, 0xD0, 0]);
 
@@ -1269,6 +1270,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         progressive: true,
         scans,
         adobe_transform: None,
+        metadata: Vec::new(),
     };
     let _ = progressive_reconstruct(&failing_info(vec![failing_scan(0, 0, 0, 0)]), &[0]);
     let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 0, 0)]), &[0]);
@@ -1330,6 +1332,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         progressive: true,
         scans: Vec::new(),
         adobe_transform: None,
+        metadata: Vec::new(),
     };
     let _ = progressive_reconstruct(&cmyk_info, &[]);
     let cmyk_info = JpegInfo {
