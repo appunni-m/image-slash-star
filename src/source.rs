@@ -3,8 +3,8 @@
 use std::sync::{Arc, OnceLock};
 
 use crate::{
-    CodecOperation, DecodePolicy, Decoded, DecodedImage, ImageFormat, ImageInfo, ImageResult,
-    VerificationScope,
+    CodecOperation, DecodePolicy, Decoded, DecodedImage, ImageError, ImageFormat, ImageInfo,
+    ImageResult, VerificationScope,
 };
 
 #[derive(Debug)]
@@ -138,6 +138,37 @@ impl EncodedImage {
     /// format-specific verification contract rejects the snapshot.
     pub fn verify(&self) -> ImageResult<()> {
         crate::codecs::verify_format(&self.inner.bytes, self.format())
+    }
+
+    /// Verify with an explicit caller-requested strength.
+    ///
+    /// The requested scope must be provided by the source format's
+    /// [`Self::verification_scope`]; requesting a stronger scope fails with a
+    /// format-qualified [`ImageError::Unsupported`] instead of silently
+    /// reporting weaker evidence. Every format provides weaker or equal
+    /// scopes, and no format currently provides
+    /// [`VerificationScope::FullPixels`].
+    ///
+    /// Verification executes independently from ordinary materialization, so
+    /// it does not populate or change the shared decode cache.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::verify`], or
+    /// [`ImageError::Unsupported`] when the requested scope is stronger than
+    /// the format provides.
+    pub fn verify_with_scope(&self, requested: VerificationScope) -> ImageResult<()> {
+        let provided = self.verification_scope();
+        if !provided.provides(requested) {
+            return Err(ImageError::Unsupported {
+                format: Some(self.format()),
+                message: format!(
+                    "{requested:?} verification is not provided; {} provides {provided:?}",
+                    self.format().as_str(),
+                ),
+            });
+        }
+        self.verify()
     }
 
     /// Returns how much validation [`Self::verify`] performs for this format.

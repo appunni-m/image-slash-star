@@ -574,3 +574,118 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
     }
     Ok(())
 }
+
+#[test]
+fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::VerificationScope;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, bool, &str, VerificationScope)] = &[
+        (
+            "jpeg",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+            VerificationScope::Structure,
+        ),
+        (
+            "png",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+            VerificationScope::Structure,
+        ),
+        (
+            "gif",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+            VerificationScope::HeaderOnly,
+        ),
+        (
+            "bmp",
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+            VerificationScope::HeaderOnly,
+        ),
+        (
+            "tiff",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/1bit.tiff",
+            VerificationScope::HeaderOnly,
+        ),
+        (
+            "webp",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+            VerificationScope::Structure,
+        ),
+        (
+            "ico",
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+            VerificationScope::HeaderOnly,
+        ),
+        (
+            "avif",
+            cfg!(feature = "avif"),
+            "tests/fixtures/input/images/avif/baseline.avif",
+            VerificationScope::HeaderOnly,
+        ),
+    ];
+
+    for &(name, enabled, path, provided) in cases {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        let source = EncodedImage::new(bytes)?;
+        assert_eq!(source.format().verification_scope(), provided, "{name}");
+        assert_eq!(source.verification_scope(), provided, "{name}");
+        assert!(provided.provides(provided), "{name}");
+        source.verify()?;
+
+        // Weaker or equal requests are satisfied by the same verification pass.
+        source.verify_with_scope(VerificationScope::HeaderOnly)?;
+        source.verify_with_scope(provided)?;
+
+        // A stronger request fails with a format-qualified Unsupported
+        // instead of silently reporting weaker evidence.
+        let stronger = if provided == VerificationScope::HeaderOnly {
+            VerificationScope::Structure
+        } else {
+            VerificationScope::FullPixels
+        };
+        assert!(!provided.provides(stronger), "{name}");
+        let error = match source.verify_with_scope(stronger) {
+            Err(error) => error,
+            Ok(()) => panic!("{name} unexpectedly provided {stronger:?}"),
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::Unsupported,
+            "{name}"
+        );
+        assert_eq!(error.format(), Some(source.format()), "{name}");
+        assert!(
+            error.message().is_some_and(|message| !message.is_empty()),
+            "{name}"
+        );
+
+        // Full pixel verification is not provided by any codec.
+        assert!(!provided.provides(VerificationScope::FullPixels), "{name}");
+        let error = match source.verify_with_scope(VerificationScope::FullPixels) {
+            Err(error) => error,
+            Ok(()) => panic!("{name} unexpectedly provided FullPixels"),
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::Unsupported,
+            "{name}"
+        );
+        assert_eq!(error.format(), Some(source.format()), "{name}");
+    }
+
+    assert!(VerificationScope::Structure.provides(VerificationScope::HeaderOnly));
+    assert!(!VerificationScope::Structure.provides(VerificationScope::FullPixels));
+    assert!(VerificationScope::FullPixels.provides(VerificationScope::FullPixels));
+    Ok(())
+}

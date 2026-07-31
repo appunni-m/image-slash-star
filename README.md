@@ -128,6 +128,7 @@ capabilities and setup.
 | `all_capabilities()` | Return the same typed capability record for every public format |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
 | `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
+| `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return
@@ -144,6 +145,13 @@ remains an explicit-format scope decision, not an automatic BMP alias.
 `mime_type()`, `canonical_extension()`, and `extensions()` expose stable,
 dependency-free format metadata in canonical-first order; `from_path` uses the
 same table without touching the filesystem.
+
+`VerificationScope` orders `HeaderOnly` < `Structure` < `FullPixels`.
+`EncodedImage::verify()` runs the format's Pillow-compatible default scope;
+`verify_with_scope(requested)` fails with a format-qualified `Unsupported` when
+the codec cannot provide the requested strength, so header-only success is
+never silently reported as structural or full-pixel evidence. No codec
+currently provides `FullPixels`.
 
 The core model separates:
 

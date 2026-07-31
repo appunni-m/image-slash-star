@@ -145,6 +145,13 @@ materialization; GIF/TIFF chains whose inspection cannot prove an exact count
 remain governed by the inspection-completeness model rather than this
 resource.
 
+The verification-strength contract is table-driven rather than manifest rows:
+for every format, the enabled feature lane loads the smallest Pillow-verified
+fixture and asserts `ImageFormat::verification_scope()` and
+`EncodedImage::verification_scope()` agreement, weaker/equal
+`verify_with_scope` success, stronger-request failure with the exact format
+and a non-empty diagnostic, and the never-provided `FullPixels` boundary.
+
 The counts are reproducible from the generated artifact:
 
 ```bash
@@ -155,17 +162,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,074 | 41,074 |
-| Branches | 5,882 | 5,882 |
-| Functions | 2,226 | 2,226 |
-| Regions | 65,480 | 65,480 |
+| Lines | 41,100 | 41,100 |
+| Branches | 5,884 | 5,884 |
+| Functions | 2,228 | 2,228 |
+| Regions | 65,510 | 65,510 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `1ecb9ef0-a2b1-4132-9c80-c0266c7cb852`
+Coverage MCP run: `38530438-2fef-4770-940b-2b66c75f02fb`
 
-Snapshot: `275d8fec-8991-415f-983a-5f3101c3ef77`
+Snapshot: `67678d82-4b57-476d-9ed2-f68031193a6d`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

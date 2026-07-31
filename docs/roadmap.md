@@ -149,6 +149,7 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-027 | `DecodedSequence::first()` now returns the complete `DecodedFrame`, preserving rectangle, timing, disposal, blend, interlace, default-image state, pixel layout, and image. The explicitly lossy `first_image()` convenience returns only `DecodedImage`; no internal encoder uses it to authorize a still fallback. | Existing manifest-driven sequence callers choose the complete frame or lossy image accessor explicitly. All 70 sequence rows and 133 frames/pages retain their exact metadata/pixel assertions, every encoded byte remains unchanged, strict native/WASM gates pass, and managed coverage remains exact in all four dimensions. |
 | COR-028 | `ImageFormat` extension utilities now mirror the public format surface: `from_name` accepts canonical names and every Pillow-recognized alias case-insensitively (JPEG `jpg`/`jpeg`/`jfif`/`jpe`, PNG `png`/`apng`, TIFF `tiff`/`tif`, ICO/CUR `ico`/`cur`, AVIF `avif`/`avifs`); `mime_type()`, `canonical_extension()`, and `extensions()` return one stable MIME string, one canonical extension, and the canonical-first alias list per format; `from_path` reuses the same table without filesystem access. Headerless `.dib` remains an explicit-format scope decision and is not an automatic BMP alias. | The table-driven feature-gate test covers every format, alias, canonical round-trip, `from_path` acceptance (including mixed-case paths), MIME string, and the rejected `.dib` boundary; it passes in the no-feature, default, every isolated-feature, and all-feature native lanes plus every supported WASM compile/rustdoc lane. The manifest and generated-matrix hashes remain unchanged, and the final Coverage MCP snapshot remains exact 100% in all four dimensions. |
 | COR-029 | `max_frames` bounds the inspected frame/page count before inspection, sequence materialization, or immutable-source construction, and bounds still/lazy still materialization to the single retained frame (only a zero maximum rejects those). The check runs after encoded bytes and the primary canvas/transfer-byte limits, retains the detected format, and precedes sequence pixel work. Sources whose inspection cannot prove an exact frame count (GIF/TIFF incomplete chains) are not claimed to be bounded by this resource. | The sequence-policy manifest adds 19 `defensive_model` cases: below/at/above the three-frame GIF boundary for inspect, sequence decode, and source construction; zero/one/two still-decode boundaries; unknown-signature precedence; and encoded-bytes, pixels, and primary-bytes precedence rows. Success paths reuse the exact Pillow `animated_3frame` metadata, still pixels, and all three source/presentation frame contracts. |
+| COR-030 | Verification strength is now an explicit caller contract. `VerificationScope` gains `FullPixels` (no codec provides it), `provides()` orders `HeaderOnly` < `Structure` < `FullPixels`, and `EncodedImage::verify_with_scope(requested)` executes the format's own verification only when the requested scope is provided. A stronger request returns a format-qualified `Unsupported` with a non-empty diagnostic instead of silently reporting weaker evidence; `verify()` retains the format's Pillow-compatible default scope. Verification resource limits remain separate backlog under API-023/030. | A table-driven feature-gate test runs each format's smallest Pillow-verified fixture in its enabled native lane and asserts the provided scope, weaker/equal request success, stronger-request failure with exact format and message, and the never-provided `FullPixels` boundary. Strict no-feature/isolated/default/all-feature native lanes and every supported WASM compile/rustdoc lane pass; the final Coverage MCP snapshot remains exact 100% in all four dimensions. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -161,10 +162,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`1ecb9ef0-a2b1-4132-9c80-c0266c7cb852`, snapshot
-`275d8fec-8991-415f-983a-5f3101c3ef77`, passed with zero failures or
-skips and reports 41,074/41,074 lines, 5,882/5,882 branches,
-2,226/2,226 functions, and 65,480/65,480 regions.
+`38530438-2fef-4770-940b-2b66c75f02fb`, snapshot
+`67678d82-4b57-476d-9ed2-f68031193a6d`, passed with zero failures or
+skips and reports 41,100/41,100 lines, 5,884/5,884 branches,
+2,228/2,228 functions, and 65,510/65,510 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -269,7 +270,6 @@ public reusable conversion layer would violate project scope.
 | API-036 | Work control | Long decodes and encodes have no cooperative cancellation, progress boundary, or work budget beyond eventual resource limits. | Add optional dependency-free callbacks/tokens only after incremental I/O defines safe interruption points and deterministic cleanup. |
 | API-037 | Source ownership | `EncodedImage` always copies or adopts bytes into `Arc<[u8]>` and performs inspection at construction. It cannot borrow a stable slice or wrap an incremental source. | Keep the safe owned snapshot as the primary API; add a borrowed view or reader-backed source only with explicit lifetime and cache semantics. |
 | API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set or supplied a trusted format hint. This matters for partial data and downstream policy. | Let a decode policy carry an optional format hint/allow-list while retaining signature validation and feature-independent `detect_format`. |
-| API-039 | Verification contract | Verification has a useful strength enum, but no policy for header-only, structure-only, or full pixel verification and no resource limits. | Make requested verification strength explicit and fail if the codec cannot provide it; never silently report header success as full verification. |
 | API-040 | Container preservation | Unknown chunks, boxes, markers, extensions, and TIFF tags cannot be retained for decode→encode passthrough. | Add an ordered opaque-block model with safe-to-copy, collision, size, and format ownership rules. Default encoding must not replay unknown data implicitly. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
 | API-043 | Partial-input contract | An incomplete signature is reported as `UnknownFormat`, while a recognized but truncated container is usually `Malformed`. There is no `NeedMoreData { minimum }` state for incremental callers. | Define a non-terminal input status before adding streaming. Require exact minimum-byte or progress semantics and never turn a terminal malformed result into an implicit retry loop. |
@@ -1032,7 +1032,7 @@ slice at a time:
 
 | Order | IDs/classes | Why first | Exit condition |
 | --- | --- | --- | --- |
-| 1 | API-023/030/031/039; QA-015/017/018/026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010 and QA-032 are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
+| 1 | API-023/030/031; QA-015/017/018/026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010, QA-032, and the verification-strength contract are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
 | 2 | FTR-026/028; QA-014/029 | Settle discoverability and pre-1.0 public compatibility before downstream adoption. | Rustdoc, generated capability table, isolated feature lanes, and claim ledger agree. |
 | 3 | API-019/028/034/035/040 plus the matching PNG/GIF/TIFF/WebP/ICO/AVIF metadata and sequence rows | Avoid implementing remaining multipage, multi-entry, or animated surfaces into a lossy common model. | Exact source/container state survives decode and, where supported, encode without public processing. |
 | 4 | API-024/025/027/032/037 and codec row/strip/tile/frame slices | Bound memory and enable large/sequence inputs without a second unrelated API family. | Whole-buffer convenience wraps the same bounded engine; caller buffers and eager results are byte-identical. |
@@ -1048,7 +1048,7 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-029, including exact WebP mode
+Completed first: COR-001 through COR-030, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
@@ -1069,7 +1069,9 @@ canonical-extension, and full alias-list queries with a table-driven contract
 test. `DecodePolicy` now also bounds the inspected frame/page count through
 `max_frames` before inspection, sequence materialization, or source
 construction, while still and lazy still paths remain bounded to the single
-materialized frame.
+materialized frame. Verification callers can now request an explicit strength
+and receive a format-qualified `Unsupported` when the codec cannot provide it,
+so header-only success is never silently reported as stronger evidence.
 
 1. Add metadata retention, remaining decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.

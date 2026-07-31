@@ -24,6 +24,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = format.mime_type();
         let _ = format.canonical_extension();
         let _ = format.extensions();
+        let _ = format.verification_scope();
+    }
+    // No format currently provides FullPixels; exercise its provides branch
+    // directly so the strength ordering stays fully covered.
+    for requested in [
+        VerificationScope::HeaderOnly,
+        VerificationScope::Structure,
+        VerificationScope::FullPixels,
+    ] {
+        assert!(VerificationScope::FullPixels.provides(requested));
     }
     for name in [
         "jpeg", "jpg", "jfif", "jpe", "png", "apng", "gif", "bmp", "webp", "tiff", "tif", "ico",
@@ -458,6 +468,26 @@ pub enum VerificationScope {
     HeaderOnly,
     /// Verification additionally scans format-specific encoded structure.
     Structure,
+    /// Verification requires decompressing and comparing every retained
+    /// pixel. No codec currently provides this scope.
+    FullPixels,
+}
+
+impl VerificationScope {
+    /// Whether this provided scope satisfies a caller's requested scope.
+    ///
+    /// Scope strength is ordered `HeaderOnly` < `Structure` < `FullPixels`.
+    /// A codec that provides a stronger scope also satisfies every weaker
+    /// request; a request stronger than the provided scope must fail rather
+    /// than silently report weaker evidence as sufficient.
+    #[must_use]
+    pub const fn provides(self, requested: Self) -> bool {
+        match self {
+            Self::HeaderOnly => matches!(requested, Self::HeaderOnly),
+            Self::Structure => matches!(requested, Self::HeaderOnly | Self::Structure),
+            Self::FullPixels => true,
+        }
+    }
 }
 
 /// A decoded value paired with the encoded container format detected from its input.
