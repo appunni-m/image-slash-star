@@ -517,7 +517,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = limit
         .clone()
         .into_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
-    let _ = limit.context("decode sequence");
+    let _ = limit.clone().context("decode sequence");
     let at = CodecError::Malformed("at".to_owned()).at(12, "png_chunk");
     let _ = at
         .clone()

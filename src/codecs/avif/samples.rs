@@ -2374,6 +2374,7 @@ fn coverage_structural_states() {
         input: &[],
         offset: usize::MAX,
         end: usize::MAX,
+        truncation: false,
     };
     let _ = overflowing_reader.take_span(1);
     let _ = overflowing_reader.c_string();
