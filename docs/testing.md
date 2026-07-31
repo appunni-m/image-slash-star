@@ -290,6 +290,13 @@ La8 fixtures, `TransferLayout` fields must agree with inspection and decoded
 bytes, row bytes must satisfy the packing rules (packed L1 rows pad the final
 byte), and `decode_into` must accept exactly `total_bytes`.
 
+The basic-inspection contract is table-driven: `inspect_basic` must agree with
+`inspect` on format, dimensions, mode, depth, and palette, and must report
+`frame_count_complete` truthfully — animated GIF/TIFF/WebP fixtures report
+`frame_count=None` with completeness `false`, single-frame deep formats report
+a complete count of one (GIF trailer peek, TIFF next-IFD offset, WebP still),
+and header-bound formats (PNG/JPEG/BMP/ICO/AVIF) return the full result.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

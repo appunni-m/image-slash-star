@@ -145,6 +145,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         palette,
         is_animated,
         frame_count: Some(frame_count),
+        frame_count_complete: true,
         cursor_hotspot: None,
         source,
     })

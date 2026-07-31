@@ -2201,6 +2201,175 @@ fn transfer_layout_matches_the_output_contract() -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+#[allow(
+    clippy::type_complexity,
+    reason = "the fixture expectation tuple is compact and local"
+)]
+#[test]
+fn basic_inspection_reports_completeness() -> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    // (name, enabled, path, basic_complete, basic_count, basic_animated,
+    //  full_complete, full_count_min)
+    let cases: &[(&str, bool, &str, bool, Option<u32>, bool, bool, u32)] = &[
+        (
+            "gif animated",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/animated_3frame.gif",
+            false,
+            None,
+            false,
+            true,
+            3,
+        ),
+        (
+            "gif still",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
+            "tiff multipage",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/multipage.tiff",
+            false,
+            None,
+            false,
+            true,
+            2,
+        ),
+        (
+            "tiff single",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/1bit.tiff",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
+            "webp animated",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+            false,
+            None,
+            true,
+            true,
+            2,
+        ),
+        (
+            "webp still",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
+            "png apng",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/apng_l_over.png",
+            true,
+            Some(2),
+            true,
+            true,
+            2,
+        ),
+        (
+            "png still",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
+            "jpeg still",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
+            "bmp still",
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
+            "ico still",
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+    ];
+    for &(
+        name,
+        enabled,
+        path,
+        basic_complete,
+        basic_count,
+        basic_animated,
+        full_complete,
+        full_min,
+    ) in cases
+    {
+        if !enabled {
+            continue;
+        }
+        let data = fs::read(root.join(path))?;
+        let full = image_slash_star::inspect(&data)?;
+        let basic = image_slash_star::inspect_basic(&data)?;
+        assert_eq!(basic.format, full.format, "{name} format");
+        assert_eq!(basic.width, full.width, "{name} width");
+        assert_eq!(basic.height, full.height, "{name} height");
+        assert_eq!(basic.mode, full.mode, "{name} mode");
+        assert_eq!(basic.bit_depth, full.bit_depth, "{name} bit depth");
+        assert_eq!(basic.palette, full.palette, "{name} palette");
+        assert_eq!(
+            basic.frame_count_complete, basic_complete,
+            "{name} basic completeness"
+        );
+        assert_eq!(basic.frame_count, basic_count, "{name} basic count");
+        assert_eq!(basic.is_animated, basic_animated, "{name} basic animated");
+        assert_eq!(
+            full.frame_count_complete, full_complete,
+            "{name} full completeness"
+        );
+        assert!(
+            full.frame_count.is_some_and(|count| count >= full_min),
+            "{name} full count"
+        );
+    }
+
+    if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
+        let data = fs::read(root.join("tests/fixtures/input/images/avif/baseline.avif"))?;
+        let full = image_slash_star::inspect(&data)?;
+        let basic = image_slash_star::inspect_basic(&data)?;
+        assert_eq!(basic, full, "avif basic matches full");
+    }
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {

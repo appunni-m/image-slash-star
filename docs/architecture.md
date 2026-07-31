@@ -195,6 +195,7 @@ translation cannot be bypassed.
 | --- | --- |
 | `detect_format(&[u8])` | Identify a supported signature without invoking a codec |
 | `inspect(&[u8])` | Read `ImageInfo` without materializing compressed pixels |
+| `inspect_basic(&[u8])` | Read the same header facts without deep frame counting; `frame_count_complete` distinguishes known from unknown counts |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |

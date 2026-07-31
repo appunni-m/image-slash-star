@@ -232,6 +232,77 @@ pub(crate) fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<I
     )
 }
 
+/// Dispatch header-only inspection to the enabled format implementation.
+pub(crate) fn inspect_basic_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInfo> {
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    )))]
+    ensure_inspection_available(format)?;
+
+    let inspected: CodecResult<ImageInfo> = match format {
+        #[cfg(feature = "jpeg")]
+        ImageFormat::Jpeg => jpeg::inspect::inspect(_data),
+        #[cfg(not(feature = "jpeg"))]
+        ImageFormat::Jpeg => Err(error::CodecError::Unsupported(
+            "JPEG metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "png")]
+        ImageFormat::Png => png::inspect::inspect(_data),
+        #[cfg(not(feature = "png"))]
+        ImageFormat::Png => Err(error::CodecError::Unsupported(
+            "PNG metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "gif")]
+        ImageFormat::Gif => gif::inspect::inspect_basic(_data),
+        #[cfg(not(feature = "gif"))]
+        ImageFormat::Gif => Err(error::CodecError::Unsupported(
+            "GIF metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "bmp")]
+        ImageFormat::Bmp => bmp::inspect::inspect(_data),
+        #[cfg(not(feature = "bmp"))]
+        ImageFormat::Bmp => Err(error::CodecError::Unsupported(
+            "BMP metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "tiff")]
+        ImageFormat::Tiff => tiff::inspect::inspect_basic(_data),
+        #[cfg(not(feature = "tiff"))]
+        ImageFormat::Tiff => Err(error::CodecError::Unsupported(
+            "TIFF metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "webp")]
+        ImageFormat::WebP => webp::inspect::inspect_basic(_data),
+        #[cfg(not(feature = "webp"))]
+        ImageFormat::WebP => Err(error::CodecError::Unsupported(
+            "WebP metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "ico")]
+        ImageFormat::Ico => ico::inspect::inspect(_data),
+        #[cfg(not(feature = "ico"))]
+        ImageFormat::Ico => Err(error::CodecError::Unsupported(
+            "ICO metadata inspection is unavailable".to_owned(),
+        )),
+        #[cfg(feature = "avif")]
+        ImageFormat::Avif => avif::inspect::inspect(_data),
+        #[cfg(not(feature = "avif"))]
+        ImageFormat::Avif => Err(error::CodecError::Unsupported(
+            "AVIF metadata inspection is unavailable".to_owned(),
+        )),
+    };
+    into_image_result(
+        inspected.map_err(|error| error.context("inspect basic")),
+        format,
+        ImageErrorStage::Inspection,
+    )
+}
+
 /// Apply the pinned Pillow oracle's codec-specific verification contract.
 pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()> {
     #[cfg(not(all(

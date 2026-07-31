@@ -8,6 +8,16 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Inspect WebP dimensions, decoded mode, and animation frame count.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data, false)
+}
+
+/// Inspect WebP dimensions and the first proven image without counting every
+/// animation frame chunk.
+pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data, true)
+}
+
+fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let header = data
         .get(..RIFF_HEADER_SIZE)
         .malformed("truncated WebP RIFF header")?;
@@ -18,11 +28,94 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     match &kind {
         b"VP8 " => inspect_vp8(payload),
         b"VP8L" => inspect_vp8l(payload),
+        b"VP8X" if basic => inspect_extended_basic(data, payload, next),
         b"VP8X" => inspect_extended(data, payload, next),
         _ => Err(CodecError::Malformed(
             "WebP contains no recognized image header".to_owned(),
         )),
     }
+}
+
+fn inspect_extended_basic(
+    data: &[u8],
+    payload: &[u8],
+    mut position: usize,
+) -> CodecResult<ImageInfo> {
+    let header = payload.get(..10).malformed("truncated WebP VP8X header")?;
+    let flags = header[0];
+    let width = le_u24(header, 4).wrapping_add(1);
+    let height = le_u24(header, 7).wrapping_add(1);
+    enforce_dimension_limit(width, height)?;
+    let has_alpha = flags & 0x10 != 0;
+    let declares_animation = flags & 0x02 != 0;
+    let mode = if has_alpha {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
+    let source = if has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
+    if declares_animation {
+        return Ok(ImageInfo {
+            format: ImageFormat::WebP,
+            width,
+            height,
+            mode,
+            bit_depth: 8,
+            palette: None,
+            is_animated: true,
+            frame_count: None,
+            frame_count_complete: false,
+            cursor_hotspot: None,
+            source,
+        });
+    }
+    let mut saw_image = false;
+    while position < data.len() {
+        let (kind, payload, next) = read_chunk(&data[position..], position)?;
+        position = next;
+        if kind == *b"VP8 " {
+            let info = inspect_vp8(payload)?;
+            if info.width != width || info.height != height {
+                return Err(CodecError::Malformed(
+                    "WebP VP8 dimensions disagree with the canvas".to_owned(),
+                ));
+            }
+            saw_image = true;
+            break;
+        }
+        if kind == *b"VP8L" {
+            let info = inspect_vp8l(payload)?;
+            if info.width != width || info.height != height {
+                return Err(CodecError::Malformed(
+                    "WebP VP8L dimensions disagree with the canvas".to_owned(),
+                ));
+            }
+            saw_image = true;
+            break;
+        }
+    }
+    if !saw_image {
+        return Err(CodecError::Malformed(
+            "extended WebP contains no image chunk".to_owned(),
+        ));
+    }
+    Ok(ImageInfo {
+        format: ImageFormat::WebP,
+        width,
+        height,
+        mode,
+        bit_depth: 8,
+        palette: None,
+        is_animated: false,
+        frame_count: Some(1),
+        frame_count_complete: true,
+        cursor_hotspot: None,
+        source,
+    })
 }
 
 fn inspect_vp8(payload: &[u8]) -> CodecResult<ImageInfo> {
@@ -87,6 +180,7 @@ fn still_info(width: u32, height: u32, mode: ImageMode, has_alpha: bool) -> Code
         palette: None,
         is_animated: false,
         frame_count: Some(1),
+        frame_count_complete: true,
         cursor_hotspot: None,
         source,
     })
@@ -166,6 +260,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         palette: None,
         is_animated,
         frame_count: Some(frame_count),
+        frame_count_complete: true,
         cursor_hotspot: None,
         source,
     })
