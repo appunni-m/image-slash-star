@@ -201,6 +201,33 @@ before any inspection preflight on all five policy paths, so an oversized
 metadata extent is rejected before codec work begins; malformed containers
 propagate their structured codec error from the scan.
 
+### Codec work is bounded by the resource set
+
+Every work dimension of the current codecs is bounded by one of the typed
+resources above, so no codec work can grow independently of output size:
+
+| Codec | Work dimension | Bounding resource |
+| --- | --- | --- |
+| PNG | chunk scan and count | `max_encoded_bytes` + `max_metadata_bytes` |
+| PNG | IDAT/fdAT inflation and scanline filtering | `max_pixels`/`max_primary_decoded_bytes` (inflated length equals canvas bytes) |
+| GIF | LZW decompression and deinterlace | `max_pixels`/`max_primary_decoded_bytes`/`max_frame_decoded_bytes` |
+| GIF | extension and block walk | `max_encoded_bytes` + `max_metadata_bytes` |
+| JPEG | marker scan and progressive scan count | `max_encoded_bytes` (entropy spans are inside the input) |
+| TIFF | directory walk | `max_metadata_bytes` |
+| TIFF | strip/tile decompression and predictors | `max_frame_decoded_bytes`/`max_sequence_decoded_bytes` |
+| WebP | RIFF chunk walk | `max_metadata_bytes` |
+| WebP | VP8/VP8L/ALPH decompression | `max_pixels`/`max_primary_decoded_bytes` |
+| ICO | directory walk and entry decode | `max_metadata_bytes` + `max_pixels`/`max_primary_decoded_bytes` |
+| AVIF | top-level box walk | `max_metadata_bytes` |
+| AVIF | AV1 tile/block reconstruction | `max_encoded_bytes` + canvas limits (portable classes have fixed extents) |
+
+The boundary manifests exercise each resource at below/at/above and
+`u64::MAX`/`u32::MAX` extremes on small assets; a future codec or container
+feature that introduces a work dimension outside this set must add a typed
+limit before acceptance. Caller-visible policy options that shape results
+(lenient-versus-strict parsing, requested output mode) are result policy, not
+resource limits, and belong with the API-029/033 family.
+
 ### Allocation and arithmetic policy
 
 Every caller-bounded allocation is preceded by checked preflight arithmetic:

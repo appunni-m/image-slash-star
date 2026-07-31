@@ -156,6 +156,7 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-034 | Near-limit arithmetic is now explicit defensive evidence and the allocation policy is decided. The policy manifests add `u64::MAX`/`u32::MAX` boundary rows for encoded bytes, width, pixels, primary decoded bytes, frame count, later-frame bytes, and cumulative sequence bytes across the public paths, all passing on small assets without enormous fixtures. Codec-internal allocations remain infallible by decision: the crate does not use `try_reserve`, OOM is Rust's default abort, and the hostile-input release gate is the checked preflight arithmetic rather than recoverable allocation errors. | The decode-policy manifest grows to 87 cases and the sequence-policy manifest to 35; every near-maximum row succeeds with exact unchanged Pillow results, and the extreme values prove the inclusive comparisons and `expected_bytes` checked arithmetic do not overflow. The decision is documented in the architecture reference. |
 | COR-035 | Every codec-dispatched failure now carries a stable `ImageErrorStage` (`Inspection`, `StillDecode`, `StillEncode`, `SequenceDecode`, `SequenceEncode`, or `Verification`) on its `Malformed`, `Unsupported`, `Dimensions`, or `Parameter` value, exposed through `ImageError::stage()`. Caller-built validation and option-construction errors remain stage-free by design, and `UnknownFormat`/`FeatureDisabled`/`LimitExceeded` keep their existing contracts (`LimitExceeded` already carries the typed operation). | A table-driven feature-gate test drives one real failure through inspect, still decode, sequence decode, source construction, verify, still encode, and sequence encode and asserts the exact kind and stage for each; the error contract and malformed-class ledger evidence remain byte-identical. |
 | COR-036 | `DecodePolicy` now bounds the encoded metadata extent with `max_metadata_bytes`: every encoded byte that is not primary pixel payload data (chunk/box/marker/IFD structure plus metadata payloads) counts toward the limit, measured by a per-format container scan that runs after detection and before any inspection preflight on all five policy paths. Pixel payloads excluded are PNG `IDAT`/`fdAT` data, GIF image sub-block payloads, JPEG entropy scans, WebP top-level `VP8 `/`VP8L`/`ALPH` payloads, TIFF strip/tile payload bytes, BMP pixel bytes after the declared offset, ICO entry payloads, and AVIF `mdat` payloads. | A SHA-pinned metadata-policy manifest lists independently measured extents for one fixture per format (JPEG 625, PNG 57, GIF 33, BMP 54, TIFF 110, WebP 20, ICO 22, AVIF 282) and the test runs below/at/above, zero, `u64::MAX`, and precedence rows across inspect, still decode, sequence decode, source construction, and lazy decode, plus a malformed-scan propagation row. |
+| COR-037 | Codec work is now bounded by the resource set and the mapping is documented: chunk/box/marker/IFD walks are bounded by `max_encoded_bytes` + `max_metadata_bytes`; every decompression or reconstruction output is bounded by the canvas, primary-byte, per-frame, and cumulative-sequence limits; and the boundary manifests prove each resource at below/at/above and `u64::MAX`/`u32::MAX` extremes on small assets. Strictness and requested output mode are result-shaping policy, not resource limits, and remain with the API-029/033 family. | The architecture reference now carries a per-codec work-dimension table naming the bounding resource for each dimension; the cumulative, per-frame, metadata, and near-maximum manifests cited there are all active and byte-identical. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -168,8 +169,8 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`c5db8799-5436-481b-a46e-c9b1b1e80460`, snapshot
-`7b820d34-d54c-45aa-a406-ee73fdb08b0b`, passed with zero failures or
+`d7dc1596-87fa-45af-8b4d-06a0b7eff422`, snapshot
+`3c831a38-bc00-4149-aeb5-380365329012`, passed with zero failures or
 skips and reports 41,954/41,954 lines, 6,022/6,022 branches,
 2,279/2,279 functions, and 66,742/66,742 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
@@ -260,7 +261,7 @@ public reusable conversion layer would violate project scope.
 | API-018 | Input model | All decoders require one contiguous complete slice. Header inspection may scan far beyond a fixed prefix to count frames or IFDs. | Define incremental input and distinguish "basic header known" from "complete frame count known." |
 | API-019 | Metadata | ICC, EXIF, XMP, orientation, text, resolution, and format-specific blocks can be written in selected encoders but are not retained by `ImageInfo`/`DecodedImage`. Decode→encode therefore drops them. | Implement the planned opaque metadata bytes first; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
-| API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. It does not yet bound codec work that grows independently of output size, strictness, or requested output mode. | Extend this same policy one independently enforceable resource at a time. Preserve the unlimited convenience wrappers, reject before the bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
+| API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. Every current codec work dimension is bounded by that resource set (documented per codec in the architecture reference). The remaining named items are result-shaping policy rather than resources: lenient-versus-strict parsing and requested output mode belong with the API-029/033 family. | Extend this same policy one independently enforceable resource at a time. Preserve the unlimited convenience wrappers, reject before the bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
 | API-024 | Memory behavior | Decode cannot report its required output size and write into a caller-provided buffer. Every successful call allocates its own `Vec<u8>`. | Add checked output-size preflight and an exact-size destination API. Reject short, oversized, or layout-incompatible buffers without partial success. |
 | API-025 | Missing representation | Packed rows, row stride, planar samples, and destination alignment are not represented. The model assumes one tightly packed interleaved buffer except for `L1`. | Define a minimal transfer-layout descriptor only for codec-native layouts. Do not grow it into a general image-view or processing abstraction. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
@@ -798,7 +799,7 @@ union. That has several consequences for this crate.
 | QA-023 | Emitted bytes are primarily re-opened through Pillow, which can share libjpeg/libwebp/libtiff/libavif implementations with the oracle path. | Decode representative outputs with an independent implementation or browser and record that evidence separately from Pillow parity. |
 | QA-024 | Round-trip tests do not publish a uniform rule separating lossless exact samples, lossy decoded tolerances, and deterministic encoded bytes. | Add an assertion policy per format/mode/option row and reject ambiguous generic “round trip passed” claims. |
 | QA-025 | There is no warning/diagnostic fixture schema because success currently carries no diagnostics. | Add only with API-029; assert stable code/stage/offset fields and treat prose as non-contractual. |
-| QA-026 | Cancellation, work-budget exhaustion, output-size limits, and cumulative sequence limits have no boundary/interruption tests. | Add them with APIs 023/036 and prove cleanup, cache state, and retry behavior. |
+| QA-026 | Decode output-size limits and cumulative sequence limits now have boundary, cache-state, and retry tests under API-023. Cancellation and work-budget exhaustion still need interruption tests under API-036, and output-write failures need API-017. | Add those with APIs 017/036 and prove cleanup, cache state, and retry behavior. |
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
 | QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. | Maintain a compact property-to-fixture map per codec so every claimed syntax/state has a named minimal witness. |
 | QA-029 | The all-feature manifest compares the generated capability table with operation fixtures, and isolated native/WASM feature combinations compile under strict Clippy, but those isolated tables are not executed as runtime tests. | Register the exact feature-matrix command with Coverage MCP and run it in CI so disabled, singleton, default, all-feature, native, and WASM target tables are runtime evidence. |
@@ -1034,7 +1035,7 @@ slice at a time:
 
 | Order | IDs/classes | Why first | Exit condition |
 | --- | --- | --- | --- |
-| 1 | API-023/030; QA-026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010, QA-032, the verification-strength contract, the trailing-input policy, the malformed-class ledger, the near-limit/allocation policy, and the operation-stage contract are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
+| 1 | API-023/030; QA-026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010, QA-032, the verification-strength contract, the trailing-input policy, the malformed-class ledger, the near-limit/allocation policy, the operation-stage contract, and the work-budget analysis are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
 | 2 | FTR-026/028; QA-014/029 | Settle discoverability and pre-1.0 public compatibility before downstream adoption. | Rustdoc, generated capability table, isolated feature lanes, and claim ledger agree. |
 | 3 | API-019/028/034/035/040 plus the matching PNG/GIF/TIFF/WebP/ICO/AVIF metadata and sequence rows | Avoid implementing remaining multipage, multi-entry, or animated surfaces into a lossy common model. | Exact source/container state survives decode and, where supported, encode without public processing. |
 | 4 | API-024/025/027/032/037 and codec row/strip/tile/frame slices | Bound memory and enable large/sequence inputs without a second unrelated API family. | Whole-buffer convenience wraps the same bounded engine; caller buffers and eager results are byte-identical. |
@@ -1050,7 +1051,7 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-036, including exact WebP mode
+Completed first: COR-001 through COR-037, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
@@ -1090,7 +1091,9 @@ names its public operation through `ImageError::stage()`, while caller-built
 errors stay explicitly stage-free. `DecodePolicy` now also bounds the encoded
 metadata extent before any inspection or pixel work, with per-format scanners
 that exclude primary pixel payload bytes and a SHA-pinned measurement
-manifest.
+manifest. Every current codec work dimension is documented as bounded by the
+typed resource set, and strictness/output-mode are recorded as result-shaping
+policy belonging to the API-029/033 family rather than new resource limits.
 
 1. Add metadata retention, remaining decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.
@@ -1137,11 +1140,11 @@ Acceptance:
 Encoded-input bytes, inspected primary-canvas width, height, pixels, decoded
 transfer bytes, the inspected frame/page count, every later frame/page's
 decoded bytes, the cumulative retained sequence bytes, and the encoded
-metadata extent are implemented through `DecodePolicy`. Complete the remaining
-typed limits before recommending the crate for arbitrary hostile inputs. They
-need to cover at least:
+metadata extent are implemented through `DecodePolicy`, and every current
+codec work dimension is bounded by that set (see the architecture reference).
+Complete the remaining typed limits before recommending the crate for
+arbitrary hostile inputs. They need to cover at least:
 
-- codec work that can grow independently of output size; and
 - output allocation.
 
 Limit failures must be distinguishable from malformed input and must be covered
