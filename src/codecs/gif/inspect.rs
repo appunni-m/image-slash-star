@@ -197,7 +197,7 @@ impl<'a> Input<'a> {
         let value = need_slice(
             self.data,
             here,
-            codec_add_end(here, 1, "truncated GIF byte field")?,
+            codec_add_end(here, 1),
             "truncated GIF byte field",
         )?[0];
         self.position = here.wrapping_add(1);
@@ -211,7 +211,7 @@ impl<'a> Input<'a> {
 
     fn bytes(&mut self, length: usize) -> CodecResult<&'a [u8]> {
         let here = self.position;
-        let end = codec_add_end(here, length, "truncated GIF field")?;
+        let end = codec_add_end(here, length);
         let bytes = need_slice(self.data, here, end, "truncated GIF field")?;
         self.position = end;
         Ok(bytes)

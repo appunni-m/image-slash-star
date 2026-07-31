@@ -112,7 +112,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     }
     if !saw_following_chunk {
         return Err(CodecError::NeedMore {
-            minimum: codec_add_end(position, 8, "PNG chunk position overflows")?,
+            minimum: codec_add_end(position, 8),
             message: "PNG ends immediately after its IHDR chunk".to_owned(),
         });
     }
@@ -183,7 +183,7 @@ fn consume_sequence(actual: u32, next: &mut u32) -> CodecResult<()> {
 }
 
 fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
-    let prefix_end = codec_add_end(position, 8, "PNG chunk position overflows")?;
+    let prefix_end = codec_add_end(position, 8);
     let prefix = need_slice(data, position, prefix_end, "truncated PNG chunk header")?;
     let length = u32::from_be_bytes([prefix[0], prefix[1], prefix[2], prefix[3]]) as usize;
     let mut kind = [0; 4];

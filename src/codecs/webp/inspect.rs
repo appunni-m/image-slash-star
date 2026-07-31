@@ -100,7 +100,7 @@ fn inspect_extended_basic(
     }
     if !saw_image {
         return Err(CodecError::NeedMore {
-            minimum: codec_add_end(position, 8, "WebP chunk position overflows")?,
+            minimum: codec_add_end(position, 8),
             message: "extended WebP contains no image chunk".to_owned(),
         });
     }
@@ -238,13 +238,13 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     if declares_animation {
         if !saw_animation_control || frame_count == 0 {
             return Err(CodecError::NeedMore {
-                minimum: codec_add_end(position, 8, "WebP chunk position overflows")?,
+                minimum: codec_add_end(position, 8),
                 message: "animated WebP lacks animation control or frames".to_owned(),
             });
         }
     } else if !saw_image {
         return Err(CodecError::NeedMore {
-            minimum: codec_add_end(position, 8, "WebP chunk position overflows")?,
+            minimum: codec_add_end(position, 8),
             message: "extended WebP contains no image chunk".to_owned(),
         });
     }
@@ -326,7 +326,7 @@ fn validate_animation_frame(
 }
 
 fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
-    let prefix_end = codec_add_end(position, 8, "WebP chunk position overflows")?;
+    let prefix_end = codec_add_end(position, 8);
     let prefix = need_slice(data, position, prefix_end, "truncated WebP chunk header")?;
     let mut kind = [0; 4];
     kind.copy_from_slice(&prefix[..4]);
@@ -335,7 +335,7 @@ fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usiz
     let padded_length = length.saturating_add(length & 1);
     #[cfg(not(target_pointer_width = "64"))]
     let padded_length = length.saturating_add(length & 1);
-    let body_end = codec_add_end(prefix_end, padded_length, "WebP chunk length overflows")?;
+    let body_end = codec_add_end(prefix_end, padded_length);
     let body = need_slice(data, prefix_end, body_end, "truncated WebP chunk payload")?;
     let payload = &body[..length];
     Ok((kind, payload, body_end))
