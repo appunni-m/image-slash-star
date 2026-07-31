@@ -13,6 +13,9 @@ pub(crate) enum CodecError {
     Dimensions(String),
     /// A caller-supplied image property or encoding option is invalid.
     Parameter(String),
+    /// A caller-configured resource maximum was exceeded; the structured
+    /// [`ImageError::LimitExceeded`] value is retained verbatim.
+    LimitExceeded(ImageError),
 }
 
 impl CodecError {
@@ -32,9 +35,10 @@ impl CodecError {
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
             ImageError::Dimensions { message, .. } => Self::Dimensions(message),
             ImageError::Parameter { message, .. } => Self::Parameter(message),
-            ImageError::UnknownFormat
-            | ImageError::FeatureDisabled { .. }
-            | ImageError::LimitExceeded { .. } => Self::Unsupported(error.to_string()),
+            ImageError::UnknownFormat | ImageError::FeatureDisabled { .. } => {
+                Self::Unsupported(error.to_string())
+            }
+            ImageError::LimitExceeded { .. } => Self::LimitExceeded(error),
         }
     }
 
@@ -54,6 +58,7 @@ impl CodecError {
                 format: Some(format),
                 message,
             },
+            Self::LimitExceeded(error) => error,
         }
     }
 
@@ -64,6 +69,7 @@ impl CodecError {
             Self::Unsupported(message) => Self::Unsupported(format!("{stage}: {message}")),
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
+            Self::LimitExceeded(error) => Self::LimitExceeded(error),
         }
     }
 }
@@ -123,6 +129,8 @@ pub(crate) fn into_image_result<T>(result: CodecResult<T>, format: ImageFormat) 
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    use crate::{CodecOperation, ResourceLimit};
+
     for error in [
         ImageError::Malformed {
             format: ImageFormat::Png,
@@ -139,7 +147,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: ImageFormat::Png,
             feature: "png",
         },
+        ImageError::LimitExceeded {
+            format: Some(ImageFormat::Png),
+            operation: CodecOperation::SequenceDecode,
+            resource: ResourceLimit::Frames,
+            maximum: 1,
+            observed: 2,
+        },
     ] {
         let _ = CodecError::from_image_error(error);
     }
+    let limit = CodecError::LimitExceeded(ImageError::LimitExceeded {
+        format: Some(ImageFormat::Png),
+        operation: CodecOperation::SequenceDecode,
+        resource: ResourceLimit::Frames,
+        maximum: 1,
+        observed: 2,
+    });
+    let _ = limit.clone().into_image_error(ImageFormat::Png);
+    let _ = limit.context("decode sequence");
 }

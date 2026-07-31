@@ -22,11 +22,12 @@ All notable changes will be documented in this file. This project follows
   decode, sequence, and encode APIs.
 - A shared `DecodePolicy` with inclusive limits for pre-detection encoded
   bytes, inspected canvas width/height/pixels, and the primary decoded
-  transfer-byte length, and the inspected frame/page count, plus typed
-  `LimitExceeded` failures and retry-safe lazy-source behavior.
-- A sequence-policy defensive manifest with 19 frame-count boundary and
-  precedence cases across inspection, still/sequence decode, immutable-source
-  construction, and lazy materialization.
+  transfer-byte length, the inspected frame/page count, every later
+  frame/page's decoded bytes, and the cumulative retained sequence bytes, plus
+  typed `LimitExceeded` failures and retry-safe lazy-source behavior.
+- A sequence-policy defensive manifest with 32 frame-count, later-frame-byte,
+  cumulative-byte, and precedence cases across inspection, still/sequence
+  decode, immutable-source construction, and lazy materialization.
 - Explicit verification-strength requests through `verify_with_scope`, with a
   never-provided `FullPixels` scope and format-qualified `Unsupported` failure
   instead of silently downgrading stronger requests.

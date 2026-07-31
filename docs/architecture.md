@@ -178,6 +178,18 @@ whose inspection cannot prove a complete count report `frame_count: None` and
 remain unlimited for this resource; the inspection-completeness model governs
 that boundary rather than this limit.
 
+`max_frame_decoded_bytes` and `max_sequence_decoded_bytes` apply to sequence
+materialization only. The per-frame limit rejects any later frame/page whose
+transfer-byte length exceeds the maximum before that frame's pixel work; the
+cumulative limit charges the inspected primary frame first, then rejects
+before the frame whose addition would exceed the total. GIF/PNG/WebP/TIFF/AVIF
+sequence decoders receive a crate-internal `SequenceDecodeBudget` and reserve
+each later frame before its allocation; the structured `LimitExceeded` value
+is preserved verbatim through `CodecError::LimitExceeded`. These limits do not
+bind still decode, immutable-source construction, or lazy still
+materialization, which remain governed by the primary-canvas and frame-count
+checks.
+
 ## Decoded sample layouts
 
 `DecodedImage::pixels` is tightly packed and row-major. There is no implicit

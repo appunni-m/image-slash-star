@@ -106,6 +106,8 @@ struct SequenceCase {
     also_max_pixels: u64,
     also_max_primary_decoded_bytes: u64,
     also_max_encoded_bytes: u64,
+    also_max_frame_decoded_bytes: u64,
+    also_max_sequence_decoded_bytes: u64,
     expected_resource: String,
     expected_maximum: u64,
     observed: u64,
@@ -149,6 +151,9 @@ impl FromJson for SequenceCase {
             also_max_primary_decoded_bytes: object
                 .take_or_default("also_max_primary_decoded_bytes")?,
             also_max_encoded_bytes: object.take_or_default("also_max_encoded_bytes")?,
+            also_max_frame_decoded_bytes: object.take_or_default("also_max_frame_decoded_bytes")?,
+            also_max_sequence_decoded_bytes: object
+                .take_or_default("also_max_sequence_decoded_bytes")?,
             expected_resource: object.take_or_default("expected_resource")?,
             expected_maximum: object.take_or_default("expected_maximum")?,
             observed: object.take_or_default("observed")?,
@@ -567,7 +572,15 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
         assert!(ids.insert(case.id.clone()), "duplicate case {}", case.id);
         assert!(matches!(case.status.as_str(), "ok" | "error" | "unknown"));
 
-        let mut policy = img::DecodePolicy::default().with_max_frames(case.maximum);
+        let mut policy = match case.resource.as_str() {
+            "frames" => img::DecodePolicy::default().with_max_frames(case.maximum),
+            "frame_decoded_bytes" => {
+                img::DecodePolicy::default().with_max_frame_decoded_bytes(u64::from(case.maximum))
+            }
+            "sequence_decoded_bytes" => img::DecodePolicy::default()
+                .with_max_sequence_decoded_bytes(u64::from(case.maximum)),
+            resource => panic!("unknown resource `{resource}`"),
+        };
         if case.also_max_pixels != 0 {
             policy = policy.with_max_pixels(case.also_max_pixels);
         }
@@ -577,19 +590,39 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
         if case.also_max_encoded_bytes != 0 {
             policy = policy.with_max_encoded_bytes(case.also_max_encoded_bytes);
         }
-        assert_eq!(policy.limits().max_frames(), Some(case.maximum));
+        if case.also_max_frame_decoded_bytes != 0 {
+            policy = policy.with_max_frame_decoded_bytes(case.also_max_frame_decoded_bytes);
+        }
+        if case.also_max_sequence_decoded_bytes != 0 {
+            policy = policy.with_max_sequence_decoded_bytes(case.also_max_sequence_decoded_bytes);
+        }
+        match case.resource.as_str() {
+            "frames" => assert_eq!(policy.limits().max_frames(), Some(case.maximum)),
+            "frame_decoded_bytes" => assert_eq!(
+                policy.limits().max_frame_decoded_bytes(),
+                Some(u64::from(case.maximum))
+            ),
+            "sequence_decoded_bytes" => assert_eq!(
+                policy.limits().max_sequence_decoded_bytes(),
+                Some(u64::from(case.maximum))
+            ),
+            resource => panic!("unknown resource `{resource}`"),
+        }
         assert_eq!(img::DecodeLimits::new().max_frames(), None);
+        assert_eq!(img::DecodeLimits::new().max_frame_decoded_bytes(), None);
+        assert_eq!(img::DecodeLimits::new().max_sequence_decoded_bytes(), None);
 
         let default_observed = match case.operation.as_str() {
             "decode" | "source_decode" => 1,
             _ => u64::from(manifest.frame_count),
         };
         let (expected_resource, expected_maximum, observed) = if case.expected_resource.is_empty() {
-            (
-                case.resource.as_str(),
-                u64::from(case.maximum),
-                default_observed,
-            )
+            let observed = if case.observed != 0 {
+                case.observed
+            } else {
+                default_observed
+            };
+            (case.resource.as_str(), u64::from(case.maximum), observed)
         } else {
             (
                 case.expected_resource.as_str(),
@@ -602,6 +635,8 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
             "encoded_bytes" => img::ResourceLimit::EncodedBytes,
             "pixels" => img::ResourceLimit::Pixels,
             "primary_decoded_bytes" => img::ResourceLimit::PrimaryDecodedBytes,
+            "frame_decoded_bytes" => img::ResourceLimit::FrameDecodedBytes,
+            "sequence_decoded_bytes" => img::ResourceLimit::SequenceDecodedBytes,
             resource => panic!("unknown resource `{resource}`"),
         };
         let expected_operation = match case.operation.as_str() {
@@ -710,6 +745,159 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
             operation => panic!("unknown operation `{operation}`"),
         }
     }
-    assert_eq!(ids.len(), 19);
+    assert_eq!(ids.len(), 32);
+    Ok(())
+}
+
+#[test]
+fn sequence_byte_limits_reject_before_every_sequence_codec_materializes_later_frames()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, bool, &str)] = &[
+        (
+            "gif",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/animated_3frame.gif",
+        ),
+        (
+            "gif_no_palette",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/animated_no_palette.gif",
+        ),
+        (
+            "png",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/apng_l_over.png",
+        ),
+        (
+            "webp",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        ),
+        (
+            "tiff",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/multipage.tiff",
+        ),
+        (
+            "avif",
+            cfg!(feature = "avif"),
+            "tests/fixtures/input/images/avif/animated_error_resilient.avif",
+        ),
+    ];
+
+    for &(name, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let format = match name {
+            "gif" => img::ImageFormat::Gif,
+            "gif_no_palette" => img::ImageFormat::Gif,
+            "png" => img::ImageFormat::Png,
+            "webp" => img::ImageFormat::WebP,
+            "tiff" => img::ImageFormat::Tiff,
+            "avif" => img::ImageFormat::Avif,
+            other => panic!("unknown codec `{other}`"),
+        };
+        let bytes = fs::read(root.join(path))?;
+        let unlimited = img::decode_sequence(&bytes)?;
+        let frames = &unlimited.content.frames;
+        assert!(frames.len() >= 2, "{name} needs at least two frames");
+
+        let mut total = 0u64;
+        let mut max_later = 0u64;
+        let mut primary = 0u64;
+        for (index, frame) in frames.iter().enumerate() {
+            let bytes = u64::try_from(frame.image.pixels.len())?;
+            total = total.saturating_add(bytes);
+            if index == 0 {
+                primary = bytes;
+            } else {
+                max_later = max_later.max(bytes);
+            }
+        }
+        assert!(max_later != 0, "{name} later frame has no retained bytes");
+        for frame in frames.iter().skip(1) {
+            assert_eq!(
+                u64::try_from(frame.image.pixels.len())?,
+                max_later,
+                "{name} later frames must be uniform for this boundary fixture"
+            );
+        }
+
+        // Every later frame may not exceed the per-frame maximum.
+        let error = match img::decode_sequence_with_policy(
+            &bytes,
+            &img::DecodePolicy::new().with_max_frame_decoded_bytes(max_later.saturating_sub(1)),
+        ) {
+            Err(error) => error,
+            Ok(_) => panic!("{name} accepted a later frame above the byte maximum"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::SequenceDecode,
+            img::ResourceLimit::FrameDecodedBytes,
+            max_later.saturating_sub(1),
+            max_later,
+            Some(format),
+        );
+        let error = match img::decode_sequence_with_policy(
+            &bytes,
+            &img::DecodePolicy::new().with_max_frame_decoded_bytes(0),
+        ) {
+            Err(error) => error,
+            Ok(_) => panic!("{name} accepted a later frame with a zero byte maximum"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::SequenceDecode,
+            img::ResourceLimit::FrameDecodedBytes,
+            0,
+            max_later,
+            Some(format),
+        );
+        let at_limit = img::decode_sequence_with_policy(
+            &bytes,
+            &img::DecodePolicy::new().with_max_frame_decoded_bytes(max_later),
+        )?;
+        assert_eq!(at_limit.content.frames, *frames, "{name}");
+
+        // The cumulative retained sequence may not exceed the total maximum.
+        let error = match img::decode_sequence_with_policy(
+            &bytes,
+            &img::DecodePolicy::new().with_max_sequence_decoded_bytes(total.saturating_sub(1)),
+        ) {
+            Err(error) => error,
+            Ok(_) => panic!("{name} accepted a sequence above the cumulative maximum"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::SequenceDecode,
+            img::ResourceLimit::SequenceDecodedBytes,
+            total.saturating_sub(1),
+            total,
+            Some(format),
+        );
+        let error = match img::decode_sequence_with_policy(
+            &bytes,
+            &img::DecodePolicy::new().with_max_sequence_decoded_bytes(0),
+        ) {
+            Err(error) => error,
+            Ok(_) => panic!("{name} accepted a sequence with a zero cumulative maximum"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::SequenceDecode,
+            img::ResourceLimit::SequenceDecodedBytes,
+            0,
+            primary,
+            Some(format),
+        );
+        let at_total = img::decode_sequence_with_policy(
+            &bytes,
+            &img::DecodePolicy::new().with_max_sequence_decoded_bytes(total),
+        )?;
+        assert_eq!(at_total.content.frames, *frames, "{name}");
+    }
     Ok(())
 }

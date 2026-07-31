@@ -1,6 +1,7 @@
 //! Baseline decoder for classic TIFF IFD payloads.
 
 use super::inspect::TiffLayout;
+use crate::SequenceDecodeBudget;
 use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
@@ -17,11 +18,14 @@ const COMPRESSION_ADOBE_DEFLATE: usize = 32_946;
 /// Decode the first IFD of a classic little- or big-endian TIFF stream.
 pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
     let (endian, ifd_offset) = parse_header(data)?;
-    decode_ifd(data, ifd_offset, endian).map(|(image, _)| image)
+    decode_ifd(data, ifd_offset, endian, None).map(|(image, _)| image)
 }
 
 /// Decode every unique IFD in the classic TIFF main-directory chain.
-pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
+pub fn decode_sequence(
+    data: &[u8],
+    budget: &mut SequenceDecodeBudget,
+) -> CodecResult<DecodedSequence> {
     let (endian, first_offset) = parse_header(data)?;
     let mut offset = first_offset;
     let mut seen = Vec::new();
@@ -30,7 +34,16 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
     let mut height = 0;
     while offset != 0 && !seen.contains(&offset) {
         seen.push(offset);
-        let (image, next_offset) = decode_ifd(data, offset, endian)?;
+        let (image, next_offset) = decode_ifd(
+            data,
+            offset,
+            endian,
+            if frames.is_empty() {
+                None
+            } else {
+                Some(&mut *budget)
+            },
+        )?;
         width = width.max(image.width);
         height = height.max(image.height);
         frames.push(DecodedFrame::source_rectangle(
@@ -62,6 +75,7 @@ fn decode_ifd(
     data: &[u8],
     ifd_offset: usize,
     endian: Endian,
+    budget: Option<&mut SequenceDecodeBudget>,
 ) -> CodecResult<(DecodedImage, usize)> {
     let directory = Directory::parse(data, ifd_offset, endian)?;
     let next_offset = directory.next_offset();
@@ -102,6 +116,11 @@ fn decode_ifd(
         sample_format,
         color_map.as_deref(),
     )?;
+    if let Some(budget) = budget {
+        budget
+            .reserve_later_frame(layout.mode(), width, height)
+            .map_err(CodecError::LimitExceeded)?;
+    }
 
     let width_usize = width as usize;
     let height_usize = height as usize;

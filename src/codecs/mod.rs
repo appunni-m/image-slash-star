@@ -3,6 +3,7 @@
 //! Each format owns its decoding and encoding implementation so enabling one
 //! Cargo feature pulls in only that codec and its private support code.
 
+use crate::SequenceDecodeBudget;
 use crate::encode_options::EncodeOptions;
 use crate::types::{
     DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageFormat, ImageInfo, ImageResult,
@@ -233,6 +234,7 @@ pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()
 pub(crate) fn decode_sequence_format(
     data: &[u8],
     format: ImageFormat,
+    _budget: &mut SequenceDecodeBudget,
 ) -> ImageResult<DecodedSequence> {
     #[cfg(any(
         not(all(
@@ -251,7 +253,8 @@ pub(crate) fn decode_sequence_format(
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
         return into_image_result(
-            gif::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            gif::decode::decode_sequence(data, _budget)
+                .map_err(|error| error.context("decode sequence")),
             format,
         );
     }
@@ -259,7 +262,8 @@ pub(crate) fn decode_sequence_format(
     #[cfg(feature = "png")]
     if format == ImageFormat::Png {
         return into_image_result(
-            png::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            png::decode::decode_sequence(data, _budget)
+                .map_err(|error| error.context("decode sequence")),
             format,
         );
     }
@@ -267,7 +271,8 @@ pub(crate) fn decode_sequence_format(
     #[cfg(feature = "webp")]
     if format == ImageFormat::WebP {
         return into_image_result(
-            webp::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            webp::decode::decode_sequence(data, _budget)
+                .map_err(|error| error.context("decode sequence")),
             format,
         );
     }
@@ -275,7 +280,8 @@ pub(crate) fn decode_sequence_format(
     #[cfg(feature = "tiff")]
     if format == ImageFormat::Tiff {
         return into_image_result(
-            tiff::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            tiff::decode::decode_sequence(data, _budget)
+                .map_err(|error| error.context("decode sequence")),
             format,
         );
     }
@@ -283,7 +289,8 @@ pub(crate) fn decode_sequence_format(
     #[cfg(feature = "avif")]
     if format == ImageFormat::Avif {
         return into_image_result(
-            avif::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            avif::decode::decode_sequence(data, _budget)
+                .map_err(|error| error.context("decode sequence")),
             format,
         );
     }
@@ -710,7 +717,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // The manifest currently has no malformed AVIF container fixture. Keep the
     // dispatch-only error conversion covered without weakening AVIF parity rows.
     #[cfg(feature = "avif")]
-    let _ = decode_sequence_format(b"not an AVIF container", ImageFormat::Avif);
+    let _ = decode_sequence_format(
+        b"not an AVIF container",
+        ImageFormat::Avif,
+        &mut SequenceDecodeBudget::default_for(ImageFormat::Avif),
+    );
 
     compression::__coverage_exercise_private_branches();
     #[cfg(feature = "avif")]
