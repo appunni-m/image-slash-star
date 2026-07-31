@@ -1738,6 +1738,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         fields: Vec::new(),
         entries: Vec::new(),
         next_offset: 0,
+        opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     };
     let _ = empty_directory.one_or(1, 7);
     let _ = empty_directory.values_or(1, &[7, 8]);
