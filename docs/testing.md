@@ -156,6 +156,15 @@ fixture-driven test runs the same boundaries against real three-frame GIF,
 two-frame APNG, animated WebP, multipage TIFF, and animated AVIF assets in
 their enabled lanes, including a palette-less later GIF frame.
 
+The trailing-input manifest pins the per-format trailing policy: three payloads
+appended to a valid asset of every format must produce identical still pixels,
+identical sequence frames, and identical inspection results, with
+`consumed_bytes` unchanged. JPEG, PNG, GIF, WebP, TIFF, and AVIF report the
+container-defined extent; BMP and ICO report `None`. Pillow 12.2.0 accepts all
+three payloads for every format (fixture evidence), while the consumed values
+and policy labels are `defensive_model` evidence. The manifest is SHA-256
+pinned and exercised only in each format's enabled feature lane.
+
 The verification-strength contract is table-driven rather than manifest rows:
 for every format, the enabled feature lane loads the smallest Pillow-verified
 fixture and asserts `ImageFormat::verification_scope()` and
@@ -173,17 +182,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,337 | 41,337 |
-| Branches | 5,924 | 5,924 |
-| Functions | 2,240 | 2,240 |
-| Regions | 65,773 | 65,773 |
+| Lines | 41,466 | 41,466 |
+| Branches | 5,934 | 5,934 |
+| Functions | 2,257 | 2,257 |
+| Regions | 65,973 | 65,973 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `b2e7785f-15a6-4be6-a275-2f770df5a172`
+Coverage MCP run: `9c1c2469-d665-4cda-9352-d57822b4025b`
 
-Snapshot: `1443f76f-fe40-462c-86d3-34c8dcd16183`
+Snapshot: `5aff85a1-e5ab-44ea-b8ea-7ba57ebbc15b`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -202,6 +211,9 @@ Decode-policy manifest SHA-256:
 
 Sequence-policy manifest SHA-256:
 `8dc6b4937841b9feb533382b6d3cf8babe585a96275cdfc2b4771c301f9b0dcf`
+
+Trailing-input manifest SHA-256:
+`b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

@@ -21,7 +21,7 @@ const ADAM7: [(usize, usize, usize, usize); 7] = [
 ];
 
 /// Decode the first image represented by a PNG or APNG stream.
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     // Pillow's load path accepts bad IDAT CRCs after lazy construction has
     // validated all construction-critical chunks.
     let mut chunks = Chunks::new(data, false)?;
@@ -74,14 +74,15 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
         ));
     }
 
-    decode_image_data(
+    let image = decode_image_data(
         header.image_spec(header.width, header.height),
         header.channels,
         header.interlace,
         &compressed,
         palette_rgb,
         palette_alpha,
-    )
+    )?;
+    Ok((image, chunks.position))
 }
 
 fn decode_image_data(
@@ -139,9 +140,10 @@ struct ParsedApng {
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
-) -> CodecResult<DecodedSequence> {
-    let Some(parsed) = parse_apng(data)? else {
-        return decode(data).map(DecodedSequence::from_image);
+) -> CodecResult<(DecodedSequence, usize)> {
+    let Some((parsed, consumed)) = parse_apng(data)? else {
+        let (image, consumed) = decode(data)?;
+        return Ok((DecodedSequence::from_image(image), consumed));
     };
 
     let ParsedApng {
@@ -242,16 +244,19 @@ pub fn decode_sequence(
         }
     }
 
-    Ok(DecodedSequence {
-        width: header.width,
-        height: header.height,
-        frames: output_frames,
-        loop_count: Some(loop_count),
-        background: None,
-    })
+    Ok((
+        DecodedSequence {
+            width: header.width,
+            height: header.height,
+            frames: output_frames,
+            loop_count: Some(loop_count),
+            background: None,
+        },
+        consumed,
+    ))
 }
 
-fn parse_apng(data: &[u8]) -> CodecResult<Option<ParsedApng>> {
+fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     // The common sequence dispatcher has already detected the complete PNG
     // signature. Avoid manufacturing an unreachable second signature-error
     // path inside the APNG parser.
@@ -370,15 +375,18 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<ParsedApng>> {
             "APNG declared frame count does not match its frame controls".to_owned(),
         ));
     }
-    Ok(Some(ParsedApng {
-        header,
-        palette_rgb,
-        palette_alpha,
-        loop_count,
-        default_compressed,
-        default_control,
-        frames,
-    }))
+    Ok(Some((
+        ParsedApng {
+            header,
+            palette_rgb,
+            palette_alpha,
+            loop_count,
+            default_compressed,
+            default_control,
+            frames,
+        },
+        chunks.position,
+    )))
 }
 
 fn parse_frame_control(

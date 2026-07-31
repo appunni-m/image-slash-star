@@ -16,10 +16,11 @@ use super::native::{DecodingError, LoopCount};
 /// Decode a WebP image from raw bytes.
 ///
 /// Returns a classified failure if the WebP container or frame cannot decode.
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let cursor = Cursor::new(data);
 
     let mut decoder = super::native::WebPDecoder::new(cursor).map_err(decode_error)?;
+    let consumed = riff_consumed(data);
     let (width, height) = decoder.dimensions();
     let has_alpha = decoder.has_alpha();
 
@@ -33,7 +34,7 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
         ColorType::Rgb8
     };
 
-    Ok(DecodedImage::new(width, height, pixels, color))
+    Ok((DecodedImage::new(width, height, pixels, color), consumed))
 }
 
 /// Validate the RIFF container and encoded frame headers without decoding pixels.
@@ -47,11 +48,13 @@ pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
-) -> CodecResult<DecodedSequence> {
+) -> CodecResult<(DecodedSequence, usize)> {
     let cursor = Cursor::new(data);
     let mut decoder = super::native::WebPDecoder::new(cursor).map_err(decode_error)?;
+    let consumed = riff_consumed(data);
     if !decoder.is_animated() {
-        return decode(data).map(DecodedSequence::from_image);
+        return decode(data)
+            .map(|(image, consumed)| (DecodedSequence::from_image(image), consumed));
     }
 
     let (width, height) = decoder.dimensions();
@@ -103,12 +106,23 @@ pub fn decode_sequence(
         LoopCount::Times(count) => u32::from(count.get()),
     });
     let background = decoder.background_color().map(AnimationBackground::Rgba);
-    Ok(DecodedSequence {
-        width,
-        height,
-        frames,
-        loop_count,
-        background,
+    Ok((
+        DecodedSequence {
+            width,
+            height,
+            frames,
+            loop_count,
+            background,
+        },
+        consumed,
+    ))
+}
+
+/// The RIFF-declared container extent: an 8-byte header plus the declared
+/// little-endian chunk size. The decoder has already validated this header.
+fn riff_consumed(data: &[u8]) -> usize {
+    data.get(4..8).map_or(data.len(), |bytes| {
+        8usize.saturating_add(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize)
     })
 }
 

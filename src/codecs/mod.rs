@@ -54,11 +54,14 @@ mod webp;
 mod compression;
 
 /// Dispatch decoding to the enabled format implementation.
-pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<DecodedImage> {
+pub(crate) fn decode_format(
+    _data: &[u8],
+    format: ImageFormat,
+) -> ImageResult<(DecodedImage, Option<usize>)> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
-        return into_image_result(avif::decode::decode(_data), format)
-            .and_then(validate_decoded_image);
+        let (image, consumed) = into_image_result(avif::decode::decode(_data), format)?;
+        return validate_decoded_image(image).map(|image| (image, Some(consumed)));
     }
 
     #[cfg(any(
@@ -75,21 +78,27 @@ pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<De
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    let image: CodecResult<DecodedImage> = match format {
+    let decoded: CodecResult<(DecodedImage, Option<usize>)> = match format {
         #[cfg(feature = "jpeg")]
-        ImageFormat::Jpeg => jpeg::decode::decode(_data),
+        ImageFormat::Jpeg => {
+            jpeg::decode::decode(_data).map(|(image, consumed)| (image, Some(consumed)))
+        }
         #[cfg(not(feature = "jpeg"))]
         ImageFormat::Jpeg => Err(error::CodecError::Malformed(
             "JPEG feature is disabled".to_owned(),
         )),
         #[cfg(feature = "png")]
-        ImageFormat::Png => png::decode::decode(_data),
+        ImageFormat::Png => {
+            png::decode::decode(_data).map(|(image, consumed)| (image, Some(consumed)))
+        }
         #[cfg(not(feature = "png"))]
         ImageFormat::Png => Err(error::CodecError::Malformed(
             "PNG feature is disabled".to_owned(),
         )),
         #[cfg(feature = "gif")]
-        ImageFormat::Gif => gif::decode::decode(_data),
+        ImageFormat::Gif => {
+            gif::decode::decode(_data).map(|(image, consumed)| (image, Some(consumed)))
+        }
         #[cfg(not(feature = "gif"))]
         ImageFormat::Gif => Err(error::CodecError::Malformed(
             "GIF feature is disabled".to_owned(),
@@ -101,13 +110,17 @@ pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<De
             "BMP feature is disabled".to_owned(),
         )),
         #[cfg(feature = "tiff")]
-        ImageFormat::Tiff => tiff::decode::decode(_data),
+        ImageFormat::Tiff => {
+            tiff::decode::decode(_data).map(|(image, consumed)| (image, Some(consumed)))
+        }
         #[cfg(not(feature = "tiff"))]
         ImageFormat::Tiff => Err(error::CodecError::Malformed(
             "TIFF feature is disabled".to_owned(),
         )),
         #[cfg(feature = "webp")]
-        ImageFormat::WebP => webp::decode::decode(_data),
+        ImageFormat::WebP => {
+            webp::decode::decode(_data).map(|(image, consumed)| (image, Some(consumed)))
+        }
         #[cfg(not(feature = "webp"))]
         ImageFormat::WebP => Err(error::CodecError::Malformed(
             "WebP feature is disabled".to_owned(),
@@ -119,14 +132,19 @@ pub(crate) fn decode_format(_data: &[u8], format: ImageFormat) -> ImageResult<De
             "ICO feature is disabled".to_owned(),
         )),
         #[cfg(feature = "avif")]
-        ImageFormat::Avif => avif::decode::decode(_data),
+        ImageFormat::Avif => {
+            avif::decode::decode(_data).map(|(image, consumed)| (image, Some(consumed)))
+        }
         #[cfg(not(feature = "avif"))]
         ImageFormat::Avif => Err(error::CodecError::Malformed(
             "AVIF feature is disabled".to_owned(),
         )),
     };
-    let image = into_image_result(image.map_err(|error| error.context("decode")), format)?;
-    validate_decoded_image(image)
+    let (image, consumed) = match decoded {
+        Ok(decoded) => decoded,
+        Err(error) => return Err(error.context("decode").into_image_error(format)),
+    };
+    validate_decoded_image(image).map(|image| (image, consumed))
 }
 
 fn validate_decoded_image(image: DecodedImage) -> ImageResult<DecodedImage> {
@@ -235,7 +253,7 @@ pub(crate) fn decode_sequence_format(
     data: &[u8],
     format: ImageFormat,
     _budget: &mut SequenceDecodeBudget,
-) -> ImageResult<DecodedSequence> {
+) -> ImageResult<(DecodedSequence, Option<usize>)> {
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -254,6 +272,7 @@ pub(crate) fn decode_sequence_format(
     if format == ImageFormat::Gif {
         return into_image_result(
             gif::decode::decode_sequence(data, _budget)
+                .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
         );
@@ -263,6 +282,7 @@ pub(crate) fn decode_sequence_format(
     if format == ImageFormat::Png {
         return into_image_result(
             png::decode::decode_sequence(data, _budget)
+                .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
         );
@@ -272,6 +292,7 @@ pub(crate) fn decode_sequence_format(
     if format == ImageFormat::WebP {
         return into_image_result(
             webp::decode::decode_sequence(data, _budget)
+                .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
         );
@@ -281,6 +302,7 @@ pub(crate) fn decode_sequence_format(
     if format == ImageFormat::Tiff {
         return into_image_result(
             tiff::decode::decode_sequence(data, _budget)
+                .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
         );
@@ -290,12 +312,14 @@ pub(crate) fn decode_sequence_format(
     if format == ImageFormat::Avif {
         return into_image_result(
             avif::decode::decode_sequence(data, _budget)
+                .map(|(sequence, consumed)| (sequence, Some(consumed)))
                 .map_err(|error| error.context("decode sequence")),
             format,
         );
     }
 
-    decode_format(data, format).map(DecodedSequence::from_image)
+    decode_format(data, format)
+        .map(|(image, consumed)| (DecodedSequence::from_image(image), consumed))
 }
 
 /// Dispatch encoding to the enabled format implementation.

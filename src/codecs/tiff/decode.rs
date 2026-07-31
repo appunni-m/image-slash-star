@@ -16,25 +16,27 @@ const COMPRESSION_PACKBITS: usize = 32_773;
 const COMPRESSION_ADOBE_DEFLATE: usize = 32_946;
 
 /// Decode the first IFD of a classic little- or big-endian TIFF stream.
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let (endian, ifd_offset) = parse_header(data)?;
-    decode_ifd(data, ifd_offset, endian, None).map(|(image, _)| image)
+    decode_ifd(data, ifd_offset, endian, None)
+        .map(|(image, _, directory_end)| (image, directory_end))
 }
 
 /// Decode every unique IFD in the classic TIFF main-directory chain.
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
-) -> CodecResult<DecodedSequence> {
+) -> CodecResult<(DecodedSequence, usize)> {
     let (endian, first_offset) = parse_header(data)?;
     let mut offset = first_offset;
     let mut seen = Vec::new();
     let mut frames = Vec::new();
     let mut width = 0;
     let mut height = 0;
+    let mut consumed = 0;
     while offset != 0 && !seen.contains(&offset) {
         seen.push(offset);
-        let (image, next_offset) = decode_ifd(
+        let (image, next_offset, directory_end) = decode_ifd(
             data,
             offset,
             endian,
@@ -44,6 +46,7 @@ pub fn decode_sequence(
                 Some(&mut *budget)
             },
         )?;
+        consumed = directory_end;
         width = width.max(image.width);
         height = height.max(image.height);
         frames.push(DecodedFrame::source_rectangle(
@@ -62,13 +65,16 @@ pub fn decode_sequence(
             "TIFF contains no image directory".to_owned(),
         ));
     }
-    Ok(DecodedSequence {
-        width,
-        height,
-        frames,
-        loop_count: None,
-        background: None,
-    })
+    Ok((
+        DecodedSequence {
+            width,
+            height,
+            frames,
+            loop_count: None,
+            background: None,
+        },
+        consumed,
+    ))
 }
 
 fn decode_ifd(
@@ -76,9 +82,14 @@ fn decode_ifd(
     ifd_offset: usize,
     endian: Endian,
     budget: Option<&mut SequenceDecodeBudget>,
-) -> CodecResult<(DecodedImage, usize)> {
+) -> CodecResult<(DecodedImage, usize, usize)> {
     let directory = Directory::parse(data, ifd_offset, endian)?;
     let next_offset = directory.next_offset();
+    #[allow(clippy::arithmetic_side_effects)]
+    let directory_end = ifd_offset
+        .saturating_add(2)
+        .saturating_add(directory.entries.len().saturating_mul(12))
+        .saturating_add(4);
     validate_decode_field_types(&directory)?;
 
     let (width, height) = super::inspect::validate_primary_dimensions(&directory)?;
@@ -244,6 +255,7 @@ fn decode_ifd(
         return Ok((
             convert_pixels((width, height), pixels, layout, endian, palette),
             next_offset,
+            directory_end,
         ));
     }
 
@@ -331,6 +343,7 @@ fn decode_ifd(
     Ok((
         convert_pixels((width, height), pixels, layout, endian, palette),
         next_offset,
+        directory_end,
     ))
 }
 

@@ -438,16 +438,18 @@ pub(super) struct EntropySegments {
 /// - Grayscale (1 component) and YCbCr (3 components)
 /// - Restart markers (DRI)
 /// - Progressive: DC first, DC refine, AC first, AC refine scans
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let info = parse_jpeg(data)?;
 
     debug_assert!(!info.scan_components.is_empty());
 
-    if info.progressive {
+    let consumed = info.eoi_pos.saturating_add(2);
+    let image = if info.progressive {
         progressive_reconstruct(&info, data)
     } else {
         reconstruct_image(&info, data)
-    }
+    }?;
+    Ok((image, consumed))
 }
 
 #[cfg(coverage)]

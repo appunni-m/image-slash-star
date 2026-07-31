@@ -501,6 +501,14 @@ pub struct Decoded<T> {
     pub format: ImageFormat,
     /// Decoded still image or retained image sequence.
     pub content: T,
+    /// Encoded bytes of the container-defined extent, or `None` when the
+    /// container does not define an unambiguous total extent.
+    ///
+    /// Decoders ignore well-formed trailing bytes after this extent and never
+    /// let them change the decoded result. `None` means the caller should
+    /// treat the complete input as the source; it does not mean trailing
+    /// bytes were rejected.
+    pub consumed_bytes: Option<usize>,
 }
 
 /// Header metadata obtained without materializing compressed pixel payloads.
@@ -610,14 +618,18 @@ impl SourceDescriptor {
 impl<T> Decoded<T> {
     /// Pair decoded content with its detected encoded format.
     #[must_use]
-    pub const fn new(format: ImageFormat, content: T) -> Self {
-        Self { format, content }
+    pub const fn new(format: ImageFormat, content: T, consumed_bytes: Option<usize>) -> Self {
+        Self {
+            format,
+            content,
+            consumed_bytes,
+        }
     }
 
     /// Borrow the decoded content without discarding its source format.
     #[must_use]
     pub const fn as_ref(&self) -> Decoded<&T> {
-        Decoded::new(self.format, &self.content)
+        Decoded::new(self.format, &self.content, self.consumed_bytes)
     }
 
     /// Consume the envelope and return only its decoded content.

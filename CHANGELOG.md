@@ -31,6 +31,10 @@ All notable changes will be documented in this file. This project follows
 - Explicit verification-strength requests through `verify_with_scope`, with a
   never-provided `FullPixels` scope and format-qualified `Unsupported` failure
   instead of silently downgrading stronger requests.
+- Container-defined consumed extents on `Decoded` (`consumed_bytes`) with a
+  pinned per-format trailing-input policy: well-formed trailing bytes are
+  ignored by every decoder, and AVIF container validation now accepts trailing
+  bytes exactly as Pillow 12.2.0/libavif do.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains

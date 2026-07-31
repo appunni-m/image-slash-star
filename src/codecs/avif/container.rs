@@ -223,21 +223,33 @@ fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
     let mut meta = None;
     let mut movie = None;
 
-    while let Some(child) = next_box(&mut reader, true, &mut budget)? {
-        match child.kind {
-            kind if kind == *b"meta" => {
-                if meta.is_some() {
-                    return Err(parse_failure!());
+    loop {
+        match next_box(&mut reader, true, &mut budget) {
+            Ok(Some(child)) => match child.kind {
+                kind if kind == *b"meta" => {
+                    if meta.is_some() {
+                        return Err(parse_failure!());
+                    }
+                    meta = Some(parse_meta(child.payload, &mut budget)?);
                 }
-                meta = Some(parse_meta(child.payload, &mut budget)?);
-            }
-            kind if kind == *b"moov" => {
-                if movie.is_some() {
-                    return Err(parse_failure!());
+                kind if kind == *b"moov" => {
+                    if movie.is_some() {
+                        return Err(parse_failure!());
+                    }
+                    movie = Some(parse_movie(child.payload, &mut budget)?);
                 }
-                movie = Some(parse_movie(child.payload, &mut budget)?);
+                _ => {}
+            },
+            Ok(None) => break,
+            Err(error) => {
+                // Bytes after a complete still or sequence structure are
+                // trailing input and are ignored, matching Pillow/libavif.
+                let complete = meta.is_some() || (brands.has_avis && movie.is_some());
+                if !complete {
+                    return Err(error);
+                }
+                break;
             }
-            _ => {}
         }
     }
 
