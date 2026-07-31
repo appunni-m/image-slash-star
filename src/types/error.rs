@@ -99,6 +99,12 @@ pub enum ImageError {
         message: String,
         /// Public operation that produced the failure.
         stage: Option<ImageErrorStage>,
+        /// Byte offset in the encoded input where the failing container
+        /// structure begins, when the codec parser can name it.
+        offset: Option<u64>,
+        /// Stable container-structure identity (for example `png_chunk`,
+        /// `jpeg_marker`, or `tiff_ifd`), when the codec parser can name it.
+        identity: Option<&'static str>,
     },
     /// Valid input, options, or output cannot be represented by the selected codec.
     Unsupported {
@@ -108,6 +114,12 @@ pub enum ImageError {
         message: String,
         /// Public operation that produced the failure.
         stage: Option<ImageErrorStage>,
+        /// Byte offset in the encoded input where the failing container
+        /// structure begins, when the codec parser can name it.
+        offset: Option<u64>,
+        /// Stable container-structure identity, when the codec parser can
+        /// name it.
+        identity: Option<&'static str>,
     },
     /// The operation dimensions are out of bounds or mismatched.
     Dimensions {
@@ -117,6 +129,12 @@ pub enum ImageError {
         message: String,
         /// Public operation that produced the failure.
         stage: Option<ImageErrorStage>,
+        /// Byte offset in the encoded input where the failing container
+        /// structure begins, when the codec parser can name it.
+        offset: Option<u64>,
+        /// Stable container-structure identity, when the codec parser can
+        /// name it.
+        identity: Option<&'static str>,
     },
     /// A parameter error.
     Parameter {
@@ -126,6 +144,12 @@ pub enum ImageError {
         message: String,
         /// Public operation that produced the failure.
         stage: Option<ImageErrorStage>,
+        /// Byte offset in the encoded input where the failing container
+        /// structure begins, when the codec parser can name it.
+        offset: Option<u64>,
+        /// Stable container-structure identity, when the codec parser can
+        /// name it.
+        identity: Option<&'static str>,
     },
     /// A caller-configured resource maximum was exceeded.
     LimitExceeded {
@@ -193,6 +217,8 @@ impl ImageError {
             format: None,
             message: message.into(),
             stage: None,
+            offset: None,
+            identity: None,
         }
     }
 
@@ -201,6 +227,8 @@ impl ImageError {
             format: None,
             message: message.into(),
             stage: None,
+            offset: None,
+            identity: None,
         }
     }
 
@@ -216,25 +244,59 @@ impl ImageError {
         }
     }
 
+    /// Return the encoded-input byte offset of the failing container
+    /// structure, when the codec parser can name it.
+    #[must_use]
+    pub const fn offset(&self) -> Option<u64> {
+        match self {
+            Self::Malformed { offset, .. }
+            | Self::Unsupported { offset, .. }
+            | Self::Dimensions { offset, .. }
+            | Self::Parameter { offset, .. } => *offset,
+            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+        }
+    }
+
+    /// Return the stable container-structure identity of the failing parse
+    /// site, when the codec parser can name it.
+    #[must_use]
+    pub const fn identity(&self) -> Option<&'static str> {
+        match self {
+            Self::Malformed { identity, .. }
+            | Self::Unsupported { identity, .. }
+            | Self::Dimensions { identity, .. }
+            | Self::Parameter { identity, .. } => *identity,
+            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+        }
+    }
+
     pub(crate) fn with_format(self, selected: ImageFormat) -> Self {
         match self {
             Self::Dimensions {
                 format: None,
                 message,
                 stage,
+                offset,
+                identity,
             } => Self::Dimensions {
                 format: Some(selected),
                 message,
                 stage,
+                offset,
+                identity,
             },
             Self::Parameter {
                 format: None,
                 message,
                 stage,
+                offset,
+                identity,
             } => Self::Parameter {
                 format: Some(selected),
                 message,
                 stage,
+                offset,
+                identity,
             },
             error => error,
         }

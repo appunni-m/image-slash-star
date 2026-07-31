@@ -56,7 +56,11 @@ pub fn decode_sequence(
     let mut recovering_from_bad_gce = false;
 
     loop {
-        match input.read_u8()? {
+        let block_offset = input.position() as u64;
+        match input
+            .read_u8()
+            .map_err(|error| error.at(block_offset, "gif_block"))?
+        {
             EXTENSION_INTRODUCER => {
                 let label = input.read_u8()?;
                 if label == 0xf9 {
@@ -77,6 +81,7 @@ pub fn decode_sequence(
                 }
             }
             IMAGE_SEPARATOR => {
+                let descriptor_offset = input.position() as u64;
                 let (image, left, top, interlaced) = decode_image(
                     &mut input,
                     global_palette.as_deref(),
@@ -86,7 +91,8 @@ pub fn decode_sequence(
                     } else {
                         Some(&mut *budget)
                     },
-                )?;
+                )
+                .map_err(|error| error.at(descriptor_offset, "gif_image"))?;
                 frames.push(DecodedFrame::source_rectangle(
                     image,
                     u32::from(left),
@@ -283,19 +289,40 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     }
     let mut pixel = 0u64;
     loop {
-        match input.read_u8()? {
+        let block_offset = input.position() as u64;
+        match input
+            .read_u8()
+            .map_err(|error| error.at(block_offset, "gif_block"))?
+        {
             EXTENSION_INTRODUCER => {
-                let _label = input.read_u8()?;
-                input.skip_sub_blocks()?;
+                let extension_offset = input.position() as u64;
+                let _label = input
+                    .read_u8()
+                    .map_err(|error| error.at(extension_offset, "gif_extension"))?;
+                input
+                    .skip_sub_blocks()
+                    .map_err(|error| error.at(extension_offset, "gif_extension"))?;
             }
             IMAGE_SEPARATOR => {
-                input.skip(8)?;
-                let packed = input.read_u8()?;
+                let descriptor_offset = input.position() as u64;
+                input
+                    .skip(8)
+                    .map_err(|error| error.at(descriptor_offset, "gif_image"))?;
+                let packed = input
+                    .read_u8()
+                    .map_err(|error| error.at(descriptor_offset, "gif_image"))?;
                 if packed & 0x80 != 0 {
-                    input.read_bytes(color_table_len(packed))?;
+                    input
+                        .read_bytes(color_table_len(packed))
+                        .map_err(|error| error.at(descriptor_offset, "gif_image"))?;
                 }
-                let _minimum_code_size = input.read_u8()?;
-                let image_data = input.read_sub_blocks()?;
+                let data_offset = input.position() as u64;
+                let _minimum_code_size = input
+                    .read_u8()
+                    .map_err(|error| error.at(data_offset, "gif_image_data"))?;
+                let image_data = input
+                    .read_sub_blocks()
+                    .map_err(|error| error.at(data_offset, "gif_image_data"))?;
                 pixel = pixel.saturating_add(image_data.len() as u64);
             }
             TRAILER => break,

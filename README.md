@@ -321,6 +321,12 @@ Caller-built validation and option-construction errors remain stage-free;
 `UnknownFormat`, `FeatureDisabled`, and `LimitExceeded` keep their existing
 contracts (`LimitExceeded` already carries the typed operation).
 
+Where the parser can name the failing container structure, codec-dispatched
+errors also report the encoded-input byte offset (`ImageError::offset()`) and
+a stable structure identity (`ImageError::identity()`, for example
+`png_chunk`, `jpeg_marker`, or `tiff_ifd`). BMP, ICO, and WebP decode internals
+intentionally remain detail-free.
+
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
 errors can usually be handled by selecting another compiled capability.

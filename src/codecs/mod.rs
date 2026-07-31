@@ -509,6 +509,8 @@ pub(crate) fn encode_sequence_format(
             format: Some(format),
             message: "format cannot encode multiple retained frames".to_owned(),
             stage: Some(ImageErrorStage::SequenceEncode),
+            offset: None,
+            identity: None,
         });
     }
     let frame = &sequence.frames[0];
@@ -517,6 +519,8 @@ pub(crate) fn encode_sequence_format(
             format: Some(format),
             message: "still-image format cannot represent retained sequence metadata".to_owned(),
             stage: Some(ImageErrorStage::SequenceEncode),
+            offset: None,
+            identity: None,
         });
     }
     encode_format(&frame.image, format, options)
@@ -535,6 +539,8 @@ fn option_format_mismatch(
             format
         ),
         stage: Some(stage),
+        offset: None,
+        identity: None,
     }
 }
 
@@ -744,6 +750,8 @@ fn ensure_target_available(format: ImageFormat, avif_unavailable: bool) -> Image
             format: Some(format),
             message: AVIF_WASM_UNAVAILABLE.to_owned(),
             stage: None,
+            offset: None,
+            identity: None,
         });
     }
     Ok(())

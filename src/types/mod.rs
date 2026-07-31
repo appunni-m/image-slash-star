@@ -95,16 +95,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: ImageFormat::Png,
             message: "coverage".to_owned(),
             stage: Some(ImageErrorStage::StillDecode),
+            offset: Some(8),
+            identity: Some("png_chunk"),
         },
         ImageError::Unsupported {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
             stage: Some(ImageErrorStage::StillEncode),
+            offset: None,
+            identity: None,
         },
         ImageError::Unsupported {
             format: None,
             message: "coverage".to_owned(),
             stage: None,
+            offset: None,
+            identity: None,
         },
         ImageError::dimensions("coverage"),
         ImageError::parameter("coverage"),
@@ -112,11 +118,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
             stage: Some(ImageErrorStage::Inspection),
+            offset: Some(8),
+            identity: Some("tiff_ifd"),
         },
         ImageError::Parameter {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
             stage: Some(ImageErrorStage::SequenceDecode),
+            offset: None,
+            identity: None,
         },
     ];
     for error in errors {
@@ -125,6 +135,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = error.message();
         let _ = error.to_string();
         let _ = error.stage();
+        let _ = error.offset();
+        let _ = error.identity();
         let _ = error.with_format(ImageFormat::Png);
     }
 
@@ -777,6 +789,8 @@ impl ImageFormat {
             format: None,
             message: format!("unknown extension: {}", ext.to_ascii_lowercase()),
             stage: None,
+            offset: None,
+            identity: None,
         })
     }
 }

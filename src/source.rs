@@ -172,6 +172,8 @@ impl EncodedImage {
                     self.format().as_str(),
                 ),
                 stage: Some(ImageErrorStage::Verification),
+                offset: None,
+                identity: None,
             });
         }
         self.verify()

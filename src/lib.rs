@@ -30,6 +30,8 @@
 //!             format: Some(decoded.format),
 //!             message: "expected a PNG source".to_owned(),
 //!             stage: None,
+//!             offset: None,
+//!             identity: None,
 //!         });
 //!     }
 //!     if decoded.content.mode != ImageMode::Rgb8 {
@@ -37,6 +39,8 @@
 //!             format: Some(ImageFormat::Jpeg),
 //!             message: "JPEG example requires opaque RGB8 input".to_owned(),
 //!             stage: None,
+//!             offset: None,
+//!             identity: None,
 //!         });
 //!     }
 //!     encode_default(&decoded.content, ImageFormat::Jpeg)

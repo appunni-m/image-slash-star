@@ -17,9 +17,47 @@ pub(crate) enum CodecError {
     /// A caller-configured resource maximum was exceeded; the structured
     /// [`ImageError::LimitExceeded`] value is retained verbatim.
     LimitExceeded(ImageError),
+    /// A codec failure wrapped with the encoded-input byte offset and stable
+    /// container-structure identity of its parse site.
+    #[cfg_attr(
+        not(any(
+            feature = "png",
+            feature = "gif",
+            feature = "jpeg",
+            feature = "tiff",
+            feature = "webp",
+            feature = "avif"
+        )),
+        allow(dead_code)
+    )]
+    At {
+        error: Box<CodecError>,
+        offset: u64,
+        identity: &'static str,
+    },
 }
 
 impl CodecError {
+    /// Attach the parse-site offset and structure identity to a failure.
+    #[cfg_attr(
+        not(any(
+            feature = "png",
+            feature = "gif",
+            feature = "jpeg",
+            feature = "tiff",
+            feature = "webp",
+            feature = "avif"
+        )),
+        allow(dead_code)
+    )]
+    pub(crate) fn at(self, offset: u64, identity: &'static str) -> Self {
+        Self::At {
+            error: Box::new(self),
+            offset,
+            identity,
+        }
+    }
+
     /// Retain a validation failure when crossing into a private codec.
     #[cfg(any(
         feature = "jpeg",
@@ -54,23 +92,67 @@ impl CodecError {
                 format,
                 message,
                 stage: Some(stage),
+                offset: None,
+                identity: None,
             },
             Self::Unsupported(message) => ImageError::Unsupported {
                 format: Some(format),
                 message,
                 stage: Some(stage),
+                offset: None,
+                identity: None,
             },
             Self::Dimensions(message) => ImageError::Dimensions {
                 format: Some(format),
                 message,
                 stage: Some(stage),
+                offset: None,
+                identity: None,
             },
             Self::Parameter(message) => ImageError::Parameter {
                 format: Some(format),
                 message,
                 stage: Some(stage),
+                offset: None,
+                identity: None,
             },
             Self::LimitExceeded(error) => error,
+            Self::At {
+                error,
+                offset,
+                identity,
+            } => {
+                let mut converted = error.into_image_error(format, stage);
+                match &mut converted {
+                    ImageError::Malformed {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::Unsupported {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::Dimensions {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::Parameter {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    } => {
+                        *target = Some(offset);
+                        *target_identity = Some(identity);
+                    }
+                    ImageError::UnknownFormat
+                    | ImageError::FeatureDisabled { .. }
+                    | ImageError::LimitExceeded { .. } => {}
+                }
+                converted
+            }
         }
     }
 
@@ -82,6 +164,15 @@ impl CodecError {
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
             Self::LimitExceeded(error) => Self::LimitExceeded(error),
+            Self::At {
+                error,
+                offset,
+                identity,
+            } => Self::At {
+                error: Box::new(error.context(stage)),
+                offset,
+                identity,
+            },
         }
     }
 }
@@ -152,11 +243,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: ImageFormat::Png,
             message: "malformed".to_owned(),
             stage: Some(ImageErrorStage::StillDecode),
+            offset: Some(8),
+            identity: Some("png_chunk"),
         },
         ImageError::Unsupported {
             format: Some(ImageFormat::Png),
             message: "unsupported".to_owned(),
             stage: Some(ImageErrorStage::StillEncode),
+            offset: None,
+            identity: None,
         },
         ImageError::dimensions("dimensions"),
         ImageError::parameter("parameter"),
@@ -186,4 +281,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .clone()
         .into_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
     let _ = limit.context("decode sequence");
+    let at = CodecError::Malformed("at".to_owned()).at(12, "png_chunk");
+    let _ = at
+        .clone()
+        .into_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
+    let _ = at.context("decode");
+    let _ = CodecError::Unsupported("at".to_owned())
+        .at(12, "webp_chunk")
+        .into_image_error(ImageFormat::WebP, ImageErrorStage::StillDecode);
+    let _ = CodecError::Dimensions("at".to_owned())
+        .at(12, "tiff_ifd")
+        .into_image_error(ImageFormat::Tiff, ImageErrorStage::StillDecode);
+    let _ = CodecError::Parameter("at".to_owned())
+        .at(12, "png_chunk")
+        .into_image_error(ImageFormat::Png, ImageErrorStage::StillEncode);
 }

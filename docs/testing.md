@@ -200,6 +200,13 @@ must report the exact `ImageErrorStage` alongside its stable kind. Caller-built
 validation and option-construction errors remain stage-free by design, so the
 test also pins which public paths produce a stage.
 
+The same test now asserts the parse-site byte offset and container-structure
+identity on codec-dispatched failures: truncated PNG chunks across
+inspect/still/sequence/source/verify, GIF image descriptors, JPEG markers,
+TIFF IFDs, and truncated AVIF boxes all carry `identity` values with offsets,
+while encode and option-construction errors stay offset-free. BMP, ICO, and
+WebP decode internals are documented as intentionally detail-free.
+
 The malformed-class ledger is generated from the coverage matrix by
 `scripts/generate_malformed_ledger.py` and checked in CI with `--check`, so
 every active decode-error class must stay catalogued. Each class records the
@@ -232,17 +239,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,954 | 41,954 |
+| Lines | 42,174 | 42,174 |
 | Branches | 6,022 | 6,022 |
-| Functions | 2,279 | 2,279 |
-| Regions | 66,742 | 66,742 |
+| Functions | 2,321 | 2,321 |
+| Regions | 67,036 | 67,036 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `ca30aade-64e2-4ad7-a815-e70cb01bceaf`
+Coverage MCP run: `f276f15b-ca36-4d94-9fb1-ddea92db0b74`
 
-Snapshot: `ad78053b-acdd-4a91-81bc-2ec0c430c6b5`
+Snapshot: `be130063-f765-43e0-984b-78c6b3c65c88`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

@@ -363,7 +363,9 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut adobe_transform = None;
 
     let eoi_pos = loop {
-        let marker = find_next_marker(data, &mut pos)?;
+        let marker_offset = pos as u64;
+        let marker = find_next_marker(data, &mut pos)
+            .map_err(|error| error.at(marker_offset, "jpeg_marker"))?;
 
         match marker {
             M_SOF0 | M_SOF2 => {
@@ -373,7 +375,8 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     ));
                 }
                 progressive = marker == M_SOF2;
-                let result = parse_sof0(data, &mut pos)?;
+                let result = parse_sof0(data, &mut pos)
+                    .map_err(|error| error.at(marker_offset, "jpeg_sof"))?;
                 width = result.0;
                 height = result.1;
                 components = result.2;
@@ -383,10 +386,12 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 saw_sof = true;
             }
             M_DQT => {
-                parse_dqt(data, &mut pos, &mut quant_tables)?;
+                parse_dqt(data, &mut pos, &mut quant_tables)
+                    .map_err(|error| error.at(marker_offset, "jpeg_dqt"))?;
             }
             M_DHT => {
-                parse_dht(data, &mut pos, &mut dc_huff_tables, &mut ac_huff_tables)?;
+                parse_dht(data, &mut pos, &mut dc_huff_tables, &mut ac_huff_tables)
+                    .map_err(|error| error.at(marker_offset, "jpeg_dht"))?;
             }
             M_SOS => {
                 if !saw_sof {
@@ -394,7 +399,8 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         "JPEG scan precedes the frame header".to_owned(),
                     ));
                 }
-                let result = parse_sos(data, &mut pos, &components)?;
+                let result = parse_sos(data, &mut pos, &components)
+                    .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
                 let comps = result.0;
                 let scan_start = result.1;
                 let ss = result.2;
@@ -423,7 +429,8 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     scan_components = comps;
                     entropy_start = scan_start;
                     saw_sos = true;
-                    break find_eoi(data, pos)?;
+                    break find_eoi(data, pos)
+                        .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
                 } else {
                     saw_sos = true;
                     if scan_components.is_empty() {
@@ -434,10 +441,14 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
             }
             M_DRI => {
-                restart_interval = parse_dri(data, &mut pos)?;
+                restart_interval = parse_dri(data, &mut pos)
+                    .map_err(|error| error.at(marker_offset, "jpeg_dri"))?;
             }
             M_APP14 => {
-                let length = usize::from(read_u16(data, &mut pos)?);
+                let length = usize::from(
+                    read_u16(data, &mut pos)
+                        .map_err(|error| error.at(marker_offset, "jpeg_app14"))?,
+                );
                 if length < 2 {
                     continue;
                 }
@@ -465,7 +476,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 ));
             }
             _ => {
-                let length = usize::from(read_u16(data, &mut pos)?);
+                let length = usize::from(
+                    read_u16(data, &mut pos)
+                        .map_err(|error| error.at(marker_offset, "jpeg_segment"))?,
+                );
                 if length < 2 {
                     continue;
                 }
