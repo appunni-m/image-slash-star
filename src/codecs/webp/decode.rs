@@ -39,8 +39,13 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     } else {
         crate::types::SourceDescriptor::new()
     };
+    let metadata = std::mem::take(&mut decoder.metadata);
+    let opaque_blocks = std::mem::take(&mut decoder.opaque_blocks);
     Ok((
-        DecodedImage::new(width, height, pixels, color).with_source_descriptor(source_descriptor),
+        DecodedImage::new(width, height, pixels, color)
+            .with_source_descriptor(source_descriptor)
+            .with_metadata(metadata)
+            .with_opaque_blocks(opaque_blocks),
         consumed,
     ))
 }
@@ -61,8 +66,15 @@ pub fn decode_sequence(
     let mut decoder = super::native::WebPDecoder::new(cursor).map_err(decode_error)?;
     let consumed = riff_consumed(data);
     if !decoder.is_animated() {
-        return decode(data)
-            .map(|(image, consumed)| (DecodedSequence::from_image(image), consumed));
+        let (mut image, consumed) = decode(data)?;
+        let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+        let metadata = std::mem::take(&mut image.metadata);
+        let source_color = std::mem::take(&mut image.source_color);
+        let mut sequence = DecodedSequence::from_image(image);
+        sequence.opaque_blocks = opaque_blocks;
+        sequence.metadata = metadata;
+        sequence.source_color = source_color;
+        return Ok((sequence, consumed));
     }
 
     let (width, height) = decoder.dimensions();
@@ -120,6 +132,8 @@ pub fn decode_sequence(
         LoopCount::Times(count) => u32::from(count.get()),
     });
     let background = decoder.background_color().map(AnimationBackground::Rgba);
+    let metadata = std::mem::take(&mut decoder.metadata);
+    let opaque_blocks = std::mem::take(&mut decoder.opaque_blocks);
     Ok((
         DecodedSequence {
             width,
@@ -128,8 +142,8 @@ pub fn decode_sequence(
             loop_count,
             background,
             kind: crate::types::SequenceKind::TimedAnimation,
-            opaque_blocks: Vec::new(),
-            metadata: Vec::new(),
+            opaque_blocks,
+            metadata,
             source_color: SourceColor::new(),
         },
         consumed,

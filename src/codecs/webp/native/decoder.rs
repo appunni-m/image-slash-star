@@ -107,6 +107,23 @@ impl WebPRiffChunk {
     pub(crate) const fn is_unknown(self) -> bool {
         matches!(self, Self::Unknown(_))
     }
+
+    pub(crate) const fn fourcc(self) -> [u8; 4] {
+        match self {
+            Self::RIFF => *b"RIFF",
+            Self::WEBP => *b"WEBP",
+            Self::VP8 => *b"VP8 ",
+            Self::VP8L => *b"VP8L",
+            Self::VP8X => *b"VP8X",
+            Self::ANIM => *b"ANIM",
+            Self::ANMF => *b"ANMF",
+            Self::ALPH => *b"ALPH",
+            Self::ICCP => *b"ICCP",
+            Self::EXIF => *b"EXIF",
+            Self::XMP => *b"XMP ",
+            Self::Unknown(fourcc) => fourcc,
+        }
+    }
 }
 
 // enum WebPImage {
@@ -176,6 +193,8 @@ pub struct WebPDecoder<'a> {
     loop_count: LoopCount,
 
     chunks: HashMap<WebPRiffChunk, Range<u64>>,
+    pub(crate) metadata: Vec<crate::types::OpaqueMetadata>,
+    pub(crate) opaque_blocks: Vec<crate::types::OpaqueBlock>,
 }
 
 impl<'a> WebPDecoder<'a> {
@@ -192,6 +211,8 @@ impl<'a> WebPDecoder<'a> {
             animation: Default::default(),
             has_alpha: false,
             loop_count: LoopCount::Times(NonZeroU16::MIN),
+            metadata: Vec::new(),
+            opaque_blocks: Vec::new(),
         };
         decoder.read_data()?;
         #[cfg(target_pointer_width = "32")]
@@ -301,7 +322,42 @@ impl<'a> WebPDecoder<'a> {
                             }
 
                             if !chunk.is_unknown() {
-                                self.chunks.entry(chunk).or_insert(range);
+                                self.chunks.entry(chunk).or_insert(range.clone());
+                            }
+
+                            match chunk {
+                                WebPRiffChunk::ICCP | WebPRiffChunk::EXIF | WebPRiffChunk::XMP => {
+                                    let data = *self.r.get_ref();
+                                    let start = usize::try_from(range.start)
+                                        .map_err(|_| DecodingError::IoError)?;
+                                    let end = usize::try_from(range.end)
+                                        .map_err(|_| DecodingError::IoError)?;
+                                    if end <= data.len() {
+                                        self.metadata.push(crate::types::OpaqueMetadata {
+                                            kind: chunk.fourcc().to_vec(),
+                                            data: data[start..end].to_vec(),
+                                        });
+                                    }
+                                }
+                                WebPRiffChunk::Unknown(fourcc) => {
+                                    let data = *self.r.get_ref();
+                                    let start = usize::try_from(range.start)
+                                        .map_err(|_| DecodingError::IoError)?;
+                                    let end = usize::try_from(range.end)
+                                        .map_err(|_| DecodingError::IoError)?;
+                                    if end <= data.len() {
+                                        // WebP defines no safe-to-copy bit;
+                                        // unknown RIFF chunks are ignorable by
+                                        // decoders, so copying one cannot
+                                        // change frame semantics.
+                                        self.opaque_blocks.push(crate::types::OpaqueBlock {
+                                            kind: fourcc.to_vec(),
+                                            data: data[start..end].to_vec(),
+                                            safe_to_copy: true,
+                                        });
+                                    }
+                                }
+                                _ => {}
                             }
 
                             self.r.set_position(position);
