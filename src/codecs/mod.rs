@@ -902,6 +902,10 @@ fn ensure_enabled(format: ImageFormat) -> ImageResult<()> {
 pub(crate) fn __coverage_exercise_private_branches() {
     error::__coverage_exercise_private_branches();
 
+    // The eager frame-decode fallback's sequence-error path is exercised
+    // with bytes whose signature never reaches a codec.
+    let _ = decode_frame_format(b"not an image", ImageFormat::Gif, 0);
+
     let invalid_sequence = DecodedSequence {
         width: 0,
         height: 1,
