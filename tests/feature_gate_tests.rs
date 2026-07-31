@@ -8,7 +8,7 @@ use bytemuck as _;
 use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
     DecodedImage, DecodedSequence, EncodeOptions, EncodedImage, ImageError, ImageErrorStage,
-    ImageFormat, ImageMode, SequenceKind,
+    ImageFormat, ImageMode, SequenceKind, SourceColor,
 };
 
 mod support;
@@ -967,7 +967,7 @@ fn opaque_blocks_match_the_container_contract() -> Result<(), Box<dyn std::error
 
 #[test]
 fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::{OpaqueBlock, OpaqueMetadata};
+    use image_slash_star::{OpaqueBlock, OpaqueMetadata, RawIccProfile};
 
     if !cfg!(feature = "png") {
         return Ok(());
@@ -1005,10 +1005,6 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
             data: b"Author\0\0raw-compressed-bytes".to_vec(),
         },
         OpaqueMetadata {
-            kind: b"iCCP".to_vec(),
-            data: b"profile\0\0raw-profile-bytes".to_vec(),
-        },
-        OpaqueMetadata {
             kind: b"eXIf".to_vec(),
             data: b"raw-exif-bytes".to_vec(),
         },
@@ -1027,6 +1023,14 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
     assert_eq!(
         decoded.content.opaque_blocks, expected_blocks,
         "still blocks"
+    );
+    assert_eq!(
+        decoded.content.source_color.icc_profile(),
+        Some(&RawIccProfile {
+            keyword: b"profile".to_vec(),
+            data: b"\0raw-profile-bytes".to_vec(),
+        }),
+        "iCCP classifies as source color metadata"
     );
     let sequence = image_slash_star::decode_sequence(&bytes)?;
     assert_eq!(
@@ -1073,12 +1077,158 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
     let apng_sequence = image_slash_star::decode_sequence(&apng)?;
     assert_eq!(
         apng_sequence.content.metadata,
-        vec![expected_metadata[0].clone(), expected_metadata[3].clone()],
+        vec![expected_metadata[0].clone(), expected_metadata[2].clone()],
         "APNG metadata"
     );
     assert_eq!(
         apng_sequence.content.opaque_blocks, expected_blocks,
         "APNG blocks"
+    );
+    Ok(())
+}
+
+#[test]
+fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{
+        OpaqueBlock, OpaqueMetadata, RawIccProfile, SourceChromaticities, SourceColor, SrgbIntent,
+    };
+
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+
+    let mut chroma = Vec::new();
+    for value in [31270u32, 32900, 64000, 33000, 30000, 60000, 15000, 6000] {
+        chroma.extend_from_slice(&value.to_be_bytes());
+    }
+    let srgb = png_chunk(b"sRGB", &[0]);
+    let duplicate_srgb = png_chunk(b"sRGB", &[1]);
+    let gamma = png_chunk(b"gAMA", &[0, 0, 0xB1, 0x8F]);
+    let malformed_gamma = png_chunk(b"gAMA", &[0, 1]);
+    let chroma_chunk = png_chunk(b"cHRM", &chroma);
+    let malformed_chroma = png_chunk(b"cHRM", &[0, 0, 0]);
+    let iccp = png_chunk(b"iCCP", b"profile\0\0raw-profile-bytes");
+    let malformed_iccp = png_chunk(b"iCCP", b"nonul");
+    let text = png_chunk(b"tEXt", b"Comment\0hello");
+    let unknown = png_chunk(b"prVt", b"unknown-payload");
+    let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&base[..idat_offset]);
+    for chunk in [
+        &srgb,
+        &text,
+        &gamma,
+        &chroma_chunk,
+        &iccp,
+        &duplicate_srgb,
+        &malformed_gamma,
+        &malformed_chroma,
+        &malformed_iccp,
+        &unknown,
+    ] {
+        bytes.extend_from_slice(chunk);
+    }
+    bytes.extend_from_slice(&base[idat_offset..]);
+
+    let expected_color = SourceColor::new()
+        .with_srgb(SrgbIntent::Perceptual)
+        .with_gamma(45_455)
+        .with_chromaticities(SourceChromaticities {
+            white_x: 31_270,
+            white_y: 32_900,
+            red_x: 64_000,
+            red_y: 33_000,
+            green_x: 30_000,
+            green_y: 60_000,
+            blue_x: 15_000,
+            blue_y: 6_000,
+        })
+        .with_icc_profile(RawIccProfile {
+            keyword: b"profile".to_vec(),
+            data: b"\0raw-profile-bytes".to_vec(),
+        });
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: b"tEXt".to_vec(),
+            data: b"Comment\0hello".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"sRGB".to_vec(),
+            data: vec![1],
+        },
+        OpaqueMetadata {
+            kind: b"gAMA".to_vec(),
+            data: vec![0, 1],
+        },
+        OpaqueMetadata {
+            kind: b"cHRM".to_vec(),
+            data: vec![0, 0, 0],
+        },
+        OpaqueMetadata {
+            kind: b"iCCP".to_vec(),
+            data: b"nonul".to_vec(),
+        },
+    ];
+    let expected_blocks = vec![OpaqueBlock {
+        kind: b"prVt".to_vec(),
+        data: b"unknown-payload".to_vec(),
+        safe_to_copy: true,
+    }];
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(decoded.content.source_color, expected_color, "still color");
+    assert_eq!(
+        decoded.content.metadata, expected_metadata,
+        "still metadata"
+    );
+    assert_eq!(
+        decoded.content.opaque_blocks, expected_blocks,
+        "still blocks"
+    );
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.source_color, expected_color,
+        "fallback sequence color"
+    );
+    assert_eq!(
+        sequence.content.metadata, expected_metadata,
+        "fallback sequence metadata"
+    );
+
+    // Default encoding never replays color metadata.
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Png);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+    for kind in [b"sRGB", b"gAMA", b"cHRM", b"iCCP"] {
+        assert!(
+            !contains_chunk_type(&encoded, kind),
+            "encoded PNG must not replay color chunk {kind:?}"
+        );
+    }
+
+    // Unmodified fixtures retain no source color facts.
+    let plain = image_slash_star::decode(&base)?;
+    assert!(plain.content.source_color.is_empty());
+
+    // APNG sequence decode retains the same container-level color metadata.
+    let apng_base = fs::read(root.join("tests/fixtures/input/images/png/apng_l_over.png"))?;
+    let apng_idat = png_chunk_offset(&apng_base, b"IDAT")?;
+    let mut apng = Vec::new();
+    apng.extend_from_slice(&apng_base[..apng_idat]);
+    apng.extend_from_slice(&srgb);
+    apng.extend_from_slice(&gamma);
+    apng.extend_from_slice(&apng_base[apng_idat..]);
+    let apng_sequence = image_slash_star::decode_sequence(&apng)?;
+    assert_eq!(
+        apng_sequence.content.source_color.srgb(),
+        Some(SrgbIntent::Perceptual),
+        "APNG srgb"
+    );
+    assert_eq!(
+        apng_sequence.content.source_color.gamma(),
+        Some(45_455),
+        "APNG gamma"
     );
     Ok(())
 }
@@ -1292,6 +1442,7 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         kind: image_slash_star::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     };
     let sequence_error = match image_slash_star::encode_sequence(
         &sequence,

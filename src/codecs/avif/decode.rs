@@ -3,7 +3,7 @@
 use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
-use crate::types::{ColorType, DecodedImage, ImageMode};
+use crate::types::{ColorType, DecodedImage, ImageMode, SourceColor};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::types::{
     DecodedFrame, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration, FrameRect,
@@ -142,6 +142,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         source: crate::types::SourceDescriptor::new(),
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     })
 }
 
@@ -318,6 +319,7 @@ fn decoded_sequence(
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
+            source_color: SourceColor::new(),
         },
         consumed,
     ))
@@ -359,6 +361,7 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
         source: source_descriptor,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
 }
 

@@ -78,6 +78,9 @@ All notable changes will be documented in this file. This project follows
 - Raw, unparsed PNG metadata retention (`OpaqueMetadata` records for
   tEXt/zTXt/iTXt/iCCP/eXIf/tIME/pHYs and color-descriptor chunks), distinct
   from unknown opaque blocks, without inflating compressed payloads.
+- Exact PNG source color retention (`SourceColor`: sRGB intent, gamma,
+  chromaticities, raw ICC profile) with malformed/duplicate fallback to raw
+  metadata records and no implicit encode replay.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

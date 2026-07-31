@@ -6,7 +6,8 @@ use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, ImageMode, ImagePalette, SourceAlpha, SourceByteOrder, SourceDescriptor,
+    FrameDuration, ImageMode, ImagePalette, SourceAlpha, SourceByteOrder, SourceColor,
+    SourceDescriptor,
 };
 
 const COMPRESSION_NONE: usize = 1;
@@ -75,6 +76,7 @@ pub fn decode_sequence(
             kind: crate::types::SequenceKind::UntimedPages,
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
+            source_color: SourceColor::new(),
         },
         consumed,
     ))

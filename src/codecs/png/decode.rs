@@ -5,7 +5,7 @@ use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, FrameRect, ImageMode, ImagePalette,
+    FrameDuration, FrameRect, ImageMode, ImagePalette, SourceColor,
 };
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -28,10 +28,12 @@ const INTERPRETED_CHUNKS: [&[u8; 4]; 8] = [
 
 /// Ancillary chunks the model classifies as known metadata and retains in the
 /// metadata records instead of the opaque-block list.
-const KNOWN_METADATA_CHUNKS: [&[u8; 4]; 13] = [
-    b"tEXt", b"zTXt", b"iTXt", b"iCCP", b"eXIf", b"tIME", b"pHYs", b"sRGB", b"gAMA", b"cHRM",
-    b"bKGD", b"hIST", b"sBIT",
+const KNOWN_METADATA_CHUNKS: [&[u8; 4]; 9] = [
+    b"tEXt", b"zTXt", b"iTXt", b"eXIf", b"tIME", b"pHYs", b"bKGD", b"hIST", b"sBIT",
 ];
+
+/// Ancillary chunks the model classifies as source color metadata.
+const COLOR_CHUNKS: [&[u8; 4]; 4] = [b"sRGB", b"gAMA", b"cHRM", b"iCCP"];
 
 /// Whether an uninterpreted ancillary chunk is retained as an opaque block.
 fn retained_opaque_chunk(kind: &[u8; 4]) -> bool {
@@ -43,6 +45,11 @@ fn retained_opaque_chunk(kind: &[u8; 4]) -> bool {
 /// Whether an ancillary chunk is classified as known metadata.
 fn retained_metadata_chunk(kind: &[u8; 4]) -> bool {
     kind[0] & 0x20 != 0 && KNOWN_METADATA_CHUNKS.contains(&kind)
+}
+
+/// Whether an ancillary chunk is classified as source color metadata.
+fn retained_color_chunk(kind: &[u8; 4]) -> bool {
+    kind[0] & 0x20 != 0 && COLOR_CHUNKS.contains(&kind)
 }
 
 fn opaque_block(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueBlock {
@@ -62,6 +69,81 @@ fn metadata_record(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueMetadata {
     }
 }
 
+fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
+    match value {
+        0 => Some(crate::types::SrgbIntent::Perceptual),
+        1 => Some(crate::types::SrgbIntent::RelativeColorimetric),
+        2 => Some(crate::types::SrgbIntent::Saturation),
+        3 => Some(crate::types::SrgbIntent::AbsoluteColorimetric),
+        _ => None,
+    }
+}
+
+/// Parse the first well-formed occurrence of each color chunk into the source
+/// color descriptor; duplicates and malformed payloads fall back to raw
+/// metadata records so no bytes are lost.
+fn retain_color_chunk(
+    kind: [u8; 4],
+    data: &[u8],
+    color: &mut SourceColor,
+    metadata: &mut Vec<crate::types::OpaqueMetadata>,
+) {
+    match &kind {
+        b"sRGB"
+            if data.len() == 1
+                && color.srgb().is_none()
+                && let Some(intent) = srgb_intent(data[0]) =>
+        {
+            *color = core::mem::take(color).with_srgb(intent);
+            return;
+        }
+        b"gAMA" if data.len() == 4 && color.gamma().is_none() => {
+            let gamma = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
+            *color = core::mem::take(color).with_gamma(gamma);
+            return;
+        }
+        b"cHRM" if data.len() == 32 && color.chromaticities().is_none() => {
+            let value = |index: usize| {
+                u32::from_be_bytes([
+                    data[index.wrapping_mul(4)],
+                    data[index.wrapping_mul(4).wrapping_add(1)],
+                    data[index.wrapping_mul(4).wrapping_add(2)],
+                    data[index.wrapping_mul(4).wrapping_add(3)],
+                ])
+            };
+            *color =
+                core::mem::take(color).with_chromaticities(crate::types::SourceChromaticities {
+                    white_x: value(0),
+                    white_y: value(1),
+                    red_x: value(2),
+                    red_y: value(3),
+                    green_x: value(4),
+                    green_y: value(5),
+                    blue_x: value(6),
+                    blue_y: value(7),
+                });
+            return;
+        }
+        b"iCCP" if color.icc_profile().is_none() => {
+            if let Some(nul) = data.iter().position(|&byte| byte == 0)
+                && nul != 0
+                && nul.saturating_add(1) < data.len()
+            {
+                *color = core::mem::take(color).with_icc_profile(crate::types::RawIccProfile {
+                    keyword: data[..nul].to_vec(),
+                    data: data[nul.saturating_add(1)..].to_vec(),
+                });
+                return;
+            }
+        }
+        _ => {}
+    }
+    metadata.push(crate::types::OpaqueMetadata {
+        kind: kind.to_vec(),
+        data: data.to_vec(),
+    });
+}
+
 /// Decode the first image represented by a PNG or APNG stream.
 pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     // Pillow's load path accepts bad IDAT CRCs after lazy construction has
@@ -77,6 +159,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let mut next_sequence = 0;
     let mut opaque_blocks = Vec::new();
     let mut metadata = Vec::new();
+    let mut source_color = SourceColor::new();
     for chunk in &mut chunks {
         let chunk = chunk?;
         match &chunk.kind {
@@ -109,6 +192,9 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
             b"IEND" => {
                 break;
             }
+            _ if retained_color_chunk(&chunk.kind) => {
+                retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+            }
             _ if retained_metadata_chunk(&chunk.kind) => {
                 metadata.push(metadata_record(chunk.kind, chunk.data));
             }
@@ -133,7 +219,8 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         palette_alpha,
     )?
     .with_opaque_blocks(opaque_blocks)
-    .with_metadata(metadata);
+    .with_metadata(metadata)
+    .with_source_color(source_color);
     Ok((image, chunks.position))
 }
 
@@ -188,6 +275,7 @@ struct ParsedApng {
     frames: Vec<ApngCompressedFrame>,
     opaque_blocks: Vec<crate::types::OpaqueBlock>,
     metadata: Vec<crate::types::OpaqueMetadata>,
+    source_color: SourceColor,
 }
 
 /// Decode every APNG presentation while retaining exact source controls.
@@ -199,9 +287,11 @@ pub fn decode_sequence(
         let (mut image, consumed) = decode(data)?;
         let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
         let metadata = std::mem::take(&mut image.metadata);
+        let source_color = std::mem::take(&mut image.source_color);
         let mut sequence = DecodedSequence::from_image(image);
         sequence.opaque_blocks = opaque_blocks;
         sequence.metadata = metadata;
+        sequence.source_color = source_color;
         return Ok((sequence, consumed));
     };
 
@@ -215,6 +305,7 @@ pub fn decode_sequence(
         frames: mut compressed_frames,
         opaque_blocks,
         metadata,
+        source_color,
     } = parsed;
     let mut output_frames = Vec::new();
     let mut canvas = None;
@@ -315,6 +406,7 @@ pub fn decode_sequence(
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks,
             metadata,
+            source_color,
         },
         consumed,
     ))
@@ -363,6 +455,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut controlled_frames = 0u32;
     let mut opaque_blocks = Vec::new();
     let mut metadata = Vec::new();
+    let mut source_color = SourceColor::new();
 
     for chunk in &mut chunks {
         let chunk = chunk?;
@@ -435,6 +528,9 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                 frame.compressed.extend_from_slice(&chunk.data[4..]);
             }
             b"IEND" => break,
+            _ if retained_color_chunk(&chunk.kind) => {
+                retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+            }
             _ if retained_metadata_chunk(&chunk.kind) => {
                 metadata.push(metadata_record(chunk.kind, chunk.data));
             }
@@ -477,6 +573,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             frames,
             opaque_blocks,
             metadata,
+            source_color,
         },
         chunks.position,
     )))

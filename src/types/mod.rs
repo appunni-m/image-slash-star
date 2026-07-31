@@ -179,6 +179,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         source: SourceDescriptor::new(),
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let _ = DecodedImage::new(1, 1, vec![0], ColorType::L8)
@@ -197,6 +198,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let _ = DecodedSequence {
@@ -208,6 +210,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let _ = DecodedSequence {
@@ -219,6 +222,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let frame = DecodedFrame::source_rectangle(
@@ -239,6 +243,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let right_outside_frame = DecodedFrame::source_rectangle(
@@ -259,6 +264,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let invalid_frame = DecodedFrame::source_rectangle(
@@ -279,6 +285,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let right_overflow_frame = DecodedFrame::source_rectangle(
@@ -299,6 +306,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let bottom_overflow_frame = DecodedFrame::source_rectangle(
@@ -319,6 +327,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
 
@@ -342,6 +351,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
 
@@ -364,6 +374,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let mut zero_rect_height = DecodedFrame::source_rectangle(
@@ -385,6 +396,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
 
@@ -407,6 +419,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let mut mismatched_source_height = DecodedFrame::source_rectangle(
@@ -428,6 +441,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
 
@@ -452,6 +466,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
     let rendered_height = DecodedFrame::rendered_canvas(
@@ -475,6 +490,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     }
     .validate();
 
@@ -759,6 +775,137 @@ pub struct OpaqueMetadata {
     pub kind: Vec<u8>,
     /// Raw encoded payload bytes exactly as stored.
     pub data: Vec<u8>,
+}
+
+/// sRGB rendering intent declared by a PNG `sRGB` chunk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SrgbIntent {
+    /// Perceptual intent (PNG value 0).
+    Perceptual,
+    /// Relative colorimetric intent (PNG value 1).
+    RelativeColorimetric,
+    /// Saturation intent (PNG value 2).
+    Saturation,
+    /// Absolute colorimetric intent (PNG value 3).
+    AbsoluteColorimetric,
+}
+
+/// Exact PNG `cHRM` chromaticity values, each scaled by 100,000.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SourceChromaticities {
+    /// White point x.
+    pub white_x: u32,
+    /// White point y.
+    pub white_y: u32,
+    /// Red primary x.
+    pub red_x: u32,
+    /// Red primary y.
+    pub red_y: u32,
+    /// Green primary x.
+    pub green_x: u32,
+    /// Green primary y.
+    pub green_y: u32,
+    /// Blue primary x.
+    pub blue_x: u32,
+    /// Blue primary y.
+    pub blue_y: u32,
+}
+
+/// Raw ICC profile retained from an encoded container without inflation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RawIccProfile {
+    /// Profile keyword from the container record.
+    pub keyword: Vec<u8>,
+    /// Raw profile bytes exactly as stored after the keyword terminator
+    /// (compressed payloads are not inflated).
+    pub data: Vec<u8>,
+}
+
+/// Source color metadata retained from an encoded container.
+///
+/// Retaining these fields records what the source declares; it never implies
+/// that color conversion was applied to decoded samples.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SourceColor {
+    srgb: Option<SrgbIntent>,
+    gamma: Option<u32>,
+    chromaticities: Option<SourceChromaticities>,
+    icc_profile: Option<RawIccProfile>,
+}
+
+impl SourceColor {
+    /// Create an empty source color descriptor.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            srgb: None,
+            gamma: None,
+            chromaticities: None,
+            icc_profile: None,
+        }
+    }
+
+    /// Record the sRGB rendering intent declared by the source.
+    #[must_use]
+    pub const fn with_srgb(mut self, srgb: SrgbIntent) -> Self {
+        self.srgb = Some(srgb);
+        self
+    }
+
+    /// Return the sRGB rendering intent declared by the source, when retained.
+    #[must_use]
+    pub const fn srgb(&self) -> Option<SrgbIntent> {
+        self.srgb
+    }
+
+    /// Record the exact PNG gamma value (scaled by 100,000).
+    #[must_use]
+    pub const fn with_gamma(mut self, gamma: u32) -> Self {
+        self.gamma = Some(gamma);
+        self
+    }
+
+    /// Return the exact PNG gamma value, when retained.
+    #[must_use]
+    pub const fn gamma(&self) -> Option<u32> {
+        self.gamma
+    }
+
+    /// Record the exact PNG chromaticity values.
+    #[must_use]
+    pub const fn with_chromaticities(mut self, chromaticities: SourceChromaticities) -> Self {
+        self.chromaticities = Some(chromaticities);
+        self
+    }
+
+    /// Return the exact PNG chromaticity values, when retained.
+    #[must_use]
+    pub const fn chromaticities(&self) -> Option<SourceChromaticities> {
+        self.chromaticities
+    }
+
+    /// Record the raw ICC profile retained from the source.
+    #[must_use]
+    pub fn with_icc_profile(mut self, icc_profile: RawIccProfile) -> Self {
+        self.icc_profile = Some(icc_profile);
+        self
+    }
+
+    /// Return the raw ICC profile, when retained.
+    #[must_use]
+    pub const fn icc_profile(&self) -> Option<&RawIccProfile> {
+        self.icc_profile.as_ref()
+    }
+
+    /// Whether this descriptor retains no source color facts.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.srgb.is_none()
+            && self.gamma.is_none()
+            && self.chromaticities.is_none()
+            && self.icc_profile.is_none()
+    }
 }
 
 impl<T> Decoded<T> {
@@ -1120,6 +1267,8 @@ pub struct DecodedImage {
     pub opaque_blocks: Vec<OpaqueBlock>,
     /// Known metadata retained in original order without semantic parsing.
     pub metadata: Vec<OpaqueMetadata>,
+    /// Source color metadata retained from the encoded container.
+    pub source_color: SourceColor,
 }
 
 impl DecodedImage {
@@ -1140,6 +1289,7 @@ impl DecodedImage {
             source: SourceDescriptor::new(),
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
+            source_color: SourceColor::new(),
         }
     }
 
@@ -1160,6 +1310,7 @@ impl DecodedImage {
             source: SourceDescriptor::new(),
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
+            source_color: SourceColor::new(),
         }
     }
 
@@ -1195,6 +1346,13 @@ impl DecodedImage {
     #[must_use]
     pub fn with_metadata(mut self, metadata: Vec<OpaqueMetadata>) -> Self {
         self.metadata = metadata;
+        self
+    }
+
+    /// Attach source color metadata without changing decoded sample bytes.
+    #[must_use]
+    pub fn with_source_color(mut self, color: SourceColor) -> Self {
+        self.source_color = color;
         self
     }
 
@@ -1487,6 +1645,8 @@ pub struct DecodedSequence {
     pub opaque_blocks: Vec<OpaqueBlock>,
     /// Known metadata retained in original order without semantic parsing.
     pub metadata: Vec<OpaqueMetadata>,
+    /// Source color metadata retained from the encoded container.
+    pub source_color: SourceColor,
 }
 
 impl DecodedSequence {
@@ -1515,6 +1675,7 @@ impl DecodedSequence {
             kind: SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
+            source_color: SourceColor::new(),
         }
     }
 

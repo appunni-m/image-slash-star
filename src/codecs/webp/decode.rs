@@ -7,7 +7,7 @@ use crate::SequenceDecodeBudget;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
-    FrameDisposal, FrameDuration, FrameRect, ImageMode,
+    FrameDisposal, FrameDuration, FrameRect, ImageMode, SourceColor,
 };
 use std::io::Cursor;
 
@@ -130,6 +130,7 @@ pub fn decode_sequence(
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
+            source_color: SourceColor::new(),
         },
         consumed,
     ))
