@@ -183,8 +183,9 @@ pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
 /// # Errors
 ///
 /// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
-/// primary canvas, or its decoded transfer-byte length exceeds a configured
-/// maximum. Otherwise returns the same errors as [`decode`].
+/// primary canvas, its decoded transfer-byte length, or the materialized frame
+/// count exceeds a configured maximum. Otherwise returns the same errors as
+/// [`decode`].
 pub fn decode_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -213,9 +214,11 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 /// # Errors
 ///
 /// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
-/// primary canvas, or its decoded transfer-byte length exceeds a configured
-/// maximum. This does not bound later frames or cumulative sequence memory.
-/// Otherwise returns the same errors as [`decode_sequence`].
+/// primary canvas, its decoded transfer-byte length, or the inspected frame
+/// count exceeds a configured maximum. The frame-count check runs before
+/// sequence materialization; it does not bound later-frame byte lengths or
+/// cumulative sequence memory. Otherwise returns the same errors as
+/// [`decode_sequence`].
 pub fn decode_sequence_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -244,8 +247,9 @@ pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
 /// # Errors
 ///
 /// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
-/// primary canvas, or its decoded transfer-byte length exceeds a configured
-/// maximum. Otherwise returns the same errors as [`inspect`].
+/// primary canvas, its decoded transfer-byte length, or the inspected frame
+/// count exceeds a configured maximum. Otherwise returns the same errors as
+/// [`inspect`].
 pub fn inspect_with_policy(data: &[u8], policy: &DecodePolicy) -> ImageResult<ImageInfo> {
     policy.check_encoded_input(data, CodecOperation::Inspection)?;
     let format = detect_format(data)?;
@@ -413,5 +417,6 @@ pub fn __coverage_exercise_private_branches() {
     let _ = encode_default(&image, ImageFormat::Png);
     capabilities::__coverage_exercise_private_branches();
     codecs::__coverage_exercise_private_branches();
+    decode_policy::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }

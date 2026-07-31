@@ -22,8 +22,11 @@ All notable changes will be documented in this file. This project follows
   decode, sequence, and encode APIs.
 - A shared `DecodePolicy` with inclusive limits for pre-detection encoded
   bytes, inspected canvas width/height/pixels, and the primary decoded
-  transfer-byte length, plus typed `LimitExceeded` failures and retry-safe
-  lazy-source behavior.
+  transfer-byte length, and the inspected frame/page count, plus typed
+  `LimitExceeded` failures and retry-safe lazy-source behavior.
+- A sequence-policy defensive manifest with 19 frame-count boundary and
+  precedence cases across inspection, still/sequence decode, immutable-source
+  construction, and lazy materialization.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains

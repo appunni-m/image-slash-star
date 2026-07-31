@@ -168,6 +168,16 @@ unlimited wrappers avoid this extra pass. These are primary-canvas limits, not
 bounds on later TIFF pages or animation frames, source rectangles, cumulative
 sequence memory, metadata, codec work, other allocations, or encoded output.
 
+`max_frames` is an inclusive limit on the exact inspected frame/page count.
+Inspection, sequence decode, and immutable-source construction reject a source
+whose declared count exceeds the maximum before sequence pixel work begins.
+Still decode and lazy still materialization retain exactly one frame, so only
+a zero maximum rejects them. The check runs after the encoded-input and
+primary-canvas checks and retains the selected format. GIF and TIFF chains
+whose inspection cannot prove a complete count report `frame_count: None` and
+remain unlimited for this resource; the inspection-completeness model governs
+that boundary rather than this limit.
+
 ## Decoded sample layouts
 
 `DecodedImage::pixels` is tightly packed and row-major. There is no implicit
@@ -245,12 +255,12 @@ The first call to `decode()` initializes a shared `OnceLock`:
   cache.
 
 `EncodedImage::new_with_policy` applies the input limit before inspection and
-primary-canvas dimension, pixel, and decoded-byte limits immediately
-afterward. `decode_with_policy` checks encoded bytes and retained `ImageInfo`
-before consulting the `OnceLock`: a policy failure is never cached, a later
-sufficient policy can initialize the ordinary cache, and an earlier cached
-success cannot bypass a later stricter policy. The policy is per operation
-rather than permanently attached to the source.
+primary-canvas dimension, pixel, decoded-byte, and frame-count limits
+immediately afterward. `decode_with_policy` checks encoded bytes and retained
+`ImageInfo` before consulting the `OnceLock`: a policy failure is never cached,
+a later sufficient policy can initialize the ordinary cache, and an earlier
+cached success cannot bypass a later stricter policy. The policy is per
+operation rather than permanently attached to the source.
 
 `ImageFormat::verification_scope()` and
 `EncodedImage::verification_scope()` distinguish `Structure` from
