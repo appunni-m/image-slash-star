@@ -90,6 +90,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .is_empty()
     );
 
+    // The preflight overflow arm of the transfer layout is exercised with the
+    // largest representable canvas and 16 bytes per pixel.
+    assert!(TransferLayout::from_mode(ImageMode::Rgba32F, u32::MAX, u32::MAX).is_err());
+
     let colors = [
         ColorType::L8,
         ColorType::La8,
@@ -1299,9 +1303,18 @@ impl TransferLayout {
         let row_bytes = if mode == ImageMode::L1 {
             (width as usize).div_ceil(8)
         } else {
-            (width as usize)
-                .checked_mul(usize::from(mode.color_type().bytes_per_pixel()))
-                .ok_or_else(|| ImageError::dimensions("decoded row byte length overflows"))?
+            let bytes = u64::from(mode.color_type().bytes_per_pixel());
+            #[cfg(target_pointer_width = "64")]
+            {
+                // Width is u32 and bytes-per-pixel is at most 16, so the
+                // product always fits u64 and 64-bit usize losslessly.
+                usize::from_ne_bytes(u64::from(width).wrapping_mul(bytes).to_ne_bytes())
+            }
+            #[cfg(not(target_pointer_width = "64"))]
+            {
+                usize::try_from(u64::from(width).wrapping_mul(bytes))
+                    .map_err(|_| ImageError::dimensions("decoded row byte length overflows"))?
+            }
         };
         Ok(Self {
             width,
