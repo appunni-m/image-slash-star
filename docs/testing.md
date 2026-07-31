@@ -171,6 +171,12 @@ propagation row. The metadata rule counts every encoded byte that is not
 primary pixel payload data, and the scanner must agree with the independently
 measured manifest values.
 
+The work-budget analysis in the architecture reference maps every current
+codec work dimension to the resource that bounds it (encoded bytes, canvas and
+primary-byte limits, per-frame and cumulative sequence limits, and the
+metadata extent); the policy manifests cited there are the active boundary
+evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
+
 The trailing-input manifest pins the per-format trailing policy: three payloads
 appended to a valid asset of every format must produce identical still pixels,
 identical sequence frames, and identical inspection results, with
@@ -234,9 +240,9 @@ The accepted Coverage MCP result for the same implementation state is:
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `c5db8799-5436-481b-a46e-c9b1b1e80460`
+Coverage MCP run: `d7dc1596-87fa-45af-8b4d-06a0b7eff422`
 
-Snapshot: `7b820d34-d54c-45aa-a406-ee73fdb08b0b`
+Snapshot: `3c831a38-bc00-4149-aeb5-380365329012`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
