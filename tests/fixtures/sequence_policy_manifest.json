@@ -280,6 +280,27 @@
       "expected_maximum": 25931,
       "observed": 25932,
       "expected_format": "none"
+    },
+    {
+      "id": "decode_sequence_frames_near_max",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 4294967295,
+      "status": "ok"
+    },
+    {
+      "id": "decode_sequence_frame_bytes_near_max",
+      "operation": "decode_sequence",
+      "resource": "frame_decoded_bytes",
+      "maximum": 18446744073709551615,
+      "status": "ok"
+    },
+    {
+      "id": "decode_sequence_sequence_bytes_near_max",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 18446744073709551615,
+      "status": "ok"
     }
   ]
 }

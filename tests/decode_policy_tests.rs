@@ -101,7 +101,7 @@ struct SequenceCase {
     id: String,
     operation: String,
     resource: String,
-    maximum: u32,
+    maximum: u64,
     status: String,
     also_max_pixels: u64,
     also_max_primary_decoded_bytes: u64,
@@ -597,7 +597,7 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
             operation => panic!("unknown operation `{operation}`"),
         }
     }
-    assert_eq!(ids.len(), 79);
+    assert_eq!(ids.len(), 87);
     Ok(())
 }
 
@@ -636,12 +636,13 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
         assert!(matches!(case.status.as_str(), "ok" | "error" | "unknown"));
 
         let mut policy = match case.resource.as_str() {
-            "frames" => img::DecodePolicy::default().with_max_frames(case.maximum),
+            "frames" => img::DecodePolicy::default().with_max_frames(u32::try_from(case.maximum)?),
             "frame_decoded_bytes" => {
-                img::DecodePolicy::default().with_max_frame_decoded_bytes(u64::from(case.maximum))
+                img::DecodePolicy::default().with_max_frame_decoded_bytes(case.maximum)
             }
-            "sequence_decoded_bytes" => img::DecodePolicy::default()
-                .with_max_sequence_decoded_bytes(u64::from(case.maximum)),
+            "sequence_decoded_bytes" => {
+                img::DecodePolicy::default().with_max_sequence_decoded_bytes(case.maximum)
+            }
             resource => panic!("unknown resource `{resource}`"),
         };
         if case.also_max_pixels != 0 {
@@ -660,14 +661,17 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
             policy = policy.with_max_sequence_decoded_bytes(case.also_max_sequence_decoded_bytes);
         }
         match case.resource.as_str() {
-            "frames" => assert_eq!(policy.limits().max_frames(), Some(case.maximum)),
+            "frames" => assert_eq!(
+                policy.limits().max_frames(),
+                Some(u32::try_from(case.maximum)?)
+            ),
             "frame_decoded_bytes" => assert_eq!(
                 policy.limits().max_frame_decoded_bytes(),
-                Some(u64::from(case.maximum))
+                Some(case.maximum)
             ),
             "sequence_decoded_bytes" => assert_eq!(
                 policy.limits().max_sequence_decoded_bytes(),
-                Some(u64::from(case.maximum))
+                Some(case.maximum)
             ),
             resource => panic!("unknown resource `{resource}`"),
         }
@@ -685,7 +689,7 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
             } else {
                 default_observed
             };
-            (case.resource.as_str(), u64::from(case.maximum), observed)
+            (case.resource.as_str(), case.maximum, observed)
         } else {
             (
                 case.expected_resource.as_str(),
@@ -808,7 +812,7 @@ fn sequence_frame_limit_manifest_matches_the_public_contract()
             operation => panic!("unknown operation `{operation}`"),
         }
     }
-    assert_eq!(ids.len(), 32);
+    assert_eq!(ids.len(), 35);
     Ok(())
 }
 

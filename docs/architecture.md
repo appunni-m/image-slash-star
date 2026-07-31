@@ -190,6 +190,23 @@ bind still decode, immutable-source construction, or lazy still
 materialization, which remain governed by the primary-canvas and frame-count
 checks.
 
+### Allocation and arithmetic policy
+
+Every caller-bounded allocation is preceded by checked preflight arithmetic:
+the inclusive `DecodePolicy` limits compare exact observed lengths, and
+`ImageMode::expected_bytes` uses checked multiplication before any primary,
+later-frame, or cumulative byte claim. Boundary manifests test just-below,
+at, and above every limit, plus extreme `u64::MAX`/`u32::MAX` maxima, using
+small assets so no enormous fixture is ever allocated.
+
+Codec-internal `Vec` allocations remain infallible and the crate deliberately
+does not use `try_reserve` or recoverable out-of-memory errors: Rust's default
+allocation abort is the documented OOM behavior, and the release gate for
+hostile input is the checked preflight above rather than allocation-error
+recovery. This is the retained QA-015 decision: near-limit arithmetic is
+fixture-proven without enormous allocations, and no public API promises a
+recoverable allocation failure.
+
 ## Decoded sample layouts
 
 `DecodedImage::pixels` is tightly packed and row-major. There is no implicit
