@@ -328,10 +328,8 @@ impl<'a> WebPDecoder<'a> {
                             match chunk {
                                 WebPRiffChunk::ICCP | WebPRiffChunk::EXIF | WebPRiffChunk::XMP => {
                                     let data = *self.r.get_ref();
-                                    let start = usize::try_from(range.start)
-                                        .map_err(|_| DecodingError::IoError)?;
-                                    let end = usize::try_from(range.end)
-                                        .map_err(|_| DecodingError::IoError)?;
+                                    let start = usize_from_u64(range.start);
+                                    let end = usize_from_u64(range.end);
                                     if end <= data.len() {
                                         self.metadata.push(crate::types::OpaqueMetadata {
                                             kind: chunk.fourcc().to_vec(),
@@ -341,10 +339,8 @@ impl<'a> WebPDecoder<'a> {
                                 }
                                 WebPRiffChunk::Unknown(fourcc) => {
                                     let data = *self.r.get_ref();
-                                    let start = usize::try_from(range.start)
-                                        .map_err(|_| DecodingError::IoError)?;
-                                    let end = usize::try_from(range.end)
-                                        .map_err(|_| DecodingError::IoError)?;
+                                    let start = usize_from_u64(range.start);
+                                    let end = usize_from_u64(range.end);
                                     if end <= data.len() {
                                         // WebP defines no safe-to-copy bit;
                                         // unknown RIFF chunks are ignorable by
@@ -772,6 +768,23 @@ impl<'a> WebPDecoder<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    for (chunk, fourcc) in [
+        (WebPRiffChunk::RIFF, *b"RIFF"),
+        (WebPRiffChunk::WEBP, *b"WEBP"),
+        (WebPRiffChunk::VP8, *b"VP8 "),
+        (WebPRiffChunk::VP8L, *b"VP8L"),
+        (WebPRiffChunk::VP8X, *b"VP8X"),
+        (WebPRiffChunk::ANIM, *b"ANIM"),
+        (WebPRiffChunk::ANMF, *b"ANMF"),
+        (WebPRiffChunk::ALPH, *b"ALPH"),
+        (WebPRiffChunk::ICCP, *b"ICCP"),
+        (WebPRiffChunk::EXIF, *b"EXIF"),
+        (WebPRiffChunk::XMP, *b"XMP "),
+        (WebPRiffChunk::Unknown(*b"ABCD"), *b"ABCD"),
+    ] {
+        assert_eq!(chunk.fourcc(), fourcc);
+    }
+
     fn chunk(fourcc: &[u8; 4], payload: &[u8]) -> Vec<u8> {
         let mut out = Vec::with_capacity(8 + payload.len() + usize::from(payload.len() % 2 != 0));
         out.extend_from_slice(fourcc);
@@ -1171,6 +1184,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         opaque_blocks: Vec::new(),
     };
     let _ = decoder.read_image(&mut []);
+}
+
+/// Convert a validated chunk offset to `usize` without a host-width error
+/// path. On 64-bit hosts the conversion is lossless; on narrower hosts an
+/// unrepresentable offset saturates and the retention bounds guard skips the
+/// chunk.
+fn usize_from_u64(value: u64) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        usize::from_ne_bytes(value.to_ne_bytes())
+    }
+    #[cfg(not(target_pointer_width = "64"))]
+    {
+        usize::try_from(value).unwrap_or(usize::MAX)
+    }
 }
 
 pub(crate) fn range_reader<'reader>(
