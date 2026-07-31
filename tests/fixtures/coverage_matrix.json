@@ -70759,7 +70759,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "be.tiff",
@@ -70830,7 +70834,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "big",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "big",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "registered_header_variants_over_classic_ifd",
@@ -70901,7 +70909,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "registered_header_variants_over_classic_ifd_legacy_be_swapped_magic",
@@ -70972,7 +70984,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "big",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "big",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "registered_header_variants_over_classic_ifd_bigtiff_be_signature",
@@ -71043,7 +71059,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "big",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "big",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "uncompressed.tiff",
@@ -71115,7 +71135,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "lzw.tiff",
@@ -71187,7 +71211,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_gray_lzw",
@@ -71258,7 +71286,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_rgba_lzw",
@@ -71329,7 +71361,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_rgb_lzw_predictor",
@@ -71400,7 +71436,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_gray16_lzw_predictor",
@@ -71471,7 +71511,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_lzw_no_eoi",
@@ -71542,7 +71586,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_lzw_trailing_code",
@@ -71613,7 +71661,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_lzw_kwkwk_clipped",
@@ -71684,7 +71736,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_lzw_dictionary_saturation",
@@ -71755,7 +71811,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_lzw_lzw_post_ifd_empty_count",
@@ -71826,7 +71886,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "deflate.tiff",
@@ -71898,7 +71962,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_deflate_gray_deflate",
@@ -71969,7 +72037,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_deflate_rgb_deflate_predictor",
@@ -72040,7 +72112,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_deflate_gray16_deflate_predictor",
@@ -72111,7 +72187,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_deflate_float32_deflate_predictor",
@@ -72182,7 +72262,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_deflate_be_float32_predictor",
@@ -72253,7 +72337,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "big",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "big",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_deflate_oversized_output",
@@ -72324,7 +72412,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "sample_format_i32",
@@ -72395,7 +72487,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "sample_format_i32_be_signed32_predictor",
@@ -72466,7 +72562,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "big",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "big",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "sample_format_i32_signed32",
@@ -72537,7 +72637,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "packbits.tiff",
@@ -72608,7 +72712,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_packbits_packbits_noop",
@@ -72679,7 +72787,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_packbits_packbits_literal_overrun",
@@ -72750,7 +72862,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compression_packbits_packbits_run_overrun",
@@ -72821,7 +72937,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "bilevel.tiff",
@@ -72893,7 +73013,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "photometric_miniswhite",
@@ -72964,7 +73088,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "photometric_miniswhite_miniswhite_1bit_aligned",
@@ -73035,7 +73163,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "photometric_miniswhite_miniswhite_8bit",
@@ -73106,7 +73238,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "photometric_miniswhite_miniswhite_2bit",
@@ -73177,7 +73313,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "photometric_miniswhite_miniswhite_4bit",
@@ -73248,7 +73388,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "gray.tiff",
@@ -73320,7 +73464,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "grayscale_alpha",
@@ -73391,7 +73539,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "palette.tiff",
@@ -73468,7 +73620,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "palette_low_depth",
@@ -73545,7 +73701,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "palette_low_depth_palette4",
@@ -73622,7 +73782,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "palette_map_leniency",
@@ -73693,7 +73857,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "rgb.tiff",
@@ -73765,7 +73933,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "rgb_rgb_dpi",
@@ -73836,7 +74008,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "rgb_byte_strip_offset",
@@ -73907,7 +74083,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "rgb_unknown_field_type",
@@ -73978,7 +74158,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "rgba.tiff",
@@ -74050,7 +74234,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "cmyk.tiff",
@@ -74121,7 +74309,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "ycbcr",
@@ -74192,7 +74384,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "1bit.tiff",
@@ -74263,7 +74459,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "depth_2",
@@ -74334,7 +74534,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "depth_4",
@@ -74405,7 +74609,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "8bit.tiff",
@@ -74476,7 +74684,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "16bit.tiff",
@@ -74547,7 +74759,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "depth_16_miniswhite_16bit",
@@ -74618,7 +74834,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "float32.tiff",
@@ -74689,7 +74909,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "stripped.tiff",
@@ -74760,7 +74984,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "stripped_leniency",
@@ -74831,7 +75059,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "stripped_leniency_uncompressed_missing_strips",
@@ -74902,7 +75134,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "stripped_leniency_missing_strip_byte_counts",
@@ -74973,7 +75209,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "tiled.tiff",
@@ -75044,7 +75284,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "tiled_missing_byte_counts",
@@ -75115,7 +75359,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "tiled_predictor",
@@ -75186,7 +75434,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "tiled_predictor_tiled_adobe_deflate_predictor",
@@ -75257,7 +75509,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "tiled_lzw_predictor",
@@ -75328,7 +75584,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "compressed_strip_count_leniency",
@@ -75399,7 +75659,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "single.tiff",
@@ -75470,7 +75734,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "multipage.tiff",
@@ -75572,6 +75840,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -75600,6 +75870,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -75612,7 +75884,11 @@
                 "pixel_origin": "pillow_fixture"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "multi_page_multipage_mixed",
@@ -75696,6 +75972,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_mixed_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -75724,6 +76002,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_mixed_tiff_frame_1.bin",
                 "ref_bytes": 15,
                 "ref_mode": "L8",
@@ -75754,7 +76034,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "cyclic_ifd_leniency",
@@ -75825,7 +76109,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "truncated_later_ifd_leniency",
@@ -75909,7 +76197,11 @@
           "sequence_status": "error",
           "sequence_error_type": "builtins.TypeError",
           "sequence_error_message": "Missing dimensions",
-          "sequence_error_kind": "malformed"
+          "sequence_error_kind": "malformed",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture"
         },
         {
           "asset": "bad_ifd.tiff",
@@ -77646,7 +77938,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_unknown_compression",
@@ -77901,7 +78195,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_oob_strip",
@@ -77974,7 +78270,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_empty_strip_offsets",
@@ -78229,7 +78527,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_missing_tile_width",
@@ -78575,7 +78875,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_miniswhite_gray_alpha",
@@ -78739,7 +79041,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_lzw_invalid_future_code",
@@ -78812,7 +79116,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_lzw_clear_only",
@@ -78885,7 +79191,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_lzw_end_only",
@@ -78958,7 +79266,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_ascii_width",
@@ -79395,7 +79705,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_ascii_compressed_strip_byte_counts",
@@ -79468,7 +79780,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_compressed_descending_strip_offsets",
@@ -79541,7 +79855,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_uncompressed_extra_strips",
@@ -79614,7 +79930,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_compressed_bad_strip_counts",
@@ -79687,7 +80005,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_bad_ifd_be_16bit_unsupported_photometric",
@@ -80124,7 +80444,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream",
@@ -80197,7 +80519,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream_deflate_invalid_header",
@@ -80270,7 +80594,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream_deflate_reserved_block",
@@ -80343,7 +80669,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream_deflate_bad_stored_complement",
@@ -80416,7 +80744,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream_deflate_bad_adler",
@@ -80489,7 +80819,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream_deflate_truncated_fixed_block",
@@ -80562,7 +80894,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         },
         {
           "id": "error_deflate_stream_deflate_backreference_before_output",
@@ -80635,7 +80969,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture"
         }
       ],
       "encode": [
@@ -82473,6 +82809,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_raw_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82501,6 +82839,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_raw_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82599,6 +82939,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_lzw_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82627,6 +82969,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_lzw_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82725,6 +83069,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_deflate_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82753,6 +83099,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_deflate_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82851,6 +83199,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_packbits_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82879,6 +83229,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_packbits_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -82977,6 +83329,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_mixed_pages_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83005,6 +83359,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_mixed_pages_tiff_frame_1.bin",
                 "ref_bytes": 15,
                 "ref_mode": "L8",
@@ -83121,6 +83477,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_canvas_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83149,6 +83507,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_canvas_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83262,6 +83622,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_frame_mode_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83290,6 +83652,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_frame_mode_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83403,6 +83767,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_duration_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83431,6 +83797,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_duration_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83544,6 +83912,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_disposal_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83572,6 +83942,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_disposal_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83685,6 +84057,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_blend_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83713,6 +84087,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_blend_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83826,6 +84202,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_interlace_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83854,6 +84232,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_interlace_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83967,6 +84347,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_default_image_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -83995,6 +84377,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_default_image_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -84108,6 +84492,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_loop_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -84136,6 +84522,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_loop_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -84254,6 +84642,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_background_tiff_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -84282,6 +84672,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": "little",
+                "source_byte_order_origin": "pillow_fixture",
                 "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_background_tiff_frame_1.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",

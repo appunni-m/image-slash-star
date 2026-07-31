@@ -125,6 +125,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         is_animated: false,
         frame_count: Some(1),
         cursor_hotspot: None,
+        source: crate::types::SourceDescriptor::new(),
     })
 }
 

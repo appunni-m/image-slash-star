@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-07-31 against the working tree based on `b437123`
+Reviewed: 2026-07-31 against the working tree based on `230fc96`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -16,8 +16,8 @@ declaration-level reference.
 - header and container inspection;
 - validated still-image and sequence decoding;
 - explicit-format still-image and sequence encoding;
-- source format, sample mode, color layout, palette, alpha, frame timing,
-  disposal, and background transfer models;
+- source format, structural source descriptors, sample mode, color layout,
+  palette, alpha, frame timing, disposal, and background transfer models;
 - structured codec errors; and
 - immutable encoded-byte snapshots with shared lazy materialization.
 
@@ -69,6 +69,13 @@ The shared `ico` codec also recognizes CUR. `cursor_hotspot: Some(...)` on
 `ImageInfo` and `DecodedImage` preserves CUR identity and its selected entry's
 activation point; ordinary ICO uses `None`.
 
+`ImageInfo::source` and `DecodedImage::source` carry an extensible
+`SourceDescriptor`. TIFF records the exact `II`/`MM` container declaration as
+`SourceByteOrder::Little` or `SourceByteOrder::Big` on inspection and on every
+decoded page. Other codecs currently return an empty descriptor. A source
+descriptor is structural provenance, not opaque ICC/EXIF/XMP metadata and not
+an instruction to reinterpret every normalized pixel buffer.
+
 ## Canonical public surface
 
 Codec modules and dispatchers are private. Callers use the root API so format
@@ -84,6 +91,8 @@ translation cannot be bypassed.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
+| `all_capabilities()` | Return the same typed record for every public format in stable order |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
 
 `detect_format` recognizes all eight container signatures even when a codec
@@ -91,6 +100,17 @@ feature is disabled. An operation that requires a disabled codec returns
 `ImageError::FeatureDisabled`. For AVIF, `avif` and `avis` major brands are
 direct signatures; generic `mif1`/`msf1` majors additionally require an
 `avif` or `avis` compatible brand in the complete bounded `ftyp` box.
+
+Capability discovery mirrors this dispatch without parsing input.
+`Capability::ManifestBounded` means the operation can be attempted within the
+fixture-defined codec contract; `Restricted` names a narrower target subset;
+and `Unavailable` distinguishes a disabled feature, unavailable target, or
+unimplemented operation. Detection remains manifest-bounded for every format.
+Sequence capability means genuine multi-image retention or emission, not the
+common one-frame fallback. Enabled native PNG reports sequence decode only;
+GIF, TIFF, WebP, and AVIF report sequence decode and encode; JPEG, BMP, and ICO
+report neither. Enabled `wasm32` AVIF reports restricted portable still decode
+and target-unavailable encode and sequence operations.
 
 ## Decoded sample layouts
 
@@ -107,14 +127,16 @@ row stride.
 | `F32`, `I32` | Exact Pillow-observable 32-bit luminance bytes. These are byte-preserving modes, not portable typed-scalar views: TIFF `I`/`F` can retain the file byte order. |
 | `Rgb32F`, `Rgba32F` | Native-endian 32-bit floating-point RGB(A) samples |
 
-Code that needs numeric `I32`/`F32` values must determine the originating
-codec's sample byte order before casting or parsing the bytes. This distinction
+Code that needs numeric TIFF `I32`/`F32` values must read
+`DecodedImage::source.byte_order()` before parsing the bytes. This distinction
 is required for Pillow 12.2.0 parity: on a little-endian host, Pillow
 `tobytes()` still returns big-endian bytes for a big-endian TIFF `I` or `F`
-source. TIFF encoding treats the supplied `I32`/`F32` buffer as the exact
-Pillow-observable transfer bytes. The manifest proves uncompressed, Deflate
-plus horizontal-predictor, and LZW plus horizontal-predictor output from
-detached big-endian source bytes.
+source. The descriptor reports source-container order; it does not override
+the documented little-endian `L16` transfer layout or affect 8-bit modes. TIFF
+encoding does not consume the descriptor and treats the supplied `I32`/`F32`
+buffer as exact Pillow-observable transfer bytes. The manifest proves
+uncompressed, Deflate plus horizontal-predictor, and LZW plus
+horizontal-predictor output from detached big-endian source bytes.
 
 `DecodedImage::new` and `DecodedImage::with_mode` record caller-supplied
 buffers without validating them. `DecodedImage::validate`, every encoder, and

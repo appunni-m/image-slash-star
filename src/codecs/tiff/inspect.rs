@@ -2,7 +2,7 @@
 
 use super::decode::{Directory, Endian};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, SourceDescriptor};
 
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
@@ -43,6 +43,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         is_animated: frame_count > 1,
         frame_count: complete_chain.then_some(frame_count),
         cursor_hotspot: None,
+        source: SourceDescriptor::new().with_byte_order(endian.source_byte_order()),
     })
 }
 

@@ -600,6 +600,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         mode: ImageMode::P8,
         palette: Some(ImagePalette::default()),
         cursor_hotspot: None,
+        source: crate::types::SourceDescriptor::new(),
     };
     let _ = prepare_palette_pixels(&short_alpha);
     let _ = prepare_palette_pixels(&invalid_palette);

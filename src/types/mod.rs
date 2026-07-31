@@ -132,6 +132,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         mode: ImageMode::L8,
         palette: None,
         cursor_hotspot: None,
+        source: SourceDescriptor::new(),
     }
     .validate();
     let _ = DecodedImage::new(1, 1, vec![0], ColorType::L8)
@@ -486,6 +487,8 @@ pub struct ImageInfo {
     pub frame_count: Option<u32>,
     /// Selected Windows cursor hotspot, distinguishing CUR from ordinary ICO.
     pub cursor_hotspot: Option<CursorHotspot>,
+    /// Structural facts retained from the encoded source.
+    pub source: SourceDescriptor,
 }
 
 impl ImageInfo {
@@ -512,6 +515,59 @@ pub struct CursorHotspot {
     pub x: u16,
     /// Vertical coordinate from the cursor image's top edge.
     pub y: u16,
+}
+
+/// Byte order declared by an encoded source container.
+///
+/// This does not by itself describe the byte order of
+/// [`DecodedImage::pixels`]. A codec may normalize its transfer layout. TIFF
+/// `I32` and `F32` deliberately retain source-order bytes, while TIFF `L16`
+/// is normalized to little-endian transfer bytes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SourceByteOrder {
+    /// Least-significant byte first.
+    Little,
+    /// Most-significant byte first.
+    Big,
+}
+
+/// Extensible structural facts retained from an encoded source.
+///
+/// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
+/// format-specific payloads. Its private representation permits adding
+/// independently proved source facts without making callers rebuild public
+/// struct literals.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SourceDescriptor {
+    byte_order: Option<SourceByteOrder>,
+}
+
+impl SourceDescriptor {
+    /// Create an empty descriptor for caller-created pixels or a source with
+    /// no retained structural facts.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { byte_order: None }
+    }
+
+    /// Record the byte order declared by the encoded source.
+    #[must_use]
+    pub const fn with_byte_order(mut self, byte_order: SourceByteOrder) -> Self {
+        self.byte_order = Some(byte_order);
+        self
+    }
+
+    /// Return the byte order declared by the encoded source, when retained.
+    #[must_use]
+    pub const fn byte_order(&self) -> Option<SourceByteOrder> {
+        self.byte_order
+    }
+
+    /// Whether this source has no retained structural facts.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.byte_order.is_none()
+    }
 }
 
 impl<T> Decoded<T> {
@@ -810,6 +866,8 @@ pub struct DecodedImage {
     pub palette: Option<ImagePalette>,
     /// Selected Windows cursor hotspot, or `None` for ordinary images/icons.
     pub cursor_hotspot: Option<CursorHotspot>,
+    /// Structural facts retained from the encoded source.
+    pub source: SourceDescriptor,
 }
 
 impl DecodedImage {
@@ -827,6 +885,7 @@ impl DecodedImage {
             mode: color.into(),
             palette: None,
             cursor_hotspot: None,
+            source: SourceDescriptor::new(),
         }
     }
 
@@ -844,6 +903,7 @@ impl DecodedImage {
             mode,
             palette: None,
             cursor_hotspot: None,
+            source: SourceDescriptor::new(),
         }
     }
 
@@ -858,6 +918,13 @@ impl DecodedImage {
     #[must_use]
     pub fn with_cursor_hotspot(mut self, hotspot: CursorHotspot) -> Self {
         self.cursor_hotspot = Some(hotspot);
+        self
+    }
+
+    /// Attach structural source facts without changing decoded sample bytes.
+    #[must_use]
+    pub fn with_source_descriptor(mut self, source: SourceDescriptor) -> Self {
+        self.source = source;
         self
     }
 
