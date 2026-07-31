@@ -129,6 +129,7 @@ pub fn decode_sequence(
             background,
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
         },
         consumed,
     ))

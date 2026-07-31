@@ -966,6 +966,124 @@ fn opaque_blocks_match_the_container_contract() -> Result<(), Box<dyn std::error
 }
 
 #[test]
+fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{OpaqueBlock, OpaqueMetadata};
+
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+
+    // Known metadata chunks are retained as raw, unparsed metadata records
+    // (compressed payloads are never inflated), while unknown ancillary
+    // chunks stay in the opaque-block list.
+    let text = png_chunk(b"tEXt", b"Comment\0hello world");
+    let ztext = png_chunk(b"zTXt", b"Author\0\0raw-compressed-bytes");
+    let iccp = png_chunk(b"iCCP", b"profile\0\0raw-profile-bytes");
+    let exif = png_chunk(b"eXIf", b"raw-exif-bytes");
+    let unknown = png_chunk(b"prVt", b"unknown-payload");
+    let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+    let iend_offset = png_chunk_offset(&base, b"IEND")?;
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&base[..idat_offset]);
+    bytes.extend_from_slice(&text);
+    bytes.extend_from_slice(&unknown);
+    bytes.extend_from_slice(&ztext);
+    bytes.extend_from_slice(&base[idat_offset..iend_offset]);
+    bytes.extend_from_slice(&iccp);
+    bytes.extend_from_slice(&exif);
+    bytes.extend_from_slice(&base[iend_offset..]);
+
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: b"tEXt".to_vec(),
+            data: b"Comment\0hello world".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"zTXt".to_vec(),
+            data: b"Author\0\0raw-compressed-bytes".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"iCCP".to_vec(),
+            data: b"profile\0\0raw-profile-bytes".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"eXIf".to_vec(),
+            data: b"raw-exif-bytes".to_vec(),
+        },
+    ];
+    let expected_blocks = vec![OpaqueBlock {
+        kind: b"prVt".to_vec(),
+        data: b"unknown-payload".to_vec(),
+        safe_to_copy: true,
+    }];
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(
+        decoded.content.metadata, expected_metadata,
+        "still metadata"
+    );
+    assert_eq!(
+        decoded.content.opaque_blocks, expected_blocks,
+        "still blocks"
+    );
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.metadata, expected_metadata,
+        "fallback sequence metadata"
+    );
+    assert_eq!(
+        sequence.content.opaque_blocks, expected_blocks,
+        "fallback sequence blocks"
+    );
+
+    // Default encoding must not replay metadata or unknown blocks.
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Png);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+    for kind in [b"tEXt", b"zTXt", b"iCCP", b"eXIf", b"prVt"] {
+        assert!(
+            !contains_chunk_type(&encoded, kind),
+            "encoded PNG must not replay metadata chunk {kind:?}"
+        );
+    }
+
+    // Unmodified fixtures carry no metadata records, and the metadata extent
+    // policy still bounds retention.
+    let plain = image_slash_star::decode(&base)?;
+    assert!(plain.content.metadata.is_empty());
+    assert!(plain.content.opaque_blocks.is_empty());
+    let strict_policy = image_slash_star::DecodePolicy::new().with_max_metadata_bytes(1);
+    assert!(matches!(
+        image_slash_star::decode_with_policy(&bytes, &strict_policy),
+        Err(image_slash_star::ImageError::LimitExceeded { .. })
+    ));
+
+    // APNG sequence decode classifies the same chunks into the same lists.
+    let apng_base = fs::read(root.join("tests/fixtures/input/images/png/apng_l_over.png"))?;
+    let apng_idat = png_chunk_offset(&apng_base, b"IDAT")?;
+    let apng_iend = png_chunk_offset(&apng_base, b"IEND")?;
+    let mut apng = Vec::new();
+    apng.extend_from_slice(&apng_base[..apng_idat]);
+    apng.extend_from_slice(&text);
+    apng.extend_from_slice(&unknown);
+    apng.extend_from_slice(&apng_base[apng_idat..apng_iend]);
+    apng.extend_from_slice(&exif);
+    apng.extend_from_slice(&apng_base[apng_iend..]);
+    let apng_sequence = image_slash_star::decode_sequence(&apng)?;
+    assert_eq!(
+        apng_sequence.content.metadata,
+        vec![expected_metadata[0].clone(), expected_metadata[3].clone()],
+        "APNG metadata"
+    );
+    assert_eq!(
+        apng_sequence.content.opaque_blocks, expected_blocks,
+        "APNG blocks"
+    );
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;
@@ -1173,6 +1291,7 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         background: None,
         kind: image_slash_star::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     };
     let sequence_error = match image_slash_star::encode_sequence(
         &sequence,

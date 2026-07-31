@@ -75,6 +75,9 @@ All notable changes will be documented in this file. This project follows
   sequences) with PNG unknown-ancillary retention in original order,
   duplicates, safe-to-copy flags, no implicit encode replay, and
   `max_metadata_bytes` policy bounds.
+- Raw, unparsed PNG metadata retention (`OpaqueMetadata` records for
+  tEXt/zTXt/iTXt/iCCP/eXIf/tIME/pHYs and color-descriptor chunks), distinct
+  from unknown opaque blocks, without inflating compressed payloads.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

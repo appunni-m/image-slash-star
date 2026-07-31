@@ -217,6 +217,9 @@ the descriptor records only what the source declares.
 Decoded images and sequences retain `OpaqueBlock` records for container blocks
 the codec does not interpret, in original order with duplicates and the
 container's safe-to-copy flag (currently PNG unknown ancillary chunks).
+Known PNG metadata chunks (text, ICC, EXIF, time, resolution, and color
+descriptor blocks) are retained separately as raw, unparsed `OpaqueMetadata`
+records; compressed payloads are never inflated.
 Default encoding never replays retained blocks implicitly; an explicit replay
 API would have to define collisions with encoder-generated blocks first.
 

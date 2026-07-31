@@ -178,6 +178,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         cursor_hotspot: None,
         source: SourceDescriptor::new(),
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let _ = DecodedImage::new(1, 1, vec![0], ColorType::L8)
@@ -195,6 +196,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let _ = DecodedSequence {
@@ -205,6 +207,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let _ = DecodedSequence {
@@ -215,6 +218,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let frame = DecodedFrame::source_rectangle(
@@ -234,6 +238,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let right_outside_frame = DecodedFrame::source_rectangle(
@@ -253,6 +258,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let invalid_frame = DecodedFrame::source_rectangle(
@@ -272,6 +278,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let right_overflow_frame = DecodedFrame::source_rectangle(
@@ -291,6 +298,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let bottom_overflow_frame = DecodedFrame::source_rectangle(
@@ -310,6 +318,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
 
@@ -332,6 +341,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
 
@@ -353,6 +363,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let mut zero_rect_height = DecodedFrame::source_rectangle(
@@ -373,6 +384,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
 
@@ -394,6 +406,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let mut mismatched_source_height = DecodedFrame::source_rectangle(
@@ -414,6 +427,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
 
@@ -437,6 +451,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
     let rendered_height = DecodedFrame::rendered_canvas(
@@ -459,6 +474,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     }
     .validate();
 
@@ -729,6 +745,20 @@ pub struct OpaqueBlock {
     pub data: Vec<u8>,
     /// Whether the container marks this block safe to copy on re-encode.
     pub safe_to_copy: bool,
+}
+
+/// Known metadata retained from an encoded source without semantic parsing.
+///
+/// Payloads are kept exactly as stored: compressed metadata (for example PNG
+/// `zTXt`, `iTXt`, or `iCCP`) is not inflated. Default encoding never replays
+/// metadata implicitly; an explicit replay API must define collisions with
+/// encoder-generated metadata first.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OpaqueMetadata {
+    /// Format-specific metadata kind (PNG: the four-byte chunk type).
+    pub kind: Vec<u8>,
+    /// Raw encoded payload bytes exactly as stored.
+    pub data: Vec<u8>,
 }
 
 impl<T> Decoded<T> {
@@ -1088,6 +1118,8 @@ pub struct DecodedImage {
     pub source: SourceDescriptor,
     /// Opaque container blocks retained in original order.
     pub opaque_blocks: Vec<OpaqueBlock>,
+    /// Known metadata retained in original order without semantic parsing.
+    pub metadata: Vec<OpaqueMetadata>,
 }
 
 impl DecodedImage {
@@ -1107,6 +1139,7 @@ impl DecodedImage {
             cursor_hotspot: None,
             source: SourceDescriptor::new(),
             opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
         }
     }
 
@@ -1126,6 +1159,7 @@ impl DecodedImage {
             cursor_hotspot: None,
             source: SourceDescriptor::new(),
             opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
         }
     }
 
@@ -1154,6 +1188,13 @@ impl DecodedImage {
     #[must_use]
     pub fn with_opaque_blocks(mut self, opaque_blocks: Vec<OpaqueBlock>) -> Self {
         self.opaque_blocks = opaque_blocks;
+        self
+    }
+
+    /// Attach known metadata without changing decoded sample bytes.
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: Vec<OpaqueMetadata>) -> Self {
+        self.metadata = metadata;
         self
     }
 
@@ -1444,6 +1485,8 @@ pub struct DecodedSequence {
     pub kind: SequenceKind,
     /// Opaque container blocks retained in original order.
     pub opaque_blocks: Vec<OpaqueBlock>,
+    /// Known metadata retained in original order without semantic parsing.
+    pub metadata: Vec<OpaqueMetadata>,
 }
 
 impl DecodedSequence {
@@ -1471,6 +1514,7 @@ impl DecodedSequence {
             background: None,
             kind: SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
         }
     }
 

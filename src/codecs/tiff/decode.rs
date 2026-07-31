@@ -74,6 +74,7 @@ pub fn decode_sequence(
             background: None,
             kind: crate::types::SequenceKind::UntimedPages,
             opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
         },
         consumed,
     ))

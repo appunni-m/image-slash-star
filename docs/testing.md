@@ -234,6 +234,13 @@ for unmodified fixtures, APNG sequence retention, and that default encoding
 never replays the retained chunk types. A caller-set `max_metadata_bytes`
 rejects the same input before retention can bypass the policy extent.
 
+The metadata-record contract is table-driven as well: known PNG metadata
+chunks (tEXt/zTXt/iCCP/eXIf) inserted into a minimal PNG must appear as raw,
+unparsed `OpaqueMetadata` records in original order while unknown chunks stay
+in `opaque_blocks`; compressed payloads are asserted byte-for-byte without
+inflation. Still, fallback-sequence, and APNG sequence decode must agree, and
+default encoding must not replay any metadata chunk.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

@@ -26,9 +26,23 @@ const INTERPRETED_CHUNKS: [&[u8; 4]; 8] = [
     b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND", b"acTL", b"fcTL", b"fdAT",
 ];
 
+/// Ancillary chunks the model classifies as known metadata and retains in the
+/// metadata records instead of the opaque-block list.
+const KNOWN_METADATA_CHUNKS: [&[u8; 4]; 13] = [
+    b"tEXt", b"zTXt", b"iTXt", b"iCCP", b"eXIf", b"tIME", b"pHYs", b"sRGB", b"gAMA", b"cHRM",
+    b"bKGD", b"hIST", b"sBIT",
+];
+
 /// Whether an uninterpreted ancillary chunk is retained as an opaque block.
 fn retained_opaque_chunk(kind: &[u8; 4]) -> bool {
-    kind[0] & 0x20 != 0 && !INTERPRETED_CHUNKS.contains(&kind)
+    kind[0] & 0x20 != 0
+        && !INTERPRETED_CHUNKS.contains(&kind)
+        && !KNOWN_METADATA_CHUNKS.contains(&kind)
+}
+
+/// Whether an ancillary chunk is classified as known metadata.
+fn retained_metadata_chunk(kind: &[u8; 4]) -> bool {
+    kind[0] & 0x20 != 0 && KNOWN_METADATA_CHUNKS.contains(&kind)
 }
 
 fn opaque_block(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueBlock {
@@ -38,6 +52,13 @@ fn opaque_block(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueBlock {
         // PNG's safe-to-copy bit is the lowercase bit of the chunk name's
         // fourth character.
         safe_to_copy: kind[3] & 0x20 != 0,
+    }
+}
+
+fn metadata_record(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueMetadata {
+    crate::types::OpaqueMetadata {
+        kind: kind.to_vec(),
+        data: data.to_vec(),
     }
 }
 
@@ -55,6 +76,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let mut saw_post_idat_control = false;
     let mut next_sequence = 0;
     let mut opaque_blocks = Vec::new();
+    let mut metadata = Vec::new();
     for chunk in &mut chunks {
         let chunk = chunk?;
         match &chunk.kind {
@@ -87,6 +109,9 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
             b"IEND" => {
                 break;
             }
+            _ if retained_metadata_chunk(&chunk.kind) => {
+                metadata.push(metadata_record(chunk.kind, chunk.data));
+            }
             _ if retained_opaque_chunk(&chunk.kind) => {
                 opaque_blocks.push(opaque_block(chunk.kind, chunk.data));
             }
@@ -107,7 +132,8 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         palette_rgb,
         palette_alpha,
     )?
-    .with_opaque_blocks(opaque_blocks);
+    .with_opaque_blocks(opaque_blocks)
+    .with_metadata(metadata);
     Ok((image, chunks.position))
 }
 
@@ -161,6 +187,7 @@ struct ParsedApng {
     default_control: Option<ApngFrameControl>,
     frames: Vec<ApngCompressedFrame>,
     opaque_blocks: Vec<crate::types::OpaqueBlock>,
+    metadata: Vec<crate::types::OpaqueMetadata>,
 }
 
 /// Decode every APNG presentation while retaining exact source controls.
@@ -171,8 +198,10 @@ pub fn decode_sequence(
     let Some((parsed, consumed)) = parse_apng(data)? else {
         let (mut image, consumed) = decode(data)?;
         let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+        let metadata = std::mem::take(&mut image.metadata);
         let mut sequence = DecodedSequence::from_image(image);
         sequence.opaque_blocks = opaque_blocks;
+        sequence.metadata = metadata;
         return Ok((sequence, consumed));
     };
 
@@ -185,6 +214,7 @@ pub fn decode_sequence(
         default_control,
         frames: mut compressed_frames,
         opaque_blocks,
+        metadata,
     } = parsed;
     let mut output_frames = Vec::new();
     let mut canvas = None;
@@ -284,6 +314,7 @@ pub fn decode_sequence(
             background: None,
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks,
+            metadata,
         },
         consumed,
     ))
@@ -331,6 +362,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut next_sequence = 0u32;
     let mut controlled_frames = 0u32;
     let mut opaque_blocks = Vec::new();
+    let mut metadata = Vec::new();
 
     for chunk in &mut chunks {
         let chunk = chunk?;
@@ -403,6 +435,9 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                 frame.compressed.extend_from_slice(&chunk.data[4..]);
             }
             b"IEND" => break,
+            _ if retained_metadata_chunk(&chunk.kind) => {
+                metadata.push(metadata_record(chunk.kind, chunk.data));
+            }
             _ if retained_opaque_chunk(&chunk.kind) => {
                 opaque_blocks.push(opaque_block(chunk.kind, chunk.data));
             }
@@ -441,6 +476,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             default_control,
             frames,
             opaque_blocks,
+            metadata,
         },
         chunks.position,
     )))
