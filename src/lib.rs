@@ -208,6 +208,46 @@ pub fn decode_with_policy(
         .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
 }
 
+/// Decode a still image into an exact-size caller-provided destination.
+///
+/// The destination must contain exactly [`ImageInfo::decoded_bytes`] bytes
+/// for the detected format's inspected mode and canvas. Short, oversized, or
+/// layout-incompatible buffers are rejected with [`ImageError::Parameter`]
+/// before any bytes are written, so a rejected call never partially
+/// overwrites the destination. The returned image remains the authoritative
+/// decoded result; the destination receives a byte-identical copy of its
+/// pixels.
+///
+/// # Errors
+///
+/// Returns the same errors as [`decode`], plus [`ImageError::Parameter`] when
+/// the destination length does not match the decoded transfer bytes exactly.
+pub fn decode_into(data: &[u8], destination: &mut [u8]) -> ImageResult<Decoded<DecodedImage>> {
+    decode_into_with_policy(data, &DecodePolicy::default(), destination)
+}
+
+/// [`decode_into`] with an explicit caller-controlled policy.
+///
+/// # Errors
+///
+/// Returns the same errors as [`decode_into`], with resource limits applied
+/// before the destination length check.
+pub fn decode_into_with_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+    destination: &mut [u8],
+) -> ImageResult<Decoded<DecodedImage>> {
+    let decoded = decode_with_policy(data, policy)?;
+    let expected = decoded.content.pixels.len();
+    if destination.len() != expected {
+        return Err(ImageError::parameter(format!(
+            "decode destination must be exactly {expected} bytes"
+        )));
+    }
+    destination.copy_from_slice(&decoded.content.pixels);
+    Ok(decoded)
+}
+
 /// Auto-detect the format and decode every retained image frame.
 ///
 /// # Errors

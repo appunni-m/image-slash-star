@@ -278,6 +278,13 @@ after a fixture's mdat must be retained as exact raw opaque records on still
 and sequence decode, a truncated trailing box must be ignored, the unmodified
 fixture must stay empty, and encoded output must not replay retained boxes.
 
+The destination-buffer contract is table-driven: for every decoded mode family
+(L1 packed, P8, L8-family, La8, Rgb8, Rgba8) across PNG/GIF/TIFF/WebP/JPEG/
+BMP/ICO/AVIF fixtures, `ImageInfo::decoded_bytes` must equal the decoded pixel
+length, `decode_into` must copy byte-identical pixels into an exact buffer,
+short and oversized destinations must be rejected with `Parameter` and left
+untouched, and policy limits must still apply before the length check.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

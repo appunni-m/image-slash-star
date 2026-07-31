@@ -2004,6 +2004,134 @@ fn avif_boxes_match_the_container_contract() -> Result<(), Box<dyn std::error::E
 }
 
 #[test]
+fn destination_buffers_match_the_output_size_contract() -> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut cases: Vec<(&str, bool, &str, ImageMode)> = vec![
+        (
+            "png rgb",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+            ImageMode::Rgb8,
+        ),
+        (
+            "png rgba",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/alpha_checker.png",
+            ImageMode::Rgba8,
+        ),
+        (
+            "png bilevel",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1bit.png",
+            ImageMode::L1,
+        ),
+        (
+            "gif indexed",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+            ImageMode::P8,
+        ),
+        (
+            "tiff gray-alpha",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/gray_alpha.tiff",
+            ImageMode::La8,
+        ),
+        (
+            "webp rgb",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+            ImageMode::Rgb8,
+        ),
+        (
+            "jpeg rgb",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+            ImageMode::Rgb8,
+        ),
+        (
+            "bmp rgb",
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+            ImageMode::Rgb8,
+        ),
+        (
+            "ico rgb",
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+            ImageMode::Rgb8,
+        ),
+    ];
+    if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
+        cases.push((
+            "avif rgb",
+            true,
+            "tests/fixtures/input/images/avif/baseline.avif",
+            ImageMode::Rgb8,
+        ));
+    }
+
+    for &(name, enabled, path, expected_mode) in &cases {
+        if !enabled {
+            continue;
+        }
+        let data = fs::read(root.join(path))?;
+        let info = image_slash_star::inspect(&data)?;
+        assert_eq!(info.mode, expected_mode, "{name} mode");
+        let expected = info.decoded_bytes()?;
+        let decoded = image_slash_star::decode(&data)?;
+        assert_eq!(decoded.content.pixels.len(), expected, "{name} length");
+
+        let mut exact = vec![0xAA; expected];
+        let into_decoded = image_slash_star::decode_into(&data, &mut exact)?;
+        assert_eq!(exact, decoded.content.pixels, "{name} exact destination");
+        assert_eq!(
+            into_decoded.content, decoded.content,
+            "{name} returned image"
+        );
+
+        let mut short = vec![0xAA; expected.saturating_sub(1)];
+        assert!(
+            matches!(
+                image_slash_star::decode_into(&data, &mut short),
+                Err(ImageError::Parameter { .. })
+            ),
+            "{name} short destination must be rejected"
+        );
+        assert!(
+            short.iter().all(|&byte| byte == 0xAA),
+            "{name} short destination must remain untouched"
+        );
+
+        let mut oversized = vec![0xAA; expected.saturating_add(1)];
+        assert!(
+            matches!(
+                image_slash_star::decode_into(&data, &mut oversized),
+                Err(ImageError::Parameter { .. })
+            ),
+            "{name} oversized destination must be rejected"
+        );
+        assert!(
+            oversized.iter().all(|&byte| byte == 0xAA),
+            "{name} oversized destination must remain untouched"
+        );
+    }
+
+    // Policy limits still apply before the destination length check.
+    if cfg!(feature = "png") {
+        let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let mut buffer = vec![0xAA; 3];
+        let strict = image_slash_star::DecodePolicy::new().with_max_encoded_bytes(1);
+        assert!(matches!(
+            image_slash_star::decode_into_with_policy(&data, &strict, &mut buffer),
+            Err(ImageError::LimitExceeded { .. })
+        ));
+        assert!(buffer.iter().all(|&byte| byte == 0xAA));
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;

@@ -675,6 +675,20 @@ impl ImageInfo {
     pub const fn has_palette_table(&self) -> bool {
         self.palette.is_some()
     }
+
+    /// Exact decoded transfer-byte length for this inspected image.
+    ///
+    /// The value is computed from the inspected canvas and mode without
+    /// decoding compressed payloads, so callers can preflight a destination
+    /// buffer before [`crate::decode_into`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn decoded_bytes(&self) -> ImageResult<usize> {
+        self.mode.expected_bytes(self.width, self.height)
+    }
 }
 
 /// Pixel coordinate selected as the activation point of a Windows cursor.
@@ -1207,7 +1221,16 @@ impl ImageMode {
         }
     }
 
-    pub(crate) fn expected_bytes(self, width: u32, height: u32) -> ImageResult<usize> {
+    /// Exact decoded transfer-byte length for this mode and canvas.
+    ///
+    /// `L1` is packed with the final row padded to whole bytes; all other
+    /// modes are tightly packed interleaved samples.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn expected_bytes(self, width: u32, height: u32) -> ImageResult<usize> {
         let width = width as usize;
         let height = height as usize;
         if self == Self::L1 {
