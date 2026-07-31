@@ -454,6 +454,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
+        opaque_blocks: Vec::new(),
     };
     let _ = encode_sequence(&invalid_sequence, &AvifEncodeOptions::default());
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), ColorType::L8);
@@ -480,6 +481,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
+        opaque_blocks: Vec::new(),
     };
     let _ = encode_sequence(&offset_sequence, &AvifEncodeOptions::default());
     let top_offset_sequence = DecodedSequence {
@@ -497,6 +499,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
+        opaque_blocks: Vec::new(),
     };
     let _ = encode_sequence(&top_offset_sequence, &AvifEncodeOptions::default());
 
@@ -516,6 +519,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         palette: Some(ImagePalette::default()),
         cursor_hotspot: None,
         source: crate::types::SourceDescriptor::new(),
+        opaque_blocks: Vec::new(),
     };
     let _ = prepare_palette_pixels(&short_alpha);
     let _ = prepare_palette_pixels(&invalid_palette);

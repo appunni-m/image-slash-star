@@ -71,6 +71,10 @@ All notable changes will be documented in this file. This project follows
   `Premultiplied`, `BinaryMask`, and reserved `Auxiliary`), recorded from GIF
   transparency, PNG/WebP/AVIF alpha, and TIFF `ExtraSamples`, without changing
   the normalized unassociated decoded transfer layout.
+- An ordered opaque-block model (`OpaqueBlock` on decoded images and
+  sequences) with PNG unknown-ancillary retention in original order,
+  duplicates, safe-to-copy flags, no implicit encode replay, and
+  `max_metadata_bytes` policy bounds.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact
