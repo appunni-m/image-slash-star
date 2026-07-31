@@ -6,8 +6,8 @@
 use crate::SequenceDecodeBudget;
 use crate::encode_options::EncodeOptions;
 use crate::types::{
-    DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageErrorStage, ImageFormat,
-    ImageInfo, ImageResult,
+    DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageErrorStage,
+    ImageFormat, ImageInfo, ImageResult,
 };
 
 mod error;
@@ -421,6 +421,43 @@ pub(crate) fn decode_sequence_format(
         sequence.source_color = source_color;
         (sequence, consumed)
     })
+}
+
+/// Dispatch one-frame decode to the enabled format implementation.
+///
+/// TIFF decodes only the selected page's IFD; every other sequence format
+/// currently decodes the full sequence and returns the indexed frame, so the
+/// public contract is uniform while the eager fallback is documented.
+#[cfg_attr(not(feature = "tiff"), allow(unused_variables))]
+pub(crate) fn decode_frame_format(
+    data: &[u8],
+    format: ImageFormat,
+    index: u32,
+) -> ImageResult<DecodedFrame> {
+    #[cfg(feature = "tiff")]
+    if format == ImageFormat::Tiff {
+        return into_image_result(
+            tiff::decode::decode_page(data, index).map(|(image, _)| {
+                DecodedFrame::source_rectangle(
+                    image,
+                    0,
+                    0,
+                    crate::types::FrameDuration::ZERO,
+                    crate::types::FrameDisposal::Unspecified,
+                    crate::types::FrameBlend::Unspecified,
+                    false,
+                )
+            }),
+            format,
+            ImageErrorStage::SequenceDecode,
+        );
+    }
+    let sequence = crate::decode_sequence(data)?.into_inner();
+    sequence
+        .frames
+        .get(index as usize)
+        .cloned()
+        .ok_or_else(|| ImageError::parameter(format!("frame index {index} is out of range")))
 }
 
 /// Dispatch encoding to the enabled format implementation.
