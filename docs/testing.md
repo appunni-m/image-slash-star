@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-07-31 on the working tree based on revision `9a2859c`
+Reviewed: 2026-07-31 on the working tree based on revision `739ac3b`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -103,7 +103,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `9a2859c`, the generated matrix
+For the current working tree based on revision `739ac3b`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -217,9 +217,9 @@ The accepted Coverage MCP result for the same implementation state is:
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `a4e313be-bf91-48cf-a531-0993da0d62a3`
+Coverage MCP run: `c8c6c0a6-4b9a-4e16-bdeb-0b559b5a4eb8`
 
-Snapshot: `0cab584b-d234-40b9-aeb4-977eec596dd7`
+Snapshot: `02297241-54cf-4d43-9546-33b4192a2474`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
