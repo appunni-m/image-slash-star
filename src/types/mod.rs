@@ -55,6 +55,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(descriptor.alpha(), Some(SourceAlpha::Auxiliary));
     assert_eq!(descriptor.byte_order(), Some(SourceByteOrder::Big));
     assert!(!descriptor.is_empty());
+    let alpha_only = SourceDescriptor::new().with_alpha(SourceAlpha::Auxiliary);
+    assert!(!alpha_only.is_empty());
+    assert!(SourceDescriptor::new().is_empty());
 
     let colors = [
         ColorType::L8,
