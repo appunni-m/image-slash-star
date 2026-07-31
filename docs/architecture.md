@@ -310,6 +310,13 @@ operation; `UnknownFormat` and `FeatureDisabled` have no stage, and
 `LimitExceeded` already carries the typed `CodecOperation` instead. Stages are
 stable recovery fields; the diagnostic message remains non-contractual prose.
 
+Where a codec parser can name the failing container structure, it also attaches
+the encoded-input byte offset (`ImageError::offset()`) and a stable structure
+identity (`ImageError::identity()`): PNG chunk boundaries, GIF blocks/images/
+extensions, JPEG markers/segments, TIFF IFDs, WebP chunks on the metadata-scan
+path, and AVIF boxes. BMP, ICO, and WebP decode internals intentionally remain
+detail-free. Both fields are stable recovery data, never prose.
+
 All canonical fallible operations return `ImageResult<T>`. `ImageError` is
 non-exhaustive so downstream matches need a fallback arm.
 

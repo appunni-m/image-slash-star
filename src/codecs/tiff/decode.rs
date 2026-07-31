@@ -88,7 +88,8 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     let mut payload_end = 0usize;
     while offset != 0 && !seen.contains(&offset) {
         seen.push(offset);
-        let directory = Directory::parse(data, offset, endian)?;
+        let directory = Directory::parse(data, offset, endian)
+            .map_err(|error| error.at(offset as u64, "tiff_ifd"))?;
         #[allow(clippy::arithmetic_side_effects)]
         let directory_end = offset
             .saturating_add(2)
@@ -128,7 +129,8 @@ fn decode_ifd(
     endian: Endian,
     budget: Option<&mut SequenceDecodeBudget>,
 ) -> CodecResult<(DecodedImage, usize, usize)> {
-    let directory = Directory::parse(data, ifd_offset, endian)?;
+    let directory = Directory::parse(data, ifd_offset, endian)
+        .map_err(|error| error.at(ifd_offset as u64, "tiff_ifd"))?;
     let next_offset = directory.next_offset();
     #[allow(clippy::arithmetic_side_effects)]
     let directory_end = ifd_offset

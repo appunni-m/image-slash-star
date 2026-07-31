@@ -1204,6 +1204,7 @@ impl<'a> Iterator for Chunks<'a> {
         if self.failed || self.position == self.data.len() {
             return None;
         }
+        let chunk_start = self.position as u64;
         let result = (|| -> CodecResult<Chunk<'a>> {
             let length_bytes = self
                 .data
@@ -1235,7 +1236,7 @@ impl<'a> Iterator for Chunks<'a> {
         if result.is_err() {
             self.failed = true;
         }
-        Some(result)
+        Some(result.map_err(|error| error.at(chunk_start, "png_chunk")))
     }
 }
 

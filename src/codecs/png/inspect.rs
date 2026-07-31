@@ -11,7 +11,8 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     if data.get(..8).malformed("truncated PNG signature")? != SIGNATURE {
         return Err(CodecError::Malformed("invalid PNG signature".to_owned()));
     }
-    let (kind, header, mut position) = read_chunk(&data[8..], 8)?;
+    let (kind, header, mut position) =
+        read_chunk(&data[8..], 8).map_err(|error| error.at(8, "png_chunk"))?;
     if kind != *b"IHDR" || header.len() != 13 {
         return Err(CodecError::Malformed(
             "PNG must begin with a 13-byte IHDR chunk".to_owned(),
@@ -47,7 +48,8 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut next_sequence = 0u32;
     let mut saw_following_chunk = false;
     while position < data.len() {
-        let (kind, payload, next) = read_chunk(&data[position..], position)?;
+        let (kind, payload, next) = read_chunk(&data[position..], position)
+            .map_err(|error| error.at(position as u64, "png_chunk"))?;
         saw_following_chunk = true;
         position = next;
         match &kind {

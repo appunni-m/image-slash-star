@@ -145,9 +145,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     while position < consumed {
         let remaining = consumed.saturating_sub(position);
         if remaining < 8 {
-            return Err(CodecError::Malformed(
-                "truncated WebP chunk header".to_owned(),
-            ));
+            return Err(
+                CodecError::Malformed("truncated WebP chunk header".to_owned())
+                    .at(position as u64, "webp_chunk"),
+            );
         }
         let kind = [
             data[position],
@@ -163,9 +164,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         ]) as usize;
         let payload_end = position.saturating_add(8).saturating_add(size);
         if payload_end > consumed {
-            return Err(CodecError::Malformed(
-                "WebP chunk exceeds the RIFF size".to_owned(),
-            ));
+            return Err(
+                CodecError::Malformed("WebP chunk exceeds the RIFF size".to_owned())
+                    .at(position as u64, "webp_chunk"),
+            );
         }
         let is_image = kind == *b"VP8 " || kind == *b"VP8L" || kind == *b"ALPH";
         pixel = pixel.saturating_add(if is_image { size as u64 } else { 0 });

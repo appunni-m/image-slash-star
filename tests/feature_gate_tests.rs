@@ -299,6 +299,8 @@ fn extension_aliases_and_mime_queries_match_the_public_contract() {
             format: None,
             message: "unknown extension: dib".to_owned(),
             stage: None,
+            offset: None,
+            identity: None,
         })
     );
 }
@@ -479,6 +481,8 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 format: Some(format),
                 message: AVIF_WASM_UNAVAILABLE.to_owned(),
                 stage: None,
+                offset: None,
+                identity: None,
             };
             let info = image_slash_star::inspect(&bytes)?;
             let Some(expected_size) = row.ref_size else {
@@ -712,6 +716,8 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     };
     assert_eq!(inspect_error.kind(), ImageErrorKind::Malformed);
     assert_eq!(inspect_error.stage(), Some(ImageErrorStage::Inspection));
+    assert_eq!(inspect_error.identity(), Some("png_chunk"));
+    assert!(inspect_error.offset().is_some());
 
     let decode_error = match image_slash_star::decode(&malformed) {
         Err(error) => error,
@@ -719,6 +725,8 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     };
     assert_eq!(decode_error.kind(), ImageErrorKind::Malformed);
     assert_eq!(decode_error.stage(), Some(ImageErrorStage::StillDecode));
+    assert_eq!(decode_error.identity(), Some("png_chunk"));
+    assert!(decode_error.offset().is_some());
 
     let sequence_error = match image_slash_star::decode_sequence(&malformed) {
         Err(error) => error,
@@ -729,6 +737,8 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         sequence_error.stage(),
         Some(ImageErrorStage::SequenceDecode)
     );
+    assert_eq!(sequence_error.identity(), Some("png_chunk"));
+    assert!(sequence_error.offset().is_some());
 
     let source_error = match image_slash_star::EncodedImage::new(malformed) {
         Err(error) => error,
@@ -736,6 +746,8 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     };
     assert_eq!(source_error.kind(), ImageErrorKind::Malformed);
     assert_eq!(source_error.stage(), Some(ImageErrorStage::Inspection));
+    assert_eq!(source_error.identity(), Some("png_chunk"));
+    assert!(source_error.offset().is_some());
 
     let source = image_slash_star::EncodedImage::new(verify_only)?;
     let verify_error = match source.verify() {
@@ -744,6 +756,8 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     };
     assert_eq!(verify_error.kind(), ImageErrorKind::Malformed);
     assert_eq!(verify_error.stage(), Some(ImageErrorStage::Verification));
+    assert_eq!(verify_error.identity(), Some("png_chunk"));
+    assert!(verify_error.offset().is_some());
 
     let cmyk = DecodedImage::new(1, 1, vec![0; 4], ColorType::Cmyk8);
     let encode_error = match image_slash_star::encode_default(&cmyk, ImageFormat::Png) {
@@ -752,6 +766,8 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     };
     assert_eq!(encode_error.kind(), ImageErrorKind::Unsupported);
     assert_eq!(encode_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(encode_error.identity(), None);
+    assert_eq!(encode_error.offset(), None);
 
     let frame = DecodedFrame::rendered_canvas(
         DecodedImage::new(1, 1, vec![0], ColorType::L8),
@@ -785,5 +801,59 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         sequence_error.stage(),
         Some(ImageErrorStage::SequenceEncode)
     );
+    assert_eq!(sequence_error.identity(), None);
+    assert_eq!(sequence_error.offset(), None);
+
+    for (name, enabled, path, identity_prefix) in [
+        (
+            "gif",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/truncated_image_descriptor.gif",
+            "gif_",
+        ),
+        (
+            "jpeg",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/truncated.jpg",
+            "jpeg_",
+        ),
+        (
+            "tiff",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/truncated_ifd_entry.tiff",
+            "tiff_",
+        ),
+    ] {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        let error = match image_slash_star::decode(&bytes) {
+            Err(error) => error,
+            Ok(_) => panic!("{name} truncated fixture must fail decode"),
+        };
+        assert_eq!(error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillDecode));
+        assert!(
+            error
+                .identity()
+                .is_some_and(|identity| identity.starts_with(identity_prefix)),
+            "{name} identity"
+        );
+        assert!(error.offset().is_some(), "{name} offset");
+    }
+
+    if cfg!(feature = "avif") {
+        let baseline = fs::read(root.join("tests/fixtures/input/images/avif/baseline.avif"))?;
+        let truncated_avif = &baseline[..100];
+        let error = match image_slash_star::decode(truncated_avif) {
+            Err(error) => error,
+            Ok(_) => panic!("truncated AVIF must fail decode"),
+        };
+        assert_eq!(error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(error.identity(), Some("avif_box"));
+        assert!(error.offset().is_some());
+    }
     Ok(())
 }

@@ -54,6 +54,9 @@ All notable changes will be documented in this file. This project follows
   work dimension is bounded by the typed resource set, with strictness and
   requested output mode classified as result-shaping policy rather than
   resource limits.
+- Parse-site byte offsets and stable container-structure identities on
+  codec-dispatched failures (`ImageError::offset()`/`identity()`), attached at
+  PNG, GIF, JPEG, TIFF, WebP-scan, and AVIF structure boundaries.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains

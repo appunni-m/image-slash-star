@@ -527,6 +527,8 @@ fn parameter(format: ImageFormat, message: impl Into<String>) -> ImageError {
         format: Some(format),
         message: message.into(),
         stage: None,
+        offset: None,
+        identity: None,
     }
 }
 

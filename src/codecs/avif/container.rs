@@ -215,28 +215,39 @@ pub(super) fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
 fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
     let mut budget = Budget::default();
     let mut reader = Reader::new(data);
-    let first = next_box(&mut reader, true, &mut budget)?.ok_or_else(|| parse_failure!())?;
+    let first = next_box(&mut reader, true, &mut budget)
+        .map_err(|error| error.at(0, "avif_box"))?
+        .ok_or_else(|| parse_failure!())?;
     if first.kind != *b"ftyp" {
         return Err(parse_failure!());
     }
-    let brands = parse_ftyp(first.payload)?;
+    let brands = parse_ftyp(first.payload).map_err(|error| error.at(0, "avif_box"))?;
     let mut meta = None;
     let mut movie = None;
 
     loop {
-        match next_box(&mut reader, true, &mut budget) {
+        let box_offset = reader.offset as u64;
+        match next_box(&mut reader, true, &mut budget)
+            .map_err(|error| error.at(box_offset, "avif_box"))
+        {
             Ok(Some(child)) => match child.kind {
                 kind if kind == *b"meta" => {
                     if meta.is_some() {
                         return Err(parse_failure!());
                     }
-                    meta = Some(parse_meta(child.payload, &mut budget)?);
+                    meta = Some(
+                        parse_meta(child.payload, &mut budget)
+                            .map_err(|error| error.at(box_offset, "avif_box"))?,
+                    );
                 }
                 kind if kind == *b"moov" => {
                     if movie.is_some() {
                         return Err(parse_failure!());
                     }
-                    movie = Some(parse_movie(child.payload, &mut budget)?);
+                    movie = Some(
+                        parse_movie(child.payload, &mut budget)
+                            .map_err(|error| error.at(box_offset, "avif_box"))?,
+                    );
                 }
                 _ => {}
             },
