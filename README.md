@@ -136,6 +136,7 @@ capabilities and setup.
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
+| `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |

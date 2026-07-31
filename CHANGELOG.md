@@ -102,6 +102,9 @@ All notable changes will be documented in this file. This project follows
   `ImageMode::expected_bytes`) and an exact-size still-decode destination API
   (`decode_into`, `decode_into_with_policy`) that rejects short or oversized
   buffers with `Parameter` before any partial write.
+- A minimal transfer-layout descriptor (`TransferLayout`) reporting canvas,
+  mode, row bytes, total bytes, packed-row status, and alignment, produced by
+  the same arithmetic as the destination contract.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

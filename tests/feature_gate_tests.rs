@@ -2132,6 +2132,76 @@ fn destination_buffers_match_the_output_size_contract() -> Result<(), Box<dyn st
 }
 
 #[test]
+fn transfer_layout_matches_the_output_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::TransferLayout;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, bool, &str)] = &[
+        (
+            "png bilevel",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1bit.png",
+        ),
+        (
+            "png rgba",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/alpha_checker.png",
+        ),
+        (
+            "gif indexed",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+        ),
+        (
+            "tiff gray-alpha",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/gray_alpha.tiff",
+        ),
+        (
+            "jpeg rgb",
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+        ),
+    ];
+    for &(name, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let data = fs::read(root.join(path))?;
+        let info = image_slash_star::inspect(&data)?;
+        let layout = info.transfer_layout()?;
+        assert_eq!(
+            layout,
+            TransferLayout::from_mode(info.mode, info.width, info.height)?,
+            "{name} from_mode"
+        );
+        assert_eq!(layout.width, info.width, "{name} width");
+        assert_eq!(layout.height, info.height, "{name} height");
+        assert_eq!(layout.mode, info.mode, "{name} mode");
+        assert_eq!(layout.total_bytes, info.decoded_bytes()?, "{name} total");
+        assert_eq!(
+            layout.packed_rows,
+            info.mode == ImageMode::L1,
+            "{name} packed rows"
+        );
+        assert_eq!(layout.alignment, 1, "{name} alignment");
+        let expected_row_bytes = if info.mode == ImageMode::L1 {
+            (info.width as usize).div_ceil(8)
+        } else {
+            layout.total_bytes / (info.height as usize)
+        };
+        assert_eq!(layout.row_bytes, expected_row_bytes, "{name} row bytes");
+
+        let decoded = image_slash_star::decode(&data)?;
+        assert_eq!(decoded.content.transfer_layout()?, layout, "{name} decoded");
+        let mut buffer = vec![0xAA; layout.total_bytes];
+        let _ = image_slash_star::decode_into(&data, &mut buffer)?;
+        assert_eq!(buffer.len(), layout.total_bytes, "{name} destination");
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;
