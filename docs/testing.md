@@ -177,6 +177,13 @@ primary-byte limits, per-frame and cumulative sequence limits, and the
 metadata extent); the policy manifests cited there are the active boundary
 evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
+The claim ledger (`tests/fixtures/claim_ledger.json`) pins the revision-bound
+tuple: the base revision, Pillow manifest SHA-256, generated-matrix SHA-256,
+the Coverage MCP run/snapshot identifiers, and every fixture-manifest SHA-256.
+`scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
+and identifiers, and requires the four maintained documents to name the same
+revision; CI runs the verifier so the tuple cannot drift.
+
 The trailing-input manifest pins the per-format trailing policy: three payloads
 appended to a valid asset of every format must produce identical still pixels,
 identical sequence frames, and identical inspection results, with
@@ -247,9 +254,9 @@ The accepted Coverage MCP result for the same implementation state is:
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `0b4c288c-ba7c-4dd9-8866-0a97bb1a42dc`
+Coverage MCP run: `83a13039-2512-4518-a0ba-b6a3e3886981`
 
-Snapshot: `297bf8f8-2d54-444f-bc29-230c1a7eee8f`
+Snapshot: `e6052beb-01aa-47d4-9593-e9c7cdfea397`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
