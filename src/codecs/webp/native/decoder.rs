@@ -859,6 +859,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             num_frames,
             loop_count: LoopCount::Forever,
             chunks: HashMap::new(),
+            metadata: Vec::new(),
+            opaque_blocks: Vec::new(),
         };
         decoder.animation.next_frame = next_frame;
         decoder.animation.dispose_next_frame = dispose_next_frame;
@@ -1165,6 +1167,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         num_frames: 0,
         loop_count: LoopCount::Forever,
         chunks: HashMap::from([(WebPRiffChunk::VP8L, 0..0)]),
+        metadata: Vec::new(),
+        opaque_blocks: Vec::new(),
     };
     let _ = decoder.read_image(&mut []);
 }
