@@ -208,6 +208,7 @@ translation cannot be bypassed.
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
+| `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; no cache, so decodes reparse |
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns

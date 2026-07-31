@@ -108,6 +108,9 @@ All notable changes will be documented in this file. This project follows
 - Basic header inspection (`inspect_basic`) with a `frame_count_complete`
   flag on `ImageInfo`, so cheap header facts are never mistaken for a counted
   GIF/TIFF/WebP frame total.
+- A borrowed immutable source view (`EncodedImageView`) with the same
+  inspect/verify/decode operations as the owned snapshot, no byte copy, and
+  no cache.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

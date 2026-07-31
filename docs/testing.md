@@ -297,6 +297,12 @@ The basic-inspection contract is table-driven: `inspect_basic` must agree with
 a complete count of one (GIF trailer peek, TIFF next-IFD offset, WebP still),
 and header-bound formats (PNG/JPEG/BMP/ICO/AVIF) return the full result.
 
+The borrowed-view contract is table-driven: `EncodedImageView` over
+PNG/GIF/WebP/TIFF fixtures must match the free functions exactly for inspect,
+still and sequence decode, policy variants, verification scope behavior,
+transfer layout, and resource-limit rejection, without copying the borrowed
+bytes.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
