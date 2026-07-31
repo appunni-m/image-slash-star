@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-07-31 on the working tree based on revision `78f0e5b`
+Reviewed: 2026-07-31 on the working tree based on revision `585c23c`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -54,12 +54,11 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `78f0e5b`,
+The correction evidence below is the working-tree state based on `585c23c`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
-Replace the base revision and hashes together after this slice is committed.
 Findings were produced from:
 
 - the public types and dispatch in [`src/lib.rs`](../src/lib.rs),
@@ -171,8 +170,8 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`83a13039-2512-4518-a0ba-b6a3e3886981`, snapshot
-`e6052beb-01aa-47d4-9593-e9c7cdfea397`, passed with zero failures or
+`9514f921-31fa-49b8-9324-cb31ff12031e`, snapshot
+`c642f990-0e45-42f6-b107-9b68282f9ad2`, passed with zero failures or
 skips and reports 42,174/42,174 lines, 6,022/6,022 branches,
 2,321/2,321 functions, and 67,036/67,036 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
