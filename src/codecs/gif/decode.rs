@@ -3,6 +3,7 @@
 //! Frames retain palette indices, palette tables, timing, offsets, disposal,
 //! and loop metadata required for deterministic re-encoding.
 
+use crate::SequenceDecodeBudget;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
@@ -18,14 +19,20 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 /// Decode the first image frame in a GIF87a or GIF89a stream.
 ///
 pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
-    let mut sequence = decode_sequence(data)?;
+    let mut sequence = decode_sequence(
+        data,
+        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Gif),
+    )?;
     // `decode_sequence` rejects a GIF without an image descriptor before
     // constructing its return value, so the first frame is a local invariant.
     Ok(sequence.frames.remove(0).image)
 }
 
 /// Decode every image descriptor and its presentation metadata.
-pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
+pub fn decode_sequence(
+    data: &[u8],
+    budget: &mut SequenceDecodeBudget,
+) -> CodecResult<DecodedSequence> {
     let mut input = Input::new(data);
     let signature = input.read_bytes(6)?;
     if signature != b"GIF87a" && signature != b"GIF89a" {
@@ -74,6 +81,11 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
                     &mut input,
                     global_palette.as_deref(),
                     graphic_control.transparent_index,
+                    if frames.is_empty() {
+                        None
+                    } else {
+                        Some(&mut *budget)
+                    },
                 )?;
                 frames.push(DecodedFrame::source_rectangle(
                     image,
@@ -180,6 +192,7 @@ fn decode_image(
     input: &mut Input<'_>,
     global_palette: Option<&[u8]>,
     transparent_index: Option<u8>,
+    budget: Option<&mut SequenceDecodeBudget>,
 ) -> CodecResult<(DecodedImage, u16, u16, bool)> {
     let left = input.read_u16()?;
     let top = input.read_u16()?;
@@ -204,6 +217,16 @@ fn decode_image(
         None
     };
     let palette_rgb = local_palette.or(global_palette);
+    if let Some(budget) = budget {
+        let mode = if palette_rgb.is_some() {
+            ImageMode::P8
+        } else {
+            ImageMode::L8
+        };
+        budget
+            .reserve_later_frame(mode, u32::from(width), u32::from(height))
+            .map_err(CodecError::LimitExceeded)?;
+    }
 
     let minimum_code_size = input.read_u8()?;
     let compressed = input.read_sub_blocks()?;
@@ -381,10 +404,15 @@ fn append_code(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode_sequence(b"").is_err());
-    assert!(decode_sequence(b"not gif").is_err());
-    assert!(decode_sequence(b"GIF89a").is_err());
-    assert!(decode_sequence(b"GIF89a\x01\0\x01\0\0\0\0\x7f").is_err());
+    let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Gif);
+    assert!(decode_sequence(b"", &mut budget).is_err());
+    assert!(decode_sequence(b"not gif", &mut budget).is_err());
+    assert!(decode_sequence(b"GIF89a", &mut budget).is_err());
+    assert!(decode_sequence(b"GIF89a\x01\0\x01\0\0\0\0\x7f", &mut budget).is_err());
+    // Two 1x1 palette-less frames prove the later-frame L8 budget branch.
+    let no_palette_two_frame =
+        b"GIF89a\x01\0\x01\0\0\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x3b";
+    assert!(decode_sequence(no_palette_two_frame, &mut budget).is_ok());
     assert!(decode_lzw(&[0], 2, 0).is_err());
     assert_eq!(decode_lzw(&[0x2c], 2, 0), Ok(Vec::new()));
 }

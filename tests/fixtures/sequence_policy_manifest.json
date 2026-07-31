@@ -163,6 +163,123 @@
       "expected_maximum": 25931,
       "observed": 25932,
       "expected_format": "none"
+    },
+    {
+      "id": "decode_sequence_frame_bytes_zero",
+      "operation": "decode_sequence",
+      "resource": "frame_decoded_bytes",
+      "maximum": 0,
+      "status": "error",
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_frame_bytes_below",
+      "operation": "decode_sequence",
+      "resource": "frame_decoded_bytes",
+      "maximum": 16383,
+      "status": "error",
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_frame_bytes_at",
+      "operation": "decode_sequence",
+      "resource": "frame_decoded_bytes",
+      "maximum": 16384,
+      "status": "ok",
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_frame_bytes_above",
+      "operation": "decode_sequence",
+      "resource": "frame_decoded_bytes",
+      "maximum": 16385,
+      "status": "ok",
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_sequence_bytes_zero",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 0,
+      "status": "error",
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_sequence_bytes_primary_below",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 16383,
+      "status": "error",
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_sequence_bytes_total_below",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 49151,
+      "status": "error",
+      "observed": 49152
+    },
+    {
+      "id": "decode_sequence_sequence_bytes_at",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 49152,
+      "status": "ok",
+      "observed": 49152
+    },
+    {
+      "id": "decode_sequence_sequence_bytes_above",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 49153,
+      "status": "ok",
+      "observed": 49152
+    },
+    {
+      "id": "decode_sequence_frames_before_frame_bytes",
+      "operation": "decode_sequence",
+      "resource": "frames",
+      "maximum": 2,
+      "status": "error",
+      "also_max_frame_decoded_bytes": 16383,
+      "expected_resource": "frames",
+      "expected_maximum": 2,
+      "observed": 3
+    },
+    {
+      "id": "decode_sequence_frame_bytes_before_sequence_bytes",
+      "operation": "decode_sequence",
+      "resource": "frame_decoded_bytes",
+      "maximum": 16383,
+      "status": "error",
+      "also_max_sequence_decoded_bytes": 49152,
+      "expected_resource": "frame_decoded_bytes",
+      "expected_maximum": 16383,
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_primary_bytes_before_sequence_bytes",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 49152,
+      "status": "error",
+      "also_max_primary_decoded_bytes": 16383,
+      "expected_resource": "primary_decoded_bytes",
+      "expected_maximum": 16383,
+      "observed": 16384
+    },
+    {
+      "id": "decode_sequence_encoded_before_sequence_bytes",
+      "operation": "decode_sequence",
+      "resource": "sequence_decoded_bytes",
+      "maximum": 49152,
+      "status": "error",
+      "also_max_encoded_bytes": 25931,
+      "expected_resource": "encoded_bytes",
+      "expected_maximum": 25931,
+      "observed": 25932,
+      "expected_format": "none"
     }
   ]
 }

@@ -21,6 +21,11 @@ pub enum ResourceLimit {
     /// Number of frames or pages the policy permits to be inspected or
     /// materialized.
     Frames,
+    /// Decoded transfer-byte length of one later frame or page.
+    FrameDecodedBytes,
+    /// Cumulative decoded transfer-byte length of every retained frame or
+    /// page in a sequence.
+    SequenceDecodedBytes,
 }
 
 /// Stable category of an [`ImageError`].

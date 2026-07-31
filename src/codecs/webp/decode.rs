@@ -3,10 +3,11 @@
 //! The internal codec handles: lossy VP8, lossless VP8L, alpha (ALPH + VP8X),
 //! animated frames, metadata (ICC/EXIF/XMP), and tiling.
 
+use crate::SequenceDecodeBudget;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
-    FrameDisposal, FrameDuration, FrameRect,
+    FrameDisposal, FrameDuration, FrameRect, ImageMode,
 };
 use std::io::Cursor;
 
@@ -43,7 +44,10 @@ pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
 }
 
 /// Decode every composited frame and its presentation timing from a WebP stream.
-pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
+pub fn decode_sequence(
+    data: &[u8],
+    budget: &mut SequenceDecodeBudget,
+) -> CodecResult<DecodedSequence> {
     let cursor = Cursor::new(data);
     let mut decoder = super::native::WebPDecoder::new(cursor).map_err(decode_error)?;
     if !decoder.is_animated() {
@@ -59,7 +63,17 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
     let buffer_size = decoder.output_buffer_size();
     let frame_count = decoder.num_frames() as usize;
     let mut frames = Vec::with_capacity(frame_count);
-    for _ in 0..frame_count {
+    let mode = if color == ColorType::Rgba8 {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
+    for frame_index in 0..frame_count {
+        if frame_index != 0 {
+            budget
+                .reserve_later_frame(mode, width, height)
+                .map_err(CodecError::LimitExceeded)?;
+        }
         let mut pixels = vec![0; buffer_size];
         let frame = decoder.read_frame(&mut pixels).map_err(decode_error)?;
         frames.push(DecodedFrame::rendered_canvas(
@@ -105,5 +119,8 @@ fn decode_error(error: DecodingError) -> CodecError {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode(b"not a webp stream");
-    let _ = decode_sequence(b"not a webp stream");
+    let _ = decode_sequence(
+        b"not a webp stream",
+        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
+    );
 }

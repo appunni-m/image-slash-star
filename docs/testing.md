@@ -145,6 +145,17 @@ materialization; GIF/TIFF chains whose inspection cannot prove an exact count
 remain governed by the inspection-completeness model rather than this
 resource.
 
+The same manifest grows to 32 cases for the later-frame and cumulative
+decoded-byte resources. `max_frame_decoded_bytes` covers zero/below/at/above
+the first later frame's transfer-byte length, and `max_sequence_decoded_bytes`
+covers the primary-only, zero, total-below/at/above cumulative boundaries.
+Precedence rows prove encoded bytes, frame count, primary bytes, later-frame
+bytes, and cumulative bytes reject in that order, with `CodecError` preserving
+the structured `LimitExceeded` value across the codec boundary. A second
+fixture-driven test runs the same boundaries against real three-frame GIF,
+two-frame APNG, animated WebP, multipage TIFF, and animated AVIF assets in
+their enabled lanes, including a palette-less later GIF frame.
+
 The verification-strength contract is table-driven rather than manifest rows:
 for every format, the enabled feature lane loads the smallest Pillow-verified
 fixture and asserts `ImageFormat::verification_scope()` and
@@ -162,17 +173,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,100 | 41,100 |
-| Branches | 5,884 | 5,884 |
-| Functions | 2,228 | 2,228 |
-| Regions | 65,510 | 65,510 |
+| Lines | 41,337 | 41,337 |
+| Branches | 5,924 | 5,924 |
+| Functions | 2,240 | 2,240 |
+| Regions | 65,773 | 65,773 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `bcfc8b09-4a78-4098-bac0-f30d22413924`
+Coverage MCP run: `2911ddc9-5f32-4ac6-b0a4-5c64105ffc6f`
 
-Snapshot: `3ebd4d1e-bcbd-4922-832b-f94c51419459`
+Snapshot: `32045627-3df9-4976-83ac-121e6712571a`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -190,7 +201,7 @@ Decode-policy manifest SHA-256:
 `cba48670d83d797cf519cb9e37bf683ba7d9354bf879655e1c2b7000a54fc937`
 
 Sequence-policy manifest SHA-256:
-`8d702829e5bcc52e2040197050990321a67911bb514c8e8adc6cbe06fede1adb`
+`8dc6b4937841b9feb533382b6d3cf8babe585a96275cdfc2b4771c301f9b0dcf`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

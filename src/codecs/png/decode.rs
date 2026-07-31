@@ -1,5 +1,6 @@
 //! PNG decoder implemented from the PNG chunk and filtering specifications.
 
+use crate::SequenceDecodeBudget;
 use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
@@ -135,7 +136,10 @@ struct ParsedApng {
 }
 
 /// Decode every APNG presentation while retaining exact source controls.
-pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
+pub fn decode_sequence(
+    data: &[u8],
+    budget: &mut SequenceDecodeBudget,
+) -> CodecResult<DecodedSequence> {
     let Some(parsed) = parse_apng(data)? else {
         return decode(data).map(DecodedSequence::from_image);
     };
@@ -186,8 +190,20 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
         default_frame.source.is_default_image = true;
         output_frames.push(default_frame);
     }
+    let canvas_mode = if header.png_color == 0 && header.depth == 1 {
+        ImageMode::L1
+    } else if header.png_color == 3 {
+        ImageMode::P8
+    } else {
+        header.color.into()
+    };
 
     for (animation_index, encoded) in compressed_frames.into_iter().enumerate() {
+        if !output_frames.is_empty() {
+            budget
+                .reserve_later_frame(canvas_mode, header.width, header.height)
+                .map_err(CodecError::LimitExceeded)?;
+        }
         let source = decode_image_data(
             header.image_spec(encoded.control.rect.width, encoded.control.rect.height),
             header.channels,

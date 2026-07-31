@@ -89,6 +89,7 @@ pub use capabilities::{
     CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
     CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
 };
+pub(crate) use decode_policy::SequenceDecodeBudget;
 pub use decode_policy::{DecodeLimits, DecodePolicy};
 pub use encode_options::*;
 pub use source::EncodedImage;
@@ -215,21 +216,25 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 ///
 /// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
 /// primary canvas, its decoded transfer-byte length, or the inspected frame
-/// count exceeds a configured maximum. The frame-count check runs before
-/// sequence materialization; it does not bound later-frame byte lengths or
-/// cumulative sequence memory. Otherwise returns the same errors as
-/// [`decode_sequence`].
+/// count exceeds a configured maximum, or when a later frame or the cumulative
+/// retained sequence exceeds the configured decoded-byte maxima. Frame-count
+/// and primary checks run before sequence materialization; later-frame and
+/// cumulative byte checks run before each later frame's pixel work. Otherwise
+/// returns the same errors as [`decode_sequence`].
 pub fn decode_sequence_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
 ) -> ImageResult<Decoded<DecodedSequence>> {
     policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
     let format = detect_format(data)?;
+    let mut budget = policy.sequence_budget(format);
     if policy.requires_image_info() {
         let info = codecs::inspect_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
+        budget.charge_primary(&info)?;
     }
-    codecs::decode_sequence_format(data, format).map(|sequence| Decoded::new(format, sequence))
+    codecs::decode_sequence_format(data, format, &mut budget)
+        .map(|sequence| Decoded::new(format, sequence))
 }
 
 /// Inspect encoded image headers without decoding compressed pixel payloads.
