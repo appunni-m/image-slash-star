@@ -72,13 +72,15 @@
 //!
 //! Canonical fallible operations return [`ImageResult`]. [`ImageError`]
 //! distinguishes unknown signatures, disabled features, malformed data,
-//! unsupported operations, invalid dimensions, and invalid parameters.
+//! unsupported operations, invalid dimensions, invalid parameters, and
+//! caller-controlled resource-limit failures.
 
 // Retained as the project's one explicitly approved byte-layout utility.
 use bytemuck as _;
 
 pub mod capabilities;
 mod codecs;
+pub mod decode_policy;
 pub mod encode_options;
 pub mod source;
 pub mod types;
@@ -87,6 +89,7 @@ pub use capabilities::{
     CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
     CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
 };
+pub use decode_policy::{DecodeLimits, DecodePolicy};
 pub use encode_options::*;
 pub use source::EncodedImage;
 pub use types::*;
@@ -168,7 +171,30 @@ fn is_avif_signature(data: &[u8]) -> bool {
 /// Returns a structured error for an unknown signature, disabled codec feature,
 /// malformed payload, or invalid decoded buffer.
 pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
+    decode_with_policy(data, &DecodePolicy::default())
+}
+
+/// Decode with an explicit caller-controlled policy.
+///
+/// The encoded-input byte limit is checked before format detection. Configured
+/// canvas limits trigger a format-qualified inspection preflight before pixel
+/// materialization.
+///
+/// # Errors
+///
+/// Returns [`ImageError::LimitExceeded`] when the complete input or inspected
+/// canvas exceeds a configured maximum. Otherwise returns the same errors as
+/// [`decode`].
+pub fn decode_with_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedImage>> {
+    policy.check_encoded_input(data, CodecOperation::StillDecode)?;
     let format = detect_format(data)?;
+    if policy.requires_image_info() {
+        let info = codecs::inspect_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::StillDecode)?;
+    }
     codecs::decode_format(data, format).map(|image| Decoded::new(format, image))
 }
 
@@ -179,7 +205,26 @@ pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
 /// Returns a structured error for an unknown signature, disabled codec feature,
 /// malformed payload, unsupported sequence, or invalid decoded frame data.
 pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
+    decode_sequence_with_policy(data, &DecodePolicy::default())
+}
+
+/// Decode every retained frame with an explicit caller-controlled policy.
+///
+/// # Errors
+///
+/// Returns [`ImageError::LimitExceeded`] when the complete input or inspected
+/// canvas exceeds a configured maximum. Otherwise returns the same errors as
+/// [`decode_sequence`].
+pub fn decode_sequence_with_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedSequence>> {
+    policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
     let format = detect_format(data)?;
+    if policy.requires_image_info() {
+        let info = codecs::inspect_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
+    }
     codecs::decode_sequence_format(data, format).map(|sequence| Decoded::new(format, sequence))
 }
 
@@ -190,8 +235,22 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 /// Returns a structured error for an unknown signature, disabled codec feature,
 /// malformed header, or metadata that the selected inspector cannot represent.
 pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
+    inspect_with_policy(data, &DecodePolicy::default())
+}
+
+/// Inspect encoded image headers with an explicit caller-controlled policy.
+///
+/// # Errors
+///
+/// Returns [`ImageError::LimitExceeded`] when the complete input or inspected
+/// canvas exceeds a configured maximum. Otherwise returns the same errors as
+/// [`inspect`].
+pub fn inspect_with_policy(data: &[u8], policy: &DecodePolicy) -> ImageResult<ImageInfo> {
+    policy.check_encoded_input(data, CodecOperation::Inspection)?;
     let format = detect_format(data)?;
-    codecs::inspect_format(data, format)
+    let info = codecs::inspect_format(data, format)?;
+    policy.check_image_info(&info, CodecOperation::Inspection)?;
+    Ok(info)
 }
 
 /// Encode a decoded still image into an explicitly selected output format.
@@ -199,7 +258,9 @@ pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
 /// # Errors
 ///
 /// Returns a structured error for invalid pixels, a disabled codec feature, or
-/// input/options unsupported by the selected encoder.
+/// input/options unsupported by the selected encoder. `opts` must name the
+/// same target as `format`; a mismatch returns a format-qualified
+/// [`ImageError::Parameter`].
 pub fn encode(
     img: &DecodedImage,
     format: ImageFormat,
@@ -217,7 +278,8 @@ pub fn encode(
 /// # Errors
 ///
 /// Returns a structured error for an invalid sequence, disabled codec feature,
-/// unsupported multi-frame target, or invalid encoder options.
+/// unsupported multi-frame target, invalid encoder options, or an option value
+/// whose target differs from `format`.
 pub fn encode_sequence(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -350,6 +412,5 @@ pub fn __coverage_exercise_private_branches() {
     let _ = encode_default(&image, ImageFormat::Png);
     capabilities::__coverage_exercise_private_branches();
     codecs::__coverage_exercise_private_branches();
-    encode_options::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }

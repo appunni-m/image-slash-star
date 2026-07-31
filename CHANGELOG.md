@@ -20,6 +20,11 @@ All notable changes will be documented in this file. This project follows
   source-package root.
 - Structured `ImageResult` failures across the canonical detect, inspect,
   decode, sequence, and encode APIs.
+- A shared `DecodePolicy` with inclusive limits for pre-detection encoded bytes
+  and inspected canvas width, height, and pixels, plus typed `LimitExceeded`
+  failures and retry-safe lazy-source behavior.
+- Format-qualified typed encoder option records for every codec, including a
+  strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
   exact source format and decoded mode.
 - A consolidated open-source documentation set covering architecture, the
@@ -51,6 +56,8 @@ All notable changes will be documented in this file. This project follows
   structured root API rather than public `Option`-returning codec helpers.
 - Made every image format independently feature-gated, with ICO explicitly
   forwarding its PNG and BMP container requirements.
+- Removed target-free encoder defaults and catch-all string maps; explicit
+  encode targets now reject option records for another codec.
 - Added portable AVIF container inspection and in-tree AV1 parsing groundwork.
 
 ### Removed

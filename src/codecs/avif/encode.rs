@@ -3,7 +3,9 @@
 use crate::codecs::{CodecError, CodecResult};
 #[cfg(all(coverage, not(target_arch = "wasm32")))]
 use crate::encode_options::AvifAdvancedOption;
-use crate::encode_options::{AvifCodec, AvifEncodeOptions, AvifRange, AvifSubsampling};
+use crate::encode_options::AvifEncodeOptions;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::encode_options::{AvifCodec, AvifRange, AvifSubsampling};
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration};
 
 #[cfg(not(target_arch = "wasm32"))]

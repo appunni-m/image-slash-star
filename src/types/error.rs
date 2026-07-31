@@ -1,7 +1,22 @@
 //! Error types for decoded buffers and codec operations.
 
 use super::ImageFormat;
+use crate::CodecOperation;
 use std::fmt;
+
+/// Caller-controlled resource whose configured maximum was exceeded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ResourceLimit {
+    /// Complete encoded input length in bytes.
+    EncodedBytes,
+    /// Inspected image canvas width in pixels.
+    Width,
+    /// Inspected image canvas height in pixels.
+    Height,
+    /// Inspected image canvas area in pixels.
+    Pixels,
+}
 
 /// Stable category of an [`ImageError`].
 ///
@@ -23,6 +38,8 @@ pub enum ImageErrorKind {
     Dimensions,
     /// An option or represented image property is invalid.
     Parameter,
+    /// A caller-configured resource maximum was exceeded.
+    LimitExceeded,
 }
 
 /// Failure returned by image validation, format detection, and codec operations.
@@ -66,6 +83,19 @@ pub enum ImageError {
         /// High-level diagnostic suitable for logs.
         message: String,
     },
+    /// A caller-configured resource maximum was exceeded.
+    LimitExceeded {
+        /// Detected format, or `None` when rejection precedes detection.
+        format: Option<ImageFormat>,
+        /// Public operation rejected by the limit.
+        operation: CodecOperation,
+        /// Resource whose maximum was exceeded.
+        resource: ResourceLimit,
+        /// Configured inclusive maximum.
+        maximum: u64,
+        /// Observed value that exceeded the maximum.
+        observed: u64,
+    },
 }
 
 impl ImageError {
@@ -79,6 +109,7 @@ impl ImageError {
             Self::Unsupported { .. } => ImageErrorKind::Unsupported,
             Self::Dimensions { .. } => ImageErrorKind::Dimensions,
             Self::Parameter { .. } => ImageErrorKind::Parameter,
+            Self::LimitExceeded { .. } => ImageErrorKind::LimitExceeded,
         }
     }
 
@@ -94,6 +125,7 @@ impl ImageError {
             Self::Unsupported { format, .. }
             | Self::Dimensions { format, .. }
             | Self::Parameter { format, .. } => *format,
+            Self::LimitExceeded { format, .. } => *format,
         }
     }
 
@@ -104,7 +136,7 @@ impl ImageError {
     #[must_use]
     pub fn message(&self) -> Option<&str> {
         match self {
-            Self::UnknownFormat | Self::FeatureDisabled { .. } => None,
+            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
             Self::Malformed { message, .. }
             | Self::Unsupported { message, .. }
             | Self::Dimensions { message, .. }
@@ -168,6 +200,22 @@ impl fmt::Display for ImageError {
             ImageError::Parameter { format, message } => match format {
                 Some(format) => write!(f, "invalid {format:?} parameter: {message}"),
                 None => write!(f, "invalid image parameter: {message}"),
+            },
+            ImageError::LimitExceeded {
+                format,
+                operation,
+                resource,
+                maximum,
+                observed,
+            } => match format {
+                Some(format) => write!(
+                    f,
+                    "{format:?} {operation:?} exceeded {resource:?} limit: observed {observed}, maximum {maximum}"
+                ),
+                None => write!(
+                    f,
+                    "{operation:?} exceeded {resource:?} limit: observed {observed}, maximum {maximum}"
+                ),
             },
         }
     }

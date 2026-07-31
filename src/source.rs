@@ -2,7 +2,10 @@
 
 use std::sync::{Arc, OnceLock};
 
-use crate::{Decoded, DecodedImage, ImageFormat, ImageInfo, ImageResult, VerificationScope};
+use crate::{
+    CodecOperation, DecodePolicy, Decoded, DecodedImage, ImageFormat, ImageInfo, ImageResult,
+    VerificationScope,
+};
 
 #[derive(Debug)]
 struct EncodedImageInner {
@@ -30,8 +33,23 @@ impl EncodedImage {
     /// Returns a structured error when the signature is unknown, the detected
     /// codec feature is disabled, or the encoded header is malformed.
     pub fn new(bytes: impl Into<Arc<[u8]>>) -> ImageResult<Self> {
+        Self::new_with_policy(bytes, &DecodePolicy::default())
+    }
+
+    /// Creates and inspects a stable encoded snapshot under an explicit policy.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::ImageError::LimitExceeded`] before detection when the
+    /// encoded snapshot is too large, or after inspection when its canvas
+    /// exceeds a configured maximum. Otherwise returns the same errors as
+    /// [`Self::new`].
+    pub fn new_with_policy(
+        bytes: impl Into<Arc<[u8]>>,
+        policy: &DecodePolicy,
+    ) -> ImageResult<Self> {
         let bytes = bytes.into();
-        let info = crate::inspect(&bytes)?;
+        let info = crate::inspect_with_policy(&bytes, policy)?;
         Ok(Self {
             inner: Arc::new(EncodedImageInner {
                 bytes,
@@ -77,6 +95,24 @@ impl EncodedImage {
     /// Returns the structured decoder failure for malformed, unsupported, or
     /// feature-disabled input.
     pub fn decode(&self) -> ImageResult<&Decoded<DecodedImage>> {
+        self.decode_with_policy(&DecodePolicy::default())
+    }
+
+    /// Lazily decode pixels under an explicit caller-controlled policy.
+    ///
+    /// A policy rejection happens before consulting or initializing the
+    /// shared cache. A later call with a sufficient policy can therefore
+    /// materialize normally, while a cached success cannot bypass a stricter
+    /// encoded-input maximum.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::ImageError::LimitExceeded`] before cache access when
+    /// the encoded snapshot or retained canvas exceeds a configured maximum.
+    /// Otherwise returns the same errors as [`Self::decode`].
+    pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<&Decoded<DecodedImage>> {
+        policy.check_encoded_input(&self.inner.bytes, CodecOperation::StillDecode)?;
+        policy.check_image_info(&self.inner.info, CodecOperation::StillDecode)?;
         self.inner
             .decoded
             .get_or_init(|| crate::decode(&self.inner.bytes))

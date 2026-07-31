@@ -330,9 +330,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode_sequence(
         &still,
         &GifEncodeOptions {
+            disposal: Some(FrameDisposal::Reserved(8)),
+            ..GifEncodeOptions::default()
+        },
+    );
+    let _ = encode_sequence(
+        &still,
+        &GifEncodeOptions {
             disposal: Some(FrameDisposal::Keep),
             color_table: Some(GifColorTable::Local),
-            loop_count: Some(GifLoop::Infinite),
+            loop_count: Some(GifLoop::Finite(1)),
             ..GifEncodeOptions::default()
         },
     );

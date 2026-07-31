@@ -35,6 +35,31 @@ struct DecodeRow {
     verify_status: Option<String>,
 }
 
+struct EncodeOptionErrorManifest {
+    format_version: u32,
+    assertion_origin: String,
+    cases: Vec<EncodeOptionErrorRow>,
+}
+
+struct EncodeOptionAcceptanceManifest {
+    format_version: u32,
+    assertion_origin: String,
+    cases: Vec<EncodeOptionAcceptanceRow>,
+}
+
+struct EncodeOptionErrorRow {
+    id: String,
+    format: String,
+    pairs: Vec<[String; 2]>,
+    message_contains: String,
+}
+
+struct EncodeOptionAcceptanceRow {
+    id: String,
+    format: String,
+    pairs: Vec<[String; 2]>,
+}
+
 impl FromJson for CoverageMatrix {
     fn from_json(value: Value) -> Result<Self, support::json::Error> {
         let mut object = Object::new(value)?;
@@ -64,6 +89,51 @@ impl FromJson for DecodeRow {
             ref_mode: object.take("ref_mode")?,
             ref_size: object.take("ref_size")?,
             verify_status: object.take("verify_status")?,
+        })
+    }
+}
+
+impl FromJson for EncodeOptionErrorManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            cases: object.take("cases")?,
+        })
+    }
+}
+
+impl FromJson for EncodeOptionAcceptanceManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            cases: object.take("cases")?,
+        })
+    }
+}
+
+impl FromJson for EncodeOptionErrorRow {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            format: object.take("format")?,
+            pairs: object.take("pairs")?,
+            message_contains: object.take("message_contains")?,
+        })
+    }
+}
+
+impl FromJson for EncodeOptionAcceptanceRow {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            format: object.take("format")?,
+            pairs: object.take("pairs")?,
         })
     }
 }
@@ -161,6 +231,67 @@ fn assert_capability_contract(format: ImageFormat, feature: &str, enabled: bool)
 fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let option_acceptance_text =
+        fs::read_to_string(root.join("tests/fixtures/encode_option_acceptance_manifest.json"))?;
+    let option_acceptance: EncodeOptionAcceptanceManifest =
+        json::from_str(&option_acceptance_text)?;
+    assert_eq!(option_acceptance.format_version, 1);
+    assert_eq!(option_acceptance.assertion_origin, "compatibility_contract");
+    let mut option_acceptance_ids = HashSet::new();
+    for row in option_acceptance.cases {
+        assert!(
+            option_acceptance_ids.insert(row.id.clone()),
+            "duplicate {}",
+            row.id
+        );
+        let (format, _, _) = format(&row.format);
+        let pairs = row
+            .pairs
+            .into_iter()
+            .map(|[key, value]| (key, value))
+            .collect::<Vec<_>>();
+        let options = EncodeOptions::try_from_legacy_pairs(format, &pairs)
+            .unwrap_or_else(|error| panic!("{} returned {error}", row.id));
+        assert_eq!(options.format(), format, "{}", row.id);
+    }
+
+    let option_error_text =
+        fs::read_to_string(root.join("tests/fixtures/encode_option_error_manifest.json"))?;
+    let option_errors: EncodeOptionErrorManifest = json::from_str(&option_error_text)?;
+    assert_eq!(option_errors.format_version, 1);
+    assert_eq!(option_errors.assertion_origin, "defensive_model");
+    let mut option_error_ids = HashSet::new();
+    for row in option_errors.cases {
+        assert!(
+            option_error_ids.insert(row.id.clone()),
+            "duplicate {}",
+            row.id
+        );
+        let (format, _, _) = format(&row.format);
+        let pairs = row
+            .pairs
+            .into_iter()
+            .map(|[key, value]| (key, value))
+            .collect::<Vec<_>>();
+        let Err(error) = EncodeOptions::try_from_legacy_pairs(format, &pairs) else {
+            panic!("{} did not produce its declared error", row.id);
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::Parameter,
+            "{}",
+            row.id
+        );
+        assert_eq!(error.format(), Some(format), "{}", row.id);
+        assert!(
+            error
+                .message()
+                .is_some_and(|message| message.contains(&row.message_contains)),
+            "{} returned the wrong diagnostic: {error}",
+            row.id
+        );
+    }
+
     let manifest_text = fs::read_to_string(root.join("tests/fixtures/coverage_matrix.json"))?;
     let manifest_value: Value = json::from_str(&manifest_text)?;
     let Some(root_object) = manifest_value.as_object() else {
@@ -224,27 +355,6 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
         let (format, feature, enabled) = format(&name);
         let options = EncodeOptions::for_format(format);
         assert_eq!(options.format(), format);
-        let unknown = vec![("unknown".to_owned(), "true".to_owned())];
-        let Err(unknown_error) = EncodeOptions::try_from_legacy_pairs(format, &unknown) else {
-            panic!("{format:?} accepted an unknown legacy option");
-        };
-        assert_eq!(
-            unknown_error.kind(),
-            image_slash_star::ImageErrorKind::Parameter
-        );
-        assert_eq!(unknown_error.format(), Some(format));
-        let duplicate = vec![
-            ("unknown".to_owned(), "true".to_owned()),
-            ("unknown".to_owned(), "false".to_owned()),
-        ];
-        let Err(duplicate_error) = EncodeOptions::try_from_legacy_pairs(format, &duplicate) else {
-            panic!("{format:?} accepted a duplicate legacy option");
-        };
-        assert_eq!(
-            duplicate_error.kind(),
-            image_slash_star::ImageErrorKind::Parameter
-        );
-        assert_eq!(duplicate_error.format(), Some(format));
         assert_capability_contract(format, feature, enabled);
         let Some(row) = rows
             .decode

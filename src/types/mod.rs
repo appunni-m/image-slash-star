@@ -4,7 +4,7 @@ mod color_type;
 mod error;
 
 pub use self::color_type::ColorType;
-pub use self::error::{ImageError, ImageErrorKind, ImageResult};
+pub use self::error::{ImageError, ImageErrorKind, ImageResult, ResourceLimit};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {

@@ -2,8 +2,6 @@
 
 use crate::codecs::compression::deflate::compress_zlib_chunked;
 use crate::codecs::{CodecError, CodecResult};
-#[cfg(coverage)]
-use crate::encode_options::EncodeOptions;
 use crate::encode_options::{PngCompression, PngEncodeOptions};
 use crate::types::{ColorType, DecodedImage, ImageMode};
 
@@ -133,16 +131,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 255, 255],
         ColorType::Rgb8,
     );
-    let ancillary_pairs = ["gamma", "srgb", "physical", "text_chunks", "time"]
-        .into_iter()
-        .map(|key| (key.to_owned(), "true".to_owned()))
-        .chain([("compression".to_owned(), "none".to_owned())])
-        .collect::<Vec<_>>();
-    if let Ok(EncodeOptions::Png(ancillary)) =
-        EncodeOptions::try_from_legacy_pairs(crate::ImageFormat::Png, &ancillary_pairs)
-    {
-        let _ = encode(&rgb, &ancillary);
-    }
+    let ancillary = PngEncodeOptions::__coverage_legacy_ancillary();
+    let _ = encode(&rgb, &ancillary);
 
     let row = [10u8, 20, 40, 80];
     let previous = [1u8, 2, 4, 8];

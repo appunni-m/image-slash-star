@@ -32,9 +32,9 @@ impl CodecError {
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
             ImageError::Dimensions { message, .. } => Self::Dimensions(message),
             ImageError::Parameter { message, .. } => Self::Parameter(message),
-            ImageError::UnknownFormat | ImageError::FeatureDisabled { .. } => {
-                Self::Unsupported(error.to_string())
-            }
+            ImageError::UnknownFormat
+            | ImageError::FeatureDisabled { .. }
+            | ImageError::LimitExceeded { .. } => Self::Unsupported(error.to_string()),
         }
     }
 

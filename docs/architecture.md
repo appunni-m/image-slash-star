@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-07-31 against the working tree based on `230fc96`
+Reviewed: 2026-07-31 against the working tree based on `91d47c6`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -18,6 +18,10 @@ declaration-level reference.
 - explicit-format still-image and sequence encoding;
 - source format, structural source descriptors, sample mode, color layout,
   palette, alpha, frame timing, disposal, and background transfer models;
+- format-qualified typed encoder configuration with a strict legacy-pair
+  migration boundary;
+- one shared decode policy for pre-detection encoded bytes and inspected
+  canvas width, height, and pixels;
 - structured codec errors; and
 - immutable encoded-byte snapshots with shared lazy materialization.
 
@@ -36,6 +40,12 @@ Encoded format and decoded sample layout answer different questions:
 
 ```text
 encoded bytes
+    │
+    ├─ DecodePolicy input limit
+    │       │
+    │       ├─ reject ────────────────► LimitExceeded (no selected format)
+    │       │
+    │       └─ accept
     │
     ├─ detect_format() ───────────────► ImageFormat
     │
@@ -88,6 +98,7 @@ translation cannot be bypassed.
 | `inspect(&[u8])` | Read `ImageInfo` without materializing compressed pixels |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
+| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
@@ -111,6 +122,29 @@ common one-frame fallback. Enabled native PNG reports sequence decode only;
 GIF, TIFF, WebP, and AVIF report sequence decode and encode; JPEG, BMP, and ICO
 report neither. Enabled `wasm32` AVIF reports restricted portable still decode
 and target-unavailable encode and sequence operations.
+
+Every `EncodeOptions` value contains exactly one codec-specific record and
+reports that target through `EncodeOptions::format()`. The explicit
+`ImageFormat` argument remains canonical; dispatch rejects a mismatched option
+target before entering a codec. `EncodeOptions::for_format()` creates
+target-specific defaults, while the strict legacy-pair adapter exists only for
+migration and is never consulted by an encoder.
+
+`DecodePolicy::default()` is the unlimited compatibility policy used by the
+short entry points. `max_encoded_bytes` is inclusive and checked against the
+complete byte slice before signature detection. This ordering bounds AVIF
+compatible-brand scanning as well as every codec parser, but intentionally
+leaves `ImageError::format()` as `None` on rejection.
+
+`max_width`, `max_height`, and `max_pixels` are inclusive limits on the exact
+inspected `ImageInfo` canvas. They run after header inspection and before pixel
+decode, so their `LimitExceeded` errors retain the selected format. The error
+also carries the exact `CodecOperation`, `ResourceLimit`, configured maximum,
+and observed value. A policy-aware direct decode performs an inspection
+preflight before the codec's decode parse; unlimited wrappers avoid this extra
+pass. These are canvas limits, not bounds on later TIFF pages, source
+rectangles, decoded sample bytes, sequence memory, metadata, work, allocation,
+or output.
 
 ## Decoded sample layouts
 
@@ -188,6 +222,13 @@ The first call to `decode()` initializes a shared `OnceLock`:
 - `verify()` runs independently and does not populate or modify the decode
   cache.
 
+`EncodedImage::new_with_policy` applies the input limit before inspection and
+canvas limits immediately afterward. `decode_with_policy` checks encoded bytes
+and retained `ImageInfo` before consulting the `OnceLock`: a policy failure is
+never cached, a later sufficient policy can initialize the ordinary cache, and
+an earlier cached success cannot bypass a later stricter policy. The policy is
+per operation rather than permanently attached to the source.
+
 `ImageFormat::verification_scope()` and
 `EncodedImage::verification_scope()` distinguish `Structure` from
 `HeaderOnly`. Header-only is Pillow 12.2.0's base `ImageFile.verify` behavior:
@@ -227,7 +268,7 @@ See [AVIF support](avif.md) for the native dependency and portable boundary.
 | --- | --- |
 | `src/lib.rs` | crate contract, signature detection, canonical root API |
 | `src/source.rs` | immutable encoded snapshots and lazy decode cache |
-| `src/encode_options.rs` | shared and codec-specific compatibility options |
+| `src/encode_options.rs` | typed codec option records and strict legacy-pair migration |
 | `src/types/` | formats, modes, palettes, images, frames, sequences, errors, validation |
 | `src/codecs/mod.rs` | private feature dispatch and availability checks |
 | `src/codecs/error.rs` | private codec failures and public error translation |
