@@ -190,6 +190,17 @@ bind still decode, immutable-source construction, or lazy still
 materialization, which remain governed by the primary-canvas and frame-count
 checks.
 
+`max_metadata_bytes` bounds the encoded metadata extent: every encoded byte
+that is not primary pixel payload data, measured by a per-format container
+scan (PNG chunk scan minus `IDAT`/`fdAT` data, GIF block scan minus image
+sub-block payloads, JPEG marker scan minus entropy spans, WebP RIFF scan minus
+top-level `VP8 `/`VP8L`/`ALPH` payloads, TIFF IFD walk minus strip/tile payload
+bytes, BMP bytes before the declared pixel offset, ICO header plus directory,
+and AVIF box scan minus `mdat` payloads). The scan runs after detection and
+before any inspection preflight on all five policy paths, so an oversized
+metadata extent is rejected before codec work begins; malformed containers
+propagate their structured codec error from the scan.
+
 ### Allocation and arithmetic policy
 
 Every caller-bounded allocation is preceded by checked preflight arithmetic:

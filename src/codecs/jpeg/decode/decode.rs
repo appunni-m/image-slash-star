@@ -452,9 +452,30 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     Ok((image, consumed))
 }
 
+/// Measure the encoded metadata extent: the consumed stream (through EOI)
+/// minus the entropy-coded scan payload bytes.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let info = parse_jpeg(data)?;
+    let mut pixel = 0u64;
+    for scan in &info.scans {
+        // The parser guarantees entropy_end >= entropy_start.
+        #[allow(clippy::arithmetic_side_effects)]
+        let span = scan.entropy_end - scan.entropy_start;
+        pixel = pixel.saturating_add(span as u64);
+    }
+    let consumed = info.eoi_pos.saturating_add(2) as u64;
+    // `pixel` is the sum of entropy spans inside the consumed stream.
+    #[allow(clippy::arithmetic_side_effects)]
+    let metadata = consumed - pixel;
+    Ok(metadata)
+}
+
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     use super::huffman::HuffTable;
+
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(b"\xff");
 
     let entropy = [0x00; 16];
     let dc_cat_64 = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[64]);

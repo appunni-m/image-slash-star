@@ -77,6 +77,51 @@ pub fn decode_sequence(
     ))
 }
 
+/// Measure the encoded metadata extent: the consumed main-chain IFD bytes
+/// minus the encoded strip/tile payload bytes declared by each directory.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let (endian, first_offset) = parse_header(data)?;
+    let mut offset = first_offset;
+    let mut seen = Vec::new();
+    let mut pixel = 0u64;
+    let mut consumed = 0usize;
+    let mut payload_end = 0usize;
+    while offset != 0 && !seen.contains(&offset) {
+        seen.push(offset);
+        let directory = Directory::parse(data, offset, endian)?;
+        #[allow(clippy::arithmetic_side_effects)]
+        let directory_end = offset
+            .saturating_add(2)
+            .saturating_add(directory.entries.len().saturating_mul(12))
+            .saturating_add(4);
+        consumed = directory_end;
+        for (offsets_tag, byte_counts_tag) in [(273u16, 279u16), (324u16, 325u16)] {
+            if let (Some(offsets), Some(byte_counts)) = (
+                directory.values(offsets_tag),
+                directory.values(byte_counts_tag),
+            ) && offsets.len() == byte_counts.len()
+            {
+                for (&byte_offset, &byte_count) in offsets.iter().zip(&byte_counts) {
+                    pixel = pixel.saturating_add(byte_count as u64);
+                    payload_end = payload_end.max(byte_offset.saturating_add(byte_count));
+                }
+            }
+        }
+        offset = directory.next_offset();
+    }
+    if consumed == 0 {
+        return Err(CodecError::Malformed(
+            "TIFF contains no image directory".to_owned(),
+        ));
+    }
+    // Strip/tile payloads can extend beyond the final IFD, so the container
+    // extent is the later of the IFD chain end and the payload ranges.
+    // `pixel` is the sum of strip/tile payload bytes inside the extent.
+    #[allow(clippy::arithmetic_side_effects)]
+    let metadata = consumed.max(payload_end) as u64 - pixel;
+    Ok(metadata)
+}
+
 fn decode_ifd(
     data: &[u8],
     ifd_offset: usize,
@@ -1032,6 +1077,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode(b"").is_err());
     assert!(decode(b"II").is_err());
     assert!(decode(b"ZZ\0\0\0\0\0\0").is_err());
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(b"II");
+    let _ = metadata_bytes(b"II\x2a\0\0\0\0\0\0");
+    let mut empty_ifd = b"II\x2a\0\0\0\x08\0\0\0\0\0".to_vec();
+    empty_ifd.extend_from_slice(&[0u8; 16]);
+    let _ = metadata_bytes(&empty_ifd);
+    let _ = metadata_bytes(&[b'I', b'I', 0x2a, 0, 0, 0, 0, 8, 0xff]);
+    // A self-referencing IFD chain exercises the cycle guard: patch the
+    // classic `1bit.tiff` chain terminator (at 106) back to the first IFD.
+    let mut cyclic = include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
+    cyclic[106..110].copy_from_slice(&8u32.to_le_bytes());
+    let _ = metadata_bytes(&cyclic);
+    // Strip offset/count arrays of different lengths exercise the mismatch
+    // guard: double tag 279's declared count (entry at 82, count at 86).
+    let mut mismatched = cyclic.clone();
+    mismatched[86..90].copy_from_slice(&2u32.to_le_bytes());
+    let _ = metadata_bytes(&mismatched);
 
     fn put_entry(out: &mut Vec<u8>, tag: u16, field_type: u16, count: u32, value: [u8; 4]) {
         out.extend_from_slice(&tag.to_le_bytes());

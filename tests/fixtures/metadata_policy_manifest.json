@@ -1,0 +1,78 @@
+{
+  "format_version": 1,
+  "assertion_origin": "defensive_model",
+  "formats": [
+    {
+      "name": "jpeg",
+      "feature": "jpeg",
+      "asset_path": "tests/fixtures/input/images/jpeg/1x1.jpg",
+      "asset_sha256": "e34500f2cfa808275787dbf0f82d59163a0a31b9489e2957ad0be72fa31d661e",
+      "expected_format": "jpeg",
+      "metadata_bytes": 625,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "png",
+      "feature": "png",
+      "asset_path": "tests/fixtures/input/images/png/1x1.png",
+      "asset_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+      "expected_format": "png",
+      "metadata_bytes": 57,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "gif",
+      "feature": "gif",
+      "asset_path": "tests/fixtures/input/images/gif/1x1.gif",
+      "asset_sha256": "54b2b3705b7d5e3f8e4b6d3744463cf15ce8374565c6c5dec27b6c586a7fe8d6",
+      "expected_format": "gif",
+      "metadata_bytes": 33,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "bmp",
+      "feature": "bmp",
+      "asset_path": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "asset_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "expected_format": "bmp",
+      "metadata_bytes": 54,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "tiff",
+      "feature": "tiff",
+      "asset_path": "tests/fixtures/input/images/tiff/1bit.tiff",
+      "asset_sha256": "df398e19017922097d8506e499f4f4be1d8e0564066933a822cfb4cd8f9330da",
+      "expected_format": "tiff",
+      "metadata_bytes": 110,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "webp",
+      "feature": "webp",
+      "asset_path": "tests/fixtures/input/images/webp/16x16.webp",
+      "asset_sha256": "68cce81ba41263b278056702805052047750cb437864f0f48f162c96808e0e26",
+      "expected_format": "webp",
+      "metadata_bytes": 20,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "ico",
+      "feature": "ico",
+      "asset_path": "tests/fixtures/input/images/ico/16x16.ico",
+      "asset_sha256": "6d8565c63a7f30ca61ded677679600d5621fd9b8dd7760a2689ca476b8edfb67",
+      "expected_format": "ico",
+      "metadata_bytes": 22,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "avif",
+      "feature": "avif",
+      "asset_path": "tests/fixtures/input/images/avif/baseline.avif",
+      "asset_sha256": "d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2",
+      "expected_format": "avif",
+      "metadata_bytes": 282,
+      "metadata_origin": "independent_measurement"
+    }
+  ]
+}

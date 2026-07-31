@@ -1630,6 +1630,67 @@ pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
     Ok(extracted)
 }
 
+/// Measure the encoded metadata extent: the parsed top-level BMFF bytes minus
+/// the encoded `mdat` payload bytes.
+pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let mut budget = Budget::default();
+    let mut reader = Reader::whole(data);
+    let first = next_box(&mut reader, true, &mut budget)?.ok_or_else(|| parse_failure!())?;
+    if first.kind != *b"ftyp" {
+        return Err(parse_failure!());
+    }
+    let brands = parse_ftyp(data, first.payload)?;
+    let mut meta = None;
+    let mut movie = None;
+    let mut pixel = 0u64;
+    // Reassigned at the top of every iteration; the initializer only satisfies
+    // definite initialization.
+    #[allow(unused_assignments)]
+    let mut consumed = 0usize;
+    loop {
+        // Extent of the last successfully parsed top-level box.
+        consumed = reader.offset;
+        match next_box(&mut reader, true, &mut budget) {
+            Ok(Some(child)) => {
+                if child.kind == *b"mdat" {
+                    pixel = pixel.saturating_add(child.payload.len() as u64);
+                }
+                match child.kind {
+                    kind if kind == *b"meta" => {
+                        if meta.is_some() {
+                            return Err(parse_failure!());
+                        }
+                        meta = Some(parse_meta(data, child.payload, &mut budget)?);
+                    }
+                    kind if kind == *b"moov" => {
+                        if movie.is_some() {
+                            return Err(parse_failure!());
+                        }
+                        movie = Some(parse_movie(data, child.payload, &mut budget)?);
+                    }
+                    _ => {}
+                }
+            }
+            Ok(None) => break,
+            Err(error) => {
+                let complete =
+                    (brands.has_avif && meta.is_some()) || (brands.has_avis && movie.is_some());
+                if !complete {
+                    return Err(error);
+                }
+                break;
+            }
+        }
+    }
+    if (brands.has_avif && meta.is_none()) || (brands.has_avis && movie.is_none()) {
+        return Err(parse_failure!());
+    }
+    // `pixel` is the sum of mdat payloads inside `consumed`.
+    #[allow(clippy::arithmetic_side_effects)]
+    let metadata = consumed as u64 - pixel;
+    Ok(metadata)
+}
+
 #[cfg(coverage)]
 fn coverage_box(kind: FourCc, payload: &[u8]) -> Vec<u8> {
     let size = payload.len().saturating_add(8);
@@ -1722,6 +1783,61 @@ fn coverage_fixture_contracts() {
     avis_only.extend_from_slice(b"garbage");
     let avis_payload = extract_inner(&avis_only).expect("avis-only trailing bytes are ignored");
     assert!(avis_payload.sequence.is_some());
+
+    // Metadata-measurement error branches.
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(b"not an AVIF container");
+    let non_ftyp = coverage_join(&[&coverage_box(*b"meta", b"garbage")]);
+    let _ = metadata_bytes(&non_ftyp);
+    let ftyp_only = coverage_join(&[&coverage_box(*b"ftyp", b"avif\0\0\0\0")]);
+    let _ = metadata_bytes(&ftyp_only);
+    let short_ftyp = coverage_join(&[&coverage_box(*b"ftyp", &b"avif"[..])]);
+    let _ = metadata_bytes(&short_ftyp);
+    let meta_garbage = coverage_join(&[
+        &coverage_box(*b"ftyp", b"avif\0\0\0\0avif"),
+        &coverage_box(*b"meta", b"garbage"),
+    ]);
+    let _ = metadata_bytes(&meta_garbage);
+    let moov_garbage = coverage_join(&[
+        &coverage_box(*b"ftyp", b"avis\0\0\0\0avis"),
+        &coverage_box(*b"moov", b"garbage"),
+    ]);
+    let _ = metadata_bytes(&moov_garbage);
+    let _ = metadata_bytes(&baseline[..100]);
+    let mut trailing_metadata = baseline.to_vec();
+    trailing_metadata.extend_from_slice(b"garbage");
+    let _ = metadata_bytes(&trailing_metadata);
+    let _ = metadata_bytes(&avis_only);
+    let avis_ftyp = coverage_join(&[&coverage_box(*b"ftyp", b"avis\0\0\0\0avis")]);
+    let _ = metadata_bytes(&avis_ftyp);
+    fn append_top_level_box(mut file: Vec<u8>, kind: &[u8; 4]) -> Vec<u8> {
+        let mut position = 0usize;
+        while position.wrapping_add(8) <= file.len() {
+            let size = u32::from_be_bytes([
+                file[position],
+                file[position + 1],
+                file[position + 2],
+                file[position + 3],
+            ]) as usize;
+            if size < 8 || position + size > file.len() {
+                break;
+            }
+            if &file[position + 4..position + 8] == kind {
+                let copied = file[position..position + size].to_vec();
+                file.extend_from_slice(&copied);
+                break;
+            }
+            position = position + size;
+        }
+        file
+    }
+    let duplicate_meta = append_top_level_box(baseline.to_vec(), b"meta");
+    let _ = metadata_bytes(&duplicate_meta);
+    let duplicate_moov = append_top_level_box(animated.to_vec(), b"moov");
+    let _ = metadata_bytes(&duplicate_moov);
+    let _ = append_top_level_box(vec![0u8; 8], b"meta");
+    let _ = append_top_level_box(vec![9, 0, 0, 0, b'm', b'e', b't', b'a'], b"meta");
+    let _ = append_top_level_box(baseline.to_vec(), b"XXXX");
 
     let alpha = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
     let alpha_payload = extract_inner(alpha).unwrap();

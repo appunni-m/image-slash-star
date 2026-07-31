@@ -126,6 +126,64 @@ fn riff_consumed(data: &[u8]) -> usize {
     })
 }
 
+/// Measure the encoded metadata extent: the RIFF-declared container minus the
+/// top-level image chunk payloads (`VP8 `, `VP8L`, and `ALPH`).
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    if data.get(..4) != Some(b"RIFF") || data.get(8..12) != Some(b"WEBP") {
+        return Err(CodecError::Malformed(
+            "invalid WebP RIFF signature".to_owned(),
+        ));
+    }
+    let consumed = riff_consumed(data);
+    if consumed > data.len() {
+        return Err(CodecError::Malformed(
+            "WebP RIFF size exceeds the input length".to_owned(),
+        ));
+    }
+    let mut position = 12usize;
+    let mut pixel = 0u64;
+    while position < consumed {
+        let remaining = consumed.saturating_sub(position);
+        if remaining < 8 {
+            return Err(CodecError::Malformed(
+                "truncated WebP chunk header".to_owned(),
+            ));
+        }
+        let kind = [
+            data[position],
+            data[position.saturating_add(1)],
+            data[position.saturating_add(2)],
+            data[position.saturating_add(3)],
+        ];
+        let size = u32::from_le_bytes([
+            data[position.saturating_add(4)],
+            data[position.saturating_add(5)],
+            data[position.saturating_add(6)],
+            data[position.saturating_add(7)],
+        ]) as usize;
+        let payload_end = position.saturating_add(8).saturating_add(size);
+        if payload_end > consumed {
+            return Err(CodecError::Malformed(
+                "WebP chunk exceeds the RIFF size".to_owned(),
+            ));
+        }
+        let is_image = kind == *b"VP8 " || kind == *b"VP8L" || kind == *b"ALPH";
+        pixel = pixel.saturating_add(if is_image { size as u64 } else { 0 });
+        let next_position = payload_end;
+        position = next_position;
+        // RIFF chunks are word-aligned; an odd payload leaves one pad byte
+        // that belongs to the container structure rather than pixel data.
+        if position < consumed && position % 2 == 1 {
+            let padded = position.saturating_add(1);
+            position = padded;
+        }
+    }
+    // `pixel` is the sum of image chunk payloads inside the RIFF extent.
+    #[allow(clippy::arithmetic_side_effects)]
+    let metadata = consumed as u64 - pixel;
+    Ok(metadata)
+}
+
 fn decode_error(error: DecodingError) -> CodecError {
     CodecError::Malformed(format!("WebP decoder failure: {error:?}"))
 }
@@ -137,4 +195,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         b"not a webp stream",
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
     );
+    let _ = metadata_bytes(b"not webp");
+    let _ = metadata_bytes(b"RIFF\x08\0\0\0WEBX");
+    let _ = metadata_bytes(b"RIFF\xff\xff\xff\xffWEBP");
+    let _ = metadata_bytes(b"RIFF\x0e\0\0\0WEBP");
+    let _ = metadata_bytes(b"RIFF\x10\0\0\0WEBPVP8 \0\0\0\0\0\0\0\0");
+    let _ = metadata_bytes(b"RIFF\x0e\0\0\0WEBPVP8 \0\0\0\x10\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+    let _ = metadata_bytes(b"RIFF\x10\0\0\0WEBPVP8L\0\0\0\0\0\0\0\0");
+    let _ = metadata_bytes(b"RIFF\x10\0\0\0WEBPALPH\0\0\0\0\0\0\0\0");
+    let _ = metadata_bytes(b"RIFF\x14\0\0\0WEBPVP8X\x06\0\0\0abcdef\0\0");
+    let _ = metadata_bytes(b"RIFF\x0d\0\0\0WEBPVP8 \x01\0\0\0x");
+    let _ = metadata_bytes(b"RIFF\x11\0\0\0WEBPVP8 \x01\0\0\0x\0\0\0\0");
 }

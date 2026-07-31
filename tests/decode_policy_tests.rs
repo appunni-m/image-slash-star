@@ -186,6 +186,22 @@ struct TrailingFormat {
     pillow_outcome: String,
 }
 
+struct MetadataManifest {
+    format_version: u32,
+    assertion_origin: String,
+    formats: Vec<MetadataFormat>,
+}
+
+struct MetadataFormat {
+    name: String,
+    feature: String,
+    asset_path: String,
+    asset_sha256: String,
+    expected_format: String,
+    metadata_bytes: u64,
+    metadata_origin: String,
+}
+
 impl FromJson for TrailingManifest {
     fn from_json(value: Value) -> Result<Self, support::json::Error> {
         let mut object = Object::new(value)?;
@@ -221,6 +237,32 @@ impl FromJson for TrailingFormat {
             consumed_bytes: object.take("consumed_bytes")?,
             consumed_origin: object.take("consumed_origin")?,
             pillow_outcome: object.take("pillow_outcome")?,
+        })
+    }
+}
+
+impl FromJson for MetadataManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            formats: object.take("formats")?,
+        })
+    }
+}
+
+impl FromJson for MetadataFormat {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            name: object.take("name")?,
+            feature: object.take("feature")?,
+            asset_path: object.take("asset_path")?,
+            asset_sha256: object.take("asset_sha256")?,
+            expected_format: object.take("expected_format")?,
+            metadata_bytes: object.take("metadata_bytes")?,
+            metadata_origin: object.take("metadata_origin")?,
         })
     }
 }
@@ -995,7 +1037,7 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
             "webp" => cfg!(feature = "webp"),
             "ico" => cfg!(feature = "ico"),
             "avif" => cfg!(feature = "avif"),
-            other => panic!("unknown feature `{other}`"),
+            other => panic!("{}: unknown feature `{other}`", format.name),
         };
         if !enabled {
             continue;
@@ -1011,7 +1053,7 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
             "webp" => img::ImageFormat::WebP,
             "ico" => img::ImageFormat::Ico,
             "avif" => img::ImageFormat::Avif,
-            other => panic!("unknown expected format `{other}`"),
+            other => panic!("{}: unknown expected format `{other}`", format.name),
         };
         let expected_consumed = format.consumed_bytes.map(usize::try_from).transpose()?;
 
@@ -1067,6 +1109,319 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
                 payload.name
             );
         }
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_metadata_case(
+    operation: &str,
+    bytes: &[u8],
+    policy: &img::DecodePolicy,
+    base_image: &img::Decoded<img::DecodedImage>,
+    base_sequence: &img::Decoded<img::DecodedSequence>,
+    base_info: &img::ImageInfo,
+    expected_format: img::ImageFormat,
+    expected_operation: img::CodecOperation,
+    expected_maximum: u64,
+    expected_observed: u64,
+    expected_status: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match operation {
+        "inspect" => match img::inspect_with_policy(bytes, policy) {
+            Ok(info) if expected_status == "ok" => assert_eq!(&info, base_info),
+            Err(error) if expected_status == "error" => assert_limit_error(
+                error,
+                expected_operation,
+                img::ResourceLimit::MetadataBytes,
+                expected_maximum,
+                expected_observed,
+                Some(expected_format),
+            ),
+            Ok(_) => panic!("inspect unexpectedly succeeded"),
+            Err(error) => panic!("inspect unexpectedly failed: {error}"),
+        },
+        "decode" => match img::decode_with_policy(bytes, policy) {
+            Ok(decoded) if expected_status == "ok" => {
+                assert_eq!(decoded.content.pixels, base_image.content.pixels);
+                assert_eq!(decoded.consumed_bytes, base_image.consumed_bytes);
+            }
+            Err(error) if expected_status == "error" => assert_limit_error(
+                error,
+                expected_operation,
+                img::ResourceLimit::MetadataBytes,
+                expected_maximum,
+                expected_observed,
+                Some(expected_format),
+            ),
+            Ok(_) => panic!("decode unexpectedly succeeded"),
+            Err(error) => panic!("decode unexpectedly failed: {error}"),
+        },
+        "decode_sequence" => match img::decode_sequence_with_policy(bytes, policy) {
+            Ok(decoded) if expected_status == "ok" => {
+                assert_eq!(decoded.content.frames, base_sequence.content.frames);
+                assert_eq!(decoded.consumed_bytes, base_sequence.consumed_bytes);
+            }
+            Err(error) if expected_status == "error" => assert_limit_error(
+                error,
+                expected_operation,
+                img::ResourceLimit::MetadataBytes,
+                expected_maximum,
+                expected_observed,
+                Some(expected_format),
+            ),
+            Ok(_) => panic!("decode_sequence unexpectedly succeeded"),
+            Err(error) => panic!("decode_sequence unexpectedly failed: {error}"),
+        },
+        "source_new" => match img::EncodedImage::new_with_policy(bytes.to_vec(), policy) {
+            Ok(source) if expected_status == "ok" => {
+                assert_eq!(source.info(), base_info);
+            }
+            Err(error) if expected_status == "error" => assert_limit_error(
+                error,
+                expected_operation,
+                img::ResourceLimit::MetadataBytes,
+                expected_maximum,
+                expected_observed,
+                Some(expected_format),
+            ),
+            Ok(_) => panic!("source_new unexpectedly succeeded"),
+            Err(error) => panic!("source_new unexpectedly failed: {error}"),
+        },
+        "source_decode" => {
+            let source = img::EncodedImage::new(bytes.to_vec())?;
+            match source.decode_with_policy(policy) {
+                Ok(decoded) if expected_status == "ok" => {
+                    assert_eq!(decoded.content.pixels, base_image.content.pixels);
+                }
+                Err(error) if expected_status == "error" => {
+                    assert_limit_error(
+                        error,
+                        expected_operation,
+                        img::ResourceLimit::MetadataBytes,
+                        expected_maximum,
+                        expected_observed,
+                        Some(expected_format),
+                    );
+                    assert!(!source.is_decoded());
+                }
+                Ok(_) => panic!("source_decode unexpectedly succeeded"),
+                Err(error) => panic!("source_decode unexpectedly failed: {error}"),
+            }
+        }
+        operation => panic!("unknown operation `{operation}`"),
+    }
+    Ok(())
+}
+
+#[test]
+fn metadata_policy_manifest_matches_the_public_contract() -> Result<(), Box<dyn std::error::Error>>
+{
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest: MetadataManifest = json::from_str(&fs::read_to_string(
+        root.join("tests/fixtures/metadata_policy_manifest.json"),
+    )?)?;
+    assert_eq!(manifest.format_version, 1);
+    assert_eq!(manifest.assertion_origin, "defensive_model");
+    assert_eq!(img::DecodeLimits::new().max_metadata_bytes(), None);
+
+    let unknown_bytes = fs::read(root.join("tests/fixtures/input/images/png/not_a_png.png"))?;
+
+    for format in manifest.formats {
+        let enabled = match format.feature.as_str() {
+            "jpeg" => cfg!(feature = "jpeg"),
+            "png" => cfg!(feature = "png"),
+            "gif" => cfg!(feature = "gif"),
+            "bmp" => cfg!(feature = "bmp"),
+            "tiff" => cfg!(feature = "tiff"),
+            "webp" => cfg!(feature = "webp"),
+            "ico" => cfg!(feature = "ico"),
+            "avif" => cfg!(feature = "avif"),
+            other => panic!("{}: unknown feature `{other}`", format.name),
+        };
+        if !enabled {
+            continue;
+        }
+        assert_eq!(format.metadata_origin, "independent_measurement");
+        let expected_format = match format.expected_format.as_str() {
+            "jpeg" => img::ImageFormat::Jpeg,
+            "png" => img::ImageFormat::Png,
+            "gif" => img::ImageFormat::Gif,
+            "bmp" => img::ImageFormat::Bmp,
+            "tiff" => img::ImageFormat::Tiff,
+            "webp" => img::ImageFormat::WebP,
+            "ico" => img::ImageFormat::Ico,
+            "avif" => img::ImageFormat::Avif,
+            other => panic!("{}: unknown expected format `{other}`", format.name),
+        };
+        let bytes = fs::read(root.join(&format.asset_path))?;
+        assert_eq!(sha256::digest_hex(&bytes), format.asset_sha256);
+
+        let base_image = img::decode(&bytes)?;
+        let base_sequence = img::decode_sequence(&bytes)?;
+        let base_info = img::inspect(&bytes)?;
+        let metadata = format.metadata_bytes;
+
+        for (operation, expected_operation) in [
+            ("inspect", img::CodecOperation::Inspection),
+            ("decode", img::CodecOperation::StillDecode),
+            ("decode_sequence", img::CodecOperation::SequenceDecode),
+            ("source_new", img::CodecOperation::Inspection),
+            ("source_decode", img::CodecOperation::StillDecode),
+        ] {
+            let below =
+                img::DecodePolicy::new().with_max_metadata_bytes(metadata.saturating_sub(1));
+            run_metadata_case(
+                operation,
+                &bytes,
+                &below,
+                &base_image,
+                &base_sequence,
+                &base_info,
+                expected_format,
+                expected_operation,
+                metadata.saturating_sub(1),
+                metadata,
+                "error",
+            )?;
+            let zero = img::DecodePolicy::new().with_max_metadata_bytes(0);
+            run_metadata_case(
+                operation,
+                &bytes,
+                &zero,
+                &base_image,
+                &base_sequence,
+                &base_info,
+                expected_format,
+                expected_operation,
+                0,
+                metadata,
+                "error",
+            )?;
+            let at = img::DecodePolicy::new().with_max_metadata_bytes(metadata);
+            run_metadata_case(
+                operation,
+                &bytes,
+                &at,
+                &base_image,
+                &base_sequence,
+                &base_info,
+                expected_format,
+                expected_operation,
+                metadata,
+                metadata,
+                "ok",
+            )?;
+            let above =
+                img::DecodePolicy::new().with_max_metadata_bytes(metadata.saturating_add(1));
+            run_metadata_case(
+                operation,
+                &bytes,
+                &above,
+                &base_image,
+                &base_sequence,
+                &base_info,
+                expected_format,
+                expected_operation,
+                metadata.saturating_add(1),
+                metadata,
+                "ok",
+            )?;
+            let near_max = img::DecodePolicy::new().with_max_metadata_bytes(u64::MAX);
+            run_metadata_case(
+                operation,
+                &bytes,
+                &near_max,
+                &base_image,
+                &base_sequence,
+                &base_info,
+                expected_format,
+                expected_operation,
+                u64::MAX,
+                metadata,
+                "ok",
+            )?;
+            assert_eq!(
+                img::DecodePolicy::new()
+                    .with_max_metadata_bytes(metadata)
+                    .limits()
+                    .max_metadata_bytes(),
+                Some(metadata)
+            );
+        }
+
+        // Precedence: encoded bytes are checked before the metadata scan.
+        let encoded_first = img::DecodePolicy::new()
+            .with_max_metadata_bytes(0)
+            .with_max_encoded_bytes(bytes.len().saturating_sub(1) as u64);
+        let error = match img::decode_with_policy(&bytes, &encoded_first) {
+            Err(error) => error,
+            Ok(_) => panic!("encoded-bytes precedence row unexpectedly succeeded"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::StillDecode,
+            img::ResourceLimit::EncodedBytes,
+            bytes.len().saturating_sub(1) as u64,
+            bytes.len() as u64,
+            None,
+        );
+
+        // Precedence: the metadata scan runs before primary-canvas checks.
+        let metadata_first = img::DecodePolicy::new()
+            .with_max_metadata_bytes(0)
+            .with_max_pixels(1);
+        let error = match img::decode_sequence_with_policy(&bytes, &metadata_first) {
+            Err(error) => error,
+            Ok(_) => panic!("metadata-precedence row unexpectedly succeeded"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::SequenceDecode,
+            img::ResourceLimit::MetadataBytes,
+            0,
+            metadata,
+            Some(expected_format),
+        );
+
+        // Lazy still decode also checks metadata before cache access.
+        let lazy_source = img::EncodedImage::new(bytes.clone())?;
+        let error = match lazy_source.decode_with_policy(&encoded_first) {
+            Err(error) => error,
+            Ok(_) => panic!("lazy encoded-bytes precedence row unexpectedly succeeded"),
+        };
+        assert_limit_error(
+            error,
+            img::CodecOperation::StillDecode,
+            img::ResourceLimit::EncodedBytes,
+            bytes.len().saturating_sub(1) as u64,
+            bytes.len() as u64,
+            None,
+        );
+
+        // Detection precedes the metadata scan on unknown signatures.
+        let unknown_policy = img::DecodePolicy::new().with_max_metadata_bytes(0);
+        match img::decode_with_policy(&unknown_bytes, &unknown_policy) {
+            Err(error) => {
+                assert_eq!(error.kind(), img::ImageErrorKind::UnknownFormat);
+                assert_eq!(error.format(), None);
+                assert_eq!(error.message(), None);
+            }
+            Ok(_) => panic!("unknown signature unexpectedly succeeded"),
+        }
+    }
+
+    // A malformed-but-detected input makes the metadata scan itself fail and
+    // propagates the codec error through the policy preflight.
+    let truncated = fs::read(root.join("tests/fixtures/input/images/png/truncated.png"))?;
+    let malformed_policy = img::DecodePolicy::new().with_max_metadata_bytes(0);
+    match img::inspect_with_policy(&truncated, &malformed_policy) {
+        Err(error) => {
+            assert_eq!(error.kind(), img::ImageErrorKind::Malformed);
+            assert_eq!(error.format(), Some(img::ImageFormat::Png));
+            assert!(error.message().is_some_and(|message| !message.is_empty()));
+        }
+        Ok(_) => panic!("truncated PNG must fail the metadata scan"),
     }
     Ok(())
 }

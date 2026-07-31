@@ -265,6 +265,51 @@ fn decode_image(
     Ok((image, left, top, interlaced))
 }
 
+// Measure the encoded metadata extent: the consumed block scan minus the
+// compressed LZW image-data payload bytes.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let mut input = Input::new(data);
+    let signature = input.read_bytes(6)?;
+    if signature != b"GIF87a" && signature != b"GIF89a" {
+        return Err(CodecError::Malformed("invalid GIF signature".to_owned()));
+    }
+    let _logical_width = input.read_u16()?;
+    let _logical_height = input.read_u16()?;
+    let packed = input.read_u8()?;
+    let _background_index = input.read_u8()?;
+    input.skip(1)?;
+    if packed & 0x80 != 0 {
+        input.read_bytes(color_table_len(packed))?;
+    }
+    let mut pixel = 0u64;
+    loop {
+        match input.read_u8()? {
+            EXTENSION_INTRODUCER => {
+                let _label = input.read_u8()?;
+                input.skip_sub_blocks()?;
+            }
+            IMAGE_SEPARATOR => {
+                input.skip(8)?;
+                let packed = input.read_u8()?;
+                if packed & 0x80 != 0 {
+                    input.read_bytes(color_table_len(packed))?;
+                }
+                let _minimum_code_size = input.read_u8()?;
+                let image_data = input.read_sub_blocks()?;
+                pixel = pixel.saturating_add(image_data.len() as u64);
+            }
+            TRAILER => break,
+            _ => {
+                return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
+            }
+        }
+    }
+    // `pixel` is the sum of image-data sub-block payloads inside the scan.
+    #[allow(clippy::arithmetic_side_effects)]
+    let metadata = input.position() as u64 - pixel;
+    Ok(metadata)
+}
+
 fn color_table_len(packed: u8) -> usize {
     (1usize << (packed & 0x07).saturating_add(1)).saturating_mul(3)
 }
@@ -414,6 +459,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let no_palette_two_frame =
         b"GIF89a\x01\0\x01\0\0\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x3b";
     assert!(decode_sequence(no_palette_two_frame, &mut budget).is_ok());
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(b"not gif");
+    let _ = metadata_bytes(b"GIF89a");
+    let _ = metadata_bytes(b"GIF89a\x01\0\x01\0\0\0\0\x7f");
+    let _ = metadata_bytes(b"GIF89a\x01\0\x01\0\0\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03");
+    let _ = metadata_bytes(b"GIF89a\x01\0\x01\0\0\0\0\x21\xf9");
+    let _ = metadata_bytes(no_palette_two_frame);
+    fn gif_prefix(length: usize, packed: u8) -> Vec<u8> {
+        let mut data = b"GIF89a".to_vec();
+        data.extend_from_slice(&[1, 0, 1, 0, packed, 0, 0]);
+        data.resize(length, 0);
+        data
+    }
+    for length in [6usize, 8, 10, 11, 12, 13] {
+        let _ = metadata_bytes(&gif_prefix(length, 0));
+    }
+    let _ = metadata_bytes(&gif_prefix(18, 0x80));
+    let _ = metadata_bytes(&gif_prefix(14, 0));
+    let mut extension = gif_prefix(13, 0);
+    extension.push(0x21);
+    let _ = metadata_bytes(&extension);
+    let mut extension_block = gif_prefix(13, 0);
+    extension_block.extend_from_slice(&[0x21, 0x01, 0xaa]);
+    let _ = metadata_bytes(&extension_block);
+    let mut short_image = gif_prefix(13, 0);
+    short_image.extend_from_slice(&[0x2c, 0, 0, 0, 0, 1, 0, 1, 0]);
+    let _ = metadata_bytes(&short_image);
+    let mut shorter_image = gif_prefix(13, 0);
+    shorter_image.extend_from_slice(&[0x2c, 0, 0, 0, 0, 1, 0]);
+    let _ = metadata_bytes(&shorter_image);
+    let mut local_palette = gif_prefix(13, 0);
+    local_palette.extend_from_slice(&[0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0x80]);
+    let _ = metadata_bytes(&local_palette);
+    let mut no_min_code = local_palette.clone();
+    no_min_code.extend_from_slice(&[0; 6]);
+    let _ = metadata_bytes(&no_min_code);
     assert!(decode_lzw(&[0], 2, 0).is_err());
     assert_eq!(decode_lzw(&[0x2c], 2, 0), Ok(Vec::new()));
 }

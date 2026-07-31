@@ -98,6 +98,16 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     Ok((image, None))
 }
 
+/// Measure the encoded metadata extent: the file header plus the complete
+/// entry directory. Entry payload bytes are pixel data by this contract.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    if data.len() < ICO_HEADER_SIZE {
+        return Err(CodecError::Malformed("truncated ICO header".to_owned()));
+    }
+    let count = u64::from(u16::from_le_bytes([data[4], data[5]]));
+    Ok(6u64.saturating_add(count.saturating_mul(ICO_DIR_ENTRY_SIZE as u64)))
+}
+
 /// Decode a single ICO directory entry by index.
 fn decode_entry(data: &[u8], index: usize, cursor: bool) -> CodecResult<DecodedImage> {
     let entry_offset = ICO_HEADER_SIZE.saturating_add(index.saturating_mul(ICO_DIR_ENTRY_SIZE));
@@ -661,6 +671,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode(&[1, 0, 1, 0, 1, 0]).is_err());
     assert!(decode(&[0, 0, 0, 0, 1, 0]).is_err());
     assert!(decode(&[0, 0, 1, 0, 0, 0]).is_err());
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(&[0, 0, 1, 0, 2, 0]);
 
     let mut too_many = Vec::new();
     too_many.extend_from_slice(&0u16.to_le_bytes());

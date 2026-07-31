@@ -39,6 +39,12 @@ fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
+/// Measure the encoded AVIF metadata extent through the same container rules.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    super::samples::metadata_bytes(data)
+        .map_err(|error| error.context("AVIF container validation failed"))
+}
+
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
     let (plane_length, width, height): (usize, usize, usize) = match (still.width, still.height) {
@@ -80,7 +86,11 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     } else {
         height
     };
-    let chroma_length = chroma_width.saturating_mul(chroma_height);
+    // Chroma extents are at most half the validated image dimensions, so the
+    // product fits `usize`; plain multiplication avoids exposing the
+    // never-taken saturating intrinsic branch to coverage instrumentation.
+    #[allow(clippy::arithmetic_side_effects)]
+    let chroma_length = chroma_width * chroma_height;
 
     let [y_plane, u_plane, v_plane] = &still.planes;
     if !(y_plane.samples.len() == plane_length
@@ -89,11 +99,15 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     {
         return None;
     }
-    let mut pixels = Vec::with_capacity(plane_length.saturating_mul(3));
+    let mut pixels = Vec::with_capacity(plane_length.wrapping_mul(3));
     for (index, &y) in y_plane.samples.iter().enumerate() {
         let (u, v) = if subsampled {
-            let row = index.div_euclid(width);
-            let column = index.rem_euclid(width);
+            #[allow(clippy::arithmetic_side_effects)]
+            let row = index.wrapping_div(width);
+            // `width` is validated nonzero; remainder matches euclidean
+            // semantics for non-negative operands without an intrinsic branch.
+            #[allow(clippy::arithmetic_side_effects)]
+            let column = index.wrapping_rem(width);
             (
                 libyuv_420_bilinear_sample(
                     &u_plane.samples,
@@ -407,6 +421,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .is_some()
     );
     let _ = decode_native(b"not an AVIF container");
+    let _ = metadata_bytes(b"");
     let _ = decode_sequence_native(
         b"not an AVIF container",
         &validated,

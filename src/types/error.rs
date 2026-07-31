@@ -49,6 +49,9 @@ pub enum ResourceLimit {
     /// Cumulative decoded transfer-byte length of every retained frame or
     /// page in a sequence.
     SequenceDecodedBytes,
+    /// Encoded bytes of container structures that are not primary pixel
+    /// payload data.
+    MetadataBytes,
 }
 
 /// Stable category of an [`ImageError`].

@@ -21,6 +21,7 @@ pub struct DecodeLimits {
     max_frames: Option<u32>,
     max_frame_decoded_bytes: Option<u64>,
     max_sequence_decoded_bytes: Option<u64>,
+    max_metadata_bytes: Option<u64>,
 }
 
 impl DecodeLimits {
@@ -36,6 +37,7 @@ impl DecodeLimits {
             max_frames: None,
             max_frame_decoded_bytes: None,
             max_sequence_decoded_bytes: None,
+            max_metadata_bytes: None,
         }
     }
 
@@ -144,6 +146,19 @@ impl DecodeLimits {
         self.max_sequence_decoded_bytes = Some(maximum);
         self
     }
+
+    /// Return the maximum accepted encoded metadata extent.
+    #[must_use]
+    pub const fn max_metadata_bytes(self) -> Option<u64> {
+        self.max_metadata_bytes
+    }
+
+    /// Set the maximum accepted encoded metadata extent.
+    #[must_use]
+    pub const fn with_max_metadata_bytes(mut self, maximum: u64) -> Self {
+        self.max_metadata_bytes = Some(maximum);
+        self
+    }
 }
 
 /// Policy shared by encoded-image inspection and decoding.
@@ -232,6 +247,13 @@ impl DecodePolicy {
     #[must_use]
     pub const fn with_max_sequence_decoded_bytes(mut self, maximum: u64) -> Self {
         self.limits = self.limits.with_max_sequence_decoded_bytes(maximum);
+        self
+    }
+
+    /// Set the maximum accepted encoded metadata extent.
+    #[must_use]
+    pub const fn with_max_metadata_bytes(mut self, maximum: u64) -> Self {
+        self.limits = self.limits.with_max_metadata_bytes(maximum);
         self
     }
 
@@ -332,6 +354,30 @@ impl DecodePolicy {
                 operation,
                 ResourceLimit::Frames,
             )?;
+        }
+        Ok(())
+    }
+
+    /// Reject inputs whose non-pixel container extent exceeds the metadata
+    /// maximum. Runs after detection and before any inspection preflight.
+    pub(crate) fn check_metadata_bytes(
+        self,
+        data: &[u8],
+        format: ImageFormat,
+        operation: CodecOperation,
+    ) -> ImageResult<()> {
+        let Some(maximum) = self.limits.max_metadata_bytes else {
+            return Ok(());
+        };
+        let observed = crate::codecs::metadata_bytes_format(data, format)?;
+        if observed > maximum {
+            return Err(ImageError::LimitExceeded {
+                format: Some(format),
+                operation,
+                resource: ResourceLimit::MetadataBytes,
+                maximum,
+                observed,
+            });
         }
         Ok(())
     }

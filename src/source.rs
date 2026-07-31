@@ -115,6 +115,11 @@ impl EncodedImage {
     /// [`Self::decode`].
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<&Decoded<DecodedImage>> {
         policy.check_encoded_input(&self.inner.bytes, CodecOperation::StillDecode)?;
+        policy.check_metadata_bytes(
+            &self.inner.bytes,
+            self.format(),
+            CodecOperation::StillDecode,
+        )?;
         policy.check_image_info(&self.inner.info, CodecOperation::StillDecode)?;
         self.inner
             .decoded
