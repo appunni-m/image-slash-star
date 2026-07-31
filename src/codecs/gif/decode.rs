@@ -18,21 +18,21 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Decode the first image frame in a GIF87a or GIF89a stream.
 ///
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
-    let mut sequence = decode_sequence(
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+    let (mut sequence, consumed) = decode_sequence(
         data,
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Gif),
     )?;
     // `decode_sequence` rejects a GIF without an image descriptor before
     // constructing its return value, so the first frame is a local invariant.
-    Ok(sequence.frames.remove(0).image)
+    Ok((sequence.frames.remove(0).image, consumed))
 }
 
 /// Decode every image descriptor and its presentation metadata.
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
-) -> CodecResult<DecodedSequence> {
+) -> CodecResult<(DecodedSequence, usize)> {
     let mut input = Input::new(data);
     let signature = input.read_bytes(6)?;
     if signature != b"GIF87a" && signature != b"GIF89a" {
@@ -129,6 +129,7 @@ pub fn decode_sequence(
     }
     let logical_width = u32::from(logical_width);
     let logical_height = u32::from(logical_height);
+    let consumed = input.position();
     let sequence = DecodedSequence {
         width: logical_width.max(fallback_width),
         height: logical_height.max(fallback_height),
@@ -136,7 +137,7 @@ pub fn decode_sequence(
         loop_count,
         background: Some(AnimationBackground::PaletteIndex(background_index)),
     };
-    Ok(sequence)
+    Ok((sequence, consumed))
 }
 
 #[derive(Clone, Copy)]
@@ -452,6 +453,10 @@ impl<'a> Input<'a> {
             .malformed("truncated GIF byte field")?;
         self.position = self.position.saturating_add(1);
         Ok(value)
+    }
+
+    fn position(&self) -> usize {
+        self.position
     }
 
     fn read_u16(&mut self) -> CodecResult<u16> {

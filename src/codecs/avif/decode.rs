@@ -10,25 +10,28 @@ use crate::types::{
 };
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let extracted = extract_av1(data)?;
+    let consumed = extracted.consumed;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    match decode_portable(&validated) {
+    let image = match decode_portable(&validated) {
         Some(image) => Ok(image),
         None => decode_native(data),
-    }
+    }?;
+    Ok((image, consumed))
 }
 
 /// Decode every AVIF frame with its Pillow-observable presentation duration.
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
-) -> CodecResult<crate::types::DecodedSequence> {
+) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     let extracted = extract_av1(data)?;
+    let consumed = extracted.consumed;
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    decode_sequence_native(data, &validated, budget)
+    decode_sequence_native(data, &validated, budget, consumed)
 }
 
 fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
@@ -229,11 +232,12 @@ fn decode_sequence_native(
     data: &[u8],
     validated: &super::av1::ValidatedAv1,
     budget: &mut SequenceDecodeBudget,
-) -> CodecResult<DecodedSequence> {
+    consumed: usize,
+) -> CodecResult<(DecodedSequence, usize)> {
     let _ = validated.portable_still.as_ref();
     let mut decoder = super::native::Decoder::new(data)?;
     let info = decoder.info();
-    decoded_sequence(info, budget, &mut |frame_index| {
+    decoded_sequence(info, budget, consumed, &mut |frame_index| {
         decoder.decode_frame(frame_index)
     })
 }
@@ -256,8 +260,9 @@ fn decoded_first_frame(
 fn decoded_sequence(
     info: super::native::DecodeInfo,
     budget: &mut SequenceDecodeBudget,
+    consumed: usize,
     decode_frame: &mut dyn FnMut(u32) -> CodecResult<(Vec<u8>, super::native::FrameTiming)>,
-) -> CodecResult<DecodedSequence> {
+) -> CodecResult<(DecodedSequence, usize)> {
     let mut frames = Vec::with_capacity(info.frame_count as usize);
     let mode = if info.has_alpha {
         ImageMode::Rgba8
@@ -287,13 +292,16 @@ fn decoded_sequence(
             FrameBlend::Unspecified,
         ));
     }
-    Ok(DecodedSequence {
-        width: info.width,
-        height: info.height,
-        frames,
-        loop_count: None,
-        background: None,
-    })
+    Ok((
+        DecodedSequence {
+            width: info.width,
+            height: info.height,
+            frames,
+            loop_count: None,
+            background: None,
+        },
+        consumed,
+    ))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -301,7 +309,8 @@ fn decode_sequence_native(
     _data: &[u8],
     validated: &super::av1::ValidatedAv1,
     _budget: &mut SequenceDecodeBudget,
-) -> CodecResult<crate::types::DecodedSequence> {
+    _consumed: usize,
+) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     let _ = validated.portable_still.as_ref();
     Err(CodecError::Unsupported(
         "AVIF sequence decoding requires the native AVIF stack".to_owned(),
@@ -402,6 +411,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         b"not an AVIF container",
         &validated,
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
+        0,
     );
 
     let info = DecodeInfo {
@@ -428,12 +438,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         )),
     );
     let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Avif);
-    let _ = decoded_sequence(info, &mut budget, &mut |_| {
+    let _ = decoded_sequence(info, &mut budget, 0, &mut |_| {
         Err(CodecError::Malformed(
             "coverage native frame failure".to_owned(),
         ))
     });
-    let _ = decoded_sequence(info, &mut budget, &mut |_| {
+    let _ = decoded_sequence(info, &mut budget, 0, &mut |_| {
         Ok((
             vec![0; 3],
             FrameTiming {
@@ -441,7 +451,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             },
         ))
     });
-    let _ = decoded_sequence(info, &mut budget, &mut |_| {
+    let _ = decoded_sequence(info, &mut budget, 0, &mut |_| {
         Ok((
             vec![0; 3],
             FrameTiming {

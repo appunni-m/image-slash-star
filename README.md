@@ -131,6 +131,14 @@ capabilities and setup.
 | `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
 | `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
 
+`Decoded::consumed_bytes` reports the encoded bytes of the container-defined
+extent when the container defines one unambiguously (JPEG after EOI, PNG after
+IEND, GIF after the trailer, WebP's RIFF size, TIFF's final IFD, and AVIF's
+last top-level box). BMP and ICO report `None` because they declare no total
+extent. Decoders ignore well-formed trailing bytes after that extent and never
+let them change the decoded result; the trailing-input manifest pins this
+behavior for all eight formats against Pillow 12.2.0.
+
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return
 `ImageError::FeatureDisabled` when attempted. Sequence capabilities mean

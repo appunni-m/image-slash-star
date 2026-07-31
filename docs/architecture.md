@@ -195,6 +195,19 @@ checks.
 `DecodedImage::pixels` is tightly packed and row-major. There is no implicit
 row stride.
 
+### Trailing input and consumed extent
+
+Every decoder parses only its container-defined extent and ignores well-formed
+trailing bytes; trailing bytes never change the decoded result. `Decoded::consumed_bytes`
+names that extent when the container defines one unambiguously: JPEG ends at
+the EOI marker, PNG at the IEND chunk, GIF at the trailer, WebP at the
+RIFF-declared size, TIFF at the end of the final main-chain IFD, and AVIF at
+the last successfully parsed top-level BMFF box. BMP and ICO do not declare a
+total extent, so they report `None` and the complete input remains the source.
+AVIF container validation tolerates an unparseable tail only after a complete
+still or sequence structure has been parsed, matching Pillow 12.2.0/libavif;
+truncated or conflicting structure remains `Malformed`.
+
 | Mode | Layout |
 | --- | --- |
 | `L1` | One bit per sample, most-significant bit first, each row byte-aligned |

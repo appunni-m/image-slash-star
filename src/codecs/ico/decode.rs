@@ -23,7 +23,7 @@ const ICO_DIR_ENTRY_SIZE: usize = 16;
 /// Decode an ICO image from raw bytes.
 ///
 /// Returns the best icon entry or a classified container/payload failure.
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     // ICO header: reserved(2) + type(2) + count(2)
     if data.len() < ICO_HEADER_SIZE {
         return Err(CodecError::Malformed("truncated ICO header".to_owned()));
@@ -85,12 +85,17 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
         let entry_offset =
             ICO_HEADER_SIZE.saturating_add(best_idx.saturating_mul(ICO_DIR_ENTRY_SIZE));
         let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
-        return Ok(image.with_cursor_hotspot(CursorHotspot {
-            x: u16::from_le_bytes([entry[4], entry[5]]),
-            y: u16::from_le_bytes([entry[6], entry[7]]),
-        }));
+        return Ok((
+            image.with_cursor_hotspot(CursorHotspot {
+                x: u16::from_le_bytes([entry[4], entry[5]]),
+                y: u16::from_le_bytes([entry[6], entry[7]]),
+            }),
+            None,
+        ));
     }
-    Ok(image)
+    // ICO/CUR directories do not declare a total extent; trailing bytes are
+    // ignored and the complete input remains the source.
+    Ok((image, None))
 }
 
 /// Decode a single ICO directory entry by index.
@@ -137,7 +142,7 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> CodecResult<DecodedI
         // Decode as PNG
         #[cfg(feature = "png")]
         {
-            crate::codecs::png::decode::decode(entry_data)
+            crate::codecs::png::decode::decode(entry_data).map(|(image, _)| image)
         }
         #[cfg(not(feature = "png"))]
         {
@@ -202,7 +207,7 @@ fn decode_cur_bmp(data: &[u8], declared_len: u32) -> CodecResult<DecodedImage> {
     // `data.len() >= header_size >= 40`, so the synthetic BMP is always at
     // least 54 bytes (`14 + data.len()`), and the height field is present.
     bmp[22..26].copy_from_slice(&actual_height.to_le_bytes());
-    crate::codecs::bmp::decode::decode(&bmp)
+    crate::codecs::bmp::decode::decode(&bmp).map(|(image, _)| image)
 }
 
 pub(super) fn cur_bmp_prefix(

@@ -252,7 +252,7 @@ fn decode_rle(
 
 // Palette bytes are constructed below in complete RGB triples.
 #[allow(clippy::expect_used)]
-pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
+pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     let mut r = Cursor::new(data);
 
     // --- BITMAPFILEHEADER (14 bytes) ---
@@ -654,7 +654,9 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
             CodecError::Malformed("BMP indexed palette contains more than 256 entries".to_owned())
         })?);
     }
-    Ok(image)
+    // BMP does not define an unambiguous total extent: the declared file size
+    // is frequently absent or inconsistent, and trailing bytes are ignored.
+    Ok((image, None))
 }
 
 fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u8> {

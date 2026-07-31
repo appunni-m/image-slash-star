@@ -1,0 +1,97 @@
+{
+  "format_version": 1,
+  "assertion_origin": "defensive_model",
+  "pillow_version": "12.2.0",
+  "pillow_outcome": "ok",
+  "trailing_payloads": [
+    {
+      "name": "binary",
+      "payload": [0, 1, 2, 3, 4]
+    },
+    {
+      "name": "gif_signature",
+      "payload": [71, 73, 70, 56, 57, 97]
+    },
+    {
+      "name": "garbage",
+      "payload": [
+        116, 114, 97, 105, 108, 105, 110, 103, 32, 103, 97, 114, 98, 97, 103,
+        101, 32, 98, 121, 116, 101, 115, 32, 255, 254
+      ]
+    }
+  ],
+  "formats": [
+    {
+      "name": "jpeg",
+      "feature": "jpeg",
+      "asset_path": "tests/fixtures/input/images/jpeg/1x1.jpg",
+      "expected_format": "jpeg",
+      "consumed_bytes": 635,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "png",
+      "feature": "png",
+      "asset_path": "tests/fixtures/input/images/png/1x1.png",
+      "expected_format": "png",
+      "consumed_bytes": 69,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "gif",
+      "feature": "gif",
+      "asset_path": "tests/fixtures/input/images/gif/1x1.gif",
+      "expected_format": "gif",
+      "consumed_bytes": 37,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "bmp",
+      "feature": "bmp",
+      "asset_path": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "expected_format": "bmp",
+      "consumed_bytes": null,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "tiff",
+      "feature": "tiff",
+      "asset_path": "tests/fixtures/input/images/tiff/1bit.tiff",
+      "expected_format": "tiff",
+      "consumed_bytes": 110,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "webp",
+      "feature": "webp",
+      "asset_path": "tests/fixtures/input/images/webp/16x16.webp",
+      "expected_format": "webp",
+      "consumed_bytes": 64,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "ico",
+      "feature": "ico",
+      "asset_path": "tests/fixtures/input/images/ico/16x16.ico",
+      "expected_format": "ico",
+      "consumed_bytes": null,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    },
+    {
+      "name": "avif",
+      "feature": "avif",
+      "asset_path": "tests/fixtures/input/images/avif/baseline.avif",
+      "expected_format": "avif",
+      "consumed_bytes": 3077,
+      "consumed_origin": "defensive_model",
+      "pillow_outcome": "ok"
+    }
+  ]
+}

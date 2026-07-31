@@ -837,6 +837,8 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) input: &'input [u8],
     pub(super) still: Option<StillPayload>,
     pub(super) sequence: Option<SequencePayload>,
+    /// Encoded bytes of the parsed top-level BMFF extent.
+    pub(super) consumed: usize,
 }
 
 impl ExtractedAvif<'_> {
@@ -1565,21 +1567,40 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
     let brands = parse_ftyp(input, first.payload)?;
     let mut meta = None;
     let mut movie = None;
-    while let Some(child) = next_box(&mut reader, true, &mut budget)? {
-        match child.kind {
-            kind if kind == *b"meta" => {
-                if meta.is_some() {
-                    return Err(parse_failure!());
+    // Reassigned at the top of every iteration; the initializer only satisfies
+    // definite initialization.
+    #[allow(unused_assignments)]
+    let mut consumed = 0;
+    loop {
+        // Extent of the last successfully parsed top-level box.
+        consumed = reader.offset;
+        match next_box(&mut reader, true, &mut budget) {
+            Ok(Some(child)) => match child.kind {
+                kind if kind == *b"meta" => {
+                    if meta.is_some() {
+                        return Err(parse_failure!());
+                    }
+                    meta = Some(parse_meta(input, child.payload, &mut budget)?);
                 }
-                meta = Some(parse_meta(input, child.payload, &mut budget)?);
-            }
-            kind if kind == *b"moov" => {
-                if movie.is_some() {
-                    return Err(parse_failure!());
+                kind if kind == *b"moov" => {
+                    if movie.is_some() {
+                        return Err(parse_failure!());
+                    }
+                    movie = Some(parse_movie(input, child.payload, &mut budget)?);
                 }
-                movie = Some(parse_movie(input, child.payload, &mut budget)?);
+                _ => {}
+            },
+            Ok(None) => break,
+            Err(error) => {
+                // Bytes after a complete still or sequence structure are
+                // trailing input and are ignored, matching Pillow/libavif.
+                let complete =
+                    (brands.has_avif && meta.is_some()) || (brands.has_avis && movie.is_some());
+                if !complete {
+                    return Err(error);
+                }
+                break;
             }
-            _ => {}
         }
     }
     if (brands.has_avif && meta.is_none()) || (brands.has_avis && movie.is_none()) {
@@ -1595,6 +1616,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         input,
         still,
         sequence,
+        consumed,
     })
 }
 
@@ -1674,6 +1696,32 @@ fn coverage_fixture_contracts() {
         1,
     );
     assert!(baseline_still.alpha.is_none());
+
+    // A complete avis sequence followed by unparseable bytes exercises the
+    // has_avis trailing-tolerance branch of the top-level box loop.
+    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let mut animated_trailing = animated.to_vec();
+    animated_trailing.extend_from_slice(b"garbage");
+    let animated_payload =
+        extract_inner(&animated_trailing).expect("trailing bytes after a sequence are ignored");
+    assert!(animated_payload.sequence.is_some());
+
+    // An avis-only ftyp exercises the has_avif=false side of the trailing
+    // tolerance decision; rebuild the compatible-brand list without `avif`.
+    let animated_size =
+        u32::from_be_bytes([animated[0], animated[1], animated[2], animated[3]]) as usize;
+    let mut avis_only = Vec::new();
+    avis_only.extend_from_slice(&40u32.to_be_bytes());
+    avis_only.extend_from_slice(b"ftyp");
+    avis_only.extend_from_slice(b"avis");
+    avis_only.extend_from_slice(&[0, 0, 0, 0]);
+    for brand in [b"avis", b"msf1", b"iso8", b"mif1", b"miaf", b"MA1B"] {
+        avis_only.extend_from_slice(brand);
+    }
+    avis_only.extend_from_slice(&animated[animated_size..]);
+    avis_only.extend_from_slice(b"garbage");
+    let avis_payload = extract_inner(&avis_only).expect("avis-only trailing bytes are ignored");
+    assert!(avis_payload.sequence.is_some());
 
     let alpha = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
     let alpha_payload = extract_inner(alpha).unwrap();
@@ -3065,6 +3113,7 @@ fn coverage_structural_states() {
         input: &[],
         still: None,
         sequence: None,
+        consumed: 0,
     };
     let _ = empty.validate();
     let invalid_plane = EncodedPlane {
@@ -3110,6 +3159,7 @@ fn coverage_structural_states() {
 
     let invalid_still_color = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: Vec::new(),
@@ -3121,6 +3171,7 @@ fn coverage_structural_states() {
     let _ = invalid_still_color.validate();
     let invalid_still_alpha = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![EncodedSample {
@@ -3139,6 +3190,7 @@ fn coverage_structural_states() {
     let _ = invalid_still_alpha.validate();
     let invalid_still = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![EncodedSample {
@@ -3170,6 +3222,7 @@ fn coverage_structural_states() {
     let _ = invalid_still.validate();
     let sequence_only = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3187,6 +3240,7 @@ fn coverage_structural_states() {
     let _ = sequence_only.validate();
     let invalid_sequence_color = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3199,6 +3253,7 @@ fn coverage_structural_states() {
     let _ = invalid_sequence_color.validate();
     let invalid_sequence_alpha = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3218,6 +3273,7 @@ fn coverage_structural_states() {
     let _ = invalid_sequence_alpha.validate();
     let invalid_sequence = ExtractedAvif {
         input: &sample_input,
+        consumed: 0,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {

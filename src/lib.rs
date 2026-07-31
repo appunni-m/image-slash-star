@@ -197,7 +197,8 @@ pub fn decode_with_policy(
         let info = codecs::inspect_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
-    codecs::decode_format(data, format).map(|image| Decoded::new(format, image))
+    codecs::decode_format(data, format)
+        .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
 }
 
 /// Auto-detect the format and decode every retained image frame.
@@ -234,7 +235,7 @@ pub fn decode_sequence_with_policy(
         budget.charge_primary(&info)?;
     }
     codecs::decode_sequence_format(data, format, &mut budget)
-        .map(|sequence| Decoded::new(format, sequence))
+        .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
 }
 
 /// Inspect encoded image headers without decoding compressed pixel payloads.

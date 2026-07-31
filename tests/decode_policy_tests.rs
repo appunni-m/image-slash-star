@@ -162,6 +162,69 @@ impl FromJson for SequenceCase {
     }
 }
 
+struct TrailingManifest {
+    format_version: u32,
+    assertion_origin: String,
+    pillow_version: String,
+    pillow_outcome: String,
+    trailing_payloads: Vec<TrailingPayload>,
+    formats: Vec<TrailingFormat>,
+}
+
+struct TrailingPayload {
+    name: String,
+    payload: Vec<u64>,
+}
+
+struct TrailingFormat {
+    name: String,
+    feature: String,
+    asset_path: String,
+    expected_format: String,
+    consumed_bytes: Option<u64>,
+    consumed_origin: String,
+    pillow_outcome: String,
+}
+
+impl FromJson for TrailingManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            pillow_version: object.take("pillow_version")?,
+            pillow_outcome: object.take("pillow_outcome")?,
+            trailing_payloads: object.take("trailing_payloads")?,
+            formats: object.take("formats")?,
+        })
+    }
+}
+
+impl FromJson for TrailingPayload {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            name: object.take("name")?,
+            payload: object.take("payload")?,
+        })
+    }
+}
+
+impl FromJson for TrailingFormat {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            name: object.take("name")?,
+            feature: object.take("feature")?,
+            asset_path: object.take("asset_path")?,
+            expected_format: object.take("expected_format")?,
+            consumed_bytes: object.take("consumed_bytes")?,
+            consumed_origin: object.take("consumed_origin")?,
+            pillow_outcome: object.take("pillow_outcome")?,
+        })
+    }
+}
+
 fn assert_info(info: &img::ImageInfo, expected_size: [u32; 2]) {
     assert_eq!(info.format, img::ImageFormat::Png);
     assert_eq!([info.width, info.height], expected_size);
@@ -898,6 +961,108 @@ fn sequence_byte_limits_reject_before_every_sequence_codec_materializes_later_fr
             &img::DecodePolicy::new().with_max_sequence_decoded_bytes(total),
         )?;
         assert_eq!(at_total.content.frames, *frames, "{name}");
+    }
+    Ok(())
+}
+
+#[test]
+fn trailing_input_policy_manifest_matches_the_public_contract()
+-> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest: TrailingManifest = json::from_str(&fs::read_to_string(
+        root.join("tests/fixtures/trailing_input_manifest.json"),
+    )?)?;
+    assert_eq!(manifest.format_version, 1);
+    assert_eq!(manifest.assertion_origin, "defensive_model");
+    assert_eq!(manifest.pillow_version, "12.2.0");
+    assert_eq!(manifest.pillow_outcome, "ok");
+    for payload in &manifest.trailing_payloads {
+        assert!(!payload.name.is_empty());
+        assert!(!payload.payload.is_empty());
+    }
+
+    for format in manifest.formats {
+        let enabled = match format.feature.as_str() {
+            "jpeg" => cfg!(feature = "jpeg"),
+            "png" => cfg!(feature = "png"),
+            "gif" => cfg!(feature = "gif"),
+            "bmp" => cfg!(feature = "bmp"),
+            "tiff" => cfg!(feature = "tiff"),
+            "webp" => cfg!(feature = "webp"),
+            "ico" => cfg!(feature = "ico"),
+            "avif" => cfg!(feature = "avif"),
+            other => panic!("unknown feature `{other}`"),
+        };
+        if !enabled {
+            continue;
+        }
+        assert_eq!(format.consumed_origin, "defensive_model");
+        assert_eq!(format.pillow_outcome, "ok");
+        let expected_format = match format.expected_format.as_str() {
+            "jpeg" => img::ImageFormat::Jpeg,
+            "png" => img::ImageFormat::Png,
+            "gif" => img::ImageFormat::Gif,
+            "bmp" => img::ImageFormat::Bmp,
+            "tiff" => img::ImageFormat::Tiff,
+            "webp" => img::ImageFormat::WebP,
+            "ico" => img::ImageFormat::Ico,
+            "avif" => img::ImageFormat::Avif,
+            other => panic!("unknown expected format `{other}`"),
+        };
+        let expected_consumed = format.consumed_bytes.map(usize::try_from).transpose()?;
+
+        let bytes = fs::read(root.join(&format.asset_path))?;
+        let base_image = img::decode(&bytes)?;
+        assert_eq!(base_image.format, expected_format, "{}", format.name);
+        assert_eq!(
+            base_image.consumed_bytes, expected_consumed,
+            "{} still consumed",
+            format.name
+        );
+        let base_sequence = img::decode_sequence(&bytes)?;
+        assert_eq!(
+            base_sequence.consumed_bytes, expected_consumed,
+            "{} sequence consumed",
+            format.name
+        );
+        let base_info = img::inspect(&bytes)?;
+        assert_eq!(base_info.format, expected_format, "{}", format.name);
+
+        for payload in &manifest.trailing_payloads {
+            let mut trailing = bytes.clone();
+            for byte in &payload.payload {
+                trailing.push(u8::try_from(*byte)?);
+            }
+            let image = img::decode(&trailing)?;
+            assert_eq!(
+                image.content.pixels, base_image.content.pixels,
+                "{}/{} still pixels",
+                format.name, payload.name
+            );
+            assert_eq!(
+                image.consumed_bytes, expected_consumed,
+                "{}/{} still consumed",
+                format.name, payload.name
+            );
+            let sequence = img::decode_sequence(&trailing)?;
+            assert_eq!(
+                sequence.content.frames, base_sequence.content.frames,
+                "{}/{} sequence frames",
+                format.name, payload.name
+            );
+            assert_eq!(
+                sequence.consumed_bytes, expected_consumed,
+                "{}/{} sequence consumed",
+                format.name, payload.name
+            );
+            assert_eq!(
+                img::inspect(&trailing)?,
+                base_info,
+                "{}/{} inspection",
+                format.name,
+                payload.name
+            );
+        }
     }
     Ok(())
 }

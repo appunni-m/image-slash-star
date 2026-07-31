@@ -448,6 +448,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             input: &[],
             still: None,
             sequence: None,
+            consumed: 0,
         })
         .is_ok()
     );
@@ -468,6 +469,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 alpha: None,
             }),
             sequence: None,
+            consumed: 0,
         })
         .is_err()
     );
@@ -500,6 +502,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let validated_multi_sample = validate(&ExtractedAvif {
         input: &input,
+        consumed: 0,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![valid_sample(), valid_sample()],
@@ -517,6 +520,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 alpha: Some(invalid_plane()),
             }),
             sequence: None,
+            consumed: 0,
         })
         .is_err()
     );
@@ -529,6 +533,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 alpha: None,
                 timescale: NonZeroU32::new(1).unwrap(),
             }),
+            consumed: 0,
         })
         .is_err()
     );
@@ -541,6 +546,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 alpha: Some(invalid_plane()),
                 timescale: NonZeroU32::new(1).unwrap(),
             }),
+            consumed: 0,
         })
         .is_err()
     );
