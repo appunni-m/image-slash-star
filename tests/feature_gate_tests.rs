@@ -1298,6 +1298,154 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "GIF extension payloads in this test are tiny fixed literals"
+)]
+fn gif_extension(label: u8, payload: &[u8]) -> Vec<u8> {
+    let mut extension = vec![0x21, label];
+    for chunk in payload.chunks(255) {
+        extension.push(chunk.len() as u8);
+        extension.extend_from_slice(chunk);
+    }
+    extension.push(0);
+    extension
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "GIF application identifiers in this test are tiny fixed literals"
+)]
+fn gif_app_extension(identifier: &[u8], payload: &[u8]) -> Vec<u8> {
+    let mut extension = vec![0x21, 0xff, identifier.len() as u8];
+    extension.extend_from_slice(identifier);
+    for chunk in payload.chunks(255) {
+        extension.push(chunk.len() as u8);
+        extension.extend_from_slice(chunk);
+    }
+    extension.push(0);
+    extension
+}
+
+fn gif_image_separator_offset(data: &[u8]) -> Result<usize, Box<dyn std::error::Error>> {
+    let packed = data[10];
+    let palette_bytes = if packed & 0x80 != 0 {
+        3usize.wrapping_mul(2usize.wrapping_shl((packed & 7).into()))
+    } else {
+        0
+    };
+    let start = 13usize.wrapping_add(palette_bytes);
+    data[start..]
+        .iter()
+        .position(|&byte| byte == 0x2c)
+        .map(|offset| start.wrapping_add(offset))
+        .ok_or_else(|| "GIF image separator not found".into())
+}
+
+#[test]
+fn gif_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{OpaqueBlock, OpaqueMetadata};
+
+    if !cfg!(feature = "gif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/gif/1x1.gif"))?;
+
+    let comment = gif_extension(0xfe, b"hello");
+    let mut plain_text = vec![0x21, 0x01, 12];
+    plain_text.extend_from_slice(&[0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]);
+    plain_text.extend_from_slice(&[3, b'p', b'l', b'a']);
+    plain_text.push(0);
+    let app = gif_app_extension(b"ANIMEXTS1.0", &[1, 2, 3]);
+    let loop_extension = gif_app_extension(b"NETSCAPE2.0", &[1, 0xE8, 0x03]);
+    let unknown_label = gif_extension(0xcc, &[0xDE, 0xAD]);
+    let comment_after = gif_extension(0xfe, b"after");
+
+    let separator = gif_image_separator_offset(&base)?;
+    let trailer = base
+        .iter()
+        .rposition(|&byte| byte == 0x3b)
+        .ok_or_else(|| "GIF trailer not found".to_string())?;
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&base[..separator]);
+    for extension in [&comment, &plain_text, &app, &loop_extension, &unknown_label] {
+        bytes.extend_from_slice(extension);
+    }
+    bytes.extend_from_slice(&base[separator..trailer]);
+    bytes.extend_from_slice(&comment_after);
+    bytes.extend_from_slice(&base[trailer..]);
+
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: vec![0xfe],
+            data: b"\x05hello\x00".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0x01],
+            data: b"\x0c\x00\x00\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x03pla\x00".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xff],
+            data: b"\x0bANIMEXTS1.0\x03\x01\x02\x03\x00".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xfe],
+            data: b"\x05after\x00".to_vec(),
+        },
+    ];
+    let expected_blocks = vec![OpaqueBlock {
+        kind: vec![0xcc],
+        data: b"\x02\xde\xad\x00".to_vec(),
+        safe_to_copy: true,
+    }];
+
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.metadata, expected_metadata,
+        "sequence metadata"
+    );
+    assert_eq!(
+        sequence.content.opaque_blocks, expected_blocks,
+        "sequence blocks"
+    );
+    assert_eq!(sequence.content.loop_count, Some(1000), "loop extension");
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(
+        decoded.content.metadata, expected_metadata,
+        "still metadata"
+    );
+    assert_eq!(
+        decoded.content.opaque_blocks, expected_blocks,
+        "still blocks"
+    );
+
+    // Default encoding never replays retained GIF extensions.
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Gif);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Gif, &options)?;
+    for needle in [
+        &b"hello"[..],
+        &b"ANIMEXTS1.0"[..],
+        &b"pla"[..],
+        &b"after"[..],
+    ] {
+        assert!(
+            !encoded.windows(needle.len()).any(|window| window == needle),
+            "encoded GIF must not replay retained extension {needle:?}"
+        );
+    }
+    assert!(
+        !encoded.windows(2).any(|window| window == [0x21, 0xcc]),
+        "encoded GIF must not replay unknown-label extensions"
+    );
+
+    // The unmodified fixture retains no extensions.
+    let plain = image_slash_star::decode_sequence(&base)?;
+    assert!(plain.content.metadata.is_empty());
+    assert!(plain.content.opaque_blocks.is_empty());
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {

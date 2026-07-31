@@ -248,6 +248,13 @@ metadata records and unknown chunks stay opaque. Still, fallback-sequence, and
 APNG sequence decode must agree, unmodified fixtures carry an empty
 descriptor, and encoded output must not replay color chunks.
 
+The GIF-extension contract is table-driven: comment, plain-text, and
+non-NETSCAPE application extensions inserted into a minimal GIF must appear as
+ordered `OpaqueMetadata` records with exact payload bytes, the NETSCAPE loop
+extension must remain interpreted into `loop_count`, unknown labels must stay
+in `opaque_blocks`, still and sequence decode must agree, and encoded output
+must not replay any retained extension.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

@@ -81,6 +81,10 @@ All notable changes will be documented in this file. This project follows
 - Exact PNG source color retention (`SourceColor`: sRGB intent, gamma,
   chromaticities, raw ICC profile) with malformed/duplicate fallback to raw
   metadata records and no implicit encode replay.
+- Raw GIF extension retention: comment, plain-text, and non-NETSCAPE
+  application extensions as ordered metadata records, unknown labels as
+  opaque blocks, with the loop extension still interpreted and no implicit
+  encode replay.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact
