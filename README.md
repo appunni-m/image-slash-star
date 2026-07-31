@@ -105,6 +105,14 @@ distinguishes ordinary ICO. The feature enables PNG and BMP because an entry
 can use either representation. Encoding currently writes ICO only, with one
 entry at the supplied raster dimensions, and never resizes pixels.
 
+Feature evolution rule: format umbrella features (`jpeg`, `png`, `gif`, `bmp`,
+`tiff`, `webp`, `ico`, `avif`) are stable public Cargo API. Any future
+operation-level subfeature must be additive: it may only narrow an umbrella's
+optional surface, never disable behavior that a subset of features already
+enables, and Cargo's additive unification must compose subfeatures without
+changing umbrella semantics. This rule is committed before any split is
+accepted.
+
 WASM feature combinations are cross-compiled in CI. Executing the complete
 semantic fixture matrix in a WASM runtime remains planned.
 
