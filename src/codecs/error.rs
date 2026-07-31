@@ -560,6 +560,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = CodecError::Malformed("nested".to_owned())
         .at(4, "webp_chunk")
         .into_incremental_image_error(ImageFormat::WebP, ImageErrorStage::Inspection);
+    let _ = CodecError::Unsupported("nested".to_owned())
+        .at(4, "webp_chunk")
+        .into_incremental_image_error(ImageFormat::WebP, ImageErrorStage::Inspection);
+    let _ = CodecError::Dimensions("nested".to_owned())
+        .at(4, "tiff_ifd")
+        .into_incremental_image_error(ImageFormat::Tiff, ImageErrorStage::Inspection);
+    let _ = CodecError::Parameter("nested".to_owned())
+        .at(4, "png_chunk")
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = limit
+        .clone()
+        .at(4, "png_chunk")
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
     let _ = need_more.context("inspect basic");
     let _ = need_slice(b"12345", 0, 6, "truncated field");
     let _ = need_slice(b"12345", 7, 6, "inverted field");
