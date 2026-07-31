@@ -174,7 +174,7 @@ fn le_u16(data: &[u8], offset: usize) -> CodecResult<u16> {
     let bytes = need_slice(
         data,
         offset,
-        codec_add_end(offset, 2, "truncated BMP 16-bit field")?,
+        codec_add_end(offset, 2),
         "truncated BMP 16-bit field",
     )?;
     Ok(u16::from_le_bytes([bytes[0], bytes[1]]))
@@ -184,7 +184,7 @@ fn le_u32(data: &[u8], offset: usize) -> CodecResult<u32> {
     let bytes = need_slice(
         data,
         offset,
-        codec_add_end(offset, 4, "truncated BMP 32-bit field")?,
+        codec_add_end(offset, 4),
         "truncated BMP 32-bit field",
     )?;
     Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
@@ -194,7 +194,7 @@ fn le_i32(data: &[u8], offset: usize) -> CodecResult<i32> {
     let bytes = need_slice(
         data,
         offset,
-        codec_add_end(offset, 4, "truncated BMP signed field")?,
+        codec_add_end(offset, 4),
         "truncated BMP signed field",
     )?;
     Ok(i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))

@@ -47,7 +47,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
             "ICO directory entry has an empty size or offset".to_owned(),
         ));
     }
-    let payload_end = codec_add_end(offset, length, "ICO entry payload is out of bounds")?;
+    let payload_end = codec_add_end(offset, length);
     let payload = need_slice(
         data,
         offset,

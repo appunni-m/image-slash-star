@@ -120,7 +120,7 @@ fn next_marker(data: &[u8], position: &mut usize) -> CodecResult<u8> {
         let byte = need_slice(
             data,
             here,
-            codec_add_end(here, 1, "truncated JPEG marker stream")?,
+            codec_add_end(here, 1),
             "truncated JPEG marker stream",
         )?[0];
         *position = here.wrapping_add(1);
@@ -131,7 +131,7 @@ fn next_marker(data: &[u8], position: &mut usize) -> CodecResult<u8> {
         let mut marker = need_slice(
             data,
             here,
-            codec_add_end(here, 1, "truncated JPEG marker code")?,
+            codec_add_end(here, 1),
             "truncated JPEG marker code",
         )?[0];
         while marker == 0xff {
@@ -140,7 +140,7 @@ fn next_marker(data: &[u8], position: &mut usize) -> CodecResult<u8> {
             marker = need_slice(
                 data,
                 here,
-                codec_add_end(here, 1, "truncated JPEG fill marker")?,
+                codec_add_end(here, 1),
                 "truncated JPEG fill marker",
             )?[0];
         }
@@ -155,7 +155,7 @@ fn read_u16(data: &[u8], position: usize) -> CodecResult<u16> {
     let bytes = need_slice(
         data,
         position,
-        codec_add_end(position, 2, "truncated JPEG 16-bit field")?,
+        codec_add_end(position, 2),
         "truncated JPEG 16-bit field",
     )?;
     let high = bytes[0];

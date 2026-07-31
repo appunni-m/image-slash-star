@@ -392,38 +392,27 @@ pub(crate) fn need_from<'a>(
 ///
 /// The 64-bit host path is branch-free: slice lengths cannot approach
 /// `usize::MAX`, so wrapping is unreachable for valid inputs and a wrapped
-/// range is rejected by [`need_slice`] as malformed. Narrow targets use
-/// checked arithmetic because a 32-bit file-derived offset can genuinely
-/// overflow.
-#[cfg(all(
-    any(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "webp",
-        feature = "ico"
-    ),
-    target_pointer_width = "64"
+/// range is rejected by [`need_slice`] as malformed. Narrow targets saturate
+/// a genuine file-derived overflow to `usize::MAX`, which [`need_slice`]
+/// reports as an unattainable incremental minimum instead of misclassifying
+/// the read.
+#[cfg(any(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "webp",
+    feature = "ico"
 ))]
-pub(crate) fn codec_add_end(base: usize, add: usize, _message: &'static str) -> CodecResult<usize> {
-    Ok(base.wrapping_add(add))
-}
-
-#[cfg(all(
-    any(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "webp",
-        feature = "ico"
-    ),
-    not(target_pointer_width = "64")
-))]
-pub(crate) fn codec_add_end(base: usize, add: usize, message: &'static str) -> CodecResult<usize> {
-    base.checked_add(add)
-        .ok_or_else(|| CodecError::Malformed(message.to_owned()))
+pub(crate) fn codec_add_end(base: usize, add: usize) -> usize {
+    #[cfg(target_pointer_width = "64")]
+    {
+        base.wrapping_add(add)
+    }
+    #[cfg(not(target_pointer_width = "64"))]
+    {
+        base.checked_add(add).unwrap_or(usize::MAX)
+    }
 }
 
 /// Convert an incremental truncation status into the terminal malformed
@@ -578,7 +567,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = need_slice(b"12345", 7, 6, "inverted field");
     let _ = need_from(b"12345", 3, "tail beyond input");
     let _ = need_from(b"12345", 9, "tail beyond input");
-    let _ = codec_add_end(3, 2, "bounded end");
+    let _ = codec_add_end(3, 2);
     let _ = terminalize(CodecError::NeedMore {
         minimum: 5,
         message: "truncated".to_owned(),
