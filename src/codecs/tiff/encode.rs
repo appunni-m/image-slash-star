@@ -2,7 +2,7 @@
 
 use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::codecs::{CodecError, CodecResult};
-use crate::encode_options::EncodeOptions;
+use crate::encode_options::{TiffCompression, TiffEncodeOptions, TiffPredictor};
 #[cfg(coverage)]
 use crate::types::ColorType;
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode};
@@ -14,7 +14,7 @@ const COMPRESSION_DEFLATE: u16 = 8;
 const COMPRESSION_PACKBITS: u16 = 32_773;
 
 /// Encode an image as a single-strip classic TIFF.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &TiffEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_page(img, opts).map(|page| page.bytes)
 }
 
@@ -25,7 +25,7 @@ struct EncodedPage {
     next_position: usize,
 }
 
-fn encode_page(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<EncodedPage> {
+fn encode_page(img: &DecodedImage, opts: &TiffEncodeOptions) -> CodecResult<EncodedPage> {
     img.validate().map_err(CodecError::from_image_error)?;
     let width = img.width as usize;
     let height = img.height as usize;
@@ -47,25 +47,15 @@ fn encode_page(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<EncodedP
     };
     // Pillow 12.2.0 accepts byte_order but always emits little-endian TIFF.
     let endian = Endian::Little;
-    let compression = match opts.extra.get("compression").map(String::as_str) {
-        Some("lzw" | "tiff_lzw") => COMPRESSION_LZW,
-        Some("deflate" | "tiff_adobe_deflate") => COMPRESSION_DEFLATE,
-        Some("packbits") => COMPRESSION_PACKBITS,
-        Some("none" | "raw") | None => COMPRESSION_NONE,
-        Some(_) => {
-            return Err(CodecError::Parameter(
-                "invalid TIFF compression option".to_owned(),
-            ));
-        }
+    let compression = match opts.compression.unwrap_or(TiffCompression::Raw) {
+        TiffCompression::Raw => COMPRESSION_NONE,
+        TiffCompression::Lzw => COMPRESSION_LZW,
+        TiffCompression::Deflate => COMPRESSION_DEFLATE,
+        TiffCompression::PackBits => COMPRESSION_PACKBITS,
     };
-    let predictor = match opts.extra.get("predictor").map(String::as_str) {
-        Some("horizontal" | "2") => 2u16,
-        Some("none" | "1") | None => 1,
-        Some(_) => {
-            return Err(CodecError::Parameter(
-                "invalid TIFF predictor option".to_owned(),
-            ));
-        }
+    let predictor = match opts.predictor.unwrap_or(TiffPredictor::None) {
+        TiffPredictor::None => 1,
+        TiffPredictor::Horizontal => 2,
     };
     if predictor == 2 && !matches!(bits_per_sample, 8 | 16 | 32) {
         return Err(CodecError::Unsupported(
@@ -133,10 +123,7 @@ fn encode_page(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<EncodedP
         pixel_offset.saturating_add(encoded.len())
     };
     #[cfg(coverage)]
-    let output_len = if opts
-        .extra
-        .contains_key("__coverage_force_tiff_output_len_overflow")
-    {
+    let output_len = if opts.force_output_len_overflow() {
         usize::MAX
     } else {
         output_len
@@ -236,7 +223,10 @@ fn encode_page(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<EncodedP
 }
 
 /// Encode ordered TIFF pages without changing any page pixels or dimensions.
-pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode_sequence(
+    sequence: &DecodedSequence,
+    opts: &TiffEncodeOptions,
+) -> CodecResult<Vec<u8>> {
     validate_sequence_semantics(sequence)?;
     if sequence.frames.len() == 1 {
         return encode(&sequence.frames[0].image, opts);
@@ -252,10 +242,7 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
         .map(|page| page.bytes.len())
         .collect::<Vec<_>>();
     #[cfg(coverage)]
-    let page_lengths = if opts
-        .extra
-        .contains_key("__coverage_force_tiff_sequence_len_overflow")
-    {
+    let page_lengths = if opts.force_sequence_len_overflow() {
         vec![usize::MAX]
     } else {
         page_lengths
@@ -364,19 +351,13 @@ fn bounded_u32(value: usize) -> u32 {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    fn opt(key: &str, value: &str) -> EncodeOptions {
-        let mut opts = EncodeOptions::default();
-        opts.extra.insert(key.to_owned(), value.to_owned());
-        opts
-    }
-
     let _ = encode(
         &DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
-        &EncodeOptions::default(),
+        &TiffEncodeOptions::default(),
     );
     let _ = encode(
         &DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::La16),
-        &EncodeOptions::default(),
+        &TiffEncodeOptions::default(),
     );
 
     let l1 = DecodedImage::with_mode(8, 1, vec![0b1010_1010], ImageMode::L1);
@@ -396,18 +377,28 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let tall_rgb = DecodedImage::new(1, 70_000, vec![0; 70_000 * 3], ColorType::Rgb8);
 
     for image in [&l1, &la, &l16, &f32, &i32, &rgb, &rgba, &cmyk] {
-        let _ = encode(image, &EncodeOptions::default());
+        let _ = encode(image, &TiffEncodeOptions::default());
     }
-    for compression in ["lzw", "deflate", "packbits", "raw"] {
-        let _ = encode(&rgb, &opt("compression", compression));
+    for compression in [
+        TiffCompression::Lzw,
+        TiffCompression::Deflate,
+        TiffCompression::PackBits,
+        TiffCompression::Raw,
+    ] {
+        let mut options = TiffEncodeOptions::default();
+        options.compression = Some(compression);
+        let _ = encode(&rgb, &options);
     }
-    let forced_output_overflow = opt("__coverage_force_tiff_output_len_overflow", "1");
+    let mut forced_output_overflow = TiffEncodeOptions::default();
+    forced_output_overflow.set_force_output_len_overflow();
     let _ = encode(&rgb, &forced_output_overflow);
-    let _ = encode(&wide_rgb, &opt("compression", "packbits"));
-    let _ = encode(&tall_rgb, &opt("compression", "packbits"));
-    let _ = encode(&rgb, &opt("compression", "unsupported"));
-    let _ = encode(&rgb, &opt("predictor", "unsupported"));
-    let _ = encode(&l1, &opt("predictor", "horizontal"));
+    let mut packbits = TiffEncodeOptions::default();
+    packbits.compression = Some(TiffCompression::PackBits);
+    let _ = encode(&wide_rgb, &packbits);
+    let _ = encode(&tall_rgb, &packbits);
+    let mut horizontal = TiffEncodeOptions::default();
+    horizontal.predictor = Some(TiffPredictor::Horizontal);
+    let _ = encode(&l1, &horizontal);
     let _ = checked_align_16(usize::MAX);
     let _ = sequence_output_len(&[usize::MAX, 0]);
     let _ = sequence_output_len(&[usize::MAX.saturating_sub(15), 16]);
@@ -415,13 +406,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = sequence_output_len(&[u32::MAX as usize + 1]);
     let mut sequence = DecodedSequence::from_image(rgb.clone());
     sequence.frames.push(sequence.frames[0].clone());
-    let forced_sequence_overflow = opt("__coverage_force_tiff_sequence_len_overflow", "1");
+    let mut forced_sequence_overflow = TiffEncodeOptions::default();
+    forced_sequence_overflow.set_force_sequence_len_overflow();
     let _ = encode_sequence(&sequence, &forced_sequence_overflow);
 
-    let mut predicted = opt("compression", "deflate");
-    predicted
-        .extra
-        .insert("predictor".to_owned(), "horizontal".to_owned());
+    let mut predicted = TiffEncodeOptions::default();
+    predicted.compression = Some(TiffCompression::Deflate);
+    predicted.predictor = Some(TiffPredictor::Horizontal);
     let _ = encode(&rgb, &predicted);
     let _ = encode(&l16, &predicted);
     let _ = encode(&f32, &predicted);

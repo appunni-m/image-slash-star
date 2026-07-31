@@ -688,47 +688,88 @@ fn option_text(value: &Value) -> String {
         .map_or_else(|| value.to_string(), str::to_owned)
 }
 
-fn extra_encode_options(params: &HashMap<String, Value>) -> HashMap<String, String> {
+fn legacy_encode_options(format: &str, params: &HashMap<String, Value>) -> Vec<(String, String)> {
+    let keys: &[&str] = match format {
+        "jpeg" => &[
+            "quality",
+            "progressive",
+            "optimize",
+            "subsampling",
+            "restart_interval",
+            "exif_hex",
+        ],
+        "png" => &[
+            "compression",
+            "optimize",
+            "interlace",
+            "interlaced",
+            "gamma",
+            "srgb",
+            "physical",
+            "text_chunks",
+            "time",
+        ],
+        "gif" => &[
+            "animated",
+            "interlace",
+            "interlaced",
+            "disposal",
+            "color_table",
+            "transparency",
+            "loop",
+        ],
+        "bmp" => &[],
+        "tiff" => &["compression", "predictor"],
+        "webp" => &[
+            "quality",
+            "lossless",
+            "method",
+            "icc_hex",
+            "exif_hex",
+            "xmp_hex",
+            "kmax",
+            "kmin",
+            "minimize_size",
+            "allow_mixed",
+        ],
+        "ico" => &["entry_type", "sizes"],
+        "avif" => &[
+            "quality",
+            "codec",
+            "subsampling",
+            "range",
+            "speed",
+            "max_threads",
+            "tile_rows",
+            "tile_cols",
+            "alpha_premultiplied",
+            "autotiling",
+            "icc_hex",
+            "exif_hex",
+            "exif_orientation",
+            "xmp_hex",
+            "sequence_time",
+        ],
+        _ => &[],
+    };
     params
         .iter()
-        .filter(|(key, _)| {
-            !matches!(
-                key.as_str(),
-                "advanced"
-                    | "oversized_palette"
-                    | "palette_on_nonindexed"
-                    | "rust_unsupported_modes"
-                    | "rust_invalid_color_mode"
-                    | "preserve_disposal"
-                    | "sequence_canvas_padding"
-                    | "sequence_frame_offset"
-                    | "sequence_frame_mode"
-                    | "sequence_duration_ms"
-                    | "sequence_duration_fraction"
-                    | "sequence_disposal"
-                    | "sequence_blend"
-                    | "sequence_interlaced"
-                    | "sequence_default_image"
-                    | "sequence_pixel_layout"
-                    | "sequence_loop_count"
-                    | "sequence_clear_loop"
-                    | "sequence_background_rgba"
-                    | "sequence_background_palette"
-                    | "sequence_clear_background"
-            )
-        })
+        .filter(|(key, _)| keys.contains(&key.as_str()))
         .map(|(key, value)| (key.clone(), option_text(value)))
         .collect()
 }
 
-fn advanced_encode_options(params: &HashMap<String, Value>) -> Vec<(String, String)> {
+fn advanced_encode_options(params: &HashMap<String, Value>) -> Vec<img::AvifAdvancedOption> {
     params
         .get("advanced")
         .and_then(Value::as_object)
         .map(|values| {
             values
                 .iter()
-                .map(|(key, value)| (key.clone(), option_text(value)))
+                .map(|(key, value)| img::AvifAdvancedOption {
+                    key: key.clone(),
+                    value: option_text(value),
+                })
                 .collect()
         })
         .unwrap_or_default()
@@ -3517,36 +3558,6 @@ fn test_encode_matrix() {
             }
             let decoded = decoded_owned.as_ref().unwrap_or(cached_decoded);
 
-            // Build encode options from row params
-            let opts = img::encode_options::EncodeOptions {
-                quality: row
-                    .params
-                    .get("quality")
-                    .and_then(|v| v.as_u64())
-                    .and_then(|v| u8::try_from(v).ok()),
-                compression: row
-                    .params
-                    .get("compression")
-                    .and_then(|v| v.as_u64())
-                    .and_then(|v| u8::try_from(v).ok()),
-                lossless: row.params.get("lossless").and_then(|v| v.as_bool()),
-                method: row
-                    .params
-                    .get("method")
-                    .and_then(|v| v.as_u64())
-                    .and_then(|v| u8::try_from(v).ok()),
-                progressive: row.params.get("progressive").and_then(|v| v.as_bool()),
-                optimize: row.params.get("optimize").and_then(|v| v.as_bool()),
-                subsampling: row.params.get("subsampling").map(option_text),
-                interlace: row
-                    .params
-                    .get("interlace")
-                    .or_else(|| row.params.get("interlaced"))
-                    .and_then(|v| v.as_bool()),
-                advanced: advanced_encode_options(&row.params),
-                extra: extra_encode_options(&row.params),
-            };
-
             let format = match fmt_name.as_str() {
                 "jpeg" => img::ImageFormat::Jpeg,
                 "png" => img::ImageFormat::Png,
@@ -3565,6 +3576,11 @@ fn test_encode_matrix() {
                     continue;
                 }
             };
+            let legacy_pairs = legacy_encode_options(fmt_name, &row.params);
+            let mut opts = img::EncodeOptions::try_from_legacy_pairs(format, &legacy_pairs);
+            if let Ok(img::EncodeOptions::Avif(options)) = &mut opts {
+                options.advanced = advanced_encode_options(&row.params);
+            }
 
             if let Some(mode_values) = row
                 .params
@@ -3576,6 +3592,15 @@ fn test_encode_matrix() {
                     "public-mode contract requires a decoded fixture frame",
                 );
                 let mut contract_failures = Vec::new();
+                let fallback_options = img::EncodeOptions::for_format(format);
+                let options = match &opts {
+                    Ok(options) => options,
+                    Err(error) => {
+                        contract_failures
+                            .push(format!("typed option construction failed: {error}"));
+                        &fallback_options
+                    }
+                };
                 for value in mode_values {
                     let name = require_some(
                         value.as_str(),
@@ -3589,7 +3614,7 @@ fn test_encode_matrix() {
                         zero_image_for_mode(base.width, base.height, mode),
                         "public-mode contract image must be constructible",
                     );
-                    let result = img::encode(&image, format, &opts);
+                    let result = img::encode(&image, format, options);
                     if !matches!(
                         result,
                         Err(img::ImageError::Unsupported {
@@ -3611,7 +3636,7 @@ fn test_encode_matrix() {
                         "invalid-state contract image must be constructible",
                     );
                     invalid.color = img::ColorType::Rgb8;
-                    let result = img::encode(&invalid, format, &opts);
+                    let result = img::encode(&invalid, format, options);
                     if !matches!(result, Err(img::ImageError::Parameter { .. })) {
                         contract_failures.push(format!("inconsistent color/mode: {result:?}"));
                     }
@@ -3651,41 +3676,50 @@ fn test_encode_matrix() {
                 .get("truncate_pixels")
                 .is_some_and(|v| v.as_bool().unwrap_or(false))
                 || row.params.contains_key("source_dimensions");
-            let encoded = if row
-                .params
-                .get("truncate_pixels")
-                .is_some_and(|v| v.as_bool().unwrap_or(false))
-            {
-                let mut malformed =
-                    require_some(decoded.first(), "encoded sequence must have a first frame")
+            let encoded = match opts.as_ref() {
+                Err(error) => Err((*error).clone()),
+                Ok(options)
+                    if row
+                        .params
+                        .get("truncate_pixels")
+                        .is_some_and(|v| v.as_bool().unwrap_or(false)) =>
+                {
+                    let mut malformed =
+                        require_some(decoded.first(), "encoded sequence must have a first frame")
+                            .clone();
+                    malformed.pixels.pop();
+                    img::encode(&malformed, format, options)
+                }
+                Ok(options) => {
+                    if let Some(dimensions) = row.params.get("source_dimensions") {
+                        let dimensions = require_some(
+                            dimensions.as_array(),
+                            "source_dimensions must be a JSON array",
+                        );
+                        let mut malformed = require_some(
+                            decoded.first(),
+                            "encoded sequence must have a first frame",
+                        )
                         .clone();
-                malformed.pixels.pop();
-                img::encode(&malformed, format, &opts)
-            } else if let Some(dimensions) = row.params.get("source_dimensions") {
-                let dimensions = require_some(
-                    dimensions.as_array(),
-                    "source_dimensions must be a JSON array",
-                );
-                let mut malformed =
-                    require_some(decoded.first(), "encoded sequence must have a first frame")
-                        .clone();
-                malformed.width = require_ok(
-                    u32::try_from(require_some(
-                        dimensions[0].as_u64(),
-                        "source width must be an unsigned integer",
-                    )),
-                    "source width must fit u32",
-                );
-                malformed.height = require_ok(
-                    u32::try_from(require_some(
-                        dimensions[1].as_u64(),
-                        "source height must be an unsigned integer",
-                    )),
-                    "source height must fit u32",
-                );
-                img::encode(&malformed, format, &opts)
-            } else {
-                img::encode_sequence(decoded, format, &opts)
+                        malformed.width = require_ok(
+                            u32::try_from(require_some(
+                                dimensions[0].as_u64(),
+                                "source width must be an unsigned integer",
+                            )),
+                            "source width must fit u32",
+                        );
+                        malformed.height = require_ok(
+                            u32::try_from(require_some(
+                                dimensions[1].as_u64(),
+                                "source height must be an unsigned integer",
+                            )),
+                            "source height must fit u32",
+                        );
+                        img::encode(&malformed, format, options)
+                    } else {
+                        img::encode_sequence(decoded, format, options)
+                    }
+                }
             };
             let operation = if direct_still {
                 "encode"
@@ -3799,7 +3833,7 @@ fn test_encode_matrix() {
                 match img::encode(
                     require_some(decoded.first(), "encoded sequence must have a first frame"),
                     format,
-                    &opts,
+                    require_ok(opts.as_ref(), "typed encode options"),
                 ) {
                     Ok(still) if still == encoded => {}
                     Ok(_) => {

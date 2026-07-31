@@ -4,12 +4,14 @@
 //! multi-resolution icon must provide already-sized entries through a future
 //! entry-oriented API rather than asking the codec to perform image processing.
 use crate::codecs::{CodecError, CodecResult};
-use crate::encode_options::EncodeOptions;
+#[cfg(coverage)]
+use crate::encode_options::IcoSize;
+use crate::encode_options::{IcoEncodeOptions, IcoEntryType, PngEncodeOptions};
 use crate::types::{ColorType, DecodedImage};
 /// Encode one source-sized image as one Pillow-compatible ICO entry.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
     img.validate().map_err(CodecError::from_image_error)?;
-    if opts.extra.get("entry_type").map(String::as_str) == Some("bmp") {
+    if opts.entry_type == IcoEntryType::Bmp {
         return encode_bmp_entries(img, opts);
     }
     encode_png_entries(img, opts)
@@ -19,7 +21,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
 pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(
         &DecodedImage::new(0, 1, Vec::new(), ColorType::Rgb8),
-        &EncodeOptions::default(),
+        &IcoEncodeOptions::default(),
     );
 
     let rgb = DecodedImage::new(
@@ -41,44 +43,53 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let luma = DecodedImage::new(16, 16, vec![0; 16 * 16], ColorType::L8);
     let cmyk = DecodedImage::new(16, 16, vec![0; 16 * 16 * 4], ColorType::Cmyk8);
 
-    let mut exact_size = EncodeOptions::default();
-    exact_size
-        .extra
-        .insert("sizes".to_owned(), "[[16, 16]]".to_owned());
+    let exact_size = IcoEncodeOptions {
+        sizes: vec![IcoSize {
+            width: 16,
+            height: 16,
+        }],
+        ..IcoEncodeOptions::default()
+    };
     let _ = encode(&rgb, &exact_size);
 
-    let mut wrong_size = EncodeOptions::default();
-    wrong_size
-        .extra
-        .insert("sizes".to_owned(), "[[8, 8]]".to_owned());
+    let wrong_size = IcoEncodeOptions {
+        sizes: vec![IcoSize {
+            width: 8,
+            height: 8,
+        }],
+        ..IcoEncodeOptions::default()
+    };
     let _ = encode(&rgb, &wrong_size);
 
     let mut bmp = exact_size.clone();
-    bmp.extra.insert("entry_type".to_owned(), "bmp".to_owned());
+    bmp.entry_type = IcoEntryType::Bmp;
     let _ = encode(&rgb, &bmp);
     let _ = encode(&rgba, &bmp);
     let _ = encode(&luma, &bmp);
     let _ = encode(&cmyk, &bmp);
 
-    let mut invalid_size = EncodeOptions::default();
-    invalid_size.extra.insert(
-        "sizes".to_owned(),
-        "999999999999999999999999999999999999".to_owned(),
-    );
+    let mut invalid_size = IcoEncodeOptions {
+        sizes: vec![
+            IcoSize {
+                width: 16,
+                height: 16,
+            },
+            IcoSize {
+                width: 32,
+                height: 32,
+            },
+        ],
+        ..IcoEncodeOptions::default()
+    };
     let _ = encode(&rgb, &invalid_size);
-    invalid_size
-        .extra
-        .insert("entry_type".to_owned(), "bmp".to_owned());
+    invalid_size.entry_type = IcoEntryType::Bmp;
     let _ = encode(&rgb, &invalid_size);
 
     let oversized = DecodedImage::new(257, 1, vec![0; 257 * 3], ColorType::Rgb8);
-    let _ = encode(&oversized, &EncodeOptions::default());
+    let _ = encode(&oversized, &IcoEncodeOptions::default());
     let too_tall = DecodedImage::new(1, 257, vec![0; 257 * 3], ColorType::Rgb8);
-    let _ = encode(&too_tall, &EncodeOptions::default());
+    let _ = encode(&too_tall, &IcoEncodeOptions::default());
 
-    let _ = parse_single_size("[[16, 16]]");
-    let _ = parse_single_size("[[16, 16], [32, 32]]");
-    let _ = parse_single_size("");
     let _ = encode_directory((256, 256), &[1, 2, 3], 32);
     for size in [(0, 1), (1, 0), (257, 1), (1, 257)] {
         let _ = encode_directory(size, &[0], 32);
@@ -87,25 +98,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode_bmp_single_entry(&rgba);
 }
 
-fn encode_png_entries(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+fn encode_png_entries(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
     let size = source_entry_size(img, opts)?;
-    let frame = crate::codecs::png::encode::encode(img, &EncodeOptions::default())
+    let frame = crate::codecs::png::encode::encode(img, &PngEncodeOptions::default())
         .map_err(|error| error.context("embedded ICO PNG encode"))?;
     encode_directory(size, &frame, 32)
 }
 
-fn source_entry_size(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<(usize, usize)> {
+fn source_entry_size(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<(usize, usize)> {
     let source = (bounded_usize_u32(img.width), bounded_usize_u32(img.height));
     if source.0 > 256 || source.1 > 256 {
         return Err(CodecError::Dimensions(
             "ICO entries cannot exceed 256 by 256 pixels".to_owned(),
         ));
     }
-    match opts.extra.get("sizes") {
-        Some(value) if parse_single_size(value)? != source => Err(CodecError::Parameter(
-            "ICO sizes must contain exactly the source dimensions".to_owned(),
+    match opts.sizes.as_slice() {
+        [] => Ok(source),
+        [size] if (usize::from(size.width), usize::from(size.height)) != source => {
+            Err(CodecError::Parameter(
+                "ICO sizes must contain exactly the source dimensions".to_owned(),
+            ))
+        }
+        [_] => Ok(source),
+        _ => Err(CodecError::Parameter(
+            "ICO sizes must contain exactly one width-height pair".to_owned(),
         )),
-        Some(_) | None => Ok(source),
     }
 }
 
@@ -143,7 +160,7 @@ fn directory_dimension(value: usize) -> u8 {
     }
 }
 
-fn encode_bmp_entries(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+fn encode_bmp_entries(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
     let size = source_entry_size(img, opts)?;
     let encoded = encode_bmp_single_entry(img)?;
     let bits = u16::from_le_bytes([encoded[12], encoded[13]]);
@@ -248,19 +265,4 @@ fn encode_bmp_single_entry(img: &DecodedImage) -> CodecResult<Vec<u8>> {
     output.extend_from_slice(&pixels);
     output.resize(output.len().saturating_add(mask_bytes), 0);
     Ok(output)
-}
-
-fn parse_single_size(value: &str) -> CodecResult<(usize, usize)> {
-    let numbers = value
-        .split(|character: char| !character.is_ascii_digit())
-        .filter(|part| !part.is_empty())
-        .map(str::parse::<usize>)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|_| CodecError::Parameter("invalid ICO sizes option".to_owned()))?;
-    let [width, height] = numbers.as_slice() else {
-        return Err(CodecError::Parameter(
-            "ICO sizes must contain exactly one width-height pair".to_owned(),
-        ));
-    };
-    Ok((*width, *height))
 }

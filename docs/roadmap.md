@@ -1057,6 +1057,50 @@ classic IFD chains, TIFF source byte order now survives inspection, still
 decode, and every retained page, and runtime capability discovery mirrors the
 current feature/target dispatch.
 
+#### Accepted typed-encode-options slice
+
+The canonical encode API keeps an explicit `ImageFormat`, but its option value
+must now identify the same target and expose only that codec's settings:
+
+- replace the shared public fields and `extra: HashMap` with a non-exhaustive
+  `EncodeOptions` enum containing `Jpeg`, `Png`, `Gif`, `Bmp`, `Tiff`, `WebP`,
+  `Ico`, and `Avif` option records;
+- keep option records dependency-free and available as configuration types
+  regardless of whether their algorithm feature is compiled. Cargo features
+  continue to gate every codec implementation and operation, while stable
+  option type names do not change under feature unification;
+- make every value domain typed: JPEG/AVIF subsampling, PNG/TIFF compression,
+  GIF table/disposal/loop policy, TIFF prediction, ICO entry representation,
+  AVIF codec/range, and raw metadata bytes. Numeric ranges and interacting
+  values remain validation-gated at encode time;
+- `EncodeOptions::format()` reports the selected target and
+  `EncodeOptions::for_format(format)` creates that target's default record.
+  Passing options for a different explicit target returns a format-qualified
+  `Parameter` error before codec dispatch;
+- remove `EncodeOptions::none()`. The only format-neutral default operation is
+  `encode_default`; an options value has no meaningful target-free default;
+- retain one explicitly named strict legacy-pair migration adapter. It accepts
+  only keys historically consumed by the selected codec, rejects unknown and
+  duplicate keys, parses hexadecimal metadata into bytes, and returns typed,
+  format-qualified errors. It is not consulted by encoders and cannot restore
+  silent cross-codec ignores;
+- retain ordered duplicate AVIF advanced codec options as a typed
+  `AvifAdvancedOption` list because order and duplication are part of
+  libavif's target-specific contract; and
+- convert the manifest harness to the typed surface. Existing deterministic
+  output bytes and structured error rows must remain exact, while new
+  cross-target and strict-adapter rows prove the behavior previously missing
+  from the fixture contract.
+
+Acceptance requires unchanged active manifest counts and hashes unless the
+new strict option-contract rows are intentionally added, exact Pillow output
+for every existing success, format-qualified structured failures for mismatch,
+unknown, duplicate, range, and interaction cases, strict Clippy/rustdoc for
+native and WASM feature lanes, and 100% Coverage MCP line, branch, function,
+and region coverage. This closes API-004/API-016/API-042/API-049 and the
+top-level typed-options item; option domains not yet implemented by a codec
+remain named codec backlog rather than catch-all strings.
+
 1. Introduce typed per-format options without changing exact retained bytes.
 2. Add metadata retention, decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.

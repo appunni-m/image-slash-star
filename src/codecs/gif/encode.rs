@@ -6,7 +6,7 @@
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
 
 use crate::codecs::error::{CodecError, CodecResult};
-use crate::encode_options::EncodeOptions;
+use crate::encode_options::{GifColorTable, GifEncodeOptions, GifLoop};
 #[cfg(coverage)]
 use crate::types::DecodedFrame;
 use crate::types::{
@@ -47,7 +47,7 @@ fn coverage_frame(
 /// most 256 unique colors using a simple nearest-neighbor approach.
 ///
 /// Returns a classified failure for invalid images, modes, or options.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &GifEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_sequence(&DecodedSequence::from_image(img.clone()), opts)
 }
 
@@ -61,7 +61,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    assert!(encode_sequence(&invalid_sequence, &EncodeOptions::none()).is_err());
+    assert!(encode_sequence(&invalid_sequence, &GifEncodeOptions::default()).is_err());
 
     let identical = [0u8, 0, 0, 255];
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -324,30 +324,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = coalesce_identical_frames(&invalid_duration_sequence, 2, None);
 
-    let mut invalid_animated = EncodeOptions::none();
-    invalid_animated
-        .extra
-        .insert("animated".to_owned(), "maybe".to_owned());
-    let _ = encode_sequence(&still, &invalid_animated);
-    let mut invalid_loop = EncodeOptions::none();
-    invalid_loop
-        .extra
-        .insert("loop".to_owned(), "forever-ish".to_owned());
-    let _ = encode_sequence(&still, &invalid_loop);
     let mut oversized_loop = still.clone();
     oversized_loop.loop_count = Some(u32::MAX);
-    let _ = encode_sequence(&oversized_loop, &EncodeOptions::none());
-    let mut invalid_color_table = EncodeOptions::none();
-    invalid_color_table
-        .extra
-        .insert("color_table".to_owned(), "invalid".to_owned());
-    let _ = encode_sequence(&still, &invalid_color_table);
-    let _ = parse_disposal("keep");
-    let _ = parse_loop_count(&{
-        let mut opts = EncodeOptions::none();
-        opts.extra.insert("loop".to_owned(), "false".to_owned());
-        opts
-    });
+    let _ = encode_sequence(&oversized_loop, &GifEncodeOptions::default());
+    let _ = encode_sequence(
+        &still,
+        &GifEncodeOptions {
+            disposal: Some(FrameDisposal::Keep),
+            color_table: Some(GifColorTable::Local),
+            loop_count: Some(GifLoop::Infinite),
+            ..GifEncodeOptions::default()
+        },
+    );
 
     let oversized_sequence = DecodedSequence {
         width: u32::from(u16::MAX) + 1,
@@ -579,7 +567,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 /// Encode a still image or animation without discarding source frames.
-pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode_sequence(
+    sequence: &DecodedSequence,
+    opts: &GifEncodeOptions,
+) -> CodecResult<Vec<u8>> {
     sequence.validate().map_err(CodecError::from_image_error)?;
     for frame in &sequence.frames {
         if frame.source.is_default_image {
@@ -595,16 +586,13 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
             ));
         }
     }
-    let animated = option_bool(opts, "animated")?.unwrap_or(sequence.frames.len() > 1);
+    let animated = opts.animated.unwrap_or(sequence.frames.len() > 1);
     let requested_frames = if animated { sequence.frames.len() } else { 1 };
 
-    let disposal_override = opts.extra.get("disposal").map(String::as_str);
-    let disposal_override = match disposal_override {
-        Some(value) => Some(parse_disposal(value)?),
-        None => None,
-    };
-    let loop_count = match parse_loop_count(opts)? {
-        Some(value) => Some(value),
+    let disposal_override = opts.disposal.map(disposal_code).transpose()?;
+    let loop_count = match opts.loop_count {
+        Some(GifLoop::Infinite) => Some(0),
+        Some(GifLoop::Finite(value)) => Some(value),
         None => match sequence.loop_count {
             Some(value) => Some(u16::try_from(value).map_err(|_| {
                 CodecError::Parameter("GIF loop count exceeds format limits".to_owned())
@@ -612,21 +600,13 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
             None => None,
         },
     };
-    let local_color_table = match opts.extra.get("color_table").map(String::as_str) {
-        None | Some("global") => false,
-        Some("local") => true,
-        Some(_) => {
-            return Err(CodecError::Parameter(
-                "invalid GIF color_table option".to_owned(),
-            ));
-        }
-    };
+    let local_color_table = matches!(opts.color_table, Some(GifColorTable::Local));
     let settings = GifSettings {
         interlaced: opts.interlace,
         local_color_table,
         disposal_override,
         loop_count,
-        transparency_override: option_bool(opts, "transparency")?,
+        transparency_override: opts.transparency,
     };
     let frames = coalesce_identical_frames(sequence, requested_frames, settings.disposal_override)?;
     write_gif(sequence, &frames, settings)
@@ -1067,29 +1047,6 @@ fn bounded_u32(value: usize) -> u32 {
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
 }
 
-fn option_bool(opts: &EncodeOptions, key: &str) -> CodecResult<Option<bool>> {
-    let Some(value) = opts.extra.get(key) else {
-        return Ok(None);
-    };
-    match value.as_str() {
-        "true" | "1" | "yes" => Ok(Some(true)),
-        "false" | "0" | "no" => Ok(Some(false)),
-        _ => Err(CodecError::Parameter(format!("invalid GIF {key} option"))),
-    }
-}
-
-fn parse_disposal(value: &str) -> CodecResult<u8> {
-    match value {
-        "none" | "0" => Ok(0),
-        "keep" | "1" => Ok(1),
-        "background" | "2" => Ok(2),
-        "previous" | "3" => Ok(3),
-        _ => Err(CodecError::Parameter(
-            "invalid GIF disposal option".to_owned(),
-        )),
-    }
-}
-
 fn disposal_code(disposal: FrameDisposal) -> CodecResult<u8> {
     match disposal {
         FrameDisposal::Unspecified => Ok(0),
@@ -1120,20 +1077,6 @@ fn gif_delay(duration: FrameDuration) -> CodecResult<u16> {
     }
     u16::try_from(centiseconds.div_euclid(duration.denominator))
         .map_err(|_| CodecError::Parameter("GIF frame duration exceeds format limits".to_owned()))
-}
-
-fn parse_loop_count(opts: &EncodeOptions) -> CodecResult<Option<u16>> {
-    let Some(value) = opts.extra.get("loop") else {
-        return Ok(None);
-    };
-    match value.as_str() {
-        "true" | "infinite" => Ok(Some(0)),
-        "false" => Ok(None),
-        number => number
-            .parse()
-            .map(Some)
-            .map_err(|_| CodecError::Parameter("invalid GIF loop option".to_owned())),
-    }
 }
 
 fn table_parameters(palette: &[u8]) -> (usize, u8, u8) {

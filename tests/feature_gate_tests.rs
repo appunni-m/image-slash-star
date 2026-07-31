@@ -5,10 +5,9 @@ use std::fs;
 use std::path::Path;
 
 use bytemuck as _;
-use image_slash_star::encode_options::EncodeOptions;
 use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
-    DecodedImage, DecodedSequence, EncodedImage, ImageError, ImageFormat, ImageMode,
+    DecodedImage, DecodedSequence, EncodeOptions, EncodedImage, ImageError, ImageFormat, ImageMode,
 };
 
 mod support;
@@ -207,7 +206,6 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
     let manifest = CoverageMatrix::from_json(manifest_value)?;
     let encode_input = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
     let encode_sequence = DecodedSequence::from_image(encode_input.clone());
-    let options = EncodeOptions::none();
     let all_capabilities = image_slash_star::all_capabilities();
     let capability_formats = all_capabilities
         .into_iter()
@@ -224,6 +222,29 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 
     for (name, rows) in manifest.formats {
         let (format, feature, enabled) = format(&name);
+        let options = EncodeOptions::for_format(format);
+        assert_eq!(options.format(), format);
+        let unknown = vec![("unknown".to_owned(), "true".to_owned())];
+        let Err(unknown_error) = EncodeOptions::try_from_legacy_pairs(format, &unknown) else {
+            panic!("{format:?} accepted an unknown legacy option");
+        };
+        assert_eq!(
+            unknown_error.kind(),
+            image_slash_star::ImageErrorKind::Parameter
+        );
+        assert_eq!(unknown_error.format(), Some(format));
+        let duplicate = vec![
+            ("unknown".to_owned(), "true".to_owned()),
+            ("unknown".to_owned(), "false".to_owned()),
+        ];
+        let Err(duplicate_error) = EncodeOptions::try_from_legacy_pairs(format, &duplicate) else {
+            panic!("{format:?} accepted a duplicate legacy option");
+        };
+        assert_eq!(
+            duplicate_error.kind(),
+            image_slash_star::ImageErrorKind::Parameter
+        );
+        assert_eq!(duplicate_error.format(), Some(format));
         assert_capability_contract(format, feature, enabled);
         let Some(row) = rows
             .decode
@@ -305,6 +326,27 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
             );
             continue;
         }
+
+        let wrong_format = if format == ImageFormat::Jpeg {
+            ImageFormat::Png
+        } else {
+            ImageFormat::Jpeg
+        };
+        let wrong_options = EncodeOptions::for_format(wrong_format);
+        assert!(matches!(
+            image_slash_star::encode(&encode_input, format, &wrong_options),
+            Err(ImageError::Parameter {
+                format: Some(actual),
+                ..
+            }) if actual == format
+        ));
+        assert!(matches!(
+            image_slash_star::encode_sequence(&encode_sequence, format, &wrong_options),
+            Err(ImageError::Parameter {
+                format: Some(actual),
+                ..
+            }) if actual == format
+        ));
 
         let info = image_slash_star::inspect(&bytes)?;
         let Some(expected_size) = row.ref_size else {

@@ -1,7 +1,9 @@
 //! Pillow-compatible AVIF encoding through libavif 1.4.1 and libaom 3.13.2.
 
 use crate::codecs::{CodecError, CodecResult};
-use crate::encode_options::EncodeOptions;
+#[cfg(all(coverage, not(target_arch = "wasm32")))]
+use crate::encode_options::AvifAdvancedOption;
+use crate::encode_options::{AvifCodec, AvifEncodeOptions, AvifRange, AvifSubsampling};
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -13,7 +15,7 @@ use std::ffi::CString;
 use crate::types::ImageMode;
 
 /// Encode one image with Pillow's AVIF defaults and option mapping.
-pub fn encode(image: &DecodedImage, options: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(image: &DecodedImage, options: &AvifEncodeOptions) -> CodecResult<Vec<u8>> {
     image.validate().map_err(CodecError::from_image_error)?;
     encode_images(
         std::slice::from_ref(image),
@@ -25,7 +27,7 @@ pub fn encode(image: &DecodedImage, options: &EncodeOptions) -> CodecResult<Vec<
 /// Encode all frames in an AVIF image sequence.
 pub fn encode_sequence(
     sequence: &DecodedSequence,
-    options: &EncodeOptions,
+    options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     sequence.validate().map_err(CodecError::from_image_error)?;
     for frame in &sequence.frames {
@@ -65,7 +67,7 @@ pub fn encode_sequence(
 fn encode_images(
     images: &[DecodedImage],
     durations: &[FrameDuration],
-    options: &EncodeOptions,
+    options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     let references = images.iter().collect::<Vec<_>>();
     encode_image_refs(&references, durations, options)
@@ -75,7 +77,7 @@ fn encode_images(
 fn encode_images(
     _images: &[DecodedImage],
     _durations: &[FrameDuration],
-    _options: &EncodeOptions,
+    _options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     Err(CodecError::Unsupported(
         "AVIF encoding requires the native extra module".to_owned(),
@@ -86,7 +88,7 @@ fn encode_images(
 fn encode_image_refs(
     images: &[&DecodedImage],
     durations: &[FrameDuration],
-    options: &EncodeOptions,
+    options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     let first = *images
         .first()
@@ -179,7 +181,7 @@ fn encode_frames(
 fn encode_image_refs(
     _images: &[&DecodedImage],
     _durations: &[FrameDuration],
-    _options: &EncodeOptions,
+    _options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     Err(CodecError::Unsupported(
         "AVIF encoding requires the native extra module".to_owned(),
@@ -350,60 +352,40 @@ struct ParsedOptions {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl ParsedOptions {
-    fn new(options: &EncodeOptions) -> CodecResult<Self> {
-        if let Some(codec) = options.extra.get("codec")
-            && codec != "auto"
-            && codec != "aom"
-        {
-            return Err(CodecError::Parameter(
-                "invalid AVIF codec option".to_owned(),
-            ));
-        }
-        let subsampling = options
-            .subsampling
-            .as_deref()
-            .or_else(|| options.extra.get("subsampling").map(String::as_str))
-            .unwrap_or("4:2:0");
-        let yuv_format = match subsampling {
-            "4:4:4" => 1,
-            "4:2:2" => 2,
-            "4:2:0" => 3,
-            "4:0:0" => 4,
-            _ => {
-                return Err(CodecError::Parameter(
-                    "invalid AVIF subsampling option".to_owned(),
-                ));
-            }
+    fn new(options: &AvifEncodeOptions) -> CodecResult<Self> {
+        let _codec = options.codec.unwrap_or(AvifCodec::Auto);
+        let yuv_format = match options.subsampling.unwrap_or(AvifSubsampling::Cs420) {
+            AvifSubsampling::Cs444 => 1,
+            AvifSubsampling::Cs422 => 2,
+            AvifSubsampling::Cs420 => 3,
+            AvifSubsampling::Cs400 => 4,
         };
-        let yuv_range = match options.extra.get("range").map(String::as_str) {
-            None | Some("full") => 1,
-            Some("limited") => 0,
-            Some(_) => {
-                return Err(CodecError::Parameter(
-                    "invalid AVIF range option".to_owned(),
-                ));
-            }
+        let yuv_range = match options.range.unwrap_or(AvifRange::Full) {
+            AvifRange::Full => 1,
+            AvifRange::Limited => 0,
         };
-        let speed = parse_i32(options, "speed")?.unwrap_or(6);
-        let max_threads =
-            parse_i32(options, "max_threads")?.unwrap_or_else(super::native::default_max_threads);
-        let tile_rows_log2 = parse_i32(options, "tile_rows")?.unwrap_or(0);
-        let tile_cols_log2 = parse_i32(options, "tile_cols")?.unwrap_or(0);
-        let alpha_premultiplied = parse_bool(options, "alpha_premultiplied")?.unwrap_or(false);
-        let auto_tiling = parse_bool(options, "autotiling")?
+        let speed = options.speed.unwrap_or(6);
+        let max_threads = options
+            .max_threads
+            .unwrap_or_else(super::native::default_max_threads);
+        let tile_rows_log2 = options.tile_rows.unwrap_or(0);
+        let tile_cols_log2 = options.tile_cols.unwrap_or(0);
+        let alpha_premultiplied = options.alpha_premultiplied.unwrap_or(false);
+        let auto_tiling = options
+            .autotiling
             .unwrap_or(tile_rows_log2 == 0 && tile_cols_log2 == 0);
-        let icc = parse_hex_option(options, "icc_hex")?;
-        let exif = parse_hex_option(options, "exif_hex")?;
-        let xmp = parse_hex_option(options, "xmp_hex")?;
-        let exif_orientation = parse_i32(options, "exif_orientation")?.unwrap_or(1);
-        let sequence_time = parse_u64(options, "sequence_time")?.unwrap_or(0);
+        let icc = options.icc.clone().unwrap_or_default();
+        let exif = options.exif.clone().unwrap_or_default();
+        let xmp = options.xmp.clone().unwrap_or_default();
+        let exif_orientation = options.exif_orientation.unwrap_or(1);
+        let sequence_time = options.sequence_time.unwrap_or(0);
         let mut advanced = Vec::with_capacity(options.advanced.len());
-        for (key, value) in &options.advanced {
+        for option in &options.advanced {
             advanced.push((
-                CString::new(key.as_str()).map_err(|_| {
+                CString::new(option.key.as_str()).map_err(|_| {
                     CodecError::Parameter("AVIF advanced key contains NUL".to_owned())
                 })?,
-                CString::new(value.as_str()).map_err(|_| {
+                CString::new(option.value.as_str()).map_err(|_| {
                     CodecError::Parameter("AVIF advanced value contains NUL".to_owned())
                 })?,
             ));
@@ -434,106 +416,34 @@ impl ParsedOptions {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_i32(options: &EncodeOptions, name: &str) -> CodecResult<Option<i32>> {
-    let Some(value) = options.extra.get(name) else {
-        return Ok(None);
-    };
-    value
-        .parse()
-        .map(Some)
-        .map_err(|_| CodecError::Parameter(format!("invalid AVIF {name} option")))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_u64(options: &EncodeOptions, name: &str) -> CodecResult<Option<u64>> {
-    let Some(value) = options.extra.get(name) else {
-        return Ok(None);
-    };
-    value
-        .parse()
-        .map(Some)
-        .map_err(|_| CodecError::Parameter(format!("invalid AVIF {name} option")))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_bool(options: &EncodeOptions, name: &str) -> CodecResult<Option<bool>> {
-    let Some(value) = options.extra.get(name) else {
-        return Ok(None);
-    };
-    match value.to_ascii_lowercase().as_str() {
-        "true" | "1" | "yes" | "on" => Ok(Some(true)),
-        "false" | "0" | "no" | "off" => Ok(Some(false)),
-        _ => Err(CodecError::Parameter(format!("invalid AVIF {name} option"))),
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_hex_option(options: &EncodeOptions, name: &str) -> CodecResult<Vec<u8>> {
-    let Some(value) = options.extra.get(name) else {
-        return Ok(Vec::new());
-    };
-    let bytes = value.as_bytes();
-    if !bytes.len().is_multiple_of(2) {
-        return Err(CodecError::Parameter(format!(
-            "invalid AVIF {name} hex value"
-        )));
-    }
-    let mut decoded = Vec::with_capacity(bytes.len() / 2);
-    for pair in bytes.chunks_exact(2) {
-        let high = hex_nibble(pair[0], name)?;
-        let low = hex_nibble(pair[1], name)?;
-        decoded.push((high << 4) | low);
-    }
-    Ok(decoded)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn hex_nibble(value: u8, name: &str) -> CodecResult<u8> {
-    match value {
-        b'0'..=b'9' => Ok(value.saturating_sub(b'0')),
-        b'a'..=b'f' => Ok(value.saturating_sub(b'a').saturating_add(10)),
-        b'A'..=b'F' => Ok(value.saturating_sub(b'A').saturating_add(10)),
-        _ => Err(CodecError::Parameter(format!(
-            "invalid AVIF {name} hex value"
-        ))),
-    }
-}
-
 #[cfg(all(coverage, not(target_arch = "wasm32")))]
 pub(crate) fn __coverage_exercise_private_branches() {
     use crate::types::{
         ColorType, DecodedFrame, FrameBlend, FrameDisposal, FrameDuration, ImagePalette,
     };
 
-    fn option(name: &str, value: &str) -> EncodeOptions {
-        let mut options = EncodeOptions::default();
-        options.extra.insert(name.to_owned(), value.to_owned());
-        options
-    }
-
     let one = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let two = DecodedImage::new(2, 1, vec![0, 0], ColorType::L8);
     let tall = DecodedImage::new(1, 2, vec![0, 0], ColorType::L8);
-    let _ = encode_image_refs(&[], &[], &EncodeOptions::default());
-    let _ = encode_image_refs(&[&one], &[], &EncodeOptions::default());
+    let _ = encode_image_refs(&[], &[], &AvifEncodeOptions::default());
+    let _ = encode_image_refs(&[&one], &[], &AvifEncodeOptions::default());
     let _ = encode_image_refs(
         &[&one],
         &[FrameDuration {
             numerator: 1,
             denominator: 0,
         }],
-        &EncodeOptions::default(),
+        &AvifEncodeOptions::default(),
     );
     let _ = encode_image_refs(
         &[&one, &two],
         &[FrameDuration::ZERO; 2],
-        &EncodeOptions::default(),
+        &AvifEncodeOptions::default(),
     );
     let _ = encode_image_refs(
         &[&one, &tall],
         &[FrameDuration::ZERO; 2],
-        &EncodeOptions::default(),
+        &AvifEncodeOptions::default(),
     );
     let invalid_sequence = DecodedSequence {
         width: 1,
@@ -542,14 +452,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let _ = encode_sequence(&invalid_sequence, &EncodeOptions::default());
+    let _ = encode_sequence(&invalid_sequence, &AvifEncodeOptions::default());
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), ColorType::L8);
-    let _ = encode(&invalid_image, &EncodeOptions::default());
+    let _ = encode(&invalid_image, &AvifEncodeOptions::default());
     let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::L8);
     let _ = encode_image_refs(
         &[&zero_width],
         &[FrameDuration::ZERO],
-        &EncodeOptions::default(),
+        &AvifEncodeOptions::default(),
     );
 
     let offset_sequence = DecodedSequence {
@@ -567,7 +477,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let _ = encode_sequence(&offset_sequence, &EncodeOptions::default());
+    let _ = encode_sequence(&offset_sequence, &AvifEncodeOptions::default());
     let top_offset_sequence = DecodedSequence {
         width: 1,
         height: 2,
@@ -583,12 +493,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let _ = encode_sequence(&top_offset_sequence, &EncodeOptions::default());
+    let _ = encode_sequence(&top_offset_sequence, &AvifEncodeOptions::default());
 
     let unsupported = DecodedImage::new(1, 1, vec![0, 0], ColorType::L16);
     let palette_without_table = DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
     let _ = prepare_pixels(&unsupported);
-    let _ = encode(&unsupported, &EncodeOptions::default());
+    let _ = encode(&unsupported, &AvifEncodeOptions::default());
     let _ = prepare_pixels(&palette_without_table);
     let short_alpha = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8)
         .with_palette(ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0]).unwrap());
@@ -621,7 +531,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = prepare_pixels(&huge_l1);
     let _ = prepare_pixels(&short_l1);
 
-    let parsed = ParsedOptions::new(&EncodeOptions::default()).unwrap();
+    let parsed = ParsedOptions::new(&AvifEncodeOptions::default()).unwrap();
     let encoder = create_encoder(&one, &parsed, 1).unwrap();
     let _ = encode_frames(encoder, &[&unsupported], &[0], true);
     let encoder = create_encoder(&one, &parsed, 1).unwrap();
@@ -629,58 +539,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let encoder = create_encoder(&one, &parsed, 1).unwrap();
     let _ = encode_frames(encoder, &[], &[], false);
 
-    for codec in ["auto", "aom", "dav1d"] {
-        let _ = ParsedOptions::new(&option("codec", codec));
-    }
-    for name in [
-        "speed",
-        "max_threads",
-        "tile_rows",
-        "tile_cols",
-        "exif_orientation",
-    ] {
-        let _ = ParsedOptions::new(&option(name, "not-an-integer"));
-    }
-    let _ = ParsedOptions::new(&option("sequence_time", "-1"));
-    let _ = ParsedOptions::new(&option("alpha_premultiplied", "invalid"));
-    let _ = ParsedOptions::new(&option("autotiling", "invalid"));
-    for name in ["icc_hex", "exif_hex", "xmp_hex"] {
-        let _ = ParsedOptions::new(&option(name, "f"));
-    }
-    let _ = ParsedOptions::new(&option("range", "full"));
-    let _ = ParsedOptions::new(&option("alpha_premultiplied", "false"));
-    let _ = ParsedOptions::new(&option("autotiling", "true"));
-    let _ = ParsedOptions::new(&option("tile_rows", "1"));
-    let _ = ParsedOptions::new(&option("tile_cols", "1"));
-
-    for value in ["true", "1", "yes", "on", "false", "0", "no", "off"] {
-        let options = option("flag", value);
-        let _ = parse_bool(&options, "flag");
-    }
-    let _ = parse_bool(&option("flag", "invalid"), "flag");
-    let _ = parse_bool(&EncodeOptions::default(), "flag");
-    let _ = parse_i32(&option("number", "7"), "number");
-    let _ = parse_i32(&option("number", "999999999999999999999"), "number");
-    let _ = parse_i32(&EncodeOptions::default(), "number");
-    let _ = parse_u64(&option("number", "7"), "number");
-    let _ = parse_u64(&option("number", "-1"), "number");
-    let _ = parse_u64(&EncodeOptions::default(), "number");
-
-    let _ = parse_hex_option(&EncodeOptions::default(), "bytes");
-    let _ = parse_hex_option(&option("bytes", ""), "bytes");
-    let _ = parse_hex_option(&option("bytes", "09aF"), "bytes");
-    let _ = parse_hex_option(&option("bytes", "f"), "bytes");
-    let _ = parse_hex_option(&option("bytes", "gg"), "bytes");
-    let _ = parse_hex_option(&option("bytes", "0g"), "bytes");
-
-    let mut advanced = EncodeOptions::default();
-    advanced
-        .advanced
-        .push(("tune".to_owned(), "psnr".to_owned()));
+    let mut advanced = AvifEncodeOptions {
+        codec: Some(AvifCodec::Aom),
+        subsampling: Some(AvifSubsampling::Cs444),
+        range: Some(AvifRange::Limited),
+        speed: Some(1),
+        max_threads: Some(1),
+        tile_rows: Some(1),
+        tile_cols: Some(1),
+        alpha_premultiplied: Some(false),
+        autotiling: Some(true),
+        icc: Some(vec![0]),
+        exif: Some(vec![0]),
+        exif_orientation: Some(1),
+        xmp: Some(vec![0]),
+        sequence_time: Some(1),
+        ..AvifEncodeOptions::default()
+    };
+    advanced.advanced.push(AvifAdvancedOption {
+        key: "tune".to_owned(),
+        value: "psnr".to_owned(),
+    });
     let _ = ParsedOptions::new(&advanced);
-    advanced.advanced[0].0.push('\0');
+    advanced.advanced[0].key.push('\0');
     let _ = ParsedOptions::new(&advanced);
-    advanced.advanced[0].0 = "tune".to_owned();
-    advanced.advanced[0].1.push('\0');
+    advanced.advanced[0].key = "tune".to_owned();
+    advanced.advanced[0].value.push('\0');
     let _ = ParsedOptions::new(&advanced);
 }
