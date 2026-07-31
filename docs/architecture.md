@@ -205,6 +205,7 @@ translation cannot be bypassed.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode the complete validated bytes into a caller-owned `OutputSink`; incremental structural writing remains future work |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |

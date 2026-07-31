@@ -366,6 +366,75 @@ pub fn encode_sequence(
     codecs::encode_sequence_format(sequence, format, opts)
 }
 
+/// Dependency-free destination for encoded output.
+///
+/// The encoder validates and produces the complete encoded bytes before the
+/// first write, so a failing sink never receives a partial container. Real
+/// incremental writing to structural boundaries remains future work; the
+/// trait exists so callers can own output destinations without coupling to
+/// the crate's internal buffers.
+pub trait OutputSink {
+    /// Append the complete encoded bytes to this sink.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the destination rejects the write.
+    fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()>;
+}
+
+impl OutputSink for Vec<u8> {
+    fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()> {
+        self.extend_from_slice(bytes);
+        Ok(())
+    }
+}
+
+impl OutputSink for &mut Vec<u8> {
+    fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()> {
+        self.extend_from_slice(bytes);
+        Ok(())
+    }
+}
+
+/// Encode a still image into a caller-owned output sink.
+///
+/// The encoded bytes are produced exactly as by [`encode`] and then written
+/// to the sink in one call.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode`], plus any error returned by the
+/// sink's [`OutputSink::write_all`].
+pub fn encode_to_sink(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    let encoded = encode(img, format, opts)?;
+    let length = encoded.len();
+    sink.write_all(&encoded)?;
+    Ok(length)
+}
+
+/// Encode a still image or animation into a caller-owned output sink.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence`], plus any error returned by
+/// the sink's [`OutputSink::write_all`].
+pub fn encode_sequence_to_sink(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    let encoded = encode_sequence(sequence, format, opts)?;
+    let length = encoded.len();
+    sink.write_all(&encoded)?;
+    Ok(length)
+}
+
 /// Encode with default options.
 ///
 /// # Errors
