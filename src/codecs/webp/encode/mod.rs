@@ -90,36 +90,32 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
         write_chunk(&mut output, b"ANMF", &payload);
     }
 
-    let riff_size = u32::try_from(output.len().saturating_sub(8)).map_err(|error| {
-        CodecError::Dimensions(format!("WebP RIFF output exceeds format limits: {error}"))
-    })?;
-    output[4..8].copy_from_slice(&riff_size.to_le_bytes());
-    Ok(output)
+    let output_len = output.len();
+    finish_riff(output, output_len)
 }
 
 fn validate_sequence_options(opts: &EncodeOptions) -> CodecResult<()> {
-    if opts
-        .extra
-        .keys()
-        .any(|key| matches!(key.as_str(), "icc_hex" | "exif_hex" | "xmp_hex"))
-    {
-        return Err(CodecError::Unsupported(
-            "WebP sequence metadata output is not implemented".to_owned(),
-        ));
+    for key in ["icc_hex", "exif_hex", "xmp_hex"] {
+        if opts.extra.contains_key(key) {
+            return Err(CodecError::Unsupported(
+                "WebP sequence metadata output is not implemented".to_owned(),
+            ));
+        }
     }
-    if opts.extra.get("kmax").is_some_and(|value| value != "1") {
-        return Err(CodecError::Parameter(
-            "WebP sequence encoder currently requires kmax=1".to_owned(),
-        ));
+    match opts.extra.get("kmax") {
+        Some(value) if value != "1" => {
+            return Err(CodecError::Parameter(
+                "WebP sequence encoder currently requires kmax=1".to_owned(),
+            ));
+        }
+        Some(_) | None => {}
     }
-    if opts
-        .extra
-        .keys()
-        .any(|key| matches!(key.as_str(), "minimize_size" | "kmin" | "allow_mixed"))
-    {
-        return Err(CodecError::Unsupported(
-            "WebP animation optimization options are not implemented".to_owned(),
-        ));
+    for key in ["minimize_size", "kmin", "allow_mixed"] {
+        if opts.extra.contains_key(key) {
+            return Err(CodecError::Unsupported(
+                "WebP animation optimization options are not implemented".to_owned(),
+            ));
+        }
     }
     Ok(())
 }
@@ -130,23 +126,28 @@ fn validate_keyframe(
 ) -> CodecResult<()> {
     let rect = frame.source.rect;
     if frame.pixel_layout == FramePixelLayout::SourceRectangle
-        && (rect.left != 0
-            || rect.top != 0
-            || rect.width != sequence.width
-            || rect.height != sequence.height)
+        && [rect.left, rect.top, rect.width, rect.height] != [0, 0, sequence.width, sequence.height]
     {
         return Err(CodecError::Unsupported(
             "WebP keyframe encoder requires full-canvas frame rectangles".to_owned(),
         ));
     }
-    if frame.source.interlaced || frame.source.is_default_image {
+    if frame.source.interlaced {
         return Err(CodecError::Unsupported(
             "WebP cannot represent retained interlace or default-image state".to_owned(),
         ));
     }
-    if matches!(frame.source.disposal, FrameDisposal::Reserved(_))
-        || matches!(frame.source.blend, FrameBlend::Reserved(_))
-    {
+    if frame.source.is_default_image {
+        return Err(CodecError::Unsupported(
+            "WebP cannot represent retained interlace or default-image state".to_owned(),
+        ));
+    }
+    if matches!(frame.source.disposal, FrameDisposal::Reserved(_)) {
+        return Err(CodecError::Unsupported(
+            "WebP keyframe encoder cannot replay reserved presentation controls".to_owned(),
+        ));
+    }
+    if matches!(frame.source.blend, FrameBlend::Reserved(_)) {
         return Err(CodecError::Unsupported(
             "WebP keyframe encoder cannot replay reserved presentation controls".to_owned(),
         ));
@@ -170,8 +171,8 @@ fn duration_milliseconds(duration: crate::types::FrameDuration) -> CodecResult<u
             "WebP frame duration exceeds 24 bits".to_owned(),
         ));
     }
-    let [a, b, c, ..] = milliseconds.to_le_bytes();
-    Ok(u32::from_le_bytes([a, b, c, 0]))
+    let bytes = milliseconds.to_le_bytes();
+    Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
 struct PreparedPixels<'a> {
@@ -345,6 +346,14 @@ fn write_chunk(output: &mut Vec<u8>, name: &[u8; 4], payload: &[u8]) {
     }
 }
 
+fn finish_riff(mut output: Vec<u8>, output_len: usize) -> CodecResult<Vec<u8>> {
+    let riff_size = u32::try_from(output_len.saturating_sub(8)).map_err(|error| {
+        CodecError::Dimensions(format!("WebP RIFF output exceeds format limits: {error}"))
+    })?;
+    output[4..8].copy_from_slice(&riff_size.to_le_bytes());
+    Ok(output)
+}
+
 fn attach_metadata(
     encoded: Vec<u8>,
     width: u32,
@@ -409,11 +418,7 @@ fn attach_metadata(
     };
     #[cfg(not(coverage))]
     let output_len = output.len();
-    let riff_size = u32::try_from(output_len.saturating_sub(8)).map_err(|error| {
-        CodecError::Dimensions(format!("WebP RIFF output exceeds format limits: {error}"))
-    })?;
-    output[4..8].copy_from_slice(&riff_size.to_le_bytes());
-    Ok(output)
+    finish_riff(output, output_len)
 }
 
 /// Lossless VP8L encoding via the internal `WebPEncoder`.

@@ -3,7 +3,10 @@
 use super::inspect::TiffLayout;
 use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
+use crate::types::{
+    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FrameDuration, ImageMode, ImagePalette,
+};
 
 const COMPRESSION_NONE: usize = 1;
 const COMPRESSION_LZW: usize = 5;
@@ -14,7 +17,54 @@ const COMPRESSION_ADOBE_DEFLATE: usize = 32_946;
 /// Decode the first IFD of a classic little- or big-endian TIFF stream.
 pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
     let (endian, ifd_offset) = parse_header(data)?;
+    decode_ifd(data, ifd_offset, endian).map(|(image, _)| image)
+}
+
+/// Decode every unique IFD in the classic TIFF main-directory chain.
+pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
+    let (endian, first_offset) = parse_header(data)?;
+    let mut offset = first_offset;
+    let mut seen = Vec::new();
+    let mut frames = Vec::new();
+    let mut width = 0;
+    let mut height = 0;
+    while offset != 0 && !seen.contains(&offset) {
+        seen.push(offset);
+        let (image, next_offset) = decode_ifd(data, offset, endian)?;
+        width = width.max(image.width);
+        height = height.max(image.height);
+        frames.push(DecodedFrame::source_rectangle(
+            image,
+            0,
+            0,
+            FrameDuration::ZERO,
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
+            false,
+        ));
+        offset = next_offset;
+    }
+    if frames.is_empty() {
+        return Err(CodecError::Malformed(
+            "TIFF contains no image directory".to_owned(),
+        ));
+    }
+    Ok(DecodedSequence {
+        width,
+        height,
+        frames,
+        loop_count: None,
+        background: None,
+    })
+}
+
+fn decode_ifd(
+    data: &[u8],
+    ifd_offset: usize,
+    endian: Endian,
+) -> CodecResult<(DecodedImage, usize)> {
     let directory = Directory::parse(data, ifd_offset, endian)?;
+    let next_offset = directory.next_offset();
     validate_decode_field_types(&directory)?;
 
     let (width, height) = super::inspect::validate_primary_dimensions(&directory)?;
@@ -172,12 +222,9 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
                     .copy_from_slice(&decoded[source..source.wrapping_add(copied_bytes)]);
             }
         }
-        return Ok(convert_pixels(
-            (width, height),
-            pixels,
-            layout,
-            endian,
-            palette,
+        return Ok((
+            convert_pixels((width, height), pixels, layout, endian, palette),
+            next_offset,
         ));
     }
 
@@ -262,12 +309,9 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
     }
     pixels.resize(expected_total, 0);
 
-    Ok(convert_pixels(
-        (width, height),
-        pixels,
-        layout,
-        endian,
-        palette,
+    Ok((
+        convert_pixels((width, height), pixels, layout, endian, palette),
+        next_offset,
     ))
 }
 

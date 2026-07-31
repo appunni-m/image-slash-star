@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-07-31 against the working tree based on `6f9c002`
+Reviewed: 2026-07-31 against the working tree based on `b437123`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -83,7 +83,7 @@ translation cannot be bypassed.
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
-| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF/native AVIF |
+| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
 
 `detect_format` recognizes all eight container signatures even when a codec
@@ -188,8 +188,8 @@ either representation.
 | `png` | Rust still/APNG sequence decode and still encode | Build-verified Rust path |
 | `gif` | Rust still/sequence decode and encode | Build-verified Rust path |
 | `bmp` | Rust inspect/decode/encode | Build-verified Rust path |
-| `tiff` | Rust inspect/decode/encode | Build-verified Rust path |
-| `webp` | Rust still/sequence decode and still encode | Build-verified Rust path |
+| `tiff` | Rust still/multipage decode and encode | Build-verified Rust path |
+| `webp` | Rust still/sequence decode and still/keyframe-sequence encode | Build-verified Rust path |
 | `ico` | Rust inspect/decode and source-sized encode | Build-verified Rust path |
 | `avif` | Fixed native inspect/decode/sequence/encode stack | Portable inspect and a manifest-bounded still-decode subset; sequence decode and encode unsupported |
 

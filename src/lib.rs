@@ -202,8 +202,9 @@ pub fn encode(
 
 /// Encode a still image or animation while retaining every source frame.
 ///
-/// Multi-frame output is currently supported for GIF and native AVIF. Other
-/// formats accept a one-frame sequence and reject additional retained frames.
+/// Multi-frame output is currently supported for GIF, TIFF, WebP, and native
+/// AVIF. Other formats accept a one-frame sequence and reject additional
+/// retained frames.
 ///
 /// # Errors
 ///

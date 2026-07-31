@@ -1586,6 +1586,1975 @@
       }
     },
     {
+      "id": "enc_sequence_raw",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_raw_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_raw_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_lzw",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_lzw_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_lzw_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "lzw"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_lzw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_deflate",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_deflate_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_deflate_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "deflate"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_adobe_deflate",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_packbits",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_packbits_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_packbits_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "packbits"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "packbits",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_mixed_pages",
+      "source_asset": "multipage_mixed.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "20553e640bfe8258cee0e99f6e3b8dc9752870bce9bfe5438d7020efa20105ae",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_mixed_pages_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              5,
+              3
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_mixed_pages_tiff_frame_1.bin",
+            "ref_bytes": 15,
+            "ref_mode": "L8",
+            "ref_size": [
+              5,
+              3
+            ],
+            "ref_sha256": "a7306fab40fb2dd5b495dbb50376f7c8ad1944b2f8b84e1d09f941dfac20788e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage_mixed.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_canvas",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_canvas_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_canvas_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_canvas_padding": [
+          1,
+          1
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF sequence canvas dimensions are derived from the maximum page extent",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_canvas_padding": [
+              1,
+              1
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_frame_mode",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_frame_mode_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_frame_mode_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_frame_mode": "Rgb16"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "Every TIFF page obeys the same exact direct-mode contract as still encode",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_frame_mode": "Rgb16"
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_duration",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_duration_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_duration_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_duration_ms": 1
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no animation duration field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_duration_ms": 1
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_disposal",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_disposal_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_disposal_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_disposal": "keep"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no animation disposal field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_disposal": "keep"
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_blend",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_blend_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_blend_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_blend": "source"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no animation blend field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_blend": "source"
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_interlace",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_interlace_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_interlace_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_interlaced": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no common animation interlace field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_interlaced": true
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_default_image",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_default_image_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_default_image_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_default_image": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no default-animation-image field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_default_image": true
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_loop",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_loop_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_loop_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_loop_count": 0
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no common animation loop field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_loop_count": 0
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_background",
+      "source_asset": "multipage.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgb8",
+      "source_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_background_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_error_sequence_background_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "compression": "none",
+        "sequence_background_rgba": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF page order has no common animation background field",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/multipage.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_background_rgba": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
       "id": "enc_predictor_none",
       "source_asset": "rgb.tiff",
       "source_format": "tiff",

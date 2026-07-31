@@ -4385,11 +4385,23 @@ def gen_tiff():
         compression="tiff_adobe_deflate",
         tiffinfo={317: 2},
     )
-    img.save(d / "multipage.tiff", save_all=True, append_images=[img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)])
+    sequence_page = pattern_img("RGB", (9, 7))
+    sequence_page.save(
+        d / "multipage.tiff",
+        save_all=True,
+        append_images=[sequence_page.transpose(Image.Transpose.FLIP_LEFT_RIGHT)],
+    )
+    mixed_page = Image.new("L", (5, 3), 137)
+    sequence_page.save(
+        d / "multipage_mixed.tiff",
+        save_all=True,
+        append_images=[mixed_page],
+    )
     d.joinpath("bad_ifd.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\xff\xff\xff")
     d.joinpath("truncated_signature.tiff").write_bytes(b"I")
     d.joinpath("truncated_magic.tiff").write_bytes(b"II")
     d.joinpath("truncated_ifd_offset.tiff").write_bytes(b"II\x2a\x00")
+    d.joinpath("empty_ifd_chain.tiff").write_bytes(b"II\x2a\x00\0\0\0\0")
     d.joinpath("truncated_ifd_count.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00")
     d.joinpath("truncated_ifd_entry.tiff").write_bytes(b"II\x2a\x00\x08\x00\x00\x00\x01\x00")
     d.joinpath("oob_tag_value_offset.tiff").write_bytes(

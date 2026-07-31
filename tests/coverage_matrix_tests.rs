@@ -690,6 +690,7 @@ fn extra_encode_options(params: &HashMap<String, Value>) -> HashMap<String, Stri
                     | "preserve_disposal"
                     | "sequence_canvas_padding"
                     | "sequence_frame_offset"
+                    | "sequence_frame_mode"
                     | "sequence_duration_ms"
                     | "sequence_duration_fraction"
                     | "sequence_disposal"
@@ -2376,139 +2377,7 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
         ));
     }
     let actual = decoded.content;
-    actual
-        .validate()
-        .map_err(|error| format!("decoded sequence validation failed: {error}"))?;
-    if !is_assertion_origin(&expected.canvas_origin) {
-        return Err(format!(
-            "sequence canvas origin is invalid: {}",
-            expected.canvas_origin
-        ));
-    }
-    if expected.canvas_size.as_slice() != [actual.width, actual.height] {
-        return Err(format!(
-            "sequence canvas mismatch: actual {}x{}, expected {:?}",
-            actual.width, actual.height, expected.canvas_size
-        ));
-    }
-    if !is_assertion_origin(&expected.loop_origin) {
-        return Err(format!(
-            "sequence loop origin is invalid: {}",
-            expected.loop_origin
-        ));
-    }
-    if actual.loop_count != expected.loop_count {
-        return Err(format!(
-            "loop count mismatch: actual {:?}, expected {:?}",
-            actual.loop_count, expected.loop_count
-        ));
-    }
-    let expected_background = expected_background(expected.background.as_ref())?;
-    if actual.background != expected_background {
-        return Err(format!(
-            "sequence background mismatch: actual {:?}, expected {:?}",
-            actual.background, expected_background
-        ));
-    }
-    if actual.frames.len() != expected.frames.len() {
-        return Err(format!(
-            "frame count mismatch: actual {}, expected {}",
-            actual.frames.len(),
-            expected.frames.len()
-        ));
-    }
-    for (index, (actual_frame, expected_frame)) in
-        actual.frames.iter().zip(&expected.frames).enumerate()
-    {
-        if expected_frame.index != index {
-            return Err(format!(
-                "frame evidence index mismatch: position {index}, declared {}",
-                expected_frame.index
-            ));
-        }
-        if !is_assertion_origin(&expected_frame.duration_origin)
-            || !is_assertion_origin(&expected_frame.source_origin)
-        {
-            return Err(format!(
-                "frame {} source origins are invalid: duration={}, source={}",
-                expected_frame.index, expected_frame.duration_origin, expected_frame.source_origin
-            ));
-        }
-        let expected_rect =
-            <[u32; 4]>::try_from(expected_frame.source_rect.as_slice()).map_err(|_| {
-                format!(
-                    "frame {} source rectangle must have four values",
-                    expected_frame.index
-                )
-            })?;
-        let actual_rect = actual_frame.source.rect;
-        if [
-            actual_rect.left,
-            actual_rect.top,
-            actual_rect.width,
-            actual_rect.height,
-        ] != expected_rect
-        {
-            return Err(format!(
-                "frame {} source rectangle mismatch: actual {:?}, expected {:?}",
-                expected_frame.index, actual_rect, expected_rect
-            ));
-        }
-        let expected_duration = img::FrameDuration {
-            numerator: expected_frame.duration_num,
-            denominator: expected_frame.duration_den,
-        };
-        if actual_frame.source.duration != expected_duration {
-            return Err(format!(
-                "frame {} exact duration mismatch: actual {:?}, expected {:?}",
-                expected_frame.index, actual_frame.source.duration, expected_duration
-            ));
-        }
-        let expected_disposal = expected_frame_disposal(&expected_frame.disposal)?;
-        if actual_frame.source.disposal != expected_disposal {
-            return Err(format!(
-                "frame {} disposal mismatch: actual {:?}, expected {:?}",
-                expected_frame.index, actual_frame.source.disposal, expected_disposal
-            ));
-        }
-        let expected_blend = expected_frame_blend(&expected_frame.blend)?;
-        if actual_frame.source.blend != expected_blend {
-            return Err(format!(
-                "frame {} blend mismatch: actual {:?}, expected {:?}",
-                expected_frame.index, actual_frame.source.blend, expected_blend
-            ));
-        }
-        if actual_frame.source.interlaced != expected_frame.interlaced
-            || actual_frame.source.is_default_image != expected_frame.is_default_image
-        {
-            return Err(format!(
-                "frame {} storage flags mismatch: interlaced {} versus {}, default-image {} versus {}",
-                expected_frame.index,
-                actual_frame.source.interlaced,
-                expected_frame.interlaced,
-                actual_frame.source.is_default_image,
-                expected_frame.is_default_image
-            ));
-        }
-        let expected_layout = match expected_frame.pixel_layout.as_str() {
-            "source_rectangle" => img::FramePixelLayout::SourceRectangle,
-            "rendered_canvas" => img::FramePixelLayout::RenderedCanvas,
-            value => {
-                return Err(format!(
-                    "frame {} has unknown pixel layout {value}",
-                    expected_frame.index
-                ));
-            }
-        };
-        if actual_frame.pixel_layout != expected_layout {
-            return Err(format!(
-                "frame {} pixel layout mismatch: actual {:?}, expected {:?}",
-                expected_frame.index, actual_frame.pixel_layout, expected_layout
-            ));
-        }
-        assert_sequence_frame_pixels(manifest_dir, &row.id, expected_frame, actual_frame)?;
-    }
-    Ok(())
+    assert_sequence_reference_parity(manifest_dir, &row.id, expected, &actual)
 }
 
 // ── Decode Tests ─────────────────────────────────────────────────────────
@@ -3262,6 +3131,7 @@ fn test_encode_matrix() {
                             | "palette_on_nonindexed"
                             | "sequence_canvas_padding"
                             | "sequence_frame_offset"
+                            | "sequence_frame_mode"
                             | "sequence_duration_ms"
                             | "sequence_duration_fraction"
                             | "sequence_disposal"
@@ -3329,6 +3199,25 @@ fn test_encode_matrix() {
                     rgb: vec![0; 768],
                     alpha: Vec::new(),
                 });
+            }
+            if let Some(decoded) = decoded_owned.as_mut()
+                && let Some(mode_name) = row
+                    .params
+                    .get("sequence_frame_mode")
+                    .and_then(Value::as_str)
+            {
+                let frame = require_some(
+                    decoded.frames.first_mut(),
+                    "sequence frame-mode operation requires a first frame",
+                );
+                let mode = require_some(
+                    expected_image_mode(mode_name),
+                    "sequence_frame_mode must name a public ImageMode",
+                );
+                frame.image = require_ok(
+                    zero_image_for_mode(frame.image.width, frame.image.height, mode),
+                    "sequence frame-mode image must be constructible",
+                );
             }
             if let Some(decoded) = decoded_owned.as_mut() {
                 let geometry_modified = row.params.contains_key("sequence_canvas_padding")

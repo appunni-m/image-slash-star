@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-07-31 on the working tree based on revision `6f9c002`
+Reviewed: 2026-07-31 on the working tree based on revision `b437123`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -48,12 +48,12 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The original audit was bound to `6f9c002`. The correction evidence below is
-newer uncommitted working-tree state, identified by manifest SHA-256
-`14d77e2f69ad5ee6e345ce1e90930fdf74a1662908c9f09c5f0d6e2eea22bfbe`
+The correction evidence below is the working-tree state based on `b437123`,
+identified by manifest SHA-256
+`bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
-`96e0687d7dcf9c781e2e15df8c6f3f9da0c1ebb2edb5f8366b35a83f8ecb682e`.
-Replace the base revision and hashes together after the work is committed.
+`f348aa1322f92798f1eddff681bae698c5312e9cb0aa46e834fcdc9a77a21546`.
+Replace the base revision and hashes together after this slice is committed.
 Findings were produced from:
 
 - the public types and dispatch in [`src/lib.rs`](../src/lib.rs),
@@ -64,7 +64,7 @@ Findings were produced from:
   matrix script;
 - every assertion made by `tests/coverage_matrix_tests.rs` and
   `tests/feature_gate_tests.rs`;
-- the active 1,374-row fixture manifest;
+- the active 1,417-row fixture manifest;
 - direct probes against the repository's Pillow 12.2.0 virtual environment;
   and
 - current primary documentation for comparable codec libraries.
@@ -117,13 +117,13 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-001 | WebP dispatches on exact `ImageMode` and privately expands indexed input through its RGB/alpha palette. | Lossy and lossless indexed fixtures, with and without palette alpha |
 | COR-002 | WebP privately unpacks `L1` input; neither lossy nor lossless paths index packed rows as byte-per-pixel data. | Lossy and lossless bilevel fixtures execute without a panic and match exact Pillow bytes |
 | COR-003 | Still-only sequence fallback accepts only a full-canvas frame at `(0,0)` with zero duration, unspecified disposal, no interlace, loop, or background. | One geometry error row for JPEG, PNG, BMP, WebP, TIFF, and ICO plus independent PNG timing/disposal/interlace/loop/background rows |
-| COR-004 | `decode_sequence` inspects a potentially multi-image format before using the still fallback. A format without an implemented sequence path cannot silently manufacture one frame from a proven multi-image source. Ordinary `decode` retains the documented first-image behavior. PNG now has a dedicated APNG path; multipage TIFF still returns structured `Unsupported`. | The two-page TIFF row retains Pillow `frame_count > 1` and `is_animated = true` evidence plus a Rust sequence-error contract |
+| COR-004 | `decode_sequence` inspects a potentially multi-image format before using the still fallback. A format without an implemented sequence path cannot silently manufacture one frame from a proven multi-image source. Ordinary `decode` retains the documented first-image behavior. PNG and TIFF now have dedicated sequence paths. | Multipage TIFF and APNG success/error rows prove that the first-image view and complete-sequence view are distinct operations. |
 | COR-005 | The suspected TIFF endian conversion defect was disproved and the actual byte contract is now documented. Pillow 12.2.0 retains big-endian TIFF `I`/`F` bytes in `tobytes()` even on a little-endian host; `I32`/`F32` therefore represent exact Pillow-observable transfer bytes, not portable scalar arrays. | Existing little-/big-endian decode rows plus four detached big-endian encode rows cover uncompressed output and Deflate/LZW horizontal prediction with exact full-file and re-decoded-byte parity |
 | COR-006 | WebP rejects quality above 100 and method above 6 instead of clamping. | Lossy/lossless fixture errors retain the Pillow `ValueError` oracle mapping and Rust `Parameter` kind |
 | COR-007 | JPEG accepts only the named 4:4:4, 4:2:2, and 4:2:0 spellings and rejects unknown subsampling. | Accepted controls plus the `"bogus"` fixture error |
-| COR-008 | Verification strength is a public, fixture-backed capability: `HeaderOnly` for GIF/BMP/TIFF/ICO/AVIF and `Structure` for JPEG/PNG/WebP. `EncodedImage::verify` explicitly warns that header-only success does not prove pixel decompression. | Every decode row carries `verification_scope`; all 1,021 rows assert both `ImageFormat::verification_scope` and `EncodedImage::verification_scope` before comparing the exact Pillow verify outcome |
+| COR-008 | Verification strength is a public, fixture-backed capability: `HeaderOnly` for GIF/BMP/TIFF/ICO/AVIF and `Structure` for JPEG/PNG/WebP. `EncodedImage::verify` explicitly warns that header-only success does not prove pixel decompression. | Every decode row carries `verification_scope`; all 1,024 rows assert both `ImageFormat::verification_scope` and `EncodedImage::verification_scope` before comparing the exact Pillow verify outcome |
 | COR-009 | The quick start is a recoverable, explicitly narrow `opaque_rgb_png_to_jpeg` example. It checks source format and `Rgb8` mode, never panics, and states that alpha/palette/bilevel/depth conversion belongs downstream. | Direct RGBA, indexed, and 16-bit PNG-to-JPEG error rows match Pillow; the bilevel row retains Pillow's successful private conversion while requiring Rust `Unsupported` until normalization is implemented |
-| COR-010 | The shared `ico` feature is explicitly documented as ICO/CUR. `.cur` is an accepted alias, and the selected CUR entry's exact hotspot is retained in both `ImageInfo` and `DecodedImage`; `None` distinguishes ordinary ICO. | All 1,021 decode rows retain Pillow's actual container name, CUR rows derive the selected hotspot from the directory bytes, and inspect/decode assertions require exact agreement |
+| COR-010 | The shared `ico` feature is explicitly documented as ICO/CUR. `.cur` is an accepted alias, and the selected CUR entry's exact hotspot is retained in both `ImageInfo` and `DecodedImage`; `None` distinguishes ordinary ICO. | All 1,024 decode rows retain Pillow's actual container name, CUR rows derive the selected hotspot from the directory bytes, and inspect/decode assertions require exact agreement |
 | COR-011 | Palette queries now distinguish indexed samples from table presence: `is_indexed()` classifies `P8`, while `has_palette_table()` checks the optional table. | Every inspected row asserts both relationships; `palette_empty_plte.png` proves the indexed-without-table case |
 | COR-012 | Every public encoder validates the complete `DecodedImage` contract before codec-specific indexing. The manifest enumerates every unsupported public `ImageMode` per target plus an inconsistent `color`/`mode` state; unsupported inputs return `ImageError::Unsupported`, invalid represented state returns `ImageError::Parameter`, and the no-panic harness executes the calls directly. | One `enc_error_public_mode_contract` row for each of JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and AVIF, backed by a valid Pillow success fixture for the same source |
 | COR-013 | Lossy WebP alpha encoding compares the valid raw and VP8L-compressed `ALPH` payloads and retains the smaller representation. Opaque `La8` remains RGB; non-opaque `La8` becomes RGBA. | Separate opaque and non-opaque `La8` rows for both lossy and lossless WebP; the minimized 1×1 partial-alpha row requires Pillow's exact two-byte raw `ALPH` payload |
@@ -131,22 +131,24 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-015 | AVIF detection retains shallow `avif`/`avis` recognition but accepts generic `mif1`/`msf1` major brands only when the complete bounded `ftyp` brand list includes `avif` or `avis`. | Three compatible-brand complete AVIF successes plus generic `mif1`, generic `msf1`, empty-compatible-list, misaligned-size, oversized-box, and unsupported-major failures. Pillow supplies exact final open/verify/load errors; AVIF v1.1 and pinned libavif supply the detection classification. |
 | COR-016 | Auto-detection rejects structurally complete related containers that are not one of the eight supported formats. | Five OS/2 bitmap-family signatures (`BA`, `CI`, `CP`, `IC`, `PT`), RIFF/WAVE, RIFF/WEBP with an unsupported initial chunk, and non-image `isom` BMFF all produce exact `UnknownFormat` contracts and Pillow final-open errors. Headerless DIB remains the separate explicit-scope decision in BMP-001/BMP-011. |
 | COR-017 | PNG sequence decode now parses APNG control/data chunks, retains exact source controls and default-image identity, and returns Pillow-compatible rendered canvases without flattening animation into the still result. Reserved control values remain format-qualified in the retained frame model. | Thirteen successful APNG rows contain 32 exact frames across RGB, RGBA, L1, L8, La8, indexed alpha, default-image, subrectangle, blend/disposal, rational timing, loop, reserved-control, and Adam7 cases; 24 malformed/fallback rows cover sequencing, placement, framing, data, dimensions, and Pillow-compatible animation abandonment |
-| TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 759 successful inspect rows carry `ref_bit_depth`: 366 specification-reference observations, 206 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
-| TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 580 successful decode rows carry both contracts: 513 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
-| TST-003 | Every successful GIF, PNG, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame bytes are required whenever Pillow exposes the same rendered layout. | 67 sequence rows contain 127 frames: all 127 carry the complete source/presentation contract, 86 PNG/WebP/AVIF rendered frames compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
-| TST-004 | Frame duration is retained and asserted as an exact non-zero-denominator rational. Encoders must either preserve it or document and fixture their format-specific quantization. | All 127 retained frames assert numerator and denominator independently. GIF accepts exact centiseconds, APNG retains its numerator/effective denominator, and the native AVIF save path fixtures Pillow's millisecond quantization. |
-| TST-005 | Every failed public operation separates exact Pillow exception evidence from the Rust recovery contract. Pillow type/message, stable Rust kind, selected format, message-presence policy, and evidence origin are independent fields. Public `Dimensions` and `Parameter` errors now retain the codec format and high-level message that the old conversion boundary discarded; `ImageErrorKind`, `kind()`, `format()`, and `message()` provide uniform access. | The matrix carries 1,544 operation-error contracts: 1,469 retain exact Pillow exception type/message pairs (including one legitimate empty message), while 75 classification/defensive outcomes invent no Pillow exception. Origins are 1,500 Pillow-fixture, 7 specification-reference, and 37 defensive-model contracts. All 1,354 contextual Rust failures require a non-empty diagnostic; all 190 `UnknownFormat` results remain intentionally message- and format-free. |
-| TST-006 | Every active row declares the expected result of each applicable public operation. Decode rows separately classify detect, inspect, verify, still decode, and sequence decode; encode rows separately classify still and sequence encode as success, error, or not applicable. | All 1,374 active rows carry the operation contract. The harness executes successful `decode_sequence` calls and checks the returned sequence model. |
-| TST-007 | Every active encode row records its source mode independently of the output mode observed after re-decoding. Generation fails if it is absent, and the Rust harness compares it with the lazily decoded source. | All 353 active encode rows carry and assert `source_mode`. |
-| TST-008 | Every executable row names the exact semantic test lane: `aarch64-apple-darwin`, all eight codec features, and `native_all_features`. The Rust harness rejects a matrix generated for another target or feature set. | All 1,374 active rows carry the execution contract. This closes ambiguity in native evidence; it does not replace the still-missing WASM runtime lane. |
+| COR-018 | WebP sequence encode emits a deterministic full-canvas keyframe stream with exact `VP8X`/`ANIM`/`ANMF` structure. It preserves integral-millisecond durations, loop and RGBA background, and routes every frame through the validated still VP8/VP8L encoder. Unsupported source-history controls, metadata, optimization options, modes, and numeric boundaries return format-qualified structured errors. | Five Pillow-byte-exact RGB/RGBA × lossy/lossless success rows contain 10 exact re-decoded frames; 22 dedicated error rows independently cover loop, duration, mode, palette background, metadata, optimization, geometry, interlace, default-image, and reserved-control boundaries. |
+| COR-019 | TIFF sequence decode walks every unique main-chain IFD and retains each page at its own exact dimensions and mode; still decode remains page one. Sequence encode composes exact still encodings using Pillow's proved 16-byte relocation/linking layout without resizing or converting pages. Animation-only state is rejected. | Two decode rows contain four exact pages including mixed RGB/L dimensions; five Pillow-byte-exact raw/LZW/Deflate/PackBits/mixed-page encodes contain 10 exact re-decoded pages; 10 structured error rows cover later-IFD failure, mode, geometry, timing, presentation controls, loop/background, and cumulative classic-offset arithmetic. |
+| TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
+| TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
+| TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
+| TST-004 | Frame duration is retained and asserted as an exact non-zero-denominator rational. Encoders must either preserve it or document and fixture their format-specific quantization. | All 133 retained frames/pages assert numerator and denominator independently. TIFF pages require exact zero duration, GIF accepts exact centiseconds, APNG retains its numerator/effective denominator, WebP stores exact integral milliseconds, and the native AVIF save path fixtures Pillow's millisecond quantization. |
+| TST-005 | Every failed public operation separates exact Pillow exception evidence from the Rust recovery contract. Pillow type/message, stable Rust kind, selected format, message-presence policy, and evidence origin are independent fields. Public `Dimensions` and `Parameter` errors now retain the codec format and high-level message that the old conversion boundary discarded; `ImageErrorKind`, `kind()`, `format()`, and `message()` provide uniform access. | The matrix carries 1,577 operation-error contracts: 1,475 retain exact Pillow exception type/message pairs (including one legitimate empty message), while 102 classification/defensive outcomes invent no Pillow exception. Origins are 1,506 Pillow-fixture, 7 specification-reference, and 64 defensive-model contracts. All 1,387 contextual Rust failures require a non-empty diagnostic; all 190 `UnknownFormat` results remain intentionally message- and format-free. |
+| TST-006 | Every active row declares the expected result of each applicable public operation. Decode rows separately classify detect, inspect, verify, still decode, and sequence decode; encode rows separately classify still and sequence encode as success, error, or not applicable. | All 1,417 active rows carry the operation contract. The harness executes successful `decode_sequence` and `encode_sequence` calls and checks the returned sequence model and exact bytes. |
+| TST-007 | Every active encode row records its source mode independently of the output mode observed after re-decoding. Generation fails if it is absent, and the Rust harness compares it with the lazily decoded source. | All 393 active encode rows carry and assert `source_mode`. |
+| TST-008 | Every executable row names the exact semantic test lane: `aarch64-apple-darwin`, all eight codec features, and `native_all_features`. The Rust harness rejects a matrix generated for another target or feature set. | All 1,417 active rows carry the execution contract. This closes ambiguity in native evidence; it does not replace the still-missing WASM runtime lane. |
 | TST-009 | Every source asset and retained pixel, palette, frame, and encoded artifact carries SHA-256. Generation recomputes every digest, and the Rust harness independently verifies used artifacts with a test-only zero-dependency SHA-256 implementation. | All current fixtures are repository-generated; no imported corpus is present. Future imports must additionally carry the source URL/path, revision, license, and upstream checksum under the corpus intake rule. |
-| TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,374 rows carry assertion origins: 6,101 Pillow-fixture, 231 specification-reference, 3 independent-implementation, and 37 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
+| TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`5b4dcd01-04a0-463f-81a5-659a10db39b0`, snapshot
-`2f007b85-f7fa-4d6a-b2ea-776ca1f32e17`, passed with zero failures or
-skips and reports 40,120/40,120 lines, 5,814/5,814 branches,
-2,120/2,120 functions, and 64,304/64,304 regions.
+`abb2458f-395d-4129-9fcb-55cdd3c9b08e`, snapshot
+`a66e6892-198a-43a9-aea9-52241c0aa495`, passed with zero failures or
+skips and reports 40,422/40,422 lines, 5,868/5,868 branches,
+2,143/2,143 functions, and 64,813/64,813 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -163,7 +165,7 @@ silently bypass the schema, limits, or target-evidence gates below.
 
 ### What the current manifest actually proves
 
-The active manifest contains 1,021 decode/inspect/verify rows and 353 encode rows.
+The active manifest contains 1,024 decode/inspect/verify rows and 393 encode rows.
 There are no planned or unwired rows. That is strong revision-bound evidence,
 but row count and 100% structural coverage do not expand the assertion schema.
 
@@ -486,21 +488,58 @@ Current strength:
 
 - classic TIFF strips and tiles, planar/chunky layouts, selected integer/float/
   palette/CMYK/YCbCr modes, LZW/DEFLATE/PackBits decode, predictors, and a
-  single-strip classic encoder.
+  single-strip classic encoder;
+- ordered main-chain multipage decode with per-page dimensions/mode and exact
+  pixels; and
+- byte-exact multipage raw/LZW/Deflate/PackBits encode from already-decoded
+  pages, including mixed dimensions and modes.
+
+Accepted TIFF multipage exploration:
+
+- A classic TIFF page is one IFD in the main next-directory chain. Sequence
+  decode must visit each unique IFD in order, stop a repeated offset without
+  duplicating a page, and return the later page's structured failure rather
+  than silently retaining only page one.
+- The common sequence representation treats each page as a source rectangle
+  at `(0,0)` with its own exact dimensions and mode. The sequence canvas is the
+  maximum page extent. Duration is zero; disposal, blend, loop, and background
+  are unspecified because TIFF pages are not animation presentation controls.
+- Still decode remains page one. Multipage decode must reuse the same
+  directory decoder so still and sequence results cannot diverge for the first
+  page.
+- Multipage encode accepts already-decoded pages without resizing or color
+  conversion. Every page must have zero duration, origin `(0,0)`, a rectangle
+  matching its own image, and no animation-only controls. Per-page dimensions
+  and modes are retained; unsupported page modes fail with the same direct-mode
+  contract as still encode.
+- `scripts/explore_tiff_sequence.py` must first map Pillow 12.2.0/libtiff 4.7.1
+  output ordering for raw, LZW, Deflate, and PackBits pages, including different
+  page dimensions and modes. The implementation may share the still encoder
+  only where the emitted IFD entries, payload placement, padding, and next-IFD
+  links are proved byte-identical.
+- The completed probe is deterministic in all five cases. Pillow concatenates
+  the corresponding still TIFF streams at 16-byte boundaries, retains each
+  embedded header, relocates external value and strip offsets by the page base,
+  links the prior IFD to the relocated next IFD, and pads the final stream to
+  the same boundary. The reconstructed raw, LZW, Deflate, PackBits, and
+  mixed-size/mixed-mode streams match every Pillow byte.
+- Success fixtures compare the complete TIFF byte stream, ordered page
+  dimensions/modes, and every page byte. Error fixtures independently cover a
+  malformed later IFD, unsupported page modes, geometry, timing, presentation
+  controls, loop/background, and classic-offset/output limits.
 
 Minute gaps:
 
 | ID | Finding | Next slice |
 | --- | --- | --- |
-| TIF-001 | Multipage inspection exists but sequence decode and encode do not. `decode_sequence` now rejects a proven multipage source rather than silently collapsing it. | Implement retained pages while preserving per-page mode, dimensions, duration-like tags if any, and page metadata. |
 | TIF-002 | BigTIFF signatures are detected, but complete decode/encode capability is not provided. | Add explicit BigTIFF success/error fixtures and capability reporting. |
 | TIF-003 | `P8` and YCbCr inputs accepted by Pillow cannot be encoded from the current model. | Add palette TIFF first; add a YCbCr transfer mode only with exact byte requirements. |
 | TIF-004 | `I32`/`F32` preserve exact Pillow-observable bytes, including big-endian TIFF source bytes; they are not portable scalar views. | Keep the COR-005 byte-order fixtures active and add explicit source-endian metadata before exposing typed numeric access. |
 | TIF-005 | Compressed output writes dimensions as TIFF SHORT and therefore imposes an artificial 65,535 ceiling where LONG is legal. | Reverse-map Pillow output for larger dimensions and select field types without allocating impossible fixtures. |
-| TIF-006 | Encoder is single-strip, chunky, classic TIFF only; no tiled, planar, BigTIFF, palette, JPEG/Fax/Zstd/LZMA/WebP compression, or multiple IFD output. | Add only formats Pillow 12.2.0 actually exercises and the dependency-free implementation can support on WASM. |
+| TIF-006 | Each encoded page is single-strip, chunky, classic TIFF only; there is no tiled, planar, BigTIFF, palette, JPEG/Fax/Zstd/LZMA/WebP compression output. | Add only formats Pillow 12.2.0 actually exercises and the dependency-free implementation can support on WASM. |
 | TIF-007 | Orientation, resolution, ICC/EXIF/GPS, arbitrary tags, extra-sample association, and sub-IFDs are not retained. | Design opaque IFD/tag retention with collision rules; never apply orientation in this crate. |
 | TIF-008 | Horizontal predictor handling for signed/float samples and unusual bit depths lacks an explicit support matrix. | Use libtiff/Pillow fixtures for predictor × sample-format × endianness before generalizing. |
-| TIF-009 | Frame counting scans IFD chains and can return `is_animated=true` with unknown `frame_count`; ordinary still decode returns page one and sequence decode rejects the source. | Document the incomplete-count state and bind it to limits/capabilities. |
+| TIF-009 | Frame counting scans IFD chains and can return `is_animated=true` with unknown `frame_count`; ordinary still decode returns page one while sequence decode attempts the later IFD and returns its structured failure. | Document the incomplete-count state and bind it to limits/capabilities. |
 | TIF-010 | Arbitrary sample counts, mixed bit depths, and non-RGB extra channels cannot be represented by `ImageMode`. | Define a TIFF-native transfer layout only if opaque extra samples must survive; do not force them into RGBA. |
 | TIF-011 | Associated and unassociated alpha (`ExtraSamples`) are not distinguished in decoded output. | Add source alpha semantics and prove whether Pillow unpremultiplies, preserves, or drops each case. |
 | TIF-012 | Fill order, photometric inversion, sample format, source byte order, and per-channel depth are only partially visible after normalization. | Expand `ImageInfo`/metadata with exact source descriptors while leaving decoded transfer bytes unchanged. |
@@ -520,7 +559,7 @@ Minute gaps:
 | TIF-026 | Missing/zero `StripByteCounts` or `TileByteCounts`, one-strip inference, and last-strip truncation have implementation-specific recovery rules. | Reverse-map Pillow/libtiff behavior and emit a diagnostic when inference preserves a usable image. |
 | TIF-027 | Floating-point predictor 3 has byte-plane shuffling semantics distinct from horizontal predictor 2 and depends on sample width and byte order. | Add exact 16/24/32/64-bit float predictor vectors before advertising float-predictor support. |
 | TIF-028 | Primary pages, reduced images, masks, SubIFDs, EXIF/GPS IFDs, thumbnails, pyramids, and arbitrary directory links need relationship types, not one flat frame list. | Introduce directory roles and bounded graph traversal before exposing more than the primary IFD chain. |
-| TIF-029 | A multipage TIFF can change dimensions, photometric interpretation, sample type, byte order-visible transfer, metadata, and compression per IFD. `DecodedSequence` has no page-level capability summary. | Allow per-page descriptors and reject only the unsupported page with a stable index/stage error. |
+| TIF-029 | Multipage decode retains each page's dimensions, mode, palette, and exact bytes, but not its photometric interpretation, sample type, byte order, metadata, compression, or page-indexed error stage. | Add per-page source descriptors and a stable page index/stage to later-page failures. |
 | TIF-030 | Edge tiles and final strips have stored padding versus visible dimensions; a caller-buffer API needs to say whether padding bytes are consumed, returned, zeroed, or ignored. | Make visible and storage extents explicit in the chunk-layout contract. |
 
 #### WebP
@@ -528,16 +567,17 @@ Minute gaps:
 Current strength:
 
 - in-tree VP8/VP8L decode, lossy and lossless still encode, alpha, extended
-  container metadata output, and composited animation decode.
+  container metadata output, composited animation decode, and full-canvas
+  keyframe sequence encode.
 
-Accepted WebP sequence-encode exploration:
+Implemented WebP sequence-encode contract:
 
 - The [WebP container specification](https://developers.google.com/speed/webp/docs/riff_container)
   governs RIFF sizes/padding, `VP8X`, `ANIM`, `ANMF`, 24-bit canvas/rectangle/
   duration fields, even-coordinate offsets, background byte order, loop
   bounds, and the legal nested `ALPH`+`VP8` or `VP8L` frame forms. Pillow
   12.2.0 with pinned libwebp 1.6.0 is the exact byte oracle.
-- The first accepted implementation is intentionally a full-canvas keyframe
+- The implementation is intentionally a full-canvas keyframe
   encoder. A rendered-canvas frame already provides every output pixel, even
   when its retained source-history rectangle was smaller; a
   source-rectangle frame must equal the entire canvas. That makes every output
@@ -555,9 +595,9 @@ Accepted WebP sequence-encode exploration:
   `AnimationBackground::Rgba` maps to `ANIM` BGRA bytes; no background maps to
   transparent black, and a palette-index background is not a WebP value.
 - Each frame passes through the existing validated WebP still pixel
-  preparation and VP8/VP8L encoder. Exploration must first prove that Pillow
-  `kmax=1` full keyframes contain those exact nested bitstreams for opaque and
-  alpha, lossy and lossless inputs. The initial public behavior is therefore
+  preparation and VP8/VP8L encoder. Pillow `kmax=1` full keyframes contain
+  those exact nested bitstreams for opaque and alpha, lossy and lossless
+  inputs. The initial public behavior is therefore
   keyframe-only; `minimize_size`, `kmin`/general `kmax`, mixed compression,
   frame differencing, and metadata remain WEP-014/WEP-006 follow-ups.
 - `scripts/explore_webp_sequence_encode.py` proves that hypothesis against the
@@ -566,16 +606,15 @@ Accepted WebP sequence-encode exploration:
   removing the still-only `VP8X` wrapper. Pillow writes full `(0,0,9,7)`
   rectangles, exact 17/33 ms durations, and flag byte `0x02` (source replace,
   keep) for every forced keyframe.
-- Manifest success rows must compare the entire encoded RIFF byte sequence and
-  every re-decoded sequence frame, not only the first still frame. Error rows
-  cover each rejected model/boundary independently. One-frame sequences remain
-  byte-identical to `encode`.
+- Five manifest success rows compare the entire encoded RIFF byte sequence and
+  all 10 re-decoded sequence frames, not only the first still frame. Twenty-two
+  dedicated error rows cover each rejected model/boundary independently.
+  One-frame sequences remain byte-identical to `encode`.
 
 Minute gaps:
 
 | ID | Finding | Next slice |
 | --- | --- | --- |
-| WEP-002 | Animated WebP encode is absent although decode and Pillow save-all support exist. | Add typed sequence options, ANIM/ANMF output, blend/disposal, background, loop, exact bytes, and malformed option rows. |
 | WEP-003 | Animation decode now returns full rendered canvases while separately retaining exact ANMF rectangles, blend, and disposal. It still does not expose the raw nested frame bitstream needed for exact container reconstruction. | Add the bounded demux/source-frame view described by WEP-011 without changing rendered decode semantics. |
 | WEP-004 | Pillow mode normalization is much broader than the current encoder. | Add `LA` first, then integer/float/16-bit/YCbCr only as fixture-backed private conversions. |
 | WEP-006 | ICC/EXIF/XMP can be written but are dropped on decode/inspect. | Preserve raw chunks under API-019 and assert exact flags/order/padding. |
@@ -588,7 +627,7 @@ Minute gaps:
 | WEP-011 | Callers cannot inspect raw ANMF rectangles/bitstreams or enumerate RIFF chunks without full compositing. | Define a bounded demux view separate from rendered sequence decode. |
 | WEP-012 | Unknown RIFF chunks, duplicate metadata chunks, odd-byte padding, chunk order, declared-size mismatch, and trailing bytes lack a preservation/strictness policy. | Build ordered-container fixtures and align outcomes with API-031/040. |
 | WEP-013 | Per-frame dimensions are bounded, but cumulative animation pixels, duration, frame count, metadata, and decode work have no caller limits. | Add WebP-specific sequence limits and overflow fixtures. |
-| WEP-014 | Pillow animation controls `minimize_size`, `kmin`, `kmax`, `allow_mixed`, per-frame/list duration, alpha quality, and background validation are not represented by typed options. | Add these only with exact sequence bytes, frame metadata, and invalid interaction fixtures. |
+| WEP-014 | The initial keyframe encoder supports exact per-frame durations, RGBA background, loop, and forced `kmax=1`, but rejects `minimize_size`, `kmin`, general `kmax`, `allow_mixed`, and alpha-quality/optimization controls. | Add each optimization only with exact sequence bytes, frame metadata, and invalid interaction fixtures. |
 | WEP-015 | VP8X feature flags, reserved bits, canvas size, and actual ICCP/ALPH/EXIF/XMP/ANIM chunks can disagree. Current inspection does not expose a normalized-versus-declared consistency report. | Add one fixture per mismatch and preserve both declared flags and observed chunks. |
 | WEP-016 | RIFF's 32-bit size, WebP's approximately 4-GiB container ceiling, 24-bit VP8X canvas fields, and the distinct VP8/VP8L dimension bounds are not preflighted through one public limit/capability contract. | Add checked per-subtype size preflight before allocating or encoding. |
 | WEP-017 | ANMF offsets are stored in half-pixel units, rectangles must fit the canvas, duration is 24-bit milliseconds, reserved bits must be zero, and the payload must contain a legal ALPH+VP8 or VP8L frame form. | Build exact boundary fixtures and retain raw frame sub-bitstream identity in the demux view. |
@@ -1007,25 +1046,25 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-017, including exact WebP mode
+Completed first: COR-001 through COR-019, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
 detection. APNG sequence decode now retains default-image state, rational
-timing, source controls, and exact rendered canvases.
+timing, source controls, and exact rendered canvases. WebP sequence encode now
+emits Pillow-byte-exact full-canvas keyframes and rejects every unsupported
+control through fixture-backed structured errors. TIFF multipage decode/encode
+retains page dimensions, modes, and exact bytes across raw and compressed
+classic IFD chains.
 
-1. Implement WebP sequence encode, then TIFF multipage decode/encode. Until
-   TIFF lands, its existing multi-page fixtures require structured
-   `Unsupported`; each capability remains an isolated format slice with its
-   own fixtures.
-2. Preserve the proved TIFF `I32`/`F32` byte contract while adding explicit
+1. Preserve the proved TIFF `I32`/`F32` byte contract while adding explicit
    source-endian metadata before any typed numeric view, palette, BigTIFF, or
    broader numeric layout.
-3. Introduce typed per-format options and runtime capability discovery without
+2. Introduce typed per-format options and runtime capability discovery without
    changing exact retained bytes.
-4. Add metadata retention, decode limits, incremental I/O, target runtime
+3. Add metadata retention, decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.
-5. Complete portable AVIF and only then design the JS/WASM core-extra
+4. Complete portable AVIF and only then design the JS/WASM core-extra
    artifact split.
 
 Every slice ends with:
