@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-07-31 on the working tree based on revision `b437123`
+Reviewed: 2026-07-31 on the working tree based on revision `230fc96`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -73,6 +73,8 @@ Depending on the manifest row, the harness compares:
 - separate stable Rust error kind, selected format, diagnostic-presence policy,
   and evidence origin;
 - encoded storage bit depth and the origin class of that assertion;
+- structural source byte order for successful TIFF inspection, still decode,
+  and every retained TIFF page, plus the origin class of each assertion;
 - decoded mode and dimensions;
 - exact pixel or palette-index bytes;
 - exact inspect and decoded palette state, RGB bytes, and retained alpha bytes;
@@ -96,7 +98,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `b437123`, the generated matrix
+For the current working tree based on revision `230fc96`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -117,23 +119,38 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 40,422 | 40,422 |
-| Branches | 5,868 | 5,868 |
-| Functions | 2,143 | 2,143 |
-| Regions | 64,813 | 64,813 |
+| Lines | 40,633 | 40,633 |
+| Branches | 5,870 | 5,870 |
+| Functions | 2,170 | 2,170 |
+| Regions | 65,043 | 65,043 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `abb2458f-395d-4129-9fcb-55cdd3c9b08e`
+Coverage MCP run: `83a47cc6-6ee9-4e99-80e2-9a1f3f8d1cf2`
 
-Snapshot: `a66e6892-198a-43a9-aea9-52241c0aa495`
+Snapshot: `77735a86-0498-487a-b671-a75282c228a8`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 
 Generated matrix SHA-256:
-`f348aa1322f92798f1eddff681bae698c5312e9cb0aa46e834fcdc9a77a21546`
+`b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`
+
+The TIFF source-descriptor slice contains 93 successful inspection assertions
+(88 little-endian and 5 big-endian), 71 successful still-decode assertions
+(66 little-endian and 5 big-endian), four exact source multipage frame
+assertions, and 10 exact successfully re-encoded multipage frame assertions.
+`scripts/explore_tiff_source_byte_order.py` independently pins Pillow
+12.2.0/libtiff 4.7.1 and verifies that Pillow's per-page directory prefix
+matches the complete fixture header before and after materialization.
+
+The same all-feature semantic run asserts the complete public capability table
+against the manifest and current target. Strict Clippy compilation also passes
+with no features, each isolated codec feature, default features, and all
+features on native and `wasm32-unknown-unknown`. Those isolated lanes prove cfg
+and API compilation; they are not presented as separate runtime coverage
+snapshots.
 
 These measurements prove execution of the retained implementation under that
 suite. They do not extend the compatibility promise beyond the active

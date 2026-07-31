@@ -120,7 +120,17 @@ capabilities and setup.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
+| `all_capabilities()` | Return the same typed capability record for every public format |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
+
+Signature detection is feature-independent. Disabled codec operations report
+`Unavailable(FeatureDisabled)` through capability discovery and return
+`ImageError::FeatureDisabled` when attempted. Sequence capabilities mean
+genuine multi-image decode or encode; the validated one-frame fallback follows
+the corresponding still capability. On `wasm32`, AVIF inspection remains
+manifest-bounded, still decode reports the restricted portable subset, and
+encode plus sequence operations report target unavailability.
 
 The core model separates:
 
@@ -136,6 +146,12 @@ PNG / JPEG / GIF / ...    P8 / L8 / RGB8 / RGBA8 / ...
 `ImageMode::P8` and retain an `ImagePalette` when the source exposes one; they
 are not silently interpreted as grayscale. Caller-built images and sequences
 are validated before encoding.
+
+`ImageInfo::source` and `DecodedImage::source` retain structural source facts
+without changing the transfer bytes. TIFF currently records its exact
+`SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
+modes keep their documented transfer layout. Other codecs currently return an
+empty `SourceDescriptor`.
 
 See [architecture and public contract](docs/architecture.md) for byte layouts,
 validation invariants, lazy source lifecycle, memory behavior, feature

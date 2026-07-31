@@ -1,13 +1,14 @@
 //! Cargo-feature and target-capability behavior driven by Pillow fixtures.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
 use bytemuck as _;
 use image_slash_star::encode_options::EncodeOptions;
 use image_slash_star::{
-    ColorType, DecodedImage, DecodedSequence, EncodedImage, ImageError, ImageFormat, ImageMode,
+    Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
+    DecodedImage, DecodedSequence, EncodedImage, ImageError, ImageFormat, ImageMode,
 };
 
 mod support;
@@ -103,6 +104,60 @@ fn mode(name: &str) -> ImageMode {
     }
 }
 
+fn unavailable(reason: CapabilityUnavailableReason) -> Capability {
+    Capability::Unavailable(reason)
+}
+
+fn assert_capability_contract(format: ImageFormat, feature: &str, enabled: bool) {
+    let capabilities = format.capabilities();
+    assert_eq!(capabilities.format(), format);
+    assert_eq!(format.feature_name(), feature);
+    assert_eq!(capabilities.target(), CapabilityTarget::current());
+    assert_eq!(capabilities.feature_enabled(), enabled);
+    assert_eq!(capabilities.detection(), Capability::ManifestBounded);
+
+    if !enabled {
+        let disabled = unavailable(CapabilityUnavailableReason::FeatureDisabled);
+        assert_eq!(capabilities.inspection(), disabled);
+        assert_eq!(capabilities.still_decode(), disabled);
+        assert_eq!(capabilities.still_encode(), disabled);
+        assert_eq!(capabilities.sequence_decode(), disabled);
+        assert_eq!(capabilities.sequence_encode(), disabled);
+        return;
+    }
+
+    assert_eq!(capabilities.inspection(), Capability::ManifestBounded);
+    if cfg!(target_arch = "wasm32") && format == ImageFormat::Avif {
+        let target_unavailable = unavailable(CapabilityUnavailableReason::TargetUnavailable);
+        assert_eq!(
+            capabilities.still_decode(),
+            Capability::Restricted(CapabilityRestriction::PortableAvif)
+        );
+        assert_eq!(capabilities.still_encode(), target_unavailable);
+        assert_eq!(capabilities.sequence_decode(), target_unavailable);
+        assert_eq!(capabilities.sequence_encode(), target_unavailable);
+        return;
+    }
+
+    assert_eq!(capabilities.still_decode(), Capability::ManifestBounded);
+    assert_eq!(capabilities.still_encode(), Capability::ManifestBounded);
+    let not_implemented = unavailable(CapabilityUnavailableReason::NotImplemented);
+    match format {
+        ImageFormat::Png => {
+            assert_eq!(capabilities.sequence_decode(), Capability::ManifestBounded);
+            assert_eq!(capabilities.sequence_encode(), not_implemented);
+        }
+        ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Tiff | ImageFormat::Avif => {
+            assert_eq!(capabilities.sequence_decode(), Capability::ManifestBounded);
+            assert_eq!(capabilities.sequence_encode(), Capability::ManifestBounded);
+        }
+        ImageFormat::Jpeg | ImageFormat::Bmp | ImageFormat::Ico => {
+            assert_eq!(capabilities.sequence_decode(), not_implemented);
+            assert_eq!(capabilities.sequence_encode(), not_implemented);
+        }
+    }
+}
+
 #[test]
 fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -153,9 +208,23 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
     let encode_input = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
     let encode_sequence = DecodedSequence::from_image(encode_input.clone());
     let options = EncodeOptions::none();
+    let all_capabilities = image_slash_star::all_capabilities();
+    let capability_formats = all_capabilities
+        .into_iter()
+        .map(|capabilities| {
+            assert_eq!(
+                capabilities,
+                capabilities.format().capabilities(),
+                "capability table and direct query differ"
+            );
+            capabilities.format()
+        })
+        .collect::<HashSet<_>>();
+    assert_eq!(capability_formats.len(), 8);
 
     for (name, rows) in manifest.formats {
         let (format, feature, enabled) = format(&name);
+        assert_capability_contract(format, feature, enabled);
         let Some(row) = rows
             .decode
             .iter()

@@ -52,7 +52,9 @@
 //! [`ImageFormat`], while [`DecodedImage::mode`] and
 //! [`DecodedImage::color`] describe the decoded sample bytes. Indexed images
 //! retain their [`ImagePalette`] rather than becoming ambiguous luminance
-//! buffers. Every encode API requires an explicit target [`ImageFormat`].
+//! buffers. [`ImageInfo::source`] and [`DecodedImage::source`] retain proved
+//! structural source facts such as TIFF byte order without changing transfer
+//! bytes. Every encode API requires an explicit target [`ImageFormat`].
 //!
 //! [`EncodedImage`] is an immutable source snapshot. It inspects at
 //! construction and shares a once-initialized decode result across clones.
@@ -75,11 +77,16 @@
 // Retained as the project's one explicitly approved byte-layout utility.
 use bytemuck as _;
 
+pub mod capabilities;
 mod codecs;
 pub mod encode_options;
 pub mod source;
 pub mod types;
 
+pub use capabilities::{
+    CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
+    CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
+};
 pub use source::EncodedImage;
 pub use types::*;
 
@@ -340,6 +347,7 @@ pub fn __coverage_exercise_private_branches() {
     let _ = decode_sequence(b"not an image");
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let _ = encode_default(&image, ImageFormat::Png);
+    capabilities::__coverage_exercise_private_branches();
     codecs::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }

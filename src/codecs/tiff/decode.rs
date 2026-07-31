@@ -5,7 +5,7 @@ use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, ImageMode, ImagePalette,
+    FrameDuration, ImageMode, ImagePalette, SourceByteOrder, SourceDescriptor,
 };
 
 const COMPRESSION_NONE: usize = 1;
@@ -391,7 +391,7 @@ fn convert_pixels(
     palette: Option<ImagePalette>,
 ) -> DecodedImage {
     let (width, height) = dimensions;
-    match layout {
+    let image = match layout {
         TiffLayout::Bilevel { invert } => {
             if invert {
                 let width = width as usize;
@@ -467,7 +467,9 @@ fn convert_pixels(
             }
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
         }
-    }
+    };
+    image
+        .with_source_descriptor(SourceDescriptor::new().with_byte_order(endian.source_byte_order()))
 }
 
 fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Vec<u8> {
@@ -749,6 +751,13 @@ pub(super) enum Endian {
 }
 
 impl Endian {
+    pub(super) const fn source_byte_order(self) -> SourceByteOrder {
+        match self {
+            Self::Little => SourceByteOrder::Little,
+            Self::Big => SourceByteOrder::Big,
+        }
+    }
+
     pub(super) fn u16_exact(self, bytes: [u8; 2]) -> u16 {
         match self {
             Endian::Little => u16::from_le_bytes(bytes),

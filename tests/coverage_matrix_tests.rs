@@ -105,6 +105,8 @@ struct DecodeRow {
     inspect_error_kind: Option<String>,
     inspect_container_format: Option<String>,
     inspect_cursor_hotspot: Option<Vec<u16>>,
+    inspect_source_byte_order: Option<String>,
+    inspect_source_byte_order_origin: Option<String>,
     ref_bit_depth: Option<u32>,
     ref_bit_depth_origin: Option<String>,
     verify_status: String,
@@ -118,6 +120,8 @@ struct DecodeRow {
     ref_is_animated: Option<bool>,
     inspect_palette: Option<PaletteParityRef>,
     decoded_palette: Option<PaletteParityRef>,
+    decoded_source_byte_order: Option<String>,
+    decoded_source_byte_order_origin: Option<String>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
     ref_sha256: Option<String>,
@@ -151,6 +155,8 @@ struct FrameParityRef {
     is_default_image: bool,
     pixel_layout: String,
     source_origin: String,
+    source_byte_order: Option<String>,
+    source_byte_order_origin: Option<String>,
     pixel_assertion: String,
     pixel_origin: Option<String>,
     ref_path: Option<String>,
@@ -416,6 +422,8 @@ impl FromJson for DecodeRow {
             inspect_error_kind: object.take("inspect_error_kind")?,
             inspect_container_format: object.take("inspect_container_format")?,
             inspect_cursor_hotspot: object.take("inspect_cursor_hotspot")?,
+            inspect_source_byte_order: object.take("inspect_source_byte_order")?,
+            inspect_source_byte_order_origin: object.take("inspect_source_byte_order_origin")?,
             ref_bit_depth: object.take("ref_bit_depth")?,
             ref_bit_depth_origin: object.take("ref_bit_depth_origin")?,
             verify_status: object.take("verify_status")?,
@@ -429,6 +437,8 @@ impl FromJson for DecodeRow {
             ref_is_animated: object.take("ref_is_animated")?,
             inspect_palette: object.take("inspect_palette")?,
             decoded_palette: object.take("decoded_palette")?,
+            decoded_source_byte_order: object.take("decoded_source_byte_order")?,
+            decoded_source_byte_order_origin: object.take("decoded_source_byte_order_origin")?,
             ref_path: object.take("ref_path")?,
             ref_bytes: object.take("ref_bytes")?,
             ref_sha256: object.take("ref_sha256")?,
@@ -461,6 +471,8 @@ json_object!(FrameParityRef {
     is_default_image,
     pixel_layout,
     source_origin,
+    source_byte_order,
+    source_byte_order_origin,
     pixel_assertion,
     pixel_origin,
     ref_path,
@@ -2012,6 +2024,24 @@ fn expected_frame_blend(value: &str) -> Result<img::FrameBlend, String> {
     }
 }
 
+fn expected_source_byte_order(
+    value: Option<&str>,
+    origin: Option<&str>,
+    label: &str,
+) -> Result<Option<img::SourceByteOrder>, String> {
+    match (value, origin) {
+        (None, None) => Ok(None),
+        (Some(value), Some(origin)) if is_assertion_origin(origin) => match value {
+            "little" => Ok(Some(img::SourceByteOrder::Little)),
+            "big" => Ok(Some(img::SourceByteOrder::Big)),
+            _ => Err(format!("{label} has unknown source byte order {value}")),
+        },
+        _ => Err(format!(
+            "{label} source byte order and evidence origin are incomplete"
+        )),
+    }
+}
+
 fn expected_background(
     expected: Option<&BackgroundParityRef>,
 ) -> Result<Option<img::AnimationBackground>, String> {
@@ -2267,6 +2297,21 @@ fn assert_sequence_reference_parity(
             return Err(format!(
                 "frame {} pixel layout mismatch: actual {:?}, expected {:?}",
                 expected_frame.index, actual_frame.pixel_layout, expected_layout
+            ));
+        }
+        let expected_byte_order = expected_source_byte_order(
+            expected_frame.source_byte_order.as_deref(),
+            expected_frame.source_byte_order_origin.as_deref(),
+            &format!("frame {}", expected_frame.index),
+        )?;
+        if actual_frame.image.source.byte_order() != expected_byte_order
+            || actual_frame.image.source.is_empty() != expected_byte_order.is_none()
+        {
+            return Err(format!(
+                "frame {} source byte order mismatch: actual {:?}, expected {:?}",
+                expected_frame.index,
+                actual_frame.image.source.byte_order(),
+                expected_byte_order
             ));
         }
         assert_sequence_frame_pixels(manifest_dir, row_id, expected_frame, actual_frame)?;
@@ -2564,6 +2609,50 @@ fn test_decode_matrix() {
                     continue;
                 }
             };
+            let expected_inspect_byte_order = match expected_source_byte_order(
+                row.inspect_source_byte_order.as_deref(),
+                row.inspect_source_byte_order_origin.as_deref(),
+                "inspection",
+            ) {
+                Ok(value) => value,
+                Err(message) => {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            };
+            let inspect_requires_byte_order =
+                expected_format == img::ImageFormat::Tiff && row.inspect_status == "ok";
+            if expected_inspect_byte_order.is_some() != inspect_requires_byte_order {
+                eprintln!(
+                    "  FAIL [{}]: inspect source byte-order presence disagrees with format/status",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
+            let expected_decoded_byte_order = match expected_source_byte_order(
+                row.decoded_source_byte_order.as_deref(),
+                row.decoded_source_byte_order_origin.as_deref(),
+                "decoded image",
+            ) {
+                Ok(value) => value,
+                Err(message) => {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            };
+            let decode_requires_byte_order = expected_format == img::ImageFormat::Tiff
+                && row.oracle_status.as_deref() == Some("ok");
+            if expected_decoded_byte_order.is_some() != decode_requires_byte_order {
+                eprintln!(
+                    "  FAIL [{}]: decoded source byte-order presence disagrees with format/status",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
             let detected = img::detect_format(&data);
             let detect_status = require_ok(
                 operation_status(&row.operations, "detect"),
@@ -2907,6 +2996,10 @@ fn test_decode_matrix() {
                     || info.is_animated != expected_is_animated
                     || info.cursor_hotspot != expected_cursor_hotspot
                     || decoded.cursor_hotspot != expected_cursor_hotspot
+                    || info.source.byte_order() != expected_inspect_byte_order
+                    || info.source.is_empty() != expected_inspect_byte_order.is_none()
+                    || decoded.source.byte_order() != expected_decoded_byte_order
+                    || decoded.source.is_empty() != expected_decoded_byte_order.is_none()
                 {
                     eprintln!(
                         "  FAIL [{}]: metadata {:?} differs from Pillow mode/size/frame and decoded palette",

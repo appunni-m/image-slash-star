@@ -1620,6 +1620,12 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
         source = gif_frame_source(image) if fmt_name == "gif" else sources[index]
         image.load()
         frame = {"index": index, **source}
+        if fmt_name == "tiff":
+            frame["source_byte_order"] = tiff_source_byte_order(source_data, image)
+            frame["source_byte_order_origin"] = "pillow_fixture"
+        else:
+            frame["source_byte_order"] = None
+            frame["source_byte_order_origin"] = None
         if fmt_name != "gif":
             raw = image.tobytes()
             ref_name = (
@@ -1696,6 +1702,8 @@ def clear_pixel_ref(row):
     row.pop("ref_is_animated", None)
     row.pop("inspect_palette", None)
     row.pop("decoded_palette", None)
+    row.pop("decoded_source_byte_order", None)
+    row.pop("decoded_source_byte_order_origin", None)
     row.pop("sequence", None)
 
 
@@ -1795,6 +1803,35 @@ def inspect_bit_depth(fmt_name, image_path, image):
     raise ValueError(f"no bit-depth oracle for {fmt_name}")
 
 
+def tiff_source_byte_order(data, image):
+    """Return Pillow's TIFF directory order after matching the file marker."""
+    file_marker = data[:2]
+    if file_marker == b"II":
+        byte_order = "little"
+    elif file_marker == b"MM":
+        byte_order = "big"
+    else:
+        raise ValueError("invalid TIFF source byte-order marker")
+    directory_marker = image.tag_v2.prefix
+    if directory_marker != file_marker:
+        raise ValueError(
+            "Pillow TIFF directory byte order differs from the complete file header"
+        )
+    return byte_order
+
+
+def write_decoded_source_descriptor(row, image_path, fmt_name, image):
+    """Record structural source facts visible after Pillow materialization."""
+    if fmt_name == "tiff":
+        row["decoded_source_byte_order"] = tiff_source_byte_order(
+            image_path.read_bytes(), image
+        )
+        row["decoded_source_byte_order_origin"] = "pillow_fixture"
+    else:
+        row["decoded_source_byte_order"] = None
+        row["decoded_source_byte_order_origin"] = None
+
+
 def write_inspect_ref(row, image_path, fmt_name):
     """Record Pillow's lazy Image.open outcome without materializing pixels."""
     try:
@@ -1803,6 +1840,14 @@ def write_inspect_ref(row, image_path, fmt_name):
             bit_depth, origin = inspect_bit_depth(fmt_name, image_path, image)
             row["ref_bit_depth"] = bit_depth
             row["ref_bit_depth_origin"] = origin
+            if fmt_name == "tiff":
+                row["inspect_source_byte_order"] = tiff_source_byte_order(
+                    image_path.read_bytes(), image
+                )
+                row["inspect_source_byte_order_origin"] = "pillow_fixture"
+            else:
+                row["inspect_source_byte_order"] = None
+                row["inspect_source_byte_order_origin"] = None
             if image.format == "CUR":
                 data = image_path.read_bytes()
                 count = int.from_bytes(data[4:6], "little")
@@ -1826,6 +1871,8 @@ def write_inspect_ref(row, image_path, fmt_name):
         row.pop("inspect_cursor_hotspot", None)
         row.pop("ref_bit_depth", None)
         row.pop("ref_bit_depth_origin", None)
+        row.pop("inspect_source_byte_order", None)
+        row.pop("inspect_source_byte_order_origin", None)
         row["inspect_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
         row["inspect_error_message"] = stable_error_message(error)
         row["inspect_error_kind"] = decode_error_kind(
@@ -2115,7 +2162,7 @@ def update_summary(matrix):
     }
 
 
-def validate_sequence_reference(sequence, case_name, expected_frame_count):
+def validate_sequence_reference(sequence, case_name, expected_frame_count, fmt_name):
     """Return every schema or artifact defect in one decoded-sequence reference."""
     failures = []
     canvas = sequence.get("canvas_size")
@@ -2227,6 +2274,15 @@ def validate_sequence_reference(sequence, case_name, expected_frame_count):
             failures.append(f"{frame_name} default-image flag is invalid")
         if frame.get("pixel_layout") not in {"source_rectangle", "rendered_canvas"}:
             failures.append(f"{frame_name} pixel layout is invalid")
+        byte_order = frame.get("source_byte_order")
+        byte_order_origin = frame.get("source_byte_order_origin")
+        if fmt_name == "tiff":
+            if byte_order not in {"little", "big"}:
+                failures.append(f"{frame_name} TIFF source byte order is invalid")
+            if byte_order_origin not in ASSERTION_ORIGINS:
+                failures.append(f"{frame_name} TIFF byte-order origin is invalid")
+        elif byte_order is not None or byte_order_origin is not None:
+            failures.append(f"{frame_name} invents source byte order for {fmt_name}")
 
         pixel_assertion = frame.get("pixel_assertion")
         pixel_fields = {
@@ -2323,12 +2379,34 @@ def validate_generated_outputs(matrix, target_format=None):
                 "ref_bit_depth_origin"
             ) not in ASSERTION_ORIGINS:
                 failures.append(f"{case_name}: inspect bit-depth origin is missing")
+            inspect_byte_order = row.get("inspect_source_byte_order")
+            inspect_byte_order_origin = row.get("inspect_source_byte_order_origin")
+            if row.get("inspect_status") == "ok" and fmt_name == "tiff":
+                if inspect_byte_order not in {"little", "big"}:
+                    failures.append(
+                        f"{case_name}: TIFF inspect source byte order is missing"
+                    )
+                if inspect_byte_order_origin not in ASSERTION_ORIGINS:
+                    failures.append(
+                        f"{case_name}: TIFF inspect byte-order origin is missing"
+                    )
+            elif inspect_byte_order is not None or inspect_byte_order_origin is not None:
+                failures.append(
+                    f"{case_name}: inspect invents source byte order for {fmt_name}"
+                )
             if row.get("inspect_container_format") == "CUR" and (
                 not isinstance(row.get("inspect_cursor_hotspot"), list)
                 or len(row["inspect_cursor_hotspot"]) != 2
             ):
                 failures.append(f"{case_name}: CUR hotspot evidence is missing")
             if row.get("expect_error"):
+                if (
+                    row.get("decoded_source_byte_order") is not None
+                    or row.get("decoded_source_byte_order_origin") is not None
+                ):
+                    failures.append(
+                        f"{case_name}: decode error row retains source byte order"
+                    )
                 if (
                     row.get("oracle_status") != "error"
                     or not row.get("oracle_error_type")
@@ -2347,6 +2425,21 @@ def validate_generated_outputs(matrix, target_format=None):
                 or row.get("ref_sha256") != sha256(path.read_bytes())
             ):
                 failures.append(f"{case_name}: decode pixel evidence is missing or has wrong size")
+            decoded_byte_order = row.get("decoded_source_byte_order")
+            decoded_byte_order_origin = row.get("decoded_source_byte_order_origin")
+            if fmt_name == "tiff":
+                if decoded_byte_order not in {"little", "big"}:
+                    failures.append(
+                        f"{case_name}: TIFF decoded source byte order is missing"
+                    )
+                if decoded_byte_order_origin not in ASSERTION_ORIGINS:
+                    failures.append(
+                        f"{case_name}: TIFF decoded byte-order origin is missing"
+                    )
+            elif decoded_byte_order is not None or decoded_byte_order_origin is not None:
+                failures.append(
+                    f"{case_name}: decode invents source byte order for {fmt_name}"
+                )
             for field in ("inspect_palette", "decoded_palette"):
                 palette = row.get(field)
                 if not isinstance(palette, dict):
@@ -2440,7 +2533,7 @@ def validate_generated_outputs(matrix, target_format=None):
                     )
                 failures.extend(
                     validate_sequence_reference(
-                        sequence, case_name, row.get("ref_frame_count")
+                        sequence, case_name, row.get("ref_frame_count"), fmt_name
                     )
                 )
 
@@ -2512,7 +2605,7 @@ def validate_generated_outputs(matrix, target_format=None):
                     )
                 failures.extend(
                     validate_sequence_reference(
-                        sequence, case_name, row.get("source_frame_count")
+                        sequence, case_name, row.get("source_frame_count"), fmt_name
                     )
                 )
             evidence = [("encoded_ref_path", "encoded_ref_bytes", "encoded bytes")]
@@ -2606,6 +2699,8 @@ def generate_decode(manifest, matrix, target_format=None):
                     row.pop("inspect_error_kind", None)
                     row.pop("ref_bit_depth", None)
                     row.pop("ref_bit_depth_origin", None)
+                    row.pop("inspect_source_byte_order", None)
+                    row.pop("inspect_source_byte_order_origin", None)
                     continue
                 img_path = ASSETS_DIR / fmt_name / asset_name
                 if not img_path.exists():
@@ -2644,6 +2739,7 @@ def generate_decode(manifest, matrix, target_format=None):
                     row.pop("oracle_error_message", None)
                     row.pop("oracle_error_kind", None)
                     write_pixel_ref(row, img, ref_name)
+                    write_decoded_source_descriptor(row, img_path, fmt_name, img)
                     write_palette_refs(row, img, fmt_name, img_path, ref_name)
                     if row.get("expect_sequence_error"):
                         write_sequence_error_ref(row, img_path)
@@ -2754,6 +2850,10 @@ def generate_decode(manifest, matrix, target_format=None):
                 "verification_scope": r.get("verification_scope"),
                 "inspect_container_format": r.get("inspect_container_format"),
                 "inspect_cursor_hotspot": r.get("inspect_cursor_hotspot"),
+                "inspect_source_byte_order": r.get("inspect_source_byte_order"),
+                "inspect_source_byte_order_origin": r.get(
+                    "inspect_source_byte_order_origin"
+                ),
                 "asset_sha256": r.get("asset_sha256"),
                 "execution": r.get("execution"),
                 "assertion_origins": r.get("assertion_origins"),
@@ -2770,6 +2870,10 @@ def generate_decode(manifest, matrix, target_format=None):
                 "ref_is_animated": r.get("ref_is_animated"),
                 "inspect_palette": r.get("inspect_palette"),
                 "decoded_palette": r.get("decoded_palette"),
+                "decoded_source_byte_order": r.get("decoded_source_byte_order"),
+                "decoded_source_byte_order_origin": r.get(
+                    "decoded_source_byte_order_origin"
+                ),
                 "sequence_status": r.get("sequence_status"),
                 "sequence_error_type": r.get("sequence_error_type"),
                 "sequence_error_message": r.get("sequence_error_message"),

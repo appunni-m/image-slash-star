@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-07-31 on the working tree based on revision `b437123`
+Reviewed: 2026-07-31 on the working tree based on revision `230fc96`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -48,11 +48,11 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `b437123`,
+The correction evidence below is the working-tree state based on `230fc96`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
-`f348aa1322f92798f1eddff681bae698c5312e9cb0aa46e834fcdc9a77a21546`.
+`b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
 Replace the base revision and hashes together after this slice is committed.
 Findings were produced from:
 
@@ -133,6 +133,8 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-017 | PNG sequence decode now parses APNG control/data chunks, retains exact source controls and default-image identity, and returns Pillow-compatible rendered canvases without flattening animation into the still result. Reserved control values remain format-qualified in the retained frame model. | Thirteen successful APNG rows contain 32 exact frames across RGB, RGBA, L1, L8, La8, indexed alpha, default-image, subrectangle, blend/disposal, rational timing, loop, reserved-control, and Adam7 cases; 24 malformed/fallback rows cover sequencing, placement, framing, data, dimensions, and Pillow-compatible animation abandonment |
 | COR-018 | WebP sequence encode emits a deterministic full-canvas keyframe stream with exact `VP8X`/`ANIM`/`ANMF` structure. It preserves integral-millisecond durations, loop and RGBA background, and routes every frame through the validated still VP8/VP8L encoder. Unsupported source-history controls, metadata, optimization options, modes, and numeric boundaries return format-qualified structured errors. | Five Pillow-byte-exact RGB/RGBA × lossy/lossless success rows contain 10 exact re-decoded frames; 22 dedicated error rows independently cover loop, duration, mode, palette background, metadata, optimization, geometry, interlace, default-image, and reserved-control boundaries. |
 | COR-019 | TIFF sequence decode walks every unique main-chain IFD and retains each page at its own exact dimensions and mode; still decode remains page one. Sequence encode composes exact still encodings using Pillow's proved 16-byte relocation/linking layout without resizing or converting pages. Animation-only state is rejected. | Two decode rows contain four exact pages including mixed RGB/L dimensions; five Pillow-byte-exact raw/LZW/Deflate/PackBits/mixed-page encodes contain 10 exact re-decoded pages; 10 structured error rows cover later-IFD failure, mode, geometry, timing, presentation controls, loop/background, and cumulative classic-offset arithmetic. |
+| COR-020 | `ImageInfo` and `DecodedImage` now carry an extensible `SourceDescriptor`. TIFF inspection and every decoded page retain the exact `II`/`MM` container order without changing transfer bytes; `I32`/`F32` remain source-order bytes, `L16` remains normalized little-endian, other codecs return an empty descriptor, and TIFF encoding remains deterministic little-endian without consuming source provenance. | Pillow 12.2.0/libtiff 4.7.1 agrees with the complete header before and after load. All 93 successful TIFF inspections (88 little, 5 big), all 71 successful TIFF still decodes (66 little, 5 big), all four source pages, and all 10 successfully re-encoded sequence pages assert the exact source order and origin. |
+| COR-021 | Public runtime capability discovery now mirrors feature and target dispatch without probing bytes. Every format reports typed detection, inspection, still, and genuine multi-image operation states; feature-disabled, target-unavailable, and unimplemented operations are distinct, and portable WASM AVIF is an explicit restricted class. | The all-feature semantic manifest asserts the complete native table and direct/table query agreement. Strict Clippy compilation passes for no features, each isolated feature, default, and all features on native and `wasm32-unknown-unknown`; the final Coverage MCP snapshot remains 100% for lines, branches, functions, and regions. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -145,10 +147,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`abb2458f-395d-4129-9fcb-55cdd3c9b08e`, snapshot
-`a66e6892-198a-43a9-aea9-52241c0aa495`, passed with zero failures or
-skips and reports 40,422/40,422 lines, 5,868/5,868 branches,
-2,143/2,143 functions, and 64,813/64,813 regions.
+`83a47cc6-6ee9-4e99-80e2-9a1f3f8d1cf2`, snapshot
+`77735a86-0498-487a-b671-a75282c228a8`, passed with zero failures or
+skips and reports 40,633/40,633 lines, 5,870/5,870 branches,
+2,170/2,170 functions, and 65,043/65,043 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -172,9 +174,9 @@ but row count and 100% structural coverage do not expand the assertion schema.
 | Surface | What is asserted now | Missing from the oracle assertion |
 | --- | --- | --- |
 | Detection | Explicit operation success/error and expected common `ImageFormat`; Pillow registration predicates cover seven formats, while AVIF uses the bounded specification/libavif compatibility rule and retains Pillow's final open outcomes | Extension aliases, ICO-versus-CUR identity, and the separate headerless-DIB scope decision |
-| Decode | Explicit still-operation success/error, exact width, height, mode, palette state and table bytes, decoded byte length, and every decoded pixel/sample byte | Decoded auxiliary metadata |
-| Inspect | Explicit operation success/error, format, width, height, mode, encoded bit depth, bit-depth evidence origin, exact palette state and table bytes for successful decode rows, animation flag, and optional frame count | ICC/EXIF/XMP/text/orientation; independent palette bytes for inspect-success/decode-error rows |
-| Sequence decode | Exact canvas, loop, background, frame count/order, source rectangle, rational duration, disposal, blend, interlace, default-image state, pixel layout, mode/size, and exact rendered frame bytes where Pillow exposes the same layout | Exact raw GIF source-rectangle bytes and auxiliary per-frame metadata |
+| Decode | Explicit still-operation success/error, exact width, height, mode, palette state and table bytes, decoded byte length, every decoded pixel/sample byte, and exact TIFF source byte order | Decoded auxiliary metadata and non-byte-order source descriptors |
+| Inspect | Explicit operation success/error, format, width, height, mode, encoded bit depth, bit-depth evidence origin, exact palette state and table bytes for successful decode rows, animation flag, optional frame count, and exact TIFF source byte order | ICC/EXIF/XMP/text/orientation; independent palette bytes for inspect-success/decode-error rows; broader source descriptors |
+| Sequence decode | Exact canvas, loop, background, frame count/order, source rectangle, rational duration, disposal, blend, interlace, default-image state, pixel layout, mode/size, exact TIFF per-page source byte order, and exact rendered frame bytes where Pillow exposes the same layout | Exact raw GIF source-rectangle bytes and auxiliary per-frame metadata |
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, and output-write cause |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, concurrency, and clone identity for a selected success per format | Lazy sequences; not-attempted versus cached-failure state; cache eviction; repeated verification cost |
@@ -227,8 +229,6 @@ public reusable conversion layer would violate project scope.
 
 | ID | Class | Finding | Attack and acceptance |
 | --- | --- | --- | --- |
-| API-001 | Missing capability | There is no runtime capability query even though target and feature support differ by operation. | Implement the already-planned capability model with detection, inspect, still decode/encode, sequence decode/encode, restricted class, and current target. Compare with `image::ImageFormat::{reading_enabled,writing_enabled}` but retain finer operation detail. |
-| API-002 | Contract ambiguity | `detect_format` recognizes every signature even when a codec feature is off, while all later operations fail. This is reasonable but not discoverable from `ImageFormat` itself. | Preserve feature-independent detection; make the capability query and rustdoc state the distinction. |
 | API-003 | Missing capability | Common decode is auto-detect only. There is no explicit-format decode for trusted out-of-band format knowledge or ambiguous/partial containers. | Decide whether `decode_with_format` improves codec-only use without duplicating dispatch. If accepted, it must still validate the format signature/contract and never bypass safety checks. |
 | API-004 | Ergonomics | `EncodeOptions` is public only through `image_slash_star::encode_options::EncodeOptions`, while README tables present it like a root type and most other public types are re-exported. | Re-export it at the root or consistently document the module path before 1.0. |
 | API-005 | Stability | `ColorType` and `ImageError` are non-exhaustive, but `ImageFormat`, `ImageMode`, `FrameDisposal`, and `AnimationBackground` are exhaustive. Adding a format, mode, or presentation state will break downstream exhaustive matches. | Decide the pre-1.0 extensibility policy and make open-ended public enums non-exhaustive before first release. |
@@ -278,7 +278,7 @@ public reusable conversion layer would violate project scope.
 | API-052 | Reserved presentation values | A format-neutral `Reserved(u8)` disposal or blend value does not identify the governing format or whether round-trip replay is legal. The same numeric code has no universal meaning across GIF, APNG, and WebP. | Retain a format-qualified raw code beside normalized known semantics; unknown values must not be silently replayed into another target. |
 | API-053 | Rendered-frame state | `RenderedCanvas` says the pixel extent but not whether the returned canvas is before blend, after blend, or after disposal, nor which prior frame state was used. That distinction affects frame extraction, seeking, cache reuse, and re-encoding. | Define the exact presentation instant in rustdoc and fixtures. Expose raw source rectangles separately when exact container reconstruction needs them. |
 | API-054 | Mixed-frame contract | `DecodedSequence` has no canvas sample mode or palette namespace. Frames may carry different modes and local palettes, while a GIF background index refers to a global table rather than an arbitrary frame palette. | Define allowed mixed-mode sequences and give palette-index backgrounds an explicit palette owner before generic sequence encoding expands. |
-| API-055 | Availability reason | `FeatureDisabled` is distinct, but target-unavailable, portable-subset-rejected, operation-not-implemented, source-class-unsupported, and encoder-configuration-unavailable all collapse into `Unsupported`. | Add a stable capability/reason code shared by runtime queries and errors; keep diagnostic prose non-stable. |
+| API-055 | Availability reason | Runtime capability queries now distinguish feature-disabled, target-unavailable, operation-not-implemented, and restricted portable AVIF. Attempted operations still collapse portable-subset rejection, operation/source/configuration unavailability, and other cases into `Unsupported`. | Add stable reason and stage fields to `ImageError` that agree with capability discovery; keep diagnostic prose non-stable. |
 
 ### Codec-by-codec capability backlog
 
@@ -534,7 +534,6 @@ Minute gaps:
 | --- | --- | --- |
 | TIF-002 | BigTIFF signatures are detected, but complete decode/encode capability is not provided. | Add explicit BigTIFF success/error fixtures and capability reporting. |
 | TIF-003 | `P8` and YCbCr inputs accepted by Pillow cannot be encoded from the current model. | Add palette TIFF first; add a YCbCr transfer mode only with exact byte requirements. |
-| TIF-004 | `I32`/`F32` preserve exact Pillow-observable bytes, including big-endian TIFF source bytes; they are not portable scalar views. | Keep the COR-005 byte-order fixtures active and add explicit source-endian metadata before exposing typed numeric access. |
 | TIF-005 | Compressed output writes dimensions as TIFF SHORT and therefore imposes an artificial 65,535 ceiling where LONG is legal. | Reverse-map Pillow output for larger dimensions and select field types without allocating impossible fixtures. |
 | TIF-006 | Each encoded page is single-strip, chunky, classic TIFF only; there is no tiled, planar, BigTIFF, palette, JPEG/Fax/Zstd/LZMA/WebP compression output. | Add only formats Pillow 12.2.0 actually exercises and the dependency-free implementation can support on WASM. |
 | TIF-007 | Orientation, resolution, ICC/EXIF/GPS, arbitrary tags, extra-sample association, and sub-IFDs are not retained. | Design opaque IFD/tag retention with collision rules; never apply orientation in this crate. |
@@ -542,7 +541,7 @@ Minute gaps:
 | TIF-009 | Frame counting scans IFD chains and can return `is_animated=true` with unknown `frame_count`; ordinary still decode returns page one while sequence decode attempts the later IFD and returns its structured failure. | Document the incomplete-count state and bind it to limits/capabilities. |
 | TIF-010 | Arbitrary sample counts, mixed bit depths, and non-RGB extra channels cannot be represented by `ImageMode`. | Define a TIFF-native transfer layout only if opaque extra samples must survive; do not force them into RGBA. |
 | TIF-011 | Associated and unassociated alpha (`ExtraSamples`) are not distinguished in decoded output. | Add source alpha semantics and prove whether Pillow unpremultiplies, preserves, or drops each case. |
-| TIF-012 | Fill order, photometric inversion, sample format, source byte order, and per-channel depth are only partially visible after normalization. | Expand `ImageInfo`/metadata with exact source descriptors while leaving decoded transfer bytes unchanged. |
+| TIF-012 | Fill order, photometric inversion, sample format, and per-channel depth are only partially visible after normalization; source byte order is now retained. | Expand `SourceDescriptor` one independently proved field at a time while leaving decoded transfer bytes unchanged. |
 | TIF-013 | There is no bounded page iterator, page selection, or random-access IFD handle. | Implement API-027 with IFD-cycle detection and preserve per-page dimensions/mode/metadata. |
 | TIF-014 | SubIFDs, pyramids, thumbnails, masks, and directory graphs are flattened or ignored. | Model relationships only when a fixture needs them; distinguish primary pages from auxiliary directories. |
 | TIF-015 | Unknown tags, tag ordering, duplicate tags, inline-versus-offset storage, and original byte order cannot round-trip. | Preserve typed identity plus opaque bytes under API-040 with deterministic collision rules. |
@@ -559,7 +558,7 @@ Minute gaps:
 | TIF-026 | Missing/zero `StripByteCounts` or `TileByteCounts`, one-strip inference, and last-strip truncation have implementation-specific recovery rules. | Reverse-map Pillow/libtiff behavior and emit a diagnostic when inference preserves a usable image. |
 | TIF-027 | Floating-point predictor 3 has byte-plane shuffling semantics distinct from horizontal predictor 2 and depends on sample width and byte order. | Add exact 16/24/32/64-bit float predictor vectors before advertising float-predictor support. |
 | TIF-028 | Primary pages, reduced images, masks, SubIFDs, EXIF/GPS IFDs, thumbnails, pyramids, and arbitrary directory links need relationship types, not one flat frame list. | Introduce directory roles and bounded graph traversal before exposing more than the primary IFD chain. |
-| TIF-029 | Multipage decode retains each page's dimensions, mode, palette, and exact bytes, but not its photometric interpretation, sample type, byte order, metadata, compression, or page-indexed error stage. | Add per-page source descriptors and a stable page index/stage to later-page failures. |
+| TIF-029 | Multipage decode retains each page's dimensions, mode, palette, exact bytes, and source byte order, but not its photometric interpretation, sample type, metadata, compression, or page-indexed error stage. | Extend the per-page source descriptor and add a stable page index/stage to later-page failures. |
 | TIF-030 | Edge tiles and final strips have stored padding versus visible dimensions; a caller-buffer API needs to say whether padding bytes are consumed, returned, zeroed, or ignored. | Make visible and storage extents explicit in the chunk-layout contract. |
 
 #### WebP
@@ -751,10 +750,9 @@ union. That has several consequences for this crate.
 | FTR-022 | WASM memory behavior | Peak memory, memory growth, allocation failure, maximum pages, and large `Vec` transfer behavior are undefined. | Bind decode/output limits to measured WASM memory and return typed failures rather than relying on trap/OOM behavior. |
 | FTR-023 | Worker integration | Long operations cannot be cooperatively cancelled and there is no worker-safe binding or transferable-buffer policy. | Add after API-036; prove termination/cancellation never publishes partial success or corrupts reusable state. |
 | FTR-024 | Core/extra definition | The intended core/extra JS split has no checked membership manifest, feature mapping, loader behavior, or per-codec native/WASM size budget. | Define exact artifact inputs and measure raw, gzip, and Brotli sizes for each revision. Do not infer size from `.crate` source size. |
-| FTR-025 | Capability export | Downstream code cannot obtain a machine-readable build/target capability table without probing operations. | Generate one dependency-free table from the same cfg dispatch used by the implementation and test it in every feature lane. |
 | FTR-026 | Feature evolution | There is no convention for adding operation-level subfeatures while preserving current `jpeg`/`png` format umbrellas under Cargo's additive unification. | Write the compatibility rule before adding any split: umbrella behavior remains stable; subfeatures compose; no union disables behavior. |
 | FTR-027 | Reproducible WASM package | No pinned binding tool version, generated-glue checksum, deterministic package archive, or clean-consumer install test exists. | Pin the release toolchain and compare produced artifact hashes in a clean CI environment. |
-| FTR-028 | Target capability drift | One feature name can silently expose different operations on native and WASM, currently most visibly AVIF. | Make CI compare the generated capability tables and reject undocumented drift. |
+| FTR-028 | Target capability drift | Capability discovery now makes native-versus-WASM AVIF differences explicit, but no runtime CI compares tables and operation results across supported targets. | Execute the generated tables and representative operations on each published target and reject undocumented drift. |
 | FTR-029 | Size attribution | There is no per-format attribution for Rust code, data tables, generated bindings, native shims, or compression after link-time optimization. | Produce additive singleton/default/all artifacts with identical compiler flags and report deltas without claiming they sum linearly. |
 | FTR-030 | Native oracle provenance | The `.oracle-venv` fallback recursively selects a filename beginning with `libavif` but does not verify libavif, dav1d, or libaom versions. The pkg-config path verifies only libavif's version, not its backend versions. | Query and record every native component version at build/test time and reject a mismatch before parity evidence is produced. |
 | FTR-031 | Linkage model | Native AVIF searches only dynamic-library forms and embeds/builds runtime search behavior. There is no static, musl, self-contained, or relocatable downstream artifact contract. | Keep this temporary oracle bridge explicitly unsupported for distribution; portable AVIF is the accepted solution rather than expanding native packaging. |
@@ -797,7 +795,7 @@ union. That has several consequences for this crate.
 | QA-026 | Cancellation, work-budget exhaustion, output-size limits, and cumulative sequence limits have no boundary/interruption tests. | Add them with APIs 023/036 and prove cleanup, cache state, and retry behavior. |
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
 | QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. | Maintain a compact property-to-fixture map per codec so every claimed syntax/state has a named minimal witness. |
-| QA-029 | Public capability claims and cfg dispatch can drift because no generated table is compared with successful/disabled operation fixtures. | Cross-check FTR-025 against feature-matrix operations and structured `FeatureDisabled` results. |
+| QA-029 | The all-feature manifest compares the generated capability table with operation fixtures, and isolated native/WASM feature combinations compile under strict Clippy, but those isolated tables are not executed as runtime tests. | Register the exact feature-matrix command with Coverage MCP and run it in CI so disabled, singleton, default, all-feature, native, and WASM target tables are runtime evidence. |
 | QA-030 | No benchmark checks output allocation count, retained encoded+decoded cache memory, sequence amplification, or caller-buffer reuse. | Add allocation/peak-memory measurements alongside time and artifact size; never optimize from source line count. |
 | QA-031 | Legal-but-unsupported format classes are not a uniform fixture lane. Some are absent entirely, while malformed inputs dominate error coverage. | Add active negative-capability rows for every named legal class and require `Unsupported` rather than incidental `Malformed`. |
 | QA-033 | Generator reproducibility is checked through hashes inside generated data, but a clean regeneration/no-diff run is not a mandatory CI gate for every script and asset. | Run generators in a clean checkout, fail on any diff, and record pinned Python/native tool identities. |
@@ -1031,7 +1029,7 @@ slice at a time:
 | Order | IDs/classes | Why first | Exit condition |
 | --- | --- | --- | --- |
 | 1 | API-023/030/031/039; QA-015/017/018/026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010 and QA-032 are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
-| 2 | API-001/004/005/007/015/016/022/042; FTR-025/026/028; QA-014/029 | Settle discoverability and pre-1.0 public compatibility before downstream adoption. | Rustdoc, generated capability table, isolated feature lanes, and claim ledger agree. |
+| 2 | API-004/005/007/015/016/022/042; FTR-026/028; QA-014/029 | Settle discoverability and pre-1.0 public compatibility before downstream adoption. | Rustdoc, generated capability table, isolated feature lanes, and claim ledger agree. |
 | 3 | API-019/028/034/035/040 plus the matching PNG/GIF/TIFF/WebP/ICO/AVIF metadata and sequence rows | Avoid implementing remaining multipage, multi-entry, or animated surfaces into a lossy common model. | Exact source/container state survives decode and, where supported, encode without public processing. |
 | 4 | API-024/025/027/032/037 and codec row/strip/tile/frame slices | Bound memory and enable large/sequence inputs without a second unrelated API family. | Whole-buffer convenience wraps the same bounded engine; caller buffers and eager results are byte-identical. |
 | 5 | API-017/018/029/036; FTR-017 through FTR-024/027/029; QA-016/019/020/022/030 | Complete native/WASM integration, incremental I/O, cancellation, packaging and measurements. | Real native and WASM runtime lanes pass with reproducible artifacts and measured copy/memory behavior. |
@@ -1046,7 +1044,7 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-019, including exact WebP mode
+Completed first: COR-001 through COR-021, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
@@ -1055,16 +1053,14 @@ timing, source controls, and exact rendered canvases. WebP sequence encode now
 emits Pillow-byte-exact full-canvas keyframes and rejects every unsupported
 control through fixture-backed structured errors. TIFF multipage decode/encode
 retains page dimensions, modes, and exact bytes across raw and compressed
-classic IFD chains.
+classic IFD chains, TIFF source byte order now survives inspection, still
+decode, and every retained page, and runtime capability discovery mirrors the
+current feature/target dispatch.
 
-1. Preserve the proved TIFF `I32`/`F32` byte contract while adding explicit
-   source-endian metadata before any typed numeric view, palette, BigTIFF, or
-   broader numeric layout.
-2. Introduce typed per-format options and runtime capability discovery without
-   changing exact retained bytes.
-3. Add metadata retention, decode limits, incremental I/O, target runtime
+1. Introduce typed per-format options without changing exact retained bytes.
+2. Add metadata retention, decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.
-4. Complete portable AVIF and only then design the JS/WASM core-extra
+3. Complete portable AVIF and only then design the JS/WASM core-extra
    artifact split.
 
 Every slice ends with:
