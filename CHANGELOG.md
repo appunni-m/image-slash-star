@@ -118,6 +118,10 @@ All notable changes will be documented in this file. This project follows
 - A dependency-free `OutputSink` trait with `encode_to_sink` and
   `encode_sequence_to_sink`, delivering complete validated encoded bytes to
   caller-owned destinations with failing-sink error propagation.
+- Cross-target determinism evidence: a WASI-runnable test pins SHA-256 over
+  exact encoder output and decoded pixels for 15 fixed cases, with the
+  feature-matrix command verifying the same hashes natively and on
+  `wasm32-wasip1`.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

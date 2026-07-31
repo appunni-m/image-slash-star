@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "cases": {
+    "bmp_rgb": "9e48a5ca458c57a8554cefec03b905b57f7bb4fc3f132762a3d1b2a9fe3af640",
+    "decode_gif_p8": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+    "decode_png_rgba": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
+    "decode_tiff_la": "c0ad0336cbf07b059de27184d72ff878a2d9b33819860e36bdfb7620959a7c87",
+    "decode_webp_rgb": "72238f830e7571d00aefca0997dd97ebe24cbb90e12e86e93b93775ed3e938f2",
+    "gif_rgb": "2f1ffce59cfe98846fa254d0d8713c7dde25a90e2f4c925aff8627a9ae1920e6",
+    "ico_rgba": "775a466a25b08fee8e5e7a811044cb514112e8ace8adad57fa614e6799452d89",
+    "jpeg_rgb": "2c413edb36dbfc7a2111f28a940805f91a8820ef2b2af5a664c498f1eeb4b4c5",
+    "png_l8": "834345965ac5dd35937c3d6abd9d1e1e53fbc5a3a24a02a5f77a16446d7ec8af",
+    "png_la8": "d8a783ce5332440ebe73f4b17b8f356c3e3d27c9135cba4d960bee8c309b673a",
+    "png_p8": "3735d115316d233f6f119e7c7cb853794b0549ca3bd3bf0e59f6348a238fdfe5",
+    "png_rgb": "6fc50b266bdbc4add63a80b162e0c4911db29bc8e7aca3cb4d39b64c3a4692a0",
+    "png_rgba": "3bf3cc20224c44fbd0738592978a0cb71141e879ecc7734cfdf2537a96a6bf31",
+    "tiff_rgb": "a9313f6aff942eb59160d2601fc5c438a6a917eae0ea8ccf5fe7adb82cebcd8c",
+    "webp_rgb": "b90d4fdd50d26279233d8b5a92544855824d39084d64b23744bddac56ccaf4b0"
+  }
+}

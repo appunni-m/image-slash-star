@@ -42,6 +42,10 @@ required-features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
 name = "capability_table"
 path = "tests/capability_table.rs"
 
+[[test]]
+name = "determinism_tests"
+path = "tests/determinism_tests.rs"
+
 [dependencies]
 bytemuck = "1"
 

@@ -86,6 +86,13 @@ else
     exit 1
 fi
 
+# Cross-target determinism: encoded bytes and decoded pixels executed in the
+# WASM runtime must match the golden hashes committed from the native host.
+cargo test --locked --target wasm32-wasip1 --test determinism_tests \
+    --all-features --no-run
+binary=$(ls -t target/wasm32-wasip1/debug/deps/determinism_tests-*.wasm | head -1)
+node scripts/wasm_test_runner.js "$binary"
+
 # Regenerate the capability tables in memory and reject any drift between the
 # committed fixture and the native or WASI runtime tables.
 python3 scripts/generate_capability_tables.py --check
