@@ -2580,6 +2580,15 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    // Exercise both standard-library sink impls directly, because the generic
+    // encode functions only ever select the `&mut Vec<u8>` implementation.
+    let mut direct = Vec::new();
+    OutputSink::write_all(&mut direct, b"abc")?;
+    assert_eq!(direct, b"abc");
+    let mut direct_ref: &mut Vec<u8> = &mut Vec::new();
+    OutputSink::write_all(&mut direct_ref, b"def")?;
+    assert_eq!(*direct_ref, b"def");
+
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     if cfg!(feature = "png") {
         let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
