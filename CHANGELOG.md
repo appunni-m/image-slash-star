@@ -115,6 +115,9 @@ All notable changes will be documented in this file. This project follows
   sources) with stable per-frame errors; TIFF uses a genuine per-page path,
   while other sequence formats currently fall back to `decode_sequence`
   indexing.
+- A dependency-free `OutputSink` trait with `encode_to_sink` and
+  `encode_sequence_to_sink`, delivering complete validated encoded bytes to
+  caller-owned destinations with failing-sink error propagation.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

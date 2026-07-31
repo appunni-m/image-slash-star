@@ -2564,6 +2564,93 @@ fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{EncodeOptions, ImageFormat, OutputSink};
+
+    struct FailingSink;
+    impl OutputSink for FailingSink {
+        fn write_all(&mut self, _bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            Err(image_slash_star::ImageError::Unsupported {
+                format: None,
+                message: "sink rejected the write".to_owned(),
+                stage: None,
+                offset: None,
+                identity: None,
+            })
+        }
+    }
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    if cfg!(feature = "png") {
+        let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::Png);
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+
+        let mut owned = Vec::new();
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &mut owned
+            )?,
+            expected.len(),
+            "owned sink length"
+        );
+        assert_eq!(owned, expected, "owned sink bytes");
+
+        let mut borrowed = Vec::new();
+        let mut borrowed_ref: &mut Vec<u8> = &mut borrowed;
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &mut borrowed_ref
+            )?,
+            expected.len(),
+            "borrowed sink length"
+        );
+        assert_eq!(borrowed, expected, "borrowed sink bytes");
+
+        let mut failing = FailingSink;
+        assert!(
+            matches!(
+                image_slash_star::encode_to_sink(
+                    &decoded.content,
+                    ImageFormat::Png,
+                    &options,
+                    &mut failing
+                ),
+                Err(ImageError::Unsupported { .. })
+            ),
+            "failing sink error must propagate"
+        );
+    }
+
+    if cfg!(feature = "gif") {
+        let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
+        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
+        let options = EncodeOptions::for_format(ImageFormat::Gif);
+        let expected = image_slash_star::encode_sequence(&sequence, ImageFormat::Gif, &options)?;
+        let mut sink = Vec::new();
+        assert_eq!(
+            image_slash_star::encode_sequence_to_sink(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &mut sink
+            )?,
+            expected.len(),
+            "sequence sink length"
+        );
+        assert_eq!(sink, expected, "sequence sink bytes");
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;

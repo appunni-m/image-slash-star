@@ -309,6 +309,12 @@ TIFF fixtures must return exactly the corresponding `decode_sequence` frame,
 out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
+The output-sink contract is table-driven: `encode_to_sink` and
+`encode_sequence_to_sink` over PNG still and GIF sequence fixtures must write
+bytes identical to `encode`/`encode_sequence` with matching lengths for both
+`Vec<u8>` and `&mut Vec<u8>` sinks, and a deterministic failing sink must
+propagate its error without any partial container write.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
