@@ -1880,6 +1880,129 @@ fn tiff_tags_match_the_container_contract() -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "AVIF test boxes are tiny fixed literals that always fit u32"
+)]
+fn avif_box(kind: &[u8; 4], payload: &[u8]) -> Vec<u8> {
+    let mut box_bytes = Vec::with_capacity(payload.len().wrapping_add(8));
+    box_bytes.extend_from_slice(&((payload.len() as u32).wrapping_add(8)).to_be_bytes());
+    box_bytes.extend_from_slice(kind);
+    box_bytes.extend_from_slice(payload);
+    box_bytes
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "offsets are bounds-checked against the in-memory fixture slice"
+)]
+fn avif_box_offset(data: &[u8], kind: &[u8; 4]) -> Result<usize, Box<dyn std::error::Error>> {
+    let mut position = 0usize;
+    while position.wrapping_add(8) <= data.len() {
+        let size = u32::from_be_bytes([
+            data[position],
+            data[position + 1],
+            data[position + 2],
+            data[position + 3],
+        ]) as usize;
+        if &data[position.wrapping_add(4)..position.wrapping_add(8)] == kind {
+            return Ok(position);
+        }
+        position = if size == 1 {
+            let extended = u64::from_be_bytes([
+                data[position + 8],
+                data[position + 9],
+                data[position + 10],
+                data[position + 11],
+                data[position + 12],
+                data[position + 13],
+                data[position + 14],
+                data[position + 15],
+            ]);
+            position.wrapping_add(16).wrapping_add(extended as usize)
+        } else if size == 0 {
+            return Err("AVIF box extends to end of input".into());
+        } else {
+            position.wrapping_add(size)
+        };
+    }
+    Err(format!("AVIF box {kind:?} not found").into())
+}
+
+#[test]
+fn avif_boxes_match_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::OpaqueBlock;
+
+    if cfg!(target_arch = "wasm32") || !cfg!(feature = "avif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/avif/baseline.avif"))?;
+    let mdat = avif_box_offset(&base, b"mdat")?;
+
+    // Unknown and free/skip boxes appended after the pixel payload are
+    // retained raw while decode behavior is unchanged (item extents point
+    // into the untouched mdat).
+    let unknown = avif_box(b"ABCD", b"unknown-payload");
+    let free = avif_box(b"free", b"padding");
+    let skip = avif_box(b"skip", b"more-padding");
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&base[..mdat]);
+    bytes.extend_from_slice(&base[mdat..]);
+    bytes.extend_from_slice(&unknown);
+    bytes.extend_from_slice(&free);
+    bytes.extend_from_slice(&skip);
+
+    let expected = vec![
+        OpaqueBlock {
+            kind: b"ABCD".to_vec(),
+            data: unknown.clone(),
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: b"free".to_vec(),
+            data: free.clone(),
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: b"skip".to_vec(),
+            data: skip.clone(),
+            safe_to_copy: true,
+        },
+    ];
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(decoded.content.opaque_blocks, expected, "still boxes");
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(sequence.content.opaque_blocks, expected, "sequence boxes");
+
+    // The unmodified fixture retains nothing, and encoding never replays.
+    let plain = image_slash_star::decode(&base)?;
+    assert!(plain.content.opaque_blocks.is_empty());
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Avif);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Avif, &options)?;
+    for needle in [
+        &b"unknown-payload"[..],
+        &b"padding"[..],
+        &b"more-padding"[..],
+    ] {
+        assert!(
+            !encoded.windows(needle.len()).any(|window| window == needle),
+            "encoded AVIF must not replay retained box {needle:?}"
+        );
+    }
+
+    // A truncated trailing box is ignored without retention.
+    let mut truncated = bytes.clone();
+    truncated.extend_from_slice(&[0, 0, 0, 16, b'A', b'B', b'C', b'D', 1, 2, 3]);
+    let truncated_decoded = image_slash_star::decode(&truncated)?;
+    assert_eq!(
+        truncated_decoded.content.opaque_blocks, expected,
+        "truncated trailing box must be skipped"
+    );
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {

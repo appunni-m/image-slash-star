@@ -236,6 +236,9 @@ TIFF tag retention preserves every non-interpreted tag with typed identity
 when the value fits four bytes, otherwise at its offset — with unknown tags in
 `opaque_blocks` and known metadata tags (text, date, software, artist,
 copyright, ICC) in the metadata records, per page.
+AVIF top-level BMFF retention keeps unknown boxes and `free`/`skip` padding
+boxes as raw opaque records (fourcc as kind, full box bytes as data) while
+interpreted boxes (ftyp/meta/moov/mdat) stay out.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

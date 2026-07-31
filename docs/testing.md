@@ -273,6 +273,11 @@ metadata tags must retain exact typed records (tag bytes in file byte order,
 stored value bytes) on still decode and per-page sequence decode, keep an
 unmodified fixture empty, and avoid replay in encoded output.
 
+The AVIF-box contract is table-driven: unknown and free/skip boxes appended
+after a fixture's mdat must be retained as exact raw opaque records on still
+and sequence decode, a truncated trailing box must be ignored, the unmodified
+fixture must stay empty, and encoded output must not replay retained boxes.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
