@@ -2627,6 +2627,25 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             ),
             "failing sink error must propagate"
         );
+
+        // Invalid still input exercises the encoder error path before the sink.
+        let invalid = image_slash_star::DecodedImage::new(
+            1,
+            1,
+            Vec::new(),
+            image_slash_star::ColorType::Rgb8,
+        );
+        let mut unused_sink = Vec::new();
+        assert!(
+            image_slash_star::encode_to_sink(
+                &invalid,
+                ImageFormat::Png,
+                &options,
+                &mut unused_sink
+            )
+            .is_err(),
+            "invalid still input must fail before the sink"
+        );
     }
 
     if cfg!(feature = "gif") {
@@ -2646,6 +2665,43 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             "sequence sink length"
         );
         assert_eq!(sink, expected, "sequence sink bytes");
+
+        // Invalid sequence and failing sequence sink error paths.
+        let empty = image_slash_star::DecodedSequence {
+            width: 1,
+            height: 1,
+            frames: Vec::new(),
+            loop_count: None,
+            background: None,
+            kind: image_slash_star::SequenceKind::SingleFrame,
+            opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
+            source_color: image_slash_star::SourceColor::new(),
+        };
+        let mut unused_sink = Vec::new();
+        assert!(
+            image_slash_star::encode_sequence_to_sink(
+                &empty,
+                ImageFormat::Gif,
+                &options,
+                &mut unused_sink
+            )
+            .is_err(),
+            "invalid sequence must fail before the sink"
+        );
+        let mut failing = FailingSink;
+        assert!(
+            matches!(
+                image_slash_star::encode_sequence_to_sink(
+                    &sequence,
+                    ImageFormat::Gif,
+                    &options,
+                    &mut failing
+                ),
+                Err(ImageError::Unsupported { .. })
+            ),
+            "failing sequence sink error must propagate"
+        );
     }
     Ok(())
 }
