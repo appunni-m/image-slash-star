@@ -59,6 +59,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(!alpha_only.is_empty());
     assert!(SourceDescriptor::new().is_empty());
 
+    // Exercise every short-circuit path of the source-color emptiness check
+    // with descriptors that set exactly one field.
+    assert!(
+        !SourceColor::new()
+            .with_srgb(SrgbIntent::Perceptual)
+            .is_empty()
+    );
+    assert!(!SourceColor::new().with_gamma(45_455).is_empty());
+    assert!(
+        !SourceColor::new()
+            .with_chromaticities(SourceChromaticities {
+                white_x: 1,
+                white_y: 1,
+                red_x: 1,
+                red_y: 1,
+                green_x: 1,
+                green_y: 1,
+                blue_x: 1,
+                blue_y: 1,
+            })
+            .is_empty()
+    );
+    assert!(
+        !SourceColor::new()
+            .with_icc_profile(RawIccProfile {
+                keyword: Vec::new(),
+                data: Vec::new(),
+            })
+            .is_empty()
+    );
+
     let colors = [
         ColorType::L8,
         ColorType::La8,

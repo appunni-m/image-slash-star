@@ -1105,12 +1105,18 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     }
     let srgb = png_chunk(b"sRGB", &[0]);
     let duplicate_srgb = png_chunk(b"sRGB", &[1]);
+    let malformed_srgb = png_chunk(b"sRGB", &[0, 1]);
     let gamma = png_chunk(b"gAMA", &[0, 0, 0xB1, 0x8F]);
+    let duplicate_gamma = png_chunk(b"gAMA", &[0, 0, 0xB1, 0x8F]);
     let malformed_gamma = png_chunk(b"gAMA", &[0, 1]);
     let chroma_chunk = png_chunk(b"cHRM", &chroma);
+    let duplicate_chroma = png_chunk(b"cHRM", &chroma);
     let malformed_chroma = png_chunk(b"cHRM", &[0, 0, 0]);
     let iccp = png_chunk(b"iCCP", b"profile\0\0raw-profile-bytes");
-    let malformed_iccp = png_chunk(b"iCCP", b"nonul");
+    let iccp_no_nul = png_chunk(b"iCCP", b"nonul");
+    let iccp_nul_first = png_chunk(b"iCCP", b"\0raw");
+    let iccp_no_profile = png_chunk(b"iCCP", b"a\0");
+    let duplicate_iccp = png_chunk(b"iCCP", b"other\0\0raw");
     let text = png_chunk(b"tEXt", b"Comment\0hello");
     let unknown = png_chunk(b"prVt", b"unknown-payload");
     let idat_offset = png_chunk_offset(&base, b"IDAT")?;
@@ -1121,11 +1127,17 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         &text,
         &gamma,
         &chroma_chunk,
+        &iccp_no_nul,
+        &iccp_nul_first,
+        &iccp_no_profile,
         &iccp,
         &duplicate_srgb,
+        &malformed_srgb,
+        &duplicate_gamma,
         &malformed_gamma,
+        &duplicate_chroma,
         &malformed_chroma,
-        &malformed_iccp,
+        &duplicate_iccp,
         &unknown,
     ] {
         bytes.extend_from_slice(chunk);
@@ -1155,8 +1167,28 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             data: b"Comment\0hello".to_vec(),
         },
         OpaqueMetadata {
+            kind: b"iCCP".to_vec(),
+            data: b"nonul".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"iCCP".to_vec(),
+            data: b"\0raw".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"iCCP".to_vec(),
+            data: b"a\0".to_vec(),
+        },
+        OpaqueMetadata {
             kind: b"sRGB".to_vec(),
             data: vec![1],
+        },
+        OpaqueMetadata {
+            kind: b"sRGB".to_vec(),
+            data: vec![0, 1],
+        },
+        OpaqueMetadata {
+            kind: b"gAMA".to_vec(),
+            data: vec![0, 0, 0xB1, 0x8F],
         },
         OpaqueMetadata {
             kind: b"gAMA".to_vec(),
@@ -1164,11 +1196,15 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         },
         OpaqueMetadata {
             kind: b"cHRM".to_vec(),
+            data: chroma.clone(),
+        },
+        OpaqueMetadata {
+            kind: b"cHRM".to_vec(),
             data: vec![0, 0, 0],
         },
         OpaqueMetadata {
             kind: b"iCCP".to_vec(),
-            data: b"nonul".to_vec(),
+            data: b"other\0\0raw".to_vec(),
         },
     ];
     let expected_blocks = vec![OpaqueBlock {
@@ -1210,6 +1246,35 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     // Unmodified fixtures retain no source color facts.
     let plain = image_slash_star::decode(&base)?;
     assert!(plain.content.source_color.is_empty());
+
+    // Every sRGB intent value parses; invalid values fall back to metadata.
+    for (value, expected) in [
+        (1u8, Some(SrgbIntent::RelativeColorimetric)),
+        (2, Some(SrgbIntent::Saturation)),
+        (3, Some(SrgbIntent::AbsoluteColorimetric)),
+        (9, None),
+    ] {
+        let mut variant = Vec::new();
+        variant.extend_from_slice(&base[..idat_offset]);
+        variant.extend_from_slice(&png_chunk(b"sRGB", &[value]));
+        variant.extend_from_slice(&base[idat_offset..]);
+        let variant_decoded = image_slash_star::decode(&variant)?;
+        assert_eq!(
+            variant_decoded.content.source_color.srgb(),
+            expected,
+            "sRGB value {value}"
+        );
+        if expected.is_none() {
+            assert_eq!(
+                variant_decoded.content.metadata,
+                vec![OpaqueMetadata {
+                    kind: b"sRGB".to_vec(),
+                    data: vec![value],
+                }],
+                "invalid sRGB value {value} must fall back to metadata"
+            );
+        }
+    }
 
     // APNG sequence decode retains the same container-level color metadata.
     let apng_base = fs::read(root.join("tests/fixtures/input/images/png/apng_l_over.png"))?;
