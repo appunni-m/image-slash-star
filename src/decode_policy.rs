@@ -531,6 +531,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         palette: None,
         is_animated: false,
         frame_count: Some(1),
+        frame_count_complete: true,
         cursor_hotspot: None,
         source: SourceDescriptor::new(),
     };
@@ -564,6 +565,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         palette: None,
         is_animated: false,
         frame_count: Some(1),
+        frame_count_complete: true,
         cursor_hotspot: None,
         source: SourceDescriptor::new(),
     };
