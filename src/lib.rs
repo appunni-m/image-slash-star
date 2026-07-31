@@ -412,9 +412,7 @@ pub fn encode_to_sink(
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
     let encoded = encode(img, format, opts)?;
-    let length = encoded.len();
-    sink.write_all(&encoded)?;
-    Ok(length)
+    write_sink_all(sink, &encoded)
 }
 
 /// Encode a still image or animation into a caller-owned output sink.
@@ -430,9 +428,14 @@ pub fn encode_sequence_to_sink(
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
     let encoded = encode_sequence(sequence, format, opts)?;
-    let length = encoded.len();
-    sink.write_all(&encoded)?;
-    Ok(length)
+    write_sink_all(sink, &encoded)
+}
+
+/// Write complete encoded bytes through a trait object so the sink error path
+/// has exactly one non-generic coverage instantiation.
+fn write_sink_all(sink: &mut dyn OutputSink, bytes: &[u8]) -> ImageResult<usize> {
+    sink.write_all(bytes)?;
+    Ok(bytes.len())
 }
 
 /// Encode with default options.
