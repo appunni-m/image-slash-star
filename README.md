@@ -30,7 +30,8 @@ bytes.
 - Exact fixture-backed success, error, pixel, frame, and encoded-byte checks.
 - Byte-buffer APIs that work without filesystem or networking assumptions.
 - Default codec feature combinations cross-compile to
-  `wasm32-unknown-unknown`.
+  `wasm32-unknown-unknown`, and every feature lane executes in a real WASM
+  runtime (`wasm32-wasip1` under Node's WASI preview1).
 
 The crate deliberately does not resize, crop, rotate, draw, filter, adjust, or
 otherwise process decoded images. Applications keep image processing in a
@@ -113,8 +114,11 @@ enables, and Cargo's additive unification must compose subfeatures without
 changing umbrella semantics. This rule is committed before any split is
 accepted.
 
-WASM feature combinations are cross-compiled in CI. Executing the complete
-semantic fixture matrix in a WASM runtime remains planned.
+WASM feature combinations are cross-compiled in CI. The feature-gate and
+capability-table suites also execute in a real WASM runtime
+(`wasm32-wasip1` under Node's WASI preview1) for no features, every isolated
+codec, default features, and all features. Executing the complete semantic
+fixture matrix in a WASM runtime remains planned.
 
 AVIF is the remaining portability boundary. Native parity uses fixed
 libavif 1.4.1, dav1d 1.5.3, and libaom 3.13.2 builds. The WASM path has a
@@ -355,6 +359,11 @@ planned or unwired rows. Expected errors are active fixture outcomes, and
 every decode-error class is catalogued in a generated, CI-checked
 malformed-class ledger with Pillow outcome, Rust error contract, evidence
 origin, and specification status.
+
+Runtime capability tables for every feature lane are emitted per target and
+committed as `tests/fixtures/capability_tables.json`; CI regenerates them in
+memory and rejects drift between the native host and `wasm32-wasip1` tables
+and the committed fixture.
 
 The accepted Coverage MCP snapshot for that implementation state reports 100%
 line, branch, function, and region coverage. Coverage proves execution under

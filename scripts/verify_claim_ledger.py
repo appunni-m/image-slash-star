@@ -32,6 +32,7 @@ HASHED_FILES = {
     "trailing_input": "tests/fixtures/trailing_input_manifest.json",
     "metadata_policy": "tests/fixtures/metadata_policy_manifest.json",
     "malformed_ledger": "tests/fixtures/malformed_ledger.json",
+    "capability_tables": "tests/fixtures/capability_tables.json",
 }
 
 DOCS = [

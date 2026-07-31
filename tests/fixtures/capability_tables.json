@@ -1,0 +1,2349 @@
+{
+  "format_version": 1,
+  "native": {
+    "host_triple": "aarch64-apple-darwin",
+    "lanes": {
+      "all": {
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "formats": [
+          {
+            "feature_enabled": true,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          }
+        ],
+        "lane": "all",
+        "target": "native"
+      },
+      "avif": {
+        "features": [
+          "avif"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          }
+        ],
+        "lane": "avif",
+        "target": "native"
+      },
+      "bmp": {
+        "features": [
+          "bmp"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "bmp",
+        "target": "native"
+      },
+      "default": {
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico"
+        ],
+        "formats": [
+          {
+            "feature_enabled": true,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "default",
+        "target": "native"
+      },
+      "gif": {
+        "features": [
+          "gif"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "gif",
+        "target": "native"
+      },
+      "ico": {
+        "features": [
+          "png",
+          "bmp",
+          "ico"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "ico",
+        "target": "native"
+      },
+      "jpeg": {
+        "features": [
+          "jpeg"
+        ],
+        "formats": [
+          {
+            "feature_enabled": true,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "jpeg",
+        "target": "native"
+      },
+      "none": {
+        "features": [],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "none",
+        "target": "native"
+      },
+      "png": {
+        "features": [
+          "png"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "png",
+        "target": "native"
+      },
+      "tiff": {
+        "features": [
+          "tiff"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "tiff",
+        "target": "native"
+      },
+      "webp": {
+        "features": [
+          "webp"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "webp",
+        "target": "native"
+      }
+    }
+  },
+  "wasm32-wasip1": {
+    "host_triple": "wasm32-wasip1",
+    "lanes": {
+      "all": {
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "formats": [
+          {
+            "feature_enabled": true,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:target_unavailable",
+              "sequence_encode": "unavailable:target_unavailable",
+              "still_decode": "restricted:portable_avif",
+              "still_encode": "unavailable:target_unavailable"
+            }
+          }
+        ],
+        "lane": "all",
+        "target": "wasm32"
+      },
+      "avif": {
+        "features": [
+          "avif"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:target_unavailable",
+              "sequence_encode": "unavailable:target_unavailable",
+              "still_decode": "restricted:portable_avif",
+              "still_encode": "unavailable:target_unavailable"
+            }
+          }
+        ],
+        "lane": "avif",
+        "target": "wasm32"
+      },
+      "bmp": {
+        "features": [
+          "bmp"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "bmp",
+        "target": "wasm32"
+      },
+      "default": {
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico"
+        ],
+        "formats": [
+          {
+            "feature_enabled": true,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "default",
+        "target": "wasm32"
+      },
+      "gif": {
+        "features": [
+          "gif"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "gif",
+        "target": "wasm32"
+      },
+      "ico": {
+        "features": [
+          "png",
+          "bmp",
+          "ico"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "ico",
+        "target": "wasm32"
+      },
+      "jpeg": {
+        "features": [
+          "jpeg"
+        ],
+        "formats": [
+          {
+            "feature_enabled": true,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "jpeg",
+        "target": "wasm32"
+      },
+      "none": {
+        "features": [],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "none",
+        "target": "wasm32"
+      },
+      "png": {
+        "features": [
+          "png"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "png",
+        "target": "wasm32"
+      },
+      "tiff": {
+        "features": [
+          "tiff"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "tiff",
+        "target": "wasm32"
+      },
+      "webp": {
+        "features": [
+          "webp"
+        ],
+        "formats": [
+          {
+            "feature_enabled": false,
+            "format": "jpeg",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "png",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "gif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "bmp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "tiff",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": true,
+            "format": "webp",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "manifest_bounded",
+              "sequence_decode": "manifest_bounded",
+              "sequence_encode": "manifest_bounded",
+              "still_decode": "manifest_bounded",
+              "still_encode": "manifest_bounded"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "ico",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          },
+          {
+            "feature_enabled": false,
+            "format": "avif",
+            "operations": {
+              "detection": "manifest_bounded",
+              "inspection": "unavailable:feature_disabled",
+              "sequence_decode": "unavailable:feature_disabled",
+              "sequence_encode": "unavailable:feature_disabled",
+              "still_decode": "unavailable:feature_disabled",
+              "still_encode": "unavailable:feature_disabled"
+            }
+          }
+        ],
+        "lane": "webp",
+        "target": "wasm32"
+      }
+    }
+  }
+}

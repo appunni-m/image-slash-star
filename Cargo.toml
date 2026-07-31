@@ -38,6 +38,10 @@ name = "coverage_matrix_tests"
 path = "tests/coverage_matrix_tests.rs"
 required-features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
 
+[[test]]
+name = "capability_table"
+path = "tests/capability_table.rs"
+
 [dependencies]
 bytemuck = "1"
 

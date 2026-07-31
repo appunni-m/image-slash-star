@@ -669,23 +669,6 @@ fn has_plain_still_semantics(
     true
 }
 
-#[cfg(any(
-    coverage,
-    target_arch = "wasm32",
-    not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    ))
-))]
-const AVIF_WASM_UNAVAILABLE: &str =
-    "AVIF is unavailable on wasm32 without an AVIF-capable extra module";
-
 #[cfg(all(
     target_arch = "wasm32",
     feature = "jpeg",
@@ -697,8 +680,8 @@ const AVIF_WASM_UNAVAILABLE: &str =
     feature = "ico",
     feature = "avif"
 ))]
-fn ensure_available(format: ImageFormat) -> ImageResult<()> {
-    ensure_target_available(format, true)
+fn ensure_available(_format: ImageFormat) -> ImageResult<()> {
+    Ok(())
 }
 
 #[cfg(not(all(
@@ -712,8 +695,7 @@ fn ensure_available(format: ImageFormat) -> ImageResult<()> {
     feature = "avif"
 )))]
 fn ensure_available(format: ImageFormat) -> ImageResult<()> {
-    ensure_enabled(format)?;
-    ensure_target_available(format, cfg!(all(target_arch = "wasm32", feature = "avif")))
+    ensure_enabled(format)
 }
 
 #[cfg(not(all(
@@ -728,33 +710,6 @@ fn ensure_available(format: ImageFormat) -> ImageResult<()> {
 )))]
 fn ensure_inspection_available(format: ImageFormat) -> ImageResult<()> {
     ensure_enabled(format)
-}
-
-#[cfg(any(
-    coverage,
-    target_arch = "wasm32",
-    not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    ))
-))]
-fn ensure_target_available(format: ImageFormat, avif_unavailable: bool) -> ImageResult<()> {
-    if avif_unavailable && format == ImageFormat::Avif {
-        return Err(ImageError::Unsupported {
-            format: Some(format),
-            message: AVIF_WASM_UNAVAILABLE.to_owned(),
-            stage: None,
-            offset: None,
-            identity: None,
-        });
-    }
-    Ok(())
 }
 
 #[cfg(not(all(
@@ -830,9 +785,6 @@ fn ensure_enabled(format: ImageFormat) -> ImageResult<()> {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     error::__coverage_exercise_private_branches();
-    let _ = ensure_target_available(ImageFormat::Avif, true);
-    let _ = ensure_target_available(ImageFormat::Avif, false);
-    let _ = ensure_target_available(ImageFormat::Png, true);
 
     let invalid_sequence = DecodedSequence {
         width: 0,

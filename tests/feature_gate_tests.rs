@@ -7,15 +7,13 @@ use std::path::Path;
 use bytemuck as _;
 use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
-    DecodedImage, DecodedSequence, EncodeOptions, EncodedImage, ImageError, ImageFormat, ImageMode,
+    DecodedImage, DecodedSequence, EncodeOptions, EncodedImage, ImageError, ImageErrorStage,
+    ImageFormat, ImageMode,
 };
 
 mod support;
 
 use support::json::{self, FromJson, Object, Value};
-
-const AVIF_WASM_UNAVAILABLE: &str =
-    "AVIF is unavailable on wasm32 without an AVIF-capable extra module";
 
 struct CoverageMatrix {
     formats: HashMap<String, FormatRows>,
@@ -477,10 +475,33 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
         }
 
         if cfg!(target_arch = "wasm32") && format == ImageFormat::Avif {
-            let expected = ImageError::Unsupported {
+            let expected_decode = ImageError::Unsupported {
                 format: Some(format),
-                message: AVIF_WASM_UNAVAILABLE.to_owned(),
-                stage: None,
+                message: "AVIF input is outside the portable WASM decode subset".to_owned(),
+                stage: Some(ImageErrorStage::StillDecode),
+                offset: None,
+                identity: None,
+            };
+            let expected_sequence_decode = ImageError::Unsupported {
+                format: Some(format),
+                message: "decode sequence: AVIF sequence decoding requires the native AVIF stack"
+                    .to_owned(),
+                stage: Some(ImageErrorStage::SequenceDecode),
+                offset: None,
+                identity: None,
+            };
+            let expected_encode = ImageError::Unsupported {
+                format: Some(format),
+                message: "encode: AVIF encoding requires the native extra module".to_owned(),
+                stage: Some(ImageErrorStage::StillEncode),
+                offset: None,
+                identity: None,
+            };
+            let expected_sequence_encode = ImageError::Unsupported {
+                format: Some(format),
+                message: "encode sequence: AVIF encoding requires the native extra module"
+                    .to_owned(),
+                stage: Some(ImageErrorStage::SequenceEncode),
                 offset: None,
                 identity: None,
             };
@@ -500,20 +521,23 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
             assert_eq!(source.info(), &info);
             assert_eq!(source.verify(), Ok(()));
             assert!(!source.is_decoded());
-            assert_eq!(image_slash_star::decode(&bytes), Err(expected.clone()));
+            assert_eq!(
+                image_slash_star::decode(&bytes),
+                Err(expected_decode.clone())
+            );
             assert_eq!(
                 image_slash_star::decode_sequence(&bytes),
-                Err(expected.clone())
+                Err(expected_sequence_decode)
             );
-            assert_eq!(source.decode(), Err(expected.clone()));
+            assert_eq!(source.decode(), Err(expected_decode.clone()));
             assert!(!source.is_decoded());
             assert_eq!(
                 image_slash_star::encode(&encode_input, format, &options),
-                Err(expected.clone())
+                Err(expected_encode)
             );
             assert_eq!(
                 image_slash_star::encode_sequence(&encode_sequence, format, &options),
-                Err(expected)
+                Err(expected_sequence_encode)
             );
             continue;
         }

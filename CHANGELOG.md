@@ -60,6 +60,13 @@ All notable changes will be documented in this file. This project follows
 - A machine-checked revision-bound claim ledger (revision, manifest/matrix and
   fixture-manifest hashes, Coverage MCP run/snapshot) with a CI verifier, plus
   the committed feature-evolution rule for umbrella and additive subfeatures.
+- Runtime capability tables emitted per feature lane by a probe test,
+  committed as a fixture, and regenerated in CI on the native host and
+  `wasm32-wasip1` with a no-drift check.
+- Execution of the feature-gate suite in a real WASM runtime
+  (`wasm32-wasip1` under Node's WASI preview1) for no features, every
+  isolated codec, default features, and all features, with the exact
+  feature-matrix command registered with Coverage MCP.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
@@ -97,6 +104,10 @@ All notable changes will be documented in this file. This project follows
   encode targets now reject option records for another codec.
 - Made public codec/capability vocabulary enums non-exhaustive while retaining
   exhaustive closed value domains such as source byte order.
+- Changed every `wasm32` AVIF operation to report staged codec-level
+  `Unsupported` errors matching capability discovery (portable-subset still
+  decode, native-stack sequence decode, native-extra-module encode) instead
+  of the stale operation-free target gate.
 - Made `DecodedSequence::first()` return the complete frame and added the
   explicitly lossy `first_image()` convenience.
 - Added Pillow-recognized extension aliases and public MIME/canonical/alias
