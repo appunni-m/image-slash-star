@@ -144,6 +144,7 @@ pub fn decode_sequence(
         background: Some(AnimationBackground::PaletteIndex(background_index)),
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
     };
     Ok((sequence, consumed))
 }
