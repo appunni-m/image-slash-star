@@ -120,7 +120,7 @@ format-qualified structured-error cases. Accepted rows are labeled
 enum-value rows are labeled `defensive_model`. They test the public migration
 boundary without weakening the primary Pillow encode/decode contract.
 
-The decode-policy manifest adds 79 `defensive_model` cases. It covers below,
+The decode-policy manifest adds 87 `defensive_model` cases. It covers below,
 at, and above the encoded-input, canvas-width, canvas-height, canvas-pixel, and
 primary-decoded-byte maxima for inspection, still decode, sequence decode,
 immutable-source construction, and lazy materialization. Successful paths
@@ -130,7 +130,10 @@ detection; two malformed preflight rows prove inspection errors propagate
 through policy-aware decode. A manifest-described AVIF `ispe` mutation proves
 that an unrepresentable primary transfer length remains a format-qualified
 `Dimensions` failure. Error paths assert the complete typed limit fields and
-retry-safe lazy-cache behavior.
+retry-safe lazy-cache behavior. Eight additional rows prove extreme
+`u64::MAX`/`u32::MAX` maxima succeed on the tiny `size_1x1` asset, so the
+inclusive comparisons and `expected_bytes` checked arithmetic are exercised
+without allocating enormous fixtures.
 
 The sequence-policy manifest adds 19 `defensive_model` cases for the
 frame-count resource. It covers below, at, and above a three-frame GIF's
@@ -145,7 +148,7 @@ materialization; GIF/TIFF chains whose inspection cannot prove an exact count
 remain governed by the inspection-completeness model rather than this
 resource.
 
-The same manifest grows to 32 cases for the later-frame and cumulative
+The same manifest grows to 35 cases for the later-frame and cumulative
 decoded-byte resources. `max_frame_decoded_bytes` covers zero/below/at/above
 the first later frame's transfer-byte length, and `max_sequence_decoded_bytes`
 covers the primary-only, zero, total-below/at/above cumulative boundaries.
@@ -155,6 +158,8 @@ the structured `LimitExceeded` value across the codec boundary. A second
 fixture-driven test runs the same boundaries against real three-frame GIF,
 two-frame APNG, animated WebP, multipage TIFF, and animated AVIF assets in
 their enabled lanes, including a palette-less later GIF frame.
+Three near-maximum rows (`u32::MAX` frames, `u64::MAX` later-frame bytes, and
+`u64::MAX` cumulative bytes) pass on the same small GIF.
 
 The trailing-input manifest pins the per-format trailing policy: three payloads
 appended to a valid asset of every format must produce identical still pixels,
@@ -212,9 +217,9 @@ The accepted Coverage MCP result for the same implementation state is:
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `cf69673b-2a53-442d-aa38-c4b60d125680`
+Coverage MCP run: `a4e313be-bf91-48cf-a531-0993da0d62a3`
 
-Snapshot: `bd24e104-a078-407e-a3ca-ec0076fc6aff`
+Snapshot: `0cab584b-d234-40b9-aeb4-977eec596dd7`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -229,10 +234,10 @@ Typed-option error manifest SHA-256:
 `657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb`
 
 Decode-policy manifest SHA-256:
-`cba48670d83d797cf519cb9e37bf683ba7d9354bf879655e1c2b7000a54fc937`
+`b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a`
 
 Sequence-policy manifest SHA-256:
-`8dc6b4937841b9feb533382b6d3cf8babe585a96275cdfc2b4771c301f9b0dcf`
+`3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51`
 
 Trailing-input manifest SHA-256:
 `b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb`

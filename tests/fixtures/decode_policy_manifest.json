@@ -98,6 +98,15 @@
     {"id": "inspect_primary_decoded_bytes_layout_overflow", "operation": "inspect_layout_overflow", "resource": "primary_decoded_bytes", "maximum": 18446744073709551615, "status": "dimensions"},
 
     {"id": "decode_preflight_malformed", "operation": "decode_malformed", "resource": "width", "maximum": 2, "status": "malformed"},
-    {"id": "decode_sequence_preflight_malformed", "operation": "decode_sequence_malformed", "resource": "width", "maximum": 2, "status": "malformed"}
+    {"id": "decode_sequence_preflight_malformed", "operation": "decode_sequence_malformed", "resource": "width", "maximum": 2, "status": "malformed"},
+
+    {"id": "inspect_encoded_near_max", "operation": "inspect", "resource": "encoded_bytes", "maximum": 18446744073709551615, "status": "ok"},
+    {"id": "decode_sequence_encoded_near_max", "operation": "decode_sequence", "resource": "encoded_bytes", "maximum": 18446744073709551615, "status": "ok"},
+    {"id": "inspect_width_near_max", "operation": "inspect", "resource": "width", "maximum": 4294967295, "status": "ok"},
+    {"id": "decode_sequence_width_near_max", "operation": "decode_sequence", "resource": "width", "maximum": 4294967295, "status": "ok"},
+    {"id": "inspect_pixels_near_max", "operation": "inspect", "resource": "pixels", "maximum": 18446744073709551615, "status": "ok"},
+    {"id": "decode_sequence_pixels_near_max", "operation": "decode_sequence", "resource": "pixels", "maximum": 18446744073709551615, "status": "ok"},
+    {"id": "decode_primary_decoded_bytes_near_max", "operation": "decode", "resource": "primary_decoded_bytes", "maximum": 18446744073709551615, "status": "ok"},
+    {"id": "decode_sequence_primary_decoded_bytes_near_max", "operation": "decode_sequence", "resource": "primary_decoded_bytes", "maximum": 18446744073709551615, "status": "ok"}
   ]
 }

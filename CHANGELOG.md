@@ -38,6 +38,10 @@ All notable changes will be documented in this file. This project follows
 - A generated, CI-checked malformed-class ledger cataloguing every active
   decode-error class with Pillow outcome, Rust error contract, evidence
   origin, and specification status.
+- Near-limit arithmetic rows at `u64::MAX`/`u32::MAX` across every policy
+  resource, plus the documented allocation policy: checked preflight gates
+  hostile input while codec-internal allocations remain infallible with
+  Rust's default OOM abort.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
