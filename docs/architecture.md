@@ -200,6 +200,7 @@ translation cannot be bypassed.
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
+| `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |

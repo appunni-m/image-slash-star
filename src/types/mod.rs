@@ -689,6 +689,16 @@ impl ImageInfo {
     pub fn decoded_bytes(&self) -> ImageResult<usize> {
         self.mode.expected_bytes(self.width, self.height)
     }
+
+    /// Exact transfer layout for this inspected image.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn transfer_layout(&self) -> ImageResult<TransferLayout> {
+        TransferLayout::from_mode(self.mode, self.width, self.height)
+    }
 }
 
 /// Pixel coordinate selected as the activation point of a Windows cursor.
@@ -1250,6 +1260,61 @@ impl ImageMode {
     }
 }
 
+/// Minimal transfer-layout descriptor for decoded sample bytes.
+///
+/// Current layouts are either tightly packed interleaved samples or packed
+/// `L1` bit rows; there is no row padding or alignment requirement beyond
+/// whole-byte rows, and no planar destination exists yet. The descriptor is
+/// produced by the same arithmetic as [`ImageMode::expected_bytes`], so a
+/// preflighted buffer of [`Self::total_bytes`] is exactly what
+/// [`crate::decode_into`] accepts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TransferLayout {
+    /// Canvas width in pixels.
+    pub width: u32,
+    /// Canvas height in pixels.
+    pub height: u32,
+    /// Decoded observable mode.
+    pub mode: ImageMode,
+    /// Bytes per row; packed `L1` rows pad the final byte of each row.
+    pub row_bytes: usize,
+    /// Exact total decoded byte length.
+    pub total_bytes: usize,
+    /// Whether samples are packed `L1` bit rows rather than tightly packed
+    /// interleaved samples.
+    pub packed_rows: bool,
+    /// Required destination alignment in bytes (1 for all current layouts).
+    pub alignment: usize,
+}
+
+impl TransferLayout {
+    /// Compute the transfer layout for one mode and canvas.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn from_mode(mode: ImageMode, width: u32, height: u32) -> ImageResult<Self> {
+        let total_bytes = mode.expected_bytes(width, height)?;
+        let row_bytes = if mode == ImageMode::L1 {
+            (width as usize).div_ceil(8)
+        } else {
+            (width as usize)
+                .checked_mul(usize::from(mode.color_type().bytes_per_pixel()))
+                .ok_or_else(|| ImageError::dimensions("decoded row byte length overflows"))?
+        };
+        Ok(Self {
+            width,
+            height,
+            mode,
+            row_bytes,
+            total_bytes,
+            packed_rows: mode == ImageMode::L1,
+            alignment: 1,
+        })
+    }
+}
+
 /// RGB palette and optional per-entry alpha values for indexed images.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImagePalette {
@@ -1408,6 +1473,16 @@ impl DecodedImage {
     pub fn with_source_color(mut self, color: SourceColor) -> Self {
         self.source_color = color;
         self
+    }
+
+    /// Exact transfer layout for these decoded sample bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn transfer_layout(&self) -> ImageResult<TransferLayout> {
+        TransferLayout::from_mode(self.mode, self.width, self.height)
     }
 
     /// Verify dimensions, byte layout, mode, and palette invariants.

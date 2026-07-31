@@ -285,6 +285,11 @@ length, `decode_into` must copy byte-identical pixels into an exact buffer,
 short and oversized destinations must be rejected with `Parameter` and left
 untouched, and policy limits must still apply before the length check.
 
+The transfer-layout contract is table-driven: for L1, RGB, RGBA, indexed, and
+La8 fixtures, `TransferLayout` fields must agree with inspection and decoded
+bytes, row bytes must satisfy the packing rules (packed L1 rows pad the final
+byte), and `decode_into` must accept exactly `total_bytes`.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
