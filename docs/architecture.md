@@ -269,6 +269,15 @@ successful construction/inspection is the complete check, so later pixel
 decompression can still fail. PNG has Pillow's structural scan; this crate
 also retains independently proved JPEG and WebP structural verifiers.
 
+`VerificationScope::provides()` orders `HeaderOnly` < `Structure` <
+`FullPixels`. `EncodedImage::verify_with_scope(requested)` accepts every scope
+the format provides and fails with a format-qualified `Unsupported` for a
+stronger request, never reporting weaker evidence as sufficient. No codec
+currently provides `FullPixels`, so requesting it always fails. The default
+`verify()` remains the format's Pillow-compatible scope; verification still
+reparses independently without a caller work budget, which remains backlog
+under API-023/030.
+
 The crate performs no filesystem or network I/O and emits no logs. Applications
 decide where bytes come from and how errors are recorded.
 

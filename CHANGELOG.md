@@ -27,6 +27,9 @@ All notable changes will be documented in this file. This project follows
 - A sequence-policy defensive manifest with 19 frame-count boundary and
   precedence cases across inspection, still/sequence decode, immutable-source
   construction, and lazy materialization.
+- Explicit verification-strength requests through `verify_with_scope`, with a
+  never-provided `FullPixels` scope and format-qualified `Unsupported` failure
+  instead of silently downgrading stronger requests.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
