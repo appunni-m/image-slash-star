@@ -2272,6 +2272,16 @@ fn basic_inspection_reports_completeness() -> Result<(), Box<dyn std::error::Err
             1,
         ),
         (
+            "webp extended still",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/alpha_uncompressed.webp",
+            true,
+            Some(1),
+            false,
+            true,
+            1,
+        ),
+        (
             "png apng",
             cfg!(feature = "png"),
             "tests/fixtures/input/images/png/apng_l_over.png",
@@ -2367,6 +2377,14 @@ fn basic_inspection_reports_completeness() -> Result<(), Box<dyn std::error::Err
         let basic = image_slash_star::inspect_basic(&data)?;
         assert_eq!(basic, full, "avif basic matches full");
     }
+    assert!(
+        image_slash_star::inspect_basic(b"not an image").is_err(),
+        "unknown signature must fail basic inspection"
+    );
+    assert!(
+        image_slash_star::inspect_basic(b"GIF89a").is_err(),
+        "truncated header must fail basic inspection"
+    );
     Ok(())
 }
 
