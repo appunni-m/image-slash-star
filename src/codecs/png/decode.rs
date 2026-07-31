@@ -20,6 +20,27 @@ const ADAM7: [(usize, usize, usize, usize); 7] = [
     (0, 1, 1, 2),
 ];
 
+/// Chunk types the PNG model interprets and therefore never retains as opaque
+/// container blocks.
+const INTERPRETED_CHUNKS: [&[u8; 4]; 8] = [
+    b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND", b"acTL", b"fcTL", b"fdAT",
+];
+
+/// Whether an uninterpreted ancillary chunk is retained as an opaque block.
+fn retained_opaque_chunk(kind: &[u8; 4]) -> bool {
+    kind[0] & 0x20 != 0 && !INTERPRETED_CHUNKS.contains(&kind)
+}
+
+fn opaque_block(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueBlock {
+    crate::types::OpaqueBlock {
+        kind: kind.to_vec(),
+        data: data.to_vec(),
+        // PNG's safe-to-copy bit is the lowercase bit of the chunk name's
+        // fourth character.
+        safe_to_copy: kind[3] & 0x20 != 0,
+    }
+}
+
 /// Decode the first image represented by a PNG or APNG stream.
 pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     // Pillow's load path accepts bad IDAT CRCs after lazy construction has
@@ -33,6 +54,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let mut saw_idat = false;
     let mut saw_post_idat_control = false;
     let mut next_sequence = 0;
+    let mut opaque_blocks = Vec::new();
     for chunk in &mut chunks {
         let chunk = chunk?;
         match &chunk.kind {
@@ -65,6 +87,9 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
             b"IEND" => {
                 break;
             }
+            _ if retained_opaque_chunk(&chunk.kind) => {
+                opaque_blocks.push(opaque_block(chunk.kind, chunk.data));
+            }
             _ => {}
         }
     }
@@ -81,7 +106,8 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         &compressed,
         palette_rgb,
         palette_alpha,
-    )?;
+    )?
+    .with_opaque_blocks(opaque_blocks);
     Ok((image, chunks.position))
 }
 
@@ -134,6 +160,7 @@ struct ParsedApng {
     default_compressed: Vec<u8>,
     default_control: Option<ApngFrameControl>,
     frames: Vec<ApngCompressedFrame>,
+    opaque_blocks: Vec<crate::types::OpaqueBlock>,
 }
 
 /// Decode every APNG presentation while retaining exact source controls.
@@ -142,8 +169,11 @@ pub fn decode_sequence(
     budget: &mut SequenceDecodeBudget,
 ) -> CodecResult<(DecodedSequence, usize)> {
     let Some((parsed, consumed)) = parse_apng(data)? else {
-        let (image, consumed) = decode(data)?;
-        return Ok((DecodedSequence::from_image(image), consumed));
+        let (mut image, consumed) = decode(data)?;
+        let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+        let mut sequence = DecodedSequence::from_image(image);
+        sequence.opaque_blocks = opaque_blocks;
+        return Ok((sequence, consumed));
     };
 
     let ParsedApng {
@@ -154,6 +184,7 @@ pub fn decode_sequence(
         default_compressed,
         default_control,
         frames: mut compressed_frames,
+        opaque_blocks,
     } = parsed;
     let mut output_frames = Vec::new();
     let mut canvas = None;
@@ -252,6 +283,7 @@ pub fn decode_sequence(
             loop_count: Some(loop_count),
             background: None,
             kind: crate::types::SequenceKind::TimedAnimation,
+            opaque_blocks,
         },
         consumed,
     ))
@@ -298,6 +330,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut frames = Vec::new();
     let mut next_sequence = 0u32;
     let mut controlled_frames = 0u32;
+    let mut opaque_blocks = Vec::new();
 
     for chunk in &mut chunks {
         let chunk = chunk?;
@@ -370,6 +403,9 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                 frame.compressed.extend_from_slice(&chunk.data[4..]);
             }
             b"IEND" => break,
+            _ if retained_opaque_chunk(&chunk.kind) => {
+                opaque_blocks.push(opaque_block(chunk.kind, chunk.data));
+            }
             _ => {}
         }
     }
@@ -404,6 +440,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             default_compressed,
             default_control,
             frames,
+            opaque_blocks,
         },
         chunks.position,
     )))

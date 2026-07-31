@@ -128,6 +128,7 @@ pub fn decode_sequence(
             loop_count,
             background,
             kind: crate::types::SequenceKind::TimedAnimation,
+            opaque_blocks: Vec::new(),
         },
         consumed,
     ))

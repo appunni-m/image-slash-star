@@ -214,6 +214,12 @@ mask, and a reserved auxiliary variant for future separate alpha channels.
 Decoded transfer bytes remain the documented normalized unassociated layout;
 the descriptor records only what the source declares.
 
+Decoded images and sequences retain `OpaqueBlock` records for container blocks
+the codec does not interpret, in original order with duplicates and the
+container's safe-to-copy flag (currently PNG unknown ancillary chunks).
+Default encoding never replays retained blocks implicitly; an explicit replay
+API would have to define collisions with encoder-generated blocks first.
+
 Codec/capability vocabulary enums are non-exhaustive, including `ImageFormat`,
 `VerificationScope`, `ImageMode`, `SequenceKind`, `SourceAlpha`, and animation
 presentation enums. Downstream `match` expressions must include a fallback so

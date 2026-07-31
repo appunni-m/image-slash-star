@@ -140,6 +140,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         palette: None,
         cursor_hotspot: None,
         source: crate::types::SourceDescriptor::new(),
+        opaque_blocks: Vec::new(),
     })
 }
 
@@ -314,6 +315,7 @@ fn decoded_sequence(
             loop_count: None,
             background: None,
             kind: crate::types::SequenceKind::TimedAnimation,
+            opaque_blocks: Vec::new(),
         },
         consumed,
     ))
@@ -353,6 +355,7 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
         palette: None,
         cursor_hotspot: None,
         source: source_descriptor,
+        opaque_blocks: Vec::new(),
     }
 }
 

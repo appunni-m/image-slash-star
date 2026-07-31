@@ -105,6 +105,15 @@ reserved auxiliary class. It never changes decoded transfer bytes, which stay
 the documented normalized unassociated layout unless a codec explicitly
 retains source-order bytes.
 
+Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
+payload-only records with a format kind, the raw encoded payload, and the
+container's safe-to-copy flag, kept in original stream order including
+duplicates. PNG decode retains every uninterpreted ancillary chunk; critical
+and interpreted chunks are never opaque, and default encoding never replays
+retained blocks. Other containers extend the same model as their parsers
+retain unknown blocks. Retained blocks count toward the caller-set
+`max_metadata_bytes` extent.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
 blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,

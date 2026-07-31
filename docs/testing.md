@@ -226,6 +226,14 @@ declares associated alpha, so that mapping arm is retained through the
 coverage model rather than a Pillow fixture. Decoded transfer bytes remain
 the normalized unassociated layout regardless of the source declaration.
 
+The opaque-block contract is table-driven: a minimal PNG is extended with
+unknown ancillary chunks (safe-to-copy and unsafe-to-copy names, a duplicate,
+a post-IDAT chunk, and a critical chunk) and the test asserts exact
+kind/payload/order/safe-to-copy on still and sequence decode, empty retention
+for unmodified fixtures, APNG sequence retention, and that default encoding
+never replays the retained chunk types. A caller-set `max_metadata_bytes`
+rejects the same input before retention can bypass the policy extent.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

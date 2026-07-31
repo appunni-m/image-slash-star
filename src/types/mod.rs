@@ -177,6 +177,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         palette: None,
         cursor_hotspot: None,
         source: SourceDescriptor::new(),
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let _ = DecodedImage::new(1, 1, vec![0], ColorType::L8)
@@ -193,6 +194,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let _ = DecodedSequence {
@@ -202,6 +204,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let _ = DecodedSequence {
@@ -211,6 +214,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let frame = DecodedFrame::source_rectangle(
@@ -229,6 +233,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let right_outside_frame = DecodedFrame::source_rectangle(
@@ -247,6 +252,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let invalid_frame = DecodedFrame::source_rectangle(
@@ -265,6 +271,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let right_overflow_frame = DecodedFrame::source_rectangle(
@@ -283,6 +290,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let bottom_overflow_frame = DecodedFrame::source_rectangle(
@@ -301,6 +309,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
 
@@ -322,6 +331,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
 
@@ -342,6 +352,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let mut zero_rect_height = DecodedFrame::source_rectangle(
@@ -361,6 +372,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
 
@@ -381,6 +393,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let mut mismatched_source_height = DecodedFrame::source_rectangle(
@@ -400,6 +413,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
 
@@ -422,6 +436,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
     let rendered_height = DecodedFrame::rendered_canvas(
@@ -443,6 +458,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
         kind: SequenceKind::SingleFrame,
+        opaque_blocks: Vec::new(),
     }
     .validate();
 
@@ -695,6 +711,24 @@ impl SourceDescriptor {
     pub const fn is_empty(&self) -> bool {
         self.byte_order.is_none() && self.alpha.is_none()
     }
+}
+
+/// One opaque container block retained from an encoded source in original
+/// order.
+///
+/// Blocks are payload-only: length, type framing, checksums, and offsets are
+/// not retained. A codec may retain only blocks its own container defines;
+/// blocks from one format are never replayed by another. Default encoding
+/// never writes retained blocks implicitly; a future explicit replay API must
+/// define collisions with encoder-generated blocks first.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OpaqueBlock {
+    /// Format-specific block type label (PNG: the four-byte chunk type).
+    pub kind: Vec<u8>,
+    /// Raw encoded payload bytes.
+    pub data: Vec<u8>,
+    /// Whether the container marks this block safe to copy on re-encode.
+    pub safe_to_copy: bool,
 }
 
 impl<T> Decoded<T> {
@@ -1052,6 +1086,8 @@ pub struct DecodedImage {
     pub cursor_hotspot: Option<CursorHotspot>,
     /// Structural facts retained from the encoded source.
     pub source: SourceDescriptor,
+    /// Opaque container blocks retained in original order.
+    pub opaque_blocks: Vec<OpaqueBlock>,
 }
 
 impl DecodedImage {
@@ -1070,6 +1106,7 @@ impl DecodedImage {
             palette: None,
             cursor_hotspot: None,
             source: SourceDescriptor::new(),
+            opaque_blocks: Vec::new(),
         }
     }
 
@@ -1088,6 +1125,7 @@ impl DecodedImage {
             palette: None,
             cursor_hotspot: None,
             source: SourceDescriptor::new(),
+            opaque_blocks: Vec::new(),
         }
     }
 
@@ -1109,6 +1147,13 @@ impl DecodedImage {
     #[must_use]
     pub fn with_source_descriptor(mut self, source: SourceDescriptor) -> Self {
         self.source = source;
+        self
+    }
+
+    /// Attach opaque container blocks without changing decoded sample bytes.
+    #[must_use]
+    pub fn with_opaque_blocks(mut self, opaque_blocks: Vec<OpaqueBlock>) -> Self {
+        self.opaque_blocks = opaque_blocks;
         self
     }
 
@@ -1397,6 +1442,8 @@ pub struct DecodedSequence {
     pub background: Option<AnimationBackground>,
     /// Container meaning of this sequence.
     pub kind: SequenceKind,
+    /// Opaque container blocks retained in original order.
+    pub opaque_blocks: Vec<OpaqueBlock>,
 }
 
 impl DecodedSequence {
@@ -1423,6 +1470,7 @@ impl DecodedSequence {
             loop_count: None,
             background: None,
             kind: SequenceKind::SingleFrame,
+            opaque_blocks: Vec::new(),
         }
     }
 

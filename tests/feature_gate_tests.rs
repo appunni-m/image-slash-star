@@ -806,6 +806,165 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+fn png_crc32(bytes: &[u8]) -> u32 {
+    let mut crc = 0xffff_ffffu32;
+    for &byte in bytes {
+        crc ^= u32::from(byte);
+        for _ in 0..8 {
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0xedb8_8320
+            } else {
+                crc >> 1
+            };
+        }
+    }
+    !crc
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "test payloads are tiny fixed literals that always fit u32"
+)]
+fn png_chunk(kind: &[u8; 4], payload: &[u8]) -> Vec<u8> {
+    let mut chunk = Vec::with_capacity(12usize.wrapping_add(payload.len()));
+    chunk.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+    chunk.extend_from_slice(kind);
+    chunk.extend_from_slice(payload);
+    let crc = png_crc32(&chunk[4..]);
+    chunk.extend_from_slice(&crc.to_be_bytes());
+    chunk
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "offsets are bounds-checked against the in-memory fixture slice"
+)]
+fn png_chunk_offset(data: &[u8], kind: &[u8; 4]) -> Result<usize, Box<dyn std::error::Error>> {
+    let mut position = 8usize;
+    while position.wrapping_add(8) <= data.len() {
+        let length = u32::from_be_bytes([
+            data[position],
+            data[position + 1],
+            data[position + 2],
+            data[position + 3],
+        ]) as usize;
+        if &data[position.wrapping_add(4)..position.wrapping_add(8)] == kind {
+            return Ok(position);
+        }
+        position = position.wrapping_add(12).wrapping_add(length);
+    }
+    Err(format!("PNG chunk {kind:?} not found").into())
+}
+
+fn contains_chunk_type(data: &[u8], kind: &[u8; 4]) -> bool {
+    data.windows(4).any(|window| window == kind)
+}
+
+#[test]
+fn opaque_blocks_match_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::OpaqueBlock;
+
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+
+    // Insert unknown ancillary chunks around the image data: a safe-to-copy
+    // private chunk before IDAT, its duplicate, an unsafe-to-copy variant, an
+    // unknown chunk after IDAT, and a critical chunk that must never be
+    // retained as opaque.
+    let safe = png_chunk(b"prVt", b"safe-payload");
+    let duplicate = png_chunk(b"prVt", b"duplicate-payload");
+    let unsafe_chunk = png_chunk(b"prVT", b"unsafe-payload");
+    let after_idat = png_chunk(b"teSt", b"after-idat-payload");
+    let critical = png_chunk(b"ABCD", b"critical-payload");
+    let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+    let iend_offset = png_chunk_offset(&base, b"IEND")?;
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&base[..idat_offset]);
+    bytes.extend_from_slice(&safe);
+    bytes.extend_from_slice(&duplicate);
+    bytes.extend_from_slice(&unsafe_chunk);
+    bytes.extend_from_slice(&critical);
+    bytes.extend_from_slice(&base[idat_offset..iend_offset]);
+    bytes.extend_from_slice(&after_idat);
+    bytes.extend_from_slice(&base[iend_offset..]);
+
+    let expected = vec![
+        OpaqueBlock {
+            kind: b"prVt".to_vec(),
+            data: b"safe-payload".to_vec(),
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: b"prVt".to_vec(),
+            data: b"duplicate-payload".to_vec(),
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: b"prVT".to_vec(),
+            data: b"unsafe-payload".to_vec(),
+            safe_to_copy: false,
+        },
+        OpaqueBlock {
+            kind: b"teSt".to_vec(),
+            data: b"after-idat-payload".to_vec(),
+            safe_to_copy: true,
+        },
+    ];
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(decoded.content.opaque_blocks, expected, "still decode");
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.opaque_blocks, expected,
+        "still fallback sequence decode"
+    );
+
+    // Default encoding must not replay retained opaque blocks.
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Png);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+    for kind in [b"prVt", b"prVT", b"teSt", b"ABCD"] {
+        assert!(
+            !contains_chunk_type(&encoded, kind),
+            "encoded PNG must not replay retained chunk {kind:?}"
+        );
+    }
+
+    // The unmodified fixture retains no opaque blocks.
+    let plain = image_slash_star::decode(&base)?;
+    assert!(plain.content.opaque_blocks.is_empty());
+    let plain_sequence = image_slash_star::decode_sequence(&base)?;
+    assert!(plain_sequence.content.opaque_blocks.is_empty());
+
+    // Retained opaque blocks count toward the metadata policy extent, so a
+    // caller-set limit rejects before retention can bypass resource bounds.
+    let strict_policy = image_slash_star::DecodePolicy::new().with_max_metadata_bytes(1);
+    assert!(matches!(
+        image_slash_star::decode_with_policy(&bytes, &strict_policy),
+        Err(image_slash_star::ImageError::LimitExceeded { .. })
+    ));
+
+    // APNG sequence decode retains the same ordered container-level blocks.
+    let apng_base = fs::read(root.join("tests/fixtures/input/images/png/apng_l_over.png"))?;
+    let apng_idat = png_chunk_offset(&apng_base, b"IDAT")?;
+    let apng_iend = png_chunk_offset(&apng_base, b"IEND")?;
+    let mut apng = Vec::new();
+    apng.extend_from_slice(&apng_base[..apng_idat]);
+    apng.extend_from_slice(&safe);
+    apng.extend_from_slice(&apng_base[apng_idat..apng_iend]);
+    apng.extend_from_slice(&after_idat);
+    apng.extend_from_slice(&apng_base[apng_iend..]);
+    let apng_sequence = image_slash_star::decode_sequence(&apng)?;
+    assert_eq!(
+        apng_sequence.content.opaque_blocks,
+        vec![expected[0].clone(), expected[3].clone()],
+        "APNG sequence decode"
+    );
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -1013,6 +1172,7 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         loop_count: None,
         background: None,
         kind: image_slash_star::SequenceKind::TimedAnimation,
+        opaque_blocks: Vec::new(),
     };
     let sequence_error = match image_slash_star::encode_sequence(
         &sequence,
