@@ -24,6 +24,16 @@ macro_rules! parse_failure {
     };
 }
 
+macro_rules! parse_need_more {
+    ($minimum:expr) => {
+        CodecError::NeedMore {
+            minimum: $minimum,
+            message: concat!("invalid AVIF metadata structure at ", file!(), ":", line!())
+                .to_owned(),
+        }
+    };
+}
+
 #[derive(Clone, Copy)]
 struct BoxView<'a> {
     kind: FourCc,
@@ -58,11 +68,28 @@ impl Budget {
 struct Reader<'a> {
     data: &'a [u8],
     offset: usize,
+    /// When `true`, reads beyond the input are incremental truncation;
+    /// bounded sub-parsers classify them as terminal malformed data.
+    truncation: bool,
 }
 
 impl<'a> Reader<'a> {
+    /// Parse a slice that was already bounded by a validated box size.
     const fn new(data: &'a [u8]) -> Self {
-        Self { data, offset: 0 }
+        Self {
+            data,
+            offset: 0,
+            truncation: false,
+        }
+    }
+
+    /// Parse the whole input; a short read means the caller must append bytes.
+    const fn whole(data: &'a [u8]) -> Self {
+        Self {
+            data,
+            offset: 0,
+            truncation: true,
+        }
     }
 
     fn remaining(self) -> usize {
@@ -78,10 +105,11 @@ impl<'a> Reader<'a> {
             .offset
             .checked_add(length)
             .ok_or_else(|| parse_failure!())?;
-        let bytes = self
-            .data
-            .get(self.offset..end)
-            .ok_or_else(|| parse_failure!())?;
+        let bytes = match self.data.get(self.offset..end) {
+            Some(bytes) => bytes,
+            None if self.truncation => return Err(parse_need_more!(end)),
+            None => return Err(parse_failure!()),
+        };
         self.offset = end;
         Ok(bytes)
     }
@@ -128,10 +156,13 @@ impl<'a> Reader<'a> {
             .data
             .get(self.offset..)
             .ok_or_else(|| parse_failure!())?;
-        let length = remaining
-            .iter()
-            .position(|&byte| byte == 0)
-            .ok_or_else(|| parse_failure!())?;
+        let length = match remaining.iter().position(|&byte| byte == 0) {
+            Some(length) => length,
+            None if self.truncation => {
+                return Err(parse_need_more!(self.data.len().saturating_add(1)));
+            }
+            None => return Err(parse_failure!()),
+        };
         let value = &remaining[..length];
         self.offset = self.offset.saturating_add(length).saturating_add(1);
         Ok(value)
@@ -214,7 +245,7 @@ pub(super) fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
 
 fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
     let mut budget = Budget::default();
-    let mut reader = Reader::new(data);
+    let mut reader = Reader::whole(data);
     let first = next_box(&mut reader, true, &mut budget)
         .map_err(|error| error.at(0, "avif_box"))?
         .ok_or_else(|| parse_failure!())?;
@@ -1698,6 +1729,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut overflow_reader = Reader {
         data: &[],
         offset: usize::MAX,
+        truncation: false,
     };
     let _ = overflow_reader.remaining();
     let _ = overflow_reader.is_empty();
@@ -1713,6 +1745,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = short_reader.take(0);
     let _ = short_reader.u8();
     let _ = Reader::new(b"unterminated").c_string();
+    let _ = Reader::whole(&[]).u8();
+    let _ = Reader::whole(&[0, 0, 0]).take(4);
+    let _ = Reader::whole(b"unterminated").c_string();
     let mut integer_reader = Reader::new(&[0, 0, 0, 0, 0, 0, 0, 1]);
     let _ = integer_reader.u64();
 

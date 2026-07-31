@@ -1,6 +1,6 @@
 //! GIF container inspection without LZW pixel decoding.
 
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
 use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -24,7 +24,7 @@ pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
 fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     // The private inspector is reached only after root signature detection,
     // which proves an exact six-byte GIF87a/GIF89a prefix.
-    let mut input = Input::new(&data[6..]);
+    let mut input = Input::new(data);
     let logical_width = u32::from(input.u16()?);
     let logical_height = u32::from(input.u16()?);
     let screen_packed = input.u8()?;
@@ -47,9 +47,10 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
                 complete = false;
                 break;
             }
-            return Err(CodecError::Malformed(
-                "GIF contains no image frame".to_owned(),
-            ));
+            return Err(CodecError::NeedMore {
+                minimum: input.position.wrapping_add(1),
+                message: "GIF contains no image frame".to_owned(),
+            });
         }
         // `is_eof()` above proves the marker byte is present.
         let block = input.data[input.position];
@@ -184,7 +185,7 @@ struct Input<'a> {
 
 impl<'a> Input<'a> {
     const fn new(data: &'a [u8]) -> Self {
-        Self { data, position: 0 }
+        Self { data, position: 6 }
     }
 
     fn is_eof(&self) -> bool {
@@ -192,11 +193,14 @@ impl<'a> Input<'a> {
     }
 
     fn u8(&mut self) -> CodecResult<u8> {
-        let value = *self
-            .data
-            .get(self.position)
-            .malformed("truncated GIF byte field")?;
-        self.position = self.position.wrapping_add(1);
+        let here = self.position;
+        let value = need_slice(
+            self.data,
+            here,
+            codec_add_end(here, 1, "truncated GIF byte field")?,
+            "truncated GIF byte field",
+        )?[0];
+        self.position = here.wrapping_add(1);
         Ok(value)
     }
 
@@ -206,11 +210,9 @@ impl<'a> Input<'a> {
     }
 
     fn bytes(&mut self, length: usize) -> CodecResult<&'a [u8]> {
-        let end = self.position.wrapping_add(length);
-        let bytes = self
-            .data
-            .get(self.position..end)
-            .malformed("truncated GIF field")?;
+        let here = self.position;
+        let end = codec_add_end(here, length, "truncated GIF field")?;
+        let bytes = need_slice(self.data, here, end, "truncated GIF field")?;
         self.position = end;
         Ok(bytes)
     }

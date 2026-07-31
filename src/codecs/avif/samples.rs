@@ -21,6 +21,15 @@ macro_rules! parse_failure {
     };
 }
 
+macro_rules! parse_need_more {
+    ($minimum:expr) => {
+        CodecError::NeedMore {
+            minimum: $minimum,
+            message: concat!("invalid AVIF sample structure at ", file!(), ":", line!()).to_owned(),
+        }
+    };
+}
+
 #[cfg(target_pointer_width = "32")]
 fn usize_from_u64(value: u64) -> ParseResult<usize> {
     usize::try_from(value).map_err(|_| parse_failure!())
@@ -38,7 +47,12 @@ pub(super) struct ByteSpan {
 }
 
 impl ByteSpan {
-    fn from_offset_size(offset: u64, size: u64, limit: usize) -> ParseResult<Self> {
+    fn from_offset_size(
+        offset: u64,
+        size: u64,
+        limit: usize,
+        truncation: bool,
+    ) -> ParseResult<Self> {
         let end = offset.checked_add(size).ok_or_else(|| parse_failure!())?;
         #[cfg(target_pointer_width = "32")]
         let start = usize_from_u64(offset)?;
@@ -49,6 +63,9 @@ impl ByteSpan {
         #[cfg(target_pointer_width = "64")]
         let end = usize_from_u64(end);
         if end > limit {
+            if truncation {
+                return Err(parse_need_more!(end));
+            }
             return Err(parse_failure!());
         }
         Ok(Self { start, end })
@@ -75,6 +92,9 @@ struct Reader<'input> {
     input: &'input [u8],
     offset: usize,
     end: usize,
+    /// When `true`, reads beyond the whole input are incremental truncation;
+    /// spans bounded by a validated box are terminal malformed data.
+    truncation: bool,
 }
 
 impl<'input> Reader<'input> {
@@ -83,6 +103,7 @@ impl<'input> Reader<'input> {
             input,
             offset: span.start,
             end: span.end,
+            truncation: false,
         }
     }
 
@@ -91,6 +112,7 @@ impl<'input> Reader<'input> {
             input,
             offset: 0,
             end: input.len(),
+            truncation: true,
         }
     }
 
@@ -104,6 +126,9 @@ impl<'input> Reader<'input> {
             .checked_add(length)
             .ok_or_else(|| parse_failure!())?;
         if end > self.end {
+            if self.truncation {
+                return Err(parse_need_more!(end));
+            }
             return Err(parse_failure!());
         }
         let span = ByteSpan {
@@ -162,7 +187,13 @@ impl<'input> Reader<'input> {
         let length = remaining
             .iter()
             .position(|&byte| byte == 0)
-            .ok_or_else(|| parse_failure!())?;
+            .ok_or_else(|| {
+                if self.truncation {
+                    parse_need_more!(self.end.saturating_add(1))
+                } else {
+                    parse_failure!()
+                }
+            })?;
         let value = &remaining[..length];
         self.offset = self.offset.saturating_add(length).saturating_add(1);
         Ok(value)
@@ -723,14 +754,14 @@ fn parse_iloc(
                 .ok_or_else(|| parse_failure!())?;
             let span = match source {
                 ExtentSource::File => {
-                    ByteSpan::from_offset_size(relative, extent_length, input.len())?
+                    ByteSpan::from_offset_size(relative, extent_length, input.len(), true)?
                 }
                 ExtentSource::Idat => {
                     let idat = idat.ok_or_else(|| parse_failure!())?;
                     let start = (idat.start as u64)
                         .checked_add(relative)
                         .ok_or_else(|| parse_failure!())?;
-                    ByteSpan::from_offset_size(start, extent_length, idat.end)?
+                    ByteSpan::from_offset_size(start, extent_length, idat.end, false)?
                 }
             };
             extents.push(span);
@@ -1489,7 +1520,8 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
                 .sample_sizes
                 .get(sample_index)
                 .ok_or_else(|| parse_failure!())?;
-            let span = ByteSpan::from_offset_size(sample_offset, u64::from(size), input.len())?;
+            let span =
+                ByteSpan::from_offset_size(sample_offset, u64::from(size), input.len(), true)?;
             #[allow(clippy::cast_possible_truncation)]
             let sample_number = (sample_index as u32).saturating_add(1);
             samples.push(EncodedSample {
@@ -2313,9 +2345,9 @@ fn coverage_parser_truncations() {
 
 #[cfg(coverage)]
 fn coverage_structural_states() {
-    let _ = ByteSpan::from_offset_size(u64::MAX, 1, usize::MAX);
-    let _ = ByteSpan::from_offset_size(0, u64::MAX, usize::MAX);
-    let _ = ByteSpan::from_offset_size(1, 1, 1);
+    let _ = ByteSpan::from_offset_size(u64::MAX, 1, usize::MAX, true);
+    let _ = ByteSpan::from_offset_size(0, u64::MAX, usize::MAX, true);
+    let _ = ByteSpan::from_offset_size(1, 1, 1, false);
     let mut invalid_width = Reader::whole(&[]);
     let _ = invalid_width.uint(1);
     let mut wide_reader = Reader::whole(&[0; 8]);
@@ -2324,8 +2356,12 @@ fn coverage_structural_states() {
         input: &[],
         offset: 0,
         end: 8,
+        truncation: false,
     };
     let _ = invalid_backing.u8();
+    let _ = Reader::whole(&[]).u8();
+    let _ = Reader::whole(&[0, 0, 0]).take_span(4);
+    let _ = Reader::whole(b"unterminated").c_string();
     invalid_backing.offset = 0;
     let _ = invalid_backing.u16();
     invalid_backing.offset = 0;

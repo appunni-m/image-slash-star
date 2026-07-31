@@ -76,6 +76,13 @@ pub enum ImageErrorKind {
     Parameter,
     /// A caller-configured resource maximum was exceeded.
     LimitExceeded,
+    /// More encoded input is required before the operation can continue.
+    ///
+    /// This is the non-terminal incremental-input status: callers should
+    /// provide at least [`ImageError::minimum_input`] total bytes and retry.
+    /// It is never returned by the complete-slice APIs; those retain the
+    /// legacy terminal [`ImageError::Malformed`] classification.
+    NeedMoreData,
 }
 
 /// Failure returned by image validation, format detection, and codec operations.
@@ -164,6 +171,26 @@ pub enum ImageError {
         /// Observed value that exceeded the maximum.
         observed: u64,
     },
+    /// The input is an incomplete prefix of a supported container.
+    ///
+    /// Retry only after appending enough bytes to reach [`Self::minimum_input`].
+    /// Terminal results ([`Self::UnknownFormat`], [`Self::Malformed`], and
+    /// every other variant) must never be turned into an implicit retry loop.
+    NeedMoreData {
+        /// Detected or partially identified format, when the prefix already
+        /// names one.
+        format: Option<ImageFormat>,
+        /// Public operation that produced the status, when known.
+        stage: Option<ImageErrorStage>,
+        /// Byte offset in the encoded input where the incomplete structure
+        /// begins, when the parser can name it.
+        offset: Option<u64>,
+        /// Stable container-structure identity, when the parser can name it.
+        identity: Option<&'static str>,
+        /// Total encoded-input length (in bytes) the caller should provide
+        /// before retrying.
+        minimum: u64,
+    },
 }
 
 impl ImageError {
@@ -178,6 +205,7 @@ impl ImageError {
             Self::Dimensions { .. } => ImageErrorKind::Dimensions,
             Self::Parameter { .. } => ImageErrorKind::Parameter,
             Self::LimitExceeded { .. } => ImageErrorKind::LimitExceeded,
+            Self::NeedMoreData { .. } => ImageErrorKind::NeedMoreData,
         }
     }
 
@@ -194,6 +222,7 @@ impl ImageError {
             | Self::Dimensions { format, .. }
             | Self::Parameter { format, .. } => *format,
             Self::LimitExceeded { format, .. } => *format,
+            Self::NeedMoreData { format, .. } => *format,
         }
     }
 
@@ -204,7 +233,10 @@ impl ImageError {
     #[must_use]
     pub fn message(&self) -> Option<&str> {
         match self {
-            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+            Self::UnknownFormat
+            | Self::FeatureDisabled { .. }
+            | Self::LimitExceeded { .. }
+            | Self::NeedMoreData { .. } => None,
             Self::Malformed { message, .. }
             | Self::Unsupported { message, .. }
             | Self::Dimensions { message, .. }
@@ -239,7 +271,8 @@ impl ImageError {
             Self::Malformed { stage, .. }
             | Self::Unsupported { stage, .. }
             | Self::Dimensions { stage, .. }
-            | Self::Parameter { stage, .. } => *stage,
+            | Self::Parameter { stage, .. }
+            | Self::NeedMoreData { stage, .. } => *stage,
             Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
         }
     }
@@ -252,7 +285,8 @@ impl ImageError {
             Self::Malformed { offset, .. }
             | Self::Unsupported { offset, .. }
             | Self::Dimensions { offset, .. }
-            | Self::Parameter { offset, .. } => *offset,
+            | Self::Parameter { offset, .. }
+            | Self::NeedMoreData { offset, .. } => *offset,
             Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
         }
     }
@@ -265,8 +299,29 @@ impl ImageError {
             Self::Malformed { identity, .. }
             | Self::Unsupported { identity, .. }
             | Self::Dimensions { identity, .. }
-            | Self::Parameter { identity, .. } => *identity,
+            | Self::Parameter { identity, .. }
+            | Self::NeedMoreData { identity, .. } => *identity,
             Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+        }
+    }
+
+    /// Return the total input length required before an incremental retry,
+    /// or `None` for terminal results.
+    ///
+    /// Only [`ImageErrorKind::NeedMoreData`] carries a retry minimum. Every
+    /// other result is terminal: feeding more bytes and calling again is
+    /// either pointless or explicitly forbidden.
+    #[must_use]
+    pub const fn minimum_input(&self) -> Option<u64> {
+        match self {
+            Self::NeedMoreData { minimum, .. } => Some(*minimum),
+            Self::UnknownFormat
+            | Self::FeatureDisabled { .. }
+            | Self::Malformed { .. }
+            | Self::Unsupported { .. }
+            | Self::Dimensions { .. }
+            | Self::Parameter { .. }
+            | Self::LimitExceeded { .. } => None,
         }
     }
 
@@ -348,6 +403,14 @@ impl fmt::Display for ImageError {
                     f,
                     "{operation:?} exceeded {resource:?} limit: observed {observed}, maximum {maximum}"
                 ),
+            },
+            ImageError::NeedMoreData {
+                format, minimum, ..
+            } => match format {
+                Some(format) => {
+                    write!(f, "need at least {minimum} bytes of {format:?} input")
+                }
+                None => write!(f, "need at least {minimum} bytes of input"),
             },
         }
     }

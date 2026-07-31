@@ -297,6 +297,19 @@ The basic-inspection contract is table-driven: `inspect_basic` must agree with
 a complete count of one (GIF trailer peek, TIFF next-IFD offset, WebP still),
 and header-bound formats (PNG/JPEG/BMP/ICO/AVIF) return the full result.
 
+The incremental-input contract is machine-checked for all eight formats:
+`detect_prefix` must identify complete signatures, return exact or
+progress-aware `NeedMoreData { minimum }` for incomplete prefixes, and return
+terminal `UnknownFormat` for bytes that can never match; `inspect_basic_prefix`
+must return the same header facts as `inspect_basic` as soon as they are
+provable. The feature-gate suite sweeps every byte boundary of one valid
+fixture per format and asserts that each retry minimum exceeds the current
+prefix, that retrying with `minimum` bytes makes progress, and that the
+complete-slice APIs never expose the non-terminal status: legacy detection
+reports `UnknownFormat` for incomplete signatures and legacy inspection maps
+codec-level truncation back to `Malformed` with unchanged messages. Terminal
+results must never be retried.
+
 The borrowed-view contract is table-driven: `EncodedImageView` over
 PNG/GIF/WebP/TIFF fixtures must match the free functions exactly for inspect,
 still and sequence decode, policy variants, verification scope behavior,

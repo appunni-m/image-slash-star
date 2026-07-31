@@ -2995,3 +2995,399 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     }
     Ok(())
 }
+
+#[test]
+fn incremental_detection_reports_exact_minimums_and_terminal_results()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{ImageError, ImageErrorKind};
+
+    type DetectionExpectation = Option<Result<ImageFormat, u64>>;
+
+    // None means terminal UnknownFormat; Some(Ok) means a complete signature;
+    // Some(Err(minimum)) means an incomplete prefix needing `minimum` total
+    // bytes. Near-miss AVIF values remain need-more until the box size,
+    // fourcc, and (for mif1/msf1) complete compatible-brand list decide.
+    let cases: &[(&[u8], DetectionExpectation)] = &[
+        (b"", Some(Err(2))),
+        (b"\xff", Some(Err(3))),
+        (b"\xff\xd8", Some(Err(3))),
+        (b"\xff\xd8\xff", Some(Ok(ImageFormat::Jpeg))),
+        (b"\x89PNG\r\n\x1a", Some(Err(8))),
+        (b"\x89PNG\r\n\x1a\n", Some(Ok(ImageFormat::Png))),
+        (b"GIF8", Some(Err(6))),
+        (b"GIF87a", Some(Ok(ImageFormat::Gif))),
+        (b"GIF89a", Some(Ok(ImageFormat::Gif))),
+        (b"GIF88", Some(Err(12))),
+        (b"B", Some(Err(2))),
+        (b"BM", Some(Ok(ImageFormat::Bmp))),
+        (b"R", Some(Err(4))),
+        (b"RIFF", Some(Err(8))),
+        (b"RIFF\0\0\0\0", Some(Err(12))),
+        (b"RIFF\0\0\0\0WEB", Some(Err(12))),
+        (b"RIFF\0\0\0\0WEBP", Some(Err(16))),
+        (b"RIFF\0\0\0\0WEBPVP8 ", Some(Ok(ImageFormat::WebP))),
+        (b"RIFF\0\0\0\0WAVE", None),
+        (b"RIFF\0\0\0\0WEBPNONE", None),
+        (b"MM", Some(Err(4))),
+        (b"MM\0\x2a", Some(Ok(ImageFormat::Tiff))),
+        (b"II\x2a\0", Some(Ok(ImageFormat::Tiff))),
+        (b"MM\x2a\0", Some(Ok(ImageFormat::Tiff))),
+        (b"II\0\x2a", Some(Ok(ImageFormat::Tiff))),
+        (b"MM\0\x2b", Some(Ok(ImageFormat::Tiff))),
+        (b"II\x2b\0", Some(Ok(ImageFormat::Tiff))),
+        (b"II\x2a", Some(Err(4))),
+        (b"MM\0\0", Some(Err(12))),
+        (b"\0\0", Some(Err(4))),
+        (b"\0\0\x01", Some(Err(4))),
+        (b"\0\0\x01\0", Some(Ok(ImageFormat::Ico))),
+        (b"\0\0\x02\0", Some(Ok(ImageFormat::Ico))),
+        (b"\0\0\0\x01", None),
+        (b"\0\0\0\x08XXXX", Some(Err(12))),
+        (b"\0\0\0\x08ftypXXXX", None),
+        (b"\0\0\0\x08ftypavif", Some(Ok(ImageFormat::Avif))),
+        (b"\0\0\0\x0cftyp", Some(Err(12))),
+        (b"\0\0\0\x14ftypmif1", Some(Err(20))),
+        (
+            b"\0\0\0\x18ftypmif1AAAAavifXXXX",
+            Some(Ok(ImageFormat::Avif)),
+        ),
+        (b"\0\0\0\x15ftypmif1", None),
+        (b"\0\0\0\0", None),
+        (b"\0\0\0\x01ftypavif", None),
+        (b"XXXX", Some(Err(12))),
+    ];
+
+    for (input, expected) in cases {
+        let actual = image_slash_star::detect_prefix(input);
+        match (&actual, expected) {
+            (Ok(format), Some(Ok(expected_format))) => {
+                assert_eq!(format, expected_format, "input {input:?}");
+            }
+            (Err(ImageError::NeedMoreData { minimum, .. }), Some(Err(expected_minimum))) => {
+                assert_eq!(minimum, expected_minimum, "input {input:?}");
+                let error = match &actual {
+                    Ok(format) => {
+                        panic!("detection must fail with NeedMoreData for {input:?}: {format:?}")
+                    }
+                    Err(error) => error,
+                };
+                assert_eq!(error.kind(), ImageErrorKind::NeedMoreData);
+                assert_eq!(error.minimum_input(), Some(*expected_minimum));
+                assert_eq!(error.format(), None);
+                assert_eq!(error.stage(), None);
+            }
+            (Err(ImageError::UnknownFormat), None) => {
+                let error = match &actual {
+                    Ok(format) => {
+                        panic!("detection must fail with UnknownFormat for {input:?}: {format:?}")
+                    }
+                    Err(error) => error,
+                };
+                assert_eq!(error.minimum_input(), None, "input {input:?}");
+            }
+            (actual, expected) => {
+                panic!("input {input:?}: expected {expected:?}, got {actual:?}");
+            }
+        }
+        // The complete-slice API never exposes the non-terminal status: it
+        // keeps reporting UnknownFormat for incomplete signatures.
+        let legacy = image_slash_star::detect_format(input);
+        assert!(
+            !matches!(legacy, Err(ImageError::NeedMoreData { .. })),
+            "legacy detection must not return NeedMoreData for {input:?}"
+        );
+        if let Some(Ok(expected_format)) = expected {
+            assert_eq!(legacy, Ok(*expected_format));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn incremental_detection_retries_to_completion_on_real_input()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::ImageError;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, ImageFormat)] = &[
+        ("tests/fixtures/input/images/png/1x1.png", ImageFormat::Png),
+        (
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+            ImageFormat::Jpeg,
+        ),
+        ("tests/fixtures/input/images/gif/1x1.gif", ImageFormat::Gif),
+        (
+            "tests/fixtures/input/images/webp/16x16.webp",
+            ImageFormat::WebP,
+        ),
+        (
+            "tests/fixtures/input/images/avif/baseline.avif",
+            ImageFormat::Avif,
+        ),
+    ];
+    for (path, expected) in cases {
+        let bytes = fs::read(root.join(path))?;
+        let mut prefix: Vec<u8> = Vec::new();
+        let mut attempts = 0;
+        loop {
+            attempts += 1;
+            assert!(
+                attempts <= bytes.len() + 1,
+                "detection must complete after at most the full input for {path}"
+            );
+            match image_slash_star::detect_prefix(&prefix) {
+                Ok(format) => {
+                    assert_eq!(&format, expected);
+                    break;
+                }
+                Err(ImageError::NeedMoreData { minimum, .. }) => {
+                    let minimum = usize::try_from(minimum).unwrap_or(usize::MAX);
+                    assert!(
+                        minimum > prefix.len(),
+                        "minimum must exceed the current prefix for {path}"
+                    );
+                    let next_len = minimum.min(bytes.len());
+                    prefix.clear();
+                    prefix.extend_from_slice(&bytes[..next_len]);
+                }
+                Err(error) => {
+                    panic!("valid {path} must never terminate detection: {error:?}");
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn incremental_basic_inspection_tracks_truncation_progress_per_format()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::ImageError;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(ImageFormat, bool, &str)] = &[
+        (
+            ImageFormat::Png,
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+        ),
+        (
+            ImageFormat::Gif,
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+        ),
+        (
+            ImageFormat::Bmp,
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+        ),
+        (
+            ImageFormat::Tiff,
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/8bit.tiff",
+        ),
+        (
+            ImageFormat::Jpeg,
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+        ),
+        (
+            ImageFormat::WebP,
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+        ),
+        (
+            ImageFormat::Ico,
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+        ),
+        (
+            ImageFormat::Avif,
+            cfg!(feature = "avif"),
+            "tests/fixtures/input/images/avif/baseline.avif",
+        ),
+    ];
+    for (format, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        let full = image_slash_star::inspect_basic_prefix(&bytes)?;
+        assert_eq!(full, image_slash_star::inspect_basic(&bytes)?);
+        assert_eq!(full.format, *format);
+
+        let mut saw_need_more = false;
+        let mut saw_ok = false;
+        for end in 0..=bytes.len() {
+            let prefix = &bytes[..end];
+            match image_slash_star::inspect_basic_prefix(prefix) {
+                Ok(info) => {
+                    saw_ok = true;
+                    let legacy = image_slash_star::inspect_basic(prefix).unwrap_or_else(|error| {
+                        panic!("legacy inspect_basic must agree on {path} prefix {end}: {error}")
+                    });
+                    assert_eq!(info, legacy, "{path} prefix {end}");
+                }
+                Err(ImageError::NeedMoreData {
+                    format, minimum, ..
+                }) => {
+                    saw_need_more = true;
+                    let minimum = usize::try_from(minimum).unwrap_or(usize::MAX);
+                    let legacy = match image_slash_star::inspect_basic(prefix) {
+                        Ok(info) => panic!(
+                            "legacy must reject truncation for {path} prefix {end}: {info:?}"
+                        ),
+                        Err(error) => error,
+                    };
+                    assert_eq!(
+                        legacy.kind(),
+                        if format.is_some() {
+                            image_slash_star::ImageErrorKind::Malformed
+                        } else {
+                            image_slash_star::ImageErrorKind::UnknownFormat
+                        },
+                        "legacy classification must match for {path} prefix {end}"
+                    );
+                    assert!(
+                        minimum > prefix.len(),
+                        "minimum must exceed the prefix for {path} at {end}"
+                    );
+                    assert!(
+                        minimum <= bytes.len(),
+                        "minimum for a valid fixture must not exceed the file for {path} at {end}"
+                    );
+                    if minimum > prefix.len() {
+                        let next = image_slash_star::inspect_basic_prefix(&bytes[..minimum]);
+                        let advanced = match next {
+                            Ok(_) => true,
+                            Err(ImageError::NeedMoreData {
+                                minimum: next_minimum,
+                                ..
+                            }) => usize::try_from(next_minimum).unwrap_or(usize::MAX) > minimum,
+                            Err(_) => true,
+                        };
+                        assert!(
+                            advanced,
+                            "retrying with minimum must progress for {path} at {end}"
+                        );
+                    }
+                }
+                Err(other) => {
+                    let legacy = match image_slash_star::inspect_basic(prefix) {
+                        Ok(info) => panic!("legacy must reject {path} prefix {end}: {info:?}"),
+                        Err(error) => error,
+                    };
+                    assert_eq!(
+                        legacy.kind(),
+                        other.kind(),
+                        "terminal kinds must match for {path} prefix {end}"
+                    );
+                }
+            }
+        }
+        assert!(
+            saw_need_more,
+            "{path} must exercise at least one need-more boundary"
+        );
+        assert!(saw_ok, "{path} must succeed on the complete input");
+    }
+    Ok(())
+}
+
+#[test]
+fn incremental_inspection_attaches_structured_context() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::ImageError;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    if cfg!(feature = "png") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        // A partial signature is a detection-level status with no format yet.
+        let error = match image_slash_star::inspect_basic_prefix(&bytes[..5]) {
+            Ok(info) => panic!("a partial signature must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), None);
+        assert_eq!(error.stage(), None);
+        assert_eq!(error.minimum_input(), Some(8));
+
+        // A terminal malformed header carries format and stage context and
+        // never advertises a retry minimum.
+        let mut bad_filter = bytes.clone();
+        bad_filter[27] = 1;
+        let error = match image_slash_star::inspect_basic_prefix(&bad_filter) {
+            Ok(info) => panic!("bad filter method must fail: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::Inspection));
+        assert_eq!(error.minimum_input(), None);
+        let legacy = match image_slash_star::inspect_basic(&bad_filter) {
+            Ok(info) => panic!("legacy must fail on the bad filter method: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(legacy.kind(), error.kind());
+
+        // A codec-level truncation carries the format and inspection stage.
+        let error = match image_slash_star::inspect_basic_prefix(&bytes[..40]) {
+            Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::Inspection));
+        assert!(error.minimum_input().is_some());
+        let _: ImageError = error;
+    }
+    Ok(())
+}
+
+#[test]
+fn incremental_inspection_reports_feature_state_like_legacy()
+-> Result<(), Box<dyn std::error::Error>> {
+    let cases: &[(ImageFormat, bool, &[u8])] = &[
+        (ImageFormat::Jpeg, cfg!(feature = "jpeg"), b"\xff\xd8\xff"),
+        (
+            ImageFormat::Png,
+            cfg!(feature = "png"),
+            b"\x89PNG\r\n\x1a\n",
+        ),
+        (ImageFormat::Gif, cfg!(feature = "gif"), b"GIF89a"),
+        (ImageFormat::Bmp, cfg!(feature = "bmp"), b"BM"),
+        (ImageFormat::Tiff, cfg!(feature = "tiff"), b"II\x2a\0"),
+        (
+            ImageFormat::WebP,
+            cfg!(feature = "webp"),
+            b"RIFF\0\0\0\0WEBPVP8 ",
+        ),
+        (ImageFormat::Ico, cfg!(feature = "ico"), b"\0\0\x01\0"),
+        (
+            ImageFormat::Avif,
+            cfg!(feature = "avif"),
+            b"\0\0\0\x08ftypavif",
+        ),
+    ];
+    for (format, enabled, signature) in cases {
+        if *enabled {
+            continue;
+        }
+        let incremental = match image_slash_star::inspect_basic_prefix(signature) {
+            Ok(info) => panic!("feature-disabled inspection must fail for {format:?}: {info:?}"),
+            Err(error) => error,
+        };
+        let legacy = match image_slash_star::inspect_basic(signature) {
+            Ok(info) => {
+                panic!("legacy feature-disabled inspection must fail for {format:?}: {info:?}")
+            }
+            Err(error) => error,
+        };
+        assert_eq!(incremental, legacy, "feature-disabled {format:?}");
+        assert_eq!(
+            incremental.kind(),
+            image_slash_star::ImageErrorKind::FeatureDisabled
+        );
+        assert_eq!(incremental.minimum_input(), None);
+    }
+    Ok(())
+}

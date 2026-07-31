@@ -175,6 +175,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
             offset: None,
             identity: None,
         },
+        ImageError::NeedMoreData {
+            format: Some(ImageFormat::Png),
+            stage: Some(ImageErrorStage::Inspection),
+            offset: Some(8),
+            identity: Some("png_chunk"),
+            minimum: 41,
+        },
+        ImageError::NeedMoreData {
+            format: None,
+            stage: None,
+            offset: None,
+            identity: None,
+            minimum: 2,
+        },
     ];
     for error in errors {
         let _ = error.kind();
@@ -184,6 +198,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = error.stage();
         let _ = error.offset();
         let _ = error.identity();
+        let _ = error.minimum_input();
         let _ = error.with_format(ImageFormat::Png);
     }
 

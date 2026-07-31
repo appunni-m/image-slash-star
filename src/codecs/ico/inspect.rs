@@ -1,6 +1,6 @@
 //! ICO/CUR directory and embedded-image inspection without pixel decoding.
 
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, codec_add_end, need_slice, terminalize};
 use crate::types::{CursorHotspot, ImageFormat, ImageInfo, ImageMode};
 
 const HEADER_SIZE: usize = 6;
@@ -8,7 +8,7 @@ const ENTRY_SIZE: usize = 16;
 
 /// Inspect the same best-resolution entry selected by the ICO decoder.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
-    let header = data.get(..HEADER_SIZE).malformed("truncated ICO header")?;
+    let header = need_slice(data, 0, HEADER_SIZE, "truncated ICO header")?;
     let reserved = u16::from_le_bytes([header[0], header[1]]);
     let kind = u16::from_le_bytes([header[2], header[3]]);
     let count = usize::from(u16::from_le_bytes([header[4], header[5]]));
@@ -17,9 +17,8 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
             "invalid ICO header fields".to_owned(),
         ));
     }
-    let directory = data
-        .get(HEADER_SIZE..HEADER_SIZE.saturating_add(count.saturating_mul(ENTRY_SIZE)))
-        .malformed("truncated ICO directory")?;
+    let directory_end = HEADER_SIZE.saturating_add(count.saturating_mul(ENTRY_SIZE));
+    let directory = need_slice(data, HEADER_SIZE, directory_end, "truncated ICO directory")?;
     let mut best = &directory[..ENTRY_SIZE];
     let mut best_score = 0;
     for entry in directory.chunks_exact(ENTRY_SIZE) {
@@ -48,11 +47,15 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
             "ICO directory entry has an empty size or offset".to_owned(),
         ));
     }
-    let payload = data
-        .get(offset..offset.wrapping_add(length))
-        .malformed("ICO entry payload is out of bounds")?;
+    let payload_end = codec_add_end(offset, length, "ICO entry payload is out of bounds")?;
+    let payload = need_slice(
+        data,
+        offset,
+        payload_end,
+        "ICO entry payload is out of bounds",
+    )?;
     let mut info = if payload.starts_with(b"\x89PNG\r\n\x1a\n") {
-        crate::codecs::png::inspect::inspect(payload)?
+        crate::codecs::png::inspect::inspect(payload).map_err(terminalize)?
     } else if kind == 2 {
         inspect_cursor_dib(payload, length_u32)?
     } else {
@@ -69,7 +72,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
 }
 
 fn inspect_cursor_dib(data: &[u8], declared_len: u32) -> CodecResult<ImageInfo> {
-    let header = data.get(..40).malformed("truncated CUR DIB header")?;
+    let header = need_slice(data, 0, 40, "truncated CUR DIB header")?;
     let header_size_u32 = u32::from_le_bytes([header[0], header[1], header[2], header[3]]);
     let header_size = header_size_u32 as usize;
     if header_size < 40 {
@@ -78,7 +81,10 @@ fn inspect_cursor_dib(data: &[u8], declared_len: u32) -> CodecResult<ImageInfo> 
         ));
     }
     if data.len() < header_size {
-        return Err(CodecError::Malformed("truncated CUR DIB header".to_owned()));
+        return Err(CodecError::NeedMore {
+            minimum: header_size,
+            message: "truncated CUR DIB header".to_owned(),
+        });
     }
     let actual_height = i32::from_le_bytes([header[8], header[9], header[10], header[11]]) / 2;
     let bits = u16::from_le_bytes([header[14], header[15]]);
@@ -101,11 +107,11 @@ fn inspect_cursor_dib(data: &[u8], declared_len: u32) -> CodecResult<ImageInfo> 
     bmp.extend_from_slice(&pixel_offset_bytes);
     bmp.extend_from_slice(data);
     bmp[22..26].copy_from_slice(&actual_height.to_le_bytes());
-    crate::codecs::bmp::inspect::inspect(&bmp)
+    crate::codecs::bmp::inspect::inspect(&bmp).map_err(terminalize)
 }
 
 fn inspect_icon_dib(data: &[u8]) -> CodecResult<ImageInfo> {
-    let header = data.get(..40).malformed("truncated ICO DIB header")?;
+    let header = need_slice(data, 0, 40, "truncated ICO DIB header")?;
     let width = u32::from_le_bytes([header[4], header[5], header[6], header[7]]);
     let stored_height = u32::from_le_bytes([header[8], header[9], header[10], header[11]]);
     let height = stored_height / 2;
@@ -141,9 +147,7 @@ fn inspect_icon_dib(data: &[u8]) -> CodecResult<ImageInfo> {
     let padded_row = row_bytes.saturating_add(3) & !3;
     let pixel_start = 40usize.saturating_add(palette_entries.saturating_mul(4));
     let required = pixel_start.saturating_add(padded_row.saturating_mul(bounded_usize(height)));
-    let payload = data
-        .get(..required)
-        .malformed("truncated ICO bitmap payload")?;
+    let payload = need_slice(data, 0, required, "truncated ICO bitmap payload")?;
     let pixels = &payload[pixel_start..];
     if bits == 4 {
         super::decode::validate_4bit_palette_references(
@@ -200,4 +204,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ] {
         let _ = inspect(&header);
     }
+    // A complete ICO directory entry whose declared PNG payload is itself
+    // truncated proves that nested incremental status is terminalized.
+    let mut truncated_png_ico = vec![0, 0, 1, 0, 1, 0];
+    truncated_png_ico.extend_from_slice(&[0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 22, 0, 0, 0]);
+    truncated_png_ico.extend_from_slice(b"\x89PNG\r");
+    let _ = inspect(&truncated_png_ico);
 }

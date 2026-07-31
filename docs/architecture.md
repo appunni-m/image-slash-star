@@ -194,8 +194,10 @@ translation cannot be bypassed.
 | API | Contract |
 | --- | --- |
 | `detect_format(&[u8])` | Identify a supported signature without invoking a codec |
+| `detect_prefix(&[u8])` | Incremental detection: complete signature, or `NeedMoreData { minimum }` for an incomplete prefix; terminal `UnknownFormat` otherwise |
 | `inspect(&[u8])` | Read `ImageInfo` without materializing compressed pixels |
 | `inspect_basic(&[u8])` | Read the same header facts without deep frame counting; `frame_count_complete` distinguishes known from unknown counts |
+| `inspect_basic_prefix(&[u8])` | Incremental basic inspection: header facts when provable, `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |
@@ -217,6 +219,21 @@ feature is disabled. An operation that requires a disabled codec returns
 `ImageError::FeatureDisabled`. For AVIF, `avif` and `avis` major brands are
 direct signatures; generic `mif1`/`msf1` majors additionally require an
 `avif` or `avis` compatible brand in the complete bounded `ftyp` box.
+
+The incremental surface (`detect_prefix`, `inspect_basic_prefix`) shares the
+same parsers as the complete-slice APIs but exposes short reads as the
+non-terminal `ImageError::NeedMoreData { minimum }` status. `minimum` is the
+total input length the next parse needs before it can either succeed or fail
+terminally: exact for fixed signatures, and progress-aware for containers
+whose structure declares its own extent (WebP chunk payloads and AVIF box
+payloads, where a truncated declared box reports its declared end). Codec
+read helpers classify "input ends before the requested slice" separately from
+"declared structure is inconsistent"; the latter stays terminal `Malformed`.
+Slices already bounded by a validated declared length (ICO entries wrapping a
+PNG, ANMF sub-chunks, nested AVIF boxes) also stay terminal, because appending
+more file bytes cannot repair them. Legacy complete-slice APIs are unchanged:
+they map every internal truncation back to `Malformed` with the same message,
+so manifest parity and error stages are preserved.
 
 Capability discovery mirrors this dispatch without parsing input.
 `Capability::ManifestBounded` means the operation can be attempted within the

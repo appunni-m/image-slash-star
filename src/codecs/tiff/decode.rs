@@ -3,7 +3,7 @@
 use super::inspect::TiffLayout;
 use crate::SequenceDecodeBudget;
 use crate::codecs::compression::deflate::decompress_zlib_prefix;
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt, need_slice};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FrameDuration, ImageMode, ImagePalette, SourceAlpha, SourceByteOrder, SourceColor,
@@ -439,10 +439,7 @@ fn decode_ifd(
 /// continues through the classic big-endian parser. Genuine BigTIFF directory
 /// layout is outside the current contract.
 pub(super) fn parse_header(data: &[u8]) -> CodecResult<(Endian, usize)> {
-    let endian = match data
-        .get(..2)
-        .malformed("TIFF byte-order marker is truncated")?
-    {
+    let endian = match need_slice(data, 0, 2, "TIFF byte-order marker is truncated")? {
         b"II" => Endian::Little,
         b"MM" => Endian::Big,
         _ => {
@@ -451,7 +448,7 @@ pub(super) fn parse_header(data: &[u8]) -> CodecResult<(Endian, usize)> {
             ));
         }
     };
-    let magic = data.get(2..4).malformed("TIFF magic is truncated")?;
+    let magic = need_slice(data, 2, 4, "TIFF magic is truncated")?;
     let registered = match endian {
         Endian::Little => matches!(magic, b"\x2a\x00" | b"\x00\x2a" | b"\x2b\x00"),
         Endian::Big => matches!(magic, b"\x00\x2a" | b"\x2a\x00" | b"\x00\x2b"),
@@ -464,9 +461,7 @@ pub(super) fn parse_header(data: &[u8]) -> CodecResult<(Endian, usize)> {
             "TIFF BigTIFF directory layout is unsupported".to_owned(),
         ));
     }
-    let ifd_offset = data
-        .get(4..8)
-        .malformed("TIFF directory offset is truncated")?;
+    let ifd_offset = need_slice(data, 4, 8, "TIFF directory offset is truncated")?;
     let ifd_offset =
         endian.u32_exact([ifd_offset[0], ifd_offset[1], ifd_offset[2], ifd_offset[3]]) as usize;
     Ok((endian, ifd_offset))
@@ -1003,9 +998,12 @@ impl<'a> Directory<'a> {
         let count_end = offset
             .checked_add(2)
             .dimensions("TIFF directory entry-count range overflows")?;
-        let count_bytes = data
-            .get(offset..count_end)
-            .malformed("TIFF directory entry count is truncated")?;
+        let count_bytes = need_slice(
+            data,
+            offset,
+            count_end,
+            "TIFF directory entry count is truncated",
+        )?;
         let count = usize::from(endian.u16_exact([count_bytes[0], count_bytes[1]]));
         if count > 4096 {
             return Err(CodecError::Malformed(
@@ -1019,9 +1017,12 @@ impl<'a> Directory<'a> {
         let mut metadata = Vec::new();
         for index in 0..count {
             let start = entries_start.saturating_add(index.saturating_mul(12));
-            let bytes = data
-                .get(start..start.saturating_add(12))
-                .malformed("TIFF directory entry is truncated")?;
+            let bytes = need_slice(
+                data,
+                start,
+                start.saturating_add(12),
+                "TIFF directory entry is truncated",
+            )?;
             let tag = endian.u16_exact([bytes[0], bytes[1]]);
             let field_type = endian.u16_exact([bytes[2], bytes[3]]);
             validate_baseline_field_type(tag, field_type)?;
@@ -1056,12 +1057,20 @@ impl<'a> Directory<'a> {
                 let value_end = value_position
                     .checked_add(byte_len)
                     .dimensions("TIFF directory value range overflows")?;
-                data.get(value_position..value_end)
-                    .malformed("TIFF directory value is out of bounds")?;
+                need_slice(
+                    data,
+                    value_position,
+                    value_end,
+                    "TIFF directory value is out of bounds",
+                )?;
             }
             #[cfg(not(target_pointer_width = "32"))]
-            data.get(value_position..value_position.saturating_add(byte_len))
-                .malformed("TIFF directory value is out of bounds")?;
+            need_slice(
+                data,
+                value_position,
+                value_position.saturating_add(byte_len),
+                "TIFF directory value is out of bounds",
+            )?;
             let raw_value = data[value_position..value_position.saturating_add(byte_len)].to_vec();
             if !INTERPRETED_TAGS.contains(&tag) {
                 let mut kind = [0u8; 2];
@@ -1094,9 +1103,12 @@ impl<'a> Directory<'a> {
             }
         }
         let next_position = entries_start.saturating_add(count.saturating_mul(12));
-        let next = data
-            .get(next_position..next_position.saturating_add(4))
-            .malformed("TIFF next-directory offset is truncated")?;
+        let next = need_slice(
+            data,
+            next_position,
+            next_position.saturating_add(4),
+            "TIFF next-directory offset is truncated",
+        )?;
         Ok(Self {
             data,
             endian,

@@ -130,8 +130,10 @@ capabilities and setup.
 | API | Purpose |
 | --- | --- |
 | `detect_format(&[u8])` | Identify a supported container signature |
+| `detect_prefix(&[u8])` | Incremental detection: identify a complete signature, or report `NeedMoreData { minimum }` while the input is still an incomplete prefix |
 | `inspect(&[u8])` | Read `ImageInfo` without decoding compressed pixels |
 | `inspect_basic(&[u8])` | Read header facts without counting every frame/page; `frame_count_complete` reports whether the count is known |
+| `inspect_basic_prefix(&[u8])` | Incremental basic inspection: return header facts as soon as the detected format can prove them, or report `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
@@ -157,6 +159,17 @@ last top-level box). BMP and ICO report `None` because they declare no total
 extent. Decoders ignore well-formed trailing bytes after that extent and never
 let them change the decoded result; the trailing-input manifest pins this
 behavior for all eight formats against Pillow 12.2.0.
+
+Incremental callers that are still receiving encoded input use `detect_prefix`
+and `inspect_basic_prefix`. Both return `ImageError::NeedMoreData { minimum }`
+when the input is an incomplete prefix: append enough bytes to reach
+`minimum` (the exact total input length the next parse needs) and retry.
+Minimums are exact for fixed signatures and progress-aware for containers
+that declare their own extent (WebP RIFF chunks and AVIF boxes). Every other
+result is terminal: an incomplete signature that can never match is
+`UnknownFormat`, and a recognized-but-truncated container remains `Malformed`
+on the complete-slice APIs. The incremental surface never turns a terminal
+result into an implicit retry loop.
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return

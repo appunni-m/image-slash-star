@@ -171,6 +171,192 @@ fn is_avif_signature(data: &[u8]) -> bool {
     }
 }
 
+/// Incremental signature detection for callers that are still receiving
+/// encoded input.
+///
+/// Unlike [`detect_format`], an *incomplete prefix* of a supported signature
+/// is not reported as [`ImageError::UnknownFormat`]. It returns
+/// [`ImageError::NeedMoreData`] with an exact total byte `minimum`: append
+/// enough input to reach that length and call again. A terminal result
+/// ([`ImageError::UnknownFormat`] for bytes that can never become a supported
+/// signature, or any other error from the complete-slice APIs) must never be
+/// retried as if more input could change it.
+///
+/// The reported minimum is exact for fixed signatures and progress-aware for
+/// containers that declare their own extent (WebP RIFF chunks and AVIF
+/// boxes): it is the total input length the next parse needs before it can
+/// either succeed or fail terminally.
+///
+/// # Errors
+///
+/// Returns [`ImageError::NeedMoreData`] when `data` is an incomplete prefix,
+/// and the terminal [`ImageError::UnknownFormat`] otherwise. Feature state is
+/// intentionally not consulted here; detection is feature-independent.
+pub fn detect_prefix(data: &[u8]) -> ImageResult<ImageFormat> {
+    match detect_prefix_inner(data) {
+        Some(Ok(format)) => Ok(format),
+        Some(Err(minimum)) => Err(ImageError::NeedMoreData {
+            format: None,
+            stage: None,
+            offset: None,
+            identity: None,
+            minimum,
+        }),
+        None => Err(ImageError::UnknownFormat),
+    }
+}
+
+/// `Some(Ok(format))` identifies a complete signature; `Some(Err(minimum))`
+/// is an incomplete prefix needing `minimum` total bytes; `None` is terminal
+/// unknown.
+fn detect_prefix_inner(data: &[u8]) -> Option<Result<ImageFormat, u64>> {
+    let mut minimum = u64::MAX;
+    let mut prefix = None;
+    for candidate in signature_prefixes(data) {
+        match candidate {
+            Some(Ok(format)) => return Some(Ok(format)),
+            Some(Err(needed)) => {
+                minimum = minimum.min(needed);
+                prefix = Some(());
+            }
+            None => {}
+        }
+    }
+    prefix.map(|()| Err(minimum))
+}
+
+fn signature_prefixes(data: &[u8]) -> [Option<Result<ImageFormat, u64>>; 8] {
+    let jpeg = fixed_signature(data, b"\xff\xd8\xff", ImageFormat::Jpeg);
+    let png = fixed_signature(data, b"\x89PNG\r\n\x1a\n", ImageFormat::Png);
+    let gif = if data.len() >= 6 {
+        (data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a")).then_some(Ok(ImageFormat::Gif))
+    } else if b"GIF87a".starts_with(data) || b"GIF89a".starts_with(data) {
+        Some(Err(6))
+    } else {
+        None
+    };
+    let bmp = fixed_signature(data, b"BM", ImageFormat::Bmp);
+    let webp = webp_signature_prefix(data);
+    let tiff = any_fixed_signature(
+        data,
+        &[
+            b"MM\x00\x2a",
+            b"II\x2a\x00",
+            b"MM\x2a\x00",
+            b"II\x00\x2a",
+            b"MM\x00\x2b",
+            b"II\x2b\x00",
+        ],
+        ImageFormat::Tiff,
+    );
+    let ico = any_fixed_signature(
+        data,
+        &[b"\x00\x00\x01\x00", b"\x00\x00\x02\x00"],
+        ImageFormat::Ico,
+    );
+    let avif = avif_signature_prefix(data);
+    [jpeg, png, gif, bmp, webp, tiff, ico, avif]
+}
+
+fn fixed_signature(
+    data: &[u8],
+    signature: &[u8],
+    format: ImageFormat,
+) -> Option<Result<ImageFormat, u64>> {
+    if data.len() >= signature.len() {
+        data.starts_with(signature).then_some(Ok(format))
+    } else if signature.starts_with(data) {
+        Some(Err(signature.len() as u64))
+    } else {
+        None
+    }
+}
+
+fn any_fixed_signature(
+    data: &[u8],
+    signatures: &[&[u8]],
+    format: ImageFormat,
+) -> Option<Result<ImageFormat, u64>> {
+    if data.len() >= 4 {
+        signatures
+            .iter()
+            .any(|signature| data.starts_with(signature))
+            .then_some(Ok(format))
+    } else {
+        signatures
+            .iter()
+            .any(|signature| signature.starts_with(data))
+            .then_some(Err(4))
+    }
+}
+
+fn webp_signature_prefix(data: &[u8]) -> Option<Result<ImageFormat, u64>> {
+    if data.len() < 4 {
+        return b"RIFF".starts_with(data).then_some(Err(4));
+    }
+    if &data[..4] != b"RIFF" {
+        return None;
+    }
+    if data.len() < 8 {
+        return Some(Err(8));
+    }
+    if data.len() < 12 {
+        return b"WEBP".starts_with(&data[8..]).then_some(Err(12));
+    }
+    if &data[8..12] != b"WEBP" {
+        return None;
+    }
+    if data.len() < 16 {
+        return [
+            b"VP8 ".starts_with(&data[12..]),
+            b"VP8L".starts_with(&data[12..]),
+            b"VP8X".starts_with(&data[12..]),
+        ]
+        .into_iter()
+        .any(|prefix| prefix)
+        .then_some(Err(16));
+    }
+    matches!(&data[12..16], b"VP8 " | b"VP8L" | b"VP8X").then_some(Ok(ImageFormat::WebP))
+}
+
+fn avif_signature_prefix(data: &[u8]) -> Option<Result<ImageFormat, u64>> {
+    if data.len() < 4 {
+        return Some(Err(4));
+    }
+    let size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as u64;
+    if size < 8 {
+        return None;
+    }
+    if data.len() < 12 {
+        return Some(Err(12));
+    }
+    match &data[4..8] {
+        b"ftyp" if &data[8..12] == b"avif" || &data[8..12] == b"avis" => {
+            Some(Ok(ImageFormat::Avif))
+        }
+        b"ftyp" if &data[8..12] == b"mif1" || &data[8..12] == b"msf1" => {
+            if size < 20 || !size.is_multiple_of(4) {
+                return None;
+            }
+            #[cfg(target_pointer_width = "64")]
+            let size = usize::from_ne_bytes(size.to_ne_bytes());
+            #[cfg(not(target_pointer_width = "64"))]
+            let size = match usize::try_from(size) {
+                Ok(size) => size,
+                Err(_) => return None,
+            };
+            if size > data.len() {
+                return Some(Err(size as u64));
+            }
+            data[16..size]
+                .chunks_exact(4)
+                .any(|brand| matches!(brand, b"avif" | b"avis"))
+                .then_some(Ok(ImageFormat::Avif))
+        }
+        _ => None,
+    }
+}
+
 /// Auto-detect encoded image data and retain both its source format and pixels.
 ///
 /// # Errors
@@ -312,6 +498,29 @@ pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
 pub fn inspect_basic(data: &[u8]) -> ImageResult<ImageInfo> {
     let format = detect_format(data)?;
     codecs::inspect_basic_format(data, format)
+}
+
+/// Incremental header inspection for callers that are still receiving input.
+///
+/// This is the partial-input counterpart of [`inspect_basic`]. It returns
+/// basic header facts as soon as the detected format can prove them, and
+/// [`ImageError::NeedMoreData`] when even the basic header is incomplete. The
+/// result distinguishes "basic header known" (an [`ImageInfo`] with
+/// `frame_count_complete` describing whether the deep count is provable) from
+/// "still receiving input" (the non-terminal status).
+///
+/// Retry only after appending enough bytes to reach
+/// [`ImageError::minimum_input`]. Every other result is terminal and must not
+/// be retried.
+///
+/// # Errors
+///
+/// Returns the same terminal errors as [`inspect_basic`] (unknown signature,
+/// disabled feature, malformed header), plus the non-terminal
+/// [`ImageError::NeedMoreData`] for incomplete input.
+pub fn inspect_basic_prefix(data: &[u8]) -> ImageResult<ImageInfo> {
+    let format = detect_prefix(data)?;
+    codecs::inspect_basic_prefix_format(data, format)
 }
 
 /// Inspect encoded image headers with an explicit caller-controlled policy.

@@ -1,6 +1,6 @@
 //! BMP header and palette inspection without pixel decoding.
 
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, codec_add_end, need_from, need_slice};
 use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
 
 const FILE_HEADER_SIZE: usize = 14;
@@ -10,7 +10,7 @@ const BI_BITFIELDS: u32 = 3;
 
 /// Inspect BMP dimensions, encoded depth, output mode, and indexed palette.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
-    if data.get(..2).malformed("truncated BMP file signature")? != b"BM" {
+    if need_slice(data, 0, 2, "truncated BMP file signature")? != b"BM" {
         return Err(CodecError::Malformed(
             "invalid BMP file signature".to_owned(),
         ));
@@ -157,9 +157,7 @@ fn read_palette(
     count: usize,
     entry_size: usize,
 ) -> CodecResult<Vec<[u8; 4]>> {
-    let available = data
-        .get(start..)
-        .malformed("BMP palette begins beyond the input")?;
+    let available = need_from(data, start, "BMP palette begins beyond the input")?;
     let count = count.min(available.len().div_euclid(entry_size));
     let byte_len = count.saturating_mul(entry_size);
     let bytes = &available[..byte_len];
@@ -173,23 +171,32 @@ fn read_palette(
 }
 
 fn le_u16(data: &[u8], offset: usize) -> CodecResult<u16> {
-    let bytes = data
-        .get(offset..offset.wrapping_add(2))
-        .malformed("truncated BMP 16-bit field")?;
+    let bytes = need_slice(
+        data,
+        offset,
+        codec_add_end(offset, 2, "truncated BMP 16-bit field")?,
+        "truncated BMP 16-bit field",
+    )?;
     Ok(u16::from_le_bytes([bytes[0], bytes[1]]))
 }
 
 fn le_u32(data: &[u8], offset: usize) -> CodecResult<u32> {
-    let bytes = data
-        .get(offset..offset.wrapping_add(4))
-        .malformed("truncated BMP 32-bit field")?;
+    let bytes = need_slice(
+        data,
+        offset,
+        codec_add_end(offset, 4, "truncated BMP 32-bit field")?,
+        "truncated BMP 32-bit field",
+    )?;
     Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
 fn le_i32(data: &[u8], offset: usize) -> CodecResult<i32> {
-    let bytes = data
-        .get(offset..offset.wrapping_add(4))
-        .malformed("truncated BMP signed field")?;
+    let bytes = need_slice(
+        data,
+        offset,
+        codec_add_end(offset, 4, "truncated BMP signed field")?,
+        "truncated BMP signed field",
+    )?;
     Ok(i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
 
