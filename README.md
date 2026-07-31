@@ -325,7 +325,10 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 
 The generated matrix in this tree contains 1,417 active cases:
 1,024 decode/inspect/verify cases and 393 encode cases, with zero
-planned or unwired rows. Expected errors are active fixture outcomes.
+planned or unwired rows. Expected errors are active fixture outcomes, and
+every decode-error class is catalogued in a generated, CI-checked
+malformed-class ledger with Pillow outcome, Rust error contract, evidence
+origin, and specification status.
 
 The accepted Coverage MCP snapshot for that implementation state reports 100%
 line, branch, function, and region coverage. Coverage proves execution under
