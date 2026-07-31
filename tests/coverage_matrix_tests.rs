@@ -3244,11 +3244,11 @@ fn test_encode_matrix() {
                 expected_image_mode(&row.source_mode),
                 "encode source_mode must name a public ImageMode",
             );
-            if cached_decoded.first().map(|image| image.mode) != Some(expected_source_mode) {
+            if cached_decoded.first_image().map(|image| image.mode) != Some(expected_source_mode) {
                 eprintln!(
                     "  FAIL [{}]: Rust source mode {:?} differs from Pillow source mode {}",
                     row.id,
-                    cached_decoded.first().map(|image| image.mode),
+                    cached_decoded.first_image().map(|image| image.mode),
                     row.source_mode
                 );
                 failed += 1;
@@ -3588,7 +3588,7 @@ fn test_encode_matrix() {
                 .and_then(Value::as_array)
             {
                 let base = require_some(
-                    decoded.first(),
+                    decoded.first_image(),
                     "public-mode contract requires a decoded fixture frame",
                 );
                 let mut contract_failures = Vec::new();
@@ -3684,9 +3684,11 @@ fn test_encode_matrix() {
                         .get("truncate_pixels")
                         .is_some_and(|v| v.as_bool().unwrap_or(false)) =>
                 {
-                    let mut malformed =
-                        require_some(decoded.first(), "encoded sequence must have a first frame")
-                            .clone();
+                    let mut malformed = require_some(
+                        decoded.first_image(),
+                        "encoded sequence must have a first frame",
+                    )
+                    .clone();
                     malformed.pixels.pop();
                     img::encode(&malformed, format, options)
                 }
@@ -3697,7 +3699,7 @@ fn test_encode_matrix() {
                             "source_dimensions must be a JSON array",
                         );
                         let mut malformed = require_some(
-                            decoded.first(),
+                            decoded.first_image(),
                             "encoded sequence must have a first frame",
                         )
                         .clone();
@@ -3831,7 +3833,10 @@ fn test_encode_matrix() {
                     continue;
                 }
                 match img::encode(
-                    require_some(decoded.first(), "encoded sequence must have a first frame"),
+                    require_some(
+                        decoded.first_image(),
+                        "encoded sequence must have a first frame",
+                    ),
                     format,
                     require_ok(opts.as_ref(), "typed encode options"),
                 ) {

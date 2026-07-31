@@ -224,7 +224,82 @@ fn assert_capability_contract(format: ImageFormat, feature: &str, enabled: bool)
             assert_eq!(capabilities.sequence_decode(), not_implemented);
             assert_eq!(capabilities.sequence_encode(), not_implemented);
         }
+        _ => panic!("capability fixture does not cover a newly added image format"),
     }
+}
+
+#[test]
+fn extension_aliases_and_mime_queries_match_the_public_contract() {
+    let cases: &[(&str, ImageFormat, &str, &str, &[&str])] = &[
+        (
+            "jpeg",
+            ImageFormat::Jpeg,
+            "image/jpeg",
+            "jpg",
+            &["jpg", "jpeg", "jfif", "jpe"],
+        ),
+        (
+            "png",
+            ImageFormat::Png,
+            "image/png",
+            "png",
+            &["png", "apng"],
+        ),
+        ("gif", ImageFormat::Gif, "image/gif", "gif", &["gif"]),
+        ("bmp", ImageFormat::Bmp, "image/bmp", "bmp", &["bmp"]),
+        ("webp", ImageFormat::WebP, "image/webp", "webp", &["webp"]),
+        (
+            "tiff",
+            ImageFormat::Tiff,
+            "image/tiff",
+            "tiff",
+            &["tiff", "tif"],
+        ),
+        (
+            "ico",
+            ImageFormat::Ico,
+            "image/x-icon",
+            "ico",
+            &["ico", "cur"],
+        ),
+        (
+            "avif",
+            ImageFormat::Avif,
+            "image/avif",
+            "avif",
+            &["avif", "avifs"],
+        ),
+    ];
+    for &(name, format, mime, canonical, extensions) in cases {
+        assert_eq!(ImageFormat::from_name(name), Ok(format));
+        assert_eq!(format.mime_type(), mime);
+        assert_eq!(format.canonical_extension(), canonical);
+        assert_eq!(format.extensions(), extensions);
+        assert_eq!(ImageFormat::from_name(canonical), Ok(format));
+        assert_eq!(ImageFormat::from_name(format.as_str()), Ok(format));
+        for extension in extensions {
+            assert_eq!(ImageFormat::from_name(extension), Ok(format));
+            assert_eq!(
+                ImageFormat::from_path(format!("fixture.{extension}")),
+                Ok(format)
+            );
+            assert_eq!(
+                ImageFormat::from_path(format!("some/dir/FIXTURE.{extension}")),
+                Ok(format)
+            );
+        }
+    }
+    assert_eq!(
+        ImageFormat::from_name("dib"),
+        Err(ImageError::UnknownFormat)
+    );
+    assert_eq!(
+        ImageFormat::from_path("fixture.dib"),
+        Err(ImageError::Unsupported {
+            format: None,
+            message: "unknown extension: dib".to_owned(),
+        })
+    );
 }
 
 #[test]

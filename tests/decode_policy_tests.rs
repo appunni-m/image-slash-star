@@ -21,7 +21,10 @@ struct Manifest {
     unknown_asset_path: String,
     unknown_encoded_bytes: u64,
     malformed_asset_path: String,
+    layout_overflow_asset_path: String,
+    layout_overflow_dimension_offset: u64,
     decoded_path: String,
+    primary_decoded_bytes: u64,
     expected_format: String,
     expected_mode: String,
     expected_size: [u32; 2],
@@ -48,7 +51,10 @@ impl FromJson for Manifest {
             unknown_asset_path: object.take("unknown_asset_path")?,
             unknown_encoded_bytes: object.take("unknown_encoded_bytes")?,
             malformed_asset_path: object.take("malformed_asset_path")?,
+            layout_overflow_asset_path: object.take("layout_overflow_asset_path")?,
+            layout_overflow_dimension_offset: object.take("layout_overflow_dimension_offset")?,
             decoded_path: object.take("decoded_path")?,
+            primary_decoded_bytes: object.take("primary_decoded_bytes")?,
             expected_format: object.take("expected_format")?,
             expected_mode: object.take("expected_mode")?,
             expected_size: object.take("expected_size")?,
@@ -106,6 +112,10 @@ fn assert_sequence(
     assert_eq!(decoded.content.frames.len(), 1);
     assert_eq!(decoded.content.frames[0].image.mode, img::ImageMode::Rgb8);
     assert_eq!(decoded.content.frames[0].image.pixels, expected_pixels);
+    assert_eq!(
+        decoded.content.first().map(|frame| &frame.image),
+        decoded.content.first_image()
+    );
 }
 
 fn assert_limit_error(
@@ -144,6 +154,12 @@ fn assert_malformed(error: img::ImageError) {
     assert!(error.message().is_some_and(|message| !message.is_empty()));
 }
 
+fn assert_dimensions(error: img::ImageError, format: img::ImageFormat) {
+    assert_eq!(error.kind(), img::ImageErrorKind::Dimensions);
+    assert_eq!(error.format(), Some(format));
+    assert!(error.message().is_some_and(|message| !message.is_empty()));
+}
+
 #[test]
 fn encoded_input_limit_manifest_matches_the_public_contract()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -173,13 +189,18 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
         .with_max_pixels(
             u64::from(manifest.expected_size[0])
                 .saturating_mul(u64::from(manifest.expected_size[1])),
-        );
+        )
+        .with_max_primary_decoded_bytes(manifest.primary_decoded_bytes);
     assert_eq!(explicit_limits.max_width(), Some(manifest.expected_size[0]));
     assert_eq!(
         explicit_limits.max_height(),
         Some(manifest.expected_size[1])
     );
     assert_eq!(explicit_limits.max_pixels(), Some(1));
+    assert_eq!(
+        explicit_limits.max_primary_decoded_bytes(),
+        Some(manifest.primary_decoded_bytes)
+    );
     let unlimited_policy = img::DecodePolicy::new();
     assert_eq!(unlimited_policy.limits(), unlimited_limits);
     assert_eq!(
@@ -190,15 +211,22 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
     let bytes = fs::read(root.join(&manifest.asset_path))?;
     let unknown_bytes = fs::read(root.join(&manifest.unknown_asset_path))?;
     let malformed_bytes = fs::read(root.join(&manifest.malformed_asset_path))?;
+    let mut layout_overflow_bytes = fs::read(root.join(&manifest.layout_overflow_asset_path))?;
+    let dimension_offset = usize::try_from(manifest.layout_overflow_dimension_offset)?;
+    layout_overflow_bytes[dimension_offset..dimension_offset + 8].fill(u8::MAX);
     let expected_pixels = fs::read(root.join(&manifest.decoded_path))?;
     assert_eq!(bytes.len() as u64, manifest.encoded_bytes);
     assert_eq!(unknown_bytes.len() as u64, manifest.unknown_encoded_bytes);
     assert_eq!(expected_pixels.len(), 3);
+    assert_eq!(expected_pixels.len() as u64, manifest.primary_decoded_bytes);
 
     let mut ids = HashSet::new();
     for case in manifest.cases {
         assert!(ids.insert(case.id.clone()), "duplicate case {}", case.id);
-        assert!(matches!(case.status.as_str(), "ok" | "error" | "malformed"));
+        assert!(matches!(
+            case.status.as_str(),
+            "ok" | "error" | "malformed" | "dimensions"
+        ));
         let (policy, expected_resource, observed, expected_format) = match case.resource.as_str() {
             "encoded_bytes" => (
                 img::DecodePolicy::default().with_max_encoded_bytes(case.maximum),
@@ -229,10 +257,16 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
                     .saturating_mul(u64::from(manifest.expected_size[1])),
                 Some(img::ImageFormat::Png),
             ),
+            "primary_decoded_bytes" => (
+                img::DecodePolicy::default().with_max_primary_decoded_bytes(case.maximum),
+                img::ResourceLimit::PrimaryDecodedBytes,
+                manifest.primary_decoded_bytes,
+                Some(img::ImageFormat::Png),
+            ),
             resource => panic!("unknown resource `{resource}`"),
         };
         let expected_operation = match case.operation.as_str() {
-            "inspect" | "source_new" => img::CodecOperation::Inspection,
+            "inspect" | "inspect_layout_overflow" | "source_new" => img::CodecOperation::Inspection,
             "decode" | "decode_unknown" | "decode_malformed" | "source_decode" => {
                 img::CodecOperation::StillDecode
             }
@@ -256,6 +290,15 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
                 Ok(_) => panic!("{} unexpectedly succeeded", case.id),
                 Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
             },
+            "inspect_layout_overflow" => {
+                match img::inspect_with_policy(&layout_overflow_bytes, &policy) {
+                    Err(error) if case.status == "dimensions" => {
+                        assert_dimensions(error, img::ImageFormat::Avif);
+                    }
+                    Ok(_) => panic!("{} unexpectedly succeeded", case.id),
+                    Err(error) => panic!("{} unexpectedly failed: {error}", case.id),
+                }
+            }
             "decode" => match img::decode_with_policy(&bytes, &policy) {
                 Ok(decoded) if case.status == "ok" => {
                     assert_image(&decoded, manifest.expected_size, &expected_pixels);
@@ -353,6 +396,6 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
             operation => panic!("unknown operation `{operation}`"),
         }
     }
-    assert_eq!(ids.len(), 63);
+    assert_eq!(ids.len(), 79);
     Ok(())
 }

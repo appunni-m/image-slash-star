@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-07-31 against the working tree based on `91d47c6`
+Reviewed: 2026-07-31 against the working tree based on `be47093`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -86,6 +86,26 @@ decoded page. Other codecs currently return an empty descriptor. A source
 descriptor is structural provenance, not opaque ICC/EXIF/XMP metadata and not
 an instruction to reinterpret every normalized pixel buffer.
 
+`DecodedSequence::first()` returns the complete first `DecodedFrame`.
+`first_image()` is a deliberately lossy convenience that drops the frame's
+source rectangle, duration, disposal, blend, interlace, default-image state,
+and pixel-layout identity. Internal sequence-to-still fallback validation does
+not use that convenience.
+
+Public enums whose vocabularies can grow with codec support are non-exhaustive.
+This includes formats, verification strengths, transfer modes, disposal,
+blend, frame layout, backgrounds, capabilities, errors, limits, and encoder
+options. Downstream matches require a fallback; internal dispatch matches stay
+exhaustive so each new variant forces a codec review. `SourceByteOrder` remains
+exhaustive because its represented domain is exactly little- or big-endian.
+
+`ImageFormat::from_name` accepts the canonical format names and every
+Pillow-recognized extension alias except headerless DIB: JPEG
+`jpg`/`jpeg`/`jfif`/`jpe`, PNG `png`/`apng`, TIFF `tiff`/`tif`, ICO/CUR
+`ico`/`cur`, and AVIF `avif`/`avifs`. `mime_type()`, `canonical_extension()`,
+and `extensions()` return stable dependency-free metadata in canonical-first
+order; `from_path` uses the same table without touching the filesystem.
+
 ## Canonical public surface
 
 Codec modules and dispatchers are private. Callers use the root API so format
@@ -136,15 +156,17 @@ complete byte slice before signature detection. This ordering bounds AVIF
 compatible-brand scanning as well as every codec parser, but intentionally
 leaves `ImageError::format()` as `None` on rejection.
 
-`max_width`, `max_height`, and `max_pixels` are inclusive limits on the exact
-inspected `ImageInfo` canvas. They run after header inspection and before pixel
-decode, so their `LimitExceeded` errors retain the selected format. The error
-also carries the exact `CodecOperation`, `ResourceLimit`, configured maximum,
-and observed value. A policy-aware direct decode performs an inspection
-preflight before the codec's decode parse; unlimited wrappers avoid this extra
-pass. These are canvas limits, not bounds on later TIFF pages, source
-rectangles, decoded sample bytes, sequence memory, metadata, work, allocation,
-or output.
+`max_width`, `max_height`, `max_pixels`, and
+`max_primary_decoded_bytes` are inclusive limits on the exact inspected
+`ImageInfo` canvas. The byte limit uses the primary mode's transfer layout,
+including byte-aligned packed `L1` rows. They run after header inspection and
+before primary pixel decode, so their `LimitExceeded` errors retain the
+selected format. The error also carries the exact `CodecOperation`,
+`ResourceLimit`, configured maximum, and observed value. A policy-aware direct
+decode performs an inspection preflight before the codec's decode parse;
+unlimited wrappers avoid this extra pass. These are primary-canvas limits, not
+bounds on later TIFF pages or animation frames, source rectangles, cumulative
+sequence memory, metadata, codec work, other allocations, or encoded output.
 
 ## Decoded sample layouts
 
@@ -223,11 +245,12 @@ The first call to `decode()` initializes a shared `OnceLock`:
   cache.
 
 `EncodedImage::new_with_policy` applies the input limit before inspection and
-canvas limits immediately afterward. `decode_with_policy` checks encoded bytes
-and retained `ImageInfo` before consulting the `OnceLock`: a policy failure is
-never cached, a later sufficient policy can initialize the ordinary cache, and
-an earlier cached success cannot bypass a later stricter policy. The policy is
-per operation rather than permanently attached to the source.
+primary-canvas dimension, pixel, and decoded-byte limits immediately
+afterward. `decode_with_policy` checks encoded bytes and retained `ImageInfo`
+before consulting the `OnceLock`: a policy failure is never cached, a later
+sufficient policy can initialize the ordinary cache, and an earlier cached
+success cannot bypass a later stricter policy. The policy is per operation
+rather than permanently attached to the source.
 
 `ImageFormat::verification_scope()` and
 `EncodedImage::verification_scope()` distinguish `Structure` from

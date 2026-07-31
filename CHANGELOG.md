@@ -20,9 +20,10 @@ All notable changes will be documented in this file. This project follows
   source-package root.
 - Structured `ImageResult` failures across the canonical detect, inspect,
   decode, sequence, and encode APIs.
-- A shared `DecodePolicy` with inclusive limits for pre-detection encoded bytes
-  and inspected canvas width, height, and pixels, plus typed `LimitExceeded`
-  failures and retry-safe lazy-source behavior.
+- A shared `DecodePolicy` with inclusive limits for pre-detection encoded
+  bytes, inspected canvas width/height/pixels, and the primary decoded
+  transfer-byte length, plus typed `LimitExceeded` failures and retry-safe
+  lazy-source behavior.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
@@ -58,6 +59,12 @@ All notable changes will be documented in this file. This project follows
   forwarding its PNG and BMP container requirements.
 - Removed target-free encoder defaults and catch-all string maps; explicit
   encode targets now reject option records for another codec.
+- Made public codec/capability vocabulary enums non-exhaustive while retaining
+  exhaustive closed value domains such as source byte order.
+- Made `DecodedSequence::first()` return the complete frame and added the
+  explicitly lossy `first_image()` convenience.
+- Added Pillow-recognized extension aliases and public MIME/canonical/alias
+  queries on `ImageFormat`.
 - Added portable AVIF container inspection and in-tree AV1 parsing groundwork.
 
 ### Removed

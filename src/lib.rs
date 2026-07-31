@@ -177,14 +177,14 @@ pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
 /// Decode with an explicit caller-controlled policy.
 ///
 /// The encoded-input byte limit is checked before format detection. Configured
-/// canvas limits trigger a format-qualified inspection preflight before pixel
-/// materialization.
+/// primary-canvas limits trigger a format-qualified inspection preflight
+/// before pixel materialization.
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] when the complete input or inspected
-/// canvas exceeds a configured maximum. Otherwise returns the same errors as
-/// [`decode`].
+/// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
+/// primary canvas, or its decoded transfer-byte length exceeds a configured
+/// maximum. Otherwise returns the same errors as [`decode`].
 pub fn decode_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -212,9 +212,10 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] when the complete input or inspected
-/// canvas exceeds a configured maximum. Otherwise returns the same errors as
-/// [`decode_sequence`].
+/// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
+/// primary canvas, or its decoded transfer-byte length exceeds a configured
+/// maximum. This does not bound later frames or cumulative sequence memory.
+/// Otherwise returns the same errors as [`decode_sequence`].
 pub fn decode_sequence_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -242,9 +243,9 @@ pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] when the complete input or inspected
-/// canvas exceeds a configured maximum. Otherwise returns the same errors as
-/// [`inspect`].
+/// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
+/// primary canvas, or its decoded transfer-byte length exceeds a configured
+/// maximum. Otherwise returns the same errors as [`inspect`].
 pub fn inspect_with_policy(data: &[u8], policy: &DecodePolicy) -> ImageResult<ImageInfo> {
     policy.check_encoded_input(data, CodecOperation::Inspection)?;
     let format = detect_format(data)?;
