@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `5d397d8`
+Reviewed: 2026-08-01 on the working tree based on revision `c430132`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -54,7 +54,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `5d397d8`,
+The correction evidence below is the working-tree state based on `c430132`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -179,10 +179,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`0f8a0f1e-be72-4103-ab50-7f60795600cf`, snapshot
-`64282087-6773-4a12-b405-f59816ddaa21`, passed with zero failures or
-skips and reports 42,709/42,709 lines, 6,096/6,096 branches,
-2,348/2,348 functions, and 67,761/67,761 regions.
+`7cd508ce-0419-4997-892a-22a7831f6f65`, snapshot
+`0f150eae-6741-412c-8cfe-b356e6513620`, passed with zero failures or
+skips and reports 42,787/42,787 lines, 6,100/6,100 branches,
+2,349/2,349 functions, and 67,876/67,876 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
