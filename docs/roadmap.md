@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-07-31 on the working tree based on revision `c0626db`
+Reviewed: 2026-07-31 on the working tree based on revision `8bfcfdb`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -54,7 +54,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `c0626db`,
+The correction evidence below is the working-tree state based on `8bfcfdb`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -163,8 +163,8 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`2911ddc9-5f32-4ac6-b0a4-5c64105ffc6f`, snapshot
-`32045627-3df9-4976-83ac-121e6712571a`, passed with zero failures or
+`b2e7785f-15a6-4be6-a275-2f770df5a172`, snapshot
+`1443f76f-fe40-462c-86d3-34c8dcd16183`, passed with zero failures or
 skips and reports 41,337/41,337 lines, 5,924/5,924 branches,
 2,240/2,240 functions, and 65,773/65,773 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
