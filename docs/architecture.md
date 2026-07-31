@@ -144,6 +144,14 @@ CMYK decoding while the payload stays retained. Truncated metadata markers
 fail with the `jpeg_metadata` parse-site identity, and default encoding never
 replays retained markers.
 
+For WebP, ICCP, EXIF, and XMP chunks are retained as ordered `OpaqueMetadata`
+records with the fourcc as kind and exact payload bytes as data, including
+duplicates in scan order. Unknown RIFF chunks are retained as `OpaqueBlock`
+records and recorded safe to copy because WebP defines no safe-to-copy bit and
+unknown chunks are ignorable by decoders. Interpreted chunks (VP8/VP8L/ALPH/
+VP8X/ANIM/ANMF) stay out, truncated chunks whose declared range exceeds the
+input are not retained, and default encoding never replays retained chunks.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
 blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,

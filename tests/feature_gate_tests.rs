@@ -1573,6 +1573,157 @@ fn jpeg_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::err
     Ok(())
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "WebP test chunks are tiny fixed literals that always fit u32"
+)]
+fn webp_chunk(kind: &[u8; 4], payload: &[u8]) -> Vec<u8> {
+    let mut chunk = Vec::with_capacity(8usize.wrapping_add(payload.len()));
+    chunk.extend_from_slice(kind);
+    chunk.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+    chunk.extend_from_slice(payload);
+    if payload.len() & 1 != 0 {
+        chunk.push(0);
+    }
+    chunk
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "WebP test buffers are tiny fixed literals that always fit u32"
+)]
+fn patch_riff_size(bytes: &mut [u8]) {
+    let size = (bytes.len() as u32).wrapping_sub(8);
+    bytes[4..8].copy_from_slice(&size.to_le_bytes());
+}
+
+#[test]
+fn webp_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{OpaqueBlock, OpaqueMetadata};
+
+    if !cfg!(feature = "webp") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/webp/16x16.webp"))?;
+
+    // Build an extended WebP from the fixture's VP8 chunk plus a VP8X header
+    // and metadata/unknown chunks in stream order.
+    let vp8_chunk = base[12..].to_vec();
+    let mut vp8x = vec![0u8; 10];
+    vp8x[4..7].copy_from_slice(&15u32.to_le_bytes()[..3]);
+    vp8x[7..10].copy_from_slice(&15u32.to_le_bytes()[..3]);
+    let iccp = webp_chunk(b"ICCP", b"webp-icc");
+    let exif = webp_chunk(b"EXIF", b"webp-exif");
+    let xmp = webp_chunk(b"XMP ", b"webp-xmp");
+    let unknown = webp_chunk(b"ABCD", b"weird");
+    let duplicate_iccp = webp_chunk(b"ICCP", b"second-icc");
+    let mut bytes = b"RIFF".to_vec();
+    bytes.extend_from_slice(&0u32.to_le_bytes());
+    bytes.extend_from_slice(b"WEBP");
+    bytes.extend_from_slice(&webp_chunk(b"VP8X", &vp8x));
+    for chunk in [&iccp, &exif, &xmp, &unknown, &duplicate_iccp] {
+        bytes.extend_from_slice(chunk);
+    }
+    bytes.extend_from_slice(&vp8_chunk);
+    patch_riff_size(&mut bytes);
+
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: b"ICCP".to_vec(),
+            data: b"webp-icc".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"EXIF".to_vec(),
+            data: b"webp-exif".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"XMP ".to_vec(),
+            data: b"webp-xmp".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"ICCP".to_vec(),
+            data: b"second-icc".to_vec(),
+        },
+    ];
+    let expected_blocks = vec![OpaqueBlock {
+        kind: b"ABCD".to_vec(),
+        data: b"weird".to_vec(),
+        safe_to_copy: true,
+    }];
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(
+        decoded.content.metadata, expected_metadata,
+        "still metadata"
+    );
+    assert_eq!(
+        decoded.content.opaque_blocks, expected_blocks,
+        "still blocks"
+    );
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.metadata, expected_metadata,
+        "sequence metadata"
+    );
+    assert_eq!(
+        sequence.content.opaque_blocks, expected_blocks,
+        "sequence blocks"
+    );
+
+    // A truncated metadata chunk is not retained, and decode still succeeds.
+    let mut truncated = bytes.clone();
+    let mut bad = b"ICCP".to_vec();
+    bad.extend_from_slice(&100u32.to_le_bytes());
+    bad.extend_from_slice(b"abc");
+    truncated.extend_from_slice(&bad);
+    patch_riff_size(&mut truncated);
+    let truncated_decoded = image_slash_star::decode(&truncated)?;
+    assert_eq!(
+        truncated_decoded.content.metadata, expected_metadata,
+        "truncated metadata chunk must be skipped"
+    );
+
+    // The unmodified fixture retains no chunks, and default encoding never
+    // replays retained metadata.
+    let plain = image_slash_star::decode(&base)?;
+    assert!(plain.content.metadata.is_empty());
+    assert!(plain.content.opaque_blocks.is_empty());
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::WebP);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::WebP, &options)?;
+    for needle in [
+        &b"webp-icc"[..],
+        &b"webp-exif"[..],
+        &b"webp-xmp"[..],
+        &b"weird"[..],
+    ] {
+        assert!(
+            !encoded.windows(needle.len()).any(|window| window == needle),
+            "encoded WebP must not replay retained chunk {needle:?}"
+        );
+    }
+
+    // Animated sequence decode retains the same container-level records.
+    let animated = fs::read(
+        root.join("tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp"),
+    )?;
+    let mut animated_bytes = Vec::new();
+    animated_bytes.extend_from_slice(&animated[..30]);
+    animated_bytes.extend_from_slice(&webp_chunk(b"ICCP", b"anim-icc"));
+    animated_bytes.extend_from_slice(&animated[30..]);
+    patch_riff_size(&mut animated_bytes);
+    let animated_sequence = image_slash_star::decode_sequence(&animated_bytes)?;
+    assert_eq!(
+        animated_sequence.content.metadata,
+        vec![OpaqueMetadata {
+            kind: b"ICCP".to_vec(),
+            data: b"anim-icc".to_vec(),
+        }],
+        "animated metadata"
+    );
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {

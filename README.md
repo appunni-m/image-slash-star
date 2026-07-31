@@ -228,6 +228,9 @@ JPEG APPn and COM marker payloads are retained as ordered metadata records
 (marker byte as kind, exact payload bytes as data), including multi-segment
 ICC/EXIF fragments in stream order; the APP14 Adobe transform byte stays
 parsed for CMYK decoding.
+WebP ICCP, EXIF, and XMP chunks are retained as ordered metadata records
+(fourcc as kind, exact payload bytes as data, duplicates kept), while unknown
+RIFF chunks stay in `opaque_blocks`; truncated chunks are not retained.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

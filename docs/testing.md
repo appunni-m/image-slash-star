@@ -261,6 +261,12 @@ still and sequence decode, the unmodified fixture must retain only its JFIF
 APP0 record, truncated metadata markers must carry the `jpeg_metadata`
 identity, and encoded output must not replay retained marker payloads.
 
+The WebP-chunk contract is table-driven: an extended WebP built from a
+fixture's VP8 chunk plus ICCP/EXIF/XMP/unknown/duplicate-ICCP chunks must
+retain exact ordered metadata and opaque records on still and sequence decode,
+skip a truncated ICCP, keep the unmodified fixture empty, avoid replay in
+encoded output, and retain the same records on animated sequence decode.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
