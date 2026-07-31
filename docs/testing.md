@@ -241,6 +241,13 @@ in `opaque_blocks`; compressed payloads are asserted byte-for-byte without
 inflation. Still, fallback-sequence, and APNG sequence decode must agree, and
 default encoding must not replay any metadata chunk.
 
+The source-color contract is table-driven: well-formed PNG sRGB/gAMA/cHRM/iCCP
+chunks are parsed into `SourceColor` (intent, gamma, chromaticities, raw
+profile) while duplicates and malformed payloads fall back to ordered raw
+metadata records and unknown chunks stay opaque. Still, fallback-sequence, and
+APNG sequence decode must agree, unmodified fixtures carry an empty
+descriptor, and encoded output must not replay color chunks.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

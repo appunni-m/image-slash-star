@@ -7,7 +7,7 @@ use crate::SequenceDecodeBudget;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, ImageMode, ImagePalette,
+    FrameDuration, ImageMode, ImagePalette, SourceColor,
 };
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -145,6 +145,7 @@ pub fn decode_sequence(
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
+        source_color: SourceColor::new(),
     };
     Ok((sequence, consumed))
 }

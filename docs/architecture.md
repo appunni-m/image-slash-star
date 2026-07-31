@@ -114,11 +114,18 @@ retained blocks. Other containers extend the same model as their parsers
 retain unknown blocks. Retained blocks count toward the caller-set
 `max_metadata_bytes` extent.
 
-Known PNG metadata chunks (tEXt/zTXt/iTXt/iCCP/eXIf/tIME/pHYs/sRGB/gAMA/cHRM/
-bKGD/hIST/sBIT) are retained in a separate ordered `metadata` list of raw,
-unparsed `OpaqueMetadata` records; compressed payloads are never inflated, so
-no decompression limit is needed before retention. Semantic parsing of text
-and ICC payloads remains future work under explicit limits.
+Known PNG metadata chunks (tEXt/zTXt/iTXt/eXIf/tIME/pHYs/bKGD/hIST/sBIT) are
+retained in a separate ordered `metadata` list of raw, unparsed
+`OpaqueMetadata` records; compressed payloads are never inflated, so no
+decompression limit is needed before retention. Semantic parsing of text and
+ICC payloads remains future work under explicit limits.
+
+Exact PNG color fields are retained in `source_color` (`SourceColor`): the
+sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
+chromaticity values, and the raw iCCP profile (keyword plus method/profile
+payload, never inflated). The first well-formed occurrence of each chunk is
+parsed; duplicates and malformed payloads fall back to raw metadata records.
+Retaining color metadata never implies that color conversion was applied.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
