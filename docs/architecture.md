@@ -152,6 +152,17 @@ unknown chunks are ignorable by decoders. Interpreted chunks (VP8/VP8L/ALPH/
 VP8X/ANIM/ANMF) stay out, truncated chunks whose declared range exceeds the
 input are not retained, and default encoding never replays retained chunks.
 
+For TIFF, every non-interpreted tag is retained as a raw record with typed
+identity: the tag number as two bytes in the file's original byte order and
+the exact stored value bytes (inline when the value fits four bytes,
+otherwise at its offset), preserving inline-versus-offset storage and
+duplicates in entry order. Unknown tags become `OpaqueBlock` records recorded
+safe to copy (TIFF defines no safe-to-copy bit; unknown tags are ignorable by
+baseline readers), while known metadata tags (ImageDescription, Software,
+DateTime, Artist, Copyright, ICC Profile) become `OpaqueMetadata` records.
+Records attach per page (the still image and each sequence frame), and default
+encoding never replays them.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
 blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,

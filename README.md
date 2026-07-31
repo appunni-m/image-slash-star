@@ -231,6 +231,11 @@ parsed for CMYK decoding.
 WebP ICCP, EXIF, and XMP chunks are retained as ordered metadata records
 (fourcc as kind, exact payload bytes as data, duplicates kept), while unknown
 RIFF chunks stay in `opaque_blocks`; truncated chunks are not retained.
+TIFF tag retention preserves every non-interpreted tag with typed identity
+(tag number in the file's byte order) and exact stored value bytes — inline
+when the value fits four bytes, otherwise at its offset — with unknown tags in
+`opaque_blocks` and known metadata tags (text, date, software, artist,
+copyright, ICC) in the metadata records, per page.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

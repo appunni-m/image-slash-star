@@ -134,7 +134,7 @@ fn decode_ifd(
     endian: Endian,
     budget: Option<&mut SequenceDecodeBudget>,
 ) -> CodecResult<(DecodedImage, usize, usize)> {
-    let directory = Directory::parse(data, ifd_offset, endian)
+    let mut directory = Directory::parse(data, ifd_offset, endian)
         .map_err(|error| error.at(ifd_offset as u64, "tiff_ifd"))?;
     let next_offset = directory.next_offset();
     #[allow(clippy::arithmetic_side_effects)]
@@ -309,7 +309,9 @@ fn decode_ifd(
             }
         }
         return Ok((
-            convert_pixels((width, height), pixels, layout, endian, palette, alpha),
+            convert_pixels((width, height), pixels, layout, endian, palette, alpha)
+                .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+                .with_metadata(std::mem::take(&mut directory.metadata)),
             next_offset,
             directory_end,
         ));
@@ -397,7 +399,9 @@ fn decode_ifd(
     pixels.resize(expected_total, 0);
 
     Ok((
-        convert_pixels((width, height), pixels, layout, endian, palette, alpha),
+        convert_pixels((width, height), pixels, layout, endian, palette, alpha)
+            .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+            .with_metadata(std::mem::take(&mut directory.metadata)),
         next_offset,
         directory_end,
     ))
@@ -899,6 +903,8 @@ pub(super) struct Directory<'a> {
     fields: Vec<Field>,
     entries: Vec<Entry>,
     next_offset: usize,
+    pub(super) opaque_blocks: Vec<crate::types::OpaqueBlock>,
+    pub(super) metadata: Vec<crate::types::OpaqueMetadata>,
 }
 
 #[derive(Clone, Copy)]
@@ -922,6 +928,16 @@ enum NumericKind {
     Shorts,
     Longs,
 }
+
+/// Tags the TIFF model interprets and therefore never retains as container
+/// records.
+const INTERPRETED_TAGS: [u16; 18] = [
+    256, 257, 258, 259, 262, 273, 277, 278, 279, 284, 317, 320, 322, 323, 324, 325, 338, 339,
+];
+
+/// Tags the model classifies as known metadata and retains as raw metadata
+/// records.
+const KNOWN_METADATA_TAGS: [u16; 6] = [270, 305, 306, 315, 33_432, 34_675];
 
 fn validate_baseline_field_type(tag: u16, field_type: u16) -> CodecResult<()> {
     let dimension_name = match tag {
@@ -976,6 +992,8 @@ impl<'a> Directory<'a> {
         let entries_start = offset.saturating_add(2);
         let mut fields = Vec::with_capacity(count);
         let mut entries = Vec::with_capacity(count);
+        let mut opaque_blocks = Vec::new();
+        let mut metadata = Vec::new();
         for index in 0..count {
             let start = entries_start.saturating_add(index.saturating_mul(12));
             let bytes = data
@@ -1021,6 +1039,26 @@ impl<'a> Directory<'a> {
             #[cfg(not(target_pointer_width = "32"))]
             data.get(value_position..value_position.saturating_add(byte_len))
                 .malformed("TIFF directory value is out of bounds")?;
+            let raw_value = data[value_position..value_position.saturating_add(byte_len)].to_vec();
+            if !INTERPRETED_TAGS.contains(&tag) {
+                let mut kind = [0u8; 2];
+                endian.write_u16(tag, &mut kind);
+                if KNOWN_METADATA_TAGS.contains(&tag) {
+                    metadata.push(crate::types::OpaqueMetadata {
+                        kind: kind.to_vec(),
+                        data: raw_value,
+                    });
+                } else {
+                    // TIFF defines no safe-to-copy bit; unknown tags are
+                    // ignorable by baseline readers, so copying one cannot
+                    // change interpreted semantics.
+                    opaque_blocks.push(crate::types::OpaqueBlock {
+                        kind: kind.to_vec(),
+                        data: raw_value,
+                        safe_to_copy: true,
+                    });
+                }
+            }
             if let Some(numeric_kind) = numeric_kind {
                 entries.push(Entry {
                     tag,
@@ -1042,6 +1080,8 @@ impl<'a> Directory<'a> {
             fields,
             entries,
             next_offset: endian.u32_exact([next[0], next[1], next[2], next[3]]) as usize,
+            opaque_blocks,
+            metadata,
         })
     }
 
