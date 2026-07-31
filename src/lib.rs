@@ -98,7 +98,7 @@ pub use capabilities::{
 pub(crate) use decode_policy::SequenceDecodeBudget;
 pub use decode_policy::{DecodeLimits, DecodePolicy};
 pub use encode_options::*;
-pub use source::EncodedImage;
+pub use source::{EncodedImage, EncodedImageView};
 pub use types::*;
 
 /// Detect an encoded image format from its magic bytes.

@@ -2389,6 +2389,101 @@ fn basic_inspection_reports_completeness() -> Result<(), Box<dyn std::error::Err
 }
 
 #[test]
+fn borrowed_view_matches_the_owned_snapshot_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{DecodePolicy, EncodedImageView, VerificationScope};
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, bool, &str)] = &[
+        (
+            "png",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+        ),
+        (
+            "gif animated",
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/animated_3frame.gif",
+        ),
+        (
+            "webp",
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+        ),
+        (
+            "tiff multipage",
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/multipage.tiff",
+        ),
+    ];
+    for &(name, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let data = fs::read(root.join(path))?;
+        let view = EncodedImageView::new(&data)?;
+        let expected = image_slash_star::inspect(&data)?;
+        assert_eq!(view.format(), expected.format, "{name} format");
+        assert_eq!(view.info(), &expected, "{name} info");
+        assert_eq!(
+            view.decoded_bytes()?,
+            expected.decoded_bytes()?,
+            "{name} decoded bytes"
+        );
+        assert_eq!(
+            view.transfer_layout()?,
+            expected.transfer_layout()?,
+            "{name} transfer layout"
+        );
+        assert_eq!(
+            view.decode()?,
+            image_slash_star::decode(&data)?,
+            "{name} decode"
+        );
+        assert_eq!(
+            view.decode_sequence()?,
+            image_slash_star::decode_sequence(&data)?,
+            "{name} sequence"
+        );
+        let default = DecodePolicy::default();
+        assert_eq!(
+            view.decode_with_policy(&default)?,
+            image_slash_star::decode(&data)?,
+            "{name} policy decode"
+        );
+        assert_eq!(
+            view.decode_sequence_with_policy(&default)?,
+            image_slash_star::decode_sequence(&data)?,
+            "{name} policy sequence"
+        );
+        assert!(view.verify().is_ok(), "{name} verify");
+        let provided = view.verification_scope();
+        assert!(
+            view.verify_with_scope(provided).is_ok(),
+            "{name} provided scope"
+        );
+        let stronger = if provided == VerificationScope::HeaderOnly {
+            VerificationScope::Structure
+        } else {
+            VerificationScope::FullPixels
+        };
+        assert!(
+            view.verify_with_scope(stronger).is_err(),
+            "{name} stronger scope"
+        );
+        let strict = DecodePolicy::new().with_max_encoded_bytes(1);
+        assert!(
+            EncodedImageView::new_with_policy(&data, &strict).is_err(),
+            "{name} strict construction"
+        );
+        assert!(
+            view.decode_with_policy(&strict).is_err(),
+            "{name} strict decode"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::VerificationScope;

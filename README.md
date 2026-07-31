@@ -146,6 +146,7 @@ capabilities and setup.
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
 | `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
 | `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
+| `EncodedImageView::new(&[u8])` | Borrow an immutable encoded view with the same inspect/verify/decode operations and no copy or cache |
 
 `Decoded::consumed_bytes` reports the encoded bytes of the container-defined
 extent when the container defines one unambiguously (JPEG after EOI, PNG after
