@@ -1164,6 +1164,13 @@ impl<'a> Directory<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    assert!(decode_page(b"", 0).is_err());
+    assert!(decode_page(b"II", 0).is_err());
+    let mut bad_page =
+        include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
+    bad_page[106..110].copy_from_slice(&2000u32.to_le_bytes());
+    assert!(decode_page(&bad_page, 1).is_err());
+
     // No committed TIFF fixture declares associated (premultiplied) alpha;
     // exercise every tag-338 mapping arm so the semantic space stays covered.
     assert_eq!(
