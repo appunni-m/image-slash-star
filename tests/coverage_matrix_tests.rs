@@ -2345,9 +2345,7 @@ fn assert_sequence_reference_parity(
             expected_frame.source_byte_order_origin.as_deref(),
             &format!("frame {}", expected_frame.index),
         )?;
-        if actual_frame.image.source.byte_order() != expected_byte_order
-            || actual_frame.image.source.is_empty() != expected_byte_order.is_none()
-        {
+        if actual_frame.image.source.byte_order() != expected_byte_order {
             return Err(format!(
                 "frame {} source byte order mismatch: actual {:?}, expected {:?}",
                 expected_frame.index,
@@ -3041,9 +3039,7 @@ fn test_decode_matrix() {
                     || info.cursor_hotspot != expected_cursor_hotspot
                     || decoded.cursor_hotspot != expected_cursor_hotspot
                     || info.source.byte_order() != expected_inspect_byte_order
-                    || info.source.is_empty() != expected_inspect_byte_order.is_none()
                     || decoded.source.byte_order() != expected_decoded_byte_order
-                    || decoded.source.is_empty() != expected_decoded_byte_order.is_none()
                 {
                     eprintln!(
                         "  FAIL [{}]: metadata {:?} differs from Pillow mode/size/frame and decoded palette",

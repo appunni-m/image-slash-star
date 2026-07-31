@@ -39,7 +39,7 @@ fn inspect_vp8(payload: &[u8]) -> CodecResult<ImageInfo> {
     payload
         .get(..10usize.wrapping_add(first_partition_size))
         .malformed("truncated WebP VP8 first partition")?;
-    still_info(width, height, ImageMode::Rgb8)
+    still_info(width, height, ImageMode::Rgb8, false)
 }
 
 fn inspect_vp8l(payload: &[u8]) -> CodecResult<ImageInfo> {
@@ -57,21 +57,27 @@ fn inspect_vp8l(payload: &[u8]) -> CodecResult<ImageInfo> {
     }
     let width = (header & 0x3fff).wrapping_add(1);
     let height = ((header >> 14) & 0x3fff).wrapping_add(1);
-    let mode = if header & (1 << 28) != 0 {
+    let has_alpha = header & (1 << 28) != 0;
+    let mode = if has_alpha {
         ImageMode::Rgba8
     } else {
         ImageMode::Rgb8
     };
-    still_info(width, height, mode)
+    still_info(width, height, mode, has_alpha)
 }
 
-fn still_info(width: u32, height: u32, mode: ImageMode) -> CodecResult<ImageInfo> {
+fn still_info(width: u32, height: u32, mode: ImageMode, has_alpha: bool) -> CodecResult<ImageInfo> {
     if width == 0 || height == 0 {
         return Err(CodecError::Malformed(
             "WebP dimensions must be nonzero".to_owned(),
         ));
     }
     enforce_dimension_limit(width, height)?;
+    let source = if has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
     Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
@@ -82,7 +88,7 @@ fn still_info(width: u32, height: u32, mode: ImageMode) -> CodecResult<ImageInfo
         is_animated: false,
         frame_count: Some(1),
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source,
     })
 }
 
@@ -93,7 +99,8 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     let height = le_u24(header, 7).wrapping_add(1);
     enforce_dimension_limit(width, height)?;
     let declares_animation = flags & 0x02 != 0;
-    let mode = if flags & 0x10 != 0 {
+    let has_alpha = flags & 0x10 != 0;
+    let mode = if has_alpha {
         ImageMode::Rgba8
     } else {
         ImageMode::Rgb8
@@ -145,6 +152,11 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         ));
     }
     let is_animated = frame_count > 1;
+    let source = if has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
     Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
@@ -155,7 +167,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         is_animated,
         frame_count: Some(frame_count),
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source,
     })
 }
 

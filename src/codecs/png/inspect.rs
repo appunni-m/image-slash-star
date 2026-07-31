@@ -116,6 +116,14 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         ));
     }
 
+    let source =
+        match color_type {
+            4 | 6 => crate::types::SourceDescriptor::new()
+                .with_alpha(crate::types::SourceAlpha::Straight),
+            3 if !palette_alpha.is_empty() => crate::types::SourceDescriptor::new()
+                .with_alpha(crate::types::SourceAlpha::Straight),
+            _ => crate::types::SourceDescriptor::new(),
+        };
     let palette = if mode == ImageMode::P8 {
         palette_rgb.map(|rgb| {
             palette_alpha.truncate(rgb.len() / 3);
@@ -138,7 +146,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         is_animated,
         frame_count: Some(frame_count),
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source,
     })
 }
 

@@ -1038,7 +1038,14 @@ fn build_image(
         (3, _) => ImageMode::P8,
         _ => color.into(),
     };
-    let mut image = DecodedImage::with_mode(width, height, pixels, mode);
+    let source_descriptor = match (png_color, palette_alpha.is_empty()) {
+        (4 | 6, _) | (3, false) => {
+            crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+        }
+        _ => crate::types::SourceDescriptor::new(),
+    };
+    let mut image = DecodedImage::with_mode(width, height, pixels, mode)
+        .with_source_descriptor(source_descriptor);
     if png_color == 3
         && let Some(mut rgb) = palette_rgb
     {

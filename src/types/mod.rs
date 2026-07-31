@@ -47,6 +47,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = ImageFormat::from_path("fixture.unknown");
     let _ = ImageFormat::from_path("fixture");
 
+    // No decoder currently emits auxiliary alpha; exercise the reserved
+    // variant and descriptor round-trip so the semantic space stays covered.
+    let descriptor = SourceDescriptor::new()
+        .with_alpha(SourceAlpha::Auxiliary)
+        .with_byte_order(SourceByteOrder::Big);
+    assert_eq!(descriptor.alpha(), Some(SourceAlpha::Auxiliary));
+    assert_eq!(descriptor.byte_order(), Some(SourceByteOrder::Big));
+    assert!(!descriptor.is_empty());
+
     let colors = [
         ColorType::L8,
         ColorType::La8,
@@ -609,6 +618,25 @@ pub enum SourceByteOrder {
     Big,
 }
 
+/// Source alpha association declared by an encoded container.
+///
+/// This records what the container says about its own alpha, not the transfer
+/// layout of [`DecodedImage::pixels`]. Decoded transfer bytes remain the
+/// documented Pillow-observable normalized layout (unassociated samples),
+/// except where a codec explicitly retains source-order bytes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum SourceAlpha {
+    /// Straight (unassociated) alpha: samples are not premultiplied.
+    Straight,
+    /// Premultiplied (associated) alpha.
+    Premultiplied,
+    /// A binary transparency mask selects fully transparent samples.
+    BinaryMask,
+    /// Alpha carried by a separate auxiliary channel or image.
+    Auxiliary,
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -618,6 +646,7 @@ pub enum SourceByteOrder {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SourceDescriptor {
     byte_order: Option<SourceByteOrder>,
+    alpha: Option<SourceAlpha>,
 }
 
 impl SourceDescriptor {
@@ -625,7 +654,10 @@ impl SourceDescriptor {
     /// no retained structural facts.
     #[must_use]
     pub const fn new() -> Self {
-        Self { byte_order: None }
+        Self {
+            byte_order: None,
+            alpha: None,
+        }
     }
 
     /// Record the byte order declared by the encoded source.
@@ -641,10 +673,24 @@ impl SourceDescriptor {
         self.byte_order
     }
 
+    /// Record the alpha association declared by the encoded source.
+    #[must_use]
+    pub const fn with_alpha(mut self, alpha: SourceAlpha) -> Self {
+        self.alpha = Some(alpha);
+        self
+    }
+
+    /// Return the alpha association declared by the encoded source, when
+    /// retained. `None` means the container declares no alpha semantics.
+    #[must_use]
+    pub const fn alpha(&self) -> Option<SourceAlpha> {
+        self.alpha
+    }
+
     /// Whether this source has no retained structural facts.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.byte_order.is_none()
+        self.byte_order.is_none() && self.alpha.is_none()
     }
 }
 

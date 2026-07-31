@@ -98,13 +98,20 @@ sequence: `TimedAnimation` (GIF, APNG, animated WebP, and AVIF), `UntimedPages`
 sequence). TIFF pages keep exact zero durations and are never described as
 timed animation.
 
+`SourceDescriptor::alpha()` records the alpha association declared by the
+encoded source: straight (PNG, WebP, AVIF, TIFF `ExtraSamples` 2),
+premultiplied (TIFF `ExtraSamples` 1), binary mask (GIF transparency), or the
+reserved auxiliary class. It never changes decoded transfer bytes, which stay
+the documented normalized unassociated layout unless a codec explicitly
+retains source-order bytes.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
-blend, frame layout, backgrounds, sequence kinds, capabilities, errors,
-limits, and encoder options. Downstream matches require a fallback; internal
-dispatch matches stay exhaustive so each new variant forces a codec review.
-`SourceByteOrder` remains exhaustive because its represented domain is exactly
-little- or big-endian.
+blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,
+errors, limits, and encoder options. Downstream matches require a fallback;
+internal dispatch matches stay exhaustive so each new variant forces a codec
+review. `SourceByteOrder` remains exhaustive because its represented domain is
+exactly little- or big-endian.
 
 `ImageFormat::from_name` accepts the canonical format names and every
 Pillow-recognized extension alias except headerless DIB: JPEG

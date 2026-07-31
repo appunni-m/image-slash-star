@@ -6,7 +6,7 @@ use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, ImageMode, ImagePalette, SourceByteOrder, SourceDescriptor,
+    FrameDuration, ImageMode, ImagePalette, SourceAlpha, SourceByteOrder, SourceDescriptor,
 };
 
 const COMPRESSION_NONE: usize = 1;
@@ -175,6 +175,10 @@ fn decode_ifd(
         sample_format,
         color_map.as_deref(),
     )?;
+    let alpha = directory
+        .values(338)
+        .as_deref()
+        .and_then(source_alpha_from_extra_samples);
     if let Some(budget) = budget {
         budget
             .reserve_later_frame(layout.mode(), width, height)
@@ -301,7 +305,7 @@ fn decode_ifd(
             }
         }
         return Ok((
-            convert_pixels((width, height), pixels, layout, endian, palette),
+            convert_pixels((width, height), pixels, layout, endian, palette, alpha),
             next_offset,
             directory_end,
         ));
@@ -389,7 +393,7 @@ fn decode_ifd(
     pixels.resize(expected_total, 0);
 
     Ok((
-        convert_pixels((width, height), pixels, layout, endian, palette),
+        convert_pixels((width, height), pixels, layout, endian, palette, alpha),
         next_offset,
         directory_end,
     ))
@@ -469,6 +473,7 @@ fn convert_pixels(
     layout: TiffLayout,
     endian: Endian,
     palette: Option<ImagePalette>,
+    alpha: Option<SourceAlpha>,
 ) -> DecodedImage {
     let (width, height) = dimensions;
     let image = match layout {
@@ -548,8 +553,23 @@ fn convert_pixels(
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
         }
     };
-    image
-        .with_source_descriptor(SourceDescriptor::new().with_byte_order(endian.source_byte_order()))
+    let mut descriptor = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
+    if let Some(alpha) = alpha {
+        descriptor = descriptor.with_alpha(alpha);
+    }
+    image.with_source_descriptor(descriptor)
+}
+
+/// Map TIFF tag 338 (`ExtraSamples`) to the declared source alpha semantics.
+///
+/// TIFF defines 1 as associated (premultiplied) and 2 as unassociated
+/// (straight) alpha; 0 and absent values remain unspecified.
+pub(super) fn source_alpha_from_extra_samples(values: &[usize]) -> Option<SourceAlpha> {
+    match values.first() {
+        Some(1) => Some(SourceAlpha::Premultiplied),
+        Some(2) => Some(SourceAlpha::Straight),
+        _ => None,
+    }
 }
 
 fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Vec<u8> {
@@ -1077,6 +1097,19 @@ impl<'a> Directory<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    // No committed TIFF fixture declares associated (premultiplied) alpha;
+    // exercise every tag-338 mapping arm so the semantic space stays covered.
+    assert_eq!(
+        source_alpha_from_extra_samples(&[1]),
+        Some(SourceAlpha::Premultiplied)
+    );
+    assert_eq!(
+        source_alpha_from_extra_samples(&[2]),
+        Some(SourceAlpha::Straight)
+    );
+    assert_eq!(source_alpha_from_extra_samples(&[0]), None);
+    assert_eq!(source_alpha_from_extra_samples(&[]), None);
+
     assert!(decode(b"").is_err());
     assert!(decode(b"II").is_err());
     assert!(decode(b"ZZ\0\0\0\0\0\0").is_err());

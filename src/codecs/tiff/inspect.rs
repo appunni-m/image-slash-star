@@ -32,6 +32,14 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         color_map.as_deref(),
     )?;
     let (frame_count, complete_chain) = count_directories(data, first_offset, endian);
+    let alpha = directory
+        .values(338)
+        .as_deref()
+        .and_then(super::decode::source_alpha_from_extra_samples);
+    let mut source = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
+    if let Some(alpha) = alpha {
+        source = source.with_alpha(alpha);
+    }
 
     Ok(ImageInfo {
         format: ImageFormat::Tiff,
@@ -43,7 +51,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         is_animated: frame_count > 1,
         frame_count: complete_chain.then_some(frame_count),
         cursor_hotspot: None,
-        source: SourceDescriptor::new().with_byte_order(endian.source_byte_order()),
+        source,
     })
 }
 

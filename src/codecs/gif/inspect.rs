@@ -115,6 +115,14 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         }
     }
 
+    let source = if first_palette
+        .as_ref()
+        .is_some_and(|palette| palette.alpha.iter().any(|&alpha| alpha != u8::MAX))
+    {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::BinaryMask)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
     Ok(ImageInfo {
         format: ImageFormat::Gif,
         width: logical_width.max(fallback_width),
@@ -125,7 +133,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         is_animated: frame_count > 1,
         frame_count: complete.then_some(frame_count),
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source,
     })
 }
 

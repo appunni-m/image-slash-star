@@ -108,7 +108,9 @@ codec-level `Unsupported` errors ("AVIF sequence decoding requires the native
 AVIF stack" for sequence decode, "AVIF encoding requires the native extra
 module" for still and sequence encode) that match the capability table;
 out-of-subset still decode returns "AVIF input is outside the portable WASM
-decode subset" at the `StillDecode` stage.
+decode subset" at the `StillDecode` stage. When an AVIF item declares an
+alpha auxiliary item, `SourceDescriptor::alpha()` reports `Straight`
+(unassociated), matching the AVIF alpha contract.
 
 ## Native FFI boundary
 

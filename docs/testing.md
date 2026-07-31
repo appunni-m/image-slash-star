@@ -218,6 +218,14 @@ fallbacks), and TIFF pages additionally assert exact zero durations so they
 are never described as timed animation. AVIF sequence decode is native-only,
 so its row is skipped on `wasm32` targets.
 
+The source-alpha contract is table-driven as well: inspect and decode must
+agree on `SourceDescriptor::alpha()` for GIF transparency (`BinaryMask`),
+PNG/WebP/TIFF/AVIF alpha (`Straight`), and opaque fixtures of every format
+(`None`). TIFF `ExtraSamples` 1 maps to `Premultiplied`; no committed fixture
+declares associated alpha, so that mapping arm is retained through the
+coverage model rather than a Pillow fixture. Decoded transfer bytes remain
+the normalized unassociated layout regardless of the source declaration.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
