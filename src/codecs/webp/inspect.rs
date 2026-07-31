@@ -388,9 +388,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = inspect_extended_basic(&[], &vp8x, 0);
     let _ = inspect_extended_basic(&[0], &vp8x, 0);
     let _ = inspect_extended_basic(&[], &[0xff; 10], 0);
+    let _ = inspect_extended_basic(&chunk(b"VP8 ", &[0u8; 10]), &vp8x, 0);
+    let _ = inspect_extended_basic(&chunk(b"VP8 ", &vp8), &[0u8; 10], 0);
+    let _ = inspect_extended_basic(&chunk(b"VP8L", &[0u8; 5]), &vp8x, 0);
     let mut lossless = vec![0x2f];
     lossless.extend_from_slice(&0u32.to_le_bytes());
     let _ = inspect_extended_basic(&chunk(b"VP8L", &lossless), &vp8x, 0);
+    let mut mismatched_lossless = vec![0x2f];
+    mismatched_lossless.extend_from_slice(&1u32.to_le_bytes());
+    let _ = inspect_extended_basic(&chunk(b"VP8L", &mismatched_lossless), &vp8x, 0);
 
     for header in [1u32, 1u32 << 14] {
         let mut vp8l = vec![0x2f];
