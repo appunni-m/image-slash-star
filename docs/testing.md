@@ -315,6 +315,13 @@ bytes identical to `encode`/`encode_sequence` with matching lengths for both
 `Vec<u8>` and `&mut Vec<u8>` sinks, and a deterministic failing sink must
 propagate its error without any partial container write.
 
+The cross-target determinism contract is machine-checked: a
+`determinism_tests` target computes SHA-256 over exact encoder output and
+decoded pixels for 15 fixed cases and compares them with the committed golden
+hashes. The feature-matrix command runs the same suite natively and on
+`wasm32-wasip1`, so a green CI run proves byte-identical output between the
+native host and the WASM runtime.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error
