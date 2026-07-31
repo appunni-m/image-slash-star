@@ -25,7 +25,10 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     )?;
     // `decode_sequence` rejects a GIF without an image descriptor before
     // constructing its return value, so the first frame is a local invariant.
-    Ok((sequence.frames.remove(0).image, consumed))
+    let mut image = sequence.frames.remove(0).image;
+    image.metadata = std::mem::take(&mut sequence.metadata);
+    image.opaque_blocks = std::mem::take(&mut sequence.opaque_blocks);
+    Ok((image, consumed))
 }
 
 /// Decode every image descriptor and its presentation metadata.
@@ -54,6 +57,8 @@ pub fn decode_sequence(
     let mut frames = Vec::new();
     let mut loop_count = None;
     let mut recovering_from_bad_gce = false;
+    let mut metadata = Vec::new();
+    let mut opaque_blocks = Vec::new();
 
     loop {
         let block_offset = input.position() as u64;
@@ -63,6 +68,7 @@ pub fn decode_sequence(
         {
             EXTENSION_INTRODUCER => {
                 let label = input.read_u8()?;
+                let payload_start = input.position();
                 if label == 0xf9 {
                     (graphic_control, recovering_from_bad_gce) = read_graphic_control(&mut input)?;
                 } else if label == 0xff {
@@ -76,8 +82,28 @@ pub fn decode_sequence(
                         let bytes = [payload[1], payload[2]];
                         loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
                     }
+                    if !is_loop_extension {
+                        metadata.push(crate::types::OpaqueMetadata {
+                            kind: vec![label],
+                            data: data[payload_start..input.position()].to_vec(),
+                        });
+                    }
+                } else if matches!(label, 0xfe | 0x01) {
+                    input.skip_sub_blocks()?;
+                    metadata.push(crate::types::OpaqueMetadata {
+                        kind: vec![label],
+                        data: data[payload_start..input.position()].to_vec(),
+                    });
                 } else {
                     input.skip_sub_blocks()?;
+                    // GIF defines no safe-to-copy bit; GIF89a requires
+                    // decoders to ignore unknown extensions, so copying one
+                    // cannot change frame semantics.
+                    opaque_blocks.push(crate::types::OpaqueBlock {
+                        kind: vec![label],
+                        data: data[payload_start..input.position()].to_vec(),
+                        safe_to_copy: true,
+                    });
                 }
             }
             IMAGE_SEPARATOR => {
@@ -143,8 +169,8 @@ pub fn decode_sequence(
         loop_count,
         background: Some(AnimationBackground::PaletteIndex(background_index)),
         kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
+        opaque_blocks,
+        metadata,
         source_color: SourceColor::new(),
     };
     Ok((sequence, consumed))

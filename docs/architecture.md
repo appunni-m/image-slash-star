@@ -127,6 +127,15 @@ payload, never inflated). The first well-formed occurrence of each chunk is
 parsed; duplicates and malformed payloads fall back to raw metadata records.
 Retaining color metadata never implies that color conversion was applied.
 
+For GIF, comment (0xFE), plain-text (0x01), and non-NETSCAPE application
+(0xFF) extensions are retained as ordered `OpaqueMetadata` records with the
+label byte as kind and the exact bytes after the label (size, sub-blocks,
+terminator) as data. The NETSCAPE loop extension stays interpreted into
+`loop_count`; unknown extension labels are retained as `OpaqueBlock` records
+and recorded safe to copy because GIF89a requires decoders to ignore
+extensions they do not understand. Still decode attaches the container records
+to the returned image, and default encoding never replays extensions.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
 blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,

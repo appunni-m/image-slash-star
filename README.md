@@ -220,6 +220,10 @@ container's safe-to-copy flag (currently PNG unknown ancillary chunks).
 Known PNG metadata chunks (text, EXIF, time, and resolution blocks) are
 retained separately as raw, unparsed `OpaqueMetadata` records; compressed
 payloads are never inflated.
+GIF comment, plain-text, and non-NETSCAPE application extensions are retained
+the same way (label byte as kind, exact payload bytes as data), while unknown
+extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
+remains interpreted into `loop_count`.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it
