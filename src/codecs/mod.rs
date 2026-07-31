@@ -538,6 +538,97 @@ fn option_format_mismatch(
     }
 }
 
+/// Measure the encoded metadata extent of one detected format.
+///
+/// The metadata extent is the container-defined consumed length minus the
+/// encoded bytes of primary pixel payload data. It is computed without
+/// decompressing pixels so `max_metadata_bytes` can reject before codec work.
+pub(crate) fn metadata_bytes_format(data: &[u8], format: ImageFormat) -> ImageResult<u64> {
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    ensure_available(format)?;
+    #[cfg(any(
+        not(all(
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        )),
+        target_arch = "wasm32"
+    ))]
+    let _ = data;
+    let metadata: CodecResult<u64> = match format {
+        #[cfg(feature = "jpeg")]
+        ImageFormat::Jpeg => jpeg::decode::metadata_bytes(data),
+        #[cfg(not(feature = "jpeg"))]
+        ImageFormat::Jpeg => Err(error::CodecError::Malformed(
+            "JPEG feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "png")]
+        ImageFormat::Png => png::decode::metadata_bytes(data),
+        #[cfg(not(feature = "png"))]
+        ImageFormat::Png => Err(error::CodecError::Malformed(
+            "PNG feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "gif")]
+        ImageFormat::Gif => gif::decode::metadata_bytes(data),
+        #[cfg(not(feature = "gif"))]
+        ImageFormat::Gif => Err(error::CodecError::Malformed(
+            "GIF feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "bmp")]
+        ImageFormat::Bmp => bmp::decode::metadata_bytes(data),
+        #[cfg(not(feature = "bmp"))]
+        ImageFormat::Bmp => Err(error::CodecError::Malformed(
+            "BMP feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "tiff")]
+        ImageFormat::Tiff => tiff::decode::metadata_bytes(data),
+        #[cfg(not(feature = "tiff"))]
+        ImageFormat::Tiff => Err(error::CodecError::Malformed(
+            "TIFF feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "webp")]
+        ImageFormat::WebP => webp::decode::metadata_bytes(data),
+        #[cfg(not(feature = "webp"))]
+        ImageFormat::WebP => Err(error::CodecError::Malformed(
+            "WebP feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "ico")]
+        ImageFormat::Ico => ico::decode::metadata_bytes(data),
+        #[cfg(not(feature = "ico"))]
+        ImageFormat::Ico => Err(error::CodecError::Malformed(
+            "ICO feature is disabled".to_owned(),
+        )),
+        #[cfg(feature = "avif")]
+        ImageFormat::Avif => avif::decode::metadata_bytes(data),
+        #[cfg(not(feature = "avif"))]
+        ImageFormat::Avif => Err(error::CodecError::Malformed(
+            "AVIF feature is disabled".to_owned(),
+        )),
+    };
+    into_image_result(
+        metadata.map_err(|error| error.context("metadata measure")),
+        format,
+        ImageErrorStage::Inspection,
+    )
+}
+
 fn has_plain_still_semantics(
     sequence: &DecodedSequence,
     frame: &crate::types::DecodedFrame,

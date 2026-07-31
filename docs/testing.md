@@ -161,6 +161,16 @@ their enabled lanes, including a palette-less later GIF frame.
 Three near-maximum rows (`u32::MAX` frames, `u64::MAX` later-frame bytes, and
 `u64::MAX` cumulative bytes) pass on the same small GIF.
 
+The metadata-policy manifest pins one independently measured encoded metadata
+extent per format (JPEG 625, PNG 57, GIF 33, BMP 54, TIFF 110, WebP 20, ICO
+22, AVIF 282) with SHA-256 asset digests. The Rust harness runs
+`max_metadata_bytes` below/at/above, zero, `u64::MAX`, and encoded-bytes and
+primary-canvas precedence rows across inspection, still decode, sequence
+decode, source construction, and lazy decode, plus a malformed-scan
+propagation row. The metadata rule counts every encoded byte that is not
+primary pixel payload data, and the scanner must agree with the independently
+measured manifest values.
+
 The trailing-input manifest pins the per-format trailing policy: three payloads
 appended to a valid asset of every format must produce identical still pixels,
 identical sequence frames, and identical inspection results, with
@@ -216,17 +226,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 41,550 | 41,550 |
-| Branches | 5,934 | 5,934 |
-| Functions | 2,258 | 2,258 |
-| Regions | 66,026 | 66,026 |
+| Lines | 41,954 | 41,954 |
+| Branches | 6,022 | 6,022 |
+| Functions | 2,279 | 2,279 |
+| Regions | 66,742 | 66,742 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `d2a86625-4f65-480b-bcc1-0d6ea15cdb9f`
+Coverage MCP run: `5121454b-8b80-4c4a-ab45-e7f3908e4fd6`
 
-Snapshot: `73221af5-0f09-47bd-b731-3fd141bf3b5f`
+Snapshot: `d5b563a7-8a08-4b3a-a764-b57ce36d0821`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -251,6 +261,9 @@ Trailing-input manifest SHA-256:
 
 Malformed-class ledger SHA-256:
 `66d11684fb9601ae7fcfe83d7ed10e6e4a87657f6780c76eb99da70a719caf72`
+
+Metadata-policy manifest SHA-256:
+`5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

@@ -195,6 +195,7 @@ pub fn decode_with_policy(
 ) -> ImageResult<Decoded<DecodedImage>> {
     policy.check_encoded_input(data, CodecOperation::StillDecode)?;
     let format = detect_format(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
     if policy.requires_image_info() {
         let info = codecs::inspect_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
@@ -230,6 +231,7 @@ pub fn decode_sequence_with_policy(
 ) -> ImageResult<Decoded<DecodedSequence>> {
     policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
     let format = detect_format(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
     let mut budget = policy.sequence_budget(format);
     if policy.requires_image_info() {
         let info = codecs::inspect_format(data, format)?;
@@ -261,6 +263,7 @@ pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
 pub fn inspect_with_policy(data: &[u8], policy: &DecodePolicy) -> ImageResult<ImageInfo> {
     policy.check_encoded_input(data, CodecOperation::Inspection)?;
     let format = detect_format(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::Inspection)?;
     let info = codecs::inspect_format(data, format)?;
     policy.check_image_info(&info, CodecOperation::Inspection)?;
     Ok(info)

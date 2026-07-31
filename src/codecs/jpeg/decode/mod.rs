@@ -25,6 +25,7 @@ pub(crate) mod upsample;
 
 // Expose the implementation only to the crate-level structured dispatcher.
 pub use implementation::decode;
+pub(crate) use implementation::metadata_bytes;
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {

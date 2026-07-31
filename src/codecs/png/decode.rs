@@ -256,6 +256,25 @@ pub fn decode_sequence(
     ))
 }
 
+/// Measure the encoded metadata extent: the consumed chunk scan minus the
+/// compressed pixel payload bytes of `IDAT` and `fdAT` data.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let mut chunks = Chunks::new(data, false)?;
+    let mut pixel = 0u64;
+    for chunk in &mut chunks {
+        let chunk = chunk?;
+        if chunk.kind == *b"IDAT" {
+            pixel = pixel.saturating_add(chunk.data.len() as u64);
+        } else if chunk.kind == *b"fdAT" {
+            pixel = pixel.saturating_add(chunk.data.len().saturating_sub(4) as u64);
+        }
+    }
+    // `pixel` is the sum of IDAT/fdAT payloads inside the chunk scan.
+    #[allow(clippy::arithmetic_side_effects)]
+    let metadata = chunks.position as u64 - pixel;
+    Ok(metadata)
+}
+
 fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     // The common sequence dispatcher has already detected the complete PNG
     // signature. Avoid manufacturing an unreachable second signature-error
@@ -1238,6 +1257,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode(b"");
     let _ = decode(&png_chunk(*b"NOPE", &[0; 13]));
     let _ = decode(&png_chunk(*b"IHDR", &[0; 12]));
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(&png_chunk(*b"NOPE", &[0; 13]));
+    let _ = metadata_bytes(&png_chunk(*b"IHDR", &[0; 12]));
+    let mut truncated_chunk = PNG_SIGNATURE.to_vec();
+    truncated_chunk.extend_from_slice(b"\x00\x00\x00\x01NOPE");
+    let _ = metadata_bytes(&truncated_chunk);
+    let mut fd_chunk = PNG_SIGNATURE.to_vec();
+    append_chunk(&mut fd_chunk, *b"IHDR", &[0; 13]);
+    append_chunk(&mut fd_chunk, *b"fdAT", &[0, 0, 0, 0, 1, 2, 3]);
+    append_chunk(&mut fd_chunk, *b"IEND", &[]);
+    let _ = metadata_bytes(&fd_chunk);
     for (width, height, filter, interlace) in [
         (0u32, 1u32, 0u8, 0u8),
         (1, 0, 0, 0),

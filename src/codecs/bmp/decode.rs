@@ -659,6 +659,25 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     Ok((image, None))
 }
 
+/// Measure the encoded metadata extent: every byte before the pixel-data
+/// offset declared by the file header.
+pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let magic = data
+        .get(..2)
+        .ok_or_else(|| CodecError::Malformed("truncated BMP file signature".to_owned()))?;
+    if magic != b"BM" {
+        return Err(CodecError::Malformed(
+            "invalid BMP file signature".to_owned(),
+        ));
+    }
+    let offset = data
+        .get(10..14)
+        .ok_or_else(|| CodecError::Malformed("truncated BMP file signature".to_owned()))?;
+    Ok(u64::from(u32::from_le_bytes([
+        offset[0], offset[1], offset[2], offset[3],
+    ])))
+}
+
 fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u8> {
     if top_down {
         return pixels;
@@ -683,4 +702,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode(b"").is_err());
     assert!(decode(b"BM").is_err());
     assert!(decode(b"not a bitmap").is_err());
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(b"X");
+    let _ = metadata_bytes(b"XX");
+    let _ = metadata_bytes(b"BM");
 }

@@ -247,7 +247,8 @@ fn decode_at_most_one_mebibyte(
         .with_max_primary_decoded_bytes(64 * 1024 * 1024)
         .with_max_frames(1000)
         .with_max_frame_decoded_bytes(4 * 1024 * 1024)
-        .with_max_sequence_decoded_bytes(256 * 1024 * 1024);
+        .with_max_sequence_decoded_bytes(256 * 1024 * 1024)
+        .with_max_metadata_bytes(8 * 1024 * 1024);
     decode_with_policy(input, &policy)
 }
 ```
@@ -278,6 +279,10 @@ and the cumulative limit charges the inspected primary first and rejects
 before the frame whose addition would exceed the total. Both failures retain
 the format and typed resource; the primary and still-only paths remain bounded
 by the primary-canvas limits.
+
+`max_metadata_bytes` bounds the encoded metadata extent — every encoded byte
+that is not primary pixel payload data — measured by a per-format container
+scan before inspection or pixel work on all five policy paths.
 
 `inspect_with_policy`, `decode_sequence_with_policy`,
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the

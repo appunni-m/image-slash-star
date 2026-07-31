@@ -46,6 +46,10 @@ All notable changes will be documented in this file. This project follows
   operation (`Inspection`, `StillDecode`, `StillEncode`, `SequenceDecode`,
   `SequenceEncode`, or `Verification`) while caller-built errors stay
   stage-free.
+- An encoded metadata-extent limit (`max_metadata_bytes`) with per-format
+  container scanners that exclude primary pixel payload bytes, enforced before
+  inspection or pixel work on all five policy paths and pinned by an
+  independently measured manifest.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
