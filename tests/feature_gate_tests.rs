@@ -1724,6 +1724,162 @@ fn webp_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::err
     Ok(())
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::type_complexity,
+    reason = "test TIFF buffers are tiny fixed literals that always fit u32/u16"
+)]
+#[test]
+fn tiff_tags_match_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{OpaqueBlock, OpaqueMetadata};
+
+    if !cfg!(feature = "tiff") {
+        return Ok(());
+    }
+
+    fn entry(tag: u16, field_type: u16, count: u32, value: [u8; 4]) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(12);
+        bytes.extend_from_slice(&tag.to_le_bytes());
+        bytes.extend_from_slice(&field_type.to_le_bytes());
+        bytes.extend_from_slice(&count.to_le_bytes());
+        bytes.extend_from_slice(&value);
+        bytes
+    }
+
+    // (tag, field_type, count, inline value, out-of-line payload)
+    let plan: Vec<(u16, u16, u32, [u8; 4], Vec<u8>)> = vec![
+        (256, 3, 1, [1, 0, 0, 0], Vec::new()),
+        (257, 3, 1, [1, 0, 0, 0], Vec::new()),
+        (258, 3, 1, [8, 0, 0, 0], Vec::new()),
+        (259, 3, 1, [1, 0, 0, 0], Vec::new()),
+        (262, 3, 1, [1, 0, 0, 0], Vec::new()),
+        (270, 2, 6, [0; 4], b"hello\0".to_vec()),
+        (273, 4, 1, [0; 4], Vec::new()),
+        (277, 3, 1, [1, 0, 0, 0], Vec::new()),
+        (278, 3, 1, [1, 0, 0, 0], Vec::new()),
+        (279, 4, 1, [0; 4], Vec::new()),
+        (306, 2, 20, [0; 4], b"2026:08:01 00:00:00\0".to_vec()),
+        (34_675, 7, 3, [1, 2, 3, 0], Vec::new()),
+        (65_000, 3, 2, [2, 1, 0, 0], Vec::new()),
+        (65_001, 1, 5, [0; 4], vec![9, 8, 7, 6, 5]),
+        (65_000, 3, 1, [9, 0, 0, 0], Vec::new()),
+        (65_003, 5, 1, [0; 4], vec![1, 2, 3, 4, 5, 6, 7, 8]),
+    ];
+    let ifd_count = plan.len() as u16;
+    let mut bytes = b"II".to_vec();
+    bytes.extend_from_slice(&42u16.to_le_bytes());
+    bytes.extend_from_slice(&8u32.to_le_bytes());
+    bytes.extend_from_slice(&ifd_count.to_le_bytes());
+    let entries_start = 8usize.wrapping_add(2);
+    for item in &plan {
+        let tag = item.0;
+        let field_type = item.1;
+        let count = item.2;
+        let value = if item.4.is_empty() { item.3 } else { [0; 4] };
+        bytes.extend_from_slice(&entry(tag, field_type, count, value));
+    }
+    bytes.extend_from_slice(&[0; 4]);
+    for (index, item) in plan.iter().enumerate() {
+        if item.4.is_empty() {
+            continue;
+        }
+        let offset = bytes.len() as u32;
+        bytes.extend_from_slice(&item.4);
+        if item.4.len() & 1 != 0 {
+            bytes.push(0);
+        }
+        let entry_offset = entries_start.wrapping_add(index.wrapping_mul(12));
+        bytes[entry_offset.wrapping_add(8)..entry_offset.wrapping_add(12)]
+            .copy_from_slice(&offset.to_le_bytes());
+    }
+    let strip_offset = bytes.len() as u32;
+    bytes.push(128);
+    for (index, item) in plan.iter().enumerate() {
+        if item.0 == 273 {
+            let entry_offset = entries_start.wrapping_add(index.wrapping_mul(12));
+            bytes[entry_offset.wrapping_add(8)..entry_offset.wrapping_add(12)]
+                .copy_from_slice(&strip_offset.to_le_bytes());
+        }
+        if item.0 == 279 {
+            let entry_offset = entries_start.wrapping_add(index.wrapping_mul(12));
+            bytes[entry_offset.wrapping_add(8)..entry_offset.wrapping_add(12)]
+                .copy_from_slice(&1u32.to_le_bytes());
+        }
+    }
+
+    let expected_blocks = vec![
+        OpaqueBlock {
+            kind: 65_000u16.to_le_bytes().to_vec(),
+            data: vec![2, 1, 0, 0],
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: 65_001u16.to_le_bytes().to_vec(),
+            data: vec![9, 8, 7, 6, 5],
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: 65_000u16.to_le_bytes().to_vec(),
+            data: vec![9, 0],
+            safe_to_copy: true,
+        },
+        OpaqueBlock {
+            kind: 65_003u16.to_le_bytes().to_vec(),
+            data: vec![1, 2, 3, 4, 5, 6, 7, 8],
+            safe_to_copy: true,
+        },
+    ];
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: 270u16.to_le_bytes().to_vec(),
+            data: b"hello\0".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: 306u16.to_le_bytes().to_vec(),
+            data: b"2026:08:01 00:00:00\0".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: 34_675u16.to_le_bytes().to_vec(),
+            data: vec![1, 2, 3],
+        },
+    ];
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(
+        decoded.content.opaque_blocks, expected_blocks,
+        "still blocks"
+    );
+    assert_eq!(
+        decoded.content.metadata, expected_metadata,
+        "still metadata"
+    );
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.frames[0].image.opaque_blocks, expected_blocks,
+        "page blocks"
+    );
+    assert_eq!(
+        sequence.content.frames[0].image.metadata, expected_metadata,
+        "page metadata"
+    );
+
+    // The unmodified fixture retains no records, and encoding never replays.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let plain = fs::read(root.join("tests/fixtures/input/images/tiff/gray.tiff"))?;
+    let plain_decoded = image_slash_star::decode(&plain)?;
+    assert!(plain_decoded.content.opaque_blocks.is_empty());
+    assert!(plain_decoded.content.metadata.is_empty());
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Tiff);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Tiff, &options)?;
+    for needle in [&b"hello"[..], &b"2026:08:01"[..]] {
+        assert!(
+            !encoded.windows(needle.len()).any(|window| window == needle),
+            "encoded TIFF must not replay retained tag {needle:?}"
+        );
+    }
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {

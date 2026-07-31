@@ -267,6 +267,12 @@ retain exact ordered metadata and opaque records on still and sequence decode,
 skip a truncated ICCP, keep the unmodified fixture empty, avoid replay in
 encoded output, and retain the same records on animated sequence decode.
 
+The TIFF-tag contract is table-driven: a minimal TIFF built with inline and
+offset unknown tags, a duplicate unknown tag, a rational tag, and ASCII/ICC
+metadata tags must retain exact typed records (tag bytes in file byte order,
+stored value bytes) on still decode and per-page sequence decode, keep an
+unmodified fixture empty, and avoid replay in encoded output.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

@@ -91,6 +91,10 @@ All notable changes will be documented in this file. This project follows
 - Raw WebP RIFF chunk retention: ICCP/EXIF/XMP as ordered metadata records,
   unknown chunks as opaque blocks, truncated chunks skipped, and no implicit
   encode replay.
+- Raw TIFF tag retention with typed identity (tag bytes in file byte order)
+  and exact stored value bytes (inline or at offset): unknown tags as opaque
+  blocks, known metadata tags (text/date/software/artist/copyright/ICC) as
+  metadata records, per page, with no implicit encode replay.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact
