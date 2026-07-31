@@ -5,7 +5,9 @@ Status: native manifest parity retained; portable implementation incomplete
 Reviewed: 2026-07-31 on the working tree based on revision `585c23c`
 
 AVIF is the only codec feature with different native and
-`wasm32-unknown-unknown` capabilities.
+`wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
+runtime on `wasm32-wasip1` (Node's WASI preview1) in every feature lane;
+`wasm32-unknown-unknown` remains build/rustdoc-verified.
 
 ## Current behavior
 
@@ -101,7 +103,12 @@ The accepted still-decode subset includes the closed manifest classes for:
 The manifest and independent reconstruction JSON are authoritative when this
 summary becomes too coarse. Inputs outside a proven class return a structured
 `Unsupported` or `Malformed` error; they must not fall through to a partial
-decode.
+decode. On every `wasm32` target the unavailable operations return staged,
+codec-level `Unsupported` errors ("AVIF sequence decoding requires the native
+AVIF stack" for sequence decode, "AVIF encoding requires the native extra
+module" for still and sequence encode) that match the capability table;
+out-of-subset still decode returns "AVIF input is outside the portable WASM
+decode subset" at the `StillDecode` stage.
 
 ## Native FFI boundary
 

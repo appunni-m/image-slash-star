@@ -396,7 +396,10 @@ either representation.
 
 The compatibility guarantee is limited to active manifest cases. Default
 native and WASM builds select the same Rust codec code, but the complete
-semantic matrix has not yet executed in a WASM runtime.
+semantic matrix has not yet executed in a WASM runtime. Every feature lane
+also executes feature-gate and capability-table evidence on `wasm32-wasip1`
+under Node's WASI preview1; `wasm32-unknown-unknown` remains
+build/rustdoc-verified.
 
 See [AVIF support](avif.md) for the native dependency and portable boundary.
 
