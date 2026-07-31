@@ -63,6 +63,7 @@ pub(super) struct JpegInfo {
     pub(super) progressive: bool,
     pub(super) scans: Vec<ScanInfo>,
     pub(super) adobe_transform: Option<u8>,
+    pub(super) metadata: Vec<crate::types::OpaqueMetadata>,
 }
 
 // ── JPEG Parser ───────────────────────────────────────────────────────────
@@ -361,6 +362,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut progressive = false;
     let mut scans: Vec<ScanInfo> = Vec::new();
     let mut adobe_transform = None;
+    let mut metadata = Vec::new();
 
     let eoi_pos = loop {
         let marker_offset = pos as u64;
@@ -459,11 +461,37 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     ));
                 }
                 let payload_end = pos.saturating_add(payload_len);
+                metadata.push(crate::types::OpaqueMetadata {
+                    kind: vec![0xee],
+                    data: data[pos..payload_end].to_vec(),
+                });
                 if data.get(pos..pos.saturating_add(5)) == Some(b"Adobe") && length >= 14 {
                     // `payload_len >= 12` and the complete payload range was
                     // validated above, so the transform byte is present.
                     adobe_transform = Some(data[pos.saturating_add(11)]);
                 }
+                pos = payload_end;
+            }
+            0xFFE0..=0xFFEF | 0xFFFE => {
+                let length = usize::from(
+                    read_u16(data, &mut pos)
+                        .map_err(|error| error.at(marker_offset, "jpeg_metadata"))?,
+                );
+                if length < 2 {
+                    continue;
+                }
+                let payload_len = length.saturating_sub(2);
+                if payload_len > data.len().saturating_sub(pos) {
+                    return Err(CodecError::Malformed(
+                        "truncated JPEG metadata marker payload".to_owned(),
+                    )
+                    .at(marker_offset, "jpeg_metadata"));
+                }
+                let payload_end = pos.saturating_add(payload_len);
+                metadata.push(crate::types::OpaqueMetadata {
+                    kind: vec![marker.to_le_bytes()[0]],
+                    data: data[pos..payload_end].to_vec(),
+                });
                 pos = payload_end;
             }
             M_EOI => {
@@ -509,6 +537,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         progressive,
         scans,
         adobe_transform,
+        metadata,
     })
 }
 

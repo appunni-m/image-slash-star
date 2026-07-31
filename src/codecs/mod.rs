@@ -340,8 +340,16 @@ pub(crate) fn decode_sequence_format(
         );
     }
 
-    decode_format(data, format)
-        .map(|(image, consumed)| (DecodedSequence::from_image(image), consumed))
+    decode_format(data, format).map(|(mut image, consumed)| {
+        let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+        let metadata = std::mem::take(&mut image.metadata);
+        let source_color = std::mem::take(&mut image.source_color);
+        let mut sequence = DecodedSequence::from_image(image);
+        sequence.opaque_blocks = opaque_blocks;
+        sequence.metadata = metadata;
+        sequence.source_color = source_color;
+        (sequence, consumed)
+    })
 }
 
 /// Dispatch encoding to the enabled format implementation.

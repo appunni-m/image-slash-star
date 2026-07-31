@@ -255,6 +255,12 @@ extension must remain interpreted into `loop_count`, unknown labels must stay
 in `opaque_blocks`, still and sequence decode must agree, and encoded output
 must not replay any retained extension.
 
+The JPEG-marker contract is table-driven: APP1/APP2/COM/multi-APP2/APP14
+segments inserted after SOI must appear as exact ordered metadata records on
+still and sequence decode, the unmodified fixture must retain only its JFIF
+APP0 record, truncated metadata markers must carry the `jpeg_metadata`
+identity, and encoded output must not replay retained marker payloads.
+
 The operation-stage contract is a separate feature-gate test: one real
 failure is driven through inspection, still decode, sequence decode, source
 construction, verification, still encode, and sequence encode, and each error

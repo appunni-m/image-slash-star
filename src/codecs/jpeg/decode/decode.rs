@@ -444,11 +444,12 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     debug_assert!(!info.scan_components.is_empty());
 
     let consumed = info.eoi_pos.saturating_add(2);
-    let image = if info.progressive {
+    let mut image = if info.progressive {
         progressive_reconstruct(&info, data)
     } else {
         reconstruct_image(&info, data)
     }?;
+    image = image.with_metadata(info.metadata);
     Ok((image, consumed))
 }
 
@@ -551,6 +552,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         progressive: false,
         scans: Vec::new(),
         adobe_transform: None,
+        metadata: Vec::new(),
     };
     let _ = reconstruct_image(&info, &[0, 0, 0xFF, 0xD0, 0]);
 }

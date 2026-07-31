@@ -85,6 +85,9 @@ All notable changes will be documented in this file. This project follows
   application extensions as ordered metadata records, unknown labels as
   opaque blocks, with the loop extension still interpreted and no implicit
   encode replay.
+- Raw JPEG APPn/COM marker retention as ordered metadata records (including
+  multi-segment fragments and the APP14 Adobe payload) with the
+  `jpeg_metadata` truncation identity and no implicit encode replay.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

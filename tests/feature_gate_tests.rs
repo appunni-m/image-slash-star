@@ -1457,6 +1457,122 @@ fn gif_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "JPEG test segments are tiny fixed literals that always fit u16"
+)]
+fn jpeg_segment(marker: u8, payload: &[u8]) -> Vec<u8> {
+    let mut segment = vec![0xff, marker];
+    segment.extend_from_slice(&((payload.len() as u16).wrapping_add(2)).to_be_bytes());
+    segment.extend_from_slice(payload);
+    segment
+}
+
+fn jpeg_marker_offset(data: &[u8], marker: u16) -> Result<usize, Box<dyn std::error::Error>> {
+    let needle = marker.to_be_bytes();
+    data[2..]
+        .windows(2)
+        .position(|window| window == needle)
+        .map(|offset| offset.wrapping_add(2))
+        .ok_or_else(|| format!("JPEG marker {marker:#x} not found").into())
+}
+
+#[test]
+fn jpeg_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::OpaqueMetadata;
+
+    if !cfg!(feature = "jpeg") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/jpeg/1x1.jpg"))?;
+
+    let app0_offset = jpeg_marker_offset(&base, 0xffe0)?;
+    let app0_length = u16::from_be_bytes([base[app0_offset + 2], base[app0_offset + 3]]) as usize;
+    let app0_payload = base[app0_offset + 4..app0_offset + app0_length + 2].to_vec();
+
+    let mut adobe = b"Adobe".to_vec();
+    adobe.extend_from_slice(&[0u8; 11]);
+    let inserted = [
+        jpeg_segment(0xe1, b"first-app1"),
+        jpeg_segment(0xe2, b"icc-frag-1"),
+        jpeg_segment(0xfe, b"hello comment"),
+        jpeg_segment(0xe2, b"icc-frag-2"),
+        jpeg_segment(0xee, &adobe),
+    ];
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&base[..2]);
+    for segment in &inserted {
+        bytes.extend_from_slice(segment);
+    }
+    bytes.extend_from_slice(&base[2..]);
+
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: vec![0xe1],
+            data: b"first-app1".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xe2],
+            data: b"icc-frag-1".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xfe],
+            data: b"hello comment".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xe2],
+            data: b"icc-frag-2".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xee],
+            data: adobe.clone(),
+        },
+        OpaqueMetadata {
+            kind: vec![0xe0],
+            data: app0_payload.clone(),
+        },
+    ];
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(
+        decoded.content.metadata, expected_metadata,
+        "still metadata"
+    );
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.metadata, expected_metadata,
+        "sequence metadata"
+    );
+
+    // The unmodified fixture retains its JFIF APP0 record only.
+    let plain = image_slash_star::decode(&base)?;
+    assert_eq!(
+        plain.content.metadata,
+        vec![OpaqueMetadata {
+            kind: vec![0xe0],
+            data: app0_payload,
+        }],
+        "unmodified fixture metadata"
+    );
+
+    // Default encoding never replays retained JPEG markers.
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Jpeg);
+    let encoded = image_slash_star::encode(&decoded.content, ImageFormat::Jpeg, &options)?;
+    for needle in [
+        &b"first-app1"[..],
+        &b"icc-frag-1"[..],
+        &b"icc-frag-2"[..],
+        &b"hello comment"[..],
+    ] {
+        assert!(
+            !encoded.windows(needle.len()).any(|window| window == needle),
+            "encoded JPEG must not replay retained marker {needle:?}"
+        );
+    }
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
