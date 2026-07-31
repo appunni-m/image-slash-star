@@ -26,6 +26,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Verify retained third-party legal texts
         run: python3 scripts/verify_third_party_licenses.py
+      - name: Verify malformed-class ledger
+        run: python3 scripts/generate_malformed_ledger.py --check
       - name: Install AVIF build tools
         run: |
           sudo apt-get update

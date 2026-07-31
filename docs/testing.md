@@ -172,6 +172,28 @@ fixture and asserts `ImageFormat::verification_scope()` and
 `verify_with_scope` success, stronger-request failure with the exact format
 and a non-empty diagnostic, and the never-provided `FullPixels` boundary.
 
+The malformed-class ledger is generated from the coverage matrix by
+`scripts/generate_malformed_ledger.py` and checked in CI with `--check`, so
+every active decode-error class must stay catalogued. Each class records the
+Pillow outcome (exception type/message where the oracle throws), the Rust
+error contract per operation, evidence origins, and one specification status:
+
+| Format | Classes | `spec_violation` | `truncated` | `not_the_format` | `ambiguous` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| JPEG | 75 | 43 | 26 | 5 | 1 |
+| PNG | 50 | 36 | 12 | 2 | 0 |
+| GIF | 47 | 15 | 28 | 4 | 0 |
+| BMP | 58 | 19 | 32 | 7 | 0 |
+| TIFF | 56 | 44 | 9 | 3 | 0 |
+| WebP | 112 | 69 | 36 | 7 | 0 |
+| ICO | 28 | 11 | 14 | 3 | 0 |
+| AVIF | 16 | 7 | 2 | 7 | 0 |
+
+Totals: 442 classes (244 `spec_violation`, 159 `truncated`, 38
+`not_the_format`, 1 `ambiguous`) carrying 442 `pillow_fixture` and 16
+`specification_reference` origin labels. Status changes are intentional
+contract changes because the committed ledger must regenerate byte-for-byte.
+
 The counts are reproducible from the generated artifact:
 
 ```bash
@@ -190,9 +212,9 @@ The accepted Coverage MCP result for the same implementation state is:
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `314d651f-7ecf-497d-a8e1-511806456e7d`
+Coverage MCP run: `69e7f5eb-385d-4005-afa2-7bef385a222c`
 
-Snapshot: `b17edf6b-ff21-41b0-a6b3-efec52239573`
+Snapshot: `f2ef11e8-822b-4ffc-b4aa-27d030272367`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -214,6 +236,9 @@ Sequence-policy manifest SHA-256:
 
 Trailing-input manifest SHA-256:
 `b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb`
+
+Malformed-class ledger SHA-256:
+`66d11684fb9601ae7fcfe83d7ed10e6e4a87657f6780c76eb99da70a719caf72`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

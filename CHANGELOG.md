@@ -35,6 +35,9 @@ All notable changes will be documented in this file. This project follows
   pinned per-format trailing-input policy: well-formed trailing bytes are
   ignored by every decoder, and AVIF container validation now accepts trailing
   bytes exactly as Pillow 12.2.0/libavif do.
+- A generated, CI-checked malformed-class ledger cataloguing every active
+  decode-error class with Pillow outcome, Rust error contract, evidence
+  origin, and specification status.
 - Format-qualified typed encoder option records for every codec, including a
   strict legacy-pair migration adapter and ordered AVIF advanced options.
 - Persistent lazy `EncodedImage` inspection and decode caching that retains
