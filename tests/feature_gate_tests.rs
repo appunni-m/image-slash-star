@@ -1443,6 +1443,17 @@ fn gif_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     let plain = image_slash_star::decode_sequence(&base)?;
     assert!(plain.content.metadata.is_empty());
     assert!(plain.content.opaque_blocks.is_empty());
+
+    // A truncated unknown-label extension exercises the error-propagation
+    // path of the raw retention reader.
+    let mut truncated = Vec::new();
+    truncated.extend_from_slice(&base[..trailer]);
+    truncated.extend_from_slice(&[0x21, 0xcc, 5, 1, 2]);
+    truncated.extend_from_slice(&base[trailer..]);
+    assert!(
+        image_slash_star::decode_sequence(&truncated).is_err(),
+        "truncated unknown-label extension must fail"
+    );
     Ok(())
 }
 
