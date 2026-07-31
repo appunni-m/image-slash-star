@@ -1,7 +1,7 @@
 //! Pure-Rust BMP encoder for indexed grayscale and true-color images.
 
 use crate::codecs::{CodecError, CodecResult};
-use crate::encode_options::EncodeOptions;
+use crate::encode_options::BmpEncodeOptions;
 use crate::types::{DecodedImage, ImageMode, ImagePalette};
 
 const FILE_HEADER_SIZE: usize = 14;
@@ -22,8 +22,7 @@ fn row_size(bits_per_pixel: usize, width: usize) -> usize {
 ///
 /// Pillow derives 1/8/24/32-bit output from the source mode and ignores save
 /// options requesting compression, row direction, or alternate DIB headers.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
-    let _ = opts;
+pub fn encode(img: &DecodedImage, _opts: &BmpEncodeOptions) -> CodecResult<Vec<u8>> {
     if !bmp_file_fits(img) {
         return Err(CodecError::Dimensions(
             "BMP dimensions or file size exceed the container limits".to_owned(),
@@ -79,7 +78,7 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
 pub(crate) fn __coverage_exercise_private_branches() {
     for (width, height) in [(u32::MAX, 1), (1, u32::MAX), (i32::MAX as u32, 1)] {
         let image = DecodedImage::new(width, height, Vec::new(), crate::types::ColorType::L8);
-        assert!(encode(&image, &EncodeOptions::none()).is_err());
+        assert!(encode(&image, &BmpEncodeOptions::default()).is_err());
     }
 }
 

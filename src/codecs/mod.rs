@@ -314,51 +314,101 @@ pub(crate) fn encode_format(
     _image
         .validate()
         .map_err(|error| error.with_format(format))?;
+    if _options.format() != format {
+        return Err(ImageError::Parameter {
+            format: Some(format),
+            message: format!(
+                "{} options cannot be used to encode {}",
+                _options.format(),
+                format
+            ),
+        });
+    }
     let encoded: CodecResult<Vec<u8>> = match format {
         #[cfg(feature = "jpeg")]
-        ImageFormat::Jpeg => jpeg::encode::encode(_image, _options),
+        ImageFormat::Jpeg => match _options {
+            EncodeOptions::Jpeg(options) => jpeg::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "JPEG options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "jpeg"))]
         ImageFormat::Jpeg => Err(error::CodecError::Unsupported(
             "JPEG encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "png")]
-        ImageFormat::Png => png::encode::encode(_image, _options),
+        ImageFormat::Png => match _options {
+            EncodeOptions::Png(options) => png::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "PNG options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "png"))]
         ImageFormat::Png => Err(error::CodecError::Unsupported(
             "PNG encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "gif")]
-        ImageFormat::Gif => gif::encode::encode(_image, _options),
+        ImageFormat::Gif => match _options {
+            EncodeOptions::Gif(options) => gif::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "GIF options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "gif"))]
         ImageFormat::Gif => Err(error::CodecError::Unsupported(
             "GIF encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "bmp")]
-        ImageFormat::Bmp => bmp::encode::encode(_image, _options),
+        ImageFormat::Bmp => match _options {
+            EncodeOptions::Bmp(options) => bmp::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "BMP options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "bmp"))]
         ImageFormat::Bmp => Err(error::CodecError::Unsupported(
             "BMP encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "tiff")]
-        ImageFormat::Tiff => tiff::encode::encode(_image, _options),
+        ImageFormat::Tiff => match _options {
+            EncodeOptions::Tiff(options) => tiff::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "TIFF options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "tiff"))]
         ImageFormat::Tiff => Err(error::CodecError::Unsupported(
             "TIFF encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "webp")]
-        ImageFormat::WebP => webp::encode::encode(_image, _options),
+        ImageFormat::WebP => match _options {
+            EncodeOptions::WebP(options) => webp::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "WebP options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "webp"))]
         ImageFormat::WebP => Err(error::CodecError::Unsupported(
             "WebP encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "ico")]
-        ImageFormat::Ico => ico::encode::encode(_image, _options),
+        ImageFormat::Ico => match _options {
+            EncodeOptions::Ico(options) => ico::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "ICO options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "ico"))]
         ImageFormat::Ico => Err(error::CodecError::Unsupported(
             "ICO encoder is unavailable".to_owned(),
         )),
         #[cfg(feature = "avif")]
-        ImageFormat::Avif => avif::encode::encode(_image, _options),
+        ImageFormat::Avif => match _options {
+            EncodeOptions::Avif(options) => avif::encode::encode(_image, options),
+            _ => Err(error::CodecError::Parameter(
+                "AVIF options are required".to_owned(),
+            )),
+        },
         #[cfg(not(feature = "avif"))]
         ImageFormat::Avif => Err(error::CodecError::Unsupported(
             "AVIF encoder is unavailable".to_owned(),
@@ -390,9 +440,25 @@ pub(crate) fn encode_sequence_format(
     sequence
         .validate()
         .map_err(|error| error.with_format(format))?;
+    if options.format() != format {
+        return Err(ImageError::Parameter {
+            format: Some(format),
+            message: format!(
+                "{} options cannot be used to encode {}",
+                options.format(),
+                format
+            ),
+        });
+    }
 
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
+        let EncodeOptions::Gif(options) = options else {
+            return Err(ImageError::Parameter {
+                format: Some(format),
+                message: "GIF options are required".to_owned(),
+            });
+        };
         return into_image_result(
             gif::encode::encode_sequence(sequence, options)
                 .map_err(|error| error.context("encode sequence")),
@@ -402,6 +468,12 @@ pub(crate) fn encode_sequence_format(
 
     #[cfg(feature = "avif")]
     if format == ImageFormat::Avif {
+        let EncodeOptions::Avif(options) = options else {
+            return Err(ImageError::Parameter {
+                format: Some(format),
+                message: "AVIF options are required".to_owned(),
+            });
+        };
         return into_image_result(
             avif::encode::encode_sequence(sequence, options)
                 .map_err(|error| error.context("encode sequence")),
@@ -411,6 +483,12 @@ pub(crate) fn encode_sequence_format(
 
     #[cfg(feature = "tiff")]
     if format == ImageFormat::Tiff {
+        let EncodeOptions::Tiff(options) = options else {
+            return Err(ImageError::Parameter {
+                format: Some(format),
+                message: "TIFF options are required".to_owned(),
+            });
+        };
         return into_image_result(
             tiff::encode::encode_sequence(sequence, options)
                 .map_err(|error| error.context("encode sequence")),
@@ -420,6 +498,12 @@ pub(crate) fn encode_sequence_format(
 
     #[cfg(feature = "webp")]
     if format == ImageFormat::WebP && sequence.frames.len() > 1 {
+        let EncodeOptions::WebP(options) = options else {
+            return Err(ImageError::Parameter {
+                format: Some(format),
+                message: "WebP options are required".to_owned(),
+            });
+        };
         return into_image_result(
             webp::encode::encode_sequence(sequence, options)
                 .map_err(|error| error.context("encode sequence")),
@@ -646,7 +730,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let _ = encode_sequence_format(&invalid_sequence, ImageFormat::Png, &EncodeOptions::none());
+    let _ = encode_sequence_format(
+        &invalid_sequence,
+        ImageFormat::Png,
+        &EncodeOptions::for_format(ImageFormat::Png),
+    );
 
     let luma = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
     let two_frame_sequence = DecodedSequence {
@@ -684,7 +772,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode_sequence_format(
         &two_frame_sequence,
         ImageFormat::Png,
-        &EncodeOptions::none(),
+        &EncodeOptions::for_format(ImageFormat::Png),
     );
 
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);

@@ -2,7 +2,9 @@
 
 use crate::codecs::compression::deflate::compress_zlib_chunked;
 use crate::codecs::{CodecError, CodecResult};
+#[cfg(coverage)]
 use crate::encode_options::EncodeOptions;
+use crate::encode_options::{PngCompression, PngEncodeOptions};
 use crate::types::{ColorType, DecodedImage, ImageMode};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -11,7 +13,7 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// Pillow ignores PNG interlace save options, so this encoder also always
 /// emits non-interlaced rows. Compression levels select the corresponding
 /// strategy in the internal zlib/DEFLATE implementation.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &PngEncodeOptions) -> CodecResult<Vec<u8>> {
     img.validate().map_err(CodecError::from_image_error)?;
 
     let width = bounded_usize(img.width);
@@ -62,19 +64,13 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
         plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize);
     let compression_level = if optimize {
         9
-    } else if let Some(level) = opts.compression {
-        level
-    } else if let Some(value) = opts.extra.get("compression") {
-        match value.as_str() {
-            "none" => 0,
-            "default" => 6,
-            "max" => 9,
-            _ => value
-                .parse()
-                .map_err(|_| CodecError::Parameter("invalid PNG compression level".to_owned()))?,
-        }
     } else {
-        6
+        match opts.compression.unwrap_or(PngCompression::Default) {
+            PngCompression::None => 0,
+            PngCompression::Default => 6,
+            PngCompression::Maximum => 9,
+            PngCompression::Level(level) => level,
+        }
     };
     let compressed = compress_zlib_chunked(&filtered, compression_level, &input_chunks)?;
 
@@ -107,29 +103,29 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
 pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(
         &DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
-        &EncodeOptions::default(),
+        &PngEncodeOptions::default(),
     );
     let _ = encode(
         &DecodedImage::new(1, 1, Vec::new(), ColorType::Rgb8),
-        &EncodeOptions::default(),
+        &PngEncodeOptions::default(),
     );
     let _ = encode(
         &DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Cmyk8),
-        &EncodeOptions::default(),
+        &PngEncodeOptions::default(),
     );
 
     let l1 = DecodedImage::with_mode(9, 1, vec![0b1010_1010, 0b1000_0000], ImageMode::L1);
-    let _ = encode(&l1, &EncodeOptions::default());
+    let _ = encode(&l1, &PngEncodeOptions::default());
 
     let l16 = DecodedImage::with_mode(1, 1, 0x1234u16.to_le_bytes().to_vec(), ImageMode::L16);
-    let _ = encode(&l16, &EncodeOptions::default());
+    let _ = encode(&l16, &PngEncodeOptions::default());
 
     let palette = crate::types::ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0, 255])
         .expect("coverage palette should be valid");
     let indexed = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(palette);
-    let _ = encode(&indexed, &EncodeOptions::default());
+    let _ = encode(&indexed, &PngEncodeOptions::default());
     let palette_less_indexed = DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
-    let _ = encode(&palette_less_indexed, &EncodeOptions::default());
+    let _ = encode(&palette_less_indexed, &PngEncodeOptions::default());
 
     let rgb = DecodedImage::new(
         2,
@@ -137,27 +133,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 255, 255],
         ColorType::Rgb8,
     );
-    let mut ancillary = EncodeOptions::default();
-    for key in ["gamma", "srgb", "physical", "text_chunks", "time"] {
-        ancillary.extra.insert(key.to_owned(), "true".to_owned());
+    let ancillary_pairs = ["gamma", "srgb", "physical", "text_chunks", "time"]
+        .into_iter()
+        .map(|key| (key.to_owned(), "true".to_owned()))
+        .chain([("compression".to_owned(), "none".to_owned())])
+        .collect::<Vec<_>>();
+    if let Ok(EncodeOptions::Png(ancillary)) =
+        EncodeOptions::try_from_legacy_pairs(crate::ImageFormat::Png, &ancillary_pairs)
+    {
+        let _ = encode(&rgb, &ancillary);
     }
-    ancillary
-        .extra
-        .insert("compression".to_owned(), "none".to_owned());
-    let _ = encode(&rgb, &ancillary);
-
-    let mut bad_compression = EncodeOptions::default();
-    bad_compression
-        .extra
-        .insert("compression".to_owned(), "not-a-level".to_owned());
-    let _ = encode(&rgb, &bad_compression);
-
-    for value in ["1", "yes", "false"] {
-        let mut option = EncodeOptions::default();
-        option.extra.insert("gamma".to_owned(), value.to_owned());
-        let _ = requested(&option, "gamma");
-    }
-    let _ = requested(&EncodeOptions::default(), "gamma");
 
     let row = [10u8, 20, 40, 80];
     let previous = [1u8, 2, 4, 8];
@@ -332,30 +317,24 @@ fn paeth(left: u8, above: u8, upper_left: u8) -> u8 {
     }
 }
 
-fn requested(opts: &EncodeOptions, key: &str) -> bool {
-    opts.extra
-        .get(key)
-        .is_some_and(|value| matches!(value.as_str(), "true" | "1" | "yes"))
-}
-
-fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &EncodeOptions) {
-    if requested(opts, "gamma") {
+fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &PngEncodeOptions) {
+    if opts.legacy_gamma() {
         write_bounded_chunk(output, *b"gAMA", &45_455u32.to_be_bytes());
     }
-    if requested(opts, "srgb") {
+    if opts.legacy_srgb() {
         write_bounded_chunk(output, *b"sRGB", &[0]);
     }
-    if requested(opts, "physical") {
+    if opts.legacy_physical() {
         let mut payload = Vec::with_capacity(9);
         payload.extend_from_slice(&2_835u32.to_be_bytes());
         payload.extend_from_slice(&2_835u32.to_be_bytes());
         payload.push(1);
         write_bounded_chunk(output, *b"pHYs", &payload);
     }
-    if requested(opts, "text_chunks") {
+    if opts.legacy_text_chunks() {
         write_bounded_chunk(output, *b"tEXt", b"Comment\0pillow-rs");
     }
-    if requested(opts, "time") {
+    if opts.legacy_time() {
         let payload = [0x07, 0xea, 7, 4, 0, 0, 0]; // 2026-07-04 00:00:00 UTC.
         write_bounded_chunk(output, *b"tIME", &payload);
     }

@@ -87,6 +87,7 @@ pub use capabilities::{
     CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
     CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
 };
+pub use encode_options::*;
 pub use source::EncodedImage;
 pub use types::*;
 
@@ -232,7 +233,7 @@ pub fn encode_sequence(
 /// Returns the same structured validation, feature, and codec errors as
 /// [`encode`].
 pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> ImageResult<Vec<u8>> {
-    encode(img, format, &EncodeOptions::default())
+    encode(img, format, &EncodeOptions::for_format(format))
 }
 
 /// One exact scalar AV1 entropy state used by the fixture-backed coverage gate.
@@ -349,6 +350,6 @@ pub fn __coverage_exercise_private_branches() {
     let _ = encode_default(&image, ImageFormat::Png);
     capabilities::__coverage_exercise_private_branches();
     codecs::__coverage_exercise_private_branches();
+    encode_options::__coverage_exercise_private_branches();
     types::__coverage_exercise_private_branches();
 }
-use crate::encode_options::EncodeOptions;

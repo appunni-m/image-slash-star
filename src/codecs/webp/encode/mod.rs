@@ -1,7 +1,7 @@
 //! Pure-Rust WebP encoder: internal VP8L lossless and VP8 lossy pipelines.
 
 use crate::codecs::{CodecError, CodecResult};
-use crate::encode_options::EncodeOptions;
+use crate::encode_options::WebPEncodeOptions;
 use crate::types::{
     AnimationBackground, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FramePixelLayout, ImageMode,
@@ -14,13 +14,13 @@ pub mod vp8;
 ///
 /// Lossless uses the internal VP8L encoder.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder.
-pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     validate_options(opts)?;
     let (encoded, alpha) = encode_pixels(img, opts)?;
     attach_metadata(encoded, img.width, img.height, alpha, opts)
 }
 
-fn encode_pixels(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<(Vec<u8>, bool)> {
+fn encode_pixels(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<(Vec<u8>, bool)> {
     let prepared = prepare_pixels(img)?;
     let encoded = if opts.lossless == Some(true) {
         encode_lossless(&prepared, img.width, img.height)
@@ -32,7 +32,10 @@ fn encode_pixels(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<(Vec<u
 }
 
 /// Encode two or more rendered canvases as full-canvas WebP keyframes.
-pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode_sequence(
+    sequence: &DecodedSequence,
+    opts: &WebPEncodeOptions,
+) -> CodecResult<Vec<u8>> {
     validate_options(opts)?;
     validate_sequence_options(opts)?;
     let loop_count = match sequence.loop_count {
@@ -94,28 +97,24 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
     finish_riff(output, output_len)
 }
 
-fn validate_sequence_options(opts: &EncodeOptions) -> CodecResult<()> {
-    for key in ["icc_hex", "exif_hex", "xmp_hex"] {
-        if opts.extra.contains_key(key) {
-            return Err(CodecError::Unsupported(
-                "WebP sequence metadata output is not implemented".to_owned(),
-            ));
-        }
+fn validate_sequence_options(opts: &WebPEncodeOptions) -> CodecResult<()> {
+    if opts.icc.is_some() || opts.exif.is_some() || opts.xmp.is_some() {
+        return Err(CodecError::Unsupported(
+            "WebP sequence metadata output is not implemented".to_owned(),
+        ));
     }
-    match opts.extra.get("kmax") {
-        Some(value) if value != "1" => {
+    match opts.legacy_kmax() {
+        Some(value) if value != 1 => {
             return Err(CodecError::Parameter(
                 "WebP sequence encoder currently requires kmax=1".to_owned(),
             ));
         }
         Some(_) | None => {}
     }
-    for key in ["minimize_size", "kmin", "allow_mixed"] {
-        if opts.extra.contains_key(key) {
-            return Err(CodecError::Unsupported(
-                "WebP animation optimization options are not implemented".to_owned(),
-            ));
-        }
+    if opts.has_unsupported_legacy_sequence_option() {
+        return Err(CodecError::Unsupported(
+            "WebP animation optimization options are not implemented".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -187,7 +186,7 @@ impl PreparedPixels<'_> {
     }
 }
 
-fn validate_options(opts: &EncodeOptions) -> CodecResult<()> {
+fn validate_options(opts: &WebPEncodeOptions) -> CodecResult<()> {
     if opts.quality.is_some_and(|quality| quality > 100) {
         return Err(CodecError::Parameter(
             "WebP quality must be between 0 and 100".to_owned(),
@@ -310,33 +309,6 @@ fn expand_luminance_alpha(img: &DecodedImage) -> PreparedPixels<'static> {
     }
 }
 
-fn decode_hex(value: Option<&String>) -> CodecResult<Option<Vec<u8>>> {
-    let Some(value) = value else {
-        return Ok(None);
-    };
-    if !value.len().is_multiple_of(2) {
-        return Err(CodecError::Parameter(
-            "WebP metadata hex must contain complete byte pairs".to_owned(),
-        ));
-    }
-    let mut decoded = Vec::with_capacity(value.len() / 2);
-    for pair in value.as_bytes().chunks_exact(2) {
-        decoded.push((hex_nibble(pair[0])? << 4) | hex_nibble(pair[1])?);
-    }
-    Ok(Some(decoded))
-}
-
-fn hex_nibble(value: u8) -> CodecResult<u8> {
-    match value {
-        b'0'..=b'9' => Ok(value.wrapping_sub(b'0')),
-        b'a'..=b'f' => Ok(value.wrapping_sub(b'a').wrapping_add(10)),
-        b'A'..=b'F' => Ok(value.wrapping_sub(b'A').wrapping_add(10)),
-        _ => Err(CodecError::Parameter(
-            "WebP metadata hex contains a non-hexadecimal byte".to_owned(),
-        )),
-    }
-}
-
 fn write_chunk(output: &mut Vec<u8>, name: &[u8; 4], payload: &[u8]) {
     output.extend_from_slice(name);
     output.extend_from_slice(&low_u32(payload.len()).to_le_bytes());
@@ -359,11 +331,11 @@ fn attach_metadata(
     width: u32,
     height: u32,
     alpha: bool,
-    opts: &EncodeOptions,
+    opts: &WebPEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
-    let icc = decode_hex(opts.extra.get("icc_hex"))?;
-    let exif = decode_hex(opts.extra.get("exif_hex"))?;
-    let xmp = decode_hex(opts.extra.get("xmp_hex"))?;
+    let icc = opts.icc.as_deref();
+    let exif = opts.exif.as_deref();
+    let xmp = opts.xmp.as_deref();
     if icc.is_none() && exif.is_none() && xmp.is_none() {
         return Ok(encoded);
     }
@@ -397,21 +369,18 @@ fn attach_metadata(
     vp8x.extend_from_slice(&height.saturating_sub(1).to_le_bytes()[..3]);
     write_chunk(&mut output, b"VP8X", &vp8x);
     if let Some(payload) = icc {
-        write_chunk(&mut output, b"ICCP", &payload);
+        write_chunk(&mut output, b"ICCP", payload);
     }
     output.extend_from_slice(encoded_chunks);
     if let Some(payload) = exif {
-        let payload = payload.strip_prefix(b"Exif\0\0").unwrap_or(&payload);
+        let payload = payload.strip_prefix(b"Exif\0\0").unwrap_or(payload);
         write_chunk(&mut output, b"EXIF", payload);
     }
     if let Some(payload) = xmp {
-        write_chunk(&mut output, b"XMP ", &payload);
+        write_chunk(&mut output, b"XMP ", payload);
     }
     #[cfg(coverage)]
-    let output_len = if opts
-        .extra
-        .contains_key("__coverage_force_webp_riff_size_overflow")
-    {
+    let output_len = if opts.force_riff_size_overflow() {
         usize::MAX
     } else {
         output.len()
@@ -435,7 +404,7 @@ fn encode_lossy(
     pixels: &PreparedPixels<'_>,
     width: u32,
     height: u32,
-    opts: &EncodeOptions,
+    opts: &WebPEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     let quality = opts.quality.unwrap_or(80);
     let method = opts.method.unwrap_or(4);
@@ -511,39 +480,19 @@ fn low_u32(value: usize) -> u32 {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use std::collections::HashMap;
-
     vp8::__coverage_exercise_private_branches();
 
-    let mut opts = EncodeOptions {
-        extra: HashMap::from([("icc_hex".to_owned(), "f".to_owned())]),
-        ..EncodeOptions::default()
-    };
-    let _ = attach_metadata(Vec::new(), 1, 1, false, &opts);
-
-    opts.extra = HashMap::from([("exif_hex".to_owned(), "f".to_owned())]);
-    let _ = attach_metadata(Vec::new(), 1, 1, false, &opts);
-
-    opts.extra = HashMap::from([("xmp_hex".to_owned(), "f".to_owned())]);
-    let _ = attach_metadata(Vec::new(), 1, 1, false, &opts);
-
-    opts.extra = HashMap::from([
-        ("icc_hex".to_owned(), "00".to_owned()),
-        (
-            "__coverage_force_webp_riff_size_overflow".to_owned(),
-            "1".to_owned(),
-        ),
-    ]);
+    let mut opts = WebPEncodeOptions::default();
+    opts.icc = Some(vec![0]);
+    opts.set_force_riff_size_overflow();
     let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts);
 
     let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::Rgb8);
-    let opts = EncodeOptions {
-        lossless: Some(true),
-        ..EncodeOptions::default()
-    };
+    let mut opts = WebPEncodeOptions::default();
+    opts.lossless = Some(true);
     let _ = encode(&zero_width, &opts);
 
     let unsupported = DecodedImage::new(1, 1, vec![0; 8], crate::types::ColorType::Rgb32F);
     let _ = encode(&unsupported, &opts);
-    let _ = encode(&unsupported, &EncodeOptions::default());
+    let _ = encode(&unsupported, &WebPEncodeOptions::default());
 }
