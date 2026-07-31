@@ -2,7 +2,7 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-07-31 at implementation revision `d7e60df`
+Reviewed: 2026-07-31 on the working tree based on revision `6f9c002`
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities.
@@ -18,8 +18,8 @@ AVIF is the only codec feature with different native and
 | Still encode | Fixed libavif/libaom path | Unsupported |
 | Sequence encode | Fixed libavif/libaom path | Unsupported |
 
-The generated matrix is the exact supported-case inventory. At revision
-`d7e60df`, AVIF has 190 decode/inspect/error cases and 23 encode/error cases.
+The generated matrix is the exact supported-case inventory. In the current
+working tree, AVIF has 197 decode/inspect/error cases and 32 encode/error cases.
 In a repository checkout, list them directly:
 
 ```bash

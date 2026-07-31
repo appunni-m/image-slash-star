@@ -149,6 +149,18 @@ pub enum LoopCount {
     Times(NonZeroU16),
 }
 
+/// Source metadata for the composited frame returned by [`WebPDecoder::read_frame`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct FrameInfo {
+    pub(crate) left: u32,
+    pub(crate) top: u32,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) duration_ms: u32,
+    pub(crate) dispose_to_background: bool,
+    pub(crate) blend_over: bool,
+}
+
 /// WebP image format decoder.
 pub struct WebPDecoder<'a> {
     r: Cursor<&'a [u8]>,
@@ -518,7 +530,7 @@ impl<'a> WebPDecoder<'a> {
     // The public precondition and constructor validation guarantee extended
     // metadata; the local initialization guarantees a canvas before use.
     #[allow(clippy::expect_used, clippy::unwrap_used)]
-    pub fn read_frame(&mut self, buf: &mut [u8]) -> Result<u32, DecodingError> {
+    pub fn read_frame(&mut self, buf: &mut [u8]) -> Result<FrameInfo, DecodingError> {
         assert!(self.is_animated());
         assert_eq!(buf.len(), self.output_buffer_size());
 
@@ -541,8 +553,10 @@ impl<'a> WebPDecoder<'a> {
         // Read ANMF chunk
         let frame_x = extended::read_3_bytes(&mut self.r)? * 2;
         let frame_y = extended::read_3_bytes(&mut self.r)? * 2;
-        let mut frame_width = extended::read_3_bytes(&mut self.r)? + 1;
-        let mut frame_height = extended::read_3_bytes(&mut self.r)? + 1;
+        let source_width = extended::read_3_bytes(&mut self.r)? + 1;
+        let source_height = extended::read_3_bytes(&mut self.r)? + 1;
+        let mut frame_width = source_width;
+        let mut frame_height = source_height;
         let duration = extended::read_3_bytes(&mut self.r)?;
         let frame_info = self.r.read_u8()?;
         let use_alpha_blending = frame_info & 0b00000010 == 0;
@@ -686,7 +700,17 @@ impl<'a> WebPDecoder<'a> {
             }
         }
 
-        Ok(duration)
+        Ok(FrameInfo {
+            left: frame_x,
+            top: frame_y,
+            // Pillow/libwebp composite the decoded bitstream dimensions when
+            // tolerated ANMF declarations disagree with their nested frame.
+            width: frame_width,
+            height: frame_height,
+            duration_ms: duration,
+            dispose_to_background: dispose,
+            blend_over: use_alpha_blending,
+        })
     }
 }
 

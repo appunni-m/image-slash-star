@@ -7,9 +7,11 @@
 
 use crate::codecs::error::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
+#[cfg(coverage)]
+use crate::types::DecodedFrame;
 use crate::types::{
-    AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
-    ImagePalette,
+    AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FrameDuration, FramePixelLayout, ImageMode, ImagePalette,
 };
 use std::collections::HashMap;
 
@@ -18,6 +20,26 @@ const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
 const GRAPHIC_CONTROL_LABEL: u8 = 0xf9;
 const MAX_LZW_CODE: u16 = 4095;
+
+#[cfg(coverage)]
+fn coverage_frame(
+    image: DecodedImage,
+    left: u32,
+    top: u32,
+    duration_ms: u32,
+    disposal: FrameDisposal,
+) -> DecodedFrame {
+    DecodedFrame::source_rectangle(
+        image,
+        left,
+        top,
+        FrameDuration::from_milliseconds(duration_ms),
+        disposal,
+        FrameBlend::Unspecified,
+        false,
+    )
+}
+
 /// Encode a `DecodedImage` as GIF bytes.
 ///
 /// For L8 images the pixel values are used directly as palette indices with a
@@ -90,22 +112,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let first = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
     let second = DecodedImage::new(16, 16, rgb_pixels, ColorType::Rgb8);
     let frames = vec![
-        crate::types::DecodedFrame {
-            image: first,
-            left: 0,
-            top: 0,
-            duration_ms: 10,
-            disposal: FrameDisposal::Keep,
-            interlaced: false,
-        },
-        crate::types::DecodedFrame {
-            image: second,
-            left: 0,
-            top: 0,
-            duration_ms: 10,
-            disposal: FrameDisposal::Keep,
-            interlaced: false,
-        },
+        coverage_frame(first, 0, 0, 10, FrameDisposal::Keep),
+        coverage_frame(second, 0, 0, 10, FrameDisposal::Keep),
     ];
     let sequence = DecodedSequence {
         width: 16,
@@ -114,7 +122,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let coalesced = coalesce_identical_frames(&sequence, 2).expect("coverage RGB frames coalesce");
+    let coalesced =
+        coalesce_identical_frames(&sequence, 2, None).expect("coverage RGB frames coalesce");
     let _ = write_gif(
         &sequence,
         &coalesced,
@@ -129,7 +138,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let luma = DecodedImage::new(1, 1, vec![7], ColorType::L8);
     let still = DecodedSequence::from_image(luma.clone());
-    let _ = coalesce_identical_frames(&still, 1);
+    let _ = coalesce_identical_frames(&still, 1, None);
 
     let huge_canvas_sequence = DecodedSequence {
         width: u32::MAX,
@@ -138,25 +147,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let _ = coalesce_identical_frames(&huge_canvas_sequence, 2);
+    let _ = coalesce_identical_frames(&huge_canvas_sequence, 2, None);
 
     let identical_frames = vec![
-        crate::types::DecodedFrame {
-            image: luma.clone(),
-            left: 0,
-            top: 0,
-            duration_ms: u32::MAX,
-            disposal: FrameDisposal::Keep,
-            interlaced: false,
-        },
-        crate::types::DecodedFrame {
-            image: luma.clone(),
-            left: 0,
-            top: 0,
-            duration_ms: 1,
-            disposal: FrameDisposal::Keep,
-            interlaced: false,
-        },
+        coverage_frame(luma.clone(), 0, 0, u32::MAX, FrameDisposal::Keep),
+        coverage_frame(luma.clone(), 0, 0, 1, FrameDisposal::Keep),
     ];
     let _ = coalesce_identical_frames(
         &DecodedSequence {
@@ -167,25 +162,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
             background: None,
         },
         2,
+        None,
     );
 
     let background_frames = vec![
-        crate::types::DecodedFrame {
-            image: DecodedImage::new(1, 1, vec![255, 0, 0], ColorType::Rgb8),
-            left: 1,
-            top: 1,
-            duration_ms: 10,
-            disposal: FrameDisposal::Background,
-            interlaced: false,
-        },
-        crate::types::DecodedFrame {
-            image: DecodedImage::new(1, 1, vec![0, 255, 0], ColorType::Rgb8),
-            left: 0,
-            top: 0,
-            duration_ms: 10,
-            disposal: FrameDisposal::Reserved(7),
-            interlaced: false,
-        },
+        coverage_frame(
+            DecodedImage::new(1, 1, vec![255, 0, 0], ColorType::Rgb8),
+            1,
+            1,
+            10,
+            FrameDisposal::Background,
+        ),
+        coverage_frame(
+            DecodedImage::new(1, 1, vec![0, 255, 0], ColorType::Rgb8),
+            0,
+            0,
+            10,
+            FrameDisposal::Reserved(7),
+        ),
     ];
     let background_sequence = DecodedSequence {
         width: 2,
@@ -194,38 +188,141 @@ pub(crate) fn __coverage_exercise_private_branches() {
         loop_count: None,
         background: None,
     };
-    let _ = coalesce_identical_frames(&background_sequence, 2);
+    let _ = coalesce_identical_frames(&background_sequence, 2, None);
 
     let transparent_palette =
         ImagePalette::new(vec![0, 0, 0], vec![0]).expect("coverage transparent palette");
-    let transparent_frame = crate::types::DecodedFrame {
-        image: DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8)
-            .with_palette(transparent_palette),
-        left: 0,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let transparent_frame = coverage_frame(
+        DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8).with_palette(transparent_palette),
+        0,
+        0,
+        0,
+        FrameDisposal::Keep,
+    );
     let mut canvas = vec![255; 4];
     let _ = composite_frame(&mut canvas, 1, &transparent_frame);
+    let opaque_palette =
+        ImagePalette::new(vec![0, 0, 0], vec![255]).expect("coverage opaque palette");
+    let opaque_frame = coverage_frame(
+        DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8).with_palette(opaque_palette),
+        0,
+        0,
+        0,
+        FrameDisposal::Keep,
+    );
+    let _ = composite_frame(&mut canvas, 1, &opaque_frame);
+    let transparent_rgba = coverage_frame(
+        DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Rgba8),
+        0,
+        0,
+        0,
+        FrameDisposal::Keep,
+    );
+    let _ = composite_frame(&mut canvas, 1, &transparent_rgba);
 
     let bad_palette =
         ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage one-color palette");
-    let bad_index_frame = crate::types::DecodedFrame {
-        image: DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8).with_palette(bad_palette),
-        left: 0,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let bad_index_frame = coverage_frame(
+        DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8).with_palette(bad_palette),
+        0,
+        0,
+        0,
+        FrameDisposal::Keep,
+    );
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = composite_frame(&mut canvas, 1, &bad_index_frame);
     }));
 
     let _ = prepare_image(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8));
     let _ = indexed_rgb(&[0], &[0, 0, 0]);
+    let _ = add_frame_durations(
+        FrameDuration {
+            numerator: 0,
+            denominator: 0,
+        },
+        FrameDuration::ZERO,
+    );
+    let _ = add_frame_durations(
+        FrameDuration::ZERO,
+        FrameDuration {
+            numerator: 0,
+            denominator: 0,
+        },
+    );
+    let _ = add_frame_durations(
+        FrameDuration {
+            numerator: 0,
+            denominator: u64::MAX,
+        },
+        FrameDuration {
+            numerator: 0,
+            denominator: u64::MAX - 1,
+        },
+    );
+    let _ = add_frame_durations(
+        FrameDuration {
+            numerator: u64::MAX,
+            denominator: 1,
+        },
+        FrameDuration {
+            numerator: 1,
+            denominator: 1,
+        },
+    );
+    let _ = disposal_code(FrameDisposal::Reserved(7));
+    let _ = disposal_code(FrameDisposal::Reserved(8));
+    let _ = gif_delay(FrameDuration {
+        numerator: 0,
+        denominator: 0,
+    });
+    let _ = gif_delay(FrameDuration {
+        numerator: u64::MAX,
+        denominator: 1,
+    });
+    let _ = gif_delay(FrameDuration {
+        numerator: 65_536,
+        denominator: 100,
+    });
+    let _ = effective_disposal(&opaque_frame, Some(2));
+    let _ = BitWriter::new().finish();
+
+    let invalid_disposal_frames = vec![
+        coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Reserved(8)),
+        coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep),
+    ];
+    let invalid_disposal_sequence = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: invalid_disposal_frames,
+        loop_count: None,
+        background: None,
+    };
+    let _ = coalesce_identical_frames(&invalid_disposal_sequence, 2, None);
+    let _ = write_gif(
+        &invalid_disposal_sequence,
+        &invalid_disposal_sequence.frames[..1],
+        GifSettings {
+            interlaced: None,
+            local_color_table: false,
+            disposal_override: None,
+            loop_count: None,
+            transparency_override: None,
+        },
+    );
+
+    let mut zero_duration_frame = coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep);
+    zero_duration_frame.source.duration.denominator = 0;
+    let invalid_duration_sequence = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![
+            coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep),
+            zero_duration_frame,
+        ],
+        loop_count: None,
+        background: None,
+    };
+    let _ = coalesce_identical_frames(&invalid_duration_sequence, 2, None);
 
     let mut invalid_animated = EncodeOptions::none();
     invalid_animated
@@ -300,14 +397,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
     );
 
-    let bad_offset_frame = crate::types::DecodedFrame {
-        image: luma.clone(),
-        left: u32::from(u16::MAX) + 1,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let bad_offset_frame = coverage_frame(
+        luma.clone(),
+        u32::from(u16::MAX) + 1,
+        0,
+        0,
+        FrameDisposal::Keep,
+    );
     let bad_offset_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -326,14 +422,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
             transparency_override: Some(true),
         },
     );
-    let bad_top_frame = crate::types::DecodedFrame {
-        image: luma.clone(),
-        left: 0,
-        top: u32::from(u16::MAX) + 1,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let bad_top_frame = coverage_frame(
+        luma.clone(),
+        0,
+        u32::from(u16::MAX) + 1,
+        0,
+        FrameDisposal::Keep,
+    );
     let bad_top_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -358,14 +453,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![0; usize::from(u16::MAX) + 1],
         ColorType::L8,
     );
-    let wide_frame = crate::types::DecodedFrame {
-        image: wide_image,
-        left: 0,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let wide_frame = coverage_frame(wide_image, 0, 0, 0, FrameDisposal::Keep);
     let wide_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -390,14 +478,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![0; usize::from(u16::MAX) + 1],
         ColorType::L8,
     );
-    let tall_frame = crate::types::DecodedFrame {
-        image: tall_image,
-        left: 0,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let tall_frame = coverage_frame(tall_image, 0, 0, 0, FrameDisposal::Keep);
     let tall_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -416,15 +497,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
             transparency_override: None,
         },
     );
-    let cmyk_frame = crate::types::DecodedFrame {
-        image: DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Cmyk8),
-        left: 0,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let cmyk_frame = coverage_frame(
+        DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Cmyk8),
+        0,
+        0,
+        0,
+        FrameDisposal::Keep,
+    );
     let cmyk_second_frames = vec![still.frames[0].clone(), cmyk_frame];
+    let _ = coalesce_identical_frames(
+        &DecodedSequence {
+            width: 1,
+            height: 1,
+            frames: cmyk_second_frames.clone(),
+            loop_count: None,
+            background: None,
+        },
+        2,
+        None,
+    );
     let _ = write_gif(
         &still,
         &cmyk_second_frames,
@@ -436,14 +527,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             transparency_override: None,
         },
     );
-    let long_delay_frame = crate::types::DecodedFrame {
-        image: luma.clone(),
-        left: 0,
-        top: 0,
-        duration_ms: u32::MAX,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let long_delay_frame = coverage_frame(luma.clone(), 0, 0, u32::MAX, FrameDisposal::Keep);
     let long_delay_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -497,6 +581,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
 /// Encode a still image or animation without discarding source frames.
 pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
     sequence.validate().map_err(CodecError::from_image_error)?;
+    for frame in &sequence.frames {
+        if frame.source.is_default_image {
+            return Err(CodecError::Unsupported(
+                "GIF cannot retain default-image metadata".to_owned(),
+            ));
+        }
+        if frame.pixel_layout == FramePixelLayout::SourceRectangle
+            && frame.source.blend != FrameBlend::Unspecified
+        {
+            return Err(CodecError::Unsupported(
+                "GIF cannot retain APNG/WebP blend metadata for source-rectangle pixels".to_owned(),
+            ));
+        }
+    }
     let animated = option_bool(opts, "animated")?.unwrap_or(sequence.frames.len() > 1);
     let requested_frames = if animated { sequence.frames.len() } else { 1 };
 
@@ -530,7 +628,7 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
         loop_count,
         transparency_override: option_bool(opts, "transparency")?,
     };
-    let frames = coalesce_identical_frames(sequence, requested_frames)?;
+    let frames = coalesce_identical_frames(sequence, requested_frames, settings.disposal_override)?;
     write_gif(sequence, &frames, settings)
 }
 
@@ -540,9 +638,10 @@ pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> Code
 fn coalesce_identical_frames(
     sequence: &DecodedSequence,
     requested_frames: usize,
+    disposal_override: Option<u8>,
 ) -> CodecResult<Vec<crate::types::DecodedFrame>> {
     if requested_frames == 1 {
-        return Ok(vec![sequence.frames[0].clone()]);
+        return Ok(vec![gif_output_frame(sequence, &sequence.frames[0])]);
     }
     #[cfg(target_pointer_width = "64")]
     let width = sequence.width as usize;
@@ -566,28 +665,32 @@ fn coalesce_identical_frames(
     let mut output = Vec::<crate::types::DecodedFrame>::new();
 
     for frame in sequence.frames.iter().take(requested_frames) {
-        if let Some(previous) = previous_frame {
-            match previous.disposal {
-                FrameDisposal::Unspecified
-                | FrameDisposal::Keep
-                | FrameDisposal::Previous
-                | FrameDisposal::Reserved(_) => {}
-                FrameDisposal::Background => clear_frame_rect(&mut canvas, width, previous),
+        let previous_disposal = match previous_frame {
+            Some(previous) if previous.pixel_layout == FramePixelLayout::SourceRectangle => {
+                Some(effective_disposal(previous, disposal_override)?)
             }
+            _ => None,
+        };
+        if let Some(previous) = previous_frame
+            && previous_disposal == Some(2)
+        {
+            clear_frame_rect(&mut canvas, width, previous);
         }
 
-        composite_frame(&mut canvas, width, frame)?;
+        if frame.pixel_layout == FramePixelLayout::RenderedCanvas {
+            composite_image(&mut canvas, width, &frame.image, 0, 0, false)?;
+        } else {
+            composite_frame(&mut canvas, width, frame)?;
+        }
         let identical = previous_render.as_deref() == Some(canvas.as_slice());
         if identical {
             let previous = output
                 .last_mut()
                 .expect("identical GIF frame must have a previous output frame");
-            previous.duration_ms = previous
-                .duration_ms
-                .checked_add(frame.duration_ms)
-                .ok_or_else(|| CodecError::Parameter("GIF frame duration overflows".to_owned()))?;
+            previous.source.duration =
+                add_frame_durations(previous.source.duration, frame.source.duration)?;
         } else {
-            let mut output_frame = frame.clone();
+            let mut output_frame = gif_output_frame(sequence, frame);
             if !output.is_empty() {
                 let previous = previous_render
                     .as_deref()
@@ -612,7 +715,11 @@ fn coalesce_identical_frames(
                 };
                 let mut prepared =
                     prepare_image(&full_image).expect("coalesced full GIF canvas is RGB/RGBA");
-                if prepared.transparent.is_none() && prepared.palette.len().div_euclid(3) < 256 {
+                let can_mask_unchanged = previous_disposal != Some(2);
+                if can_mask_unchanged
+                    && prepared.transparent.is_none()
+                    && prepared.palette.len().div_euclid(3) < 256
+                {
                     let transparent = palette_index(prepared.palette.len().div_euclid(3));
                     prepared.palette.extend_from_slice(&[0, 0, 0]);
                     prepared.transparent = Some(transparent);
@@ -623,8 +730,11 @@ fn coalesce_identical_frames(
                     let end = start.saturating_add(frame_width);
                     cropped.extend_from_slice(&prepared.indices[start..end]);
                 }
-                output_frame.left = bounded_u32(left);
-                output_frame.top = bounded_u32(top);
+                output_frame.source.rect.left = bounded_u32(left);
+                output_frame.source.rect.top = bounded_u32(top);
+                output_frame.source.rect.width = bounded_u32(frame_width);
+                output_frame.source.rect.height = bounded_u32(frame_height);
+                output_frame.pixel_layout = FramePixelLayout::SourceRectangle;
                 let mut alpha = vec![255; prepared.palette.len().div_euclid(3)];
                 if let Some(transparent) = prepared.transparent {
                     alpha[usize::from(transparent)] = 0;
@@ -646,6 +756,72 @@ fn coalesce_identical_frames(
         previous_frame = Some(frame);
     }
     Ok(output)
+}
+
+fn gif_output_frame(
+    sequence: &DecodedSequence,
+    frame: &crate::types::DecodedFrame,
+) -> crate::types::DecodedFrame {
+    let mut output = frame.clone();
+    if output.pixel_layout == FramePixelLayout::RenderedCanvas {
+        output.pixel_layout = FramePixelLayout::SourceRectangle;
+        output.source.rect.left = 0;
+        output.source.rect.top = 0;
+        output.source.rect.width = sequence.width;
+        output.source.rect.height = sequence.height;
+        output.source.disposal = FrameDisposal::Unspecified;
+        output.source.blend = FrameBlend::Unspecified;
+        output.source.interlaced = false;
+    }
+    output
+}
+
+fn effective_disposal(
+    frame: &crate::types::DecodedFrame,
+    disposal_override: Option<u8>,
+) -> CodecResult<u8> {
+    match disposal_override {
+        Some(value) => Ok(value),
+        None => disposal_code(frame.source.disposal),
+    }
+}
+
+fn add_frame_durations(left: FrameDuration, right: FrameDuration) -> CodecResult<FrameDuration> {
+    if left.denominator == 0 || right.denominator == 0 {
+        return Err(CodecError::Parameter(
+            "GIF frame duration denominator must be non-zero".to_owned(),
+        ));
+    }
+    let common = greatest_common_divisor(left.denominator, right.denominator);
+    let left_scale = right.denominator.div_euclid(common);
+    let right_scale = left.denominator.div_euclid(common);
+    let denominator = left
+        .denominator
+        .checked_mul(left_scale)
+        .ok_or_else(|| CodecError::Parameter("GIF frame duration overflows".to_owned()))?;
+    let numerator = left
+        .numerator
+        .checked_mul(left_scale)
+        .and_then(|value| {
+            right
+                .numerator
+                .checked_mul(right_scale)
+                .and_then(|right| value.checked_add(right))
+        })
+        .ok_or_else(|| CodecError::Parameter("GIF frame duration overflows".to_owned()))?;
+    Ok(FrameDuration {
+        numerator,
+        denominator,
+    })
+}
+
+fn greatest_common_divisor(mut left: u64, mut right: u64) -> u64 {
+    while right != 0 {
+        let remainder = left.rem_euclid(right);
+        left = right;
+        right = remainder;
+    }
+    left
 }
 
 fn rgba_difference_bounds(
@@ -681,8 +857,8 @@ fn rgba_difference_bounds(
 }
 
 fn clear_frame_rect(canvas: &mut [u8], canvas_width: usize, frame: &crate::types::DecodedFrame) {
-    let left = frame.left as usize;
-    let top = frame.top as usize;
+    let left = frame.source.rect.left as usize;
+    let top = frame.source.rect.top as usize;
     let width = frame.image.width as usize;
     let height = frame.image.height as usize;
     for y in 0..height {
@@ -703,9 +879,23 @@ fn composite_frame(
     canvas_width: usize,
     frame: &crate::types::DecodedFrame,
 ) -> CodecResult<()> {
-    let image = &frame.image;
-    let left = frame.left as usize;
-    let top = frame.top as usize;
+    let left = frame.source.rect.left as usize;
+    let top = frame.source.rect.top as usize;
+    composite_image(canvas, canvas_width, &frame.image, left, top, true)
+}
+
+// `transparent_over` distinguishes a GIF source rectangle, whose transparent
+// palette samples leave the existing canvas untouched, from an already
+// rendered canvas, whose samples replace the complete prior presentation.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+fn composite_image(
+    canvas: &mut [u8],
+    canvas_width: usize,
+    image: &DecodedImage,
+    left: usize,
+    top: usize,
+    transparent_over: bool,
+) -> CodecResult<()> {
     let width = image.width as usize;
     let height = image.height as usize;
     for y in 0..height {
@@ -755,7 +945,7 @@ fn composite_frame(
                     ));
                 }
             };
-            if rgba[3] == 0 && image.mode == ImageMode::P8 {
+            if transparent_over && rgba[3] == 0 && image.mode == ImageMode::P8 {
                 continue;
             }
             let destination = top
@@ -900,6 +1090,38 @@ fn parse_disposal(value: &str) -> CodecResult<u8> {
     }
 }
 
+fn disposal_code(disposal: FrameDisposal) -> CodecResult<u8> {
+    match disposal {
+        FrameDisposal::Unspecified => Ok(0),
+        FrameDisposal::Keep => Ok(1),
+        FrameDisposal::Background => Ok(2),
+        FrameDisposal::Previous => Ok(3),
+        FrameDisposal::Reserved(value) if value <= 7 => Ok(value),
+        FrameDisposal::Reserved(_) => Err(CodecError::Parameter(
+            "GIF disposal value exceeds its three-bit field".to_owned(),
+        )),
+    }
+}
+
+fn gif_delay(duration: FrameDuration) -> CodecResult<u16> {
+    if duration.denominator == 0 {
+        return Err(CodecError::Parameter(
+            "GIF frame duration denominator must be non-zero".to_owned(),
+        ));
+    }
+    let centiseconds = duration
+        .numerator
+        .checked_mul(100)
+        .ok_or_else(|| CodecError::Parameter("GIF frame duration overflows".to_owned()))?;
+    if !centiseconds.is_multiple_of(duration.denominator) {
+        return Err(CodecError::Unsupported(
+            "GIF cannot represent the exact frame duration".to_owned(),
+        ));
+    }
+    u16::try_from(centiseconds.div_euclid(duration.denominator))
+        .map_err(|_| CodecError::Parameter("GIF frame duration exceeds format limits".to_owned()))
+}
+
 fn parse_loop_count(opts: &EncodeOptions) -> CodecResult<Option<u16>> {
     let Some(value) = opts.extra.get("loop") else {
         return Ok(None);
@@ -996,6 +1218,7 @@ fn write_gif(
     }
 
     let mut previous_quantized_rgb = None::<Vec<u8>>;
+    let mut previous_disposal = None::<u8>;
     for (frame_index, (frame, prepared)) in frames.iter().zip(&prepared_frames).enumerate() {
         let mut prepared = if frame_index == 0 {
             first.clone()
@@ -1003,7 +1226,9 @@ fn write_gif(
             prepared.clone()
         };
         let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette);
-        if let Some(previous) = previous_quantized_rgb.as_deref()
+        let previous_can_mask = previous_disposal != Some(2);
+        if previous_can_mask
+            && let Some(previous) = previous_quantized_rgb.as_deref()
             && previous.len() == quantized_rgb.len()
             && let Some(transparent) = prepared.transparent
         {
@@ -1026,10 +1251,12 @@ fn write_gif(
         if let Some(requested) = settings.transparency_override {
             transparent = requested.then_some(transparent.unwrap_or(0));
         }
-        let disposal = settings.disposal_override.unwrap_or(0);
-        let delay_cs = u16::try_from(frame.duration_ms / 10).map_err(|_| {
-            CodecError::Parameter("GIF frame duration exceeds format limits".to_owned())
-        })?;
+        let disposal = match settings.disposal_override {
+            Some(disposal) => disposal,
+            None => disposal_code(frame.source.disposal)?,
+        };
+        previous_disposal = Some(disposal);
+        let delay_cs = gif_delay(frame.source.duration)?;
         if transparent.is_some() || disposal != 0 || delay_cs != 0 {
             output.extend_from_slice(&[
                 EXTENSION_INTRODUCER,
@@ -1043,14 +1270,14 @@ fn write_gif(
 
         output.push(IMAGE_SEPARATOR);
         output.extend_from_slice(
-            &u16::try_from(frame.left)
+            &u16::try_from(frame.source.rect.left)
                 .map_err(|_| {
                     CodecError::Dimensions("GIF frame left offset exceeds format limits".to_owned())
                 })?
                 .to_le_bytes(),
         );
         output.extend_from_slice(
-            &u16::try_from(frame.top)
+            &u16::try_from(frame.source.rect.top)
                 .map_err(|_| {
                     CodecError::Dimensions("GIF frame top offset exceeds format limits".to_owned())
                 })?
@@ -1069,7 +1296,9 @@ fn write_gif(
         // GIF, but its multi-frame writer emits non-interlaced descriptors.
         let default_interlace =
             frames.len() == 1 && frame.image.width >= 16 && frame.image.height >= 16;
-        let interlaced = settings.interlaced.unwrap_or(default_interlace);
+        let interlaced = settings
+            .interlaced
+            .unwrap_or(frame.source.interlaced || default_interlace);
         // Pillow 12.2.0 GifImagePlugin.py:826-873 writes local-table size
         // bits only when include_color_table also sets the presence flag.
         // With the global palette, the descriptor contains only interlace.

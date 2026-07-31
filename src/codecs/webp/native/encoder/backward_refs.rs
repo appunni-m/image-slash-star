@@ -250,6 +250,114 @@ fn rle(pixels: &[u32], width: usize) -> Vec<Token> {
     refs
 }
 
+fn box_chain(pixels: &[u32], width: usize, best_chain: &[(usize, usize)]) -> Vec<(usize, usize)> {
+    const WINDOW_OFFSETS_SIZE_MAX: usize = 32;
+
+    let mut chain = vec![(0, 0); pixels.len()];
+    if pixels.len() < 2 {
+        return chain;
+    }
+
+    let mut counts = vec![1_u16; pixels.len()];
+    for position in (0..pixels.len() - 1).rev() {
+        if pixels[position] == pixels[position + 1] {
+            counts[position] = counts[position + 1]
+                .saturating_add(u16::from(usize::from(counts[position + 1]) != MAX_LENGTH));
+        }
+    }
+
+    let mut offsets_by_code = [0_usize; WINDOW_OFFSETS_SIZE_MAX];
+    for y in 0..=6 {
+        for x in -6_isize..=6 {
+            let offset = y * width;
+            let Some(offset) = offset.checked_add_signed(x) else {
+                continue;
+            };
+            if offset == 0 {
+                continue;
+            }
+            let code = plane_code(width, offset) - 1;
+            if code < WINDOW_OFFSETS_SIZE_MAX {
+                offsets_by_code[code] = offset;
+            }
+        }
+    }
+    let window_offsets = offsets_by_code
+        .into_iter()
+        .filter(|&offset| offset != 0)
+        .collect::<Vec<_>>();
+    let window_offsets_new = window_offsets
+        .iter()
+        .copied()
+        .filter(|&offset| {
+            !window_offsets
+                .iter()
+                .any(|&other| offset == other.saturating_add(1))
+        })
+        .collect::<Vec<_>>();
+
+    let mut previous_offset = 0;
+    let mut previous_length = 0;
+    for position in 1..pixels.len() {
+        let (mut best_offset, mut best_length) = best_chain[position];
+        let recompute = best_length < MAX_LENGTH || !window_offsets.contains(&best_offset);
+        if recompute {
+            let use_previous = previous_length > 1 && previous_length < MAX_LENGTH;
+            let offsets = if use_previous {
+                &window_offsets_new
+            } else {
+                &window_offsets
+            };
+            best_length = if use_previous { previous_length - 1 } else { 0 };
+            best_offset = if use_previous { previous_offset } else { 0 };
+            for &offset in offsets {
+                let Some(mut candidate) = position.checked_sub(offset) else {
+                    continue;
+                };
+                if pixels[candidate] != pixels[position] {
+                    continue;
+                }
+                let mut current = position;
+                let mut length = 0;
+                loop {
+                    let candidate_count = usize::from(counts[candidate]);
+                    let current_count = usize::from(counts[current]);
+                    if candidate_count != current_count {
+                        length += candidate_count.min(current_count);
+                        break;
+                    }
+                    length += candidate_count;
+                    candidate += candidate_count;
+                    current += current_count;
+                    if length > MAX_LENGTH
+                        || current >= pixels.len()
+                        || pixels[candidate] != pixels[current]
+                    {
+                        break;
+                    }
+                }
+                if length > best_length {
+                    best_offset = offset;
+                    best_length = length.min(MAX_LENGTH);
+                    if length >= MAX_LENGTH {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if best_length <= MIN_LENGTH {
+            previous_offset = 0;
+            previous_length = 0;
+        } else {
+            chain[position] = (best_offset, best_length);
+            previous_offset = best_offset;
+            previous_length = best_length;
+        }
+    }
+    chain
+}
+
 fn color_hash(pixel: u32, bits: u8) -> usize {
     (pixel.wrapping_mul(COLOR_HASH_MUL) >> (32 - bits)) as usize
 }
@@ -820,50 +928,60 @@ fn trace_backwards(
     output
 }
 
-pub(super) fn trace(
-    pixels: &[u32],
-    width: usize,
-    source: &[Token],
-    cache_bits: u8,
-    quality: u32,
-) -> Vec<Token> {
-    let chain = fill_hash_chain(pixels, width, quality);
-    trace_backwards(pixels, width, &chain, source, cache_bits)
-}
-
 pub(super) fn candidates(
     pixels: &[u32],
     width: usize,
     allow_cache: bool,
     quality: u32,
     max_cache_bits: u8,
-) -> Vec<(Vec<Token>, u8, bool)> {
+) -> Vec<(Vec<Token>, u8)> {
     if pixels.is_empty() {
-        return vec![(Vec::new(), 0, true)];
+        return vec![(Vec::new(), 0)];
     }
     let chain = fill_hash_chain(pixels, width, quality);
-    let refs = lz77(pixels, width, &chain);
-    let refs_rle = rle(pixels, width);
-    if !allow_cache {
-        return vec![(refs, 0, true), (refs_rle, 0, false)];
+    let choose_cache = |source: Vec<Token>| {
+        let maximum = if allow_cache { max_cache_bits } else { 0 };
+        // The inclusive range always contains cache-bit value zero.
+        #[allow(clippy::unwrap_used)]
+        let (tokens, bits, _) = (0..=maximum)
+            .map(|bits| {
+                let cached = with_cache(pixels, &source, bits);
+                let cost = cache_estimated_bits(&cached, bits);
+                (cached, bits, cost)
+            })
+            .min_by_key(|candidate| candidate.2)
+            .unwrap();
+        let cost = estimated_bits(&tokens, bits);
+        (tokens, bits, cost)
+    };
+    let improve = |mut candidate: (Vec<Token>, u8, u64), source_chain: &[(usize, usize)]| {
+        if quality >= 25 {
+            let traced = trace_backwards(pixels, width, source_chain, &candidate.0, candidate.1);
+            let cost = estimated_bits(&traced, candidate.1);
+            if cost < candidate.2 {
+                candidate = (traced, candidate.1, cost);
+            }
+        }
+        candidate
+    };
+
+    let standard = choose_cache(lz77(pixels, width, &chain));
+    let rle = choose_cache(rle(pixels, width));
+    let mut primary = if standard.2 <= rle.2 {
+        improve(standard, &chain)
+    } else {
+        rle
+    };
+    let mut result = vec![(std::mem::take(&mut primary.0), primary.1)];
+
+    // libwebp evaluates its low-distance "box" chain as a separate crunch
+    // configuration for palette images containing at most sixteen colors.
+    if allow_cache && max_cache_bits <= 4 {
+        let chain = box_chain(pixels, width, &chain);
+        let mut box_candidate = improve(choose_cache(lz77(pixels, width, &chain)), &chain);
+        result.push((std::mem::take(&mut box_candidate.0), box_candidate.1));
     }
-    let candidates: Vec<_> = [(refs, true), (refs_rle, false)]
-        .into_iter()
-        .map(|(source, is_standard)| {
-            // The inclusive range always contains cache-bit value zero.
-            #[allow(clippy::unwrap_used)]
-            (0..=max_cache_bits)
-                .map(|bits| {
-                    let cached = with_cache(pixels, &source, bits);
-                    let cost = cache_estimated_bits(&cached, bits);
-                    (cached, bits, cost)
-                })
-                .min_by_key(|candidate| candidate.2)
-                .map(|(tokens, bits, _)| (tokens, bits, is_standard))
-                .unwrap()
-        })
-        .collect();
-    candidates
+    result
 }
 
 #[cfg(coverage)]
@@ -890,6 +1008,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .collect::<Vec<_>>();
     let _ = candidates(&long_periodic, 2, false, 100, 0);
+
+    // Defensive optimizer-state model (TST-010), not Pillow parity evidence.
+    // `box_chain` consumes a hash-chain heuristic whose retained offset/length
+    // state cannot be selected independently through an encoded image. Both
+    // states below are valid for this repeated input: the first is a maximum
+    // low-distance match that needs no recomputation; the second is a maximum
+    // non-window match that must be recomputed by the box-distance model.
+    let long_uniform = vec![0xff00_0000; MAX_LENGTH * 3 + 8];
+    let mut retained_chain = vec![(0, 0); long_uniform.len()];
+    retained_chain[1] = (1, MAX_LENGTH);
+    retained_chain[MAX_LENGTH + 1] = (MAX_LENGTH + 1, MAX_LENGTH);
+    let _ = box_chain(&long_uniform, 1, &retained_chain);
+
     let _ = fast_slog(70_000);
     let _ = prefix(300);
     let _ = population_cost(&[70_000, 1]);

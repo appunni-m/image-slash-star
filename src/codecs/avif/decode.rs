@@ -1,9 +1,13 @@
 //! Pillow-compatible AVIF decoding with a portable closed-class fast path.
 
-use crate::codecs::{CodecError, CodecResult};
+#[cfg(any(coverage, target_arch = "wasm32"))]
+use crate::codecs::CodecError;
+use crate::codecs::CodecResult;
 use crate::types::{ColorType, DecodedImage, ImageMode};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::types::{DecodedFrame, DecodedSequence, FrameDisposal};
+use crate::types::{
+    DecodedFrame, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration, FrameRect,
+};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
@@ -114,6 +118,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         color: ColorType::Rgb8,
         mode: ImageMode::Rgb8,
         palette: None,
+        cursor_hotspot: None,
     })
 }
 
@@ -248,14 +253,21 @@ fn decoded_sequence(
     let mut frames = Vec::with_capacity(info.frame_count as usize);
     for frame_index in 0..info.frame_count {
         let (pixels, timing) = decode_frame(frame_index)?;
-        frames.push(DecodedFrame {
-            image: decoded_image(info.width, info.height, info.has_alpha, pixels),
-            left: 0,
-            top: 0,
-            duration_ms: duration_ms(timing.duration_in_timescales, info.timescale)?,
-            disposal: FrameDisposal::Unspecified,
-            interlaced: false,
-        });
+        frames.push(DecodedFrame::rendered_canvas(
+            decoded_image(info.width, info.height, info.has_alpha, pixels),
+            FrameRect {
+                left: 0,
+                top: 0,
+                width: info.width,
+                height: info.height,
+            },
+            FrameDuration {
+                numerator: timing.duration_in_timescales,
+                denominator: info.timescale.get(),
+            },
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
+        ));
     }
     Ok(DecodedSequence {
         width: info.width,
@@ -291,23 +303,8 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
         color,
         mode,
         palette: None,
+        cursor_hotspot: None,
     }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn duration_ms(duration: u64, timescale: std::num::NonZeroU64) -> CodecResult<u32> {
-    let numerator = u128::from(duration).saturating_mul(1_000);
-    let denominator = u128::from(timescale.get());
-    let quotient = numerator.div_euclid(denominator);
-    let remainder = numerator.rem_euclid(denominator);
-    let doubled_remainder = remainder.saturating_mul(2);
-    let rounded = quotient.saturating_add(u128::from(
-        doubled_remainder > denominator
-            || (doubled_remainder == denominator && !quotient.is_multiple_of(2)),
-    ));
-    u32::try_from(rounded).map_err(|_| {
-        CodecError::Dimensions("AVIF frame duration exceeds u32 milliseconds".to_owned())
-    })
 }
 
 #[cfg(coverage)]
@@ -318,13 +315,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     use super::native::{DecodeInfo, FrameTiming};
 
     let one = NonZeroU64::new(1).unwrap();
-    let three = NonZeroU64::new(3).unwrap();
-    let four_hundred = NonZeroU64::new(400).unwrap();
-    let _ = duration_ms(1, three);
-    let _ = duration_ms(2, three);
-    let _ = duration_ms(1, four_hundred);
-    let _ = duration_ms(3, four_hundred);
-    let _ = duration_ms(u64::MAX, one);
     let _ = decode_sequence(b"not an AVIF container");
     let validated = ValidatedAv1 {
         portable_still: None,

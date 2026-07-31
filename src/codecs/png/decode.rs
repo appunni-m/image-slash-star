@@ -2,7 +2,10 @@
 
 use crate::codecs::compression::deflate::decompress_zlib_prefix;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ColorType, DecodedImage, ImageMode, ImagePalette};
+use crate::types::{
+    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FrameDuration, FrameRect, ImageMode, ImagePalette,
+};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
@@ -21,58 +24,42 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
     // Pillow's load path accepts bad IDAT CRCs after lazy construction has
     // validated all construction-critical chunks.
     let mut chunks = Chunks::new(data, false)?;
-    let header = chunks
-        .next()
-        .transpose()?
-        .malformed("PNG is missing its IHDR chunk")?;
-    if header.kind != *b"IHDR" || header.data.len() != 13 {
-        return Err(CodecError::Malformed(
-            "PNG IHDR chunk has an invalid type or length".to_owned(),
-        ));
-    }
-
-    let width = u32::from_be_bytes([
-        header.data[0],
-        header.data[1],
-        header.data[2],
-        header.data[3],
-    ]);
-    let height = u32::from_be_bytes([
-        header.data[4],
-        header.data[5],
-        header.data[6],
-        header.data[7],
-    ]);
-    let depth = header.data[8];
-    let png_color = header.data[9];
-    let _compression = header.data[10];
-    let filter = header.data[11];
-    let interlace = header.data[12];
-    if width == 0 || height == 0 || filter != 0 || interlace > 1 {
-        return Err(CodecError::Malformed(
-            "PNG IHDR fields are invalid".to_owned(),
-        ));
-    }
-    if u64::from(width).saturating_mul(u64::from(height)) > PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS {
-        return Err(CodecError::Dimensions(
-            "PNG dimensions exceed Pillow's decompression-bomb limit".to_owned(),
-        ));
-    }
-    let (channels, color) = png_layout(png_color, depth)?;
+    let header = read_header(&mut chunks)?;
 
     let mut compressed = Vec::new();
     let mut palette_rgb = None;
     let mut palette_alpha = Vec::new();
+    let mut saw_idat = false;
+    let mut saw_post_idat_control = false;
+    let mut next_sequence = 0;
     for chunk in &mut chunks {
         let chunk = chunk?;
         match &chunk.kind {
-            b"IDAT" => compressed.extend_from_slice(chunk.data),
+            b"IDAT" => {
+                saw_idat = true;
+                compressed.extend_from_slice(chunk.data);
+            }
             b"PLTE" if palette_rgb.is_none() => palette_rgb = Some(chunk.data.to_vec()),
             b"tRNS" if palette_alpha.is_empty() => palette_alpha.extend_from_slice(chunk.data),
-            b"acTL" if chunk.data.len() != 8 => {
+            b"acTL" if chunk.data.len() < 8 => {
                 return Err(CodecError::Malformed(
                     "PNG acTL chunk has an invalid length".to_owned(),
                 ));
+            }
+            b"fcTL" => {
+                if saw_idat {
+                    saw_post_idat_control = true;
+                } else {
+                    let _ = parse_frame_control(chunk.data, header, &mut next_sequence)?;
+                }
+            }
+            b"fdAT" if saw_idat && !saw_post_idat_control => {
+                if chunk.data.len() < 4 {
+                    return Err(CodecError::Malformed(
+                        "APNG contains a truncated fdAT chunk".to_owned(),
+                    ));
+                }
+                consume_sequence(read_u32(chunk.data, 0), &mut next_sequence)?;
             }
             b"IEND" => {
                 break;
@@ -86,8 +73,26 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
         ));
     }
 
-    let expected_inflated = inflated_len(width, height, channels, depth, interlace);
-    let inflated = decompress_zlib_prefix(&compressed, expected_inflated)
+    decode_image_data(
+        header.image_spec(header.width, header.height),
+        header.channels,
+        header.interlace,
+        &compressed,
+        palette_rgb,
+        palette_alpha,
+    )
+}
+
+fn decode_image_data(
+    spec: PngImageSpec,
+    channels: usize,
+    interlace: u8,
+    compressed: &[u8],
+    palette_rgb: Option<Vec<u8>>,
+    palette_alpha: Vec<u8>,
+) -> CodecResult<DecodedImage> {
+    let expected_inflated = inflated_len(spec.width, spec.height, channels, spec.depth, interlace);
+    let inflated = decompress_zlib_prefix(compressed, expected_inflated)
         .map_err(|error| error.context("decode PNG zlib stream"))?;
     if inflated.len() != expected_inflated {
         return Err(CodecError::Malformed(
@@ -95,19 +100,497 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
         ));
     }
 
-    let samples = decode_scanlines(&inflated, width, height, channels, depth, interlace)?;
-    build_image(
-        PngImageSpec {
-            width,
-            height,
-            png_color,
-            depth,
-            color,
-        },
-        &samples,
+    let samples = decode_scanlines(
+        &inflated,
+        spec.width,
+        spec.height,
+        channels,
+        spec.depth,
+        interlace,
+    )?;
+    build_image(spec, &samples, palette_rgb, palette_alpha)
+}
+
+#[derive(Clone)]
+struct ApngFrameControl {
+    rect: FrameRect,
+    duration: FrameDuration,
+    disposal: FrameDisposal,
+    blend: FrameBlend,
+}
+
+struct ApngCompressedFrame {
+    control: ApngFrameControl,
+    compressed: Vec<u8>,
+}
+
+struct ParsedApng {
+    header: PngHeader,
+    palette_rgb: Option<Vec<u8>>,
+    palette_alpha: Vec<u8>,
+    loop_count: u32,
+    default_compressed: Vec<u8>,
+    default_control: Option<ApngFrameControl>,
+    frames: Vec<ApngCompressedFrame>,
+}
+
+/// Decode every APNG presentation while retaining exact source controls.
+pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
+    let Some(parsed) = parse_apng(data)? else {
+        return decode(data).map(DecodedSequence::from_image);
+    };
+
+    let ParsedApng {
+        header,
         palette_rgb,
         palette_alpha,
-    )
+        loop_count,
+        default_compressed,
+        default_control,
+        frames: mut compressed_frames,
+    } = parsed;
+    let mut output_frames = Vec::new();
+    let mut canvas = None;
+
+    if let Some(control) = default_control {
+        compressed_frames.insert(
+            0,
+            ApngCompressedFrame {
+                control,
+                compressed: default_compressed,
+            },
+        );
+    } else {
+        let default_image = decode_image_data(
+            header.image_spec(header.width, header.height),
+            header.channels,
+            header.interlace,
+            &default_compressed,
+            palette_rgb.clone(),
+            palette_alpha.clone(),
+        )?;
+        canvas = Some(default_image.clone());
+        let mut default_frame = DecodedFrame::rendered_canvas(
+            default_image,
+            FrameRect {
+                left: 0,
+                top: 0,
+                width: header.width,
+                height: header.height,
+            },
+            FrameDuration::ZERO,
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
+        );
+        default_frame.source.interlaced = header.interlace != 0;
+        default_frame.source.is_default_image = true;
+        output_frames.push(default_frame);
+    }
+
+    for (animation_index, encoded) in compressed_frames.into_iter().enumerate() {
+        let source = decode_image_data(
+            header.image_spec(encoded.control.rect.width, encoded.control.rect.height),
+            header.channels,
+            header.interlace,
+            &encoded.compressed,
+            palette_rgb.clone(),
+            palette_alpha.clone(),
+        )?;
+        let canvas = match &mut canvas {
+            Some(canvas) => canvas,
+            slot @ None => slot.insert(blank_canvas(&source, header.width, header.height)),
+        };
+        let previous = canvas.clone();
+        composite_frame(canvas, &source, encoded.control.rect, encoded.control.blend);
+
+        let mut frame = DecodedFrame::rendered_canvas(
+            canvas.clone(),
+            encoded.control.rect,
+            encoded.control.duration,
+            encoded.control.disposal,
+            encoded.control.blend,
+        );
+        frame.source.interlaced = header.interlace != 0;
+        frame.source.is_default_image = animation_index == 0 && output_frames.is_empty();
+        output_frames.push(frame);
+
+        match encoded.control.disposal {
+            FrameDisposal::Background => clear_rect(canvas, encoded.control.rect),
+            FrameDisposal::Previous if animation_index == 0 => {
+                clear_rect(canvas, encoded.control.rect);
+            }
+            FrameDisposal::Previous => {
+                *canvas = previous;
+            }
+            FrameDisposal::Unspecified | FrameDisposal::Keep | FrameDisposal::Reserved(_) => {}
+        }
+    }
+
+    Ok(DecodedSequence {
+        width: header.width,
+        height: header.height,
+        frames: output_frames,
+        loop_count: Some(loop_count),
+        background: None,
+    })
+}
+
+fn parse_apng(data: &[u8]) -> CodecResult<Option<ParsedApng>> {
+    // The common sequence dispatcher has already detected the complete PNG
+    // signature. Avoid manufacturing an unreachable second signature-error
+    // path inside the APNG parser.
+    let mut chunks = Chunks {
+        data,
+        position: PNG_SIGNATURE.len(),
+        failed: false,
+        verify_crc: false,
+    };
+    let header = read_header(&mut chunks)?;
+    let mut animation = None;
+    let mut saw_idat = false;
+    let mut palette_rgb = None;
+    let mut palette_alpha = Vec::new();
+    let mut default_compressed = Vec::new();
+    let mut default_control = None;
+    let mut current = None::<ApngCompressedFrame>;
+    let mut current_has_data = false;
+    let mut frames = Vec::new();
+    let mut next_sequence = 0u32;
+    let mut controlled_frames = 0u32;
+
+    for chunk in &mut chunks {
+        let chunk = chunk?;
+        match &chunk.kind {
+            b"PLTE" if !saw_idat && palette_rgb.is_none() => {
+                palette_rgb = Some(chunk.data.to_vec());
+            }
+            b"tRNS" if !saw_idat && palette_alpha.is_empty() => {
+                palette_alpha.extend_from_slice(chunk.data);
+            }
+            b"acTL" if !saw_idat => {
+                if chunk.data.len() < 8 {
+                    return Err(CodecError::Malformed(
+                        "APNG contains a truncated acTL chunk".to_owned(),
+                    ));
+                }
+                if animation.is_some() {
+                    animation = None;
+                    default_control = None;
+                    current = None;
+                    frames.clear();
+                    continue;
+                }
+                let frame_count = read_u32(chunk.data, 0);
+                if frame_count == 0 || frame_count > 0x8000_0000 {
+                    continue;
+                }
+                animation = Some((frame_count, read_u32(chunk.data, 4)));
+            }
+            b"fcTL" if animation.is_some() => {
+                if let Some(frame) = current.take() {
+                    if !current_has_data {
+                        return Err(CodecError::Malformed(
+                            "APNG frame is missing image data".to_owned(),
+                        ));
+                    }
+                    frames.push(frame);
+                }
+                let control = parse_frame_control(chunk.data, header, &mut next_sequence)?;
+                controlled_frames = controlled_frames.saturating_add(1);
+                if saw_idat {
+                    current = Some(ApngCompressedFrame {
+                        control,
+                        compressed: Vec::new(),
+                    });
+                    current_has_data = false;
+                } else if default_control.replace(control).is_some() {
+                    return Err(CodecError::Malformed(
+                        "APNG default frame has multiple controls".to_owned(),
+                    ));
+                }
+            }
+            b"IDAT" => {
+                saw_idat = true;
+                default_compressed.extend_from_slice(chunk.data);
+            }
+            b"fdAT" if animation.is_some() => {
+                if chunk.data.len() < 4 {
+                    return Err(CodecError::Malformed(
+                        "APNG contains a truncated fdAT chunk".to_owned(),
+                    ));
+                }
+                consume_sequence(read_u32(chunk.data, 0), &mut next_sequence)?;
+                let Some(frame) = current.as_mut() else {
+                    return Err(CodecError::Malformed(
+                        "APNG frame data has no frame control".to_owned(),
+                    ));
+                };
+                current_has_data = true;
+                frame.compressed.extend_from_slice(&chunk.data[4..]);
+            }
+            b"IEND" => break,
+            _ => {}
+        }
+    }
+
+    let Some((declared_frames, loop_count)) = animation else {
+        return Ok(None);
+    };
+    if let Some(frame) = current {
+        if !current_has_data {
+            return Err(CodecError::Malformed(
+                "APNG frame is missing image data".to_owned(),
+            ));
+        }
+        frames.push(frame);
+    }
+    if default_compressed.is_empty() {
+        return Err(CodecError::Malformed(
+            "PNG contains no image data".to_owned(),
+        ));
+    }
+    if controlled_frames != declared_frames {
+        return Err(CodecError::Malformed(
+            "APNG declared frame count does not match its frame controls".to_owned(),
+        ));
+    }
+    Ok(Some(ParsedApng {
+        header,
+        palette_rgb,
+        palette_alpha,
+        loop_count,
+        default_compressed,
+        default_control,
+        frames,
+    }))
+}
+
+fn parse_frame_control(
+    data: &[u8],
+    header: PngHeader,
+    next_sequence: &mut u32,
+) -> CodecResult<ApngFrameControl> {
+    if data.len() < 26 {
+        return Err(CodecError::Malformed(
+            "APNG contains a truncated fcTL chunk".to_owned(),
+        ));
+    }
+    consume_sequence(read_u32(data, 0), next_sequence)?;
+    let width = read_u32(data, 4);
+    let height = read_u32(data, 8);
+    let left = read_u32(data, 12);
+    let top = read_u32(data, 16);
+    if width == 0 || height == 0 {
+        return Err(CodecError::Dimensions(
+            "APNG frame dimensions must be non-zero".to_owned(),
+        ));
+    }
+    if u64::from(left).saturating_add(u64::from(width)) > u64::from(header.width)
+        || u64::from(top).saturating_add(u64::from(height)) > u64::from(header.height)
+    {
+        return Err(CodecError::Malformed(
+            "APNG contains an invalid frame rectangle".to_owned(),
+        ));
+    }
+    let delay_denominator = u64::from(read_u16(data, 22));
+    Ok(ApngFrameControl {
+        rect: FrameRect {
+            left,
+            top,
+            width,
+            height,
+        },
+        duration: FrameDuration {
+            numerator: u64::from(read_u16(data, 20)),
+            denominator: if delay_denominator == 0 {
+                100
+            } else {
+                delay_denominator
+            },
+        },
+        disposal: match data[24] {
+            0 => FrameDisposal::Keep,
+            1 => FrameDisposal::Background,
+            2 => FrameDisposal::Previous,
+            value => FrameDisposal::Reserved(value),
+        },
+        blend: match data[25] {
+            0 => FrameBlend::Source,
+            1 => FrameBlend::Over,
+            value => FrameBlend::Reserved(value),
+        },
+    })
+}
+
+fn consume_sequence(actual: u32, next: &mut u32) -> CodecResult<()> {
+    if actual != *next {
+        return Err(CodecError::Malformed(
+            "APNG frame sequence numbers are not continuous".to_owned(),
+        ));
+    }
+    if *next == u32::MAX {
+        return Err(CodecError::Malformed(
+            "APNG sequence number overflows".to_owned(),
+        ));
+    }
+    *next = next.wrapping_add(1);
+    Ok(())
+}
+
+fn read_u32(data: &[u8], offset: usize) -> u32 {
+    u32::from_be_bytes([
+        data[offset],
+        data[offset.wrapping_add(1)],
+        data[offset.wrapping_add(2)],
+        data[offset.wrapping_add(3)],
+    ])
+}
+
+fn read_u16(data: &[u8], offset: usize) -> u16 {
+    u16::from_be_bytes([data[offset], data[offset.wrapping_add(1)]])
+}
+
+fn blank_canvas(source: &DecodedImage, width: u32, height: u32) -> DecodedImage {
+    // The validated IHDR canvas is bounded by Pillow's decompression-bomb
+    // ceiling, so these products fit every supported pointer width.
+    let width_usize = width as usize;
+    let height_usize = height as usize;
+    let byte_len = if source.mode == ImageMode::L1 {
+        width_usize.div_ceil(8).wrapping_mul(height_usize)
+    } else {
+        width_usize
+            .wrapping_mul(height_usize)
+            .wrapping_mul(usize::from(source.mode.color_type().bytes_per_pixel()))
+    };
+    let mut canvas = DecodedImage::with_mode(width, height, vec![0; byte_len], source.mode);
+    canvas.palette = source.palette.clone();
+    canvas
+}
+
+fn composite_frame(
+    canvas: &mut DecodedImage,
+    source: &DecodedImage,
+    rect: FrameRect,
+    blend: FrameBlend,
+) {
+    // Every frame is decoded from the same IHDR and retained PLTE/tRNS state,
+    // and blank_canvas copies that state. A layout change cannot be produced
+    // by parse_apng, so this helper only handles the proven common layout.
+    if source.mode == ImageMode::L1 {
+        for y in 0..rect.height {
+            for x in 0..rect.width {
+                let value = packed_bit(&source.pixels, source.width, x, y);
+                set_packed_bit(
+                    &mut canvas.pixels,
+                    canvas.width,
+                    rect.left.wrapping_add(x),
+                    rect.top.wrapping_add(y),
+                    value,
+                );
+            }
+        }
+        return;
+    }
+
+    let bytes_per_pixel = usize::from(source.color.bytes_per_pixel());
+    let over = blend == FrameBlend::Over;
+    for y in 0..rect.height {
+        for x in 0..rect.width {
+            let source_pixel = (y as usize)
+                .wrapping_mul(source.width as usize)
+                .wrapping_add(x as usize)
+                .saturating_mul(bytes_per_pixel);
+            let canvas_pixel = (rect.top.wrapping_add(y) as usize)
+                .wrapping_mul(canvas.width as usize)
+                .wrapping_add(rect.left.wrapping_add(x) as usize)
+                .saturating_mul(bytes_per_pixel);
+            let alpha = if over {
+                source_alpha(source, source_pixel)
+            } else {
+                255
+            };
+            for channel in 0..bytes_per_pixel {
+                let source_value = source.pixels[source_pixel.wrapping_add(channel)];
+                let canvas_value = &mut canvas.pixels[canvas_pixel.wrapping_add(channel)];
+                *canvas_value = blend_byte(*canvas_value, source_value, alpha);
+            }
+        }
+    }
+}
+
+fn source_alpha(source: &DecodedImage, pixel: usize) -> u8 {
+    match source.mode {
+        ImageMode::La8 => source.pixels[pixel.wrapping_add(1)],
+        ImageMode::Rgba8 => source.pixels[pixel.wrapping_add(3)],
+        ImageMode::P8 => {
+            let index = usize::from(source.pixels[pixel]);
+            source
+                .palette
+                .as_ref()
+                .and_then(|palette| palette.alpha.get(index))
+                .copied()
+                .unwrap_or(255)
+        }
+        _ => 255,
+    }
+}
+
+fn blend_byte(background: u8, foreground: u8, alpha: u8) -> u8 {
+    let value = u32::from(background)
+        .wrapping_mul(u32::from(255u8.wrapping_sub(alpha)))
+        .wrapping_add(u32::from(foreground).wrapping_mul(u32::from(alpha)));
+    let rounded = value.wrapping_add(128);
+    rounded
+        .wrapping_add(rounded.wrapping_shr(8))
+        .wrapping_shr(8)
+        .to_le_bytes()[0]
+}
+
+fn clear_rect(canvas: &mut DecodedImage, rect: FrameRect) {
+    if canvas.mode == ImageMode::L1 {
+        for y in 0..rect.height {
+            for x in 0..rect.width {
+                set_packed_bit(
+                    &mut canvas.pixels,
+                    canvas.width,
+                    rect.left.wrapping_add(x),
+                    rect.top.wrapping_add(y),
+                    false,
+                );
+            }
+        }
+        return;
+    }
+    let bytes_per_pixel = usize::from(canvas.color.bytes_per_pixel());
+    for y in 0..rect.height {
+        let start = (rect.top.wrapping_add(y) as usize)
+            .wrapping_mul(canvas.width as usize)
+            .wrapping_add(rect.left as usize)
+            .saturating_mul(bytes_per_pixel);
+        let len = (rect.width as usize).wrapping_mul(bytes_per_pixel);
+        canvas.pixels[start..start.wrapping_add(len)].fill(0);
+    }
+}
+
+fn packed_bit(pixels: &[u8], width: u32, x: u32, y: u32) -> bool {
+    let stride = (width as usize).div_ceil(8);
+    let byte = pixels[(y as usize)
+        .wrapping_mul(stride)
+        .wrapping_add((x as usize).wrapping_div(8))];
+    byte & (0x80 >> (x % 8)) != 0
+}
+
+fn set_packed_bit(pixels: &mut [u8], width: u32, x: u32, y: u32, value: bool) {
+    let stride = (width as usize).div_ceil(8);
+    let byte = &mut pixels[(y as usize)
+        .wrapping_mul(stride)
+        .wrapping_add((x as usize).wrapping_div(8))];
+    let mask = 0x80 >> (x % 8);
+    if value {
+        *byte |= mask;
+    } else {
+        *byte &= !mask;
+    }
 }
 
 /// Validate PNG chunk framing and CRCs without decompressing image samples.
@@ -142,6 +625,78 @@ pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
     Err(CodecError::Malformed(
         "PNG is missing its IEND chunk".to_owned(),
     ))
+}
+
+#[derive(Clone, Copy)]
+struct PngHeader {
+    width: u32,
+    height: u32,
+    depth: u8,
+    png_color: u8,
+    interlace: u8,
+    channels: usize,
+    color: ColorType,
+}
+
+impl PngHeader {
+    fn image_spec(self, width: u32, height: u32) -> PngImageSpec {
+        PngImageSpec {
+            width,
+            height,
+            png_color: self.png_color,
+            depth: self.depth,
+            color: self.color,
+        }
+    }
+}
+
+fn read_header(chunks: &mut Chunks<'_>) -> CodecResult<PngHeader> {
+    let header = chunks
+        .next()
+        .transpose()?
+        .malformed("PNG is missing its IHDR chunk")?;
+    if header.kind != *b"IHDR" || header.data.len() != 13 {
+        return Err(CodecError::Malformed(
+            "PNG IHDR chunk has an invalid type or length".to_owned(),
+        ));
+    }
+
+    let width = u32::from_be_bytes([
+        header.data[0],
+        header.data[1],
+        header.data[2],
+        header.data[3],
+    ]);
+    let height = u32::from_be_bytes([
+        header.data[4],
+        header.data[5],
+        header.data[6],
+        header.data[7],
+    ]);
+    let depth = header.data[8];
+    let png_color = header.data[9];
+    let filter = header.data[11];
+    let interlace = header.data[12];
+    if width == 0 || height == 0 || filter != 0 || interlace > 1 {
+        return Err(CodecError::Malformed(
+            "PNG IHDR fields are invalid".to_owned(),
+        ));
+    }
+    if u64::from(width).saturating_mul(u64::from(height)) > PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS {
+        return Err(CodecError::Dimensions(
+            "PNG dimensions exceed Pillow's decompression-bomb limit".to_owned(),
+        ));
+    }
+    let (channels, color) = png_layout(png_color, depth)?;
+    Ok(PngHeader {
+        width,
+        height,
+        depth,
+        png_color,
+        interlace,
+        channels,
+        color,
+    })
 }
 
 fn png_layout(color: u8, depth: u8) -> CodecResult<(usize, ColorType)> {
@@ -645,11 +1200,15 @@ impl<'a> Iterator for Chunks<'a> {
 pub(crate) fn __coverage_exercise_private_branches() {
     fn png_chunk(kind: [u8; 4], payload: &[u8]) -> Vec<u8> {
         let mut data = PNG_SIGNATURE.to_vec();
+        append_chunk(&mut data, kind, payload);
+        data
+    }
+
+    fn append_chunk(data: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {
         data.extend_from_slice(&(payload.len() as u32).to_be_bytes());
         data.extend_from_slice(&kind);
         data.extend_from_slice(payload);
         data.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
-        data
     }
 
     let _ = decode(b"");
@@ -689,4 +1248,35 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8).is_err());
 
     assert!(chunk_payload_with_crc(&[], b"IDAT", usize::MAX, 1, true).is_err());
+
+    let mut sequence = u32::MAX;
+    assert!(consume_sequence(u32::MAX, &mut sequence).is_err());
+
+    let mut trailing_palette = PNG_SIGNATURE.to_vec();
+    let mut header = [0u8; 13];
+    header[3] = 1;
+    header[7] = 1;
+    header[8] = 8;
+    header[9] = 2;
+    append_chunk(&mut trailing_palette, *b"IHDR", &header);
+    append_chunk(&mut trailing_palette, *b"fdAT", &[0, 0, 0, 0]);
+    append_chunk(
+        &mut trailing_palette,
+        *b"IDAT",
+        &[
+            0x78, 0x9c, 0x63, 0x68, 0x60, 0x60, 0x00, 0x00, 0x01, 0x84, 0x00, 0x81,
+        ],
+    );
+    append_chunk(&mut trailing_palette, *b"PLTE", &[0, 0, 0]);
+    append_chunk(&mut trailing_palette, *b"tRNS", &[]);
+    append_chunk(&mut trailing_palette, *b"IEND", &[]);
+    assert!(decode(&trailing_palette).is_ok());
+    assert!(parse_apng(&trailing_palette).is_ok_and(|parsed| parsed.is_none()));
+
+    let mut orphan_frame_data = PNG_SIGNATURE.to_vec();
+    append_chunk(&mut orphan_frame_data, *b"IHDR", &header);
+    append_chunk(&mut orphan_frame_data, *b"acTL", &[0, 0, 0, 1, 0, 0, 0, 0]);
+    append_chunk(&mut orphan_frame_data, *b"fdAT", &[0, 0, 0, 0, 0x78]);
+    append_chunk(&mut orphan_frame_data, *b"IEND", &[]);
+    assert!(parse_apng(&orphan_frame_data).is_err());
 }

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, OnceLock};
 
-use crate::{Decoded, DecodedImage, ImageFormat, ImageInfo, ImageResult};
+use crate::{Decoded, DecodedImage, ImageFormat, ImageInfo, ImageResult, VerificationScope};
 
 #[derive(Debug)]
 struct EncodedImageInner {
@@ -86,6 +86,10 @@ impl EncodedImage {
 
     /// Applies the format-specific Pillow verification contract to the snapshot.
     ///
+    /// [`Self::verification_scope`] distinguishes a format-specific structural
+    /// scan from Pillow's header-only default. A successful header-only result
+    /// does not prove that later pixel decompression will succeed.
+    ///
     /// Verification executes independently from ordinary materialization, so
     /// it does not populate or change the shared decode cache.
     ///
@@ -95,5 +99,11 @@ impl EncodedImage {
     /// format-specific verification contract rejects the snapshot.
     pub fn verify(&self) -> ImageResult<()> {
         crate::codecs::verify_format(&self.inner.bytes, self.format())
+    }
+
+    /// Returns how much validation [`Self::verify`] performs for this format.
+    #[must_use]
+    pub fn verification_scope(&self) -> VerificationScope {
+        self.format().verification_scope()
     }
 }

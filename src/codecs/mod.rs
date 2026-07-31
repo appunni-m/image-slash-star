@@ -5,7 +5,7 @@
 
 use crate::encode_options::EncodeOptions;
 use crate::types::{
-    DecodedImage, DecodedSequence, ImageError, ImageFormat, ImageInfo, ImageResult,
+    DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageFormat, ImageInfo, ImageResult,
 };
 
 mod error;
@@ -256,6 +256,14 @@ pub(crate) fn decode_sequence_format(
         );
     }
 
+    #[cfg(feature = "png")]
+    if format == ImageFormat::Png {
+        return into_image_result(
+            png::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            format,
+        );
+    }
+
     #[cfg(feature = "webp")]
     if format == ImageFormat::WebP {
         return into_image_result(
@@ -270,6 +278,16 @@ pub(crate) fn decode_sequence_format(
             avif::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
             format,
         );
+    }
+
+    if format == ImageFormat::Tiff {
+        let info = inspect_format(data, format)?;
+        if info.is_animated {
+            return Err(ImageError::Unsupported {
+                format: Some(format),
+                message: "multi-frame sequence decoding is not implemented".to_owned(),
+            });
+        }
     }
 
     decode_format(data, format).map(DecodedSequence::from_image)
@@ -295,7 +313,9 @@ pub(crate) fn encode_format(
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    _image.validate()?;
+    _image
+        .validate()
+        .map_err(|error| error.with_format(format))?;
     let encoded: CodecResult<Vec<u8>> = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::encode::encode(_image, _options),
@@ -369,7 +389,9 @@ pub(crate) fn encode_sequence_format(
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    sequence.validate()?;
+    sequence
+        .validate()
+        .map_err(|error| error.with_format(format))?;
 
     #[cfg(feature = "gif")]
     if format == ImageFormat::Gif {
@@ -389,13 +411,63 @@ pub(crate) fn encode_sequence_format(
         );
     }
 
+    #[cfg(feature = "webp")]
+    if format == ImageFormat::WebP && sequence.frames.len() > 1 {
+        return into_image_result(
+            webp::encode::encode_sequence(sequence, options)
+                .map_err(|error| error.context("encode sequence")),
+            format,
+        );
+    }
+
     if sequence.frames.len() != 1 {
         return Err(ImageError::Unsupported {
             format: Some(format),
             message: "format cannot encode multiple retained frames".to_owned(),
         });
     }
-    encode_format(&sequence.frames[0].image, format, options)
+    let frame = &sequence.frames[0];
+    if !has_plain_still_semantics(sequence, frame) {
+        return Err(ImageError::Unsupported {
+            format: Some(format),
+            message: "still-image format cannot represent retained sequence metadata".to_owned(),
+        });
+    }
+    encode_format(&frame.image, format, options)
+}
+
+fn has_plain_still_semantics(
+    sequence: &DecodedSequence,
+    frame: &crate::types::DecodedFrame,
+) -> bool {
+    if frame.source.rect.left != 0 {
+        return false;
+    }
+    if frame.source.rect.top != 0 {
+        return false;
+    }
+    if frame.source.rect.width != sequence.width || frame.source.rect.height != sequence.height {
+        return false;
+    }
+    if frame.source.duration.numerator != 0 {
+        return false;
+    }
+    if frame.source.disposal != FrameDisposal::Unspecified {
+        return false;
+    }
+    if frame.source.blend != crate::types::FrameBlend::Unspecified
+        || frame.source.interlaced
+        || frame.source.is_default_image
+    {
+        return false;
+    }
+    if sequence.loop_count.is_some() {
+        return false;
+    }
+    if sequence.background.is_some() {
+        return false;
+    }
+    true
 }
 
 #[cfg(any(
@@ -574,22 +646,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![
-            crate::types::DecodedFrame {
-                image: luma.clone(),
-                left: 0,
-                top: 0,
-                duration_ms: 0,
-                disposal: crate::types::FrameDisposal::Unspecified,
-                interlaced: false,
-            },
-            crate::types::DecodedFrame {
-                image: luma,
-                left: 0,
-                top: 0,
-                duration_ms: 0,
-                disposal: crate::types::FrameDisposal::Unspecified,
-                interlaced: false,
-            },
+            crate::types::DecodedFrame::rendered_canvas(
+                luma.clone(),
+                crate::types::FrameRect {
+                    left: 0,
+                    top: 0,
+                    width: 1,
+                    height: 1,
+                },
+                crate::types::FrameDuration::ZERO,
+                crate::types::FrameDisposal::Unspecified,
+                crate::types::FrameBlend::Unspecified,
+            ),
+            crate::types::DecodedFrame::rendered_canvas(
+                luma,
+                crate::types::FrameRect {
+                    left: 0,
+                    top: 0,
+                    width: 1,
+                    height: 1,
+                },
+                crate::types::FrameDuration::ZERO,
+                crate::types::FrameDisposal::Unspecified,
+                crate::types::FrameBlend::Unspecified,
+            ),
         ],
         loop_count: None,
         background: None,

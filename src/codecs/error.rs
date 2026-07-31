@@ -30,8 +30,8 @@ impl CodecError {
         match error {
             ImageError::Malformed { message, .. } => Self::Malformed(message),
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
-            ImageError::Dimensions => Self::Dimensions("image dimensions are invalid".to_owned()),
-            ImageError::Parameter(message) => Self::Parameter(message),
+            ImageError::Dimensions { message, .. } => Self::Dimensions(message),
+            ImageError::Parameter { message, .. } => Self::Parameter(message),
             ImageError::UnknownFormat | ImageError::FeatureDisabled { .. } => {
                 Self::Unsupported(error.to_string())
             }
@@ -46,8 +46,14 @@ impl CodecError {
                 format: Some(format),
                 message,
             },
-            Self::Dimensions(_) => ImageError::Dimensions,
-            Self::Parameter(message) => ImageError::Parameter(message),
+            Self::Dimensions(message) => ImageError::Dimensions {
+                format: Some(format),
+                message,
+            },
+            Self::Parameter(message) => ImageError::Parameter {
+                format: Some(format),
+                message,
+            },
         }
     }
 
@@ -126,8 +132,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: Some(ImageFormat::Png),
             message: "unsupported".to_owned(),
         },
-        ImageError::Dimensions,
-        ImageError::Parameter("parameter".to_owned()),
+        ImageError::dimensions("dimensions"),
+        ImageError::parameter("parameter"),
         ImageError::UnknownFormat,
         ImageError::FeatureDisabled {
             format: ImageFormat::Png,

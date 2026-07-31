@@ -65,6 +65,7 @@ formats:
     decoder: own (Pillow 12.2.0 parity target)
     encoder: own (Pillow 12.2.0 parity target)
     status: in-progress
+    verification_scope: structure
     encode_source:
       format: jpeg
       asset: baseline_444.jpg
@@ -324,6 +325,22 @@ formats:
       test_assets:
       - progressive_restart.jpg
     encode_edge_cases:
+    - id: enc_error_retained_sequence_geometry
+      description: A still JPEG cannot represent a retained frame offset or a larger sequence canvas
+      params: {'sequence_canvas_padding': [1, 1], 'sequence_frame_offset': [1, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: JPEG has no one-frame sequence geometry fields
+    - id: enc_error_public_mode_contract
+      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['1', 'P', 'La8', 'Rgba8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: JPEG directly accepts only L8 and Rgb8
     - id: enc_q100
       description: 
       params: {'quality': 100}
@@ -354,6 +371,10 @@ formats:
     - id: enc_sub_420
       description: 
       params: {'subsampling': '420'}
+    - id: enc_error_subsampling_unknown
+      description: Unknown JPEG subsampling names are rejected by Pillow
+      params: {'subsampling': 'bogus'}
+      expect_error: true
     - id: enc_progressive
       description: 
       params: {'progressive': True}
@@ -368,6 +389,32 @@ formats:
       description: 
       params: {'grayscale': False}
       source_asset: baseline_444.jpg
+    - id: enc_error_rgba_png
+      description: Pillow and Rust reject direct RGBA input because JPEG cannot represent alpha
+      source_format: png
+      source_asset: rgba.png
+      params: {}
+      expect_error: true
+    - id: enc_error_indexed_png
+      description: Pillow and Rust reject direct palette-index input
+      source_format: png
+      source_asset: indexed.png
+      params: {}
+      expect_error: true
+    - id: enc_error_l16_png
+      description: Pillow and Rust reject direct 16-bit luminance input
+      source_format: png
+      source_asset: 16bit.png
+      params: {}
+      expect_error: true
+    - id: enc_bilevel_png_rust_unsupported
+      description: Pillow privately expands bilevel input, while the strict Rust JPEG encoder requires byte-per-sample luminance or RGB
+      source_format: png
+      source_asset: 1bit.png
+      params: {}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: Private source-mode conversion belongs to a future fixture-proven encoder normalization slice
     - id: enc_1x1
       description: 
       params: {'size': [1, 1]}
@@ -479,6 +526,7 @@ formats:
     decoder: own (PNG chunks, filters, Adam7, zlib/DEFLATE)
     encoder: own (PNG filters, ancillary chunks, Adam7, stored/fixed-Huffman LZ77 DEFLATE)
     status: in-progress
+    verification_scope: structure
     encode_source:
       format: png
       asset: rgb.png
@@ -725,8 +773,133 @@ formats:
       description: APNG with multiple frames
       test_assets:
       - apng_animated.png
-      notes: Decode first frame only (matching base PNG behavior)
+    - id: apng_sequence_controls
+      description: APNG rendered canvases retain exact frame control and default-image semantics
+      test_assets:
+      - apng_rgba_controls.png
+      - apng_default_image.png
+      - apng_zero_delay_den.png
+      - apng_invalid_disposal.png
+      - apng_invalid_blend.png
+      - apng_first_previous.png
+      - apng_l1_controls.png
+      - apng_l_over.png
+      - apng_la_over.png
+      - apng_palette_over.png
+      - apng_adam7.png
+      - apng_long_actl.png
+    - id: apng_sequence_open_error
+      description: APNG structural errors encountered before the default image
+      test_assets:
+      - apng_bad_first_sequence.png
+      - apng_short_first_fctl.png
+      - apng_first_frame_outside_x.png
+      - apng_first_frame_outside_y.png
+      - apng_zero_frame_width.png
+      - apng_zero_frame_height.png
+      - apng_no_idat.png
+      - apng_fdat_without_fctl.png
+      - apng_short_fdat_without_fctl.png
+      - apng_corrupt_default_data.png
+      expect_error: true
+    - id: apng_sequence_later_error
+      description: APNG structural errors encountered while seeking later frames
+      test_assets:
+      - apng_gap_sequence.png
+      - apng_duplicate_sequence.png
+      - apng_frame_outside_canvas.png
+      - apng_declared_frame_mismatch.png
+      - apng_short_fctl.png
+      - apng_short_fdat.png
+      - apng_missing_between_frame_data.png
+      - apng_missing_final_frame_data.png
+      - apng_multiple_default_controls.png
+      - apng_no_controlled_frames.png
+      - apng_corrupt_frame_data.png
+      expect_sequence_error: true
+    - id: apng_control_after_idat
+      description: An acTL after IDAT does not turn the default PNG into an animation
+      test_assets:
+      - actl_after_idat.png
+      - apng_large_frame_count.png
+      - apng_duplicate_actl.png
     encode_edge_cases:
+    - id: enc_error_retained_sequence_geometry
+      description: A still PNG cannot represent a retained horizontal frame offset
+      params: {'sequence_canvas_padding': [1, 0], 'sequence_frame_offset': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard horizontal frame geometry
+    - id: enc_error_retained_sequence_top
+      description: A still PNG cannot represent a retained vertical frame offset
+      params: {'sequence_canvas_padding': [0, 1], 'sequence_frame_offset': [0, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard vertical frame geometry
+    - id: enc_error_retained_sequence_canvas_width
+      description: A still PNG cannot represent a frame narrower than its retained canvas
+      params: {'sequence_canvas_padding': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard canvas width
+    - id: enc_error_retained_sequence_canvas_height
+      description: A still PNG cannot represent a frame shorter than its retained canvas
+      params: {'sequence_canvas_padding': [0, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard canvas height
+    - id: enc_error_public_mode_contract
+      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and L16
+    - id: enc_error_retained_sequence_duration
+      description: A still PNG cannot represent a retained presentation duration
+      params: {'sequence_duration_ms': 10}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard frame timing
+    - id: enc_error_retained_sequence_disposal
+      description: A still PNG cannot represent a retained disposal operation
+      params: {'sequence_disposal': 'keep'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard disposal metadata
+    - id: enc_error_retained_sequence_interlace
+      description: A still PNG cannot represent retained GIF frame-interlace state
+      params: {'sequence_interlaced': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard frame storage metadata
+    - id: enc_error_retained_sequence_blend
+      description: A still PNG cannot discard a retained source-frame blend operation
+      params: {'sequence_blend': 'over'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard frame blend metadata
+    - id: enc_error_retained_sequence_default_image
+      description: A still PNG cannot discard retained animation default-image identity
+      params: {'sequence_default_image': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard default-image metadata
+    - id: enc_error_retained_sequence_loop
+      description: A still PNG cannot represent a retained animation loop count
+      params: {'sequence_loop_count': 0}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard loop metadata
+    - id: enc_error_retained_sequence_background
+      description: A still PNG cannot represent a retained animation background
+      params: {'sequence_background_rgba': [1, 2, 3, 4]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current PNG encoder is still-only and cannot discard background metadata
     - id: enc_compress_0
       description: 
       params: {'compression': 0}
@@ -1007,6 +1180,7 @@ formats:
     decoder: own (GIF89a parser and LZW)
     encoder: own (GIF89a, LZW, interlace, transparency, disposal, looping, repeated-frame animation)
     status: in-progress
+    verification_scope: header_only
     encode_source:
       format: gif
       asset: static.gif
@@ -1051,11 +1225,12 @@ formats:
       - comment_extension.gif
       - unknown_application.gif
     - id: alternate_loop_extension
-      description: ANIMEXTS1.0 carries the same loop payload as NETSCAPE2.0
+      description: Pillow leaves ANIMEXTS1.0 opaque and accepts malformed or short loop payloads
       test_assets:
       - animext_loop.gif
       - animext_bad_payload.gif
       - short_loop_payload.gif
+      - bad_loop_payload.gif
     - id: extension_gce
       description: Graphic Control Extension (delay, disposal)
       test_assets:
@@ -1144,9 +1319,31 @@ formats:
       - lzw_truncated_output.gif
       expect_error: true
     encode_edge_cases:
+    - id: enc_error_public_mode_contract
+      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['1', 'La8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: GIF directly accepts only P8, L8, Rgb8, and Rgba8
     - id: enc_static
       description: 
       params: {'animated': False}
+    - id: enc_error_retained_source_blend
+      description: GIF cannot reinterpret an uncomposited source rectangle carrying WebP or APNG blend semantics
+      params: {'sequence_pixel_layout': 'source_rectangle', 'sequence_blend': 'over'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: GIF source-rectangle pixels require format-neutral unspecified blend semantics
+    - id: enc_error_retained_default_image
+      description: GIF cannot retain APNG default-image identity
+      params: {'sequence_default_image': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: GIF has no default-image metadata equivalent
     - id: enc_animated
       description: 
       source_asset: animated.gif
@@ -1162,11 +1359,11 @@ formats:
     - id: enc_animated_background
       description: Re-encode animation whose frames request background disposal
       source_asset: gce.gif
-      params: {'animated': True, 'frames': 2, 'loop': 1}
+      params: {'animated': True, 'frames': 2, 'loop': 1, 'preserve_disposal': True}
     - id: enc_animated_previous
       description: Re-encode animation whose frames request previous-frame disposal
       source_asset: gce_previous.gif
-      params: {'animated': True, 'frames': 2, 'loop': 1}
+      params: {'animated': True, 'frames': 2, 'loop': 1, 'preserve_disposal': True}
     - id: enc_animated_rgba
       description: Re-encode composited RGBA animation frames through Pillow's adaptive GIF palettes
       source_format: webp
@@ -1317,6 +1514,7 @@ formats:
     decoder: own (direct impl)
     encoder: own (8/24/32-bit BI_RGB, 32-bit BI_BITFIELDS, top-down rows, V3/V4/V5 headers)
     status: in-progress
+    verification_scope: header_only
     encode_source:
       format: bmp
       asset: 24bit.bmp
@@ -1427,6 +1625,15 @@ formats:
       test_assets:
       - not_bmp.bmp
       expect_error: true
+    - id: error_related_os2_signatures
+      description: Structurally complete BMP-like bytes using OS/2 bitmap-array, color-icon, color-pointer, icon, and pointer file signatures
+      test_assets:
+      - related_ba.bmp
+      - related_ci.bmp
+      - related_cp.bmp
+      - related_ic.bmp
+      - related_pt.bmp
+      expect_error: true
     - id: error_malformed
       description: Malformed BMP headers, palettes, and pixel payloads
       test_assets:
@@ -1484,6 +1691,22 @@ formats:
       - bitfields_zero_blue_mask.bmp
       expect_error: true
     encode_edge_cases:
+    - id: enc_error_retained_sequence_geometry
+      description: A still BMP cannot represent a retained frame offset or a larger sequence canvas
+      params: {'sequence_canvas_padding': [1, 1], 'sequence_frame_offset': [1, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: BMP has no one-frame sequence geometry fields
+    - id: enc_error_public_mode_contract
+      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['La8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: BMP directly accepts only L1, P8, L8, Rgb8, and Rgba8
     - id: enc_1bit
       description: 
       source_asset: 1bit.bmp
@@ -1581,6 +1804,7 @@ formats:
     decoder: internal pure-Rust VP8/VP8L implementation
     encoder: internal pure-Rust VP8 lossy and VP8L lossless implementations
     status: in-progress
+    verification_scope: structure
     encode_source:
       format: webp
       asset: lossless.webp
@@ -1678,6 +1902,7 @@ formats:
       description: Animated WebP (all composited frames)
       test_assets:
       - animated.webp
+      - animated_sequence_rgba_keyframes.webp
       - animated_alpha.webp
       - animated_alpha_holes_partial_background.webp
       - animated_alpha_holes_opaque_background.webp
@@ -1841,6 +2066,12 @@ formats:
       - vp8_partition_31.webp
       - vp8_partition_32.webp
       expect_error: true
+    - id: error_related_riff_containers
+      description: Complete RIFF bytes whose form is WAVE or whose WEBP form begins with an unsupported chunk identifier
+      test_assets:
+      - riff_wave.webp
+      - riff_webp_unknown_chunk.webp
+      expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed WebP structures tolerated by Pillow
       test_assets:
@@ -1854,6 +2085,176 @@ formats:
       - vp8_missing_last_byte.webp
       - vp8l_unused_invalid_one_symbol.webp
     encode_edge_cases:
+    - id: enc_sequence_lossy_rgb_keyframes
+      description: Two rendered RGB canvases encode as exact full-canvas lossy WebP keyframes
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': False, 'quality': 80, 'method': 4, 'kmax': 1}
+    - id: enc_sequence_lossless_rgb_background
+      description: Lossless RGB keyframes retain the decoded WebP animation background
+      source_asset: animated_rgb_palette_background.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1}
+    - id: enc_sequence_lossy_rgba_keyframes
+      description: Two rendered RGBA canvases encode as exact ALPH plus VP8 keyframes
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': False, 'quality': 80, 'method': 4, 'loop': 2, 'background': [0, 0, 0, 0], 'kmax': 1}
+    - id: enc_sequence_lossless_rgba_keyframes
+      description: Two rendered RGBA canvases encode as exact VP8L keyframes
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'loop': 2, 'background': [0, 0, 0, 0], 'kmax': 1}
+    - id: enc_sequence_lossless_default_controls
+      description: A full-canvas source layout plus absent retained controls map exactly to WebP defaults
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_pixel_layout': 'source_rectangle', 'sequence_clear_loop': true, 'sequence_clear_background': true}
+    - id: enc_error_sequence_loop_overflow
+      description: WebP rejects retained loop counts larger than its 16-bit field
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_loop_count': 65536}
+      rust_expect_error: true
+      rust_error_kind: parameter
+      rust_error_reason: WebP animation loop counts are unsigned 16-bit values
+    - id: enc_error_sequence_palette_background
+      description: WebP rejects a retained palette-index background because ANIM stores RGBA
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_background_palette': 0}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP animation backgrounds are explicit RGBA values
+    - id: enc_error_sequence_icc
+      description: Sequence ICC output remains unsupported until animated metadata ordering has an exact contract
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'icc_hex': '01020304'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP sequence metadata output is not implemented
+    - id: enc_error_sequence_exif
+      description: Sequence EXIF output remains unsupported until animated metadata ordering has an exact contract
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'exif_hex': '4578696600000102'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP sequence metadata output is not implemented
+    - id: enc_error_sequence_xmp
+      description: Sequence XMP output remains unsupported until animated metadata ordering has an exact contract
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'xmp_hex': '3c783e3c2f783e'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP sequence metadata output is not implemented
+    - id: enc_error_sequence_kmax
+      description: The initial exact keyframe encoder rejects non-keyframe-only kmax settings
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmin': 1, 'kmax': 2}
+      rust_expect_error: true
+      rust_error_kind: parameter
+      rust_error_reason: The exact initial WebP sequence contract requires kmax=1
+    - id: enc_error_sequence_minimize_size
+      description: WebP frame minimization remains unsupported by the initial exact keyframe encoder
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'minimize_size': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP animation optimization options are not implemented
+    - id: enc_error_sequence_kmin
+      description: WebP minimum keyframe distance remains unsupported by the initial exact keyframe encoder
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmin': 3}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP animation optimization options are not implemented
+    - id: enc_error_sequence_allow_mixed
+      description: Mixed lossy and lossless WebP frames remain unsupported by the initial exact keyframe encoder
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'quality': 80, 'method': 4, 'kmax': 1, 'allow_mixed': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP animation optimization options are not implemented
+    - id: enc_error_sequence_left
+      description: A left-offset source rectangle cannot be emitted by the full-canvas keyframe encoder
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_canvas_padding': [1, 0], 'sequence_frame_offset': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The initial WebP sequence encoder emits full-canvas keyframes
+    - id: enc_error_sequence_top
+      description: A top-offset source rectangle cannot be emitted by the full-canvas keyframe encoder
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_canvas_padding': [0, 1], 'sequence_frame_offset': [0, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The initial WebP sequence encoder emits full-canvas keyframes
+    - id: enc_error_sequence_width
+      description: A source rectangle narrower than its canvas cannot be emitted by the full-canvas keyframe encoder
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_canvas_padding': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The initial WebP sequence encoder emits full-canvas keyframes
+    - id: enc_error_sequence_height
+      description: A source rectangle shorter than its canvas cannot be emitted by the full-canvas keyframe encoder
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_canvas_padding': [0, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The initial WebP sequence encoder emits full-canvas keyframes
+    - id: enc_error_sequence_interlace
+      description: WebP rejects retained interlace state because ANMF has no interlace field
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_interlaced': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP cannot represent retained interlace state
+    - id: enc_error_sequence_default_image
+      description: WebP rejects retained default-image state because ANMF has no default-image field
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_default_image': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP cannot represent retained default-image state
+    - id: enc_error_sequence_reserved_disposal
+      description: WebP rejects a reserved retained disposal value rather than silently changing it
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_disposal': 'reserved:3'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The keyframe encoder cannot replay reserved presentation controls
+    - id: enc_error_sequence_reserved_blend
+      description: WebP rejects a reserved retained blend value rather than silently changing it
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_blend': 'reserved:3'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The keyframe encoder cannot replay reserved presentation controls
+    - id: enc_error_sequence_fractional_duration
+      description: WebP rejects an exact duration that cannot be represented as integral milliseconds
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_duration_fraction': [1, 3]}
+      rust_expect_error: true
+      rust_error_kind: parameter
+      rust_error_reason: WebP ANMF durations are integral milliseconds
+    - id: enc_error_sequence_zero_duration_denominator
+      description: The common sequence model rejects a zero duration denominator before codec dispatch
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_duration_fraction': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: parameter
+      rust_error_reason: Retained frame duration denominators must be non-zero
+    - id: enc_error_sequence_duration_overflow
+      description: WebP rejects retained durations larger than its 24-bit millisecond field
+      source_asset: animated.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_duration_ms': 16777216}
+      rust_expect_error: true
+      rust_error_kind: parameter
+      rust_error_reason: WebP ANMF durations are unsigned 24-bit millisecond values
+    - id: enc_error_public_mode_contract
+      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8
     - id: enc_lossy_q100
       description: 
       params: {'lossless': False, 'quality': 100}
@@ -1882,6 +2283,56 @@ formats:
       source_format: png
       source_asset: gray.png
       params: {'lossless': True, 'grayscale': True}
+    - id: enc_lossy_bilevel
+      description: Lossy bilevel WebP converted through Pillow's RGB path
+      source_format: png
+      source_asset: 1bit.png
+      params: {'lossless': False, 'color_type': '1'}
+    - id: enc_lossless_bilevel
+      description: Lossless bilevel WebP converted through Pillow's RGB path
+      source_format: png
+      source_asset: 1bit.png
+      params: {'lossless': True, 'color_type': '1'}
+    - id: enc_lossy_indexed
+      description: Lossy indexed WebP expanded through Pillow's opaque palette path
+      source_format: png
+      source_asset: indexed.png
+      params: {'lossless': False, 'color_type': 'P'}
+    - id: enc_lossless_indexed
+      description: Lossless indexed WebP expanded through Pillow's opaque palette path
+      source_format: png
+      source_asset: indexed.png
+      params: {'lossless': True, 'color_type': 'P'}
+    - id: enc_lossy_indexed_alpha
+      description: Lossy indexed WebP expanded through Pillow's RGBA palette path
+      source_format: png
+      source_asset: indexed_alpha.png
+      params: {'lossless': False, 'color_type': 'P'}
+    - id: enc_lossless_indexed_alpha
+      description: Lossless indexed WebP expanded through Pillow's RGBA palette path
+      source_format: png
+      source_asset: indexed_alpha.png
+      params: {'lossless': True, 'color_type': 'P'}
+    - id: enc_lossy_luminance_alpha
+      description: Lossy opaque luminance-alpha WebP converted through Pillow's RGB path
+      source_format: png
+      source_asset: gray_alpha.png
+      params: {'lossless': False, 'color_type': 'LA'}
+    - id: enc_lossy_luminance_alpha_partial
+      description: Lossy non-opaque luminance-alpha WebP converted through Pillow's RGBA path
+      source_format: png
+      source_asset: gray_alpha_partial.png
+      params: {'lossless': False, 'color_type': 'LA'}
+    - id: enc_lossless_luminance_alpha
+      description: Lossless opaque luminance-alpha WebP converted through Pillow's RGB path
+      source_format: png
+      source_asset: gray_alpha.png
+      params: {'lossless': True, 'color_type': 'LA'}
+    - id: enc_lossless_luminance_alpha_partial
+      description: Lossless non-opaque luminance-alpha WebP converted through Pillow's RGBA path
+      source_format: png
+      source_asset: gray_alpha_partial.png
+      params: {'lossless': True, 'color_type': 'LA'}
     - id: enc_lossy_alpha
       description: 
       source_format: png
@@ -1940,6 +2391,22 @@ formats:
     - id: enc_method_6
       description: 
       params: {'method': 6}
+    - id: enc_error_lossy_quality_above_max
+      description: Pillow rejects lossy quality values above 100
+      params: {'lossless': False, 'quality': 101}
+      expect_error: true
+    - id: enc_error_lossless_quality_above_max
+      description: Pillow rejects lossless quality values above 100
+      params: {'lossless': True, 'quality': 101}
+      expect_error: true
+    - id: enc_error_lossy_method_above_max
+      description: Pillow rejects lossy method values above 6
+      params: {'lossless': False, 'method': 7}
+      expect_error: true
+    - id: enc_error_lossless_method_above_max
+      description: Pillow rejects lossless method values above 6
+      params: {'lossless': True, 'method': 7}
+      expect_error: true
     - id: enc_exif
       description: 
       params: {'exif_hex': '45786966000049492a000800000000000000'}
@@ -2065,6 +2532,7 @@ formats:
     decoder: own (classic TIFF IFDs, strips, PackBits, LZW, Deflate)
     encoder: own (classic TIFF strips, endian selection, PackBits/LZW/Deflate, horizontal predictor)
     status: in-progress
+    verification_scope: header_only
     encode_source:
       format: tiff
       asset: rgb.tiff
@@ -2242,9 +2710,12 @@ formats:
       test_assets:
       - single.tiff
     - id: multi_page
-      description: Multi-page TIFF (decode first page)
+      description: Multi-page TIFF still decode reads page one, while sequence decode must not silently collapse pages
       test_assets:
       - multipage.tiff
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: unsupported
+      rust_sequence_error_reason: Multipage TIFF inspection must not silently collapse multiple pages
     - id: cyclic_ifd_leniency
       description: Pillow stops a self-referential IFD chain after the first unique page
       test_assets:
@@ -2253,6 +2724,9 @@ formats:
       description: Pillow counts a referenced truncated later IFD before ending the chain
       test_assets:
       - truncated_second_ifd.tiff
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: unsupported
+      rust_sequence_error_reason: Animated TIFF inspection with an incomplete later IFD must not silently collapse to one page
     - id: error_bad_ifd
       description: Corrupt headers, dimensions, tags, and strip bounds
       test_assets:
@@ -2317,6 +2791,22 @@ formats:
       - deflate_backreference_before_output.tiff
       expect_error: true
     encode_edge_cases:
+    - id: enc_error_retained_sequence_geometry
+      description: A still TIFF cannot represent a retained frame offset or a larger sequence canvas
+      params: {'sequence_canvas_padding': [1, 1], 'sequence_frame_offset': [1, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current TIFF encoder is still-only and cannot discard sequence geometry
+    - id: enc_error_public_mode_contract
+      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['P', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF does not directly accept P8 or multi-channel 16-bit and float modes
     - id: enc_compress_none
       description: 
       params: {'compression': 'none'}
@@ -2398,13 +2888,29 @@ formats:
       source_asset: 16bit.tiff
       params: {'bit_depth': 16}
     - id: enc_32bit
-      description: 
+      description: Little-endian Pillow F mode bytes
       source_asset: float32.tiff
       params: {'bit_depth': 32}
+    - id: enc_f32_be_source
+      description: Big-endian Pillow F mode bytes retained through an uncompressed save
+      source_asset: be_float32_predictor.tiff
+      params: {'bit_depth': 32, 'compression': 'none', 'detach_source': true}
+    - id: enc_f32_be_source_predictor
+      description: Big-endian Pillow F mode bytes retained through Deflate and horizontal prediction
+      source_asset: be_float32_predictor.tiff
+      params: {'bit_depth': 32, 'compression': 'deflate', 'predictor': 'horizontal', 'detach_source': true}
     - id: enc_i32
       description: Signed 32-bit grayscale Pillow I mode
       source_asset: signed32.tiff
       params: {'bit_depth': 32}
+    - id: enc_i32_be_source
+      description: Big-endian Pillow I mode bytes retained through an uncompressed save
+      source_asset: be_signed32_predictor.tiff
+      params: {'bit_depth': 32, 'compression': 'none', 'detach_source': true}
+    - id: enc_i32_be_source_predictor
+      description: Big-endian Pillow I mode bytes retained through LZW and horizontal prediction
+      source_asset: be_signed32_predictor.tiff
+      params: {'bit_depth': 32, 'compression': 'lzw', 'predictor': 'horizontal', 'detach_source': true}
     - id: enc_stripped
       description: 
       params: {'organization': 'stripped'}
@@ -2463,17 +2969,24 @@ formats:
       params:
         byte_order: be
   ico:
-    name: ICO
+    name: ICO/CUR
     extensions:
     - .ico
+    - .cur
     magic:
     - 0
     - 0
     - 1
     - 0
+    alternate_magic:
+    - 0
+    - 0
+    - 2
+    - 0
     decoder: own (BMP/PNG wrapper)
     encoder: own
     status: in-progress
+    verification_scope: header_only
     encode_source:
       format: ico
       asset: 16x16.ico
@@ -2568,6 +3081,23 @@ formats:
       - too_many_entries.ico
       expect_error: true
     encode_edge_cases:
+    - id: enc_error_retained_sequence_geometry
+      description: A still ICO cannot represent a retained frame offset or a larger sequence canvas
+      params: {'sequence_canvas_padding': [1, 1], 'sequence_frame_offset': [1, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: ICO has no one-frame sequence geometry fields
+    - id: enc_error_public_mode_contract
+      description: Every unsupported default PNG-backed public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+        sizes: [[1, 1]]
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: Default ICO encoding inherits the direct PNG mode boundary
     - id: enc_16x16
       description: 16x16 icon
       params: {'sizes': [[16, 16]]}
@@ -2587,6 +3117,31 @@ formats:
     - id: enc_png_entry
       description: Source-sized PNG-backed ICO entry
       params: {'entry_type': 'png', 'sizes': [[16, 16]]}
+    - id: enc_png_bilevel
+      description: PNG-backed ICO from Pillow bilevel input
+      source_format: png
+      source_asset: 1bit.png
+      params: {'entry_type': 'png', 'sizes': [[128, 128]]}
+    - id: enc_png_indexed
+      description: PNG-backed ICO from Pillow palette-index input
+      source_format: png
+      source_asset: indexed.png
+      params: {'entry_type': 'png', 'sizes': [[128, 128]]}
+    - id: enc_png_luminance
+      description: PNG-backed ICO from Pillow luminance input
+      source_format: png
+      source_asset: gray.png
+      params: {'entry_type': 'png', 'sizes': [[128, 128]]}
+    - id: enc_png_luminance_alpha
+      description: PNG-backed ICO from Pillow luminance-alpha input
+      source_format: png
+      source_asset: gray_alpha.png
+      params: {'entry_type': 'png', 'sizes': [[128, 128]]}
+    - id: enc_png_l16
+      description: PNG-backed ICO from Pillow sixteen-bit luminance input
+      source_format: png
+      source_asset: 16bit.png
+      params: {'entry_type': 'png', 'sizes': [[128, 128]]}
     - id: enc_24bit
       description: Source-sized RGB ICO entry
       source_format: bmp
@@ -2644,6 +3199,7 @@ formats:
     decoder: Optional native bridge matching libavif 1.4.1 and dav1d 1.5.3 observable behavior
     encoder: Optional native bridge matching libavif 1.4.1 and libaom 3.13.2 deterministic bytes
     status: parity-active
+    verification_scope: header_only
     encode_source:
       format: png
       asset: 2x3.png
@@ -3348,10 +3904,32 @@ formats:
       test_assets:
       - alpha.avif
     - id: accepted_still_major_brands
-      description: Complete AVIF containers using Pillow's accepted mif1 and msf1 major brands
+      description: Complete AVIF containers using generic HEIF major brands and an AVIF compatible brand
       test_assets:
       - major_brand_mif1.avif
       - major_brand_msf1.avif
+      - major_brand_mif1_late_avif.avif
+    - id: error_generic_heif_brands
+      description: Complete generic HEIF containers whose mif1/msf1 major brand has no avif/avis compatible brand
+      test_assets:
+      - generic_mif1.avif
+      - generic_msf1.avif
+      expect_error: true
+    - id: error_generic_heif_without_compatible_brands
+      description: Complete generic mif1 FileTypeBox with no compatible brands
+      test_assets:
+      - generic_mif1_no_compatible_brands.avif
+      expect_error: true
+    - id: error_misaligned_ftyp_size
+      description: Generic mif1 FileTypeBox whose declared payload cannot contain whole compatible brands
+      test_assets:
+      - malformed_mif1_ftyp_size.avif
+      expect_error: true
+    - id: error_oversized_ftyp
+      description: Generic mif1 FileTypeBox whose declared end exceeds the complete input
+      test_assets:
+      - oversized_mif1_ftyp.avif
+      expect_error: true
     - id: hdr
       description: HDR AVIF (PQ/HLG transfer)
       test_assets:
@@ -3411,6 +3989,7 @@ formats:
       description: ISO BMFF input whose major brand is not an accepted AVIF brand
       test_assets:
       - unsupported_major_brand.avif
+      - non_image_isom_bmff.avif
       expect_error: true
     - id: error_invalid_sequence_profile
       description: Structurally valid AVIF container whose AV1 sequence declares a reserved profile
@@ -3418,6 +3997,64 @@ formats:
       - invalid_sequence_profile.avif
       expect_error: true
     encode_edge_cases:
+    - id: enc_error_public_mode_contract
+      description: Every unsupported native AVIF public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      source_format: png
+      source_asset: 1x1.png
+      params:
+        rust_unsupported_modes: ['L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_invalid_color_mode: true
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: Native AVIF directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8
+    - id: enc_error_retained_sequence_left
+      description: AVIF sequence encoding cannot retain a horizontally offset source frame
+      params: {'sequence_canvas_padding': [1, 0], 'sequence_frame_offset': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder requires source frames at the canvas origin
+    - id: enc_error_retained_sequence_top
+      description: AVIF sequence encoding cannot retain a vertically offset source frame
+      params: {'sequence_canvas_padding': [0, 1], 'sequence_frame_offset': [0, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder requires source frames at the canvas origin
+    - id: enc_error_retained_sequence_width
+      description: AVIF sequence encoding cannot retain a source frame narrower than its canvas
+      params: {'sequence_canvas_padding': [1, 0]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder requires every source rectangle to fill the canvas
+    - id: enc_error_retained_sequence_height
+      description: AVIF sequence encoding cannot retain a source frame shorter than its canvas
+      params: {'sequence_canvas_padding': [0, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder requires every source rectangle to fill the canvas
+    - id: enc_error_retained_sequence_disposal
+      description: AVIF sequence encoding cannot retain GIF or APNG disposal metadata
+      params: {'sequence_disposal': 'keep'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder has no disposal mapping
+    - id: enc_error_retained_sequence_blend
+      description: AVIF sequence encoding cannot retain WebP or APNG blend metadata
+      params: {'sequence_blend': 'over'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder has no blend mapping
+    - id: enc_error_retained_sequence_interlace
+      description: AVIF sequence encoding cannot retain GIF frame-interlace storage metadata
+      params: {'sequence_interlaced': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: AVIF has no GIF frame-interlace metadata equivalent
+    - id: enc_error_retained_sequence_default_image
+      description: AVIF sequence encoding cannot retain APNG default-image identity
+      params: {'sequence_default_image': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: The current AVIF sequence encoder has no default-image mapping
     - id: enc_default_rgb
       description: Pillow default AVIF settings from RGB input
       source_format: png
@@ -3559,7 +4196,7 @@ formats:
           tune: psnr
         max_threads: 1
     - id: enc_animation
-      description: Five AVIF frames with exact source durations and encoded bytes
+      description: Five AVIF frames with Pillow's millisecond timing quantization and exact encoded bytes
       source_format: avif
       source_asset: animated.avif
       params:

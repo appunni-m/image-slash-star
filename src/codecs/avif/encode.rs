@@ -2,7 +2,7 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
-use crate::types::{DecodedImage, DecodedSequence};
+use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::borrow::Cow;
@@ -17,7 +17,7 @@ pub fn encode(image: &DecodedImage, options: &EncodeOptions) -> CodecResult<Vec<
     image.validate().map_err(CodecError::from_image_error)?;
     encode_images(
         std::slice::from_ref(image),
-        std::slice::from_ref(&0),
+        std::slice::from_ref(&FrameDuration::from_milliseconds(0)),
         options,
     )
 }
@@ -29,9 +29,22 @@ pub fn encode_sequence(
 ) -> CodecResult<Vec<u8>> {
     sequence.validate().map_err(CodecError::from_image_error)?;
     for frame in &sequence.frames {
-        if frame.left != 0 || frame.top != 0 {
+        if frame.source.rect.left != 0
+            || frame.source.rect.top != 0
+            || frame.source.rect.width != sequence.width
+            || frame.source.rect.height != sequence.height
+        {
             return Err(CodecError::Unsupported(
-                "AVIF cannot retain nonzero frame offsets".to_owned(),
+                "AVIF cannot retain partial or offset source frames".to_owned(),
+            ));
+        }
+        if frame.source.disposal != FrameDisposal::Unspecified
+            || frame.source.blend != FrameBlend::Unspecified
+            || frame.source.interlaced
+            || frame.source.is_default_image
+        {
+            return Err(CodecError::Unsupported(
+                "AVIF cannot retain GIF/APNG presentation metadata".to_owned(),
             ));
         }
     }
@@ -43,7 +56,7 @@ pub fn encode_sequence(
     let durations = sequence
         .frames
         .iter()
-        .map(|frame| frame.duration_ms)
+        .map(|frame| frame.source.duration)
         .collect::<Vec<_>>();
     encode_image_refs(&images, &durations, options)
 }
@@ -51,7 +64,7 @@ pub fn encode_sequence(
 #[cfg(not(target_arch = "wasm32"))]
 fn encode_images(
     images: &[DecodedImage],
-    durations: &[u32],
+    durations: &[FrameDuration],
     options: &EncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     let references = images.iter().collect::<Vec<_>>();
@@ -61,7 +74,7 @@ fn encode_images(
 #[cfg(target_arch = "wasm32")]
 fn encode_images(
     _images: &[DecodedImage],
-    _durations: &[u32],
+    _durations: &[FrameDuration],
     _options: &EncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     Err(CodecError::Unsupported(
@@ -72,7 +85,7 @@ fn encode_images(
 #[cfg(not(target_arch = "wasm32"))]
 fn encode_image_refs(
     images: &[&DecodedImage],
-    durations: &[u32],
+    durations: &[FrameDuration],
     options: &EncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     let first = *images
@@ -91,14 +104,27 @@ fn encode_image_refs(
         }
     }
     let parsed = ParsedOptions::new(options)?;
-    let encoder = create_encoder(first, &parsed)?;
-    encode_frames(encoder, images, durations, images.len() == 1)
+    let frame_durations = durations
+        .iter()
+        .copied()
+        .map(FrameDuration::milliseconds_rounded)
+        .map(|duration| {
+            duration
+                .map(u64::from)
+                .map_err(CodecError::from_image_error)
+        })
+        .collect::<CodecResult<Vec<_>>>()?;
+    // Pillow's AVIF save surface quantizes source timing to milliseconds even
+    // when the decoded AVIF track retained a more precise rational duration.
+    let encoder = create_encoder(first, &parsed, 1_000)?;
+    encode_frames(encoder, images, &frame_durations, images.len() == 1)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn create_encoder(
     first: &DecodedImage,
     parsed: &ParsedOptions,
+    timescale: u64,
 ) -> CodecResult<super::native::Encoder> {
     let config = super::native::EncodeConfig {
         width: first.width,
@@ -112,7 +138,7 @@ fn create_encoder(
         tile_cols_log2: parsed.tile_cols_log2,
         alpha_premultiplied: parsed.alpha_premultiplied,
         auto_tiling: parsed.auto_tiling,
-        timescale: 1_000,
+        timescale,
         creation_time: parsed.sequence_time,
         modification_time: parsed.sequence_time,
         icc: &parsed.icc,
@@ -128,10 +154,10 @@ fn create_encoder(
 fn encode_frames(
     mut encoder: super::native::Encoder,
     images: &[&DecodedImage],
-    durations: &[u32],
+    durations: &[u64],
     single: bool,
 ) -> CodecResult<Vec<u8>> {
-    for (image, &duration_ms) in images.iter().zip(durations) {
+    for (image, &duration) in images.iter().zip(durations) {
         let prepared = prepare_pixels(image)?;
         encoder
             .add_frame(
@@ -139,7 +165,7 @@ fn encode_frames(
                 image.width,
                 image.height,
                 prepared.channels,
-                u64::from(duration_ms),
+                duration,
                 single,
             )
             .map_err(|error| error.context("encode AVIF frame"))?;
@@ -152,7 +178,7 @@ fn encode_frames(
 #[cfg(target_arch = "wasm32")]
 fn encode_image_refs(
     _images: &[&DecodedImage],
-    _durations: &[u32],
+    _durations: &[FrameDuration],
     _options: &EncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     Err(CodecError::Unsupported(
@@ -476,7 +502,9 @@ fn hex_nibble(value: u8, name: &str) -> CodecResult<u8> {
 
 #[cfg(all(coverage, not(target_arch = "wasm32")))]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use crate::types::{ColorType, DecodedFrame, FrameDisposal, ImagePalette};
+    use crate::types::{
+        ColorType, DecodedFrame, FrameBlend, FrameDisposal, FrameDuration, ImagePalette,
+    };
 
     fn option(name: &str, value: &str) -> EncodeOptions {
         let mut options = EncodeOptions::default();
@@ -489,8 +517,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let tall = DecodedImage::new(1, 2, vec![0, 0], ColorType::L8);
     let _ = encode_image_refs(&[], &[], &EncodeOptions::default());
     let _ = encode_image_refs(&[&one], &[], &EncodeOptions::default());
-    let _ = encode_image_refs(&[&one, &two], &[0, 0], &EncodeOptions::default());
-    let _ = encode_image_refs(&[&one, &tall], &[0, 0], &EncodeOptions::default());
+    let _ = encode_image_refs(
+        &[&one],
+        &[FrameDuration {
+            numerator: 1,
+            denominator: 0,
+        }],
+        &EncodeOptions::default(),
+    );
+    let _ = encode_image_refs(
+        &[&one, &two],
+        &[FrameDuration::ZERO; 2],
+        &EncodeOptions::default(),
+    );
+    let _ = encode_image_refs(
+        &[&one, &tall],
+        &[FrameDuration::ZERO; 2],
+        &EncodeOptions::default(),
+    );
     let invalid_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -502,19 +546,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), ColorType::L8);
     let _ = encode(&invalid_image, &EncodeOptions::default());
     let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::L8);
-    let _ = encode_image_refs(&[&zero_width], &[0], &EncodeOptions::default());
+    let _ = encode_image_refs(
+        &[&zero_width],
+        &[FrameDuration::ZERO],
+        &EncodeOptions::default(),
+    );
 
     let offset_sequence = DecodedSequence {
         width: 2,
         height: 1,
-        frames: vec![DecodedFrame {
-            image: one.clone(),
-            left: 1,
-            top: 0,
-            duration_ms: 0,
-            disposal: FrameDisposal::Unspecified,
-            interlaced: false,
-        }],
+        frames: vec![DecodedFrame::source_rectangle(
+            one.clone(),
+            1,
+            0,
+            FrameDuration::ZERO,
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
+            false,
+        )],
         loop_count: None,
         background: None,
     };
@@ -522,14 +571,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let top_offset_sequence = DecodedSequence {
         width: 1,
         height: 2,
-        frames: vec![DecodedFrame {
-            image: one.clone(),
-            left: 0,
-            top: 1,
-            duration_ms: 0,
-            disposal: FrameDisposal::Unspecified,
-            interlaced: false,
-        }],
+        frames: vec![DecodedFrame::source_rectangle(
+            one.clone(),
+            0,
+            1,
+            FrameDuration::ZERO,
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
+            false,
+        )],
         loop_count: None,
         background: None,
     };
@@ -549,6 +599,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         color: ColorType::L8,
         mode: ImageMode::P8,
         palette: Some(ImagePalette::default()),
+        cursor_hotspot: None,
     };
     let _ = prepare_palette_pixels(&short_alpha);
     let _ = prepare_palette_pixels(&invalid_palette);
@@ -570,11 +621,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = prepare_pixels(&short_l1);
 
     let parsed = ParsedOptions::new(&EncodeOptions::default()).unwrap();
-    let encoder = create_encoder(&one, &parsed).unwrap();
+    let encoder = create_encoder(&one, &parsed, 1).unwrap();
     let _ = encode_frames(encoder, &[&unsupported], &[0], true);
-    let encoder = create_encoder(&one, &parsed).unwrap();
+    let encoder = create_encoder(&one, &parsed, 1).unwrap();
     let _ = encode_frames(encoder, &[&two], &[0], true);
-    let encoder = create_encoder(&one, &parsed).unwrap();
+    let encoder = create_encoder(&one, &parsed, 1).unwrap();
     let _ = encode_frames(encoder, &[], &[], false);
 
     for codec in ["auto", "aom", "dav1d"] {

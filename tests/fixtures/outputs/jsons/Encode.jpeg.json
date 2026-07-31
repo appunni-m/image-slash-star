@@ -13,6 +13,114 @@
   },
   "cases": [
     {
+      "id": "enc_error_retained_sequence_geometry",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_error_retained_sequence_geometry.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_error_retained_sequence_geometry.bin",
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "JPEG has no one-frame sequence geometry fields"
+    },
+    {
+      "id": "enc_error_public_mode_contract",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_error_public_mode_contract.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ],
+      "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_error_public_mode_contract.bin",
+      "encoded_ref_bytes": 633,
+      "encoded_ref_sha256": "ebe312ff045b1f86a890e0af53966ee228cbca760d7af8fc01fed1508a25c9f2",
+      "source_mode": "Rgb8",
+      "source_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "JPEG directly accepts only L8 and Rgb8"
+    },
+    {
       "id": "enc_q100",
       "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q100.bin",
       "ref_bytes": 49152,
@@ -21,8 +129,36 @@
         128,
         128
       ],
+      "ref_sha256": "629400b55c60835f6cc3c56b693e61f1912034e96b236808dd39dfff20d870d8",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q100.bin",
-      "encoded_ref_bytes": 16404
+      "encoded_ref_bytes": 16404,
+      "encoded_ref_sha256": "a4953e227a83e534d563605c94853d2dc1aa57852c2305a30438d5948a65a4d3",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_q85",
@@ -33,8 +169,36 @@
         128,
         128
       ],
+      "ref_sha256": "4c277ca87f0f45721f840aae6b0860da002eb4bd48e459a904ecbfd0eb23fbde",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q85.bin",
-      "encoded_ref_bytes": 5911
+      "encoded_ref_bytes": 5911,
+      "encoded_ref_sha256": "7a2d8c55e4e10d7d5576619735b393e6127cca2b7b73b9f0db2bcffd42c41505",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_q75",
@@ -45,8 +209,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q75.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_q50",
@@ -57,8 +249,36 @@
         128,
         128
       ],
+      "ref_sha256": "e469e34f8f6b333aef776b469e5576ff9934a39ebd2911fee2714e7481ce8bd1",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q50.bin",
-      "encoded_ref_bytes": 3327
+      "encoded_ref_bytes": 3327,
+      "encoded_ref_sha256": "78a1749701c6221c5c060500bda14cc82b856999e42cb18ad97d60784ee0d369",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_q25",
@@ -69,8 +289,36 @@
         128,
         128
       ],
+      "ref_sha256": "fd776d72fabbed8926aefc876aa48bc6693adcff23123f5b3d28f3ec3897a2a0",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q25.bin",
-      "encoded_ref_bytes": 2398
+      "encoded_ref_bytes": 2398,
+      "encoded_ref_sha256": "be38564754c43d519856f17f9fa28a908fbdc3d017896c77db99eddf92eccff9",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_q10",
@@ -81,8 +329,36 @@
         128,
         128
       ],
+      "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q10.bin",
-      "encoded_ref_bytes": 1677
+      "encoded_ref_bytes": 1677,
+      "encoded_ref_sha256": "df1f1f85fe478d958158915455b21948e7cba57adb173852efd6cd5304525b33",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_q1",
@@ -93,8 +369,36 @@
         128,
         128
       ],
+      "ref_sha256": "ae6c026b5971f550d41f9ca5e1b9909d297382125e5b33164d98e47a9d74e44d",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q1.bin",
-      "encoded_ref_bytes": 1106
+      "encoded_ref_bytes": 1106,
+      "encoded_ref_sha256": "325704c6f1d7f53386cb4968920caf13d097010b2894099870c4b5ce00225254",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_sub_444",
@@ -105,8 +409,36 @@
         128,
         128
       ],
+      "ref_sha256": "fdf89263700cd98caf9f5504df2cbde71a8c93914d2a1a8078111110468d3b43",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444.bin",
-      "encoded_ref_bytes": 7927
+      "encoded_ref_bytes": 7927,
+      "encoded_ref_sha256": "5200c257618606a17eb5c449b3166c83ae81948cbfa417b4cd3f7c4256c1514e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_sub_422",
@@ -117,8 +449,36 @@
         128,
         128
       ],
+      "ref_sha256": "711562a389bd36d8ea7dee5723cef99df885ead26c9bbe5cf624f4a9f927a126",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422.bin",
-      "encoded_ref_bytes": 5853
+      "encoded_ref_bytes": 5853,
+      "encoded_ref_sha256": "80f8322364f37d991de2424230367107c14ebe1f56edc8cce9c9d811884bc3c2",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_sub_420",
@@ -129,8 +489,86 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_error_subsampling_unknown",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.TypeError",
+          "pillow_message": "'str' object cannot be interpreted as an integer",
+          "rust_kind": "parameter",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.TypeError",
+      "error_message": "'str' object cannot be interpreted as an integer",
+      "error_kind": "parameter"
     },
     {
       "id": "enc_progressive",
@@ -141,8 +579,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive.bin",
-      "encoded_ref_bytes": 4562
+      "encoded_ref_bytes": 4562,
+      "encoded_ref_sha256": "246443c304f31e1b6f99e70c54b2b1b1e7278a30ec23d634d663379d49f1d42e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_baseline",
@@ -153,8 +619,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_baseline.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_grayscale",
@@ -165,8 +659,36 @@
         128,
         128
       ],
+      "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale.bin",
-      "encoded_ref_bytes": 3441
+      "encoded_ref_bytes": 3441,
+      "encoded_ref_sha256": "bd0b5bfd8830961bbb643e560ea97db8c63c2a988e6ec7fea5baac1c703559fa",
+      "source_mode": "L8",
+      "source_sha256": "04f4abc256640f968f134b5ddc1fb054da75c87f89683a66a5bc65bb7cd0b21d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_rgb",
@@ -177,8 +699,240 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_rgb.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_error_rgba_png",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgba8",
+      "source_sha256": "0f2614c72297fe89d09979d4413d9ea24e71b8b2874242a906acc7f125f3506b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode RGBA as JPEG",
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode RGBA as JPEG",
+      "error_kind": "unsupported"
+    },
+    {
+      "id": "enc_error_indexed_png",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "P",
+      "source_sha256": "8a22b47c55cc7cd026af81af06b85bb1d24e04ea18f6ca8b532c2da58b1d9e0b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode P as JPEG",
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode P as JPEG",
+      "error_kind": "unsupported"
+    },
+    {
+      "id": "enc_error_l16_png",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "I;16",
+      "source_sha256": "ba3be70e8c5b8fdce3f31e6f7587f66eacff97579c7077d3bbed9479c8ea1119",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode I;16 as JPEG",
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode I;16 as JPEG",
+      "error_kind": "unsupported"
+    },
+    {
+      "id": "enc_bilevel_png_rust_unsupported",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_bilevel_png_rust_unsupported.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "45658ed5e25bb8269cdaa023112598ee39d80fad5cdb273787c308f66725043d",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_bilevel_png_rust_unsupported.bin",
+      "encoded_ref_bytes": 10238,
+      "encoded_ref_sha256": "68f15e5e6fa58222070babcba88088a4a9960e427796b96a08f9b7a8aa5905f7",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "Private source-mode conversion belongs to a future fixture-proven encoder normalization slice"
     },
     {
       "id": "enc_1x1",
@@ -189,8 +943,36 @@
         1,
         1
       ],
+      "ref_sha256": "05d6cb0338b455d0265d55e4ed3bb7931a406e57aab1e3080da6a808ca2fd899",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_1x1.bin",
-      "encoded_ref_bytes": 633
+      "encoded_ref_bytes": 633,
+      "encoded_ref_sha256": "9b616590a4eb0c185c040e13289ebfbb006ed4721453dbc3f030f965d53c366e",
+      "source_mode": "Rgb8",
+      "source_sha256": "e34500f2cfa808275787dbf0f82d59163a0a31b9489e2957ad0be72fa31d661e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_zero_width",
@@ -198,8 +980,45 @@
       "ref_bytes": null,
       "ref_mode": null,
       "ref_size": null,
+      "ref_sha256": null,
       "encoded_ref_path": null,
       "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "cannot write empty image",
+          "rust_kind": "dimensions",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "cannot write empty image",
@@ -214,8 +1033,36 @@
         8,
         8
       ],
+      "ref_sha256": "3e0b16811ce3532ec643e445c8b9c15c252952abce2def80589e02039f61c9f8",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_8x8.bin",
-      "encoded_ref_bytes": 675
+      "encoded_ref_bytes": 675,
+      "encoded_ref_sha256": "a72e9a374af0c1fbd9aa1e52ed545604ea6cc88586eca416dfbcef6ec34ef802",
+      "source_mode": "Rgb8",
+      "source_sha256": "678cc8b35a46b62bccb0800c5fd9c173633c067f12b4d9aaa6ac57a21b0531c5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_odd_size",
@@ -226,8 +1073,36 @@
         17,
         17
       ],
+      "ref_sha256": "ff17ba9736ca6cdffcfe639824ae3271a4c921e4fcbbf3f06d50002852986d3d",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_odd_size.bin",
-      "encoded_ref_bytes": 829
+      "encoded_ref_bytes": 829,
+      "encoded_ref_sha256": "bb82aecccc1d04b6d74ca5b4d297839d4cd4641a7ab16040ca75c643ed8293ff",
+      "source_mode": "Rgb8",
+      "source_sha256": "cb1632ddf154ea044863205d6b6f6e8249c70791a044debdc2b80b8fae92622e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_exif",
@@ -238,8 +1113,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif.bin",
-      "encoded_ref_bytes": 4921
+      "encoded_ref_bytes": 4921,
+      "encoded_ref_sha256": "2825c0f6c394f1866ed71661a54880f227d44221239bd7d35f84a9368dba2c1c",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_exif_mixed_hex_case",
@@ -250,8 +1153,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif_mixed_hex_case.bin",
-      "encoded_ref_bytes": 4923
+      "encoded_ref_bytes": 4923,
+      "encoded_ref_sha256": "9db46253ab06235b82b050c692f3c95ed43db0d7b6be2177b534a7185d612852",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_error_exif_hex_odd",
@@ -259,8 +1190,45 @@
       "ref_bytes": null,
       "ref_mode": null,
       "ref_size": null,
+      "ref_sha256": null,
       "encoded_ref_path": null,
       "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 1",
+          "rust_kind": "parameter",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
@@ -272,8 +1240,45 @@
       "ref_bytes": null,
       "ref_mode": null,
       "ref_size": null,
+      "ref_sha256": null,
       "encoded_ref_path": null,
       "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 0",
+          "rust_kind": "parameter",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "non-hexadecimal number found in fromhex() arg at position 0",
@@ -285,8 +1290,45 @@
       "ref_bytes": null,
       "ref_mode": null,
       "ref_size": null,
+      "ref_sha256": null,
       "encoded_ref_path": null,
       "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 1",
+          "rust_kind": "parameter",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "oracle_status": "error",
       "error_type": "builtins.ValueError",
       "error_message": "non-hexadecimal number found in fromhex() arg at position 1",
@@ -301,8 +1343,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_exif.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_restart",
@@ -313,8 +1383,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_restart.bin",
-      "encoded_ref_bytes": 4906
+      "encoded_ref_bytes": 4906,
+      "encoded_ref_sha256": "a3bc1228a37d4865d038f2514352b0c0c561b36d41d2089bcabcbc38570a729c",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_no_restart",
@@ -325,8 +1423,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_restart.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_dct_fast",
@@ -337,8 +1463,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_dct_fast.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_dct_slow",
@@ -349,8 +1503,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_dct_slow.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_optimize",
@@ -361,8 +1543,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize.bin",
-      "encoded_ref_bytes": 4437
+      "encoded_ref_bytes": 4437,
+      "encoded_ref_sha256": "49b67893efa9f017b4c10225d7200e73bf0a901aef44386e1c3263785938afd1",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_optimize_odd",
@@ -373,8 +1583,36 @@
         17,
         17
       ],
+      "ref_sha256": "ff17ba9736ca6cdffcfe639824ae3271a4c921e4fcbbf3f06d50002852986d3d",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_odd.bin",
-      "encoded_ref_bytes": 511
+      "encoded_ref_bytes": 511,
+      "encoded_ref_sha256": "91e4e96cf2b16dc7be52944f481b5c81125ebdea9ca72cfa031ee6003d92c0e0",
+      "source_mode": "Rgb8",
+      "source_sha256": "cb1632ddf154ea044863205d6b6f6e8249c70791a044debdc2b80b8fae92622e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_optimize_restart",
@@ -385,8 +1623,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_restart.bin",
-      "encoded_ref_bytes": 4441
+      "encoded_ref_bytes": 4441,
+      "encoded_ref_sha256": "a466d162ad38a6c34381b54b22ed55507cd18ab9e1d80a16557afb7451777a30",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_progressive_grayscale",
@@ -397,8 +1663,36 @@
         128,
         128
       ],
+      "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_grayscale.bin",
-      "encoded_ref_bytes": 3227
+      "encoded_ref_bytes": 3227,
+      "encoded_ref_sha256": "19b5a9d7e5f1b5fc1a829561ba1f1fdec43cc19c5a0fde457a622cdd10d11cc9",
+      "source_mode": "L8",
+      "source_sha256": "04f4abc256640f968f134b5ddc1fb054da75c87f89683a66a5bc65bb7cd0b21d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_progressive_eob_limit",
@@ -409,8 +1703,36 @@
         2048,
         1024
       ],
+      "ref_sha256": "e303b22f75fb4f8b39e5ea623f1f24d455263303088135176e9d9dd4d6a6a556",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_eob_limit.bin",
-      "encoded_ref_bytes": 8486
+      "encoded_ref_bytes": 8486,
+      "encoded_ref_sha256": "566ffe377253e2d4a279e4a776d00509c10ef8ae174ae993a615376c6c49f5cb",
+      "source_mode": "L8",
+      "source_sha256": "6359bc391043f33219032496e43ae607b80e59e25554aa0c9486629b96f7d5e5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_no_optimize",
@@ -421,8 +1743,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_optimize.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_quality_100",
@@ -433,8 +1783,36 @@
         128,
         128
       ],
+      "ref_sha256": "629400b55c60835f6cc3c56b693e61f1912034e96b236808dd39dfff20d870d8",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_100.bin",
-      "encoded_ref_bytes": 16404
+      "encoded_ref_bytes": 16404,
+      "encoded_ref_sha256": "a4953e227a83e534d563605c94853d2dc1aa57852c2305a30438d5948a65a4d3",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_quality_85",
@@ -445,8 +1823,36 @@
         128,
         128
       ],
+      "ref_sha256": "4c277ca87f0f45721f840aae6b0860da002eb4bd48e459a904ecbfd0eb23fbde",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_85.bin",
-      "encoded_ref_bytes": 5911
+      "encoded_ref_bytes": 5911,
+      "encoded_ref_sha256": "7a2d8c55e4e10d7d5576619735b393e6127cca2b7b73b9f0db2bcffd42c41505",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_quality_50",
@@ -457,8 +1863,36 @@
         128,
         128
       ],
+      "ref_sha256": "e469e34f8f6b333aef776b469e5576ff9934a39ebd2911fee2714e7481ce8bd1",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_50.bin",
-      "encoded_ref_bytes": 3327
+      "encoded_ref_bytes": 3327,
+      "encoded_ref_sha256": "78a1749701c6221c5c060500bda14cc82b856999e42cb18ad97d60784ee0d369",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_quality_10",
@@ -469,8 +1903,36 @@
         128,
         128
       ],
+      "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_10.bin",
-      "encoded_ref_bytes": 1677
+      "encoded_ref_bytes": 1677,
+      "encoded_ref_sha256": "df1f1f85fe478d958158915455b21948e7cba57adb173852efd6cd5304525b33",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_subsample_444",
@@ -481,8 +1943,36 @@
         128,
         128
       ],
+      "ref_sha256": "fdf89263700cd98caf9f5504df2cbde71a8c93914d2a1a8078111110468d3b43",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_subsample_444.bin",
-      "encoded_ref_bytes": 7927
+      "encoded_ref_bytes": 7927,
+      "encoded_ref_sha256": "5200c257618606a17eb5c449b3166c83ae81948cbfa417b4cd3f7c4256c1514e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     },
     {
       "id": "enc_subsample_420",
@@ -493,8 +1983,36 @@
         128,
         128
       ],
+      "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
       "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_subsample_420.bin",
-      "encoded_ref_bytes": 4899
+      "encoded_ref_bytes": 4899,
+      "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
+      "source_mode": "Rgb8",
+      "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
     }
   ]
 }

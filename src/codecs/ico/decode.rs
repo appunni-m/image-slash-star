@@ -12,7 +12,7 @@
 //! Reference: <https://en.wikipedia.org/wiki/ICO_(file_format)>
 
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{ColorType, CursorHotspot, DecodedImage};
 
 /// ICO header size: 6 bytes
 const ICO_HEADER_SIZE: usize = 6;
@@ -78,8 +78,19 @@ pub fn decode(data: &[u8]) -> CodecResult<DecodedImage> {
         }
     }
 
-    // Decode the best entry
-    decode_entry(data, best_idx, icon_type == 2)
+    // Decode the best entry and retain the two CUR hotspot fields that occupy
+    // the ICO plane/bit-depth positions.
+    let image = decode_entry(data, best_idx, icon_type == 2)?;
+    if icon_type == 2 {
+        let entry_offset =
+            ICO_HEADER_SIZE.saturating_add(best_idx.saturating_mul(ICO_DIR_ENTRY_SIZE));
+        let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
+        return Ok(image.with_cursor_hotspot(CursorHotspot {
+            x: u16::from_le_bytes([entry[4], entry[5]]),
+            y: u16::from_le_bytes([entry[6], entry[7]]),
+        }));
+    }
+    Ok(image)
 }
 
 /// Decode a single ICO directory entry by index.

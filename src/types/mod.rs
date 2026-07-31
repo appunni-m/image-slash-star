@@ -4,7 +4,7 @@ mod color_type;
 mod error;
 
 pub use self::color_type::ColorType;
-pub use self::error::{ImageError, ImageResult};
+pub use self::error::{ImageError, ImageErrorKind, ImageResult};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
@@ -23,7 +23,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = format.to_string();
     }
     for name in [
-        "jpeg", "jpg", "png", "gif", "bmp", "webp", "tiff", "tif", "ico", "avif",
+        "jpeg", "jpg", "png", "gif", "bmp", "webp", "tiff", "tif", "ico", "cur", "avif",
     ] {
         let _ = ImageFormat::from_name(name);
         let _ = name.parse::<ImageFormat>();
@@ -89,11 +89,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: None,
             message: "coverage".to_owned(),
         },
-        ImageError::Dimensions,
-        ImageError::Parameter("coverage".to_owned()),
+        ImageError::dimensions("coverage"),
+        ImageError::parameter("coverage"),
+        ImageError::Dimensions {
+            format: Some(ImageFormat::Png),
+            message: "coverage".to_owned(),
+        },
+        ImageError::Parameter {
+            format: Some(ImageFormat::Png),
+            message: "coverage".to_owned(),
+        },
     ];
     for error in errors {
+        let _ = error.kind();
+        let _ = error.format();
+        let _ = error.message();
         let _ = error.to_string();
+        let _ = error.with_format(ImageFormat::Png);
     }
 
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
@@ -119,6 +131,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         color: ColorType::Rgb8,
         mode: ImageMode::L8,
         palette: None,
+        cursor_hotspot: None,
     }
     .validate();
     let _ = DecodedImage::new(1, 1, vec![0], ColorType::L8)
@@ -152,14 +165,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
     }
     .validate();
-    let frame = DecodedFrame {
+    let frame = DecodedFrame::source_rectangle(
         image,
-        left: 0,
-        top: 1,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+        0,
+        1,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
     let _ = DecodedSequence {
         width: 1,
         height: 1,
@@ -168,14 +182,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
     }
     .validate();
-    let right_outside_frame = DecodedFrame {
-        image: DecodedImage::new(1, 1, vec![0], ColorType::L8),
-        left: 1,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let right_outside_frame = DecodedFrame::source_rectangle(
+        DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        1,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
     let _ = DecodedSequence {
         width: 1,
         height: 1,
@@ -184,14 +199,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
     }
     .validate();
-    let invalid_frame = DecodedFrame {
-        image: DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
-        left: 0,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let invalid_frame = DecodedFrame::source_rectangle(
+        DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
+        0,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
     let _ = DecodedSequence {
         width: 1,
         height: 1,
@@ -200,14 +216,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
     }
     .validate();
-    let right_overflow_frame = DecodedFrame {
-        image: DecodedImage::new(1, 1, vec![0], ColorType::L8),
-        left: u32::MAX,
-        top: 0,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let right_overflow_frame = DecodedFrame::source_rectangle(
+        DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        u32::MAX,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
     let _ = DecodedSequence {
         width: u32::MAX,
         height: 1,
@@ -216,14 +233,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
     }
     .validate();
-    let bottom_overflow_frame = DecodedFrame {
-        image: DecodedImage::new(1, 1, vec![0], ColorType::L8),
-        left: 0,
-        top: u32::MAX,
-        duration_ms: 0,
-        disposal: FrameDisposal::Keep,
-        interlaced: false,
-    };
+    let bottom_overflow_frame = DecodedFrame::source_rectangle(
+        DecodedImage::new(1, 1, vec![0], ColorType::L8),
+        0,
+        u32::MAX,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
     let _ = DecodedSequence {
         width: 1,
         height: u32::MAX,
@@ -232,6 +250,172 @@ pub(crate) fn __coverage_exercise_private_branches() {
         background: None,
     }
     .validate();
+
+    let base = DecodedImage::new(1, 1, vec![0], ColorType::L8);
+    let mut zero_denominator = DecodedFrame::source_rectangle(
+        base.clone(),
+        0,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
+    zero_denominator.source.duration.denominator = 0;
+    let _ = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![zero_denominator],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+
+    let mut zero_rect = DecodedFrame::source_rectangle(
+        base.clone(),
+        0,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
+    zero_rect.source.rect.width = 0;
+    let _ = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![zero_rect],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let mut zero_rect_height = DecodedFrame::source_rectangle(
+        base.clone(),
+        0,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
+    zero_rect_height.source.rect.height = 0;
+    let _ = DecodedSequence {
+        width: 1,
+        height: 1,
+        frames: vec![zero_rect_height],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+
+    let mut mismatched_source = DecodedFrame::source_rectangle(
+        base.clone(),
+        0,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
+    mismatched_source.source.rect.width = 2;
+    let _ = DecodedSequence {
+        width: 2,
+        height: 1,
+        frames: vec![mismatched_source],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let mut mismatched_source_height = DecodedFrame::source_rectangle(
+        base.clone(),
+        0,
+        0,
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Unspecified,
+        false,
+    );
+    mismatched_source_height.source.rect.height = 2;
+    let _ = DecodedSequence {
+        width: 1,
+        height: 2,
+        frames: vec![mismatched_source_height],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+
+    let rendered = DecodedFrame::rendered_canvas(
+        base.clone(),
+        FrameRect {
+            left: 0,
+            top: 0,
+            width: 1,
+            height: 1,
+        },
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Over,
+    );
+    let _ = DecodedSequence {
+        width: 2,
+        height: 1,
+        frames: vec![rendered],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+    let rendered_height = DecodedFrame::rendered_canvas(
+        base.clone(),
+        FrameRect {
+            left: 0,
+            top: 0,
+            width: 1,
+            height: 1,
+        },
+        FrameDuration::ZERO,
+        FrameDisposal::Keep,
+        FrameBlend::Over,
+    );
+    let _ = DecodedSequence {
+        width: 1,
+        height: 2,
+        frames: vec![rendered_height],
+        loop_count: None,
+        background: None,
+    }
+    .validate();
+
+    let still = DecodedSequence::from_image(base);
+    let _ = still.first();
+    for duration in [
+        FrameDuration {
+            numerator: 1,
+            denominator: 0,
+        },
+        FrameDuration {
+            numerator: u64::MAX,
+            denominator: 1,
+        },
+        FrameDuration {
+            numerator: 1,
+            denominator: 3,
+        },
+        FrameDuration {
+            numerator: 2,
+            denominator: 3,
+        },
+        FrameDuration {
+            numerator: 1,
+            denominator: 2_000,
+        },
+        FrameDuration {
+            numerator: 3,
+            denominator: 2_000,
+        },
+    ] {
+        let _ = duration.milliseconds_rounded();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +441,15 @@ pub enum ImageFormat {
     Ico,
     /// AVIF
     Avif,
+}
+
+/// Amount of validation performed by [`crate::EncodedImage::verify`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum VerificationScope {
+    /// Construction-time header inspection is the complete Pillow contract.
+    HeaderOnly,
+    /// Verification additionally scans format-specific encoded structure.
+    Structure,
 }
 
 /// A decoded value paired with the encoded container format detected from its input.
@@ -291,14 +484,34 @@ pub struct ImageInfo {
     pub is_animated: bool,
     /// Exact frame count when a cheap container scan provides it.
     pub frame_count: Option<u32>,
+    /// Selected Windows cursor hotspot, distinguishing CUR from ordinary ICO.
+    pub cursor_hotspot: Option<CursorHotspot>,
 }
 
 impl ImageInfo {
-    /// Whether the encoded image uses indexed palette samples.
+    /// Whether the encoded image uses palette indices as its sample mode.
     #[must_use]
-    pub const fn has_palette(&self) -> bool {
+    pub const fn is_indexed(&self) -> bool {
         matches!(self.mode, ImageMode::P8)
     }
+
+    /// Whether inspection retained an explicit palette table.
+    ///
+    /// This is independent of [`Self::is_indexed`]: malformed-but-tolerated or
+    /// implicit indexed containers can expose `P8` samples without a table.
+    #[must_use]
+    pub const fn has_palette_table(&self) -> bool {
+        self.palette.is_some()
+    }
+}
+
+/// Pixel coordinate selected as the activation point of a Windows cursor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CursorHotspot {
+    /// Horizontal coordinate from the cursor image's left edge.
+    pub x: u16,
+    /// Vertical coordinate from the cursor image's top edge.
+    pub y: u16,
 }
 
 impl<T> Decoded<T> {
@@ -337,6 +550,23 @@ impl ImageFormat {
         }
     }
 
+    /// Returns the validation scope of [`crate::EncodedImage::verify`].
+    ///
+    /// Pillow 12.2.0 implements an additional structural verification pass for
+    /// PNG. This crate also retains its independently proved JPEG and WebP
+    /// structural verifiers. Pillow's default verifier for the other formats
+    /// performs no work beyond a successful open, which corresponds to the
+    /// header inspection already performed by [`crate::EncodedImage::new`].
+    #[must_use]
+    pub const fn verification_scope(self) -> VerificationScope {
+        match self {
+            Self::Jpeg | Self::Png | Self::WebP => VerificationScope::Structure,
+            Self::Gif | Self::Bmp | Self::Tiff | Self::Ico | Self::Avif => {
+                VerificationScope::HeaderOnly
+            }
+        }
+    }
+
     /// Parses a case-insensitive image format name or common extension alias.
     ///
     /// # Errors
@@ -356,7 +586,7 @@ impl ImageFormat {
             Ok(ImageFormat::WebP)
         } else if name.eq_ignore_ascii_case("tiff") || name.eq_ignore_ascii_case("tif") {
             Ok(ImageFormat::Tiff)
-        } else if name.eq_ignore_ascii_case("ico") {
+        } else if name.eq_ignore_ascii_case("ico") || name.eq_ignore_ascii_case("cur") {
             Ok(ImageFormat::Ico)
         } else if name.eq_ignore_ascii_case("avif") {
             Ok(ImageFormat::Avif)
@@ -442,9 +672,15 @@ pub enum ImageMode {
     Rgb32F,
     /// Native-endian 32-bit floating-point RGBA samples.
     Rgba32F,
-    /// Pillow-observable 32-bit floating-point luminance samples.
+    /// Exact Pillow-observable 32-bit floating-point luminance bytes.
+    ///
+    /// This mode does not promise a portable scalar byte order. In particular,
+    /// Pillow retains the file byte order for TIFF `F` images.
     F32,
-    /// Pillow-observable 32-bit integer luminance samples.
+    /// Exact Pillow-observable 32-bit integer luminance bytes.
+    ///
+    /// This mode does not promise a portable scalar byte order. In particular,
+    /// Pillow retains the file byte order for TIFF `I` images.
     I32,
 }
 
@@ -496,12 +732,16 @@ impl ImageMode {
             return width
                 .div_ceil(8)
                 .checked_mul(height)
-                .ok_or(ImageError::Dimensions);
+                .ok_or(ImageError::dimensions(
+                    "packed bilevel byte length overflows",
+                ));
         }
         width
             .checked_mul(height)
             .and_then(|pixels| pixels.checked_mul(usize::from(self.color_type().bytes_per_pixel())))
-            .ok_or(ImageError::Dimensions)
+            .ok_or(ImageError::dimensions(
+                "decoded pixel byte length overflows",
+            ))
     }
 }
 
@@ -535,7 +775,7 @@ impl ImagePalette {
             || entries > 256
             || self.alpha.len() > entries
         {
-            return Err(ImageError::Parameter("invalid indexed palette".to_owned()));
+            return Err(ImageError::parameter("invalid indexed palette"));
         }
         Ok(())
     }
@@ -568,6 +808,8 @@ pub struct DecodedImage {
     pub mode: ImageMode,
     /// Palette retained for `P8` images.
     pub palette: Option<ImagePalette>,
+    /// Selected Windows cursor hotspot, or `None` for ordinary images/icons.
+    pub cursor_hotspot: Option<CursorHotspot>,
 }
 
 impl DecodedImage {
@@ -584,6 +826,7 @@ impl DecodedImage {
             color,
             mode: color.into(),
             palette: None,
+            cursor_hotspot: None,
         }
     }
 
@@ -600,6 +843,7 @@ impl DecodedImage {
             color: mode.color_type(),
             mode,
             palette: None,
+            cursor_hotspot: None,
         }
     }
 
@@ -607,6 +851,13 @@ impl DecodedImage {
     #[must_use]
     pub fn with_palette(mut self, palette: ImagePalette) -> Self {
         self.palette = Some(palette);
+        self
+    }
+
+    /// Attach a Windows cursor hotspot while preserving decoded sample bytes.
+    #[must_use]
+    pub fn with_cursor_hotspot(mut self, hotspot: CursorHotspot) -> Self {
+        self.cursor_hotspot = Some(hotspot);
         self
     }
 
@@ -620,11 +871,13 @@ impl DecodedImage {
     pub fn validate(&self) -> ImageResult<()> {
         let expected = self.mode.expected_bytes(self.width, self.height)?;
         if self.width == 0 || self.height == 0 || self.pixels.len() != expected {
-            return Err(ImageError::Dimensions);
+            return Err(ImageError::dimensions(
+                "decoded dimensions and pixel byte length do not agree",
+            ));
         }
         if self.color != self.mode.color_type() {
-            return Err(ImageError::Parameter(
-                "decoded color type does not match its byte mode".to_owned(),
+            return Err(ImageError::parameter(
+                "decoded color type does not match its byte mode",
             ));
         }
         match &self.palette {
@@ -635,14 +888,14 @@ impl DecodedImage {
                     .iter()
                     .any(|&index| usize::from(index) >= palette.len())
                 {
-                    return Err(ImageError::Parameter(
-                        "palette index is outside the retained palette".to_owned(),
+                    return Err(ImageError::parameter(
+                        "palette index is outside the retained palette",
                     ));
                 }
             }
             Some(_) => {
-                return Err(ImageError::Parameter(
-                    "only indexed images may carry a palette".to_owned(),
+                return Err(ImageError::parameter(
+                    "only indexed images may carry a palette",
                 ));
             }
             None => {}
@@ -672,21 +925,181 @@ pub enum FrameDisposal {
     Reserved(u8),
 }
 
-/// One decoded animation frame and its presentation metadata.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DecodedFrame {
-    /// Frame image samples.
-    pub image: DecodedImage,
-    /// Horizontal offset on the animation canvas.
+/// Alpha-composition rule used when a source frame enters its canvas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum FrameBlend {
+    /// The source format does not define a blend operation.
+    Unspecified,
+    /// Replace every sample in the source rectangle.
+    Source,
+    /// Alpha-composite the source rectangle over the existing canvas.
+    Over,
+    /// Preserve a format-reserved value for diagnostics and future support.
+    Reserved(u8),
+}
+
+/// Exact source-frame duration as a fraction of one second.
+///
+/// Decoders retain the source numerator and effective denominator without
+/// rounding to milliseconds. A zero denominator is invalid in the common
+/// model; formats such as APNG that encode zero as a special default normalize
+/// it to that effective denominator while parsing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FrameDuration {
+    /// Source or caller-supplied numerator.
+    pub numerator: u64,
+    /// Effective non-zero denominator.
+    pub denominator: u64,
+}
+
+impl FrameDuration {
+    /// A zero-length duration represented without format-specific scaling.
+    pub const ZERO: Self = Self {
+        numerator: 0,
+        denominator: 1,
+    };
+
+    /// Construct an exact millisecond duration.
+    #[must_use]
+    pub const fn from_milliseconds(milliseconds: u32) -> Self {
+        Self {
+            numerator: milliseconds as u64,
+            denominator: 1_000,
+        }
+    }
+
+    /// Return the nearest whole millisecond using round-half-to-even.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Parameter`] for a zero denominator and
+    /// [`ImageError::Dimensions`] when the rounded value does not fit `u32`.
+    pub fn milliseconds_rounded(self) -> ImageResult<u32> {
+        if self.denominator == 0 {
+            return Err(ImageError::parameter(
+                "frame duration denominator must be non-zero",
+            ));
+        }
+        let numerator = u128::from(self.numerator).saturating_mul(1_000);
+        let denominator = u128::from(self.denominator);
+        let quotient = numerator.div_euclid(denominator);
+        let remainder = numerator.rem_euclid(denominator);
+        let doubled_remainder = remainder.saturating_mul(2);
+        let rounded = quotient.saturating_add(u128::from(
+            doubled_remainder > denominator
+                || (doubled_remainder == denominator && !quotient.is_multiple_of(2)),
+        ));
+        u32::try_from(rounded)
+            .map_err(|_| ImageError::dimensions("frame duration exceeds u32 milliseconds"))
+    }
+}
+
+/// Rectangle occupied by one encoded source frame on its animation canvas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FrameRect {
+    /// Horizontal offset from the canvas origin.
     pub left: u32,
-    /// Vertical offset on the animation canvas.
+    /// Vertical offset from the canvas origin.
     pub top: u32,
-    /// Presentation duration in milliseconds.
-    pub duration_ms: u32,
+    /// Source-frame width.
+    pub width: u32,
+    /// Source-frame height.
+    pub height: u32,
+}
+
+/// Relationship between [`DecodedFrame::image`] and its animation canvas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum FramePixelLayout {
+    /// `image` contains only the uncomposited source rectangle.
+    SourceRectangle,
+    /// `image` contains the complete composited canvas at display time.
+    RenderedCanvas,
+}
+
+/// Source-frame metadata retained independently from decoded pixel layout.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FrameSource {
+    /// Encoded frame rectangle on the animation canvas.
+    pub rect: FrameRect,
+    /// Exact presentation duration.
+    pub duration: FrameDuration,
     /// Disposal operation after presentation.
     pub disposal: FrameDisposal,
-    /// Whether the frame samples were stored in GIF interlace order.
+    /// Composition operation used before presentation.
+    pub blend: FrameBlend,
+    /// Whether frame samples used GIF interlace storage order.
     pub interlaced: bool,
+    /// Whether this frame is also the container's default still image.
+    pub is_default_image: bool,
+}
+
+/// One decoded animation frame with explicit pixel and source semantics.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DecodedFrame {
+    /// Frame samples in the representation identified by `pixel_layout`.
+    pub image: DecodedImage,
+    /// Whether `image` is a source rectangle or a rendered canvas.
+    pub pixel_layout: FramePixelLayout,
+    /// Metadata retained from the encoded source frame.
+    pub source: FrameSource,
+}
+
+impl DecodedFrame {
+    /// Construct an uncomposited source-rectangle frame.
+    #[must_use]
+    pub fn source_rectangle(
+        image: DecodedImage,
+        left: u32,
+        top: u32,
+        duration: FrameDuration,
+        disposal: FrameDisposal,
+        blend: FrameBlend,
+        interlaced: bool,
+    ) -> Self {
+        let rect = FrameRect {
+            left,
+            top,
+            width: image.width,
+            height: image.height,
+        };
+        Self {
+            image,
+            pixel_layout: FramePixelLayout::SourceRectangle,
+            source: FrameSource {
+                rect,
+                duration,
+                disposal,
+                blend,
+                interlaced,
+                is_default_image: false,
+            },
+        }
+    }
+
+    /// Construct a rendered-canvas frame while retaining its source rectangle.
+    #[must_use]
+    pub fn rendered_canvas(
+        image: DecodedImage,
+        rect: FrameRect,
+        duration: FrameDuration,
+        disposal: FrameDisposal,
+        blend: FrameBlend,
+    ) -> Self {
+        Self {
+            image,
+            pixel_layout: FramePixelLayout::RenderedCanvas,
+            source: FrameSource {
+                rect,
+                duration,
+                disposal,
+                blend,
+                interlaced: false,
+                is_default_image: false,
+            },
+        }
+    }
 }
 
 /// Background metadata retained from an animated image container.
@@ -722,14 +1135,18 @@ impl DecodedSequence {
         Self {
             width,
             height,
-            frames: vec![DecodedFrame {
+            frames: vec![DecodedFrame::rendered_canvas(
                 image,
-                left: 0,
-                top: 0,
-                duration_ms: 0,
-                disposal: FrameDisposal::Unspecified,
-                interlaced: false,
-            }],
+                FrameRect {
+                    left: 0,
+                    top: 0,
+                    width,
+                    height,
+                },
+                FrameDuration::ZERO,
+                FrameDisposal::Unspecified,
+                FrameBlend::Unspecified,
+            )],
             loop_count: None,
             background: None,
         }
@@ -744,20 +1161,56 @@ impl DecodedSequence {
     /// returns any validation error from a retained frame image.
     pub fn validate(&self) -> ImageResult<()> {
         if self.width == 0 || self.height == 0 || self.frames.is_empty() {
-            return Err(ImageError::Dimensions);
+            return Err(ImageError::dimensions(
+                "sequence canvas must be non-zero and contain a frame",
+            ));
         }
         for frame in &self.frames {
             frame.image.validate()?;
+            if frame.source.duration.denominator == 0 {
+                return Err(ImageError::parameter(
+                    "frame duration denominator must be non-zero",
+                ));
+            }
+            if frame.source.rect.width == 0 || frame.source.rect.height == 0 {
+                return Err(ImageError::dimensions(
+                    "source frame rectangle must be non-zero",
+                ));
+            }
+            match frame.pixel_layout {
+                FramePixelLayout::SourceRectangle
+                    if frame.image.width != frame.source.rect.width
+                        || frame.image.height != frame.source.rect.height =>
+                {
+                    return Err(ImageError::dimensions(
+                        "source-rectangle pixels do not match the source rectangle",
+                    ));
+                }
+                FramePixelLayout::RenderedCanvas
+                    if frame.image.width != self.width || frame.image.height != self.height =>
+                {
+                    return Err(ImageError::dimensions(
+                        "rendered-frame pixels do not match the sequence canvas",
+                    ));
+                }
+                _ => {}
+            }
             let right = frame
+                .source
+                .rect
                 .left
-                .checked_add(frame.image.width)
-                .ok_or(ImageError::Dimensions)?;
+                .checked_add(frame.source.rect.width)
+                .ok_or_else(|| ImageError::dimensions("frame right edge overflows"))?;
             let bottom = frame
+                .source
+                .rect
                 .top
-                .checked_add(frame.image.height)
-                .ok_or(ImageError::Dimensions)?;
+                .checked_add(frame.source.rect.height)
+                .ok_or_else(|| ImageError::dimensions("frame bottom edge overflows"))?;
             if right > self.width || bottom > self.height {
-                return Err(ImageError::Dimensions);
+                return Err(ImageError::dimensions(
+                    "frame rectangle extends outside the sequence canvas",
+                ));
             }
         }
         Ok(())

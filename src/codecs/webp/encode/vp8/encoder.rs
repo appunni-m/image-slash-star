@@ -659,6 +659,16 @@ fn append_chunk(output: &mut Vec<u8>, name: &[u8; 4], data: &[u8]) {
     }
 }
 
+fn append_vp8_chunk(output: &mut Vec<u8>, data: &[u8]) {
+    let padded_length = data.len().saturating_add(data.len() & 1);
+    output.extend_from_slice(b"VP8 ");
+    output.extend_from_slice(&low_u32(padded_length).to_le_bytes());
+    output.extend_from_slice(data);
+    if data.len() & 1 != 0 {
+        output.push(0);
+    }
+}
+
 fn build_extended_webp_container(
     vp8_data: &[u8],
     alpha_chunk: &[u8],
@@ -676,7 +686,7 @@ fn build_extended_webp_container(
     vp8x.extend_from_slice(&height.wrapping_sub(1).to_le_bytes()[..3]);
     append_chunk(&mut output, b"VP8X", &vp8x);
     append_chunk(&mut output, b"ALPH", alpha_chunk);
-    append_chunk(&mut output, b"VP8 ", vp8_data);
+    append_vp8_chunk(&mut output, vp8_data);
 
     let riff_size = low_u32(output.len().saturating_sub(8));
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());

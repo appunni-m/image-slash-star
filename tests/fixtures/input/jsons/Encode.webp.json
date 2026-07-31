@@ -13,9 +13,4161 @@
   },
   "cases": [
     {
+      "id": "enc_sequence_lossy_rgb_keyframes",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgb_keyframes_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "2220d8f545eebd6ab8bda7543c3d77111d8a546b882a531e50ba4a0201649a49",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgb_keyframes_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "5840638e13e5b862872dc2749ffcf312ed8054af84321f6cc9d642123df2487d",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "kmax": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_lossless_rgb_background",
+      "source_asset": "animated_rgb_palette_background.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "f337a5980ca138148f59629627f18a064618fb6a662bad9f67ccd2d27cbb8c07",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          64,
+          64
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgb_background_webp_frame_0.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "ba1897db6a16522aca021433abf095ed845bacf941a6257e4b9a33ce98b85f45",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgb_background_webp_frame_1.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "c7fdd0fe8541d24752333bb78ab2fe3703137395984a4071d0b25f1207094178",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_rgb_palette_background.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_lossy_rgba_keyframes",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 2,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgba_keyframes_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "ce00f2dee17d451760d8b1e7979a6063556d34d73a24535f95a38f903d38977c",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgba_keyframes_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "7cff2c577d3b1e00fbc7ffa9e5398bc262ac6848a56b18010bd5f7ec4361dae7",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "loop": 2,
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "kmax": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4,
+          "loop": 2,
+          "background": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_lossless_rgba_keyframes",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 2,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgba_keyframes_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgba_keyframes_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "loop": 2,
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "kmax": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "loop": 2,
+          "background": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_lossless_default_controls",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_default_controls_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_default_controls_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_pixel_layout": "source_rectangle",
+        "sequence_clear_loop": true,
+        "sequence_clear_background": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_pixel_layout": "source_rectangle",
+            "sequence_clear_loop": true,
+            "sequence_clear_background": true
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_loop_overflow",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_loop_overflow_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_loop_overflow_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_loop_count": 65536
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "parameter",
+      "rust_error_reason": "WebP animation loop counts are unsigned 16-bit values",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_loop_count": 65536
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_palette_background",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_palette_background_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_palette_background_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_background_palette": 0
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP animation backgrounds are explicit RGBA values",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_background_palette": 0
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_icc",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_icc_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_icc_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "icc_hex": "01020304"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP sequence metadata output is not implemented",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "icc_profile": {
+            "type": "bytes",
+            "hex": "01020304"
+          },
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_exif",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_exif_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_exif_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "exif_hex": "4578696600000102"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP sequence metadata output is not implemented",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "exif": {
+            "type": "bytes",
+            "hex": "4578696600000102"
+          },
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_xmp",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_xmp_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_xmp_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "xmp_hex": "3c783e3c2f783e"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP sequence metadata output is not implemented",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "xmp": {
+            "type": "bytes",
+            "hex": "3c783e3c2f783e"
+          },
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_kmax",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmax_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmax_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmin": 1,
+        "kmax": 2
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "parameter",
+      "rust_error_reason": "The exact initial WebP sequence contract requires kmax=1",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmin": 1,
+          "kmax": 2,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_minimize_size",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_minimize_size_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_minimize_size_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "minimize_size": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP animation optimization options are not implemented",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "minimize_size": true,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_kmin",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmin_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmin_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmin": 3
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP animation optimization options are not implemented",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmin": 3,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_allow_mixed",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 17,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_allow_mixed_webp_frame_0.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 33,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_allow_mixed_webp_frame_1.bin",
+            "ref_bytes": 252,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "944a3c81154afde974518fbb90cf88088d8b7b481d12bb04cea84e050eab9b09",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "quality": 80,
+        "method": 4,
+        "kmax": 1,
+        "allow_mixed": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP animation optimization options are not implemented",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "method": 4,
+          "kmax": 1,
+          "allow_mixed": true,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_sequence_left",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_left_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_left_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_canvas_padding": [
+          1,
+          0
+        ],
+        "sequence_frame_offset": [
+          1,
+          0
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "The initial WebP sequence encoder emits full-canvas keyframes",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_canvas_padding": [
+              1,
+              0
+            ],
+            "sequence_frame_offset": [
+              1,
+              0
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_top",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_top_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_top_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_canvas_padding": [
+          0,
+          1
+        ],
+        "sequence_frame_offset": [
+          0,
+          1
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "The initial WebP sequence encoder emits full-canvas keyframes",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_canvas_padding": [
+              0,
+              1
+            ],
+            "sequence_frame_offset": [
+              0,
+              1
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_width",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_width_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_width_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_canvas_padding": [
+          1,
+          0
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "The initial WebP sequence encoder emits full-canvas keyframes",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_canvas_padding": [
+              1,
+              0
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_height",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_height_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_height_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_canvas_padding": [
+          0,
+          1
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "The initial WebP sequence encoder emits full-canvas keyframes",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_canvas_padding": [
+              0,
+              1
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_interlace",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_interlace_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_interlace_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_interlaced": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP cannot represent retained interlace state",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_interlaced": true
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_default_image",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_default_image_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_default_image_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_default_image": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP cannot represent retained default-image state",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_default_image": true
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_reserved_disposal",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_disposal_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_disposal_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_disposal": "reserved:3"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "The keyframe encoder cannot replay reserved presentation controls",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_disposal": "reserved:3"
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_reserved_blend",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_blend_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_blend_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_blend": "reserved:3"
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "The keyframe encoder cannot replay reserved presentation controls",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_blend": "reserved:3"
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_fractional_duration",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_fractional_duration_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_fractional_duration_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_duration_fraction": [
+          1,
+          3
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "parameter",
+      "rust_error_reason": "WebP ANMF durations are integral milliseconds",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_duration_fraction": [
+              1,
+              3
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_zero_duration_denominator",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_zero_duration_denominator_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_zero_duration_denominator_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_duration_fraction": [
+          1,
+          0
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "parameter",
+      "rust_error_reason": "Retained frame duration denominators must be non-zero",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_duration_fraction": [
+              1,
+              0
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_sequence_duration_overflow",
+      "source_asset": "animated.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "606031a3f82d1e1c40f3afae0bc0af1e3de4605a238acbbff58eaadcb73ee23b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_duration_overflow_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_duration_overflow_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "lossless": true,
+        "method": 4,
+        "kmax": 1,
+        "sequence_duration_ms": 16777216
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "parameter",
+      "rust_error_reason": "WebP ANMF durations are unsigned 24-bit millisecond values",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 4,
+          "kmax": 1,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_duration_ms": 16777216
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
+      "id": "enc_error_public_mode_contract",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "params": {
+        "rust_unsupported_modes": [
+          "L16",
+          "La16",
+          "Rgb16",
+          "Rgba16",
+          "Rgb32F",
+          "Rgba32F",
+          "F32",
+          "I32"
+        ],
+        "rust_invalid_color_mode": true
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "WebP directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_source_transform": "construct one valid zero-filled DecodedImage for every named mode",
+        "rust_invalid_transform": "construct L8 bytes with a deliberately inconsistent Rgb8 ColorType"
+      }
+    },
+    {
       "id": "enc_lossy_q100",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 100
@@ -39,6 +4191,32 @@
       "id": "enc_lossy_q80",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 80
@@ -62,6 +4240,32 @@
       "id": "enc_lossy_q50",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 50
@@ -85,6 +4289,32 @@
       "id": "enc_lossy_q10",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 10
@@ -108,6 +4338,32 @@
       "id": "enc_lossy_q1",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 1
@@ -131,6 +4387,32 @@
       "id": "enc_lossless",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -152,6 +4434,32 @@
       "id": "enc_lossy_grayscale",
       "source_asset": "gray.png",
       "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "d0b0532c41978447b463b65e9bc836b66e99650b08515c3d575c3dc3433f6e19",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "grayscale": true
@@ -174,6 +4482,32 @@
       "id": "enc_lossless_grayscale",
       "source_asset": "gray.png",
       "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "d0b0532c41978447b463b65e9bc836b66e99650b08515c3d575c3dc3433f6e19",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true,
         "grayscale": true
@@ -193,9 +4527,515 @@
       }
     },
     {
+      "id": "enc_lossy_bilevel",
+      "source_asset": "1bit.png",
+      "source_format": "png",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "color_type": "1"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_bilevel",
+      "source_asset": "1bit.png",
+      "source_format": "png",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "color_type": "1"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_indexed",
+      "source_asset": "indexed.png",
+      "source_format": "png",
+      "source_mode": "P",
+      "source_sha256": "8a22b47c55cc7cd026af81af06b85bb1d24e04ea18f6ca8b532c2da58b1d9e0b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_indexed",
+      "source_asset": "indexed.png",
+      "source_format": "png",
+      "source_mode": "P",
+      "source_sha256": "8a22b47c55cc7cd026af81af06b85bb1d24e04ea18f6ca8b532c2da58b1d9e0b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_indexed_alpha",
+      "source_asset": "indexed_alpha.png",
+      "source_format": "png",
+      "source_mode": "P",
+      "source_sha256": "3bca132208f40e598d3e0aacb81710c7d95e8fb417ec7df80b39d2bf2ad20c98",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_indexed_alpha",
+      "source_asset": "indexed_alpha.png",
+      "source_format": "png",
+      "source_mode": "P",
+      "source_sha256": "3bca132208f40e598d3e0aacb81710c7d95e8fb417ec7df80b39d2bf2ad20c98",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "color_type": "P"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/indexed_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_luminance_alpha",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "source_mode": "La8",
+      "source_sha256": "d36fd50df075b64305c37dc6d9fb183c95a4326879f1c9076fea5bf1af55569b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "color_type": "LA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_luminance_alpha_partial",
+      "source_asset": "gray_alpha_partial.png",
+      "source_format": "png",
+      "source_mode": "La8",
+      "source_sha256": "19f15fdf921977bffe2ef6e6323ee08e685402f89cf2114961ac3572d6f9a25b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "color_type": "LA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha_partial.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_luminance_alpha",
+      "source_asset": "gray_alpha.png",
+      "source_format": "png",
+      "source_mode": "La8",
+      "source_sha256": "d36fd50df075b64305c37dc6d9fb183c95a4326879f1c9076fea5bf1af55569b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "color_type": "LA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_luminance_alpha_partial",
+      "source_asset": "gray_alpha_partial.png",
+      "source_format": "png",
+      "source_mode": "La8",
+      "source_sha256": "19f15fdf921977bffe2ef6e6323ee08e685402f89cf2114961ac3572d6f9a25b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "color_type": "LA"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gray_alpha_partial.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossy_alpha",
       "source_asset": "alpha_partial.png",
       "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "8ff61af3131813de7522fe0b4fc3897b796573ff1d68dead92840e28f26ba77d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "alpha": true
@@ -218,6 +5058,32 @@
       "id": "enc_lossy_opaque_rgba",
       "source_asset": "rgba.png",
       "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "0f2614c72297fe89d09979d4413d9ea24e71b8b2874242a906acc7f125f3506b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "alpha": true
@@ -240,6 +5106,32 @@
       "id": "enc_lossy_odd_alpha",
       "source_asset": "rgba_odd.png",
       "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "ac993e9cf309f9b50f4e4aded9d10c70780ac1418ceb8f3326ebd78c66464503",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "alpha": true
@@ -262,6 +5154,32 @@
       "id": "enc_lossy_horizontal",
       "source_asset": "lossless_horizontal.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "f78f159563654576095ef77f4a0552fd895a218737ec23d2f40e316acb53e3e3",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false
       },
@@ -283,6 +5201,32 @@
       "id": "enc_lossy_vertical",
       "source_asset": "lossless_vertical.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "3c43cb7ccd27ace4d885db035ea0bc49872d0c80ed56d11b368880168c753ccc",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false
       },
@@ -304,6 +5248,32 @@
       "id": "enc_lossy_solid",
       "source_asset": "lossless_solid.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "980115bee705e7ff1276a5f97950c03769601c8409bd1cbb4a9dd8daa5158d7d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false
       },
@@ -325,6 +5295,32 @@
       "id": "enc_lossless_alpha",
       "source_asset": "alpha_partial.png",
       "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "8ff61af3131813de7522fe0b4fc3897b796573ff1d68dead92840e28f26ba77d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true,
         "alpha": true
@@ -347,6 +5343,32 @@
       "id": "enc_lossy_alpha_exif",
       "source_asset": "alpha_partial.png",
       "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "8ff61af3131813de7522fe0b4fc3897b796573ff1d68dead92840e28f26ba77d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "alpha": true,
@@ -374,6 +5396,32 @@
       "id": "enc_no_alpha",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "alpha": false
       },
@@ -393,6 +5441,32 @@
       "id": "enc_hint_photo",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "hint": "photo"
       },
@@ -414,6 +5488,32 @@
       "id": "enc_hint_graph",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "hint": "graph"
       },
@@ -435,6 +5535,32 @@
       "id": "enc_hint_picture",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "hint": "picture"
       },
@@ -456,6 +5582,32 @@
       "id": "enc_method_0",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "method": 0
       },
@@ -477,6 +5629,32 @@
       "id": "enc_method_6",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "method": 6
       },
@@ -495,9 +5673,271 @@
       }
     },
     {
+      "id": "enc_error_lossy_quality_above_max",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "invalid configuration",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "lossless": false,
+        "quality": 101
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 101,
+          "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_lossless_quality_above_max",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "invalid configuration",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "lossless": true,
+        "quality": 101
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 101,
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_lossy_method_above_max",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "invalid configuration",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "lossless": false,
+        "method": 7
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": false,
+          "method": 7
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_lossless_method_above_max",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "invalid configuration",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "lossless": true,
+        "method": 7
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true,
+          "method": 7
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_exif",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "exif_hex": "45786966000049492a000800000000000000"
       },
@@ -522,6 +5962,32 @@
       "id": "enc_exif_mixed_hex_case",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "exif_hex": "45786966000049492A000800000000000000abCD"
       },
@@ -546,6 +6012,32 @@
       "id": "enc_xmp",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "xmp_hex": "3c783a786d706d6574612f3e"
       },
@@ -570,6 +6062,32 @@
       "id": "enc_icc",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "icc_hex": "70696c6c6f772d72732d696363"
       },
@@ -594,6 +6112,41 @@
       "id": "enc_error_metadata_hex_odd",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 1",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "params": {
         "icc_hex": "f"
       },
@@ -616,6 +6169,41 @@
       "id": "enc_error_metadata_hex_invalid",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 0",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "params": {
         "icc_hex": "gg"
       },
@@ -638,6 +6226,41 @@
       "id": "enc_error_metadata_hex_invalid_second_nibble",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 1",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "params": {
         "icc_hex": "0g"
       },
@@ -660,6 +6283,41 @@
       "id": "enc_error_exif_hex_odd",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 1",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "params": {
         "exif_hex": "f"
       },
@@ -682,6 +6340,41 @@
       "id": "enc_error_xmp_hex_odd",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "non-hexadecimal number found in fromhex() arg at position 1",
+          "rust_kind": "parameter",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
       "params": {
         "xmp_hex": "f"
       },
@@ -704,6 +6397,32 @@
       "id": "enc_lossy_cmyk",
       "source_asset": "baseline_cmyk.jpg",
       "source_format": "jpeg",
+      "source_mode": "CMYK",
+      "source_sha256": "d4ad71649e3252d9dfeb0007de25ed7d7b4b8afe1e73548bd4023b47b6deefa4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false
       },
@@ -725,6 +6444,32 @@
       "id": "enc_lossless_cmyk",
       "source_asset": "baseline_cmyk.jpg",
       "source_format": "jpeg",
+      "source_mode": "CMYK",
+      "source_sha256": "d4ad71649e3252d9dfeb0007de25ed7d7b4b8afe1e73548bd4023b47b6deefa4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -746,6 +6491,32 @@
       "id": "enc_lossless_noise",
       "source_asset": "lossless_noise.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "00d0c6efd398dccf63b171fa0b9d946e336e64167349768ad3a0c385006f1806",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -767,6 +6538,32 @@
       "id": "enc_lossless_checker",
       "source_asset": "lossless_checker2.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "72081b8fbf00fb6ccbb70d8ee27b36c0ae9f215c54a98df60e1f07ecdb53c4d5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -788,6 +6585,32 @@
       "id": "enc_lossless_solid",
       "source_asset": "lossless_solid.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "980115bee705e7ff1276a5f97950c03769601c8409bd1cbb4a9dd8daa5158d7d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -809,6 +6632,32 @@
       "id": "enc_lossless_palette256",
       "source_asset": "lossless_palette256.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "42bc53bcb80cfb23db2e70db57f2811babc2a78d5660f6f05437724b4379a7c0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -830,6 +6679,32 @@
       "id": "enc_lossless_predictor_sparse",
       "source_asset": "lossless_predictor_sparse.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "da5586976b4c3b8289477b2cba1ccaecf9b6cd9aa088489369a149305473ae19",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -851,6 +6726,32 @@
       "id": "enc_lossless_predictor_random_walk",
       "source_asset": "lossless_predictor_random_walk.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "361a8a62f1c46e9837de650cb058ceebb70613de177d344389b244573f13413a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -872,6 +6773,32 @@
       "id": "enc_lossless_predictor_radial",
       "source_asset": "lossless_predictor_radial.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "03da22eac5013a8e6a4a7674654d38ee05364b53b520c2bab6ca086b88526704",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -893,6 +6820,32 @@
       "id": "enc_lossless_predictor_quadrants",
       "source_asset": "lossless_predictor_quadrants.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "cac9b5292d4eaf8f3acde1b7492535a1642c1bde661081d9a5feff453328443c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true
       },
@@ -914,6 +6867,32 @@
       "id": "enc_lossless_subtract_green",
       "source_asset": "webp_subtract_green.png",
       "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "f60a0ce6bf4ce6baefba2b5e698f44a537ddec25a989c8ca48057b1d981402c7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": true,
         "color_type": "RGB",
@@ -940,6 +6919,32 @@
       "id": "enc_1x1",
       "source_asset": "1x1.png",
       "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "size": [
           1,
@@ -962,6 +6967,32 @@
       "id": "enc_lossy",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false
       },
@@ -983,6 +7014,32 @@
       "id": "enc_lossy_quality_100",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 100
@@ -1006,6 +7063,32 @@
       "id": "enc_lossy_quality_10",
       "source_asset": "lossless.webp",
       "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
       "params": {
         "lossless": false,
         "quality": 10
