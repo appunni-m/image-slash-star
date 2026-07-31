@@ -98,6 +98,10 @@ All notable changes will be documented in this file. This project follows
 - Raw AVIF top-level box retention: unknown and free/skip boxes as opaque
   records with full box bytes, interpreted boxes excluded, truncated trailing
   boxes ignored, and no implicit encode replay.
+- Checked output-size preflight (`ImageInfo::decoded_bytes`,
+  `ImageMode::expected_bytes`) and an exact-size still-decode destination API
+  (`decode_into`, `decode_into_with_policy`) that rejects short or oversized
+  buffers with `Parameter` before any partial write.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact
