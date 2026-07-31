@@ -3,6 +3,28 @@
 use super::ImageFormat;
 use std::fmt;
 
+/// Stable category of an [`ImageError`].
+///
+/// Error messages provide useful diagnostics but may become more specific over
+/// time. Match this category, and optionally [`ImageError::format`], when
+/// implementing recovery policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ImageErrorKind {
+    /// No encoded-image signature was recognized.
+    UnknownFormat,
+    /// The detected format's Cargo feature is disabled.
+    FeatureDisabled,
+    /// Encoded bytes violate the selected format.
+    Malformed,
+    /// The format cannot represent the requested input or operation.
+    Unsupported,
+    /// Dimensions, bounds, or represented byte lengths are invalid.
+    Dimensions,
+    /// An option or represented image property is invalid.
+    Parameter,
+}
+
 /// Failure returned by image validation, format detection, and codec operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -20,20 +42,109 @@ pub enum ImageError {
     Malformed {
         /// Detected or explicitly selected format.
         format: ImageFormat,
-        /// Stable high-level diagnostic suitable for logs.
+        /// High-level diagnostic suitable for logs.
         message: String,
     },
     /// Valid input, options, or output cannot be represented by the selected codec.
     Unsupported {
         /// Selected format when the failure belongs to a codec.
         format: Option<ImageFormat>,
-        /// Stable high-level diagnostic suitable for logs.
+        /// High-level diagnostic suitable for logs.
         message: String,
     },
     /// The operation dimensions are out of bounds or mismatched.
-    Dimensions,
+    Dimensions {
+        /// Selected format when the failure belongs to a codec.
+        format: Option<ImageFormat>,
+        /// High-level diagnostic suitable for logs.
+        message: String,
+    },
     /// A parameter error.
-    Parameter(String),
+    Parameter {
+        /// Selected format when the failure belongs to a codec.
+        format: Option<ImageFormat>,
+        /// High-level diagnostic suitable for logs.
+        message: String,
+    },
+}
+
+impl ImageError {
+    /// Return the stable category used for programmatic recovery.
+    #[must_use]
+    pub const fn kind(&self) -> ImageErrorKind {
+        match self {
+            Self::UnknownFormat => ImageErrorKind::UnknownFormat,
+            Self::FeatureDisabled { .. } => ImageErrorKind::FeatureDisabled,
+            Self::Malformed { .. } => ImageErrorKind::Malformed,
+            Self::Unsupported { .. } => ImageErrorKind::Unsupported,
+            Self::Dimensions { .. } => ImageErrorKind::Dimensions,
+            Self::Parameter { .. } => ImageErrorKind::Parameter,
+        }
+    }
+
+    /// Return the encoded or output format associated with the failure.
+    ///
+    /// This is `None` for unknown-format failures and validation errors that
+    /// occur before a codec is selected.
+    #[must_use]
+    pub const fn format(&self) -> Option<ImageFormat> {
+        match self {
+            Self::UnknownFormat => None,
+            Self::FeatureDisabled { format, .. } | Self::Malformed { format, .. } => Some(*format),
+            Self::Unsupported { format, .. }
+            | Self::Dimensions { format, .. }
+            | Self::Parameter { format, .. } => *format,
+        }
+    }
+
+    /// Return the stable high-level diagnostic retained by the failure.
+    ///
+    /// The error kind and format are the compatibility surface for recovery;
+    /// this message is intended for logs and troubleshooting.
+    #[must_use]
+    pub fn message(&self) -> Option<&str> {
+        match self {
+            Self::UnknownFormat | Self::FeatureDisabled { .. } => None,
+            Self::Malformed { message, .. }
+            | Self::Unsupported { message, .. }
+            | Self::Dimensions { message, .. }
+            | Self::Parameter { message, .. } => Some(message),
+        }
+    }
+
+    pub(crate) fn dimensions(message: impl Into<String>) -> Self {
+        Self::Dimensions {
+            format: None,
+            message: message.into(),
+        }
+    }
+
+    pub(crate) fn parameter(message: impl Into<String>) -> Self {
+        Self::Parameter {
+            format: None,
+            message: message.into(),
+        }
+    }
+
+    pub(crate) fn with_format(self, selected: ImageFormat) -> Self {
+        match self {
+            Self::Dimensions {
+                format: None,
+                message,
+            } => Self::Dimensions {
+                format: Some(selected),
+                message,
+            },
+            Self::Parameter {
+                format: None,
+                message,
+            } => Self::Parameter {
+                format: Some(selected),
+                message,
+            },
+            error => error,
+        }
+    }
 }
 
 impl fmt::Display for ImageError {
@@ -50,8 +161,14 @@ impl fmt::Display for ImageError {
                 Some(format) => write!(f, "unsupported {format:?}: {message}"),
                 None => write!(f, "unsupported: {message}"),
             },
-            ImageError::Dimensions => write!(f, "image dimensions are out of bounds"),
-            ImageError::Parameter(msg) => write!(f, "parameter error: {}", msg),
+            ImageError::Dimensions { format, message } => match format {
+                Some(format) => write!(f, "invalid {format:?} dimensions: {message}"),
+                None => write!(f, "invalid image dimensions: {message}"),
+            },
+            ImageError::Parameter { format, message } => match format {
+                Some(format) => write!(f, "invalid {format:?} parameter: {message}"),
+                None => write!(f, "invalid image parameter: {message}"),
+            },
         }
     }
 }

@@ -5,8 +5,8 @@
 
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
-    AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageMode,
-    ImagePalette,
+    AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FrameDuration, ImageMode, ImagePalette,
 };
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -58,8 +58,10 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
                     let identifier_len = usize::from(input.read_u8()?);
                     let identifier = input.read_bytes(identifier_len)?;
                     let payload = input.read_sub_blocks()?;
-                    let is_loop_extension = matches!(identifier, b"NETSCAPE2.0" | b"ANIMEXTS1.0");
-                    if is_loop_extension && payload.first() == Some(&1) && payload.len() >= 3 {
+                    // Pillow 12.2.0 recognizes only NETSCAPE2.0 here. It
+                    // exposes ANIMEXTS1.0 as an opaque application extension.
+                    let is_loop_extension = identifier == b"NETSCAPE2.0";
+                    if is_loop_extension && payload.len() >= 3 && payload[0] == 1 {
                         let bytes = [payload[1], payload[2]];
                         loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
                     }
@@ -73,14 +75,18 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
                     global_palette.as_deref(),
                     graphic_control.transparent_index,
                 )?;
-                frames.push(DecodedFrame {
+                frames.push(DecodedFrame::source_rectangle(
                     image,
-                    left: u32::from(left),
-                    top: u32::from(top),
-                    duration_ms: u32::from(graphic_control.delay_cs).saturating_mul(10),
-                    disposal: graphic_control.disposal,
+                    u32::from(left),
+                    u32::from(top),
+                    FrameDuration {
+                        numerator: u64::from(graphic_control.delay_cs),
+                        denominator: 100,
+                    },
+                    graphic_control.disposal,
+                    FrameBlend::Unspecified,
                     interlaced,
-                });
+                ));
                 graphic_control = GraphicControl::default();
                 recovering_from_bad_gce = false;
             }
@@ -93,11 +99,21 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
     }
 
     let first_frame = frames.first().malformed("GIF contains no image frame")?;
-    let mut fallback_width = first_frame.left.saturating_add(first_frame.image.width);
-    let mut fallback_height = first_frame.top.saturating_add(first_frame.image.height);
+    let mut fallback_width = first_frame
+        .source
+        .rect
+        .left
+        .saturating_add(first_frame.image.width);
+    let mut fallback_height = first_frame
+        .source
+        .rect
+        .top
+        .saturating_add(first_frame.image.height);
     for frame in &frames[1..] {
-        fallback_width = fallback_width.max(frame.left.saturating_add(frame.image.width));
-        fallback_height = fallback_height.max(frame.top.saturating_add(frame.image.height));
+        fallback_width =
+            fallback_width.max(frame.source.rect.left.saturating_add(frame.image.width));
+        fallback_height =
+            fallback_height.max(frame.source.rect.top.saturating_add(frame.image.height));
     }
     let logical_width = u32::from(logical_width);
     let logical_height = u32::from(logical_height);

@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-07-31 at implementation revision `d7e60df`
+Reviewed: 2026-07-31 on the working tree based on revision `6f9c002`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -24,6 +24,15 @@ Use these sources in order:
 Implementation comments and prose do not override the generated fixture
 contract.
 
+Every active row also records the semantic target/feature lane, assertion
+origins, and SHA-256 for its source plus every retained pixel, palette, frame,
+or encoded artifact. The Rust harness recomputes those hashes independently;
+generated lengths or paths alone are not accepted as provenance.
+Each row also declares the expected result of every applicable public
+operation. A decode row covers detect, inspect, verify, still decode, and
+sequence decode; an encode row separately classifies still and sequence encode
+as success, error, or not applicable.
+
 ## Pinned oracle
 
 The primary oracle is:
@@ -43,19 +52,34 @@ libaom 3.13.2.
 The generator refuses to replace references when the environment identity does
 not match the lock. A different wheel is a different oracle.
 
+AVIF detection has one deliberate evidence split. Pillow's 16-byte plugin
+predicate admits any `mif1`/`msf1` major brand so its libavif backend can make
+the complete decision. The common Rust detector has no plugin-fallthrough
+stage, so the generated detection result instead follows AVIF v1.1 and pinned
+libavif: generic HEIF major brands require `avif` or `avis` in the complete
+bounded `ftyp` compatible-brand list. Pillow still supplies the exact final
+open, inspect, verify, and load outcomes for those same full-file fixtures.
+
 ## What parity compares
 
 Depending on the manifest row, the harness compares:
 
 - format detection;
+- explicit success or error for every applicable public operation;
 - inspection status and metadata;
 - verification status;
 - success or error outcome;
-- structured error category;
+- exact Pillow exception type/message where the oracle raises an exception;
+- separate stable Rust error kind, selected format, diagnostic-presence policy,
+  and evidence origin;
+- encoded storage bit depth and the origin class of that assertion;
 - decoded mode and dimensions;
 - exact pixel or palette-index bytes;
-- exact palette and alpha data;
-- frame count, timing, offsets, disposal, background, and frame pixels; or
+- exact inspect and decoded palette state, RGB bytes, and retained alpha bytes;
+- sequence canvas, loop, background, frame order, source rectangle, exact
+  rational timing, disposal, blend, interlace, default-image state, pixel
+  layout, mode, size, and exact rendered frame bytes where Pillow exposes the
+  same layout; or
 - exact encoded container bytes.
 
 Expected failures are fixture outcomes, not skipped tests. A case that Pillow
@@ -65,15 +89,21 @@ failure.
 Approximate similarity, hashes without byte comparison, and file-size-only
 assertions are not parity evidence.
 
+GIF source rectangles are not mislabeled as rendered-pixel parity: their
+source/presentation metadata is independently asserted, while exact raw source
+sample bytes remain a documented gap. The schema does not yet compare
+auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
+
 ## Current revision-bound evidence
 
-At implementation revision `d7e60df`, the generated matrix reports:
+For the current working tree based on revision `6f9c002`, the generated matrix
+reports:
 
 | Metric | Count |
 | --- | ---: |
-| Active cases | 1,261 |
-| Decode/inspect/verify cases | 970 |
-| Encode cases | 291 |
+| Active cases | 1,374 |
+| Decode/inspect/verify cases | 1,021 |
+| Encode cases | 353 |
 | Planned or unwired cases | 0 |
 | Formats | 8 |
 
@@ -87,14 +117,23 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 38,652 | 38,652 |
-| Branches | 5,532 | 5,532 |
-| Functions | 2,044 | 2,044 |
-| Regions | 62,400 | 62,400 |
+| Lines | 40,120 | 40,120 |
+| Branches | 5,814 | 5,814 |
+| Functions | 2,120 | 2,120 |
+| Regions | 64,304 | 64,304 |
 
-Coverage MCP run: `65edd371-6a90-49d0-8ce1-51f4801c234e`
+The same managed run executed every active manifest case with zero failures or
+skips.
 
-Snapshot: `4ae70741-3fc1-4b45-8154-4d1ed8c2d63b`
+Coverage MCP run: `5b4dcd01-04a0-463f-81a5-659a10db39b0`
+
+Snapshot: `2f007b85-f7fa-4d6a-b2ea-776ca1f32e17`
+
+Manifest SHA-256:
+`14d77e2f69ad5ee6e345ce1e90930fdf74a1662908c9f09c5f0d6e2eea22bfbe`
+
+Generated matrix SHA-256:
+`96e0687d7dcf9c781e2e15df8c6f3f9da0c1ebb2edb5f8366b35a83f8ecb682e`
 
 These measurements prove execution of the retained implementation under that
 suite. They do not extend the compatibility promise beyond the active

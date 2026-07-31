@@ -240,6 +240,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let alpha = super::encoder::encode_alpha(&[7], 1, 1);
     let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 1, 1).unwrap();
     assert_eq!(chunk.data, vec![7]);
+
+    let repeated_alpha = [7; 64];
+    let alpha = super::encoder::encode_alpha(&repeated_alpha, 8, 8);
+    assert_eq!(alpha.first(), Some(&1));
+    let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 8, 8).unwrap();
+    assert_eq!(chunk.data, repeated_alpha);
 }
 
 // Callers pass in-canvas coordinates and a four-byte-per-pixel image slice.

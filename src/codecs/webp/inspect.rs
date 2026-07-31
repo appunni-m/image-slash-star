@@ -81,6 +81,7 @@ fn still_info(width: u32, height: u32, mode: ImageMode) -> CodecResult<ImageInfo
         palette: None,
         is_animated: false,
         frame_count: Some(1),
+        cursor_hotspot: None,
     })
 }
 
@@ -152,6 +153,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         palette: None,
         is_animated,
         frame_count: Some(frame_count),
+        cursor_hotspot: None,
     })
 }
 

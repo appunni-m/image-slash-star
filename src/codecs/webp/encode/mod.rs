@@ -2,7 +2,10 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
-use crate::types::{ColorType, DecodedImage};
+use crate::types::{
+    AnimationBackground, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FramePixelLayout, ImageMode,
+};
 use std::borrow::Cow;
 
 pub mod vp8;
@@ -12,14 +15,298 @@ pub mod vp8;
 /// Lossless uses the internal VP8L encoder.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
-    let encoded = if opts.lossless == Some(true) {
-        encode_lossless(img, opts)
-    } else {
-        encode_lossy(img, opts)
-    }?;
-    let alpha = img.color == ColorType::Rgba8
-        && img.pixels.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX);
+    validate_options(opts)?;
+    let (encoded, alpha) = encode_pixels(img, opts)?;
     attach_metadata(encoded, img.width, img.height, alpha, opts)
+}
+
+fn encode_pixels(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<(Vec<u8>, bool)> {
+    let prepared = prepare_pixels(img)?;
+    let encoded = if opts.lossless == Some(true) {
+        encode_lossless(&prepared, img.width, img.height)
+    } else {
+        encode_lossy(&prepared, img.width, img.height, opts)
+    }?;
+    let alpha = prepared.has_nonopaque_alpha();
+    Ok((encoded, alpha))
+}
+
+/// Encode two or more rendered canvases as full-canvas WebP keyframes.
+pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    validate_options(opts)?;
+    validate_sequence_options(opts)?;
+    let loop_count = match sequence.loop_count {
+        Some(value) => u16::try_from(value).map_err(|_| {
+            CodecError::Parameter("WebP animation loop count exceeds 16 bits".to_owned())
+        })?,
+        None => 0,
+    };
+    let background = match sequence.background {
+        Some(AnimationBackground::Rgba(rgba)) => rgba,
+        Some(AnimationBackground::PaletteIndex(_)) => {
+            return Err(CodecError::Unsupported(
+                "WebP animation cannot represent a palette-index background".to_owned(),
+            ));
+        }
+        None => [0; 4],
+    };
+
+    let mut encoded_frames = Vec::with_capacity(sequence.frames.len());
+    let mut has_alpha = false;
+    for frame in &sequence.frames {
+        validate_keyframe(sequence, frame)?;
+        let duration = duration_milliseconds(frame.source.duration)?;
+        let (encoded, alpha) = encode_pixels(&frame.image, opts)?;
+        has_alpha |= alpha;
+        let chunks = if encoded.get(12..16) == Some(b"VP8X") {
+            &encoded[30..]
+        } else {
+            &encoded[12..]
+        };
+        encoded_frames.push((duration, chunks.to_vec()));
+    }
+
+    let mut output = Vec::new();
+    output.extend_from_slice(b"RIFF");
+    output.extend_from_slice(&[0; 4]);
+    output.extend_from_slice(b"WEBP");
+
+    let mut vp8x = vec![0x02 | u8::from(has_alpha).wrapping_shl(4), 0, 0, 0];
+    vp8x.extend_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
+    write_chunk(&mut output, b"VP8X", &vp8x);
+
+    let mut animation = vec![background[2], background[1], background[0], background[3]];
+    animation.extend_from_slice(&loop_count.to_le_bytes());
+    write_chunk(&mut output, b"ANIM", &animation);
+
+    for (duration, chunks) in encoded_frames {
+        let mut payload = vec![0; 6];
+        payload.extend_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
+        payload.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
+        payload.extend_from_slice(&duration.to_le_bytes()[..3]);
+        payload.push(0x02);
+        payload.extend_from_slice(&chunks);
+        write_chunk(&mut output, b"ANMF", &payload);
+    }
+
+    let riff_size = u32::try_from(output.len().saturating_sub(8)).map_err(|error| {
+        CodecError::Dimensions(format!("WebP RIFF output exceeds format limits: {error}"))
+    })?;
+    output[4..8].copy_from_slice(&riff_size.to_le_bytes());
+    Ok(output)
+}
+
+fn validate_sequence_options(opts: &EncodeOptions) -> CodecResult<()> {
+    if opts
+        .extra
+        .keys()
+        .any(|key| matches!(key.as_str(), "icc_hex" | "exif_hex" | "xmp_hex"))
+    {
+        return Err(CodecError::Unsupported(
+            "WebP sequence metadata output is not implemented".to_owned(),
+        ));
+    }
+    if opts.extra.get("kmax").is_some_and(|value| value != "1") {
+        return Err(CodecError::Parameter(
+            "WebP sequence encoder currently requires kmax=1".to_owned(),
+        ));
+    }
+    if opts
+        .extra
+        .keys()
+        .any(|key| matches!(key.as_str(), "minimize_size" | "kmin" | "allow_mixed"))
+    {
+        return Err(CodecError::Unsupported(
+            "WebP animation optimization options are not implemented".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_keyframe(
+    sequence: &DecodedSequence,
+    frame: &crate::types::DecodedFrame,
+) -> CodecResult<()> {
+    let rect = frame.source.rect;
+    if frame.pixel_layout == FramePixelLayout::SourceRectangle
+        && (rect.left != 0
+            || rect.top != 0
+            || rect.width != sequence.width
+            || rect.height != sequence.height)
+    {
+        return Err(CodecError::Unsupported(
+            "WebP keyframe encoder requires full-canvas frame rectangles".to_owned(),
+        ));
+    }
+    if frame.source.interlaced || frame.source.is_default_image {
+        return Err(CodecError::Unsupported(
+            "WebP cannot represent retained interlace or default-image state".to_owned(),
+        ));
+    }
+    if matches!(frame.source.disposal, FrameDisposal::Reserved(_))
+        || matches!(frame.source.blend, FrameBlend::Reserved(_))
+    {
+        return Err(CodecError::Unsupported(
+            "WebP keyframe encoder cannot replay reserved presentation controls".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn duration_milliseconds(duration: crate::types::FrameDuration) -> CodecResult<u32> {
+    let scaled = u128::from(duration.numerator).saturating_mul(1000);
+    let denominator = u128::from(duration.denominator);
+    if !scaled.is_multiple_of(denominator) {
+        return Err(CodecError::Parameter(
+            "WebP frame duration must be an exact number of milliseconds".to_owned(),
+        ));
+    }
+    // The public sequence validator rejects a zero denominator before codec
+    // dispatch, so division is safe here.
+    let milliseconds = scaled.div_euclid(denominator);
+    if milliseconds > 0x00ff_ffff {
+        return Err(CodecError::Parameter(
+            "WebP frame duration exceeds 24 bits".to_owned(),
+        ));
+    }
+    let [a, b, c, ..] = milliseconds.to_le_bytes();
+    Ok(u32::from_le_bytes([a, b, c, 0]))
+}
+
+struct PreparedPixels<'a> {
+    bytes: Cow<'a, [u8]>,
+    color: super::native::ColorType,
+}
+
+impl PreparedPixels<'_> {
+    fn has_nonopaque_alpha(&self) -> bool {
+        self.color == super::native::ColorType::Rgba8
+            && self.bytes.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX)
+    }
+}
+
+fn validate_options(opts: &EncodeOptions) -> CodecResult<()> {
+    if opts.quality.is_some_and(|quality| quality > 100) {
+        return Err(CodecError::Parameter(
+            "WebP quality must be between 0 and 100".to_owned(),
+        ));
+    }
+    if opts.method.is_some_and(|method| method > 6) {
+        return Err(CodecError::Parameter(
+            "WebP method must be between 0 and 6".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn prepare_pixels(img: &DecodedImage) -> CodecResult<PreparedPixels<'_>> {
+    let prepared = match img.mode {
+        ImageMode::L1 => PreparedPixels {
+            bytes: Cow::Owned(expand_bilevel_to_rgb(img)),
+            color: super::native::ColorType::Rgb8,
+        },
+        ImageMode::P8 => expand_indexed(img),
+        ImageMode::L8 => PreparedPixels {
+            bytes: Cow::Owned(img.pixels.iter().flat_map(|&value| [value; 3]).collect()),
+            color: super::native::ColorType::Rgb8,
+        },
+        ImageMode::La8 => expand_luminance_alpha(img),
+        ImageMode::Rgb8 => PreparedPixels {
+            bytes: Cow::Borrowed(&img.pixels),
+            color: super::native::ColorType::Rgb8,
+        },
+        ImageMode::Rgba8 => PreparedPixels {
+            bytes: Cow::Borrowed(&img.pixels),
+            color: super::native::ColorType::Rgba8,
+        },
+        ImageMode::Cmyk8 => PreparedPixels {
+            bytes: Cow::Owned(cmyk_to_rgb(&img.pixels)),
+            color: super::native::ColorType::Rgb8,
+        },
+        _ => {
+            return Err(CodecError::Unsupported(
+                "WebP encoder does not support this image mode".to_owned(),
+            ));
+        }
+    };
+    Ok(prepared)
+}
+
+fn expand_bilevel_to_rgb(img: &DecodedImage) -> Vec<u8> {
+    let width = img.width as usize;
+    let row_bytes = width.div_ceil(8);
+    let mut rgb = Vec::with_capacity(width.saturating_mul(img.height as usize).saturating_mul(3));
+    for row in img.pixels.chunks_exact(row_bytes) {
+        for x in 0..width {
+            let bit = (row[x / 8] >> 7usize.wrapping_sub(x % 8)) & 1;
+            rgb.extend_from_slice(&[0u8.wrapping_sub(bit); 3]);
+        }
+    }
+    rgb
+}
+
+fn expand_indexed(img: &DecodedImage) -> PreparedPixels<'static> {
+    let mut rgba = Vec::with_capacity(img.pixels.len().saturating_mul(4));
+    let mut has_alpha = false;
+    for &index in &img.pixels {
+        let index = usize::from(index);
+        let rgb_start = index.saturating_mul(3);
+        let color = img
+            .palette
+            .as_ref()
+            .and_then(|palette| palette.rgb.get(rgb_start..rgb_start.saturating_add(3)))
+            .unwrap_or(&[0, 0, 0]);
+        let alpha = img
+            .palette
+            .as_ref()
+            .and_then(|palette| palette.alpha.get(index))
+            .copied()
+            .unwrap_or(u8::MAX);
+        has_alpha |= alpha != u8::MAX;
+        rgba.extend_from_slice(color);
+        rgba.push(alpha);
+    }
+    if has_alpha {
+        PreparedPixels {
+            bytes: Cow::Owned(rgba),
+            color: super::native::ColorType::Rgba8,
+        }
+    } else {
+        PreparedPixels {
+            bytes: Cow::Owned(
+                rgba.chunks_exact(4)
+                    .flat_map(|pixel| pixel[..3].iter().copied())
+                    .collect(),
+            ),
+            color: super::native::ColorType::Rgb8,
+        }
+    }
+}
+
+fn expand_luminance_alpha(img: &DecodedImage) -> PreparedPixels<'static> {
+    let has_alpha = img.pixels.chunks_exact(2).any(|pixel| pixel[1] != u8::MAX);
+    if has_alpha {
+        PreparedPixels {
+            bytes: Cow::Owned(
+                img.pixels
+                    .chunks_exact(2)
+                    .flat_map(|pixel| [pixel[0], pixel[0], pixel[0], pixel[1]])
+                    .collect(),
+            ),
+            color: super::native::ColorType::Rgba8,
+        }
+    } else {
+        PreparedPixels {
+            bytes: Cow::Owned(
+                img.pixels
+                    .chunks_exact(2)
+                    .flat_map(|pixel| [pixel[0]; 3])
+                    .collect(),
+            ),
+            color: super::native::ColorType::Rgb8,
+        }
+    }
 }
 
 fn decode_hex(value: Option<&String>) -> CodecResult<Option<Vec<u8>>> {
@@ -130,94 +417,52 @@ fn attach_metadata(
 }
 
 /// Lossless VP8L encoding via the internal `WebPEncoder`.
-fn encode_lossless(img: &DecodedImage, _opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
-    let (width, height) = (img.width, img.height);
-    let (pixels, color) = match img.color {
-        ColorType::L8 => (
-            Cow::Owned(
-                img.pixels
-                    .iter()
-                    .flat_map(|&value| [value; 3])
-                    .collect::<Vec<_>>(),
-            ),
-            super::native::ColorType::Rgb8,
-        ),
-        ColorType::Cmyk8 => (
-            Cow::Owned(cmyk_to_rgb(&img.pixels)),
-            super::native::ColorType::Rgb8,
-        ),
-        ColorType::Rgb8 => (
-            Cow::Borrowed(img.pixels.as_slice()),
-            super::native::ColorType::Rgb8,
-        ),
-        ColorType::Rgba8 => (
-            Cow::Borrowed(img.pixels.as_slice()),
-            super::native::ColorType::Rgba8,
-        ),
-        _ => {
-            return Err(CodecError::Unsupported(
-                "WebP lossless encoder does not support this image mode".to_owned(),
-            ));
-        }
-    };
-
+fn encode_lossless(pixels: &PreparedPixels<'_>, width: u32, height: u32) -> CodecResult<Vec<u8>> {
     super::native::WebPEncoder::new()
-        .encode(&pixels, width, height, color)
+        .encode(&pixels.bytes, width, height, pixels.color)
         .map_err(encode_error)
 }
 
 /// Lossy VP8 encoding — own pure-Rust implementation.
 ///
 /// Encodes VP8 keyframe bitstream in RIFF/WEBP container.
-fn encode_lossy(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
-    let quality = opts.quality.unwrap_or(80).min(100);
-    let method = opts.method.unwrap_or(4).min(6);
-    let encoded = match img.color {
-        ColorType::L8 => {
-            let rgb = img
-                .pixels
-                .iter()
-                .flat_map(|&value| [value; 3])
-                .collect::<Vec<_>>();
-            vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
+fn encode_lossy(
+    pixels: &PreparedPixels<'_>,
+    width: u32,
+    height: u32,
+    opts: &EncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    let quality = opts.quality.unwrap_or(80);
+    let method = opts.method.unwrap_or(4);
+    let encoded = match pixels.color {
+        super::native::ColorType::Rgb8 => {
+            vp8::encoder::encode_vp8_lossy(&pixels.bytes, width, height, quality, method)
         }
-        ColorType::Rgb8 => {
-            vp8::encoder::encode_vp8_lossy(&img.pixels, img.width, img.height, quality, method)
-        }
-        ColorType::Rgba8 => {
-            let has_alpha = img.pixels.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX);
+        super::native::ColorType::Rgba8 => {
+            let has_alpha = pixels.has_nonopaque_alpha();
             if has_alpha {
-                let alpha = img
-                    .pixels
+                let alpha = pixels
+                    .bytes
                     .chunks_exact(4)
                     .map(|pixel| pixel[3])
                     .collect::<Vec<_>>();
-                let alpha_chunk = super::native::encode_alpha(&alpha, img.width, img.height);
+                let alpha_chunk = super::native::encode_alpha(&alpha, width, height);
                 vp8::encoder::encode_vp8_lossy_rgba(
-                    &img.pixels,
-                    img.width,
-                    img.height,
+                    &pixels.bytes,
+                    width,
+                    height,
                     quality,
                     method,
                     &alpha_chunk,
                 )
             } else {
-                let rgb = img
-                    .pixels
+                let rgb = pixels
+                    .bytes
                     .chunks_exact(4)
                     .flat_map(|pixel| pixel[..3].iter().copied())
                     .collect::<Vec<_>>();
-                vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
+                vp8::encoder::encode_vp8_lossy(&rgb, width, height, quality, method)
             }
-        }
-        ColorType::Cmyk8 => {
-            let rgb = cmyk_to_rgb(&img.pixels);
-            vp8::encoder::encode_vp8_lossy(&rgb, img.width, img.height, quality, method)
-        }
-        _ => {
-            return Err(CodecError::Unsupported(
-                "WebP lossy encoder does not support this image mode".to_owned(),
-            ));
         }
     };
     Ok(encoded)
@@ -286,14 +531,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ]);
     let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts);
 
-    let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::Rgb8);
+    let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::Rgb8);
     let opts = EncodeOptions {
         lossless: Some(true),
         ..EncodeOptions::default()
     };
     let _ = encode(&zero_width, &opts);
 
-    let unsupported = DecodedImage::new(1, 1, vec![0, 0], ColorType::La8);
+    let unsupported = DecodedImage::new(1, 1, vec![0; 8], crate::types::ColorType::Rgb32F);
     let _ = encode(&unsupported, &opts);
     let _ = encode(&unsupported, &EncodeOptions::default());
 }

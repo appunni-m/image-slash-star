@@ -469,16 +469,17 @@ fn write_image_stream(
     width: usize,
     write_meta_huffman_bit: bool,
 ) {
-    write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 80, 11)
+    write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 3, 80, 11)
 }
 
-// `backward_refs::candidates` always returns the standard and RLE candidates.
+// `backward_refs::candidates` always returns at least one crunch configuration.
 #[allow(clippy::unwrap_used)]
 fn write_image_stream_configured(
     w: &mut BitWriter<'_>,
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
+    histogram_bits: u8,
     quality: u32,
     max_cache_bits: u8,
 ) {
@@ -489,33 +490,121 @@ fn write_image_stream_configured(
         quality,
         max_cache_bits,
     );
-    let token_cost = |tokens: &[backward_refs::Token], cache_bits: u8| {
-        backward_refs::estimated_bits(tokens, cache_bits)
-    };
-    let (mut tokens, cache_bits, is_standard) = candidates
-        .into_iter()
-        .min_by_key(|(tokens, cache_bits, _)| token_cost(tokens, *cache_bits))
-        .unwrap();
-    if is_standard && quality >= 25 {
-        let traced = backward_refs::trace(pixels, width, &tokens, cache_bits, quality);
-        if token_cost(&traced, cache_bits) < token_cost(&tokens, cache_bits) {
-            tokens = traced;
+
+    let initial_bytes = w.writer.clone();
+    let initial_buffer = w.buffer;
+    let initial_nbits = w.nbits;
+    let mut best: Option<(usize, Vec<u8>, u64, u8)> = None;
+    for (tokens, cache_bits) in candidates {
+        let mut bytes = initial_bytes.clone();
+        let (byte_length, buffer, nbits) = {
+            let mut trial = BitWriter {
+                writer: &mut bytes,
+                buffer: initial_buffer,
+                nbits: initial_nbits,
+            };
+            write_token_stream(
+                &mut trial,
+                pixels,
+                width,
+                write_meta_huffman_bit,
+                &tokens,
+                TokenStreamConfig {
+                    cache_bits,
+                    histogram_bits,
+                    quality,
+                },
+            );
+            (
+                trial.writer.len() + usize::from(trial.nbits).div_ceil(8),
+                trial.buffer,
+                trial.nbits,
+            )
+        };
+        if best
+            .as_ref()
+            .is_none_or(|(best_length, ..)| byte_length < *best_length)
+        {
+            best = Some((byte_length, bytes, buffer, nbits));
         }
     }
-    write_token_stream(
-        w,
-        pixels,
-        width,
-        write_meta_huffman_bit,
-        &tokens,
-        cache_bits,
-        quality,
-    );
+    let (_, bytes, buffer, nbits) = best.unwrap();
+    *w.writer = bytes;
+    w.buffer = buffer;
+    w.nbits = nbits;
 }
 
 struct GroupCodes {
     lengths: [Vec<u8>; 5],
     codes: [Vec<u16>; 5],
+}
+
+#[derive(Clone, Copy)]
+struct TokenStreamConfig {
+    cache_bits: u8,
+    histogram_bits: u8,
+    quality: u32,
+}
+
+fn optimize_sampling(
+    symbols: &mut Vec<u16>,
+    full_width: usize,
+    full_height: usize,
+    input_bits: u8,
+    maximum_bits: u8,
+) -> u8 {
+    let mut width = full_width.div_ceil(1 << input_bits);
+    let mut height = full_height.div_ceil(1 << input_bits);
+    let mut best_bits = input_bits;
+
+    while best_bits < maximum_bits {
+        let new_square_size = 1 << (best_bits + 1 - input_bits);
+        let square_size = 1 << (best_bits - input_bits);
+        let rows_match = (0..height)
+            .step_by(new_square_size)
+            .take_while(|&y| y + square_size < height)
+            .all(|y| {
+                symbols[y * width..(y + 1) * width]
+                    == symbols[(y + square_size) * width..(y + square_size + 1) * width]
+            });
+        if !rows_match {
+            break;
+        }
+        best_bits += 1;
+    }
+    if best_bits == input_bits {
+        return input_bits;
+    }
+
+    while best_bits > input_bits {
+        let square_size = 1 << (best_bits - input_bits);
+        let columns_match = (0..height).all(|y| {
+            (0..width).step_by(square_size).all(|x| {
+                let first = symbols[y * width + x];
+                (x + 1..(x + square_size).min(width))
+                    .all(|column| symbols[y * width + column] == first)
+            })
+        });
+        if columns_match {
+            break;
+        }
+        best_bits -= 1;
+    }
+    if best_bits == input_bits {
+        return input_bits;
+    }
+
+    let old_width = width;
+    let square_size = 1 << (best_bits - input_bits);
+    width = full_width.div_ceil(1 << best_bits);
+    height = full_height.div_ceil(1 << best_bits);
+    for y in 0..height {
+        for x in 0..width {
+            symbols[y * width + x] = symbols[square_size * (y * old_width + x)];
+        }
+    }
+    symbols.truncate(width * height);
+    best_bits
 }
 
 fn write_group(w: &mut BitWriter<'_>, populations: &[Vec<u32>; 5]) -> GroupCodes {
@@ -540,31 +629,37 @@ fn write_token_stream(
     width: usize,
     write_meta_huffman_bit: bool,
     tokens: &[backward_refs::Token],
-    cache_bits: u8,
-    quality: u32,
+    config: TokenStreamConfig,
 ) {
+    let TokenStreamConfig {
+        cache_bits,
+        histogram_bits,
+        quality,
+    } = config;
     w.write_bits(u64::from(cache_bits != 0), 1);
     if cache_bits != 0 {
         w.write_bits(u64::from(cache_bits), 4);
     }
     let height = pixels.len() / width;
-    let histogram_bits = 3_u8;
-    let (symbols, histograms) = if write_meta_huffman_bit {
+    let (mut symbols, histograms) = if write_meta_huffman_bit {
         histogram::cluster(tokens, width, height, cache_bits, quality, histogram_bits)
     } else {
         histogram::cluster(tokens, width, height, cache_bits, quality, 31)
     };
     let multiple_groups = write_meta_huffman_bit && histograms.len() > 1;
+    let mut encoded_histogram_bits = histogram_bits;
     if write_meta_huffman_bit {
         w.write_bits(u64::from(multiple_groups), 1);
         if multiple_groups {
-            w.write_bits(u64::from(histogram_bits - 2), 3);
+            encoded_histogram_bits =
+                optimize_sampling(&mut symbols, width, height, histogram_bits, 9);
+            w.write_bits(u64::from(encoded_histogram_bits - 2), 3);
             let meta_pixels = symbols
                 .iter()
                 .map(|&symbol| u32::from(symbol) << 8)
                 .collect::<Vec<_>>();
-            let meta_width = (width + (1 << histogram_bits) - 1) >> histogram_bits;
-            write_image_stream_configured(w, &meta_pixels, meta_width, false, quality, 0);
+            let meta_width = width.div_ceil(1 << encoded_histogram_bits);
+            write_image_stream_configured(w, &meta_pixels, meta_width, false, 3, quality, 0);
         }
     }
     let mut groups = Vec::with_capacity(histograms.len());
@@ -572,13 +667,15 @@ fn write_token_stream(
         groups.push(write_group(w, &histogram.populations));
     }
 
-    let tile_width = (width + (1 << histogram_bits) - 1) >> histogram_bits;
+    let tile_width = width.div_ceil(1 << encoded_histogram_bits);
     let mut position = 0;
     for &token in tokens {
         let group_index = if multiple_groups {
             let x = position % width;
             let y = position / width;
-            usize::from(symbols[(y >> histogram_bits) * tile_width + (x >> histogram_bits)])
+            usize::from(
+                symbols[(y >> encoded_histogram_bits) * tile_width + (x >> encoded_histogram_bits)],
+            )
         } else {
             0
         };
@@ -854,7 +951,7 @@ fn apply_palette(
             difference
         })
         .collect::<Vec<_>>();
-    write_image_stream_configured(w, &palette_delta, encoded_length, false, 20, 0);
+    write_image_stream_configured(w, &palette_delta, encoded_length, false, 3, 20, 0);
 
     let packing_bits = match palette.len() {
         0..=2 => 3,
@@ -878,7 +975,7 @@ fn apply_palette(
     }
     w.write_bits(0, 1);
     let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
-    write_image_stream_configured(w, &packed, packed_width, true, 80, maximum_cache_bits)
+    write_image_stream_configured(w, &packed, packed_width, true, 5, 80, maximum_cache_bits)
 }
 
 /// Encode image data with the indicated color type.
@@ -1109,7 +1206,7 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     writer.write_bits(1, 1); // transform present
     writer.write_bits(3, 2); // color-indexing transform
     writer.write_bits((palette.len() - 1) as u64, 8);
-    write_image_stream_configured(&mut writer, &palette_delta, palette.len(), false, 20, 0);
+    write_image_stream_configured(&mut writer, &palette_delta, palette.len(), false, 3, 20, 0);
 
     let xbits = match palette.len() {
         0..=2 => 3,
@@ -1133,13 +1230,22 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     }
 
     writer.write_bits(0, 1); // transforms done
-    write_image_stream_configured(&mut writer, &packed, packed_width, true, 32, 2);
+    write_image_stream_configured(&mut writer, &packed, packed_width, true, 5, 32, 2);
     writer.flush();
 
-    let mut chunk = Vec::with_capacity(encoded.len() + 1);
-    chunk.push(1); // lossless compression, no filtering, no preprocessing
-    chunk.extend_from_slice(&encoded);
-    chunk
+    let mut compressed = Vec::with_capacity(encoded.len() + 1);
+    compressed.push(1); // lossless compression, no filtering, no preprocessing
+    compressed.extend_from_slice(&encoded);
+
+    let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
+    uncompressed.push(0); // no compression, no filtering, no preprocessing
+    uncompressed.extend_from_slice(alpha);
+
+    if uncompressed.len() <= compressed.len() {
+        uncompressed
+    } else {
+        compressed
+    }
 }
 
 const fn chunk_size(inner_bytes: usize) -> u32 {
@@ -1280,8 +1386,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
             backward_refs::Token::Literal(0xff00_0000),
             backward_refs::Token::Literal(0xff00_0000),
         ],
-        0,
-        1,
+        TokenStreamConfig {
+            cache_bits: 0,
+            histogram_bits: 3,
+            quality: 1,
+        },
     );
     token_writer.flush();
 

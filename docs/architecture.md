@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-07-31 at implementation revision `d7e60df`
+Reviewed: 2026-07-31 against the working tree based on `6f9c002`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -60,6 +60,15 @@ intrinsic output format.
 Palette indices use `ImageMode::P8` and an optional `ImagePalette`. They are not
 treated as luminance merely because both layouts use one byte per sample.
 
+`ImageInfo::is_indexed()` classifies the `P8` sample mode, while
+`ImageInfo::has_palette_table()` reports whether an explicit table was
+retained. These can differ for a tolerated indexed container with a missing or
+empty palette table.
+
+The shared `ico` codec also recognizes CUR. `cursor_hotspot: Some(...)` on
+`ImageInfo` and `DecodedImage` preserves CUR identity and its selected entry's
+activation point; ordinary ICO uses `None`.
+
 ## Canonical public surface
 
 Codec modules and dispatchers are private. Callers use the root API so format
@@ -79,7 +88,9 @@ translation cannot be bypassed.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
-`ImageError::FeatureDisabled`.
+`ImageError::FeatureDisabled`. For AVIF, `avif` and `avis` major brands are
+direct signatures; generic `mif1`/`msf1` majors additionally require an
+`avif` or `avis` compatible brand in the complete bounded `ftyp` box.
 
 ## Decoded sample layouts
 
@@ -93,7 +104,17 @@ row stride.
 | `L8`, `La8` | Interleaved 8-bit luminance and optional alpha |
 | `Rgb8`, `Rgba8`, `Cmyk8` | Interleaved 8-bit channels |
 | `L16`, `La16`, `Rgb16`, `Rgba16` | Interleaved little-endian 16-bit channels |
-| `F32`, `I32`, `Rgb32F`, `Rgba32F` | Retained 32-bit integer or floating-point sample bytes described by `ImageMode` |
+| `F32`, `I32` | Exact Pillow-observable 32-bit luminance bytes. These are byte-preserving modes, not portable typed-scalar views: TIFF `I`/`F` can retain the file byte order. |
+| `Rgb32F`, `Rgba32F` | Native-endian 32-bit floating-point RGB(A) samples |
+
+Code that needs numeric `I32`/`F32` values must determine the originating
+codec's sample byte order before casting or parsing the bytes. This distinction
+is required for Pillow 12.2.0 parity: on a little-endian host, Pillow
+`tobytes()` still returns big-endian bytes for a big-endian TIFF `I` or `F`
+source. TIFF encoding treats the supplied `I32`/`F32` buffer as the exact
+Pillow-observable transfer bytes. The manifest proves uncompressed, Deflate
+plus horizontal-predictor, and LZW plus horizontal-predictor output from
+detached big-endian source bytes.
 
 `DecodedImage::new` and `DecodedImage::with_mode` record caller-supplied
 buffers without validating them. `DecodedImage::validate`, every encoder, and
@@ -124,8 +145,12 @@ non-exhaustive so downstream matches need a fallback arm.
 | `Dimensions` | Dimensions, frame bounds, or sample length are invalid | Correct or constrain the caller-supplied data |
 | `Parameter` | An encoder option, palette, mode combination, or other parameter is invalid | Correct the named input |
 
-Diagnostics are stable high-level context for logs, not a commitment to
-preserve every internal parser phrase as public API.
+`ImageError::kind()` is the stable recovery category and
+`ImageError::format()` identifies the selected codec when one exists.
+`Dimensions` and `Parameter` retain optional format plus the high-level
+diagnostic that crossed the codec boundary. `ImageError::message()` exposes
+that diagnostic for logs; its prose may become more specific and is not a
+commitment to preserve every internal parser phrase as public API.
 
 ## Immutable source lifecycle
 
@@ -141,6 +166,13 @@ The first call to `decode()` initializes a shared `OnceLock`:
 - `verify()` runs independently and does not populate or modify the decode
   cache.
 
+`ImageFormat::verification_scope()` and
+`EncodedImage::verification_scope()` distinguish `Structure` from
+`HeaderOnly`. Header-only is Pillow 12.2.0's base `ImageFile.verify` behavior:
+successful construction/inspection is the complete check, so later pixel
+decompression can still fail. PNG has Pillow's structural scan; this crate
+also retains independently proved JPEG and WebP structural verifiers.
+
 The crate performs no filesystem or network I/O and emits no logs. Applications
 decide where bytes come from and how errors are recorded.
 
@@ -153,7 +185,7 @@ either representation.
 | Feature | Native | `wasm32-unknown-unknown` |
 | --- | --- | --- |
 | `jpeg` | Rust inspect/decode/encode | Build-verified Rust path |
-| `png` | Rust inspect/decode/encode | Build-verified Rust path |
+| `png` | Rust still/APNG sequence decode and still encode | Build-verified Rust path |
 | `gif` | Rust still/sequence decode and encode | Build-verified Rust path |
 | `bmp` | Rust inspect/decode/encode | Build-verified Rust path |
 | `tiff` | Rust inspect/decode/encode | Build-verified Rust path |

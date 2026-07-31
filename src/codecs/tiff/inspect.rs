@@ -42,6 +42,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         palette,
         is_animated: frame_count > 1,
         frame_count: complete_chain.then_some(frame_count),
+        cursor_hotspot: None,
     })
 }
 

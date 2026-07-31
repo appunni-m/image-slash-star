@@ -5,7 +5,8 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal,
+    AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
+    FrameDisposal, FrameDuration, FrameRect,
 };
 use std::io::Cursor;
 
@@ -60,15 +61,27 @@ pub fn decode_sequence(data: &[u8]) -> CodecResult<DecodedSequence> {
     let mut frames = Vec::with_capacity(frame_count);
     for _ in 0..frame_count {
         let mut pixels = vec![0; buffer_size];
-        let duration_ms = decoder.read_frame(&mut pixels).map_err(decode_error)?;
-        frames.push(DecodedFrame {
-            image: DecodedImage::new(width, height, pixels, color),
-            left: 0,
-            top: 0,
-            duration_ms,
-            disposal: FrameDisposal::Unspecified,
-            interlaced: false,
-        });
+        let frame = decoder.read_frame(&mut pixels).map_err(decode_error)?;
+        frames.push(DecodedFrame::rendered_canvas(
+            DecodedImage::new(width, height, pixels, color),
+            FrameRect {
+                left: frame.left,
+                top: frame.top,
+                width: frame.width,
+                height: frame.height,
+            },
+            FrameDuration::from_milliseconds(frame.duration_ms),
+            if frame.dispose_to_background {
+                FrameDisposal::Background
+            } else {
+                FrameDisposal::Keep
+            },
+            if frame.blend_over {
+                FrameBlend::Over
+            } else {
+                FrameBlend::Source
+            },
+        ));
     }
 
     let loop_count = Some(match decoder.loop_count() {

@@ -4,7 +4,7 @@
 [![License: multi-license](https://img.shields.io/badge/license-see%20NOTICE-blue.svg)](#license-and-attribution)
 
 Dependency-constrained Rust codecs for detecting, inspecting, decoding, and
-encoding JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and AVIF bytes.
+encoding JPEG, PNG, GIF, BMP, TIFF, WebP, ICO/CUR, and AVIF bytes.
 
 The crate targets exact observable compatibility with a pinned Pillow 12.2.0
 oracle for every active manifest case: success or error, format, mode,
@@ -46,12 +46,24 @@ features = ["png", "jpeg"]
 Cargo package names use hyphens; Rust imports use underscores.
 
 ```rust,no_run
-use image_slash_star::{decode, encode_default, ImageFormat, ImageResult};
+use image_slash_star::{
+    decode, encode_default, ImageError, ImageFormat, ImageMode, ImageResult,
+};
 
-fn png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
+fn opaque_rgb_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
     let decoded = decode(input)?;
-
-    assert_eq!(decoded.format, ImageFormat::Png);
+    if decoded.format != ImageFormat::Png {
+        return Err(ImageError::Unsupported {
+            format: Some(decoded.format),
+            message: "expected a PNG source".to_owned(),
+        });
+    }
+    if decoded.content.mode != ImageMode::Rgb8 {
+        return Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            message: "JPEG example requires opaque RGB8 input".to_owned(),
+        });
+    }
     encode_default(&decoded.content, ImageFormat::Jpeg)
 }
 ```
@@ -60,8 +72,12 @@ fn png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
 that format separately from the decoded sample mode. Encoding always requires
 an explicit output format.
 
-For a full program, read bytes with `std::fs`, call the function above, and
-write the returned bytes. The crate itself never opens paths.
+The example deliberately accepts only opaque `Rgb8` PNG pixels. RGBA, indexed,
+bilevel, and sixteen-bit PNG inputs need an explicit conversion policy in a
+downstream processing library; this codec crate does not silently discard
+alpha, expand palettes, or change sample depth. For a full program, read bytes
+with `std::fs`, call the function above, and write the returned bytes. The crate
+itself never opens paths.
 
 ## Supported features
 
@@ -70,17 +86,20 @@ Default features enable every codec except AVIF.
 | Feature | Default | Native behavior | `wasm32-unknown-unknown` |
 | --- | --- | --- | --- |
 | `jpeg` | yes | Rust inspect/decode/encode | Build-verified Rust path |
-| `png` | yes | Rust inspect/decode/encode | Build-verified Rust path |
+| `png` | yes | Rust still/APNG sequence decode and still encode | Build-verified Rust path |
 | `gif` | yes | Rust still/sequence decode and encode | Build-verified Rust path |
 | `bmp` | yes | Rust inspect/decode/encode | Build-verified Rust path |
 | `tiff` | yes | Rust inspect/decode/encode | Build-verified Rust path |
 | `webp` | yes | Rust still/sequence decode and still encode | Build-verified Rust path |
-| `ico` | yes | Rust inspect/decode and source-sized encode | Build-verified Rust path |
+| `ico` | yes | Rust ICO/CUR inspect/decode and source-sized ICO encode | Build-verified Rust path |
 | `avif` | no | Fixed native inspect/decode/sequence/encode stack | Portable inspect and restricted still decode; sequence decode and encode unsupported |
 
-ICO enables PNG and BMP because an icon entry can use either representation.
-ICO encoding writes one entry at the supplied raster dimensions and never
-resizes pixels.
+The `ico` feature recognizes both ICO and CUR signatures and accepts `.ico`
+and `.cur` aliases. Inspection and decode retain the selected CUR hotspot in
+`ImageInfo::cursor_hotspot` and `DecodedImage::cursor_hotspot`; `None`
+distinguishes ordinary ICO. The feature enables PNG and BMP because an entry
+can use either representation. Encoding currently writes ICO only, with one
+entry at the supplied raster dimensions, and never resizes pixels.
 
 WASM feature combinations are cross-compiled in CI. Executing the complete
 semantic fixture matrix in a WASM runtime remains planned.
@@ -144,10 +163,17 @@ Every canonical fallible API returns `ImageResult<T>`.
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
 errors can usually be handled by selecting another compiled capability.
 
+Use `error.kind()` for stable recovery policy and `error.format()` for the
+selected input/output format when one is known. `error.message()` returns the
+retained high-level diagnostic for logs. In particular, `Dimensions` and
+`Parameter` retain both optional format and diagnostic context; callers do not
+need to parse `Display` output. Diagnostic prose may become more specific, so
+it is not a substitute for `ImageErrorKind`.
+
 ## Correctness evidence
 
-At implementation revision `d7e60df`, the generated matrix contains 1,261
-active cases: 970 decode/inspect/verify cases and 291 encode cases, with zero
+The generated matrix in this tree contains 1,374 active cases:
+1,021 decode/inspect/verify cases and 353 encode cases, with zero
 planned or unwired rows. Expected errors are active fixture outcomes.
 
 The accepted Coverage MCP snapshot for that implementation state reports 100%

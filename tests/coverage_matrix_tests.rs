@@ -11,6 +11,8 @@ use std::sync::{Arc, OnceLock};
 use bytemuck as _;
 use image_slash_star as img;
 
+#[path = "support/sha256.rs"]
+mod sha256;
 mod support;
 
 use support::json::{self, FromJson, Object, Value};
@@ -82,8 +84,16 @@ struct DecodeRow {
     status: String,
     asset: Option<String>,
     asset_path: Option<String>,
+    asset_sha256: Option<String>,
+    execution: Option<ExecutionRef>,
+    assertion_origins: HashMap<String, String>,
+    operations: HashMap<String, String>,
+    error_contracts: HashMap<String, ErrorContractRef>,
     expect_error: Option<bool>,
     expect_sequence_error: bool,
+    rust_expect_sequence_error: bool,
+    rust_sequence_error_kind: Option<String>,
+    rust_sequence_error_reason: Option<String>,
     oracle_detects_format: bool,
     oracle_status: Option<String>,
     oracle_error_type: Option<String>,
@@ -93,16 +103,24 @@ struct DecodeRow {
     inspect_error_type: Option<String>,
     inspect_error_message: Option<String>,
     inspect_error_kind: Option<String>,
+    inspect_container_format: Option<String>,
+    inspect_cursor_hotspot: Option<Vec<u16>>,
+    ref_bit_depth: Option<u32>,
+    ref_bit_depth_origin: Option<String>,
     verify_status: String,
     verify_error_type: Option<String>,
     verify_error_message: Option<String>,
     verify_error_kind: Option<String>,
+    verification_scope: String,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
     ref_frame_count: Option<u32>,
     ref_is_animated: Option<bool>,
+    inspect_palette: Option<PaletteParityRef>,
+    decoded_palette: Option<PaletteParityRef>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
+    ref_sha256: Option<String>,
     sequence_status: Option<String>,
     sequence_error_type: Option<String>,
     sequence_error_message: Option<String>,
@@ -112,18 +130,70 @@ struct DecodeRow {
 
 #[derive(Debug)]
 struct SequenceParityRef {
+    canvas_size: Vec<u32>,
+    canvas_origin: String,
     loop_count: Option<u32>,
+    loop_origin: String,
+    background: Option<BackgroundParityRef>,
     frames: Vec<FrameParityRef>,
 }
 
 #[derive(Debug)]
 struct FrameParityRef {
     index: usize,
-    ref_path: String,
-    ref_bytes: usize,
-    ref_mode: String,
-    ref_size: Vec<u32>,
-    duration_ms: u32,
+    source_rect: Vec<u32>,
+    duration_num: u64,
+    duration_den: u64,
+    duration_origin: String,
+    disposal: String,
+    blend: String,
+    interlaced: bool,
+    is_default_image: bool,
+    pixel_layout: String,
+    source_origin: String,
+    pixel_assertion: String,
+    pixel_origin: Option<String>,
+    ref_path: Option<String>,
+    ref_bytes: Option<usize>,
+    ref_sha256: Option<String>,
+    ref_mode: Option<String>,
+    ref_size: Option<Vec<u32>>,
+}
+
+#[derive(Debug)]
+struct BackgroundParityRef {
+    palette_index: Option<u16>,
+    rgba: Option<Vec<u16>>,
+    origin: String,
+}
+
+#[derive(Debug)]
+struct PaletteParityRef {
+    state: String,
+    origin: String,
+    rgb_path: Option<String>,
+    rgb_bytes: Option<usize>,
+    rgb_sha256: Option<String>,
+    alpha_path: Option<String>,
+    alpha_bytes: Option<usize>,
+    alpha_sha256: Option<String>,
+}
+
+#[derive(Debug)]
+struct ExecutionRef {
+    target: String,
+    features: Vec<String>,
+    suite: String,
+}
+
+#[derive(Debug)]
+struct ErrorContractRef {
+    pillow_type: Option<String>,
+    pillow_message: Option<String>,
+    rust_kind: String,
+    rust_format: Option<String>,
+    rust_message: String,
+    origin: String,
 }
 
 #[derive(Debug)]
@@ -136,18 +206,30 @@ struct EncodeRow {
     description: Option<String>,
     status: String,
     expect_error: bool,
+    rust_expect_error: bool,
+    rust_error_kind: Option<String>,
+    rust_error_reason: Option<String>,
     oracle_status: Option<String>,
     oracle_error_type: Option<String>,
     oracle_error_message: Option<String>,
     oracle_error_kind: Option<String>,
     source_format: Option<String>,
     source_asset: Option<String>,
+    source_mode: String,
+    source_sha256: Option<String>,
+    execution: Option<ExecutionRef>,
+    assertion_origins: HashMap<String, String>,
+    operations: HashMap<String, String>,
+    error_contracts: HashMap<String, ErrorContractRef>,
     ref_bytes: Option<usize>,
+    ref_sha256: Option<String>,
     ref_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
     ref_path: Option<String>,
     encoded_ref_path: Option<String>,
     encoded_ref_bytes: Option<usize>,
+    encoded_ref_sha256: Option<String>,
+    sequence: Option<SequenceParityRef>,
 }
 
 #[derive(Debug)]
@@ -313,8 +395,16 @@ impl FromJson for DecodeRow {
             status: object.take("status")?,
             asset: object.take("asset")?,
             asset_path: object.take("asset_path")?,
+            asset_sha256: object.take("asset_sha256")?,
+            execution: object.take("execution")?,
+            assertion_origins: object.take_or_default("assertion_origins")?,
+            operations: object.take_or_default("operations")?,
+            error_contracts: object.take_or_default("error_contracts")?,
             expect_error: object.take("expect_error")?,
             expect_sequence_error: object.take_or_default("expect_sequence_error")?,
+            rust_expect_sequence_error: object.take_or_default("rust_expect_sequence_error")?,
+            rust_sequence_error_kind: object.take("rust_sequence_error_kind")?,
+            rust_sequence_error_reason: object.take("rust_sequence_error_reason")?,
             oracle_detects_format: object.take("oracle_detects_format")?,
             oracle_status: object.take("oracle_status")?,
             oracle_error_type: object.take("oracle_error_type")?,
@@ -324,16 +414,24 @@ impl FromJson for DecodeRow {
             inspect_error_type: object.take("inspect_error_type")?,
             inspect_error_message: object.take("inspect_error_message")?,
             inspect_error_kind: object.take("inspect_error_kind")?,
+            inspect_container_format: object.take("inspect_container_format")?,
+            inspect_cursor_hotspot: object.take("inspect_cursor_hotspot")?,
+            ref_bit_depth: object.take("ref_bit_depth")?,
+            ref_bit_depth_origin: object.take("ref_bit_depth_origin")?,
             verify_status: object.take("verify_status")?,
             verify_error_type: object.take("verify_error_type")?,
             verify_error_message: object.take("verify_error_message")?,
             verify_error_kind: object.take("verify_error_kind")?,
+            verification_scope: object.take("verification_scope")?,
             ref_mode: object.take("ref_mode")?,
             ref_size: object.take("ref_size")?,
             ref_frame_count: object.take("ref_frame_count")?,
             ref_is_animated: object.take("ref_is_animated")?,
+            inspect_palette: object.take("inspect_palette")?,
+            decoded_palette: object.take("decoded_palette")?,
             ref_path: object.take("ref_path")?,
             ref_bytes: object.take("ref_bytes")?,
+            ref_sha256: object.take("ref_sha256")?,
             sequence_status: object.take("sequence_status")?,
             sequence_error_type: object.take("sequence_error_type")?,
             sequence_error_message: object.take("sequence_error_message")?,
@@ -343,14 +441,61 @@ impl FromJson for DecodeRow {
     }
 }
 
-json_object!(SequenceParityRef { loop_count, frames });
+json_object!(SequenceParityRef {
+    canvas_size,
+    canvas_origin,
+    loop_count,
+    loop_origin,
+    background,
+    frames,
+});
 json_object!(FrameParityRef {
     index,
+    source_rect,
+    duration_num,
+    duration_den,
+    duration_origin,
+    disposal,
+    blend,
+    interlaced,
+    is_default_image,
+    pixel_layout,
+    source_origin,
+    pixel_assertion,
+    pixel_origin,
     ref_path,
     ref_bytes,
+    ref_sha256,
     ref_mode,
     ref_size,
-    duration_ms,
+});
+json_object!(BackgroundParityRef {
+    palette_index,
+    rgba,
+    origin,
+});
+json_object!(PaletteParityRef {
+    state,
+    origin,
+    rgb_path,
+    rgb_bytes,
+    rgb_sha256,
+    alpha_path,
+    alpha_bytes,
+    alpha_sha256,
+});
+json_object!(ExecutionRef {
+    target,
+    features,
+    suite,
+});
+json_object!(ErrorContractRef {
+    pillow_type,
+    pillow_message,
+    rust_kind,
+    rust_format,
+    rust_message,
+    origin,
 });
 
 impl FromJson for EncodeRow {
@@ -364,18 +509,30 @@ impl FromJson for EncodeRow {
             description: object.take("description")?,
             status: object.take("status")?,
             expect_error: object.take_or_default("expect_error")?,
+            rust_expect_error: object.take_or_default("rust_expect_error")?,
+            rust_error_kind: object.take("rust_error_kind")?,
+            rust_error_reason: object.take("rust_error_reason")?,
             oracle_status: object.take("oracle_status")?,
             oracle_error_type: object.take("oracle_error_type")?,
             oracle_error_message: object.take("oracle_error_message")?,
             oracle_error_kind: object.take("oracle_error_kind")?,
             source_format: object.take("source_format")?,
             source_asset: object.take("source_asset")?,
+            source_mode: object.take("source_mode")?,
+            source_sha256: object.take("source_sha256")?,
+            execution: object.take("execution")?,
+            assertion_origins: object.take_or_default("assertion_origins")?,
+            operations: object.take_or_default("operations")?,
+            error_contracts: object.take_or_default("error_contracts")?,
             ref_bytes: object.take("ref_bytes")?,
+            ref_sha256: object.take("ref_sha256")?,
             ref_mode: object.take("ref_mode")?,
             ref_size: object.take("ref_size")?,
             ref_path: object.take("ref_path")?,
             encoded_ref_path: object.take("encoded_ref_path")?,
             encoded_ref_bytes: object.take("encoded_ref_bytes")?,
+            encoded_ref_sha256: object.take("encoded_ref_sha256")?,
+            sequence: object.take("sequence")?,
         })
     }
 }
@@ -525,7 +682,26 @@ fn extra_encode_options(params: &HashMap<String, Value>) -> HashMap<String, Stri
         .filter(|(key, _)| {
             !matches!(
                 key.as_str(),
-                "advanced" | "oversized_palette" | "palette_on_nonindexed"
+                "advanced"
+                    | "oversized_palette"
+                    | "palette_on_nonindexed"
+                    | "rust_unsupported_modes"
+                    | "rust_invalid_color_mode"
+                    | "preserve_disposal"
+                    | "sequence_canvas_padding"
+                    | "sequence_frame_offset"
+                    | "sequence_duration_ms"
+                    | "sequence_duration_fraction"
+                    | "sequence_disposal"
+                    | "sequence_blend"
+                    | "sequence_interlaced"
+                    | "sequence_default_image"
+                    | "sequence_pixel_layout"
+                    | "sequence_loop_count"
+                    | "sequence_clear_loop"
+                    | "sequence_background_rgba"
+                    | "sequence_background_palette"
+                    | "sequence_clear_background"
             )
         })
         .map(|(key, value)| (key.clone(), option_text(value)))
@@ -1192,6 +1368,370 @@ fn expected_raw_name(module: &str, format: &str, asset: &str) -> String {
     format!("{module}.{format}_{}.bin", asset.replace('.', "_"))
 }
 
+fn assert_sha256(bytes: &[u8], expected: Option<&str>, label: &str) -> Result<(), String> {
+    let expected = expected.ok_or_else(|| format!("{label} SHA-256 is missing"))?;
+    let actual = sha256::digest_hex(bytes);
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "{label} SHA-256 mismatch: actual {actual}, expected {expected}"
+        ))
+    }
+}
+
+fn assert_execution_contract(expected: Option<&ExecutionRef>) -> Result<(), String> {
+    let expected = expected.ok_or_else(|| "execution contract is missing".to_owned())?;
+    let all_features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"];
+    if expected.target != "aarch64-apple-darwin"
+        || expected.suite != "native_all_features"
+        || expected
+            .features
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            != all_features
+        || !cfg!(all(
+            target_arch = "aarch64",
+            target_os = "macos",
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        ))
+    {
+        return Err(format!(
+            "execution contract differs from this test lane: {expected:?}"
+        ));
+    }
+    Ok(())
+}
+
+fn is_assertion_origin(origin: &str) -> bool {
+    matches!(
+        origin,
+        "pillow_fixture"
+            | "specification_reference"
+            | "independent_implementation"
+            | "defensive_model"
+    )
+}
+
+fn assert_origins(origins: &HashMap<String, String>, required: &[&str]) -> Result<(), String> {
+    for field in required {
+        if !origins.contains_key(*field) {
+            return Err(format!("assertion origin for {field} is missing"));
+        }
+    }
+    for (field, origin) in origins {
+        if !is_assertion_origin(origin) {
+            return Err(format!("assertion origin for {field} is invalid: {origin}"));
+        }
+    }
+    Ok(())
+}
+
+fn assert_operation_contract(
+    operations: &HashMap<String, String>,
+    required: &[&str],
+) -> Result<(), String> {
+    if operations.len() != required.len() {
+        return Err(format!(
+            "operation contract has {} entries, expected {}",
+            operations.len(),
+            required.len()
+        ));
+    }
+    for operation in required {
+        let status = operations
+            .get(*operation)
+            .ok_or_else(|| format!("{operation} expectation is missing"))?;
+        if !matches!(status.as_str(), "ok" | "error" | "not_applicable") {
+            return Err(format!("{operation} expectation {status:?} is invalid"));
+        }
+    }
+    Ok(())
+}
+
+fn image_error_kind_name(kind: img::ImageErrorKind) -> &'static str {
+    match kind {
+        img::ImageErrorKind::UnknownFormat => "unknown_format",
+        img::ImageErrorKind::FeatureDisabled => "feature_disabled",
+        img::ImageErrorKind::Malformed => "malformed",
+        img::ImageErrorKind::Unsupported => "unsupported",
+        img::ImageErrorKind::Dimensions => "dimensions",
+        img::ImageErrorKind::Parameter => "parameter",
+        _ => "unknown",
+    }
+}
+
+fn assert_error_contracts(
+    operations: &HashMap<String, String>,
+    contracts: &HashMap<String, ErrorContractRef>,
+    format: &str,
+) -> Result<(), String> {
+    let expected_count = operations
+        .values()
+        .filter(|status| status.as_str() == "error")
+        .count();
+    if contracts.len() != expected_count {
+        return Err(format!(
+            "error contract has {} entries, expected {expected_count}",
+            contracts.len()
+        ));
+    }
+    for (operation, status) in operations {
+        let contract = contracts.get(operation);
+        if status == "error" && contract.is_none() {
+            return Err(format!("{operation} error contract is missing"));
+        }
+        if status != "error" && contract.is_some() {
+            return Err(format!("{operation} has a stale error contract"));
+        }
+    }
+    for (operation, contract) in contracts {
+        if !matches!(
+            contract.rust_kind.as_str(),
+            "unknown_format"
+                | "feature_disabled"
+                | "malformed"
+                | "unsupported"
+                | "dimensions"
+                | "parameter"
+        ) {
+            return Err(format!(
+                "{operation} Rust error kind is invalid: {:?}",
+                contract.rust_kind
+            ));
+        }
+        let expected_format = if contract.rust_kind == "unknown_format" {
+            None
+        } else {
+            Some(
+                format_from_name(format)
+                    .ok_or_else(|| format!("unknown error-contract format {format:?}"))?
+                    .as_str(),
+            )
+        };
+        if contract.rust_format.as_deref() != expected_format {
+            return Err(format!(
+                "{operation} Rust error format is {:?}, expected {expected_format:?}",
+                contract.rust_format
+            ));
+        }
+        let expected_message =
+            if contract.rust_kind == "unknown_format" || contract.rust_kind == "feature_disabled" {
+                "none"
+            } else {
+                "non_empty"
+            };
+        if contract.rust_message != expected_message {
+            return Err(format!(
+                "{operation} Rust message policy is {:?}, expected {expected_message:?}",
+                contract.rust_message
+            ));
+        }
+        match contract.origin.as_str() {
+            "pillow_fixture" => {
+                let has_type = contract
+                    .pillow_type
+                    .as_deref()
+                    .is_some_and(|value| !value.is_empty());
+                let has_message = contract.pillow_message.is_some();
+                if has_type != has_message {
+                    return Err(format!(
+                        "{operation} Pillow error type/message evidence is incomplete"
+                    ));
+                }
+                if !has_type && contract.rust_kind != "unknown_format" {
+                    return Err(format!(
+                        "{operation} non-signature error lacks Pillow exception evidence"
+                    ));
+                }
+            }
+            "defensive_model" => {
+                if contract.pillow_type.is_some() || contract.pillow_message.is_some() {
+                    return Err(format!(
+                        "{operation} defensive Rust contract must not claim a Pillow exception"
+                    ));
+                }
+            }
+            "specification_reference" | "independent_implementation" => {
+                if contract.pillow_type.is_some() || contract.pillow_message.is_some() {
+                    return Err(format!(
+                        "{operation} non-Pillow contract must not claim a Pillow exception"
+                    ));
+                }
+            }
+            origin => {
+                return Err(format!(
+                    "{operation} error-contract origin is invalid: {origin:?}"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn assert_result_error_contract<T>(
+    result: &img::ImageResult<T>,
+    contracts: &HashMap<String, ErrorContractRef>,
+    operation: &str,
+) -> Result<(), String> {
+    let Some(contract) = contracts.get(operation) else {
+        return if result.is_ok() {
+            Ok(())
+        } else {
+            Err(format!("{operation} returned an undeclared error"))
+        };
+    };
+    let error = match result {
+        Err(error) => error,
+        Ok(_) => return Err(format!("{operation} was required to return an error")),
+    };
+    let actual_kind = image_error_kind_name(error.kind());
+    if actual_kind != contract.rust_kind {
+        return Err(format!(
+            "{operation} Rust error kind is {actual_kind:?}, expected {:?}",
+            contract.rust_kind
+        ));
+    }
+    let actual_format = error.format().map(img::ImageFormat::as_str);
+    if actual_format != contract.rust_format.as_deref() {
+        return Err(format!(
+            "{operation} Rust error format is {actual_format:?}, expected {:?}",
+            contract.rust_format
+        ));
+    }
+    match contract.rust_message.as_str() {
+        "none" if error.message().is_none() => Ok(()),
+        "non_empty" if error.message().is_some_and(|message| !message.is_empty()) => Ok(()),
+        policy => Err(format!(
+            "{operation} Rust error message violates policy {policy:?}: {:?}",
+            error.message()
+        )),
+    }
+}
+
+fn operation_status<'a>(
+    operations: &'a HashMap<String, String>,
+    operation: &str,
+) -> Result<&'a str, String> {
+    operations
+        .get(operation)
+        .map(String::as_str)
+        .ok_or_else(|| format!("{operation} expectation is missing"))
+}
+
+fn result_has_status<T>(result: &img::ImageResult<T>, expected: &str) -> bool {
+    matches!((result, expected), (Ok(_), "ok") | (Err(_), "error"))
+}
+
+fn load_exact_reference(
+    manifest_dir: &Path,
+    path: Option<&str>,
+    expected_bytes: Option<usize>,
+    expected_sha256: Option<&str>,
+    label: &str,
+) -> Result<Option<Vec<u8>>, String> {
+    match (path, expected_bytes) {
+        (None, None) => Ok(None),
+        (Some(path), Some(expected_bytes)) => {
+            let bytes = fs::read(manifest_dir.join(path))
+                .map_err(|error| format!("{label} reference is unreadable: {error}"))?;
+            if bytes.len() != expected_bytes {
+                return Err(format!(
+                    "{label} reference has {} bytes, expected {expected_bytes}",
+                    bytes.len()
+                ));
+            }
+            assert_sha256(&bytes, expected_sha256, label)?;
+            Ok(Some(bytes))
+        }
+        _ => Err(format!("{label} reference path/length/hash is incomplete")),
+    }
+}
+
+fn assert_palette_parity(
+    manifest_dir: &Path,
+    expected: Option<&PaletteParityRef>,
+    mode: img::ImageMode,
+    actual: Option<&img::ImagePalette>,
+    label: &str,
+) -> Result<(), String> {
+    let expected = expected.ok_or_else(|| format!("{label} palette evidence is missing"))?;
+    if !matches!(
+        expected.origin.as_str(),
+        "pillow_fixture"
+            | "specification_reference"
+            | "independent_implementation"
+            | "defensive_model"
+    ) {
+        return Err(format!("{label} palette origin is invalid"));
+    }
+    match expected.state.as_str() {
+        "absent" => {
+            if mode == img::ImageMode::P8 || actual.is_some() {
+                return Err(format!("{label} palette should be absent"));
+            }
+        }
+        "implicit" => {
+            if mode != img::ImageMode::P8 || actual.is_some() {
+                return Err(format!(
+                    "{label} should be indexed without an explicit table"
+                ));
+            }
+        }
+        "table" => {
+            if mode != img::ImageMode::P8 {
+                return Err(format!("{label} palette table requires indexed mode"));
+            }
+            let actual = actual.ok_or_else(|| format!("{label} palette table is missing"))?;
+            let rgb = load_exact_reference(
+                manifest_dir,
+                expected.rgb_path.as_deref(),
+                expected.rgb_bytes,
+                expected.rgb_sha256.as_deref(),
+                &format!("{label} RGB"),
+            )?
+            .ok_or_else(|| format!("{label} RGB reference is missing"))?;
+            let alpha = load_exact_reference(
+                manifest_dir,
+                expected.alpha_path.as_deref(),
+                expected.alpha_bytes,
+                expected.alpha_sha256.as_deref(),
+                &format!("{label} alpha"),
+            )?
+            .unwrap_or_default();
+            if actual.rgb != rgb || actual.alpha != alpha {
+                return Err(format!(
+                    "{label} palette differs: RGB {}/{} bytes, alpha {}/{} bytes",
+                    actual.rgb.len(),
+                    rgb.len(),
+                    actual.alpha.len(),
+                    alpha.len()
+                ));
+            }
+        }
+        state => return Err(format!("{label} palette state {state:?} is invalid")),
+    }
+    if expected.state != "table"
+        && (expected.rgb_path.is_some()
+            || expected.rgb_bytes.is_some()
+            || expected.rgb_sha256.is_some()
+            || expected.alpha_path.is_some()
+            || expected.alpha_bytes.is_some()
+            || expected.alpha_sha256.is_some())
+    {
+        return Err(format!("{label} non-table palette retains byte references"));
+    }
+    Ok(())
+}
+
 fn load_pixel_reference(
     manifest_dir: &Path,
     id: &str,
@@ -1256,9 +1796,39 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "La16" => Some(img::ImageMode::La16),
         "Rgb16" => Some(img::ImageMode::Rgb16),
         "Rgba16" => Some(img::ImageMode::Rgba16),
+        "Rgb32F" => Some(img::ImageMode::Rgb32F),
+        "Rgba32F" => Some(img::ImageMode::Rgba32F),
         "F" | "F32" => Some(img::ImageMode::F32),
         "I" | "I32" => Some(img::ImageMode::I32),
         _ => None,
+    }
+}
+
+fn zero_image_for_mode(
+    width: u32,
+    height: u32,
+    mode: img::ImageMode,
+) -> Result<img::DecodedImage, String> {
+    let width_usize = usize::try_from(width).map_err(|_| "mode width is too large")?;
+    let height_usize = usize::try_from(height).map_err(|_| "mode height is too large")?;
+    let len = if mode == img::ImageMode::L1 {
+        width_usize
+            .div_ceil(8)
+            .checked_mul(height_usize)
+            .ok_or("mode byte length overflows")?
+    } else {
+        width_usize
+            .checked_mul(height_usize)
+            .and_then(|pixels| pixels.checked_mul(usize::from(mode.color_type().bytes_per_pixel())))
+            .ok_or("mode byte length overflows")?
+    };
+    let image = img::DecodedImage::with_mode(width, height, vec![0; len], mode);
+    if mode == img::ImageMode::P8 {
+        Ok(image.with_palette(
+            img::ImagePalette::new(vec![0, 0, 0], Vec::new()).map_err(|error| error.to_string())?,
+        ))
+    } else {
+        Ok(image)
     }
 }
 
@@ -1317,10 +1887,20 @@ fn count_mismatched_bytes(expected: &[u8], actual: &[u8]) -> usize {
 
 fn assert_encoded_byte_parity(expected: &[u8], actual: &[u8]) -> Result<(), String> {
     if expected.len() != actual.len() {
+        let first_difference = expected
+            .iter()
+            .zip(actual)
+            .position(|(expected, actual)| expected != actual)
+            .unwrap_or(expected.len().min(actual.len()));
+        let actual_byte = actual.get(first_difference).copied();
+        let expected_byte = expected.get(first_difference).copied();
         return Err(format!(
-            "encoded byte length mismatch: actual {}, expected {}",
+            "encoded byte length mismatch: actual {}, expected {}; first difference at byte {}: actual {:02x?}, expected {:02x?}",
             actual.len(),
-            expected.len()
+            expected.len(),
+            first_difference,
+            actual_byte,
+            expected_byte,
         ));
     }
     if let Some(index) = expected
@@ -1402,8 +1982,342 @@ fn assert_pixel_parity(
     ))
 }
 
+fn expected_frame_disposal(value: &str) -> Result<img::FrameDisposal, String> {
+    match value {
+        "unspecified" => Ok(img::FrameDisposal::Unspecified),
+        "keep" => Ok(img::FrameDisposal::Keep),
+        "background" => Ok(img::FrameDisposal::Background),
+        "previous" => Ok(img::FrameDisposal::Previous),
+        value => value
+            .strip_prefix("reserved:")
+            .ok_or_else(|| format!("unknown frame disposal {value}"))?
+            .parse::<u8>()
+            .map(img::FrameDisposal::Reserved)
+            .map_err(|error| format!("invalid reserved frame disposal {value}: {error}")),
+    }
+}
+
+fn expected_frame_blend(value: &str) -> Result<img::FrameBlend, String> {
+    match value {
+        "unspecified" => Ok(img::FrameBlend::Unspecified),
+        "source" => Ok(img::FrameBlend::Source),
+        "over" => Ok(img::FrameBlend::Over),
+        value => value
+            .strip_prefix("reserved:")
+            .ok_or_else(|| format!("unknown frame blend {value}"))?
+            .parse::<u8>()
+            .map(img::FrameBlend::Reserved)
+            .map_err(|error| format!("invalid reserved frame blend {value}: {error}")),
+    }
+}
+
+fn expected_background(
+    expected: Option<&BackgroundParityRef>,
+) -> Result<Option<img::AnimationBackground>, String> {
+    let Some(expected) = expected else {
+        return Ok(None);
+    };
+    if !is_assertion_origin(&expected.origin) {
+        return Err(format!(
+            "sequence background origin is invalid: {}",
+            expected.origin
+        ));
+    }
+    match (expected.palette_index, expected.rgba.as_deref()) {
+        (Some(index), None) => u8::try_from(index)
+            .map(img::AnimationBackground::PaletteIndex)
+            .map(Some)
+            .map_err(|_| "sequence palette background exceeds u8".to_owned()),
+        (None, Some(channels)) => {
+            let [red, green, blue, alpha] = <[u16; 4]>::try_from(channels)
+                .map_err(|_| "sequence RGBA background must have four channels".to_owned())?;
+            let channel = |value| {
+                u8::try_from(value)
+                    .map_err(|_| "sequence RGBA background channel exceeds u8".to_owned())
+            };
+            let rgba = [
+                channel(red)?,
+                channel(green)?,
+                channel(blue)?,
+                channel(alpha)?,
+            ];
+            Ok(Some(img::AnimationBackground::Rgba(rgba)))
+        }
+        _ => {
+            Err("sequence background must contain exactly one of palette_index or rgba".to_owned())
+        }
+    }
+}
+
+fn assert_sequence_frame_pixels(
+    manifest_dir: &Path,
+    row_id: &str,
+    expected: &FrameParityRef,
+    actual: &img::DecodedFrame,
+) -> Result<(), String> {
+    if expected.pixel_assertion == "not_asserted_source_layout" {
+        if expected.pixel_origin.is_some()
+            || expected.ref_path.is_some()
+            || expected.ref_bytes.is_some()
+            || expected.ref_sha256.is_some()
+            || expected.ref_mode.is_some()
+            || expected.ref_size.is_some()
+        {
+            return Err(format!(
+                "frame {} claims no pixel assertion but retains pixel evidence",
+                expected.index
+            ));
+        }
+        return Ok(());
+    }
+    if expected.pixel_assertion != "exact" {
+        return Err(format!(
+            "frame {} has unknown pixel assertion {}",
+            expected.index, expected.pixel_assertion
+        ));
+    }
+    let pixel_origin = expected
+        .pixel_origin
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack an origin", expected.index))?;
+    if !is_assertion_origin(pixel_origin) {
+        return Err(format!(
+            "frame {} pixel origin is invalid: {pixel_origin}",
+            expected.index
+        ));
+    }
+    let ref_path = expected
+        .ref_path
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack a path", expected.index))?;
+    let ref_bytes = expected
+        .ref_bytes
+        .ok_or_else(|| format!("frame {} exact pixels lack a byte length", expected.index))?;
+    let ref_sha256 = expected
+        .ref_sha256
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack SHA-256", expected.index))?;
+    let ref_mode = expected
+        .ref_mode
+        .as_ref()
+        .ok_or_else(|| format!("frame {} exact pixels lack a mode", expected.index))?;
+    let ref_size = expected
+        .ref_size
+        .as_ref()
+        .ok_or_else(|| format!("frame {} exact pixels lack dimensions", expected.index))?;
+
+    let bytes = fs::read(manifest_dir.join(ref_path))
+        .map_err(|error| format!("frame {} reference unreadable: {error}", expected.index))?;
+    if bytes.len() != ref_bytes {
+        return Err(format!(
+            "frame {} reference length mismatch: actual {}, declared {}",
+            expected.index,
+            bytes.len(),
+            ref_bytes
+        ));
+    }
+    assert_sha256(
+        &bytes,
+        Some(ref_sha256),
+        &format!("frame {} pixels", expected.index),
+    )?;
+    let reference = PixelParityRef {
+        id: format!("{row_id} frame {}", expected.index),
+        bytes,
+        width: ref_size.first().copied(),
+        height: ref_size.get(1).copied(),
+        mode: Some(ref_mode.clone()),
+    };
+    assert_pixel_parity(&reference, &actual.image)
+        .map_err(|message| format!("frame {}: {message}", expected.index))
+}
+
+fn assert_sequence_reference_parity(
+    manifest_dir: &Path,
+    row_id: &str,
+    expected: &SequenceParityRef,
+    actual: &img::DecodedSequence,
+) -> Result<(), String> {
+    actual
+        .validate()
+        .map_err(|error| format!("decoded sequence validation failed: {error}"))?;
+    if !is_assertion_origin(&expected.canvas_origin) {
+        return Err(format!(
+            "sequence canvas origin is invalid: {}",
+            expected.canvas_origin
+        ));
+    }
+    if expected.canvas_size.as_slice() != [actual.width, actual.height] {
+        return Err(format!(
+            "sequence canvas mismatch: actual {}x{}, expected {:?}",
+            actual.width, actual.height, expected.canvas_size
+        ));
+    }
+    if !is_assertion_origin(&expected.loop_origin) {
+        return Err(format!(
+            "sequence loop origin is invalid: {}",
+            expected.loop_origin
+        ));
+    }
+    if actual.loop_count != expected.loop_count {
+        return Err(format!(
+            "loop count mismatch: actual {:?}, expected {:?}",
+            actual.loop_count, expected.loop_count
+        ));
+    }
+    let expected_background = expected_background(expected.background.as_ref())?;
+    if actual.background != expected_background {
+        return Err(format!(
+            "sequence background mismatch: actual {:?}, expected {:?}",
+            actual.background, expected_background
+        ));
+    }
+    if actual.frames.len() != expected.frames.len() {
+        return Err(format!(
+            "frame count mismatch: actual {}, expected {}",
+            actual.frames.len(),
+            expected.frames.len()
+        ));
+    }
+    for (index, (actual_frame, expected_frame)) in
+        actual.frames.iter().zip(&expected.frames).enumerate()
+    {
+        if expected_frame.index != index {
+            return Err(format!(
+                "frame evidence index mismatch: position {index}, declared {}",
+                expected_frame.index
+            ));
+        }
+        if !is_assertion_origin(&expected_frame.duration_origin)
+            || !is_assertion_origin(&expected_frame.source_origin)
+        {
+            return Err(format!(
+                "frame {} source origins are invalid: duration={}, source={}",
+                expected_frame.index, expected_frame.duration_origin, expected_frame.source_origin
+            ));
+        }
+        let expected_rect =
+            <[u32; 4]>::try_from(expected_frame.source_rect.as_slice()).map_err(|_| {
+                format!(
+                    "frame {} source rectangle must have four values",
+                    expected_frame.index
+                )
+            })?;
+        let actual_rect = actual_frame.source.rect;
+        if [
+            actual_rect.left,
+            actual_rect.top,
+            actual_rect.width,
+            actual_rect.height,
+        ] != expected_rect
+        {
+            return Err(format!(
+                "frame {} source rectangle mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_rect, expected_rect
+            ));
+        }
+        let expected_duration = img::FrameDuration {
+            numerator: expected_frame.duration_num,
+            denominator: expected_frame.duration_den,
+        };
+        if actual_frame.source.duration != expected_duration {
+            return Err(format!(
+                "frame {} exact duration mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.source.duration, expected_duration
+            ));
+        }
+        let expected_disposal = expected_frame_disposal(&expected_frame.disposal)?;
+        if actual_frame.source.disposal != expected_disposal {
+            return Err(format!(
+                "frame {} disposal mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.source.disposal, expected_disposal
+            ));
+        }
+        let expected_blend = expected_frame_blend(&expected_frame.blend)?;
+        if actual_frame.source.blend != expected_blend {
+            return Err(format!(
+                "frame {} blend mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.source.blend, expected_blend
+            ));
+        }
+        if actual_frame.source.interlaced != expected_frame.interlaced
+            || actual_frame.source.is_default_image != expected_frame.is_default_image
+        {
+            return Err(format!(
+                "frame {} storage flags mismatch: interlaced {} versus {}, default-image {} versus {}",
+                expected_frame.index,
+                actual_frame.source.interlaced,
+                expected_frame.interlaced,
+                actual_frame.source.is_default_image,
+                expected_frame.is_default_image
+            ));
+        }
+        let expected_layout = match expected_frame.pixel_layout.as_str() {
+            "source_rectangle" => img::FramePixelLayout::SourceRectangle,
+            "rendered_canvas" => img::FramePixelLayout::RenderedCanvas,
+            value => {
+                return Err(format!(
+                    "frame {} has unknown pixel layout {value}",
+                    expected_frame.index
+                ));
+            }
+        };
+        if actual_frame.pixel_layout != expected_layout {
+            return Err(format!(
+                "frame {} pixel layout mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.pixel_layout, expected_layout
+            ));
+        }
+        assert_sequence_frame_pixels(manifest_dir, row_id, expected_frame, actual_frame)?;
+    }
+    Ok(())
+}
+
 fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+    let operation = operation_status(&row.operations, "decode_sequence")?;
+    if row.rust_expect_sequence_error {
+        if operation != "error" {
+            return Err("Rust sequence-error row lacks an error operation contract".to_owned());
+        }
+        if row.ref_is_animated != Some(true)
+            || row
+                .ref_frame_count
+                .is_some_and(|frame_count| frame_count <= 1)
+        {
+            return Err(format!(
+                "Rust-only sequence error lacks multi-frame Pillow evidence: count {:?}, animated {:?}",
+                row.ref_frame_count, row.ref_is_animated
+            ));
+        }
+        if row
+            .rust_sequence_error_reason
+            .as_deref()
+            .unwrap_or_default()
+            .is_empty()
+        {
+            return Err("Rust-only sequence error lacks a contract reason".to_owned());
+        }
+        let expected_format = format_from_name(&row.format)
+            .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+        let actual = img::decode_sequence(data);
+        if result_matches_oracle(
+            &actual,
+            "error",
+            row.rust_sequence_error_kind.as_deref(),
+            expected_format,
+        ) && assert_result_error_contract(&actual, &row.error_contracts, "decode_sequence")
+            .is_ok()
+        {
+            return Ok(());
+        }
+        return Err(format!(
+            "sequence decode silently collapsed a Pillow-proven multi-frame source: {actual:?}"
+        ));
+    }
     if row.expect_sequence_error {
+        if operation != "error" {
+            return Err("sequence-error row lacks an error operation contract".to_owned());
+        }
         let expected_format = format_from_name(&row.format)
             .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
         let actual = img::decode_sequence(data);
@@ -1414,6 +2328,8 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
                 row.sequence_error_kind.as_deref(),
                 expected_format,
             )
+            && assert_result_error_contract(&actual, &row.error_contracts, "decode_sequence")
+                .is_ok()
         {
             return Ok(());
         }
@@ -1423,15 +2339,75 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
         ));
     }
     let Some(expected) = &row.sequence else {
+        let expected_format = format_from_name(&row.format)
+            .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+        let actual = img::decode_sequence(data);
+        if !result_has_status(&actual, operation) {
+            return Err(format!(
+                "decode_sequence violates operation contract {operation}: {actual:?}"
+            ));
+        }
+        assert_result_error_contract(&actual, &row.error_contracts, "decode_sequence")?;
+        if let Ok(decoded) = actual {
+            if decoded.format != expected_format {
+                return Err(format!(
+                    "sequence source format mismatch: actual {:?}, expected {expected_format:?}",
+                    decoded.format
+                ));
+            }
+            decoded
+                .content
+                .validate()
+                .map_err(|error| format!("decoded sequence validation failed: {error}"))?;
+        }
         return Ok(());
     };
-    let actual = img::decode_sequence(data)
-        .map_err(|error| format!("sequence decode failed: {error}"))?
-        .content;
+    if operation != "ok" {
+        return Err("successful sequence row lacks an ok operation contract".to_owned());
+    }
+    let expected_format = format_from_name(&row.format)
+        .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+    let decoded =
+        img::decode_sequence(data).map_err(|error| format!("sequence decode failed: {error}"))?;
+    if decoded.format != expected_format {
+        return Err(format!(
+            "sequence source format mismatch: actual {:?}, expected {expected_format:?}",
+            decoded.format
+        ));
+    }
+    let actual = decoded.content;
+    actual
+        .validate()
+        .map_err(|error| format!("decoded sequence validation failed: {error}"))?;
+    if !is_assertion_origin(&expected.canvas_origin) {
+        return Err(format!(
+            "sequence canvas origin is invalid: {}",
+            expected.canvas_origin
+        ));
+    }
+    if expected.canvas_size.as_slice() != [actual.width, actual.height] {
+        return Err(format!(
+            "sequence canvas mismatch: actual {}x{}, expected {:?}",
+            actual.width, actual.height, expected.canvas_size
+        ));
+    }
+    if !is_assertion_origin(&expected.loop_origin) {
+        return Err(format!(
+            "sequence loop origin is invalid: {}",
+            expected.loop_origin
+        ));
+    }
     if actual.loop_count != expected.loop_count {
         return Err(format!(
             "loop count mismatch: actual {:?}, expected {:?}",
             actual.loop_count, expected.loop_count
+        ));
+    }
+    let expected_background = expected_background(expected.background.as_ref())?;
+    if actual.background != expected_background {
+        return Err(format!(
+            "sequence background mismatch: actual {:?}, expected {:?}",
+            actual.background, expected_background
         ));
     }
     if actual.frames.len() != expected.frames.len() {
@@ -1441,36 +2417,96 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
             expected.frames.len()
         ));
     }
-    for (actual_frame, expected_frame) in actual.frames.iter().zip(&expected.frames) {
-        if actual_frame.duration_ms != expected_frame.duration_ms {
+    for (index, (actual_frame, expected_frame)) in
+        actual.frames.iter().zip(&expected.frames).enumerate()
+    {
+        if expected_frame.index != index {
             return Err(format!(
-                "frame {} duration mismatch: actual {}, expected {}",
-                expected_frame.index, actual_frame.duration_ms, expected_frame.duration_ms
-            ));
-        }
-        let bytes = fs::read(manifest_dir.join(&expected_frame.ref_path)).map_err(|error| {
-            format!(
-                "frame {} reference unreadable: {error}",
+                "frame evidence index mismatch: position {index}, declared {}",
                 expected_frame.index
-            )
-        })?;
-        if bytes.len() != expected_frame.ref_bytes {
-            return Err(format!(
-                "frame {} reference length mismatch: actual {}, declared {}",
-                expected_frame.index,
-                bytes.len(),
-                expected_frame.ref_bytes
             ));
         }
-        let reference = PixelParityRef {
-            id: format!("{} frame {}", row.id, expected_frame.index),
-            bytes,
-            width: expected_frame.ref_size.first().copied(),
-            height: expected_frame.ref_size.get(1).copied(),
-            mode: Some(expected_frame.ref_mode.clone()),
+        if !is_assertion_origin(&expected_frame.duration_origin)
+            || !is_assertion_origin(&expected_frame.source_origin)
+        {
+            return Err(format!(
+                "frame {} source origins are invalid: duration={}, source={}",
+                expected_frame.index, expected_frame.duration_origin, expected_frame.source_origin
+            ));
+        }
+        let expected_rect =
+            <[u32; 4]>::try_from(expected_frame.source_rect.as_slice()).map_err(|_| {
+                format!(
+                    "frame {} source rectangle must have four values",
+                    expected_frame.index
+                )
+            })?;
+        let actual_rect = actual_frame.source.rect;
+        if [
+            actual_rect.left,
+            actual_rect.top,
+            actual_rect.width,
+            actual_rect.height,
+        ] != expected_rect
+        {
+            return Err(format!(
+                "frame {} source rectangle mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_rect, expected_rect
+            ));
+        }
+        let expected_duration = img::FrameDuration {
+            numerator: expected_frame.duration_num,
+            denominator: expected_frame.duration_den,
         };
-        assert_pixel_parity(&reference, &actual_frame.image)
-            .map_err(|message| format!("frame {}: {message}", expected_frame.index))?;
+        if actual_frame.source.duration != expected_duration {
+            return Err(format!(
+                "frame {} exact duration mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.source.duration, expected_duration
+            ));
+        }
+        let expected_disposal = expected_frame_disposal(&expected_frame.disposal)?;
+        if actual_frame.source.disposal != expected_disposal {
+            return Err(format!(
+                "frame {} disposal mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.source.disposal, expected_disposal
+            ));
+        }
+        let expected_blend = expected_frame_blend(&expected_frame.blend)?;
+        if actual_frame.source.blend != expected_blend {
+            return Err(format!(
+                "frame {} blend mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.source.blend, expected_blend
+            ));
+        }
+        if actual_frame.source.interlaced != expected_frame.interlaced
+            || actual_frame.source.is_default_image != expected_frame.is_default_image
+        {
+            return Err(format!(
+                "frame {} storage flags mismatch: interlaced {} versus {}, default-image {} versus {}",
+                expected_frame.index,
+                actual_frame.source.interlaced,
+                expected_frame.interlaced,
+                actual_frame.source.is_default_image,
+                expected_frame.is_default_image
+            ));
+        }
+        let expected_layout = match expected_frame.pixel_layout.as_str() {
+            "source_rectangle" => img::FramePixelLayout::SourceRectangle,
+            "rendered_canvas" => img::FramePixelLayout::RenderedCanvas,
+            value => {
+                return Err(format!(
+                    "frame {} has unknown pixel layout {value}",
+                    expected_frame.index
+                ));
+            }
+        };
+        if actual_frame.pixel_layout != expected_layout {
+            return Err(format!(
+                "frame {} pixel layout mismatch: actual {:?}, expected {:?}",
+                expected_frame.index, actual_frame.pixel_layout, expected_layout
+            ));
+        }
+        assert_sequence_frame_pixels(manifest_dir, &row.id, expected_frame, actual_frame)?;
     }
     Ok(())
 }
@@ -1498,8 +2534,8 @@ fn error_matches_kind(
                 ..
             },
         ) => *actual == expected_format,
-        (Some("dimensions"), img::ImageError::Dimensions)
-        | (Some("parameter"), img::ImageError::Parameter(_)) => true,
+        (Some("dimensions"), img::ImageError::Dimensions { .. })
+        | (Some("parameter"), img::ImageError::Parameter { .. }) => true,
         _ => false,
     }
 }
@@ -1568,18 +2604,111 @@ fn test_decode_matrix() {
                     continue;
                 }
             };
+            if let Err(message) = assert_execution_contract(row.execution.as_ref())
+                .and_then(|()| assert_sha256(&data, row.asset_sha256.as_deref(), "decode asset"))
+                .and_then(|()| {
+                    assert_origins(
+                        &row.assertion_origins,
+                        &["detection", "inspection", "verification", "decode"],
+                    )
+                })
+                .and_then(|()| {
+                    assert_operation_contract(
+                        &row.operations,
+                        &["detect", "inspect", "verify", "decode", "decode_sequence"],
+                    )
+                })
+                .and_then(|()| {
+                    assert_error_contracts(&row.operations, &row.error_contracts, fmt_name)
+                })
+            {
+                eprintln!("  FAIL [{}]: {message}", row.id);
+                failed += 1;
+                continue;
+            }
 
             let expected_format = require_some(
                 format_from_name(fmt_name),
                 "manifest format must be supported",
             );
+            let expected_verification_scope = match row.verification_scope.as_str() {
+                "header_only" => img::VerificationScope::HeaderOnly,
+                "structure" => img::VerificationScope::Structure,
+                other => {
+                    eprintln!("  FAIL [{}]: unknown verification scope {other:?}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            };
+            if expected_format.verification_scope() != expected_verification_scope {
+                eprintln!(
+                    "  FAIL [{}]: format verification capability differs from the manifest",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
+            let expected_cursor_hotspot = match row.inspect_cursor_hotspot.as_deref() {
+                None => None,
+                Some([x, y]) => Some(img::CursorHotspot { x: *x, y: *y }),
+                Some(other) => {
+                    eprintln!(
+                        "  FAIL [{}]: invalid cursor hotspot evidence {other:?}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            };
+            if (row.inspect_container_format.as_deref() == Some("CUR"))
+                != expected_cursor_hotspot.is_some()
+            {
+                eprintln!(
+                    "  FAIL [{}]: CUR identity and hotspot evidence disagree",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
+            let expected_bit_depth = match (
+                row.inspect_status.as_str(),
+                row.ref_bit_depth,
+                row.ref_bit_depth_origin.as_deref(),
+            ) {
+                (
+                    "ok",
+                    Some(bit_depth),
+                    Some(
+                        "pillow_fixture"
+                        | "specification_reference"
+                        | "independent_implementation"
+                        | "defensive_model",
+                    ),
+                ) => Some(bit_depth),
+                ("error", None, None) => None,
+                _ => {
+                    eprintln!(
+                        "  FAIL [{}]: invalid inspect bit-depth evidence {:?} from {:?}",
+                        row.id, row.ref_bit_depth, row.ref_bit_depth_origin
+                    );
+                    failed += 1;
+                    continue;
+                }
+            };
             let detected = img::detect_format(&data);
+            let detect_status = require_ok(
+                operation_status(&row.operations, "detect"),
+                "detect operation status",
+            );
             let detection_matches_oracle = if row.oracle_detects_format {
                 detected == Ok(expected_format)
             } else {
                 detected == Err(img::ImageError::UnknownFormat)
             };
-            if !detection_matches_oracle {
+            if !detection_matches_oracle
+                || !result_has_status(&detected, detect_status)
+                || assert_result_error_contract(&detected, &row.error_contracts, "detect").is_err()
+            {
                 eprintln!(
                     "  FAIL [{}]: detection result does not match Pillow ({detected:?})",
                     row.id
@@ -1589,12 +2718,19 @@ fn test_decode_matrix() {
             }
 
             let inspected = img::inspect(&data);
+            let inspect_operation_status = require_ok(
+                operation_status(&row.operations, "inspect"),
+                "inspect operation status",
+            );
             if !result_matches_oracle(
                 &inspected,
                 &row.inspect_status,
                 row.inspect_error_kind.as_deref(),
                 expected_format,
-            ) {
+            ) || !result_has_status(&inspected, inspect_operation_status)
+                || assert_result_error_contract(&inspected, &row.error_contracts, "inspect")
+                    .is_err()
+            {
                 eprintln!(
                     "  FAIL [{}]: inspect result does not match Pillow ({:?} versus {} {:?}: {:?})",
                     row.id,
@@ -1608,8 +2744,20 @@ fn test_decode_matrix() {
             }
 
             let decoded = img::decode(&data);
+            let decode_operation_status = require_ok(
+                operation_status(&row.operations, "decode"),
+                "decode operation status",
+            );
             let verify_result =
                 img::EncodedImage::new(Arc::<[u8]>::from(data.clone())).and_then(|source| {
+                    if source.verification_scope() != expected_verification_scope {
+                        return Err(img::ImageError::Parameter {
+                            format: Some(expected_format),
+                            message:
+                                "encoded source verification capability differs from the manifest"
+                                    .to_owned(),
+                        });
+                    }
                     let result = source.verify();
                     assert!(
                         !source.is_decoded(),
@@ -1623,7 +2771,15 @@ fn test_decode_matrix() {
                 row.verify_error_kind.as_deref(),
                 expected_format,
             );
-            if !verify_matches_oracle {
+            let verify_operation_status = require_ok(
+                operation_status(&row.operations, "verify"),
+                "verify operation status",
+            );
+            if !verify_matches_oracle
+                || !result_has_status(&verify_result, verify_operation_status)
+                || assert_result_error_contract(&verify_result, &row.error_contracts, "verify")
+                    .is_err()
+            {
                 eprintln!(
                     "  FAIL [{}]: verify result does not match Pillow ({:?} versus {} {:?}: {:?})",
                     row.id,
@@ -1631,6 +2787,16 @@ fn test_decode_matrix() {
                     row.verify_status,
                     row.verify_error_type,
                     row.verify_error_message
+                );
+                failed += 1;
+                continue;
+            }
+            if !result_has_status(&decoded, decode_operation_status)
+                || assert_result_error_contract(&decoded, &row.error_contracts, "decode").is_err()
+            {
+                eprintln!(
+                    "  FAIL [{}]: decode result violates its operation contract",
+                    row.id
                 );
                 failed += 1;
                 continue;
@@ -1647,15 +2813,20 @@ fn test_decode_matrix() {
                     failed += 1;
                     continue;
                 }
-                let sequence_rejected = match fmt_name.as_str() {
-                    "gif" | "webp" | "avif" => result_matches_oracle(
-                        &img::decode_sequence(&data),
-                        "error",
-                        row.oracle_error_kind.as_deref(),
-                        expected_format,
-                    ),
-                    _ => true,
-                };
+                let sequence_result = img::decode_sequence(&data);
+                let sequence_rejected = result_matches_oracle(
+                    &sequence_result,
+                    "error",
+                    row.oracle_error_kind.as_deref(),
+                    expected_format,
+                ) && operation_status(&row.operations, "decode_sequence")
+                    == Ok("error")
+                    && assert_result_error_contract(
+                        &sequence_result,
+                        &row.error_contracts,
+                        "decode_sequence",
+                    )
+                    .is_ok();
                 let structured_error = result_matches_oracle(
                     &decoded,
                     "error",
@@ -1831,18 +3002,42 @@ fn test_decode_matrix() {
                 let expected_is_animated = row
                     .ref_is_animated
                     .unwrap_or(row.ref_frame_count.is_some_and(|count| count > 1));
+                if let Err(message) = assert_palette_parity(
+                    manifest_dir,
+                    row.inspect_palette.as_ref(),
+                    info.mode,
+                    info.palette.as_ref(),
+                    "inspect",
+                )
+                .and_then(|()| {
+                    assert_palette_parity(
+                        manifest_dir,
+                        row.decoded_palette.as_ref(),
+                        decoded.mode,
+                        decoded.palette.as_ref(),
+                        "decoded",
+                    )
+                }) {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
                 if info.format != expected_format
                     || Some(info.width)
                         != row.ref_size.as_ref().and_then(|size| size.first()).copied()
                     || Some(info.height)
                         != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
                     || Some(info.mode) != expected_mode
+                    || Some(u32::from(info.bit_depth)) != expected_bit_depth
                     || (matches!(fmt_name.as_str(), "png" | "bmp" | "tiff" | "ico")
                         && info.palette != decoded.palette)
                     || (fmt_name == "gif" && info.palette.is_some() != decoded.palette.is_some())
-                    || info.has_palette() != (decoded.mode == img::ImageMode::P8)
+                    || info.is_indexed() != (decoded.mode == img::ImageMode::P8)
+                    || info.has_palette_table() != info.palette.is_some()
                     || info.frame_count != row.ref_frame_count
                     || info.is_animated != expected_is_animated
+                    || info.cursor_hotspot != expected_cursor_hotspot
+                    || decoded.cursor_hotspot != expected_cursor_hotspot
                 {
                     eprintln!(
                         "  FAIL [{}]: metadata {:?} differs from Pillow mode/size/frame and decoded palette",
@@ -1881,6 +3076,13 @@ fn test_decode_matrix() {
                 failed += 1;
                 continue;
             };
+            if let Err(message) =
+                assert_sha256(&expected.bytes, row.ref_sha256.as_deref(), "decoded pixels")
+            {
+                eprintln!("  FAIL [{}]: {message}", row.id);
+                failed += 1;
+                continue;
+            }
 
             match assert_pixel_parity(&expected, &decoded)
                 .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
@@ -1990,6 +3192,30 @@ fn test_encode_matrix() {
                     "encode source asset must be readable",
                 ));
             }
+            let source_bytes = require_some(
+                asset_cache.get(&asset_path),
+                "encode source must be cached before provenance validation",
+            );
+            if let Err(message) = assert_execution_contract(row.execution.as_ref())
+                .and_then(|()| {
+                    assert_sha256(
+                        source_bytes,
+                        row.source_sha256.as_deref(),
+                        "encode source asset",
+                    )
+                })
+                .and_then(|()| assert_origins(&row.assertion_origins, &["source", "encode"]))
+                .and_then(|()| {
+                    assert_operation_contract(&row.operations, &["encode", "encode_sequence"])
+                })
+                .and_then(|()| {
+                    assert_error_contracts(&row.operations, &row.error_contracts, fmt_name)
+                })
+            {
+                eprintln!("  FAIL [{}]: {message}", row.id);
+                failed += 1;
+                continue;
+            }
 
             if let Entry::Vacant(entry) = decoded_cache.entry(asset_path.clone()) {
                 let asset_data = require_some(
@@ -2011,13 +3237,43 @@ fn test_encode_matrix() {
                 decoded_cache.get(&asset_path),
                 "decoded source must be cached before encode",
             );
+            let expected_source_mode = require_some(
+                expected_image_mode(&row.source_mode),
+                "encode source_mode must name a public ImageMode",
+            );
+            if cached_decoded.first().map(|image| image.mode) != Some(expected_source_mode) {
+                eprintln!(
+                    "  FAIL [{}]: Rust source mode {:?} differs from Pillow source mode {}",
+                    row.id,
+                    cached_decoded.first().map(|image| image.mode),
+                    row.source_mode
+                );
+                failed += 1;
+                continue;
+            }
             let mut decoded_owned = row
                 .params
                 .keys()
                 .any(|key| {
                     matches!(
                         key.as_str(),
-                        "second_frame_mode" | "oversized_palette" | "palette_on_nonindexed"
+                        "second_frame_mode"
+                            | "oversized_palette"
+                            | "palette_on_nonindexed"
+                            | "sequence_canvas_padding"
+                            | "sequence_frame_offset"
+                            | "sequence_duration_ms"
+                            | "sequence_duration_fraction"
+                            | "sequence_disposal"
+                            | "sequence_blend"
+                            | "sequence_interlaced"
+                            | "sequence_default_image"
+                            | "sequence_pixel_layout"
+                            | "sequence_loop_count"
+                            | "sequence_clear_loop"
+                            | "sequence_background_rgba"
+                            | "sequence_background_palette"
+                            | "sequence_clear_background"
                     )
                 })
                 .then(|| cached_decoded.clone());
@@ -2074,6 +3330,209 @@ fn test_encode_matrix() {
                     alpha: Vec::new(),
                 });
             }
+            if let Some(decoded) = decoded_owned.as_mut() {
+                let geometry_modified = row.params.contains_key("sequence_canvas_padding")
+                    || row.params.contains_key("sequence_frame_offset");
+                if let Some(padding) = row
+                    .params
+                    .get("sequence_canvas_padding")
+                    .and_then(Value::as_array)
+                {
+                    let horizontal = require_ok(
+                        u32::try_from(require_some(
+                            padding.first().and_then(Value::as_u64),
+                            "sequence canvas horizontal padding must be unsigned",
+                        )),
+                        "sequence canvas horizontal padding must fit u32",
+                    );
+                    let vertical = require_ok(
+                        u32::try_from(require_some(
+                            padding.get(1).and_then(Value::as_u64),
+                            "sequence canvas vertical padding must be unsigned",
+                        )),
+                        "sequence canvas vertical padding must fit u32",
+                    );
+                    decoded.width = require_some(
+                        decoded.width.checked_add(horizontal),
+                        "sequence canvas width must not overflow",
+                    );
+                    decoded.height = require_some(
+                        decoded.height.checked_add(vertical),
+                        "sequence canvas height must not overflow",
+                    );
+                }
+                if geometry_modified {
+                    for retained_frame in &mut decoded.frames {
+                        retained_frame.pixel_layout = img::FramePixelLayout::SourceRectangle;
+                        retained_frame.source.rect.width = retained_frame.image.width;
+                        retained_frame.source.rect.height = retained_frame.image.height;
+                    }
+                }
+                let frame = require_some(
+                    decoded.frames.first_mut(),
+                    "sequence transform requires a first frame",
+                );
+                if let Some(offset) = row
+                    .params
+                    .get("sequence_frame_offset")
+                    .and_then(Value::as_array)
+                {
+                    frame.source.rect.left = require_ok(
+                        u32::try_from(require_some(
+                            offset.first().and_then(Value::as_u64),
+                            "sequence frame left offset must be unsigned",
+                        )),
+                        "sequence frame left offset must fit u32",
+                    );
+                    frame.source.rect.top = require_ok(
+                        u32::try_from(require_some(
+                            offset.get(1).and_then(Value::as_u64),
+                            "sequence frame top offset must be unsigned",
+                        )),
+                        "sequence frame top offset must fit u32",
+                    );
+                }
+                if let Some(pixel_layout) = row
+                    .params
+                    .get("sequence_pixel_layout")
+                    .and_then(Value::as_str)
+                {
+                    frame.pixel_layout = match pixel_layout {
+                        "source_rectangle" => img::FramePixelLayout::SourceRectangle,
+                        "rendered_canvas" => img::FramePixelLayout::RenderedCanvas,
+                        _ => panic!("unknown manifest sequence pixel layout"),
+                    };
+                }
+                if let Some(duration) = row
+                    .params
+                    .get("sequence_duration_ms")
+                    .and_then(Value::as_u64)
+                {
+                    frame.source.duration = img::FrameDuration::from_milliseconds(require_ok(
+                        u32::try_from(duration),
+                        "sequence duration must fit u32",
+                    ));
+                }
+                if let Some(duration) = row
+                    .params
+                    .get("sequence_duration_fraction")
+                    .and_then(Value::as_array)
+                {
+                    frame.source.duration = img::FrameDuration {
+                        numerator: require_some(
+                            duration.first().and_then(Value::as_u64),
+                            "sequence duration numerator must be unsigned",
+                        ),
+                        denominator: require_some(
+                            duration.get(1).and_then(Value::as_u64),
+                            "sequence duration denominator must be unsigned",
+                        ),
+                    };
+                }
+                if let Some(disposal) = row.params.get("sequence_disposal").and_then(Value::as_str)
+                {
+                    frame.source.disposal = match disposal {
+                        "unspecified" => img::FrameDisposal::Unspecified,
+                        "keep" => img::FrameDisposal::Keep,
+                        "background" => img::FrameDisposal::Background,
+                        "previous" => img::FrameDisposal::Previous,
+                        value if value.starts_with("reserved:") => {
+                            img::FrameDisposal::Reserved(require_ok(
+                                value["reserved:".len()..].parse::<u8>(),
+                                "reserved sequence disposal must contain a u8",
+                            ))
+                        }
+                        _ => panic!("unknown manifest sequence disposal"),
+                    };
+                }
+                if let Some(blend) = row.params.get("sequence_blend").and_then(Value::as_str) {
+                    frame.source.blend = match blend {
+                        "unspecified" => img::FrameBlend::Unspecified,
+                        "source" => img::FrameBlend::Source,
+                        "over" => img::FrameBlend::Over,
+                        value if value.starts_with("reserved:") => {
+                            img::FrameBlend::Reserved(require_ok(
+                                value["reserved:".len()..].parse::<u8>(),
+                                "reserved sequence blend must contain a u8",
+                            ))
+                        }
+                        _ => panic!("unknown manifest sequence blend"),
+                    };
+                }
+                if let Some(interlaced) = row
+                    .params
+                    .get("sequence_interlaced")
+                    .and_then(Value::as_bool)
+                {
+                    frame.source.interlaced = interlaced;
+                }
+                if let Some(is_default_image) = row
+                    .params
+                    .get("sequence_default_image")
+                    .and_then(Value::as_bool)
+                {
+                    frame.source.is_default_image = is_default_image;
+                }
+                if let Some(loop_count) = row
+                    .params
+                    .get("sequence_loop_count")
+                    .and_then(Value::as_u64)
+                {
+                    decoded.loop_count = Some(require_ok(
+                        u32::try_from(loop_count),
+                        "sequence loop count must fit u32",
+                    ));
+                }
+                if row
+                    .params
+                    .get("sequence_clear_loop")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                {
+                    decoded.loop_count = None;
+                }
+                if let Some(background) = row
+                    .params
+                    .get("sequence_background_rgba")
+                    .and_then(Value::as_array)
+                {
+                    let channels = require_ok(
+                        background
+                            .iter()
+                            .map(|value| {
+                                u8::try_from(require_some(
+                                    value.as_u64(),
+                                    "sequence background channels must be unsigned",
+                                ))
+                            })
+                            .collect::<Result<Vec<_>, _>>(),
+                        "sequence background channels must fit u8",
+                    );
+                    let rgba = require_ok(
+                        <[u8; 4]>::try_from(channels),
+                        "sequence background must contain four u8 channels",
+                    );
+                    decoded.background = Some(img::AnimationBackground::Rgba(rgba));
+                }
+                if let Some(index) = row
+                    .params
+                    .get("sequence_background_palette")
+                    .and_then(Value::as_u64)
+                {
+                    decoded.background = Some(img::AnimationBackground::PaletteIndex(require_ok(
+                        u8::try_from(index),
+                        "sequence palette background must fit u8",
+                    )));
+                }
+                if row
+                    .params
+                    .get("sequence_clear_background")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                {
+                    decoded.background = None;
+                }
+            }
             let decoded = decoded_owned.as_ref().unwrap_or(cached_decoded);
 
             // Build encode options from row params
@@ -2125,6 +3584,91 @@ fn test_encode_matrix() {
                 }
             };
 
+            if let Some(mode_values) = row
+                .params
+                .get("rust_unsupported_modes")
+                .and_then(Value::as_array)
+            {
+                let base = require_some(
+                    decoded.first(),
+                    "public-mode contract requires a decoded fixture frame",
+                );
+                let mut contract_failures = Vec::new();
+                for value in mode_values {
+                    let name = require_some(
+                        value.as_str(),
+                        "public-mode contract entries must be strings",
+                    );
+                    let mode = require_some(
+                        expected_image_mode(name),
+                        "public-mode contract entry must name an ImageMode",
+                    );
+                    let image = require_ok(
+                        zero_image_for_mode(base.width, base.height, mode),
+                        "public-mode contract image must be constructible",
+                    );
+                    let result = img::encode(&image, format, &opts);
+                    if !matches!(
+                        result,
+                        Err(img::ImageError::Unsupported {
+                            format: Some(actual),
+                            ..
+                        }) if actual == format
+                    ) {
+                        contract_failures.push(format!("{name}: {result:?}"));
+                    }
+                }
+                if row
+                    .params
+                    .get("rust_invalid_color_mode")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                {
+                    let mut invalid = require_ok(
+                        zero_image_for_mode(base.width, base.height, img::ImageMode::L8),
+                        "invalid-state contract image must be constructible",
+                    );
+                    invalid.color = img::ColorType::Rgb8;
+                    let result = img::encode(&invalid, format, &opts);
+                    if !matches!(result, Err(img::ImageError::Parameter { .. })) {
+                        contract_failures.push(format!("inconsistent color/mode: {result:?}"));
+                    }
+                }
+                let fixture_has_oracle_success = row.rust_expect_error
+                    && row.rust_error_kind.as_deref() == Some("unsupported")
+                    && row.oracle_status.as_deref() == Some("ok")
+                    && row
+                        .encoded_ref_path
+                        .as_deref()
+                        .is_some_and(|path| manifest_dir.join(path).is_file());
+                let operation_contract_matches = operation_status(&row.operations, "encode")
+                    == Ok("error")
+                    && operation_status(&row.operations, "encode_sequence") == Ok("not_applicable");
+                if contract_failures.is_empty()
+                    && fixture_has_oracle_success
+                    && operation_contract_matches
+                {
+                    eprintln!(
+                        "  OK   [{}] all public unsupported modes and invalid state returned structured errors",
+                        row.id
+                    );
+                    passed += 1;
+                } else {
+                    eprintln!(
+                        "  FAIL [{}]: public mode contract diverged: {}; fixture evidence={fixture_has_oracle_success}",
+                        row.id,
+                        contract_failures.join("; ")
+                    );
+                    failed += 1;
+                }
+                continue;
+            }
+
+            let direct_still = row
+                .params
+                .get("truncate_pixels")
+                .is_some_and(|v| v.as_bool().unwrap_or(false))
+                || row.params.contains_key("source_dimensions");
             let encoded = if row
                 .params
                 .get("truncate_pixels")
@@ -2161,6 +3705,66 @@ fn test_encode_matrix() {
             } else {
                 img::encode_sequence(decoded, format, &opts)
             };
+            let operation = if direct_still {
+                "encode"
+            } else {
+                "encode_sequence"
+            };
+            let expected_operation_status = require_ok(
+                operation_status(&row.operations, operation),
+                "encode operation status",
+            );
+            if !result_has_status(&encoded, expected_operation_status) {
+                eprintln!(
+                    "  FAIL [{}]: {operation} result violates operation contract {expected_operation_status}",
+                    row.id
+                );
+                failed += 1;
+                continue;
+            }
+            if let Err(message) =
+                assert_result_error_contract(&encoded, &row.error_contracts, operation)
+            {
+                eprintln!("  FAIL [{}]: {message}", row.id);
+                failed += 1;
+                continue;
+            }
+            if row.rust_expect_error {
+                let fixture_has_oracle_success = row.oracle_status.as_deref() == Some("ok")
+                    && row
+                        .encoded_ref_path
+                        .as_deref()
+                        .is_some_and(|value| !value.is_empty())
+                    && row
+                        .ref_path
+                        .as_deref()
+                        .is_some_and(|value| !value.is_empty());
+                if fixture_has_oracle_success
+                    && result_matches_oracle(
+                        &encoded,
+                        "error",
+                        row.rust_error_kind.as_deref(),
+                        format,
+                    )
+                {
+                    eprintln!(
+                        "  OK   [{}] rejected retained sequence semantics: {}",
+                        row.id,
+                        row.rust_error_reason.as_deref().unwrap_or("unspecified")
+                    );
+                    passed += 1;
+                } else {
+                    eprintln!(
+                        "  FAIL [{}]: Rust contract error mismatch (encoded_ok={}, oracle_status={:?}, expected={:?})",
+                        row.id,
+                        encoded.is_ok(),
+                        row.oracle_status,
+                        row.rust_error_kind
+                    );
+                    failed += 1;
+                }
+                continue;
+            }
             if row.expect_error {
                 let fixture_has_oracle_error = row.oracle_status.as_deref() == Some("error")
                     && row
@@ -2202,6 +3806,14 @@ fn test_encode_matrix() {
                 }
             };
             if decoded.frames.len() == 1 {
+                if operation_status(&row.operations, "encode") != Ok("ok") {
+                    eprintln!(
+                        "  FAIL [{}]: one-frame success lacks still encode capability",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
                 match img::encode(
                     require_some(decoded.first(), "encoded sequence must have a first frame"),
                     format,
@@ -2222,6 +3834,13 @@ fn test_encode_matrix() {
                         continue;
                     }
                 }
+            } else if operation_status(&row.operations, "encode") != Ok("not_applicable") {
+                eprintln!(
+                    "  FAIL [{}]: multi-frame row must mark still encode not applicable",
+                    row.id
+                );
+                failed += 1;
+                continue;
             }
 
             if let Err(message) = assert_encoded_contract(fmt_name, &row.params, &encoded) {
@@ -2257,10 +3876,51 @@ fn test_encode_matrix() {
                 failed += 1;
                 continue;
             }
+            if let Err(message) = assert_sha256(
+                &expected_encoded,
+                row.encoded_ref_sha256.as_deref(),
+                "encoded-byte reference",
+            ) {
+                eprintln!("  FAIL [{}]: {message}", row.id);
+                failed += 1;
+                continue;
+            }
             if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &encoded) {
                 eprintln!("  FAIL [{}]: {message}", row.id);
                 failed += 1;
                 continue;
+            }
+            if let Some(expected_sequence) = &row.sequence {
+                match img::decode_sequence(&encoded) {
+                    Ok(decoded) => {
+                        let parity = if decoded.format == format {
+                            assert_sequence_reference_parity(
+                                manifest_dir,
+                                &row.id,
+                                expected_sequence,
+                                &decoded.content,
+                            )
+                        } else {
+                            Err(format!(
+                                "sequence format {:?} differs from {format:?}",
+                                decoded.format
+                            ))
+                        };
+                        if let Err(detail) = parity {
+                            eprintln!("  FAIL [{}]: encoded sequence parity: {detail}", row.id);
+                            failed += 1;
+                            continue;
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: encoded sequence decode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                }
             }
             if row.params.get("encoded_only").and_then(Value::as_bool) == Some(true) {
                 eprintln!(
@@ -2287,6 +3947,15 @@ fn test_encode_matrix() {
                             (row.ref_size.as_deref(), row.ref_mode.as_deref()),
                         )
                     }) {
+                        if let Err(message) = assert_sha256(
+                            &expected.bytes,
+                            row.ref_sha256.as_deref(),
+                            "encode roundtrip pixels",
+                        ) {
+                            eprintln!("  FAIL [{}]: {message}", row.id);
+                            failed += 1;
+                            continue;
+                        }
                         match assert_pixel_parity(&expected, &redecoded) {
                             Ok(()) => {
                                 eprintln!(

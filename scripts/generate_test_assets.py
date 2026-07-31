@@ -181,6 +181,51 @@ def png_chunk(kind, payload):
     )
 
 
+def png_chunks(data):
+    """Return every complete PNG chunk as ``(kind, payload)``."""
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("invalid PNG signature")
+    chunks = []
+    position = 8
+    while position < len(data):
+        if position + 12 > len(data):
+            raise ValueError("truncated PNG chunk")
+        length = struct.unpack_from(">I", data, position)[0]
+        end = position + 12 + length
+        if end > len(data):
+            raise ValueError("truncated PNG chunk")
+        kind = data[position + 4 : position + 8]
+        payload = data[position + 8 : position + 8 + length]
+        chunks.append((kind, payload))
+        position = end
+        if kind == b"IEND":
+            break
+    return chunks
+
+
+def rebuild_png(chunks):
+    """Serialize PNG chunks with fresh CRCs."""
+    return b"\x89PNG\r\n\x1a\n" + b"".join(
+        png_chunk(kind, payload) for kind, payload in chunks
+    )
+
+
+def mutate_png_chunk(data, kind, occurrence, mutate):
+    """Mutate one PNG chunk payload and recompute every chunk CRC."""
+    chunks = png_chunks(data)
+    seen = 0
+    for index, (chunk_kind, payload) in enumerate(chunks):
+        if chunk_kind != kind:
+            continue
+        if seen == occurrence:
+            mutable = bytearray(payload)
+            mutate(mutable)
+            chunks[index] = (chunk_kind, bytes(mutable))
+            return rebuild_png(chunks)
+        seen += 1
+    raise ValueError(f"PNG chunk {kind!r} occurrence {occurrence} not found")
+
+
 def deflate_bits(fields):
     """Pack ``(value, width)`` DEFLATE fields in least-significant-bit order."""
     output = bytearray()
@@ -870,6 +915,11 @@ def gen_png():
     gif_rgba_octree_sorted.save(d / "gif_rgba_octree_sorted.png")
     img.convert("L").save(d / "gray.png")
     img.convert("LA").save(d / "gray_alpha.png")
+    # Minimal non-opaque LA input: large gradient fixtures exercise unrelated
+    # VP8/VP8L optimizer choices, while this row exists to prove the LA→RGBA
+    # transfer contract and alpha-bearing branch exactly.
+    gray_alpha_partial = Image.new("LA", (1, 1), (17, 128))
+    gray_alpha_partial.save(d / "gray_alpha_partial.png")
     img.convert("P").save(d / "indexed.png")
     indexed_alpha = img.convert("RGBA")
     indexed_alpha.putalpha(pattern_img("L"))
@@ -969,6 +1019,377 @@ def gen_png():
     img.save(d / "apng_static.png")
     img2 = pattern_img("RGB").transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     img.save(d / "apng_animated.png", save_all=True, append_images=[img2], duration=100, loop=0)
+
+    # Pillow does not expose APNG interlace encoding and Pillow 12.2 cannot
+    # load an Adam7 fdAT frame. Assemble a valid one-frame APNG so sequence
+    # parity still proves the APNG-controlled IDAT path through Adam7; fdAT
+    # extraction is covered independently by the non-interlaced families.
+    with tempfile.TemporaryDirectory(prefix="image-star-apng-") as temporary:
+        temporary = Path(temporary)
+        first_path = temporary / "first.png"
+        first = pattern_img("RGB", (9, 7))
+        write_rgb_png(first_path, first, interlace=True)
+        first_chunks = png_chunks(first_path.read_bytes())
+    ihdr = next(payload for kind, payload in first_chunks if kind == b"IHDR")
+    first_idat = next(payload for kind, payload in first_chunks if kind == b"IDAT")
+    first_control = struct.pack(">IIIIIHHBB", 0, 9, 7, 0, 0, 1, 10, 0, 0)
+    (d / "apng_adam7.png").write_bytes(
+        rebuild_png(
+            [
+                (b"IHDR", ihdr),
+                (b"acTL", struct.pack(">II", 1, 1)),
+                (b"fcTL", first_control),
+                (b"IDAT", first_idat),
+                (b"IEND", b""),
+            ]
+        )
+    )
+
+    apng_base = Image.new("RGBA", (4, 4), (220, 20, 10, 255))
+    apng_over = apng_base.copy()
+    apng_over.putpixel((1, 1), (10, 240, 20, 128))
+    apng_previous = apng_over.copy()
+    for y in range(1, 3):
+        for x in range(1, 3):
+            apng_previous.putpixel((x, y), (20, 30, 240, 192))
+    apng_base.save(
+        d / "apng_rgba_controls.png",
+        save_all=True,
+        append_images=[apng_over, apng_previous],
+        duration=[10, 20, 30],
+        disposal=[0, 1, 2],
+        blend=[0, 1, 0],
+        loop=2,
+    )
+
+    apng_default = Image.new("RGBA", (4, 4), (12, 34, 56, 255))
+    apng_first = Image.new("RGBA", (4, 4), (200, 10, 40, 160))
+    apng_second = Image.new("RGBA", (4, 4), (20, 210, 70, 255))
+    apng_default.save(
+        d / "apng_default_image.png",
+        save_all=True,
+        append_images=[apng_first, apng_second],
+        default_image=True,
+        duration=[20, 30],
+        disposal=[1, 2],
+        blend=[1, 0],
+        loop=3,
+    )
+
+    apng_l1_base = Image.new("1", (8, 2))
+    apng_l1_base.putpixel((0, 0), 1)
+    apng_l1_middle = apng_l1_base.copy()
+    apng_l1_middle.putpixel((2, 1), 1)
+    apng_l1_final = apng_l1_middle.copy()
+    apng_l1_final.putpixel((7, 0), 1)
+    apng_l1_base.save(
+        d / "apng_l1_controls.png",
+        save_all=True,
+        append_images=[apng_l1_middle, apng_l1_final],
+        duration=[10, 20, 30],
+        disposal=[0, 0, 0],
+        blend=[0, 0, 0],
+        loop=1,
+    )
+    (d / "apng_l1_controls.png").write_bytes(
+        mutate_png_chunk(
+            (d / "apng_l1_controls.png").read_bytes(),
+            b"fcTL",
+            1,
+            lambda payload: payload.__setitem__(24, 1),
+        )
+    )
+
+    apng_la_base = Image.new("LA", (4, 4), (100, 255))
+    apng_la_over = apng_la_base.copy()
+    apng_la_over.putpixel((1, 1), (200, 128))
+    apng_la_base.save(
+        d / "apng_la_over.png",
+        save_all=True,
+        append_images=[apng_la_over],
+        duration=[10, 20],
+        disposal=[0, 1],
+        blend=[0, 1],
+        loop=1,
+    )
+
+    apng_l_base = Image.new("L", (4, 4), 50)
+    apng_l_over = apng_l_base.copy()
+    apng_l_over.putpixel((1, 1), 200)
+    apng_l_base.save(
+        d / "apng_l_over.png",
+        save_all=True,
+        append_images=[apng_l_over],
+        duration=[10, 20],
+        disposal=[0, 1],
+        blend=[0, 1],
+        loop=1,
+    )
+
+    apng_p_base = Image.new("P", (4, 4), 2)
+    apng_palette = [0, 0, 0, 255, 0, 0, 0, 255, 0] + [0, 0, 0] * 253
+    apng_p_base.putpalette(apng_palette)
+    apng_p_base.info["transparency"] = bytes([0, 128, 255])
+    apng_p_over = apng_p_base.copy()
+    apng_p_over.putpixel((1, 1), 1)
+    apng_p_base.save(
+        d / "apng_palette_over.png",
+        save_all=True,
+        append_images=[apng_p_over],
+        duration=[10, 20],
+        disposal=[0, 1],
+        blend=[0, 1],
+        loop=1,
+    )
+
+    animated = (d / "apng_animated.png").read_bytes()
+    controls = (d / "apng_rgba_controls.png").read_bytes()
+    (d / "apng_zero_delay_den.png").write_bytes(
+        mutate_png_chunk(
+            controls,
+            b"fcTL",
+            1,
+            lambda payload: payload.__setitem__(slice(22, 24), b"\0\0"),
+        )
+    )
+    (d / "apng_bad_first_sequence.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            0,
+            lambda payload: payload.__setitem__(slice(0, 4), struct.pack(">I", 1)),
+        )
+    )
+    (d / "apng_gap_sequence.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fdAT",
+            0,
+            lambda payload: payload.__setitem__(
+                slice(0, 4), struct.pack(">I", struct.unpack(">I", payload[:4])[0] + 1)
+            ),
+        )
+    )
+    (d / "apng_duplicate_sequence.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fdAT",
+            0,
+            lambda payload: payload.__setitem__(
+                slice(0, 4), struct.pack(">I", struct.unpack(">I", payload[:4])[0] - 1)
+            ),
+        )
+    )
+    (d / "apng_frame_outside_canvas.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            1,
+            lambda payload: payload.__setitem__(slice(12, 16), struct.pack(">I", 1)),
+        )
+    )
+    (d / "apng_declared_frame_mismatch.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"acTL",
+            0,
+            lambda payload: payload.__setitem__(slice(0, 4), struct.pack(">I", 3)),
+        )
+    )
+    (d / "apng_short_fctl.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            1,
+            lambda payload: payload.__delitem__(slice(25, 26)),
+        )
+    )
+    (d / "apng_short_fdat.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fdAT",
+            0,
+            lambda payload: payload.__delitem__(slice(3, None)),
+        )
+    )
+    (d / "apng_corrupt_default_data.png").write_bytes(
+        mutate_png_chunk(
+            (d / "apng_default_image.png").read_bytes(),
+            b"IDAT",
+            0,
+            lambda payload: payload.__setitem__(slice(None), b"\0"),
+        )
+    )
+    (d / "apng_corrupt_frame_data.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fdAT",
+            0,
+            lambda payload: payload.__setitem__(slice(4, None), b"\0"),
+        )
+    )
+    (d / "apng_invalid_disposal.png").write_bytes(
+        mutate_png_chunk(
+            controls,
+            b"fcTL",
+            1,
+            lambda payload: payload.__setitem__(24, 3),
+        )
+    )
+    (d / "apng_invalid_blend.png").write_bytes(
+        mutate_png_chunk(
+            controls,
+            b"fcTL",
+            1,
+            lambda payload: payload.__setitem__(25, 2),
+        )
+    )
+    (d / "apng_first_previous.png").write_bytes(
+        mutate_png_chunk(
+            controls,
+            b"fcTL",
+            0,
+            lambda payload: payload.__setitem__(24, 2),
+        )
+    )
+    (d / "apng_large_frame_count.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"acTL",
+            0,
+            lambda payload: payload.__setitem__(
+                slice(0, 4), struct.pack(">I", 0x8000_0001)
+            ),
+        )
+    )
+    (d / "apng_long_actl.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"acTL",
+            0,
+            lambda payload: payload.extend(b"\0"),
+        )
+    )
+    duplicated_actl = png_chunks(animated)
+    first_actl = next(
+        index for index, (kind, _) in enumerate(duplicated_actl) if kind == b"acTL"
+    )
+    duplicated_actl.insert(first_actl + 1, duplicated_actl[first_actl])
+    (d / "apng_duplicate_actl.png").write_bytes(rebuild_png(duplicated_actl))
+
+    (d / "apng_short_first_fctl.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            0,
+            lambda payload: payload.__delitem__(slice(25, 26)),
+        )
+    )
+    (d / "apng_first_frame_outside_x.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            0,
+            lambda payload: payload.__setitem__(slice(12, 16), struct.pack(">I", 1)),
+        )
+    )
+    (d / "apng_first_frame_outside_y.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            0,
+            lambda payload: payload.__setitem__(slice(16, 20), struct.pack(">I", 1)),
+        )
+    )
+    (d / "apng_zero_frame_width.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            0,
+            lambda payload: payload.__setitem__(slice(4, 8), b"\0\0\0\0"),
+        )
+    )
+    (d / "apng_zero_frame_height.png").write_bytes(
+        mutate_png_chunk(
+            animated,
+            b"fcTL",
+            0,
+            lambda payload: payload.__setitem__(slice(8, 12), b"\0\0\0\0"),
+        )
+    )
+
+    missing_between = png_chunks(controls)
+    first_fdat = next(
+        index for index, (kind, _) in enumerate(missing_between) if kind == b"fdAT"
+    )
+    missing_between.pop(first_fdat)
+    (d / "apng_missing_between_frame_data.png").write_bytes(
+        rebuild_png(missing_between)
+    )
+    missing_final = png_chunks(animated)
+    final_fdat = max(
+        index for index, (kind, _) in enumerate(missing_final) if kind == b"fdAT"
+    )
+    missing_final.pop(final_fdat)
+    (d / "apng_missing_final_frame_data.png").write_bytes(rebuild_png(missing_final))
+    no_control = png_chunks(animated)
+    later_control = max(
+        index for index, (kind, _) in enumerate(no_control) if kind == b"fcTL"
+    )
+    no_control.pop(later_control)
+    (d / "apng_fdat_without_fctl.png").write_bytes(rebuild_png(no_control))
+    (d / "apng_short_fdat_without_fctl.png").write_bytes(
+        mutate_png_chunk(
+            rebuild_png(no_control),
+            b"fdAT",
+            0,
+            lambda payload: payload.__delitem__(slice(3, None)),
+        )
+    )
+
+    duplicate_default_control = png_chunks(animated)
+    first_control = next(
+        index
+        for index, (kind, _) in enumerate(duplicate_default_control)
+        if kind == b"fcTL"
+    )
+    second_control = bytearray(duplicate_default_control[first_control][1])
+    second_control[:4] = struct.pack(">I", 1)
+    duplicate_default_control.insert(
+        first_control + 1, (b"fcTL", bytes(second_control))
+    )
+    duplicate_default_control[first_actl] = (
+        b"acTL",
+        struct.pack(">II", 2, 0),
+    )
+    (d / "apng_multiple_default_controls.png").write_bytes(
+        rebuild_png(duplicate_default_control)
+    )
+
+    static_chunks = png_chunks((d / "rgb.png").read_bytes())
+    static_chunks.insert(1, (b"acTL", struct.pack(">II", 1, 0)))
+    (d / "apng_no_controlled_frames.png").write_bytes(rebuild_png(static_chunks))
+    animated_chunks = png_chunks(animated)
+    no_idat = [
+        animated_chunks[0],
+        next(chunk for chunk in animated_chunks if chunk[0] == b"acTL"),
+        next(chunk for chunk in animated_chunks if chunk[0] == b"fcTL"),
+        next(chunk for chunk in animated_chunks if chunk[0] == b"IEND"),
+    ]
+    (d / "apng_no_idat.png").write_bytes(rebuild_png(no_idat))
+
+    moved_chunks = png_chunks(animated)
+    actl_index = next(
+        index for index, (kind, _) in enumerate(moved_chunks) if kind == b"acTL"
+    )
+    idat_index = next(
+        index for index, (kind, _) in enumerate(moved_chunks) if kind == b"IDAT"
+    )
+    actl_chunk = moved_chunks.pop(actl_index)
+    if actl_index < idat_index:
+        idat_index -= 1
+    moved_chunks.insert(idat_index + 1, actl_chunk)
+    (d / "actl_after_idat.png").write_bytes(rebuild_png(moved_chunks))
     # Error
     d.joinpath("truncated.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00")
     d.joinpath("short_signature.png").write_bytes(b"\x89PNG")
@@ -1450,6 +1871,11 @@ def gen_gif():
     short_loop_payload = bytearray(static)
     short_loop_payload[image_offset:image_offset] = b"\x21\xff\x0bNETSCAPE2.0\x01\x01\x00"
     (d / "short_loop_payload.gif").write_bytes(short_loop_payload)
+    bad_loop_payload = bytearray(static)
+    bad_loop_payload[image_offset:image_offset] = (
+        b"\x21\xff\x0bNETSCAPE2.0\x03\x02\x01\x00\x00"
+    )
+    (d / "bad_loop_payload.gif").write_bytes(bad_loop_payload)
     (d / "truncated_application_identifier.gif").write_bytes(
         bytes(static[:image_offset]) + b"\x21\xff\x0bNETS"
     )
@@ -1935,6 +2361,13 @@ def gen_bmp():
     pattern_img("RGB", (3, 5)).save(d / "width3.bmp")
     pattern_img("RGB", (31, 7)).save(d / "width31.bmp")
     d.joinpath("not_bmp.bmp").write_bytes(b"NOTABMP")
+    signature_source = (d / "24bit.bmp").read_bytes()
+    for signature in (b"BA", b"CI", b"CP", b"IC", b"PT"):
+        related_bitmap = bytearray(signature_source)
+        related_bitmap[:2] = signature
+        (d / f"related_{signature.decode('ascii').lower()}.bmp").write_bytes(
+            related_bitmap
+        )
     baseline = bytearray((d / "24bit.bmp").read_bytes())
     malformed = bytearray(baseline)
     struct.pack_into("<H", malformed, 26, 2)
@@ -2346,6 +2779,18 @@ def gen_webp():
     img.save(d / "xmp.webp", lossless=True, xmp=b"<x:xmpmeta>pillow-rs</x:xmpmeta>")
     img.save(d / "exif.webp", lossless=True, exif=b"Exif\x00\x00pillow-rs")
     img.save(d / "animated.webp", save_all=True, append_images=[pattern_img("RGB").transpose(Image.Transpose.FLIP_LEFT_RIGHT)], duration=100, loop=0)
+    sequence_rgba_first = Image.new("RGBA", (9, 7), (17, 34, 51, 128))
+    sequence_rgba_second = Image.new("RGBA", (9, 7), (201, 7, 99, 192))
+    sequence_rgba_first.save(
+        d / "animated_sequence_rgba_keyframes.webp",
+        save_all=True,
+        append_images=[sequence_rgba_second],
+        duration=[17, 33],
+        loop=2,
+        lossless=True,
+        method=4,
+        kmax=1,
+    )
     animated_base = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     ImageDraw.Draw(animated_base).rectangle([8, 8, 23, 23], fill=(255, 0, 0, 128))
     animated_next = animated_base.copy()
@@ -2846,6 +3291,16 @@ def gen_webp():
         "bad_webp_signature.webp",
         "lossy.webp",
         lambda data: data.__setitem__(slice(8, 12), b"WEPB"),
+    )
+    write_mutated_webp(
+        "riff_wave.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(slice(8, 12), b"WAVE"),
+    )
+    write_mutated_webp(
+        "riff_webp_unknown_chunk.webp",
+        "lossy.webp",
+        lambda data: data.__setitem__(slice(12, 16), b"JUNK"),
     )
     write_mutated_webp(
         "vp8_interframe.webp",
@@ -4952,11 +5407,40 @@ def gen_avif():
             raise RuntimeError("baseline AVIF must begin with an ftyp box")
         accepted_major_brand[8:12] = brand
         (d / f"major_brand_{brand.decode('ascii')}.avif").write_bytes(accepted_major_brand)
+    late_compatible_brand = bytearray(baseline)
+    late_compatible_brand[8:12] = b"mif1"
+    late_compatible_brand[16:20] = b"mif1"
+    late_compatible_brand[20:24] = b"avif"
+    (d / "major_brand_mif1_late_avif.avif").write_bytes(late_compatible_brand)
+    for brand in (b"mif1", b"msf1"):
+        generic_brand = bytearray(baseline)
+        generic_brand[8:12] = brand
+        generic_brand[16:20] = brand
+        (d / f"generic_{brand.decode('ascii')}.avif").write_bytes(generic_brand)
+    no_compatible_brands = bytearray(baseline[:16] + baseline[32:])
+    no_compatible_brands[:4] = (16).to_bytes(4, "big")
+    no_compatible_brands[8:12] = b"mif1"
+    (d / "generic_mif1_no_compatible_brands.avif").write_bytes(
+        no_compatible_brands
+    )
+    malformed_size = bytearray(baseline)
+    malformed_size[:4] = (31).to_bytes(4, "big")
+    malformed_size[8:12] = b"mif1"
+    (d / "malformed_mif1_ftyp_size.avif").write_bytes(malformed_size)
+    oversized_box = bytearray(baseline)
+    oversized_box[:4] = (len(oversized_box) + 4).to_bytes(4, "big")
+    oversized_box[8:12] = b"mif1"
+    (d / "oversized_mif1_ftyp.avif").write_bytes(oversized_box)
     unsupported_major_brand = bytearray(baseline)
     if unsupported_major_brand[4:8] != b"ftyp":
         raise RuntimeError("baseline AVIF must begin with an ftyp box")
     unsupported_major_brand[8:12] = b"heic"
+    unsupported_major_brand[16:20] = b"heic"
     (d / "unsupported_major_brand.avif").write_bytes(unsupported_major_brand)
+    non_image_bmff = bytearray(baseline)
+    non_image_bmff[8:12] = b"isom"
+    non_image_bmff[16:32] = b"isomiso2mp41av01"
+    (d / "non_image_isom_bmff.avif").write_bytes(non_image_bmff)
     sequence_marker = bytes.fromhex("0a091819bfff6880868342")
     sequence_offset = baseline.index(sequence_marker) + 2
     baseline[sequence_offset] = (baseline[sequence_offset] & 0x1f) | 0xe0

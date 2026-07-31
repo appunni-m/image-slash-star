@@ -63,7 +63,16 @@ pub(crate) fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Ve
     let quality = opts.quality.unwrap_or(75);
     let progressive = opts.progressive.unwrap_or(false);
     let optimize = opts.optimize.unwrap_or(false);
-    let subsampling = opts.subsampling.as_deref().unwrap_or("420");
+    let subsampling = match opts.subsampling.as_deref().unwrap_or("420") {
+        "444" | "4:4:4" => "444",
+        "422" | "4:2:2" => "422",
+        "420" | "4:2:0" => "420",
+        _ => {
+            return Err(CodecError::Parameter(
+                "JPEG subsampling must be 444, 422, or 420".to_owned(),
+            ));
+        }
+    };
     let restart_rows = match opts.extra.get("restart_interval") {
         Some(value) => value.parse::<usize>().map_err(|_| {
             CodecError::Parameter("invalid JPEG restart_interval option".to_owned())

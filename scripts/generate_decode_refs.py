@@ -30,6 +30,14 @@ OUTPUT_RAWS = ROOT / "tests" / "fixtures" / "outputs" / "raws"
 OUTPUT_ENCODED = ROOT / "tests" / "fixtures" / "outputs" / "encoded"
 ASSETS_DIR = ROOT / "tests" / "fixtures" / "input" / "images"
 
+ASSERTION_ORIGINS = {
+    "pillow_fixture",
+    "specification_reference",
+    "independent_implementation",
+    "defensive_model",
+}
+ALL_CODEC_FEATURES = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
+
 
 def pillow_open_asset(path):
     """Open fixture bytes with a stable name for deterministic Pillow errors."""
@@ -84,8 +92,31 @@ def encode_error_kind(row, error):
     return "parameter"
 
 
-def pillow_detects_format(fmt_name, data):
-    """Apply the pinned Pillow plugin's public registration predicate."""
+def avif_detection_oracle(data):
+    """Apply the bounded AVIF compatibility rule used by common detection.
+
+    Pillow's prefix predicate deliberately admits bare mif1/msf1 major brands
+    and delegates the complete brand check to libavif. The public Rust detector
+    has no plugin fallthrough stage, so generic HEIF majors require an avif or
+    avis compatible brand here. avif/avis major brands retain Pillow's
+    signature-level behavior so malformed codec bodies remain recognizable.
+    """
+    prefix = data[:16]
+    if prefix[4:12] in (b"ftypavif", b"ftypavis"):
+        return True
+    if prefix[4:12] not in (b"ftypmif1", b"ftypmsf1"):
+        return False
+    size = int.from_bytes(prefix[:4], "big")
+    if size < 20 or size > len(data) or size % 4:
+        return False
+    return any(
+        brand in (b"avif", b"avis")
+        for brand in (data[offset : offset + 4] for offset in range(16, size, 4))
+    )
+
+
+def oracle_detects_format(fmt_name, data):
+    """Apply the pinned detection oracle for one common format."""
     from PIL import (
         AvifImagePlugin,
         BmpImagePlugin,
@@ -101,6 +132,10 @@ def pillow_detects_format(fmt_name, data):
     prefix = data[:16]
     if fmt_name == "ico":
         return bool(IcoImagePlugin._accept(prefix) or CurImagePlugin._accept(prefix))
+    if fmt_name == "avif":
+        if not AvifImagePlugin.SUPPORTED:
+            raise RuntimeError("AVIF detection oracle requires Pillow AVIF support")
+        return avif_detection_oracle(data)
     accepts = {
         "jpeg": JpegImagePlugin._accept,
         "png": PngImagePlugin._accept,
@@ -108,7 +143,6 @@ def pillow_detects_format(fmt_name, data):
         "bmp": BmpImagePlugin._accept,
         "tiff": TiffImagePlugin._accept,
         "webp": WebPImagePlugin._accept,
-        "avif": AvifImagePlugin._accept,
     }
     return bool(accepts[fmt_name](prefix))
 
@@ -129,7 +163,7 @@ def decode_row_id(case, asset_name):
     return f"{case['id']}_{stable_id(Path(asset_name).stem)}"
 
 
-def ensure_decode_row(matrix, fmt_name, case, asset_name):
+def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
     fmt_matrix = matrix.setdefault("formats", {}).setdefault(fmt_name, {})
     rows = fmt_matrix.setdefault("decode", [])
     row_id = decode_row_id(case, asset_name)
@@ -146,6 +180,16 @@ def ensure_decode_row(matrix, fmt_name, case, asset_name):
                     "expect_sequence_error": bool(
                         case.get("expect_sequence_error", False)
                     ),
+                    "verification_scope": fmt_manifest["verification_scope"],
+                    "rust_expect_sequence_error": bool(
+                        case.get("rust_expect_sequence_error", False)
+                    ),
+                    "rust_sequence_error_kind": case.get(
+                        "rust_sequence_error_kind"
+                    ),
+                    "rust_sequence_error_reason": case.get(
+                        "rust_sequence_error_reason"
+                    ),
                     "status": case.get("status", "active"),
                 }
             )
@@ -160,6 +204,12 @@ def ensure_decode_row(matrix, fmt_name, case, asset_name):
         "asset": asset_name,
         "expect_error": bool(case.get("expect_error", False)),
         "expect_sequence_error": bool(case.get("expect_sequence_error", False)),
+        "verification_scope": fmt_manifest["verification_scope"],
+        "rust_expect_sequence_error": bool(
+            case.get("rust_expect_sequence_error", False)
+        ),
+        "rust_sequence_error_kind": case.get("rust_sequence_error_kind"),
+        "rust_sequence_error_reason": case.get("rust_sequence_error_reason"),
         "status": "active",
     }
     rows.append(row)
@@ -200,6 +250,16 @@ def sync_decode_rows(manifest, matrix):
                         "expect_error": bool(case.get("expect_error", False)),
                         "expect_sequence_error": bool(
                             case.get("expect_sequence_error", False)
+                        ),
+                        "verification_scope": fmt_manifest["verification_scope"],
+                        "rust_expect_sequence_error": bool(
+                            case.get("rust_expect_sequence_error", False)
+                        ),
+                        "rust_sequence_error_kind": case.get(
+                            "rust_sequence_error_kind"
+                        ),
+                        "rust_sequence_error_reason": case.get(
+                            "rust_sequence_error_reason"
                         ),
                         "status": case_status,
                     }
@@ -254,7 +314,24 @@ def encode_params(fmt, params):
         "source_dimensions",
         "oversized_palette",
         "palette_on_nonindexed",
+        "detach_source",
+        "rust_unsupported_modes",
+        "rust_invalid_color_mode",
         "encoded_only",
+        "sequence_canvas_padding",
+        "sequence_frame_offset",
+        "sequence_duration_ms",
+        "sequence_duration_fraction",
+        "sequence_disposal",
+        "sequence_blend",
+        "sequence_interlaced",
+        "sequence_default_image",
+        "sequence_pixel_layout",
+        "sequence_loop_count",
+        "sequence_clear_loop",
+        "sequence_background_rgba",
+        "sequence_background_palette",
+        "sequence_clear_background",
     ):
         take(source_property)
 
@@ -350,6 +427,9 @@ def encode_params(fmt, params):
             kwargs["_manifest_animated"] = animated
         if frames is not None:
             kwargs["_manifest_frames"] = frames
+        preserve_disposal = take("preserve_disposal")
+        if preserve_disposal is not None:
+            kwargs["_manifest_preserve_disposal"] = preserve_disposal
         second_frame_mode = take("second_frame_mode")
         if second_frame_mode is not None:
             kwargs["_manifest_second_frame_mode"] = second_frame_mode
@@ -374,6 +454,19 @@ def encode_params(fmt, params):
             kwargs["header"] = header
     elif fmt == "webp":
         for name in ("quality", "lossless", "method"):
+            value = take(name)
+            if value is not None:
+                kwargs[name] = value
+        animated = take("animated")
+        frames = take("frames")
+        preserve_duration = take("preserve_duration")
+        if animated is not None:
+            kwargs["_manifest_animated"] = animated
+        if frames is not None:
+            kwargs["_manifest_frames"] = frames
+        if preserve_duration is not None:
+            kwargs["_manifest_preserve_duration"] = preserve_duration
+        for name in ("loop", "background", "minimize_size", "kmin", "kmax", "allow_mixed"):
             value = take(name)
             if value is not None:
                 kwargs[name] = value
@@ -529,6 +622,7 @@ def prepare_multiframe_call(image, kwargs):
     frame_count = kwargs.pop("_manifest_frames", None)
     second_frame_mode = kwargs.pop("_manifest_second_frame_mode", None)
     preserve_duration = kwargs.pop("_manifest_preserve_duration", False)
+    preserve_disposal = kwargs.pop("_manifest_preserve_disposal", False)
     if animated is None:
         return image, kwargs
     if not animated:
@@ -536,7 +630,11 @@ def prepare_multiframe_call(image, kwargs):
 
     from PIL import ImageSequence
 
-    frames = [frame.copy() for frame in ImageSequence.Iterator(image)]
+    frames = []
+    disposals = []
+    for source_frame in ImageSequence.Iterator(image):
+        disposals.append(int(getattr(source_frame, "disposal_method", 0)))
+        frames.append(source_frame.copy())
     requested = frame_count or len(frames)
     if len(frames) < requested:
         raise RuntimeError(f"source has {len(frames)} frame(s), requested {requested}")
@@ -550,6 +648,17 @@ def prepare_multiframe_call(image, kwargs):
         kwargs["duration"] = [
             frame.info.get("duration", 0) for frame in frames[:requested]
         ]
+    if preserve_disposal:
+        requested_disposals = disposals[:requested]
+        # Pillow's multi-frame writer accepts either a scalar or a per-frame
+        # list. If it coalesces identical frames down to one image, however,
+        # the single-frame fallback calls int() on this value. Preserve a
+        # shared disposal as a scalar so that both writer paths remain valid.
+        kwargs["disposal"] = (
+            requested_disposals[0]
+            if len(set(requested_disposals)) == 1
+            else requested_disposals
+        )
     return frames[0], kwargs
 
 
@@ -874,13 +983,170 @@ def raw_ref_path(name):
     return Path("tests") / "fixtures" / "outputs" / "raws" / name
 
 
+def sha256(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def execution_contract():
+    return {
+        "target": "aarch64-apple-darwin",
+        "features": ALL_CODEC_FEATURES,
+        "suite": "native_all_features",
+    }
+
+
+def decode_operation_expectations(row):
+    sequence = "ok"
+    if (
+        row.get("expect_error")
+        or row.get("expect_sequence_error")
+        or row.get("rust_expect_sequence_error")
+    ):
+        sequence = "error"
+    return {
+        "detect": "ok" if row.get("oracle_detects_format") else "error",
+        "inspect": row.get("inspect_status"),
+        "verify": row.get("verify_status"),
+        "decode": row.get("oracle_status"),
+        "decode_sequence": sequence,
+    }
+
+
+def encode_operation_expectations(row):
+    expected = "error" if row.get("expect_error") or row.get("rust_expect_error") else "ok"
+    params = row.get("params", {})
+    direct_still = bool(params.get("truncate_pixels")) or "source_dimensions" in params
+    public_mode_contract = bool(params.get("rust_unsupported_modes"))
+    single_frame_success = (
+        row.get("source_frame_count") == 1
+        and expected == "ok"
+        and not any(name.startswith("sequence_") for name in params)
+    )
+    return {
+        "encode": (
+            "error"
+            if direct_still or public_mode_contract
+            else "ok"
+            if single_frame_success
+            else "not_applicable"
+        ),
+        "encode_sequence": "not_applicable" if direct_still or public_mode_contract else expected,
+    }
+
+
+def rust_error_contract(
+    fmt_name, kind, pillow_type=None, pillow_message=None, origin="pillow_fixture"
+):
+    """Separate exact Pillow evidence from the stable public Rust contract."""
+    if kind not in {
+        "unknown_format",
+        "feature_disabled",
+        "malformed",
+        "unsupported",
+        "dimensions",
+        "parameter",
+    }:
+        raise ValueError(f"unknown Rust error kind {kind!r}")
+    return {
+        "pillow_type": pillow_type,
+        "pillow_message": pillow_message,
+        "rust_kind": kind,
+        "rust_format": None if kind == "unknown_format" else fmt_name.upper(),
+        "rust_message": (
+            "none" if kind in {"unknown_format", "feature_disabled"} else "non_empty"
+        ),
+        "origin": origin,
+    }
+
+
+def decode_error_contracts(row, fmt_name):
+    """Build one independently classified error contract per failed operation."""
+    operations = decode_operation_expectations(row)
+    contracts = {}
+    if operations["detect"] == "error":
+        contracts["detect"] = rust_error_contract(
+            fmt_name,
+            "unknown_format",
+            origin=(
+                "specification_reference"
+                if fmt_name == "avif"
+                else "pillow_fixture"
+            ),
+        )
+    if operations["inspect"] == "error":
+        contracts["inspect"] = rust_error_contract(
+            fmt_name,
+            row["inspect_error_kind"],
+            row["inspect_error_type"],
+            row["inspect_error_message"],
+        )
+    if operations["verify"] == "error":
+        contracts["verify"] = rust_error_contract(
+            fmt_name,
+            row["verify_error_kind"],
+            row["verify_error_type"],
+            row["verify_error_message"],
+        )
+    if operations["decode"] == "error":
+        contracts["decode"] = rust_error_contract(
+            fmt_name,
+            row["oracle_error_kind"],
+            row["oracle_error_type"],
+            row["oracle_error_message"],
+        )
+    if operations["decode_sequence"] == "error":
+        if row.get("rust_expect_sequence_error"):
+            contracts["decode_sequence"] = rust_error_contract(
+                fmt_name,
+                row["rust_sequence_error_kind"],
+                origin="defensive_model",
+            )
+        elif row.get("expect_sequence_error"):
+            contracts["decode_sequence"] = rust_error_contract(
+                fmt_name,
+                row["sequence_error_kind"],
+                row["sequence_error_type"],
+                row["sequence_error_message"],
+            )
+        else:
+            contracts["decode_sequence"] = rust_error_contract(
+                fmt_name,
+                row["oracle_error_kind"],
+                row["oracle_error_type"],
+                row["oracle_error_message"],
+            )
+    return contracts
+
+
+def encode_error_contracts(row, fmt_name):
+    """Build the selected still/sequence encoder error contracts."""
+    contracts = {}
+    for operation, status in encode_operation_expectations(row).items():
+        if status != "error":
+            continue
+        if row.get("rust_expect_error"):
+            contracts[operation] = rust_error_contract(
+                fmt_name,
+                row["rust_error_kind"],
+                origin="defensive_model",
+            )
+        else:
+            contracts[operation] = rust_error_contract(
+                fmt_name,
+                row["oracle_error_kind"],
+                row["oracle_error_type"],
+                row["oracle_error_message"],
+            )
+    return contracts
+
+
 def write_pixel_ref(row, image, ref_name):
     """Write raw PIL pixels and update one matrix/output row."""
     image.load()
     raw = image.tobytes()
     OUTPUT_RAWS.mkdir(parents=True, exist_ok=True)
     (OUTPUT_RAWS / ref_name).write_bytes(raw)
-    row.pop("ref_sha256", None)
+    row["ref_sha256"] = sha256(raw)
     row["ref_path"] = raw_ref_path(ref_name).as_posix()
     row["ref_bytes"] = len(raw)
     row["ref_mode"] = mode_name(image)
@@ -898,36 +1164,465 @@ def write_pixel_ref(row, image, ref_name):
     return raw
 
 
-def write_sequence_ref(row, image, fmt_name, asset_name):
-    """Write every Pillow-observable WebP or AVIF frame as exact evidence."""
-    if fmt_name not in {"webp", "avif"} or getattr(image, "n_frames", 1) <= 1:
+def first_png_transparency(data):
+    """Return the first indexed PNG tRNS payload, matching Pillow leniency."""
+    position = 8
+    while position + 12 <= len(data):
+        length = int.from_bytes(data[position : position + 4], "big")
+        kind = data[position + 4 : position + 8]
+        payload_start = position + 8
+        payload_end = payload_start + length
+        if payload_end + 4 > len(data):
+            return b""
+        if kind == b"tRNS":
+            return data[payload_start:payload_end]
+        if kind in {b"IDAT", b"IEND"}:
+            return b""
+        position = payload_end + 4
+    return b""
+
+
+def pillow_palette(image, fmt_name, image_path, *, decoded):
+    """Return Pillow-observable palette state and crate transfer bytes."""
+    if image.mode != "P":
+        return "absent", b"", b""
+    rgb = bytes(image.getpalette("RGB") or [])
+    rgb = rgb[: len(rgb) // 3 * 3]
+    if not rgb:
+        return "implicit", b"", b""
+
+    entries = len(rgb) // 3
+    if decoded and fmt_name == "gif":
+        pixels = image.tobytes()
+        required_entries = max(pixels, default=-1) + 1
+        if required_entries > entries:
+            rgb += bytes((required_entries - entries) * 3)
+            entries = required_entries
+
+    alpha = b""
+    if fmt_name == "gif":
+        transparent = image.info.get("transparency")
+        if isinstance(transparent, int) and 0 <= transparent < entries:
+            values = bytearray([255] * entries)
+            values[transparent] = 0
+            alpha = bytes(values)
+    elif fmt_name == "png":
+        alpha = first_png_transparency(image_path.read_bytes())[:entries]
+    return "table", rgb, alpha
+
+
+def write_palette_bytes(name, data):
+    path = raw_ref_path(name)
+    (ROOT / path).write_bytes(data)
+    return path.as_posix()
+
+
+def palette_ref(state, origin, prefix, rgb, alpha):
+    reference = {"state": state, "origin": origin}
+    if state == "table":
+        reference["rgb_path"] = write_palette_bytes(f"{prefix}.rgb.bin", rgb)
+        reference["rgb_bytes"] = len(rgb)
+        reference["rgb_sha256"] = sha256(rgb)
+        if alpha:
+            reference["alpha_path"] = write_palette_bytes(
+                f"{prefix}.alpha.bin", alpha
+            )
+            reference["alpha_bytes"] = len(alpha)
+            reference["alpha_sha256"] = sha256(alpha)
+    return reference
+
+
+def write_palette_refs(row, image, fmt_name, image_path, ref_name):
+    """Record independent inspect and decoded palette representations."""
+    stem = ref_name.removesuffix(".bin")
+    inspect_state, inspect_rgb, inspect_alpha = pillow_palette(
+        image, fmt_name, image_path, decoded=False
+    )
+    decoded_state, decoded_rgb, decoded_alpha = pillow_palette(
+        image, fmt_name, image_path, decoded=True
+    )
+    row["inspect_palette"] = palette_ref(
+        inspect_state,
+        "pillow_fixture",
+        f"{stem}.inspect-palette",
+        inspect_rgb,
+        inspect_alpha,
+    )
+    row["decoded_palette"] = palette_ref(
+        decoded_state,
+        "pillow_fixture",
+        f"{stem}.decoded-palette",
+        decoded_rgb,
+        decoded_alpha,
+    )
+
+
+def webp_frame_dimensions(payload):
+    """Return the effective nested VP8/VP8L dimensions used for compositing."""
+    offset = 16
+    while offset + 8 <= len(payload):
+        kind = payload[offset : offset + 4]
+        chunk_size = int.from_bytes(payload[offset + 4 : offset + 8], "little")
+        chunk_start = offset + 8
+        chunk_end = chunk_start + chunk_size
+        if chunk_end > len(payload):
+            break
+        bitstream = payload[chunk_start:chunk_end]
+        if (
+            kind == b"VP8 "
+            and len(bitstream) >= 10
+            and bitstream[3:6] == b"\x9d\x01\x2a"
+        ):
+            width = int.from_bytes(bitstream[6:8], "little") & 0x3FFF
+            height = int.from_bytes(bitstream[8:10], "little") & 0x3FFF
+            return width, height
+        if kind == b"VP8L" and len(bitstream) >= 5 and bitstream[0] == 0x2F:
+            dimensions = int.from_bytes(bitstream[1:5], "little")
+            width = (dimensions & 0x3FFF) + 1
+            height = ((dimensions >> 14) & 0x3FFF) + 1
+            return width, height
+        offset = chunk_end + (chunk_size & 1)
+    raise ValueError("animated WebP frame lacks a readable VP8/VP8L header")
+
+
+def apng_sequence_source(data):
+    """Read exact APNG controls while retaining Pillow's seekable default image."""
+    png = parse_png_structure(data)
+    chunks = png["chunks"]
+    animation = None
+    saw_idat = False
+    sources = []
+    controlled_frames = 0
+
+    for kind, payload in chunks:
+        if kind == b"IDAT":
+            if animation is not None and not sources:
+                sources.append(
+                    {
+                        "source_rect": [0, 0, png["width"], png["height"]],
+                        "duration_num": 0,
+                        "duration_den": 1,
+                        "duration_origin": "specification_reference",
+                        "disposal": "unspecified",
+                        "blend": "unspecified",
+                        "interlaced": bool(png["interlace"]),
+                        "is_default_image": True,
+                        "pixel_layout": "rendered_canvas",
+                        "source_origin": "specification_reference",
+                    }
+                )
+            saw_idat = True
+        elif kind == b"acTL" and not saw_idat:
+            if animation is not None:
+                return None
+            if len(payload) < 8:
+                raise ValueError("APNG has a short animation control")
+            frame_count, loop_count = struct.unpack(">II", payload[:8])
+            if frame_count == 0 or frame_count > 0x8000_0000:
+                return None
+            animation = (frame_count, loop_count)
+        elif kind == b"fcTL" and animation is not None:
+            if len(payload) < 26:
+                raise ValueError("APNG has a short frame control")
+            (
+                _sequence,
+                width,
+                height,
+                left,
+                top,
+                delay_num,
+                delay_den,
+                disposal,
+                blend,
+            ) = struct.unpack(">IIIIIHHBB", payload[:26])
+            controlled_frames += 1
+            sources.append(
+                {
+                    "source_rect": [left, top, width, height],
+                    "duration_num": delay_num,
+                    "duration_den": delay_den or 100,
+                    "duration_origin": "specification_reference",
+                    "disposal": {
+                        0: "keep",
+                        1: "background",
+                        2: "previous",
+                    }.get(disposal, f"reserved:{disposal}"),
+                    "blend": {
+                        0: "source",
+                        1: "over",
+                    }.get(blend, f"reserved:{blend}"),
+                    "interlaced": bool(png["interlace"]),
+                    "is_default_image": not saw_idat and controlled_frames == 1,
+                    "pixel_layout": "rendered_canvas",
+                    "source_origin": "specification_reference",
+                }
+            )
+
+    if animation is None:
+        return None
+    declared_frames, loop_count = animation
+    if controlled_frames != declared_frames:
+        raise ValueError(
+            "APNG declared frame count differs from its frame controls"
+        )
+    return loop_count, sources
+
+
+def webp_sequence_source(data):
+    """Read exact ANIM/ANMF presentation fields from the standardized container."""
+    frames = []
+    background = None
+    loop_count = None
+    offset = 12
+    while offset + 8 <= len(data):
+        chunk_type = data[offset : offset + 4]
+        chunk_size = int.from_bytes(data[offset + 4 : offset + 8], "little")
+        payload_start = offset + 8
+        payload_end = payload_start + chunk_size
+        if payload_end > len(data):
+            break
+        if chunk_type == b"ANIM" and chunk_size >= 6:
+            payload = data[payload_start:payload_end]
+            background = {
+                "rgba": [payload[2], payload[1], payload[0], payload[3]],
+                "origin": "specification_reference",
+            }
+            loop_count = int.from_bytes(payload[4:6], "little")
+        elif chunk_type == b"ANMF" and chunk_size >= 16:
+            payload = data[payload_start:payload_end]
+            left = int.from_bytes(payload[0:3], "little") * 2
+            top = int.from_bytes(payload[3:6], "little") * 2
+            width, height = webp_frame_dimensions(payload)
+            duration_ms = int.from_bytes(payload[12:15], "little")
+            flags = payload[15]
+            frames.append(
+                {
+                    "source_rect": [left, top, width, height],
+                    "duration_num": duration_ms,
+                    "duration_den": 1000,
+                    "duration_origin": "pillow_fixture",
+                    "disposal": "background" if flags & 1 else "keep",
+                    "blend": "source" if flags & 2 else "over",
+                    "interlaced": False,
+                    "is_default_image": False,
+                    "pixel_layout": "rendered_canvas",
+                    "source_origin": "specification_reference",
+                }
+            )
+        offset = payload_end + (chunk_size & 1)
+    if background is None or loop_count is None or not frames:
+        raise ValueError("animated WebP lacks complete ANIM/ANMF source metadata")
+    return background, loop_count, frames
+
+
+def bmff_boxes(data, start=0, end=None, path=()):
+    """Yield bounded ISO BMFF payloads recursively for timing evidence."""
+    end = len(data) if end is None else end
+    containers = {
+        b"moov",
+        b"trak",
+        b"mdia",
+        b"minf",
+        b"stbl",
+        b"edts",
+        b"dinf",
+        b"meta",
+        b"iprp",
+        b"ipco",
+        b"iinf",
+        b"iref",
+    }
+    offset = start
+    while offset + 8 <= end:
+        size = int.from_bytes(data[offset : offset + 4], "big")
+        kind = data[offset + 4 : offset + 8]
+        header = 8
+        if size == 1:
+            if offset + 16 > end:
+                return
+            size = int.from_bytes(data[offset + 8 : offset + 16], "big")
+            header = 16
+        elif size == 0:
+            size = end - offset
+        if size < header or offset + size > end:
+            return
+        payload_start = offset + header
+        payload_end = offset + size
+        payload = data[payload_start:payload_end]
+        current_path = path + (kind,)
+        yield current_path, payload
+        if kind in containers:
+            prefix = 4 if kind == b"meta" else 0
+            yield from bmff_boxes(
+                data, payload_start + prefix, payload_end, current_path
+            )
+        offset += size
+
+
+def avif_frame_durations(data, frame_count):
+    """Read exact track timescale/sample deltas without float conversion."""
+    timescales = []
+    sample_tables = []
+    for path, payload in bmff_boxes(data):
+        if path[-1] == b"mdhd" and len(payload) >= 24:
+            version = payload[0]
+            timescale_offset = 20 if version == 1 else 12
+            if timescale_offset + 4 <= len(payload):
+                timescales.append(
+                    int.from_bytes(
+                        payload[timescale_offset : timescale_offset + 4], "big"
+                    )
+                )
+        elif path[-1] == b"stts" and len(payload) >= 8:
+            entry_count = int.from_bytes(payload[4:8], "big")
+            entries = []
+            cursor = 8
+            for _ in range(entry_count):
+                if cursor + 8 > len(payload):
+                    entries = []
+                    break
+                count = int.from_bytes(payload[cursor : cursor + 4], "big")
+                delta = int.from_bytes(payload[cursor + 4 : cursor + 8], "big")
+                entries.extend([delta] * count)
+                cursor += 8
+            if entries:
+                sample_tables.append(entries)
+    for timescale in timescales:
+        if timescale == 0:
+            continue
+        for durations in sample_tables:
+            if len(durations) == frame_count:
+                return [(duration, timescale) for duration in durations]
+    raise ValueError("AVIF frame timing table does not match Pillow frame count")
+
+
+def gif_frame_source(image):
+    """Capture Pillow plugin metadata before load consumes the frame tile."""
+    if not image.tile:
+        raise ValueError("GIF frame lacks a decoder tile")
+    tile = image.tile[0]
+    left, top, right, bottom = tile.extents
+    duration_ms = int(image.info.get("duration", 0))
+    if duration_ms % 10:
+        raise ValueError("GIF duration is not an exact centisecond")
+    disposal = int(getattr(image, "disposal_method", 0))
+    disposal_name = {
+        0: "unspecified",
+        1: "keep",
+        2: "background",
+        3: "previous",
+    }.get(disposal, f"reserved:{disposal}")
+    return {
+        "source_rect": [left, top, right - left, bottom - top],
+        "duration_num": duration_ms // 10,
+        "duration_den": 100,
+        "duration_origin": "pillow_fixture",
+        "disposal": disposal_name,
+        "blend": "unspecified",
+        "interlaced": bool(tile.args[1]),
+        "is_default_image": False,
+        "pixel_layout": "source_rectangle",
+        "source_origin": "pillow_fixture",
+    }
+
+
+def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
+    """Write exact frame pixels where layouts align and all source metadata."""
+    frame_count = int(getattr(image, "n_frames", 1))
+    if fmt_name not in {"png", "gif", "webp", "avif"}:
         row.pop("sequence", None)
         return
+
+    if fmt_name == "png":
+        parsed = apng_sequence_source(source_data)
+        if parsed is None:
+            row.pop("sequence", None)
+            return
+        parsed_loop_count, sources = parsed
+        background = None
+        if len(sources) != frame_count:
+            raise ValueError("APNG source controls differ from Pillow frame count")
+    elif fmt_name != "gif" and frame_count <= 1:
+        row.pop("sequence", None)
+        return
+    elif fmt_name == "webp":
+        background, parsed_loop_count, sources = webp_sequence_source(source_data)
+        pillow_background = list(image.info.get("background", ()))
+        pillow_loop_count = image.info.get("loop")
+        if (
+            background["rgba"] != pillow_background
+            or parsed_loop_count != pillow_loop_count
+        ):
+            raise ValueError("WebP container metadata differs from Pillow")
+    elif fmt_name == "avif":
+        durations = avif_frame_durations(source_data, image.n_frames)
+        background = None
+        sources = [
+            {
+                "source_rect": [0, 0, image.width, image.height],
+                "duration_num": duration,
+                "duration_den": timescale,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": False,
+                "is_default_image": False,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+            }
+            for duration, timescale in durations
+        ]
+    else:
+        background = {
+            "palette_index": int(image.info.get("background", 0)),
+            "origin": "pillow_fixture",
+        }
+        sources = None
 
     frames = []
     for index in range(image.n_frames):
         image.seek(index)
+        source = gif_frame_source(image) if fmt_name == "gif" else sources[index]
         image.load()
-        raw = image.tobytes()
-        ref_name = (
-            f"Decode.{fmt_name}_{asset_name.replace('.', '_')}_frame_{index}.bin"
-        )
-        OUTPUT_RAWS.mkdir(parents=True, exist_ok=True)
-        (OUTPUT_RAWS / ref_name).write_bytes(raw)
-        frames.append(
-            {
-                "index": index,
-                "ref_path": raw_ref_path(ref_name).as_posix(),
-                "ref_bytes": len(raw),
-                "ref_mode": mode_name(image),
-                "ref_size": list(image.size),
-                "duration_ms": int(image.info.get("duration", 0)),
-            }
-        )
+        frame = {"index": index, **source}
+        if fmt_name != "gif":
+            raw = image.tobytes()
+            ref_name = (
+                f"Decode.{fmt_name}_{asset_name.replace('.', '_')}_frame_{index}.bin"
+            )
+            OUTPUT_RAWS.mkdir(parents=True, exist_ok=True)
+            (OUTPUT_RAWS / ref_name).write_bytes(raw)
+            frame.update(
+                {
+                    "ref_path": raw_ref_path(ref_name).as_posix(),
+                    "ref_bytes": len(raw),
+                    "ref_mode": mode_name(image),
+                    "ref_size": list(image.size),
+                    "ref_sha256": sha256(raw),
+                    "pixel_assertion": "exact",
+                    "pixel_origin": "pillow_fixture",
+                }
+            )
+        else:
+            frame["pixel_assertion"] = "not_asserted_source_layout"
+        frames.append(frame)
     row["sequence"] = {
-        "loop_count": image.info.get("loop"),
+        "canvas_size": list(image.size),
+        "canvas_origin": "pillow_fixture",
+        "loop_count": (
+            parsed_loop_count if fmt_name in {"png", "webp"} else image.info.get("loop")
+        ),
+        "loop_origin": (
+            "specification_reference" if fmt_name == "png" else "pillow_fixture"
+        ),
+        "background": background,
         "frames": frames,
     }
+
+
+def write_sequence_ref(row, image, fmt_name, asset_name):
+    source_data = (ASSETS_DIR / fmt_name / asset_name).read_bytes()
+    write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data)
 
 
 def write_sequence_error_ref(row, image_path):
@@ -960,16 +1655,138 @@ def clear_pixel_ref(row):
     row.pop("ref_size", None)
     row.pop("ref_frame_count", None)
     row.pop("ref_is_animated", None)
+    row.pop("inspect_palette", None)
+    row.pop("decoded_palette", None)
     row.pop("sequence", None)
 
 
-def write_inspect_ref(row, image_path):
+def ico_bit_depth(data):
+    """Read storage depth from the best-resolution ICO or CUR payload."""
+    if len(data) < 6:
+        raise ValueError("truncated ICO header")
+    count = int.from_bytes(data[4:6], "little")
+    directory_end = 6 + count * 16
+    if count == 0 or directory_end > len(data):
+        raise ValueError("truncated ICO directory")
+    entries = [data[6 + index * 16 : 22 + index * 16] for index in range(count)]
+    best = max(
+        entries,
+        key=lambda entry: (entry[0] or 256) * (entry[1] or 256),
+    )
+    length = int.from_bytes(best[8:12], "little")
+    offset = int.from_bytes(best[12:16], "little")
+    payload = data[offset : offset + length]
+    if len(payload) != length:
+        raise ValueError("truncated ICO payload")
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        if len(payload) < 25 or payload[12:16] != b"IHDR":
+            raise ValueError("truncated ICO PNG header")
+        return payload[24]
+    if len(payload) < 16:
+        raise ValueError("truncated ICO DIB header")
+    return int.from_bytes(payload[14:16], "little")
+
+
+def avif_bit_depth(image_path):
+    """Read AV1 configuration depth with the independent ISO-BMFF inspector."""
+    from inspect_avif_bitstreams import inspect as inspect_avif
+
+    report = inspect_avif(image_path)
+    color_items = report.get("items", {}).get("color", [])
+    configurations = [
+        item.get("av1c") for item in color_items if item.get("av1c") is not None
+    ]
+    if not configurations:
+        configurations = [
+            track.get("av1c")
+            for track in report.get("tracks", [])
+            if track.get("handler") == "pict" and track.get("av1c") is not None
+        ]
+    if not configurations:
+        raise ValueError("AVIF has no color AV1CodecConfigurationBox")
+    payload = bytes.fromhex(configurations[0]["hex"])
+    if len(payload) < 3 or payload[0] != 0x81:
+        raise ValueError("invalid AV1CodecConfigurationBox")
+    high_bit_depth = bool(payload[2] & 0x40)
+    twelve_bit = bool(payload[2] & 0x20)
+    if twelve_bit and not high_bit_depth:
+        raise ValueError("invalid AV1CodecConfigurationBox depth flags")
+    return 12 if twelve_bit else 10 if high_bit_depth else 8
+
+
+def inspect_bit_depth(fmt_name, image_path, image):
+    """Return encoded storage depth and the independent evidence category."""
+    data = image_path.read_bytes()
+    if fmt_name == "png":
+        if len(data) < 25 or data[12:16] != b"IHDR":
+            raise ValueError("truncated PNG IHDR")
+        return data[24], "specification_reference"
+    if fmt_name == "jpeg":
+        return int(image.bits), "pillow_fixture"
+    if fmt_name == "gif":
+        if image.palette is None:
+            return 8, "pillow_fixture"
+        palette_bytes = image.palette.getdata()[1]
+        entries = max(1, len(palette_bytes) // 3)
+        return max(1, (entries - 1).bit_length()), "pillow_fixture"
+    if fmt_name == "bmp":
+        if len(data) < 26:
+            raise ValueError("truncated BMP DIB header")
+        dib_size = int.from_bytes(data[14:18], "little")
+        bit_depth_offset = 24 if dib_size == 12 else 28
+        if bit_depth_offset + 2 > len(data):
+            raise ValueError("truncated BMP bit-depth field")
+        return (
+            int.from_bytes(data[bit_depth_offset : bit_depth_offset + 2], "little"),
+            "specification_reference",
+        )
+    if fmt_name == "webp":
+        return 8, "specification_reference"
+    if fmt_name == "tiff":
+        values = image.tag_v2.get(258, (1,))
+        if not isinstance(values, tuple):
+            values = (values,)
+        if not values:
+            raise ValueError("TIFF has empty BitsPerSample")
+        return int(values[0]), "pillow_fixture"
+    if fmt_name == "ico":
+        return ico_bit_depth(data), "specification_reference"
+    if fmt_name == "avif":
+        return avif_bit_depth(image_path), "independent_implementation"
+    raise ValueError(f"no bit-depth oracle for {fmt_name}")
+
+
+def write_inspect_ref(row, image_path, fmt_name):
     """Record Pillow's lazy Image.open outcome without materializing pixels."""
     try:
-        with pillow_open_asset(image_path):
-            pass
+        with pillow_open_asset(image_path) as image:
+            row["inspect_container_format"] = image.format
+            bit_depth, origin = inspect_bit_depth(fmt_name, image_path, image)
+            row["ref_bit_depth"] = bit_depth
+            row["ref_bit_depth_origin"] = origin
+            if image.format == "CUR":
+                data = image_path.read_bytes()
+                count = int.from_bytes(data[4:6], "little")
+                entries = [
+                    data[6 + index * 16 : 22 + index * 16]
+                    for index in range(count)
+                ]
+                best = max(
+                    entries,
+                    key=lambda entry: (entry[0] or 256) * (entry[1] or 256),
+                )
+                row["inspect_cursor_hotspot"] = [
+                    int.from_bytes(best[4:6], "little"),
+                    int.from_bytes(best[6:8], "little"),
+                ]
+            else:
+                row["inspect_cursor_hotspot"] = None
     except Exception as error:
         row["inspect_status"] = "error"
+        row.pop("inspect_container_format", None)
+        row.pop("inspect_cursor_hotspot", None)
+        row.pop("ref_bit_depth", None)
+        row.pop("ref_bit_depth_origin", None)
         row["inspect_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
         row["inspect_error_message"] = stable_error_message(error)
         row["inspect_error_kind"] = decode_error_kind(
@@ -1004,6 +1821,7 @@ def write_verify_ref(row, image_path):
 def clear_encoded_ref(row):
     row.pop("encoded_ref_path", None)
     row.pop("encoded_ref_bytes", None)
+    row.pop("encoded_ref_sha256", None)
 
 
 def oracle_identity(manifest):
@@ -1084,6 +1902,7 @@ def describe_encode_call(fmt_name, row):
     animated = kwargs.pop("_manifest_animated", None)
     frame_count = kwargs.pop("_manifest_frames", None)
     preserve_duration = kwargs.pop("_manifest_preserve_duration", False)
+    preserve_disposal = kwargs.pop("_manifest_preserve_disposal", False)
     if animated:
         kwargs["save_all"] = True
         kwargs["append_images"] = {
@@ -1094,6 +1913,11 @@ def describe_encode_call(fmt_name, row):
         if preserve_duration:
             kwargs["duration"] = {
                 "type": "durations_from_source",
+                "count": frame_count or 1,
+            }
+        if preserve_disposal:
+            kwargs["disposal"] = {
+                "type": "disposals_from_source",
                 "count": frame_count or 1,
             }
     call = {
@@ -1124,6 +1948,29 @@ def describe_encode_call(fmt_name, row):
         call["source_transform"] = "PIL.Image.Image.putpalette(bytes(771))"
     if row.get("params", {}).get("palette_on_nonindexed"):
         call["source_transform"] = "PIL.Image.Image.putpalette(bytes(768))"
+    if row.get("params", {}).get("detach_source"):
+        call["source_transform"] = (
+            "PIL.Image.frombytes(source.mode, source.size, source.tobytes())"
+        )
+    if row.get("params", {}).get("rust_unsupported_modes"):
+        call["rust_source_transform"] = (
+            "construct one valid zero-filled DecodedImage for every named mode"
+        )
+    if row.get("params", {}).get("rust_invalid_color_mode"):
+        call["rust_invalid_transform"] = (
+            "construct L8 bytes with a deliberately inconsistent Rgb8 ColorType"
+        )
+    sequence_fields = {
+        name: value
+        for name, value in row.get("params", {}).items()
+        if name.startswith("sequence_")
+    }
+    if sequence_fields:
+        call["retained_sequence_transform"] = {
+            "scope": "image-slash-star DecodedSequence contract",
+            "fields": sequence_fields,
+            "pillow_model": "Pillow saves the already materialized still image",
+        }
     return call
 
 
@@ -1172,6 +2019,14 @@ def sync_encode_rows(manifest, matrix):
                 row["expect_error"] = True
             else:
                 row.pop("expect_error", None)
+            if specification.get("rust_expect_error"):
+                row["rust_expect_error"] = True
+                row["rust_error_kind"] = specification["rust_error_kind"]
+                row["rust_error_reason"] = specification["rust_error_reason"]
+            else:
+                row.pop("rust_expect_error", None)
+                row.pop("rust_error_kind", None)
+                row.pop("rust_error_reason", None)
             row["status"] = specification.get("status", "active")
             if row["status"] == "planned":
                 row["gap"] = (
@@ -1221,6 +2076,152 @@ def update_summary(matrix):
     }
 
 
+def validate_sequence_reference(sequence, case_name, expected_frame_count):
+    """Return every schema or artifact defect in one decoded-sequence reference."""
+    failures = []
+    canvas = sequence.get("canvas_size")
+    if (
+        not isinstance(canvas, list)
+        or len(canvas) != 2
+        or any(not isinstance(value, int) or value <= 0 for value in canvas)
+    ):
+        failures.append(f"{case_name}: sequence canvas evidence is invalid")
+        canvas = None
+    if sequence.get("canvas_origin") not in ASSERTION_ORIGINS:
+        failures.append(f"{case_name}: sequence canvas origin is invalid")
+    loop_count = sequence.get("loop_count")
+    if loop_count is not None and (
+        not isinstance(loop_count, int) or isinstance(loop_count, bool) or loop_count < 0
+    ):
+        failures.append(f"{case_name}: sequence loop count is invalid")
+    if sequence.get("loop_origin") not in ASSERTION_ORIGINS:
+        failures.append(f"{case_name}: sequence loop origin is invalid")
+
+    background = sequence.get("background")
+    if background is not None:
+        if not isinstance(background, dict):
+            failures.append(f"{case_name}: sequence background is not an object")
+        else:
+            palette_index = background.get("palette_index")
+            rgba = background.get("rgba")
+            palette_valid = (
+                isinstance(palette_index, int)
+                and not isinstance(palette_index, bool)
+                and 0 <= palette_index <= 255
+            )
+            rgba_valid = (
+                isinstance(rgba, list)
+                and len(rgba) == 4
+                and all(
+                    isinstance(value, int)
+                    and not isinstance(value, bool)
+                    and 0 <= value <= 255
+                    for value in rgba
+                )
+            )
+            if palette_valid == rgba_valid:
+                failures.append(
+                    f"{case_name}: sequence background must contain exactly one valid representation"
+                )
+            if background.get("origin") not in ASSERTION_ORIGINS:
+                failures.append(f"{case_name}: sequence background origin is invalid")
+
+    frames = sequence.get("frames")
+    if not isinstance(frames, list) or not frames:
+        failures.append(f"{case_name}: sequence has no frame evidence")
+        return failures
+    if isinstance(expected_frame_count, int) and len(frames) != expected_frame_count:
+        failures.append(
+            f"{case_name}: sequence has {len(frames)} frames but Pillow reports {expected_frame_count}"
+        )
+    for index, frame in enumerate(frames):
+        frame_name = f"{case_name}: frame {index}"
+        if not isinstance(frame, dict):
+            failures.append(f"{frame_name} evidence is not an object")
+            continue
+        if frame.get("index") != index:
+            failures.append(f"{frame_name} has a stale index")
+        rect = frame.get("source_rect")
+        if (
+            not isinstance(rect, list)
+            or len(rect) != 4
+            or any(not isinstance(value, int) or value < 0 for value in rect)
+            or rect[2] == 0
+            or rect[3] == 0
+        ):
+            failures.append(f"{frame_name} source rectangle is invalid")
+        elif canvas is not None and (
+            rect[0] + rect[2] > canvas[0] or rect[1] + rect[3] > canvas[1]
+        ):
+            failures.append(f"{frame_name} source rectangle exceeds the canvas")
+        duration_num = frame.get("duration_num")
+        duration_den = frame.get("duration_den")
+        if (
+            not isinstance(duration_num, int)
+            or isinstance(duration_num, bool)
+            or duration_num < 0
+            or not isinstance(duration_den, int)
+            or isinstance(duration_den, bool)
+            or duration_den <= 0
+        ):
+            failures.append(f"{frame_name} exact duration is invalid")
+        for field in ("duration_origin", "source_origin"):
+            if frame.get(field) not in ASSERTION_ORIGINS:
+                failures.append(f"{frame_name} {field} is invalid")
+        disposal = frame.get("disposal")
+        if disposal not in {"unspecified", "keep", "background", "previous"} and not (
+            isinstance(disposal, str)
+            and re.fullmatch(r"reserved:(?:[0-9]|[1-9][0-9]{1,2})", disposal)
+            and int(disposal.split(":", 1)[1]) <= 255
+        ):
+            failures.append(f"{frame_name} disposal is invalid")
+        blend = frame.get("blend")
+        if blend not in {"unspecified", "source", "over"} and not (
+            isinstance(blend, str)
+            and re.fullmatch(r"reserved:(?:[0-9]|[1-9][0-9]{1,2})", blend)
+            and int(blend.split(":", 1)[1]) <= 255
+        ):
+            failures.append(f"{frame_name} blend is invalid")
+        if not isinstance(frame.get("interlaced"), bool):
+            failures.append(f"{frame_name} interlace flag is invalid")
+        if not isinstance(frame.get("is_default_image"), bool):
+            failures.append(f"{frame_name} default-image flag is invalid")
+        if frame.get("pixel_layout") not in {"source_rectangle", "rendered_canvas"}:
+            failures.append(f"{frame_name} pixel layout is invalid")
+
+        pixel_assertion = frame.get("pixel_assertion")
+        pixel_fields = {
+            "pixel_origin",
+            "ref_path",
+            "ref_bytes",
+            "ref_sha256",
+            "ref_mode",
+            "ref_size",
+        }
+        if pixel_assertion == "not_asserted_source_layout":
+            if any(frame.get(field) is not None for field in pixel_fields):
+                failures.append(f"{frame_name} unasserted pixels retain evidence")
+            continue
+        if pixel_assertion != "exact":
+            failures.append(f"{frame_name} pixel assertion is invalid")
+            continue
+        if frame.get("pixel_origin") not in ASSERTION_ORIGINS:
+            failures.append(f"{frame_name} exact pixel origin is invalid")
+        frame_path = ROOT / str(frame.get("ref_path", ""))
+        ref_size = frame.get("ref_size")
+        if (
+            not frame_path.is_file()
+            or frame_path.stat().st_size != frame.get("ref_bytes")
+            or frame.get("ref_sha256") != sha256(frame_path.read_bytes())
+            or not isinstance(frame.get("ref_mode"), str)
+            or not isinstance(ref_size, list)
+            or len(ref_size) != 2
+            or any(not isinstance(value, int) or value <= 0 for value in ref_size)
+        ):
+            failures.append(f"{frame_name} exact pixel evidence is invalid")
+    return failures
+
+
 def validate_generated_outputs(matrix, target_format=None):
     """Require complete evidence for every active row and none for planned rows."""
     failures = []
@@ -1235,6 +2236,27 @@ def validate_generated_outputs(matrix, target_format=None):
                 if row.get("ref_path"):
                     failures.append(f"{case_name}: planned decode row retains a reference")
                 continue
+            if row.get("execution") != execution_contract():
+                failures.append(f"{case_name}: native execution contract is missing")
+            if row.get("operations") != decode_operation_expectations(row):
+                failures.append(f"{case_name}: decode operation contract is missing or stale")
+            if row.get("error_contracts") != decode_error_contracts(row, fmt_name):
+                failures.append(f"{case_name}: decode error contracts are missing or stale")
+            origins = row.get("assertion_origins")
+            if (
+                not isinstance(origins, dict)
+                or not {"detection", "inspection", "verification", "decode"}.issubset(
+                    origins
+                )
+                or any(origin not in ASSERTION_ORIGINS for origin in origins.values())
+            ):
+                failures.append(f"{case_name}: assertion origins are missing or invalid")
+            asset_path = ASSETS_DIR / fmt_name / str(row.get("asset", ""))
+            if (
+                not asset_path.is_file()
+                or row.get("asset_sha256") != sha256(asset_path.read_bytes())
+            ):
+                failures.append(f"{case_name}: asset SHA-256 is missing or stale")
             if row.get("verify_status") not in {"ok", "error"}:
                 failures.append(f"{case_name}: active decode row lacks Pillow verify evidence")
             if row.get("inspect_status") not in {"ok", "error"}:
@@ -1247,6 +2269,26 @@ def validate_generated_outputs(matrix, target_format=None):
                 not row.get("verify_error_type") or not row.get("verify_error_kind")
             ):
                 failures.append(f"{case_name}: verify error lacks Pillow exception mapping")
+            if row.get("verification_scope") not in {"header_only", "structure"}:
+                failures.append(f"{case_name}: verification scope is missing or invalid")
+            if row.get("inspect_status") == "ok" and not row.get(
+                "inspect_container_format"
+            ):
+                failures.append(f"{case_name}: inspect container format is missing")
+            if row.get("inspect_status") == "ok" and (
+                not isinstance(row.get("ref_bit_depth"), int)
+                or not 1 <= row["ref_bit_depth"] <= 32
+            ):
+                failures.append(f"{case_name}: inspect bit-depth evidence is missing")
+            if row.get("inspect_status") == "ok" and row.get(
+                "ref_bit_depth_origin"
+            ) not in ASSERTION_ORIGINS:
+                failures.append(f"{case_name}: inspect bit-depth origin is missing")
+            if row.get("inspect_container_format") == "CUR" and (
+                not isinstance(row.get("inspect_cursor_hotspot"), list)
+                or len(row["inspect_cursor_hotspot"]) != 2
+            ):
+                failures.append(f"{case_name}: CUR hotspot evidence is missing")
             if row.get("expect_error"):
                 if (
                     row.get("oracle_status") != "error"
@@ -1260,8 +2302,60 @@ def validate_generated_outputs(matrix, target_format=None):
                 failures.append(f"{case_name}: active decode row lacks pixel evidence")
                 continue
             path = ROOT / reference
-            if not path.exists() or path.stat().st_size != row.get("ref_bytes"):
+            if (
+                not path.exists()
+                or path.stat().st_size != row.get("ref_bytes")
+                or row.get("ref_sha256") != sha256(path.read_bytes())
+            ):
                 failures.append(f"{case_name}: decode pixel evidence is missing or has wrong size")
+            for field in ("inspect_palette", "decoded_palette"):
+                palette = row.get(field)
+                if not isinstance(palette, dict):
+                    failures.append(f"{case_name}: {field} evidence is missing")
+                    continue
+                state = palette.get("state")
+                if state not in {"absent", "implicit", "table"}:
+                    failures.append(f"{case_name}: {field} state is invalid")
+                if palette.get("origin") not in ASSERTION_ORIGINS:
+                    failures.append(f"{case_name}: {field} origin is missing")
+                if state == "table":
+                    rgb_path = ROOT / palette.get("rgb_path", "")
+                    rgb_bytes = palette.get("rgb_bytes")
+                    if (
+                        not rgb_path.is_file()
+                        or not isinstance(rgb_bytes, int)
+                        or rgb_bytes < 3
+                        or rgb_bytes % 3
+                        or rgb_path.stat().st_size != rgb_bytes
+                        or palette.get("rgb_sha256") != sha256(rgb_path.read_bytes())
+                    ):
+                        failures.append(f"{case_name}: {field} RGB evidence is invalid")
+                    alpha_path = palette.get("alpha_path")
+                    alpha_bytes = palette.get("alpha_bytes")
+                    if (alpha_path is None) != (alpha_bytes is None):
+                        failures.append(f"{case_name}: {field} alpha evidence is incomplete")
+                    elif alpha_path is not None and (
+                        not (ROOT / alpha_path).is_file()
+                        or not isinstance(alpha_bytes, int)
+                        or alpha_bytes < 1
+                        or alpha_bytes > rgb_bytes // 3
+                        or (ROOT / alpha_path).stat().st_size != alpha_bytes
+                        or palette.get("alpha_sha256")
+                        != sha256((ROOT / alpha_path).read_bytes())
+                    ):
+                        failures.append(f"{case_name}: {field} alpha evidence is invalid")
+                elif any(
+                    key in palette
+                    for key in (
+                        "rgb_path",
+                        "rgb_bytes",
+                        "rgb_sha256",
+                        "alpha_path",
+                        "alpha_bytes",
+                        "alpha_sha256",
+                    )
+                ):
+                    failures.append(f"{case_name}: {field} non-table state retains bytes")
             if row.get("expect_sequence_error"):
                 if (
                     row.get("sequence_status") != "error"
@@ -1276,20 +2370,40 @@ def validate_generated_outputs(matrix, target_format=None):
                         f"{case_name}: sequence error row retains successful frame evidence"
                     )
                 continue
+            if row.get("rust_expect_sequence_error") and (
+                row.get("rust_sequence_error_kind") != "unsupported"
+                or not row.get("rust_sequence_error_reason")
+                or row.get("ref_is_animated") is not True
+                or (
+                    row.get("ref_frame_count") is not None
+                    and row["ref_frame_count"] <= 1
+                )
+            ):
+                failures.append(
+                    f"{case_name}: Rust sequence error row lacks a multi-frame oracle and contract"
+                )
             sequence = row.get("sequence")
             if sequence:
-                frames = sequence.get("frames", [])
-                if not frames:
-                    failures.append(f"{case_name}: sequence has no frame evidence")
-                for frame in frames:
-                    frame_path = ROOT / frame.get("ref_path", "")
-                    if (
-                        not frame_path.is_file()
-                        or frame_path.stat().st_size != frame.get("ref_bytes")
-                    ):
-                        failures.append(
-                            f"{case_name}: frame {frame.get('index')} evidence is missing or has wrong size"
-                        )
+                if not {
+                    "sequence_canvas",
+                    "sequence_source",
+                }.issubset(origins):
+                    failures.append(
+                        f"{case_name}: sequence assertion origins are incomplete"
+                    )
+                if any(
+                    frame.get("pixel_assertion") == "exact"
+                    for frame in sequence.get("frames", [])
+                    if isinstance(frame, dict)
+                ) and "sequence_pixels" not in origins:
+                    failures.append(
+                        f"{case_name}: exact sequence pixels lack a row-level origin"
+                    )
+                failures.extend(
+                    validate_sequence_reference(
+                        sequence, case_name, row.get("ref_frame_count")
+                    )
+                )
 
         for row in fmt_data.get("encode", []):
             case_name = f"{fmt_name}/{row['id']}"
@@ -1299,6 +2413,31 @@ def validate_generated_outputs(matrix, target_format=None):
                 if row.get("ref_path") or row.get("encoded_ref_path"):
                     failures.append(f"{case_name}: planned encode row retains oracle evidence")
                 continue
+            if row.get("execution") != execution_contract():
+                failures.append(f"{case_name}: native execution contract is missing")
+            if row.get("operations") != encode_operation_expectations(row):
+                failures.append(f"{case_name}: encode operation contract is missing or stale")
+            if row.get("error_contracts") != encode_error_contracts(row, fmt_name):
+                failures.append(f"{case_name}: encode error contracts are missing or stale")
+            origins = row.get("assertion_origins")
+            if (
+                not isinstance(origins, dict)
+                or not {"source", "encode"}.issubset(origins)
+                or any(origin not in ASSERTION_ORIGINS for origin in origins.values())
+            ):
+                failures.append(f"{case_name}: assertion origins are missing or invalid")
+            source_path = (
+                ASSETS_DIR
+                / str(row.get("source_format") or fmt_name)
+                / str(row.get("source_asset", ""))
+            )
+            if (
+                not source_path.is_file()
+                or row.get("source_sha256") != sha256(source_path.read_bytes())
+            ):
+                failures.append(f"{case_name}: source SHA-256 is missing or stale")
+            if not row.get("source_mode"):
+                failures.append(f"{case_name}: active encode row lacks source-mode evidence")
             if row.get("expect_error"):
                 if (
                     row.get("oracle_status") != "error"
@@ -1307,6 +2446,36 @@ def validate_generated_outputs(matrix, target_format=None):
                 ):
                     failures.append(f"{case_name}: error row lacks Pillow exception mapping")
                 continue
+            if row.get("rust_expect_error") and (
+                row.get("rust_error_kind")
+                not in {
+                    "unknown_format",
+                    "feature_disabled",
+                    "malformed",
+                    "unsupported",
+                    "dimensions",
+                    "parameter",
+                }
+                or not row.get("rust_error_reason")
+            ):
+                failures.append(
+                    f"{case_name}: Rust-only error row lacks a supported kind and reason"
+                )
+            sequence = row.get("sequence")
+            if sequence:
+                if not {
+                    "sequence_canvas",
+                    "sequence_source",
+                    "sequence_pixels",
+                }.issubset(origins):
+                    failures.append(
+                        f"{case_name}: encoded sequence assertion origins are incomplete"
+                    )
+                failures.extend(
+                    validate_sequence_reference(
+                        sequence, case_name, row.get("source_frame_count")
+                    )
+                )
             evidence = [("encoded_ref_path", "encoded_ref_bytes", "encoded bytes")]
             if not row.get("params", {}).get("encoded_only"):
                 evidence.insert(0, ("ref_path", "ref_bytes", "roundtrip pixels"))
@@ -1316,7 +2485,16 @@ def validate_generated_outputs(matrix, target_format=None):
                     failures.append(f"{case_name}: active encode row lacks {label}")
                     continue
                 path = ROOT / reference
-                if not path.exists() or path.stat().st_size != row.get(size_field):
+                checksum_field = (
+                    "encoded_ref_sha256"
+                    if path_field == "encoded_ref_path"
+                    else "ref_sha256"
+                )
+                if (
+                    not path.exists()
+                    or path.stat().st_size != row.get(size_field)
+                    or row.get(checksum_field) != sha256(path.read_bytes())
+                ):
                     failures.append(f"{case_name}: {label} evidence is missing or has wrong size")
     if failures:
         detail = "\n  - ".join(failures)
@@ -1375,7 +2553,7 @@ def generate_decode(manifest, matrix, target_format=None):
             if case.get("status") == "planned" and case.get("oracle_gap"):
                 continue
             for asset_name in case.get("test_assets", []):
-                row = ensure_decode_row(matrix, fmt_name, case, asset_name)
+                row = ensure_decode_row(matrix, fmt_name, fmt_data, case, asset_name)
                 if fmt_data.get("status") == "planned" or case.get("status") == "planned":
                     row["status"] = "planned"
                     clear_pixel_ref(row)
@@ -1387,14 +2565,17 @@ def generate_decode(manifest, matrix, target_format=None):
                     row.pop("inspect_error_type", None)
                     row.pop("inspect_error_message", None)
                     row.pop("inspect_error_kind", None)
+                    row.pop("ref_bit_depth", None)
+                    row.pop("ref_bit_depth_origin", None)
                     continue
                 img_path = ASSETS_DIR / fmt_name / asset_name
                 if not img_path.exists():
                     continue
-                row["oracle_detects_format"] = pillow_detects_format(
-                    fmt_name, img_path.read_bytes()
-                )
-                write_inspect_ref(row, img_path)
+                asset_bytes = img_path.read_bytes()
+                row["asset_sha256"] = sha256(asset_bytes)
+                row["execution"] = execution_contract()
+                row["oracle_detects_format"] = oracle_detects_format(fmt_name, asset_bytes)
+                write_inspect_ref(row, img_path, fmt_name)
                 write_verify_ref(row, img_path)
                 if row.get("expect_error"):
                     clear_pixel_ref(row)
@@ -1424,6 +2605,7 @@ def generate_decode(manifest, matrix, target_format=None):
                     row.pop("oracle_error_message", None)
                     row.pop("oracle_error_kind", None)
                     write_pixel_ref(row, img, ref_name)
+                    write_palette_refs(row, img, fmt_name, img_path, ref_name)
                     if row.get("expect_sequence_error"):
                         write_sequence_error_ref(row, img_path)
                     else:
@@ -1431,10 +2613,49 @@ def generate_decode(manifest, matrix, target_format=None):
                         row.pop("sequence_error_type", None)
                         row.pop("sequence_error_message", None)
                         row.pop("sequence_error_kind", None)
-                        write_sequence_ref(row, img, fmt_name, asset_name)
+                        if fmt_name == "gif":
+                            with pillow_open_asset(img_path) as sequence_image:
+                                write_sequence_ref(
+                                    row, sequence_image, fmt_name, asset_name
+                                )
+                        else:
+                            write_sequence_ref(row, img, fmt_name, asset_name)
                     generated += 1
                 except Exception as e:
                     print(f"  SKIP decode {asset_name}: {e}", file=sys.stderr)
+
+        for row in matrix["formats"][fmt_name].get("decode", []):
+            if row.get("status") != "active":
+                continue
+            origins = {
+                "detection": (
+                    "specification_reference"
+                    if fmt_name == "avif"
+                    else "pillow_fixture"
+                ),
+                "inspection": "pillow_fixture",
+                "verification": "pillow_fixture",
+                "decode": "pillow_fixture",
+                "operations": "pillow_fixture",
+            }
+            if row.get("sequence"):
+                origins["sequence_canvas"] = "pillow_fixture"
+                origins["sequence_source"] = {
+                    "png": "specification_reference",
+                    "gif": "pillow_fixture",
+                    "webp": "specification_reference",
+                    "avif": "independent_implementation",
+                }[fmt_name]
+                if any(
+                    frame.get("pixel_assertion") == "exact"
+                    for frame in row["sequence"]["frames"]
+                ):
+                    origins["sequence_pixels"] = "pillow_fixture"
+            if row.get("rust_expect_sequence_error"):
+                origins["rust_sequence_contract"] = "defensive_model"
+            row["assertion_origins"] = origins
+            row["operations"] = decode_operation_expectations(row)
+            row["error_contracts"] = decode_error_contracts(row, fmt_name)
 
         # Also write input/output JSONs
         dec_cases = [r for r in matrix["formats"][fmt_name].get("decode", [])
@@ -1443,10 +2664,21 @@ def generate_decode(manifest, matrix, target_format=None):
             {
                 "id": r["id"],
                 "asset": r["asset"],
+                "asset_sha256": r.get("asset_sha256"),
+                "execution": r.get("execution"),
+                "assertion_origins": r.get("assertion_origins"),
+                "operations": r.get("operations"),
+                "error_contracts": r.get("error_contracts"),
                 "expect_error": bool(r.get("expect_error", False)),
                 "expect_sequence_error": bool(
                     r.get("expect_sequence_error", False)
                 ),
+                "verification_scope": r.get("verification_scope"),
+                "rust_expect_sequence_error": bool(
+                    r.get("rust_expect_sequence_error", False)
+                ),
+                "rust_sequence_error_kind": r.get("rust_sequence_error_kind"),
+                "rust_sequence_error_reason": r.get("rust_sequence_error_reason"),
                 "pillow_call": {
                     "open": f"tests/fixtures/input/images/{fmt_name}/{r['asset']}",
                     "operations": ["PIL.Image.open", "load", "tobytes"],
@@ -1479,16 +2711,34 @@ def generate_decode(manifest, matrix, target_format=None):
                 "verify_error_type": r.get("verify_error_type"),
                 "verify_error_message": r.get("verify_error_message"),
                 "verify_error_kind": r.get("verify_error_kind"),
+                "verification_scope": r.get("verification_scope"),
+                "inspect_container_format": r.get("inspect_container_format"),
+                "inspect_cursor_hotspot": r.get("inspect_cursor_hotspot"),
+                "asset_sha256": r.get("asset_sha256"),
+                "execution": r.get("execution"),
+                "assertion_origins": r.get("assertion_origins"),
+                "operations": r.get("operations"),
+                "error_contracts": r.get("error_contracts"),
+                "ref_bit_depth": r.get("ref_bit_depth"),
+                "ref_bit_depth_origin": r.get("ref_bit_depth_origin"),
                 "ref_path": r.get("ref_path"),
                 "ref_bytes": r.get("ref_bytes"),
+                "ref_sha256": r.get("ref_sha256"),
                 "ref_mode": r.get("ref_mode"),
                 "ref_size": r.get("ref_size"),
                 "ref_frame_count": r.get("ref_frame_count"),
                 "ref_is_animated": r.get("ref_is_animated"),
+                "inspect_palette": r.get("inspect_palette"),
+                "decoded_palette": r.get("decoded_palette"),
                 "sequence_status": r.get("sequence_status"),
                 "sequence_error_type": r.get("sequence_error_type"),
                 "sequence_error_message": r.get("sequence_error_message"),
                 "sequence_error_kind": r.get("sequence_error_kind"),
+                "rust_expect_sequence_error": bool(
+                    r.get("rust_expect_sequence_error", False)
+                ),
+                "rust_sequence_error_kind": r.get("rust_sequence_error_kind"),
+                "rust_sequence_error_reason": r.get("rust_sequence_error_reason"),
                 **({"sequence": r["sequence"]} if r.get("sequence") else {}),
             }
             for r in dec_cases
@@ -1521,6 +2771,7 @@ def generate_encode(manifest, matrix, target_format=None):
             # green result in the authoritative matrix.
             clear_pixel_ref(row)
             clear_encoded_ref(row)
+            row.pop("sequence", None)
             row.pop("oracle_status", None)
             row.pop("oracle_error_type", None)
             row.pop("oracle_error_message", None)
@@ -1535,9 +2786,16 @@ def generate_encode(manifest, matrix, target_format=None):
 
             try:
                 img = pillow_open_asset(src_path)
+                source_bytes = src_path.read_bytes()
+                row["source_sha256"] = sha256(source_bytes)
+                row["execution"] = execution_contract()
+                row["source_mode"] = mode_name(img)
+                row["source_frame_count"] = int(getattr(img, "n_frames", 1))
                 params = row.get("params", {})
                 validate_source_params(img, params, fmt_name)
                 kwargs = encode_params(fmt_name, dict(params))
+                if params.get("detach_source"):
+                    img = Image.frombytes(img.mode, img.size, img.tobytes())
                 if params.get("truncate_pixels"):
                     img = Image.frombytes(img.mode, img.size, img.tobytes()[:-1])
                 if source_dimensions := params.get("source_dimensions"):
@@ -1557,6 +2815,8 @@ def generate_encode(manifest, matrix, target_format=None):
                 if row.get("expect_error"):
                     row["oracle_status"] = "ok"
                     continue
+                if row.get("rust_expect_error"):
+                    row["oracle_status"] = "ok"
                 encoded_name = f"Encode.{fmt_name}_{row['id']}.bin"
                 OUTPUT_ENCODED.mkdir(parents=True, exist_ok=True)
                 (OUTPUT_ENCODED / encoded_name).write_bytes(encoded)
@@ -1564,11 +2824,20 @@ def generate_encode(manifest, matrix, target_format=None):
                     Path("tests") / "fixtures" / "outputs" / "encoded" / encoded_name
                 ).as_posix()
                 row["encoded_ref_bytes"] = len(encoded)
+                row["encoded_ref_sha256"] = sha256(encoded)
                 buf.seek(0)
                 rt = Image.open(buf)
                 if exact_encode_parity_supported(fmt_name, row):
                     ref_name = f"Encode.{fmt_name}_{row['id']}.bin"
                     write_pixel_ref(row, rt, ref_name)
+                    if row["source_frame_count"] > 1 and fmt_name == "webp":
+                        write_sequence_ref_from_data(
+                            row,
+                            rt,
+                            fmt_name,
+                            f"encoded_{row['id']}.webp",
+                            encoded,
+                        )
                     generated += 1
                 else:
                     clear_pixel_ref(row)
@@ -1582,6 +2851,28 @@ def generate_encode(manifest, matrix, target_format=None):
                 # Lossy formats or unsupported params — skip ref, just verify dimensions
                 print(f"  SKIP encode {row.get('id')}: {e}", file=sys.stderr)
 
+        for row in fmt_data.get("encode", []):
+            if row.get("status") != "active":
+                continue
+            origins = {
+                "source": "pillow_fixture",
+                "encode": "pillow_fixture",
+                "operations": "pillow_fixture",
+            }
+            if row.get("rust_expect_error"):
+                origins["rust_contract"] = "defensive_model"
+            if row.get("sequence"):
+                origins.update(
+                    {
+                        "sequence_canvas": "pillow_fixture",
+                        "sequence_source": "pillow_fixture",
+                        "sequence_pixels": "pillow_fixture",
+                    }
+                )
+            row["assertion_origins"] = origins
+            row["operations"] = encode_operation_expectations(row)
+            row["error_contracts"] = encode_error_contracts(row, fmt_name)
+
         # Encode input/output JSONs
         enc_cases = [r for r in fmt_data.get("encode", [])
                      if r.get("status") == "active" and r.get("source_asset")]
@@ -1591,8 +2882,24 @@ def generate_encode(manifest, matrix, target_format=None):
                     "id": r["id"],
                     "source_asset": r["source_asset"],
                     "source_format": r.get("source_format", fmt_name),
+                    "source_mode": r.get("source_mode"),
+                    "source_sha256": r.get("source_sha256"),
+                    "execution": r.get("execution"),
+                    "assertion_origins": r.get("assertion_origins"),
+                    "operations": r.get("operations"),
+                    "error_contracts": r.get("error_contracts"),
+                    **({"sequence": r["sequence"]} if r.get("sequence") else {}),
                     "params": r.get("params", {}),
                     **({"expect_error": True} if r.get("expect_error") else {}),
+                    **(
+                        {
+                            "rust_expect_error": True,
+                            "rust_error_kind": r.get("rust_error_kind"),
+                            "rust_error_reason": r.get("rust_error_reason"),
+                        }
+                        if r.get("rust_expect_error")
+                        else {}
+                    ),
                     "pillow_call": describe_encode_call(fmt_name, r),
                 }
                 for r in enc_cases
@@ -1612,8 +2919,17 @@ def generate_encode(manifest, matrix, target_format=None):
                     "ref_bytes": r.get("ref_bytes"),
                     "ref_mode": r.get("ref_mode"),
                     "ref_size": r.get("ref_size"),
+                    "ref_sha256": r.get("ref_sha256"),
                     "encoded_ref_path": r.get("encoded_ref_path"),
                     "encoded_ref_bytes": r.get("encoded_ref_bytes"),
+                    "encoded_ref_sha256": r.get("encoded_ref_sha256"),
+                    "source_mode": r.get("source_mode"),
+                    "source_sha256": r.get("source_sha256"),
+                    "execution": r.get("execution"),
+                    "assertion_origins": r.get("assertion_origins"),
+                    "operations": r.get("operations"),
+                    "error_contracts": r.get("error_contracts"),
+                    **({"sequence": r["sequence"]} if r.get("sequence") else {}),
                     **(
                         {
                             "oracle_status": r.get("oracle_status"),
@@ -1622,6 +2938,16 @@ def generate_encode(manifest, matrix, target_format=None):
                             "error_kind": r.get("oracle_error_kind"),
                         }
                         if r.get("expect_error")
+                        else {}
+                    ),
+                    **(
+                        {
+                            "oracle_status": r.get("oracle_status"),
+                            "rust_expect_error": True,
+                            "rust_error_kind": r.get("rust_error_kind"),
+                            "rust_error_reason": r.get("rust_error_reason"),
+                        }
+                        if r.get("rust_expect_error")
                         else {}
                     ),
                 }

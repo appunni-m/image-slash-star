@@ -105,6 +105,7 @@ fn inspect_frame(frame: &[u8]) -> CodecResult<ImageInfo> {
         palette: None,
         is_animated: false,
         frame_count: Some(1),
+        cursor_hotspot: None,
     })
 }
 

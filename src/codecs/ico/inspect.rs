@@ -1,7 +1,7 @@
 //! ICO/CUR directory and embedded-image inspection without pixel decoding.
 
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ImageFormat, ImageInfo, ImageMode};
+use crate::types::{CursorHotspot, ImageFormat, ImageInfo, ImageMode};
 
 const HEADER_SIZE: usize = 6;
 const ENTRY_SIZE: usize = 16;
@@ -61,6 +61,10 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     info.format = ImageFormat::Ico;
     info.is_animated = false;
     info.frame_count = Some(1);
+    info.cursor_hotspot = (kind == 2).then(|| CursorHotspot {
+        x: u16::from_le_bytes([best[4], best[5]]),
+        y: u16::from_le_bytes([best[6], best[7]]),
+    });
     Ok(info)
 }
 
@@ -167,6 +171,7 @@ fn inspect_icon_dib(data: &[u8]) -> CodecResult<ImageInfo> {
         palette: None,
         is_animated: false,
         frame_count: Some(1),
+        cursor_hotspot: None,
     })
 }
 

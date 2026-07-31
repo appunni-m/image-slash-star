@@ -42,6 +42,9 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut palette_rgb = None;
     let mut palette_alpha = Vec::new();
     let mut frame_count = 1;
+    let mut animation_declared = false;
+    let mut saw_frame_control = false;
+    let mut next_sequence = 0u32;
     let mut saw_following_chunk = false;
     while position < data.len() {
         let (kind, payload, next) = read_chunk(&data[position..], position)?;
@@ -58,17 +61,47 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                 palette_alpha = payload.to_vec();
             }
             b"acTL" => {
-                if payload.len() != 8 {
+                if payload.len() < 8 {
                     return Err(CodecError::Malformed(
                         "invalid PNG animation control chunk".to_owned(),
                     ));
                 }
                 let frames = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
-                if frames != 0 {
+                if animation_declared {
+                    animation_declared = false;
+                    frame_count = 1;
+                } else if frames != 0 && frames <= 0x8000_0000 {
+                    animation_declared = true;
                     frame_count = frames;
                 }
             }
+            b"fcTL" => {
+                if payload.len() < 26 {
+                    return Err(CodecError::Malformed(
+                        "invalid PNG frame control chunk".to_owned(),
+                    ));
+                }
+                let sequence = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
+                let frame_width =
+                    u32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]);
+                let frame_height =
+                    u32::from_be_bytes([payload[8], payload[9], payload[10], payload[11]]);
+                let left = u32::from_be_bytes([payload[12], payload[13], payload[14], payload[15]]);
+                let top = u32::from_be_bytes([payload[16], payload[17], payload[18], payload[19]]);
+                consume_sequence(sequence, &mut next_sequence)?;
+                if u64::from(left).saturating_add(u64::from(frame_width)) > u64::from(width)
+                    || u64::from(top).saturating_add(u64::from(frame_height)) > u64::from(height)
+                {
+                    return Err(CodecError::Malformed(
+                        "PNG animation frame rectangle is invalid".to_owned(),
+                    ));
+                }
+                saw_frame_control = true;
+            }
             b"IDAT" => {
+                if animation_declared && !saw_frame_control {
+                    frame_count = frame_count.saturating_add(1);
+                }
                 break;
             }
             b"IEND" => break,
@@ -102,6 +135,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         palette,
         is_animated,
         frame_count: Some(frame_count),
+        cursor_hotspot: None,
     })
 }
 
@@ -118,6 +152,21 @@ fn png_mode(color_type: u8, bit_depth: u8) -> CodecResult<ImageMode> {
             "invalid PNG color type and bit-depth combination".to_owned(),
         )),
     }
+}
+
+fn consume_sequence(actual: u32, next: &mut u32) -> CodecResult<()> {
+    if actual != *next {
+        return Err(CodecError::Malformed(
+            "PNG animation frame sequence is invalid".to_owned(),
+        ));
+    }
+    if *next == u32::MAX {
+        return Err(CodecError::Malformed(
+            "PNG animation sequence number overflows".to_owned(),
+        ));
+    }
+    *next = next.wrapping_add(1);
+    Ok(())
 }
 
 fn read_chunk(chunk: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
@@ -179,4 +228,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     no_image_data.extend_from_slice(&chunk(*b"IHDR", &header));
     no_image_data.extend_from_slice(&chunk(*b"IEND", &[]));
     let _ = inspect(&no_image_data);
+    let mut sequence = u32::MAX;
+    assert!(consume_sequence(u32::MAX, &mut sequence).is_err());
 }

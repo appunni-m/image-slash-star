@@ -19,14 +19,31 @@
 //! # Quick start
 //!
 //! ```
-//! use image_slash_star::{decode, encode_default, ImageFormat, ImageResult};
+//! use image_slash_star::{
+//!     decode, encode_default, ImageError, ImageFormat, ImageMode, ImageResult,
+//! };
 //!
-//! fn png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
+//! fn opaque_rgb_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
 //!     let decoded = decode(input)?;
-//!     assert_eq!(decoded.format, ImageFormat::Png);
+//!     if decoded.format != ImageFormat::Png {
+//!         return Err(ImageError::Unsupported {
+//!             format: Some(decoded.format),
+//!             message: "expected a PNG source".to_owned(),
+//!         });
+//!     }
+//!     if decoded.content.mode != ImageMode::Rgb8 {
+//!         return Err(ImageError::Unsupported {
+//!             format: Some(ImageFormat::Jpeg),
+//!             message: "JPEG example requires opaque RGB8 input".to_owned(),
+//!         });
+//!     }
 //!     encode_default(&decoded.content, ImageFormat::Jpeg)
 //! }
 //! ```
+//!
+//! This intentionally narrow example performs no hidden image processing.
+//! Alpha, palette, bilevel, and sixteen-bit PNG sources require an explicit
+//! conversion policy in a downstream processing library before JPEG encoding.
 //!
 //! # Data model
 //!
@@ -67,6 +84,10 @@ pub use source::EncodedImage;
 pub use types::*;
 
 /// Detect an encoded image format from its magic bytes.
+///
+/// AVIF uses `avif`/`avis` major brands directly. Generic `mif1`/`msf1`
+/// containers are identified as AVIF only when their complete bounded
+/// `ftyp` box also declares an `avif` or `avis` compatible brand.
 ///
 /// # Errors
 ///
@@ -110,13 +131,26 @@ pub fn detect_format(data: &[u8]) -> ImageResult<ImageFormat> {
     ) {
         return Ok(ImageFormat::Ico);
     }
-    if matches!(
-        data.get(4..12),
-        Some(b"ftypavif" | b"ftypavis" | b"ftypmif1" | b"ftypmsf1")
-    ) {
+    if is_avif_signature(data) {
         return Ok(ImageFormat::Avif);
     }
     Err(ImageError::UnknownFormat)
+}
+
+fn is_avif_signature(data: &[u8]) -> bool {
+    match data.get(4..12) {
+        Some(b"ftypavif" | b"ftypavis") => true,
+        Some(b"ftypmif1" | b"ftypmsf1") => {
+            let size = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
+            size >= 20
+                && size <= data.len()
+                && size.is_multiple_of(4)
+                && data[16..size]
+                    .chunks_exact(4)
+                    .any(|brand| matches!(brand, b"avif" | b"avis"))
+        }
+        _ => false,
+    }
 }
 
 /// Auto-detect encoded image data and retain both its source format and pixels.
