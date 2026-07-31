@@ -11,15 +11,16 @@ use crate::types::{
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
-    let extracted = extract_av1(data)?;
+    let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
+    let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let image = match decode_portable(&validated) {
-        Some(image) => Ok(image),
-        None => decode_native(data),
-    }?;
-    Ok((image, consumed))
+        Some(image) => image,
+        None => decode_native(data)?,
+    };
+    Ok((image.with_opaque_blocks(retained_boxes), consumed))
 }
 
 /// Decode every AVIF frame with its Pillow-observable presentation duration.
@@ -27,11 +28,14 @@ pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
-    let extracted = extract_av1(data)?;
+    let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
+    let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    decode_sequence_native(data, &validated, budget, consumed)
+    let (mut sequence, consumed) = decode_sequence_native(data, &validated, budget, consumed)?;
+    sequence.opaque_blocks = retained_boxes;
+    Ok((sequence, consumed))
 }
 
 fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {

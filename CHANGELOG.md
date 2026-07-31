@@ -95,6 +95,9 @@ All notable changes will be documented in this file. This project follows
   and exact stored value bytes (inline or at offset): unknown tags as opaque
   blocks, known metadata tags (text/date/software/artist/copyright/ICC) as
   metadata records, per page, with no implicit encode replay.
+- Raw AVIF top-level box retention: unknown and free/skip boxes as opaque
+  records with full box bytes, interpreted boxes excluded, truncated trailing
+  boxes ignored, and no implicit encode replay.
 - Execution of the feature-gate suite in a real WASM runtime
   (`wasm32-wasip1` under Node's WASI preview1) for no features, every
   isolated codec, default features, and all features, with the exact

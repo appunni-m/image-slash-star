@@ -839,6 +839,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) sequence: Option<SequencePayload>,
     /// Encoded bytes of the parsed top-level BMFF extent.
     pub(super) consumed: usize,
+    pub(super) retained_boxes: Vec<crate::types::OpaqueBlock>,
 }
 
 impl ExtractedAvif<'_> {
@@ -1569,6 +1570,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
     let brands = parse_ftyp(input, first.payload).map_err(|error| error.at(0, "avif_box"))?;
     let mut meta = None;
     let mut movie = None;
+    let mut retained_boxes = Vec::new();
     // Reassigned at the top of every iteration; the initializer only satisfies
     // definite initialization.
     #[allow(unused_assignments)]
@@ -1577,30 +1579,50 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         // Extent of the last successfully parsed top-level box.
         consumed = reader.offset;
         let box_offset = reader.offset as u64;
+        let box_start = reader.offset;
         match next_box(&mut reader, true, &mut budget)
             .map_err(|error| error.at(box_offset, "avif_box"))
         {
-            Ok(Some(child)) => match child.kind {
-                kind if kind == *b"meta" => {
-                    if meta.is_some() {
-                        return Err(parse_failure!());
+            Ok(Some(child)) => {
+                let box_end = reader.offset;
+                match child.kind {
+                    kind if kind == *b"meta" => {
+                        if meta.is_some() {
+                            return Err(parse_failure!());
+                        }
+                        meta = Some(
+                            parse_meta(input, child.payload, &mut budget)
+                                .map_err(|error| error.at(box_offset, "avif_box"))?,
+                        );
                     }
-                    meta = Some(
-                        parse_meta(input, child.payload, &mut budget)
-                            .map_err(|error| error.at(box_offset, "avif_box"))?,
-                    );
-                }
-                kind if kind == *b"moov" => {
-                    if movie.is_some() {
-                        return Err(parse_failure!());
+                    kind if kind == *b"moov" => {
+                        if movie.is_some() {
+                            return Err(parse_failure!());
+                        }
+                        movie = Some(
+                            parse_movie(input, child.payload, &mut budget)
+                                .map_err(|error| error.at(box_offset, "avif_box"))?,
+                        );
                     }
-                    movie = Some(
-                        parse_movie(input, child.payload, &mut budget)
-                            .map_err(|error| error.at(box_offset, "avif_box"))?,
-                    );
+                    kind if kind == *b"mdat" => {}
+                    kind if kind == *b"free" || kind == *b"skip" => {
+                        retained_boxes.push(crate::types::OpaqueBlock {
+                            kind: kind.to_vec(),
+                            data: input[box_start..box_end].to_vec(),
+                            safe_to_copy: true,
+                        });
+                    }
+                    _ => {
+                        // Unknown top-level boxes are ignorable by decoders
+                        // and retained raw; BMFF defines no safe-to-copy bit.
+                        retained_boxes.push(crate::types::OpaqueBlock {
+                            kind: child.kind.to_vec(),
+                            data: input[box_start..box_end].to_vec(),
+                            safe_to_copy: true,
+                        });
+                    }
                 }
-                _ => {}
-            },
+            }
             Ok(None) => break,
             Err(error) => {
                 // Bytes after a complete still or sequence structure are
@@ -1628,6 +1650,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         still,
         sequence,
         consumed,
+        retained_boxes,
     })
 }
 
@@ -3252,6 +3275,7 @@ fn coverage_structural_states() {
         still: None,
         sequence: None,
         consumed: 0,
+        retained_boxes: Vec::new(),
     };
     let _ = empty.validate();
     let invalid_plane = EncodedPlane {
@@ -3298,6 +3322,7 @@ fn coverage_structural_states() {
     let invalid_still_color = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: Vec::new(),
@@ -3310,6 +3335,7 @@ fn coverage_structural_states() {
     let invalid_still_alpha = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![EncodedSample {
@@ -3329,6 +3355,7 @@ fn coverage_structural_states() {
     let invalid_still = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![EncodedSample {
@@ -3361,6 +3388,7 @@ fn coverage_structural_states() {
     let sequence_only = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3379,6 +3407,7 @@ fn coverage_structural_states() {
     let invalid_sequence_color = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3392,6 +3421,7 @@ fn coverage_structural_states() {
     let invalid_sequence_alpha = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3412,6 +3442,7 @@ fn coverage_structural_states() {
     let invalid_sequence = ExtractedAvif {
         input: &sample_input,
         consumed: 0,
+        retained_boxes: Vec::new(),
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {

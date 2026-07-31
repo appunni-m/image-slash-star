@@ -163,6 +163,13 @@ DateTime, Artist, Copyright, ICC Profile) become `OpaqueMetadata` records.
 Records attach per page (the still image and each sequence frame), and default
 encoding never replays them.
 
+For AVIF, unknown top-level BMFF boxes and `free`/`skip` padding boxes are
+retained as raw `OpaqueBlock` records with the fourcc as kind and the full box
+bytes as data, in scan order, under the documented BMFF convention (no
+safe-to-copy bit; unknown boxes are ignorable). Interpreted boxes (ftyp/meta/
+moov/mdat) stay out, truncated trailing boxes are ignored exactly as before,
+and default encoding never replays retained boxes.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
 blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,
