@@ -658,6 +658,12 @@ pub struct ImageInfo {
     pub is_animated: bool,
     /// Exact frame count when a cheap container scan provides it.
     pub frame_count: Option<u32>,
+    /// Whether `frame_count` is the complete container count.
+    ///
+    /// Basic inspection (`inspect_basic`) may stop after the first proven
+    /// image and leave this `false` with `frame_count` `None`, while full
+    /// inspection (`inspect`) reports `true` for every supported container.
+    pub frame_count_complete: bool,
     /// Selected Windows cursor hotspot, distinguishing CUR from ordinary ICO.
     pub cursor_hotspot: Option<CursorHotspot>,
     /// Structural facts retained from the encoded source.

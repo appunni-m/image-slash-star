@@ -296,6 +296,24 @@ pub fn inspect(data: &[u8]) -> ImageResult<ImageInfo> {
     inspect_with_policy(data, &DecodePolicy::default())
 }
 
+/// Inspect encoded headers without counting every frame or page.
+///
+/// [`inspect_basic`] performs the same header validation as [`inspect`] but
+/// may stop after the first proven image, leaving `frame_count` `None` and
+/// `frame_count_complete` `false` when the complete count requires a deep
+/// traversal (GIF frame descriptors, the TIFF IFD chain, or animated WebP
+/// frame chunks). Formats whose inspection is already header-bound (PNG,
+/// JPEG, BMP, ICO, and AVIF) return the same result as [`inspect`].
+///
+/// # Errors
+///
+/// Returns the same errors as [`inspect`] for unknown signatures, disabled
+/// features, and malformed headers.
+pub fn inspect_basic(data: &[u8]) -> ImageResult<ImageInfo> {
+    let format = detect_format(data)?;
+    codecs::inspect_basic_format(data, format)
+}
+
 /// Inspect encoded image headers with an explicit caller-controlled policy.
 ///
 /// # Errors

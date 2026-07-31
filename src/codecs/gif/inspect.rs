@@ -10,6 +10,18 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Inspect logical-screen, first-frame palette, and sequence metadata.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data, false)
+}
+
+/// Inspect only the logical screen and first proven image.
+///
+/// Frame counting stops after the first image descriptor; the result reports
+/// `frame_count_complete` only when the next byte is the trailer.
+pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data, true)
+}
+
+fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     // The private inspector is reached only after root signature detection,
     // which proves an exact six-byte GIF87a/GIF89a prefix.
     let mut input = Input::new(&data[6..]);
@@ -106,6 +118,10 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                     complete = false;
                     break;
                 }
+                if basic {
+                    complete = *input.data.get(input.position).unwrap_or(&0) == TRAILER;
+                    break;
+                }
             }
             TRAILER => break,
             _ if recovering_from_bad_gce => {}
@@ -132,6 +148,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         palette: first_palette,
         is_animated: frame_count > 1,
         frame_count: complete.then_some(frame_count),
+        frame_count_complete: complete,
         cursor_hotspot: None,
         source,
     })

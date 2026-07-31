@@ -309,6 +309,7 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         palette: None,
         is_animated: details.frame_count > 1,
         frame_count: Some(details.frame_count),
+        frame_count_complete: true,
         cursor_hotspot: None,
         source,
     })

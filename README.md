@@ -131,6 +131,7 @@ capabilities and setup.
 | --- | --- |
 | `detect_format(&[u8])` | Identify a supported container signature |
 | `inspect(&[u8])` | Read `ImageInfo` without decoding compressed pixels |
+| `inspect_basic(&[u8])` | Read header facts without counting every frame/page; `frame_count_complete` reports whether the count is known |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |

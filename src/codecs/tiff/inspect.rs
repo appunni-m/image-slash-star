@@ -8,6 +8,18 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Inspect the first TIFF page and count the complete IFD chain.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data, false)
+}
+
+/// Inspect only the first TIFF page without traversing the IFD chain.
+///
+/// `frame_count_complete` is `true` only when the first directory has no next
+/// offset, so multipage files report an incomplete count.
+pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
+    inspect_inner(data, true)
+}
+
+fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let (endian, first_offset) = super::decode::parse_header(data)?;
     let directory = Directory::parse(data, first_offset, endian)?;
 
@@ -31,7 +43,11 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         sample_format,
         color_map.as_deref(),
     )?;
-    let (frame_count, complete_chain) = count_directories(data, first_offset, endian);
+    let (frame_count, complete_chain) = if basic {
+        (1u32, directory.next_offset() == 0)
+    } else {
+        count_directories(data, first_offset, endian)
+    };
     let alpha = directory
         .values(338)
         .as_deref()
@@ -50,6 +66,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         palette,
         is_animated: frame_count > 1,
         frame_count: complete_chain.then_some(frame_count),
+        frame_count_complete: complete_chain,
         cursor_hotspot: None,
         source,
     })
