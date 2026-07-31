@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-07-31 on the working tree based on revision `230fc96`
+Reviewed: 2026-07-31 on the working tree based on revision `91d47c6`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -35,7 +35,12 @@ The following decisions are already implemented and are not roadmap work:
 - exact palette, alpha, frame, timing, disposal, and background transfer
   models;
 - structured errors rather than fallible `Option`;
+- target-qualified typed encoder options with strict migration from legacy
+  string pairs;
+- one shared decode policy with a pre-detection encoded-input byte limit;
 - immutable encoded snapshots and shared lazy decode results;
+- runtime capability discovery that distinguishes feature, target, and
+  operation availability;
 - one Cargo feature per format, with ICO forwarding PNG and BMP;
 - exact fixture-backed errors and byte outputs;
 - no general image-processing layer; and
@@ -48,7 +53,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `230fc96`,
+The correction evidence below is the working-tree state based on `91d47c6`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -135,6 +140,9 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-019 | TIFF sequence decode walks every unique main-chain IFD and retains each page at its own exact dimensions and mode; still decode remains page one. Sequence encode composes exact still encodings using Pillow's proved 16-byte relocation/linking layout without resizing or converting pages. Animation-only state is rejected. | Two decode rows contain four exact pages including mixed RGB/L dimensions; five Pillow-byte-exact raw/LZW/Deflate/PackBits/mixed-page encodes contain 10 exact re-decoded pages; 10 structured error rows cover later-IFD failure, mode, geometry, timing, presentation controls, loop/background, and cumulative classic-offset arithmetic. |
 | COR-020 | `ImageInfo` and `DecodedImage` now carry an extensible `SourceDescriptor`. TIFF inspection and every decoded page retain the exact `II`/`MM` container order without changing transfer bytes; `I32`/`F32` remain source-order bytes, `L16` remains normalized little-endian, other codecs return an empty descriptor, and TIFF encoding remains deterministic little-endian without consuming source provenance. | Pillow 12.2.0/libtiff 4.7.1 agrees with the complete header before and after load. All 93 successful TIFF inspections (88 little, 5 big), all 71 successful TIFF still decodes (66 little, 5 big), all four source pages, and all 10 successfully re-encoded sequence pages assert the exact source order and origin. |
 | COR-021 | Public runtime capability discovery now mirrors feature and target dispatch without probing bytes. Every format reports typed detection, inspection, still, and genuine multi-image operation states; feature-disabled, target-unavailable, and unimplemented operations are distinct, and portable WASM AVIF is an explicit restricted class. | The all-feature semantic manifest asserts the complete native table and direct/table query agreement. Strict Clippy compilation passes for no features, each isolated feature, default, and all features on native and `wasm32-unknown-unknown`; the final Coverage MCP snapshot remains 100% for lines, branches, functions, and regions. |
+| COR-022 | Every common encode call now receives a non-exhaustive, target-qualified `EncodeOptions` value containing one codec-specific record. The explicit `ImageFormat` remains canonical; a mismatched option target returns a format-qualified `Parameter` before codec dispatch. There is no target-free default or catch-all map. A strict legacy-pair adapter rejects unknown, duplicate, and malformed values, while AVIF advanced options retain order and duplication in their typed list. | The original 1,417-row Pillow manifest and generated-matrix hashes remain unchanged. Separate manifest fixtures execute 97 accepted adapter translations, 69 structured errors, and every cross-target mismatch. The all-feature managed suite passes with exact 100% line, branch, function, and region coverage. |
+| COR-023 | `DecodePolicy` and `DecodeLimits` now apply one inclusive `max_encoded_bytes` boundary uniformly to inspection, still decode, sequence decode, immutable-source construction, and lazy materialization. The check precedes detection, so rejection performs no codec parsing and returns a typed, format-free `LimitExceeded` with operation, resource, maximum, and observed values. Lazy policy failures are not cached, and cached success cannot bypass a later stricter policy. | One 16-case `defensive_model` manifest covers below/at/above for all five public paths plus a zero-limit unknown-signature precedence case. Success reuses exact Pillow `size_1x1` metadata/pixels; failure asserts the complete error and cache/retry contract. The original 1,417-row Pillow manifest remains unchanged, and the managed suite retains 100% line, branch, function, and region coverage. |
+| COR-024 | The same policy now applies inclusive `max_width`, `max_height`, and `max_pixels` limits to the exact inspected canvas. Policy-aware direct decode performs an inspection preflight only when a canvas limit exists; lazy decode reuses retained `ImageInfo`. Failures occur before pixel materialization and retain the detected format. Unlimited wrappers do not gain another inspection pass. | The policy manifest now has 63 cases: below/at/above across four resources and five public paths, one pre-detection zero-limit case, and two malformed inspection-propagation rows. Successful paths retain exact Pillow metadata/pixels; the final managed suite remains 100% for all four coverage dimensions. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -147,10 +155,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`83a47cc6-6ee9-4e99-80e2-9a1f3f8d1cf2`, snapshot
-`77735a86-0498-487a-b671-a75282c228a8`, passed with zero failures or
-skips and reports 40,633/40,633 lines, 5,870/5,870 branches,
-2,170/2,170 functions, and 65,043/65,043 regions.
+`711afbf5-d52d-4254-b54d-e74e1f45744d`, snapshot
+`519bacc6-4be5-4a47-9503-ede4686b84c2`, passed with zero failures or
+skips and reports 40,939/40,939 lines, 5,864/5,864 branches,
+2,213/2,213 functions, and 65,321/65,321 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -230,7 +238,6 @@ public reusable conversion layer would violate project scope.
 | ID | Class | Finding | Attack and acceptance |
 | --- | --- | --- | --- |
 | API-003 | Missing capability | Common decode is auto-detect only. There is no explicit-format decode for trusted out-of-band format knowledge or ambiguous/partial containers. | Decide whether `decode_with_format` improves codec-only use without duplicating dispatch. If accepted, it must still validate the format signature/contract and never bypass safety checks. |
-| API-004 | Ergonomics | `EncodeOptions` is public only through `image_slash_star::encode_options::EncodeOptions`, while README tables present it like a root type and most other public types are re-exported. | Re-export it at the root or consistently document the module path before 1.0. |
 | API-005 | Stability | `ColorType` and `ImageError` are non-exhaustive, but `ImageFormat`, `ImageMode`, `FrameDisposal`, and `AnimationBackground` are exhaustive. Adding a format, mode, or presentation state will break downstream exhaustive matches. | Decide the pre-1.0 extensibility policy and make open-ended public enums non-exhaustive before first release. |
 | API-006 | Invalid-state surface | `DecodedImage` exposes both `color` and `mode`; callers can create disagreement. Palette/image/sequence fields are also all public. | Keep zero-copy construction possible, but consider checked constructors/builders and clearly label direct field construction as unchecked. Every consumer remains validation-gated. |
 | API-007 | Contract ambiguity | `ImageInfo.bit_depth` describes encoded storage while `mode` may describe down-converted output, for example 16-bit RGB PNG reported with `Rgb8`. | Document these as encoded depth versus decoded transfer mode and add exact bit-depth fixtures. |
@@ -239,7 +246,6 @@ public reusable conversion layer would violate project scope.
 | API-012 | Lazy-loading limitation | `EncodedImage` lazily caches only `DecodedImage`, not `DecodedSequence`. Animated callers must use eager `decode_sequence`. | Add a separate cached sequence path or a source view with independently named still/sequence caches; prove no accidental first-frame collapse. |
 | API-013 | Lazy-state ambiguity | `is_decoded()` is false for both "never attempted" and "failure already cached." | Add a small decode-state enum if callers need observability; do not expose internal synchronization details. |
 | API-014 | Memory behavior | Lazy materialization retains the complete encoded snapshot and decoded raster forever; clones share both, but there is no eviction. Repeated `verify` reparses independently. | Document peak memory now; benchmark before adding optional cache release or cached verification. |
-| API-016 | Option behavior | Unrelated and unknown `EncodeOptions::extra` keys are ignored, while invalid consumed keys error. Format-irrelevant typed fields are also silently ignored. | Typed per-format options remain the accepted solution. During migration, add strict validation at the selected target boundary and fixtures for unknown, irrelevant, duplicate, and interacting options. |
 | API-017 | Output model | All encoders allocate and return `Vec<u8>`; callers cannot supply a sink, reserve policy, or cancellation. | Implement the planned incremental writer without filesystem ownership or dependencies. Keep `Vec` convenience wrappers. |
 | API-018 | Input model | All decoders require one contiguous complete slice. Header inspection may scan far beyond a fixed prefix to count frames or IFDs. | Define incremental input and distinguish "basic header known" from "complete frame count known." |
 | API-019 | Metadata | ICC, EXIF, XMP, orientation, text, resolution, and format-specific blocks can be written in selected encoders but are not retained by `ImageInfo`/`DecodedImage`. Decode→encode therefore drops them. | Implement the planned opaque metadata bytes first; parsed semantics are optional and format-specific. |
@@ -265,14 +271,12 @@ public reusable conversion layer would violate project scope.
 | API-039 | Verification contract | Verification has a useful strength enum, but no policy for header-only, structure-only, or full pixel verification and no resource limits. | Make requested verification strength explicit and fail if the codec cannot provide it; never silently report header success as full verification. |
 | API-040 | Container preservation | Unknown chunks, boxes, markers, extensions, and TIFF tags cannot be retained for decode→encode passthrough. | Add an ordered opaque-block model with safe-to-copy, collision, size, and format ownership rules. Default encoding must not replay unknown data implicitly. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
-| API-042 | Option naming | `EncodeOptions::none()` and `EncodeOptions::default()` are currently identical, so `none` suggests a semantic distinction that does not exist. | Remove or clearly document the alias before 1.0 unless typed options give it a real meaning. |
 | API-043 | Partial-input contract | An incomplete signature is reported as `UnknownFormat`, while a recognized but truncated container is usually `Malformed`. There is no `NeedMoreData { minimum }` state for incremental callers. | Define a non-terminal input status before adding streaming. Require exact minimum-byte or progress semantics and never turn a terminal malformed result into an implicit retry loop. |
 | API-044 | Lazy-policy compatibility | `EncodedImage` has one permanent still-decode cache. Future limits, output modes, strictness, metadata policy, or color/alpha layout choices would make that single cache key ambiguous, and a cached limit failure could block a later less restrictive request. | Decide whether policy is fixed at source construction, part of each separately keyed materialization, or unsupported on cached sources before API-023/033 lands. |
 | API-045 | Repeated parsing | `EncodedImage::new` detects and inspects once, but `decode()` calls the top-level decoder, which detects and parses the container again; `verify()` independently reparses it on every call. | Measure the duplicate work, then retain an immutable parsed header/index only when every codec can prove that reuse cannot make later validation weaker. |
 | API-046 | Output-layout preflight | Callers cannot ask for exact output row bytes, packed-bit order, plane sizes, byte order, alignment, or total allocation without performing a decode. `ColorType::bits_per_pixel` is insufficient for `L1`, source-endian TIFF numeric bytes, and future planar data. | Add a checked transfer-layout result that is produced by the same arithmetic used by decode-into-buffer. Keep it about byte transport, not image processing. |
 | API-047 | Information completeness | `ImageInfo.frame_count: Option<u32>` collapses not-applicable, not-yet-scanned, scan-limited, malformed-later, and genuinely unknown states. A partial demux cannot report “N complete frames seen, another is partial.” | Replace the optional count with a small completeness/result model before incremental inspect or frame enumeration becomes public. |
 | API-048 | Source subtype loss | `Decoded<T>` retains only the eight-format enum. It cannot identify APNG versus PNG, classic TIFF versus BigTIFF, ICO versus CUR without inspecting a selected hotspot, VP8/VP8L/VP8X, AVIF item versus sequence source, or the source precision/profile class. | Add codec-specific inspected descriptors behind the format feature. Keep `ImageFormat` as the stable dispatch identity. |
-| API-049 | Shared-quality ambiguity | One `quality: Option<u8>` is presented across JPEG, lossy WebP, and AVIF even though the scales, defaults, lossless boundaries, alpha controls, and encoder implementations are not comparable. | Move quality into typed per-codec options and document only target-local semantics. Do not publish a cross-codec quality equivalence. |
 | API-050 | Loop-count ambiguity | `Option<u32>` does not name whether a value means total plays, additional repetitions, a file-format loop field, unknown repetition, or infinity. GIF/WebP convention and libavif's `n + 1` repetition contract differ. | Introduce explicit `Unspecified`, `Finite { total_plays }`, `Infinite`, and, if an oracle exposes it, `Unknown` states with checked per-format conversion. |
 | API-051 | Rational-duration identity | Exact numerator/denominator retention raises two distinct equality questions: `1/2` and `2/4` are the same duration but different source fields. Unbounded LCM conversion can also overflow when choosing one sequence timescale. | Preserve raw source fields separately from a reduced semantic duration, use checked arithmetic, and make every encoder's quantization/overflow result explicit. |
 | API-052 | Reserved presentation values | A format-neutral `Reserved(u8)` disposal or blend value does not identify the governing format or whether round-trip replay is legal. The same numeric code has no universal meaning across GIF, APNG, and WebP. | Retain a format-qualified raw code beside normalized known semantics; unknown values must not be silently replayed into another target. |
@@ -1029,7 +1033,7 @@ slice at a time:
 | Order | IDs/classes | Why first | Exit condition |
 | --- | --- | --- | --- |
 | 1 | API-023/030/031/039; QA-015/017/018/026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010 and QA-032 are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
-| 2 | API-004/005/007/015/016/022/042; FTR-026/028; QA-014/029 | Settle discoverability and pre-1.0 public compatibility before downstream adoption. | Rustdoc, generated capability table, isolated feature lanes, and claim ledger agree. |
+| 2 | API-005/007/015/022; FTR-026/028; QA-014/029 | Settle discoverability and pre-1.0 public compatibility before downstream adoption. | Rustdoc, generated capability table, isolated feature lanes, and claim ledger agree. |
 | 3 | API-019/028/034/035/040 plus the matching PNG/GIF/TIFF/WebP/ICO/AVIF metadata and sequence rows | Avoid implementing remaining multipage, multi-entry, or animated surfaces into a lossy common model. | Exact source/container state survives decode and, where supported, encode without public processing. |
 | 4 | API-024/025/027/032/037 and codec row/strip/tile/frame slices | Bound memory and enable large/sequence inputs without a second unrelated API family. | Whole-buffer convenience wraps the same bounded engine; caller buffers and eager results are byte-identical. |
 | 5 | API-017/018/029/036; FTR-017 through FTR-024/027/029; QA-016/019/020/022/030 | Complete native/WASM integration, incremental I/O, cancellation, packaging and measurements. | Real native and WASM runtime lanes pass with reproducible artifacts and measured copy/memory behavior. |
@@ -1044,7 +1048,7 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-021, including exact WebP mode
+Completed first: COR-001 through COR-024, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
@@ -1055,56 +1059,15 @@ control through fixture-backed structured errors. TIFF multipage decode/encode
 retains page dimensions, modes, and exact bytes across raw and compressed
 classic IFD chains, TIFF source byte order now survives inspection, still
 decode, and every retained page, and runtime capability discovery mirrors the
-current feature/target dispatch.
+current feature/target dispatch. Encode options are target-qualified typed
+records with a strict, manifest-tested legacy-pair migration boundary. The
+shared decode policy now bounds pre-detection encoded-input bytes and inspected
+canvas width, height, and pixels without claiming the remaining resource limits
+are complete.
 
-#### Accepted typed-encode-options slice
-
-The canonical encode API keeps an explicit `ImageFormat`, but its option value
-must now identify the same target and expose only that codec's settings:
-
-- replace the shared public fields and `extra: HashMap` with a non-exhaustive
-  `EncodeOptions` enum containing `Jpeg`, `Png`, `Gif`, `Bmp`, `Tiff`, `WebP`,
-  `Ico`, and `Avif` option records;
-- keep option records dependency-free and available as configuration types
-  regardless of whether their algorithm feature is compiled. Cargo features
-  continue to gate every codec implementation and operation, while stable
-  option type names do not change under feature unification;
-- make every value domain typed: JPEG/AVIF subsampling, PNG/TIFF compression,
-  GIF table/disposal/loop policy, TIFF prediction, ICO entry representation,
-  AVIF codec/range, and raw metadata bytes. Numeric ranges and interacting
-  values remain validation-gated at encode time;
-- `EncodeOptions::format()` reports the selected target and
-  `EncodeOptions::for_format(format)` creates that target's default record.
-  Passing options for a different explicit target returns a format-qualified
-  `Parameter` error before codec dispatch;
-- remove `EncodeOptions::none()`. The only format-neutral default operation is
-  `encode_default`; an options value has no meaningful target-free default;
-- retain one explicitly named strict legacy-pair migration adapter. It accepts
-  only keys historically consumed by the selected codec, rejects unknown and
-  duplicate keys, parses hexadecimal metadata into bytes, and returns typed,
-  format-qualified errors. It is not consulted by encoders and cannot restore
-  silent cross-codec ignores;
-- retain ordered duplicate AVIF advanced codec options as a typed
-  `AvifAdvancedOption` list because order and duplication are part of
-  libavif's target-specific contract; and
-- convert the manifest harness to the typed surface. Existing deterministic
-  output bytes and structured error rows must remain exact, while new
-  cross-target and strict-adapter rows prove the behavior previously missing
-  from the fixture contract.
-
-Acceptance requires unchanged active manifest counts and hashes unless the
-new strict option-contract rows are intentionally added, exact Pillow output
-for every existing success, format-qualified structured failures for mismatch,
-unknown, duplicate, range, and interaction cases, strict Clippy/rustdoc for
-native and WASM feature lanes, and 100% Coverage MCP line, branch, function,
-and region coverage. This closes API-004/API-016/API-042/API-049 and the
-top-level typed-options item; option domains not yet implemented by a codec
-remain named codec backlog rather than catch-all strings.
-
-1. Introduce typed per-format options without changing exact retained bytes.
-2. Add metadata retention, decode limits, incremental I/O, target runtime
+1. Add metadata retention, remaining decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.
-3. Complete portable AVIF and only then design the JS/WASM core-extra
+2. Complete portable AVIF and only then design the JS/WASM core-extra
    artifact split.
 
 Every slice ends with:
@@ -1144,10 +1107,12 @@ Acceptance:
 
 ### Caller-controlled resource limits
 
-Add typed limits before recommending the crate for arbitrary hostile inputs.
-Limits need to cover at least:
+Encoded-input bytes and inspected canvas width, height, and pixels are
+implemented through `DecodePolicy`. Complete the remaining typed limits before
+recommending the crate for arbitrary hostile inputs. They need to cover at
+least:
 
-- dimensions and decoded bytes;
+- later page/frame dimensions and decoded bytes;
 - frame count and total sequence bytes;
 - metadata/container nesting;
 - codec work that can grow independently of output size; and
@@ -1170,19 +1135,6 @@ Before the first registry release:
 
 ## Priority 1: integration quality
 
-### Typed encode options
-
-Replace catch-all string configuration with format-specific typed options.
-Compatibility keys may remain temporarily at an adapter boundary, but new
-public behavior should be discoverable from types and rustdoc.
-
-Acceptance:
-
-- ranges, defaults, interactions, target availability, and errors are explicit;
-- unsupported options are not silently accepted by the wrong codec;
-- existing manifest output remains exact; and
-- migration from `EncodeOptions::extra` is documented.
-
 ### Metadata preservation
 
 Define an opaque metadata model for ICC, EXIF, XMP, textual chunks, orientation,
@@ -1190,17 +1142,6 @@ and format-specific blocks.
 
 Preserve bytes first. Parsed semantic metadata should be added only where the
 format contract and round-trip behavior are clear.
-
-### Capability discovery
-
-Expose a dependency-free way to ask whether a format/operation is compiled and
-available on the current target. It must distinguish:
-
-- signature recognition;
-- inspection;
-- still decode/encode;
-- sequence decode/encode; and
-- manifest-bounded or restricted capability classes such as portable AVIF.
 
 ### Incremental I/O
 

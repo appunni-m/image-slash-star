@@ -1,0 +1,260 @@
+{
+  "format_version": 1,
+  "assertion_origin": "defensive_model",
+  "cases": [
+    {
+      "id": "jpeg_unknown",
+      "format": "jpeg",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "png_unknown",
+      "format": "png",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "gif_unknown",
+      "format": "gif",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "bmp_unknown",
+      "format": "bmp",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "tiff_unknown",
+      "format": "tiff",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "webp_unknown",
+      "format": "webp",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "ico_unknown",
+      "format": "ico",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "avif_unknown",
+      "format": "avif",
+      "pairs": [["unknown", "true"]],
+      "message_contains": "unknown legacy encode option"
+    },
+    {
+      "id": "jpeg_duplicate",
+      "format": "jpeg",
+      "pairs": [["quality", "1"], ["quality", "2"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "png_duplicate",
+      "format": "png",
+      "pairs": [["optimize", "true"], ["optimize", "false"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "gif_duplicate",
+      "format": "gif",
+      "pairs": [["interlace", "true"], ["interlace", "false"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "bmp_duplicate",
+      "format": "bmp",
+      "pairs": [["unknown", "true"], ["unknown", "false"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "tiff_duplicate",
+      "format": "tiff",
+      "pairs": [["compression", "raw"], ["compression", "lzw"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "webp_duplicate",
+      "format": "webp",
+      "pairs": [["lossless", "true"], ["lossless", "false"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "ico_duplicate",
+      "format": "ico",
+      "pairs": [["entry_type", "png"], ["entry_type", "bmp"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "avif_duplicate",
+      "format": "avif",
+      "pairs": [["codec", "auto"], ["codec", "aom"]],
+      "message_contains": "duplicate legacy encode option"
+    },
+    {
+      "id": "jpeg_invalid_hex",
+      "format": "jpeg",
+      "pairs": [["exif_hex", "0g"]],
+      "message_contains": "invalid hex value"
+    },
+    {
+      "id": "jpeg_invalid_boolean",
+      "format": "jpeg",
+      "pairs": [["optimize", "maybe"]],
+      "message_contains": "invalid boolean value"
+    },
+    {
+      "id": "jpeg_invalid_numeric_u8",
+      "format": "jpeg",
+      "pairs": [["quality", "invalid"]],
+      "message_contains": "invalid numeric value"
+    },
+    {
+      "id": "jpeg_invalid_numeric_u32",
+      "format": "jpeg",
+      "pairs": [["restart_interval", "invalid"]],
+      "message_contains": "invalid numeric value"
+    },
+    {
+      "id": "jpeg_invalid_hex_odd_length",
+      "format": "jpeg",
+      "pairs": [["exif_hex", "0"]],
+      "message_contains": "invalid hex value"
+    },
+    {
+      "id": "jpeg_invalid_hex_high_nibble",
+      "format": "jpeg",
+      "pairs": [["exif_hex", "g0"]],
+      "message_contains": "invalid hex value"
+    },
+    {
+      "id": "jpeg_invalid_subsampling",
+      "format": "jpeg",
+      "pairs": [["subsampling", "invalid"]],
+      "message_contains": "invalid JPEG subsampling option"
+    },
+    {
+      "id": "gif_invalid_numeric_u16",
+      "format": "gif",
+      "pairs": [["loop", "70000"]],
+      "message_contains": "invalid numeric value"
+    },
+    {
+      "id": "gif_invalid_disposal",
+      "format": "gif",
+      "pairs": [["disposal", "invalid"]],
+      "message_contains": "invalid GIF disposal option"
+    },
+    {
+      "id": "gif_invalid_color_table",
+      "format": "gif",
+      "pairs": [["color_table", "invalid"]],
+      "message_contains": "invalid GIF color-table option"
+    },
+    {
+      "id": "tiff_invalid_compression",
+      "format": "tiff",
+      "pairs": [["compression", "invalid"]],
+      "message_contains": "invalid TIFF compression option"
+    },
+    {
+      "id": "tiff_invalid_predictor",
+      "format": "tiff",
+      "pairs": [["predictor", "invalid"]],
+      "message_contains": "invalid TIFF predictor option"
+    },
+    {
+      "id": "ico_invalid_entry_type",
+      "format": "ico",
+      "pairs": [["entry_type", "invalid"]],
+      "message_contains": "invalid ICO entry type"
+    },
+    {
+      "id": "ico_invalid_size_shape",
+      "format": "ico",
+      "pairs": [["sizes", "16"]],
+      "message_contains": "exactly one width-height pair"
+    },
+    {
+      "id": "ico_invalid_numeric_u16",
+      "format": "ico",
+      "pairs": [["sizes", "70000x1"]],
+      "message_contains": "invalid numeric value"
+    },
+    {
+      "id": "ico_invalid_size_three_values",
+      "format": "ico",
+      "pairs": [["sizes", "1x2x3"]],
+      "message_contains": "exactly one width-height pair"
+    },
+    {
+      "id": "avif_invalid_numeric_i32",
+      "format": "avif",
+      "pairs": [["speed", "999999999999999"]],
+      "message_contains": "invalid numeric value"
+    },
+    {
+      "id": "avif_invalid_numeric_u64",
+      "format": "avif",
+      "pairs": [["sequence_time", "-1"]],
+      "message_contains": "invalid numeric value"
+    },
+    {
+      "id": "avif_invalid_codec",
+      "format": "avif",
+      "pairs": [["codec", "invalid"]],
+      "message_contains": "invalid AVIF codec option"
+    },
+    {
+      "id": "avif_invalid_subsampling",
+      "format": "avif",
+      "pairs": [["subsampling", "invalid"]],
+      "message_contains": "invalid AVIF subsampling option"
+    },
+    {
+      "id": "avif_invalid_range",
+      "format": "avif",
+      "pairs": [["range", "invalid"]],
+      "message_contains": "invalid AVIF range option"
+    },
+    {"id": "jpeg_invalid_progressive", "format": "jpeg", "pairs": [["progressive", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_compression_number", "format": "png", "pairs": [["compression", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "png_invalid_optimize", "format": "png", "pairs": [["optimize", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_interlace", "format": "png", "pairs": [["interlace", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_gamma", "format": "png", "pairs": [["gamma", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_srgb", "format": "png", "pairs": [["srgb", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_physical", "format": "png", "pairs": [["physical", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_text_chunks", "format": "png", "pairs": [["text_chunks", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "png_invalid_time", "format": "png", "pairs": [["time", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "gif_invalid_animated", "format": "gif", "pairs": [["animated", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "gif_invalid_interlace", "format": "gif", "pairs": [["interlace", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "gif_invalid_transparency", "format": "gif", "pairs": [["transparency", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "webp_invalid_quality", "format": "webp", "pairs": [["quality", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "webp_invalid_lossless", "format": "webp", "pairs": [["lossless", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "webp_invalid_method", "format": "webp", "pairs": [["method", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "webp_invalid_icc", "format": "webp", "pairs": [["icc_hex", "g0"]], "message_contains": "invalid hex value"},
+    {"id": "webp_invalid_exif", "format": "webp", "pairs": [["exif_hex", "g0"]], "message_contains": "invalid hex value"},
+    {"id": "webp_invalid_xmp", "format": "webp", "pairs": [["xmp_hex", "g0"]], "message_contains": "invalid hex value"},
+    {"id": "webp_invalid_kmax", "format": "webp", "pairs": [["kmax", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "webp_invalid_kmin", "format": "webp", "pairs": [["kmin", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "webp_invalid_minimize_size", "format": "webp", "pairs": [["minimize_size", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "webp_invalid_allow_mixed", "format": "webp", "pairs": [["allow_mixed", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "avif_invalid_quality", "format": "avif", "pairs": [["quality", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "avif_invalid_max_threads", "format": "avif", "pairs": [["max_threads", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "avif_invalid_tile_rows", "format": "avif", "pairs": [["tile_rows", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "avif_invalid_tile_cols", "format": "avif", "pairs": [["tile_cols", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "avif_invalid_alpha_premultiplied", "format": "avif", "pairs": [["alpha_premultiplied", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "avif_invalid_autotiling", "format": "avif", "pairs": [["autotiling", "invalid"]], "message_contains": "invalid boolean value"},
+    {"id": "avif_invalid_icc", "format": "avif", "pairs": [["icc_hex", "g0"]], "message_contains": "invalid hex value"},
+    {"id": "avif_invalid_exif", "format": "avif", "pairs": [["exif_hex", "g0"]], "message_contains": "invalid hex value"},
+    {"id": "avif_invalid_exif_orientation", "format": "avif", "pairs": [["exif_orientation", "invalid"]], "message_contains": "invalid numeric value"},
+    {"id": "avif_invalid_xmp", "format": "avif", "pairs": [["xmp_hex", "g0"]], "message_contains": "invalid hex value"}
+  ]
+}

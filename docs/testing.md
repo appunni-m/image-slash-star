@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-07-31 on the working tree based on revision `230fc96`
+Reviewed: 2026-07-31 on the working tree based on revision `91d47c6`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -17,9 +17,14 @@ Use these sources in order:
 2. `manifest.yaml` declares public input/output and error cases.
 3. `tests/fixtures/coverage_matrix.json` is the generated executable projection
    of the manifest.
-4. `tests/fixtures/outputs/` contains exact expected metadata, pixels, frames,
+4. `tests/fixtures/encode_option_acceptance_manifest.json` and
+   `tests/fixtures/encode_option_error_manifest.json` define the strict
+   legacy-pair migration boundary for typed encoder options.
+5. `tests/fixtures/decode_policy_manifest.json` defines caller-controlled
+   policy boundaries that Pillow does not expose.
+6. `tests/fixtures/outputs/` contains exact expected metadata, pixels, frames,
    entropy traces, and encoded files.
-5. `tests/coverage_matrix_tests.rs` executes the generated contract.
+7. The Rust integration harnesses execute those contracts.
 
 Implementation comments and prose do not override the generated fixture
 contract.
@@ -98,7 +103,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `230fc96`, the generated matrix
+For the current working tree based on revision `91d47c6`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -108,6 +113,22 @@ reports:
 | Encode cases | 393 |
 | Planned or unwired cases | 0 |
 | Formats | 8 |
+
+The two typed-option adapter manifests add 97 accepted translations and 69
+format-qualified structured-error cases. Accepted rows are labeled
+`compatibility_contract`; rejected unknown, duplicate, syntax, shape, and
+enum-value rows are labeled `defensive_model`. They test the public migration
+boundary without weakening the primary Pillow encode/decode contract.
+
+The decode-policy manifest adds 63 `defensive_model` cases. It covers below,
+at, and above the encoded-input, canvas-width, canvas-height, and canvas-pixel
+maxima for inspection, still decode, sequence decode, immutable-source
+construction, and lazy materialization. Successful paths reuse Pillow case
+`size_1x1` and compare the same exact metadata and decoded bytes. A zero-limit
+unknown-signature case proves input rejection precedes detection; two malformed
+preflight rows prove inspection errors propagate through policy-aware decode.
+Error paths assert the complete typed limit fields and retry-safe lazy-cache
+behavior.
 
 The counts are reproducible from the generated artifact:
 
@@ -119,23 +140,32 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 40,633 | 40,633 |
-| Branches | 5,870 | 5,870 |
-| Functions | 2,170 | 2,170 |
-| Regions | 65,043 | 65,043 |
+| Lines | 40,939 | 40,939 |
+| Branches | 5,864 | 5,864 |
+| Functions | 2,213 | 2,213 |
+| Regions | 65,321 | 65,321 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `83a47cc6-6ee9-4e99-80e2-9a1f3f8d1cf2`
+Coverage MCP run: `711afbf5-d52d-4254-b54d-e74e1f45744d`
 
-Snapshot: `77735a86-0498-487a-b671-a75282c228a8`
+Snapshot: `519bacc6-4be5-4a47-9503-ede4686b84c2`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 
 Generated matrix SHA-256:
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`
+
+Typed-option acceptance manifest SHA-256:
+`604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5`
+
+Typed-option error manifest SHA-256:
+`657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb`
+
+Decode-policy manifest SHA-256:
+`ffff62bb320c310760c8d5276819484697c11cd66a9b194f8a323b8f9d631d27`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions
@@ -171,8 +201,16 @@ manifest.yaml
     ├─ independent AV1 reference generators
     │      └─ entropy and reconstruction JSON
     │
-    └─ tests/coverage_matrix_tests.rs
-           └─ exact public parity assertions
+    ├─ tests/fixtures/encode_option_*_manifest.json
+    │      └─ strict typed-option adapter success/error contracts
+    │
+    ├─ tests/fixtures/decode_policy_manifest.json
+    │      └─ caller-limit boundary and cache contracts
+    │
+    └─ Rust integration harnesses
+           ├─ exact public parity assertions
+           ├─ exact typed-option adapter assertions
+           └─ typed resource-limit assertions
 ```
 
 Inputs and outputs are committed because they define the reviewable byte

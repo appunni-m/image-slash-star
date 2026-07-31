@@ -38,14 +38,14 @@ impl EncodeOptions {
     #[must_use]
     pub fn for_format(format: ImageFormat) -> Self {
         match format {
-            ImageFormat::Jpeg => Self::Jpeg(JpegEncodeOptions::default()),
-            ImageFormat::Png => Self::Png(PngEncodeOptions::default()),
-            ImageFormat::Gif => Self::Gif(GifEncodeOptions::default()),
-            ImageFormat::Bmp => Self::Bmp(BmpEncodeOptions::default()),
-            ImageFormat::Tiff => Self::Tiff(TiffEncodeOptions::default()),
-            ImageFormat::WebP => Self::WebP(WebPEncodeOptions::default()),
-            ImageFormat::Ico => Self::Ico(IcoEncodeOptions::default()),
-            ImageFormat::Avif => Self::Avif(AvifEncodeOptions::default()),
+            ImageFormat::Jpeg => JpegEncodeOptions::default().into(),
+            ImageFormat::Png => PngEncodeOptions::default().into(),
+            ImageFormat::Gif => GifEncodeOptions::default().into(),
+            ImageFormat::Bmp => BmpEncodeOptions::default().into(),
+            ImageFormat::Tiff => TiffEncodeOptions::default().into(),
+            ImageFormat::WebP => WebPEncodeOptions::default().into(),
+            ImageFormat::Ico => IcoEncodeOptions::default().into(),
+            ImageFormat::Avif => AvifEncodeOptions::default().into(),
         }
     }
 
@@ -97,24 +97,53 @@ impl EncodeOptions {
     }
 }
 
-macro_rules! impl_encode_options_from {
-    ($type:ty, $variant:ident) => {
-        impl From<$type> for EncodeOptions {
-            fn from(options: $type) -> Self {
-                Self::$variant(options)
-            }
-        }
-    };
+impl From<JpegEncodeOptions> for EncodeOptions {
+    fn from(options: JpegEncodeOptions) -> Self {
+        Self::Jpeg(options)
+    }
 }
 
-impl_encode_options_from!(JpegEncodeOptions, Jpeg);
-impl_encode_options_from!(PngEncodeOptions, Png);
-impl_encode_options_from!(GifEncodeOptions, Gif);
-impl_encode_options_from!(BmpEncodeOptions, Bmp);
-impl_encode_options_from!(TiffEncodeOptions, Tiff);
-impl_encode_options_from!(WebPEncodeOptions, WebP);
-impl_encode_options_from!(IcoEncodeOptions, Ico);
-impl_encode_options_from!(AvifEncodeOptions, Avif);
+impl From<PngEncodeOptions> for EncodeOptions {
+    fn from(options: PngEncodeOptions) -> Self {
+        Self::Png(options)
+    }
+}
+
+impl From<GifEncodeOptions> for EncodeOptions {
+    fn from(options: GifEncodeOptions) -> Self {
+        Self::Gif(options)
+    }
+}
+
+impl From<BmpEncodeOptions> for EncodeOptions {
+    fn from(options: BmpEncodeOptions) -> Self {
+        Self::Bmp(options)
+    }
+}
+
+impl From<TiffEncodeOptions> for EncodeOptions {
+    fn from(options: TiffEncodeOptions) -> Self {
+        Self::Tiff(options)
+    }
+}
+
+impl From<WebPEncodeOptions> for EncodeOptions {
+    fn from(options: WebPEncodeOptions) -> Self {
+        Self::WebP(options)
+    }
+}
+
+impl From<IcoEncodeOptions> for EncodeOptions {
+    fn from(options: IcoEncodeOptions) -> Self {
+        Self::Ico(options)
+    }
+}
+
+impl From<AvifEncodeOptions> for EncodeOptions {
+    fn from(options: AvifEncodeOptions) -> Self {
+        Self::Avif(options)
+    }
+}
 
 /// JPEG chroma-subsampling layout.
 #[non_exhaustive]
@@ -177,6 +206,7 @@ pub struct PngEncodeOptions {
     legacy_ancillary: PngLegacyAncillary,
 }
 
+#[cfg(feature = "png")]
 impl PngEncodeOptions {
     pub(crate) const fn legacy_gamma(&self) -> bool {
         self.legacy_ancillary.gamma
@@ -196,6 +226,21 @@ impl PngEncodeOptions {
 
     pub(crate) const fn legacy_time(&self) -> bool {
         self.legacy_ancillary.time
+    }
+
+    #[cfg(coverage)]
+    pub(crate) fn __coverage_legacy_ancillary() -> Self {
+        Self {
+            compression: Some(PngCompression::None),
+            legacy_ancillary: PngLegacyAncillary {
+                gamma: true,
+                srgb: true,
+                physical: true,
+                text_chunks: true,
+                time: true,
+            },
+            ..Self::default()
+        }
     }
 }
 
@@ -331,6 +376,7 @@ pub struct WebPEncodeOptions {
     force_riff_size_overflow: bool,
 }
 
+#[cfg(feature = "webp")]
 impl WebPEncodeOptions {
     pub(crate) const fn legacy_kmax(&self) -> Option<u32> {
         self.legacy_sequence.kmax
@@ -789,31 +835,4 @@ fn parse_avif(pairs: &[(String, String)]) -> ImageResult<AvifEncodeOptions> {
         }
     }
     Ok(options)
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let duplicate = vec![
-        ("quality".to_owned(), "1".to_owned()),
-        ("quality".to_owned(), "2".to_owned()),
-    ];
-    let _ = EncodeOptions::try_from_legacy_pairs(ImageFormat::Jpeg, &duplicate);
-    let invalid_hex = vec![("exif_hex".to_owned(), "0g".to_owned())];
-    let _ = EncodeOptions::try_from_legacy_pairs(ImageFormat::Jpeg, &invalid_hex);
-    let invalid_boolean = vec![("optimize".to_owned(), "maybe".to_owned())];
-    let _ = EncodeOptions::try_from_legacy_pairs(ImageFormat::Jpeg, &invalid_boolean);
-    let unknown = vec![("unknown".to_owned(), "true".to_owned())];
-    for format in [
-        ImageFormat::Jpeg,
-        ImageFormat::Png,
-        ImageFormat::Gif,
-        ImageFormat::Bmp,
-        ImageFormat::Tiff,
-        ImageFormat::WebP,
-        ImageFormat::Ico,
-        ImageFormat::Avif,
-    ] {
-        let _ = EncodeOptions::for_format(format).format();
-        let _ = EncodeOptions::try_from_legacy_pairs(format, &unknown);
-    }
 }

@@ -68,11 +68,9 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
         JpegSubsampling::Cs422 => "422",
         JpegSubsampling::Cs420 => "420",
     };
-    let restart_rows = opts.restart_interval.map_or(Ok(0), |value| {
-        usize::try_from(value).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval is unrepresentable".to_owned())
-        })
-    })?;
+    // The supported native and WebAssembly targets have at least a 32-bit
+    // `usize`, so every public `u32` row interval is representable here.
+    let restart_rows = opts.restart_interval.unwrap_or(0) as usize;
 
     let params = quant::build_params(quality, subsampling, usize::from(num_components));
 
@@ -184,9 +182,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
     let restart_interval = if restart_rows == 0 {
         0
     } else {
-        let interval = restart_rows
-            .checked_mul(mcu_columns)
-            .ok_or_else(|| CodecError::Parameter("JPEG restart interval overflows".to_owned()))?;
+        let interval = restart_rows.saturating_mul(mcu_columns);
         u16::try_from(interval).map_err(|_| {
             CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
         })?

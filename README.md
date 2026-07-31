@@ -13,9 +13,11 @@ bytes.
 
 > **Pre-release status:** version 0.1.0 is not published to crates.io. The
 > compatibility guarantee is limited to committed manifest cases, not every
-> legal file in each format specification. Caller-controlled decode limits are
-> not implemented, so the current crate should not be treated as hardened for
-> arbitrary hostile inputs. Breaking API changes may occur before 1.0.
+> legal file in each format specification. Encoded-input bytes and inspected
+> canvas dimensions/pixels can be bounded, but decoded memory, later
+> pages/frames, metadata, and codec work are not yet fully limited. The current
+> crate should not be treated as hardened for arbitrary hostile inputs.
+> Breaking API changes may occur before 1.0.
 
 ## Why use it?
 
@@ -117,12 +119,14 @@ capabilities and setup.
 | `inspect(&[u8])` | Read `ImageInfo` without decoding compressed pixels |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
+| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
+| `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return
@@ -153,6 +157,76 @@ without changing the transfer bytes. TIFF currently records its exact
 modes keep their documented transfer layout. Other codecs currently return an
 empty `SourceDescriptor`.
 
+### Typed encoder options
+
+`EncodeOptions` always identifies one target codec. Construct the corresponding
+record directly or use `EncodeOptions::for_format` for that format's defaults:
+
+```rust
+use image_slash_star::{
+    encode, EncodeOptions, ImageFormat, JpegEncodeOptions, JpegSubsampling,
+};
+
+# fn example(image: &image_slash_star::DecodedImage)
+#     -> image_slash_star::ImageResult<Vec<u8>> {
+let options = EncodeOptions::from(JpegEncodeOptions {
+    quality: Some(90),
+    subsampling: Some(JpegSubsampling::Cs444),
+    ..JpegEncodeOptions::default()
+});
+encode(image, ImageFormat::Jpeg, &options)
+# }
+```
+
+Passing JPEG options with a PNG target, for example, returns a
+format-qualified `Parameter` error before codec dispatch. There is no
+format-neutral `EncodeOptions::default()` because codec defaults and option
+domains are not interchangeable.
+
+`EncodeOptions::try_from_legacy_pairs` is a strict migration boundary for the
+former string-pair configuration. It rejects unknown and duplicate keys,
+validates each value, and produces a typed record; encoders never inspect
+string keys. New integrations should construct codec records directly.
+
+### Caller-controlled limits
+
+The unlimited entry points remain convenient for trusted inputs.
+`DecodePolicy` provides inclusive maxima for the complete encoded byte slice
+and inspected canvas width, height, and pixel count:
+
+```rust
+use image_slash_star::{decode_with_policy, DecodePolicy, ImageResult};
+
+fn decode_at_most_one_mebibyte(
+    input: &[u8],
+) -> ImageResult<image_slash_star::Decoded<image_slash_star::DecodedImage>> {
+    let policy = DecodePolicy::new()
+        .with_max_encoded_bytes(1024 * 1024)
+        .with_max_width(4096)
+        .with_max_height(4096)
+        .with_max_pixels(16_000_000);
+    decode_with_policy(input, &policy)
+}
+```
+
+The encoded-byte check occurs before signature detection and codec parsing. An
+oversized input returns a typed `LimitExceeded` error with the operation,
+`ResourceLimit::EncodedBytes`, configured maximum, and observed length. It has
+no selected format because no format parsing occurred.
+
+Canvas limits use exact `ImageInfo` width, height, and `width × height`. They
+run after format-qualified inspection and before pixel materialization, so
+their errors retain the selected format. Policy-aware direct decode may inspect
+then parse again; unlimited wrappers do not gain that additional pass.
+
+`inspect_with_policy`, `decode_sequence_with_policy`,
+`EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
+same boundary. A rejected lazy decode is not cached, and an already cached
+decode cannot bypass a later stricter policy. This is not yet a complete
+hostile-input budget: later page/frame dimensions, decoded sample bytes,
+cumulative sequence memory, frame counts, metadata, nesting, codec work,
+allocations, and output remain unbounded.
+
 See [architecture and public contract](docs/architecture.md) for byte layouts,
 validation invariants, lazy source lifecycle, memory behavior, feature
 dispatch, and internal boundaries. Generate declaration-level API
@@ -174,17 +248,19 @@ Every canonical fallible API returns `ImageResult<T>`.
 | `Unsupported` | The requested operation or valid input class is unavailable |
 | `Dimensions` | Dimensions, frame bounds, or sample length are invalid |
 | `Parameter` | An option, palette, mode combination, or other parameter is invalid |
+| `LimitExceeded` | A caller-configured resource maximum was exceeded |
 
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
 errors can usually be handled by selecting another compiled capability.
 
 Use `error.kind()` for stable recovery policy and `error.format()` for the
-selected input/output format when one is known. `error.message()` returns the
-retained high-level diagnostic for logs. In particular, `Dimensions` and
-`Parameter` retain both optional format and diagnostic context; callers do not
-need to parse `Display` output. Diagnostic prose may become more specific, so
-it is not a substitute for `ImageErrorKind`.
+selected input/output format when one is known. `error.message()` returns
+retained high-level codec/parameter diagnostics; `LimitExceeded` instead
+exposes typed fields directly and has no prose message. In particular,
+`Dimensions` and `Parameter` retain both optional format and diagnostic
+context; callers do not need to parse `Display` output. Diagnostic prose may
+become more specific, so it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
