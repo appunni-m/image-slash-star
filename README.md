@@ -224,6 +224,10 @@ GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
 extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
 remains interpreted into `loop_count`.
+JPEG APPn and COM marker payloads are retained as ordered metadata records
+(marker byte as kind, exact payload bytes as data), including multi-segment
+ICC/EXIF fragments in stream order; the APP14 Adobe transform byte stays
+parsed for CMYK decoding.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

@@ -136,6 +136,14 @@ and recorded safe to copy because GIF89a requires decoders to ignore
 extensions they do not understand. Still decode attaches the container records
 to the returned image, and default encoding never replays extensions.
 
+For JPEG, APPn (0xE0–0xEF) and COM (0xFE) marker payloads are retained as
+ordered `OpaqueMetadata` records with the marker byte as kind and the exact
+payload bytes after the length field as data. Multi-segment ICC/EXIF fragments
+keep their stream order, and the APP14 Adobe transform byte remains parsed for
+CMYK decoding while the payload stays retained. Truncated metadata markers
+fail with the `jpeg_metadata` parse-site identity, and default encoding never
+replays retained markers.
+
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
 blend, frame layout, backgrounds, sequence kinds, source alpha, capabilities,
