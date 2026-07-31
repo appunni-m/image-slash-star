@@ -16,6 +16,8 @@ pub enum ResourceLimit {
     Height,
     /// Inspected image canvas area in pixels.
     Pixels,
+    /// Decoded transfer-byte length of the inspected primary image.
+    PrimaryDecodedBytes,
 }
 
 /// Stable category of an [`ImageError`].

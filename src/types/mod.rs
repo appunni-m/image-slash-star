@@ -21,9 +21,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for format in formats {
         let _ = format.as_str();
         let _ = format.to_string();
+        let _ = format.mime_type();
+        let _ = format.canonical_extension();
+        let _ = format.extensions();
     }
     for name in [
-        "jpeg", "jpg", "png", "gif", "bmp", "webp", "tiff", "tif", "ico", "cur", "avif",
+        "jpeg", "jpg", "jfif", "jpe", "png", "apng", "gif", "bmp", "webp", "tiff", "tif", "ico",
+        "cur", "avif", "avifs",
     ] {
         let _ = ImageFormat::from_name(name);
         let _ = name.parse::<ImageFormat>();
@@ -389,6 +393,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let still = DecodedSequence::from_image(base);
     let _ = still.first();
+    let _ = still.first_image();
     for duration in [
         FrameDuration {
             numerator: 1,
@@ -425,6 +430,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
 /// Supported image formats for encoding and decoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum ImageFormat {
     /// JPEG
     Jpeg,
@@ -446,6 +452,7 @@ pub enum ImageFormat {
 
 /// Amount of validation performed by [`crate::EncodedImage::verify`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum VerificationScope {
     /// Construction-time header inspection is the complete Pillow contract.
     HeaderOnly,
@@ -623,6 +630,51 @@ impl ImageFormat {
         }
     }
 
+    /// Return one stable MIME media type for this format.
+    #[must_use]
+    pub const fn mime_type(self) -> &'static str {
+        match self {
+            Self::Jpeg => "image/jpeg",
+            Self::Png => "image/png",
+            Self::Gif => "image/gif",
+            Self::Bmp => "image/bmp",
+            Self::WebP => "image/webp",
+            Self::Tiff => "image/tiff",
+            Self::Ico => "image/x-icon",
+            Self::Avif => "image/avif",
+        }
+    }
+
+    /// Return the canonical file extension without a leading dot.
+    #[must_use]
+    pub const fn canonical_extension(self) -> &'static str {
+        match self {
+            Self::Jpeg => "jpg",
+            Self::Png => "png",
+            Self::Gif => "gif",
+            Self::Bmp => "bmp",
+            Self::WebP => "webp",
+            Self::Tiff => "tiff",
+            Self::Ico => "ico",
+            Self::Avif => "avif",
+        }
+    }
+
+    /// Return every accepted file extension in canonical-first order.
+    #[must_use]
+    pub const fn extensions(self) -> &'static [&'static str] {
+        match self {
+            Self::Jpeg => &["jpg", "jpeg", "jfif", "jpe"],
+            Self::Png => &["png", "apng"],
+            Self::Gif => &["gif"],
+            Self::Bmp => &["bmp"],
+            Self::WebP => &["webp"],
+            Self::Tiff => &["tiff", "tif"],
+            Self::Ico => &["ico", "cur"],
+            Self::Avif => &["avif", "avifs"],
+        }
+    }
+
     /// Parses a case-insensitive image format name or common extension alias.
     ///
     /// # Errors
@@ -630,9 +682,13 @@ impl ImageFormat {
     /// Returns [`ImageError::UnknownFormat`] when `name` does not identify a
     /// supported image container.
     pub fn from_name(name: &str) -> Result<Self, ImageError> {
-        if name.eq_ignore_ascii_case("jpeg") || name.eq_ignore_ascii_case("jpg") {
+        if name.eq_ignore_ascii_case("jpeg")
+            || name.eq_ignore_ascii_case("jpg")
+            || name.eq_ignore_ascii_case("jfif")
+            || name.eq_ignore_ascii_case("jpe")
+        {
             Ok(ImageFormat::Jpeg)
-        } else if name.eq_ignore_ascii_case("png") {
+        } else if name.eq_ignore_ascii_case("png") || name.eq_ignore_ascii_case("apng") {
             Ok(ImageFormat::Png)
         } else if name.eq_ignore_ascii_case("gif") {
             Ok(ImageFormat::Gif)
@@ -644,7 +700,7 @@ impl ImageFormat {
             Ok(ImageFormat::Tiff)
         } else if name.eq_ignore_ascii_case("ico") || name.eq_ignore_ascii_case("cur") {
             Ok(ImageFormat::Ico)
-        } else if name.eq_ignore_ascii_case("avif") {
+        } else if name.eq_ignore_ascii_case("avif") || name.eq_ignore_ascii_case("avifs") {
             Ok(ImageFormat::Avif)
         } else {
             Err(ImageError::UnknownFormat)
@@ -701,6 +757,7 @@ impl std::str::FromStr for ImageFormat {
 /// this distinction so a later encode operation receives the same information
 /// that Pillow keeps on its image object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum ImageMode {
     /// One-bit samples, packed most-significant bit first with rows byte-aligned.
     L1,
@@ -781,7 +838,7 @@ impl ImageMode {
         }
     }
 
-    fn expected_bytes(self, width: u32, height: u32) -> ImageResult<usize> {
+    pub(crate) fn expected_bytes(self, width: u32, height: u32) -> ImageResult<usize> {
         let width = width as usize;
         let height = height as usize;
         if self == Self::L1 {
@@ -979,6 +1036,7 @@ impl DecodedImage {
 
 /// Disposal operation applied before displaying the next animation frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum FrameDisposal {
     /// The format does not specify a disposal operation.
     Unspecified,
@@ -1171,6 +1229,7 @@ impl DecodedFrame {
 
 /// Background metadata retained from an animated image container.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum AnimationBackground {
     /// A GIF global color-table index.
     PaletteIndex(u8),
@@ -1283,10 +1342,20 @@ impl DecodedSequence {
         Ok(())
     }
 
-    /// Return the first frame used by still-image APIs, or `None` before an
-    /// empty caller-built sequence has been validated.
+    /// Return the first complete frame, or `None` before an empty caller-built
+    /// sequence has been validated.
     #[must_use]
-    pub fn first(&self) -> Option<&DecodedImage> {
+    pub fn first(&self) -> Option<&DecodedFrame> {
+        self.frames.first()
+    }
+
+    /// Return only the first frame's image.
+    ///
+    /// This convenience intentionally discards source rectangle, timing,
+    /// disposal, blend, interlace, and default-image metadata. Use
+    /// [`Self::first`] when that state matters.
+    #[must_use]
+    pub fn first_image(&self) -> Option<&DecodedImage> {
         self.frames.first().map(|frame| &frame.image)
     }
 }

@@ -15,6 +15,7 @@ pub struct DecodeLimits {
     max_width: Option<u32>,
     max_height: Option<u32>,
     max_pixels: Option<u64>,
+    max_primary_decoded_bytes: Option<u64>,
 }
 
 impl DecodeLimits {
@@ -26,6 +27,7 @@ impl DecodeLimits {
             max_width: None,
             max_height: None,
             max_pixels: None,
+            max_primary_decoded_bytes: None,
         }
     }
 
@@ -78,6 +80,19 @@ impl DecodeLimits {
     #[must_use]
     pub const fn with_max_pixels(mut self, maximum: u64) -> Self {
         self.max_pixels = Some(maximum);
+        self
+    }
+
+    /// Return the maximum accepted decoded byte length for the primary image.
+    #[must_use]
+    pub const fn max_primary_decoded_bytes(self) -> Option<u64> {
+        self.max_primary_decoded_bytes
+    }
+
+    /// Set the maximum accepted decoded byte length for the primary image.
+    #[must_use]
+    pub const fn with_max_primary_decoded_bytes(mut self, maximum: u64) -> Self {
+        self.max_primary_decoded_bytes = Some(maximum);
         self
     }
 }
@@ -142,6 +157,13 @@ impl DecodePolicy {
         self
     }
 
+    /// Set the maximum accepted decoded byte length for the primary image.
+    #[must_use]
+    pub const fn with_max_primary_decoded_bytes(mut self, maximum: u64) -> Self {
+        self.limits = self.limits.with_max_primary_decoded_bytes(maximum);
+        self
+    }
+
     pub(crate) fn check_encoded_input(
         self,
         data: &[u8],
@@ -166,6 +188,7 @@ impl DecodePolicy {
         self.limits.max_width.is_some()
             || self.limits.max_height.is_some()
             || self.limits.max_pixels.is_some()
+            || self.limits.max_primary_decoded_bytes.is_some()
     }
 
     pub(crate) fn check_image_info(
@@ -193,7 +216,21 @@ impl DecodePolicy {
             info,
             operation,
             ResourceLimit::Pixels,
-        )
+        )?;
+        if let Some(maximum) = self.limits.max_primary_decoded_bytes {
+            let primary_decoded_bytes =
+                info.mode
+                    .expected_bytes(info.width, info.height)
+                    .map_err(|error| error.with_format(info.format))? as u64;
+            check_limit(
+                Some(maximum),
+                primary_decoded_bytes,
+                info,
+                operation,
+                ResourceLimit::PrimaryDecodedBytes,
+            )?;
+        }
+        Ok(())
     }
 }
 

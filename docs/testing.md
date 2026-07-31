@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-07-31 on the working tree based on revision `91d47c6`
+Reviewed: 2026-07-31 on the working tree based on revision `be47093`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -103,7 +103,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `91d47c6`, the generated matrix
+For the current working tree based on revision `be47093`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -120,15 +120,17 @@ format-qualified structured-error cases. Accepted rows are labeled
 enum-value rows are labeled `defensive_model`. They test the public migration
 boundary without weakening the primary Pillow encode/decode contract.
 
-The decode-policy manifest adds 63 `defensive_model` cases. It covers below,
-at, and above the encoded-input, canvas-width, canvas-height, and canvas-pixel
-maxima for inspection, still decode, sequence decode, immutable-source
-construction, and lazy materialization. Successful paths reuse Pillow case
-`size_1x1` and compare the same exact metadata and decoded bytes. A zero-limit
-unknown-signature case proves input rejection precedes detection; two malformed
-preflight rows prove inspection errors propagate through policy-aware decode.
-Error paths assert the complete typed limit fields and retry-safe lazy-cache
-behavior.
+The decode-policy manifest adds 79 `defensive_model` cases. It covers below,
+at, and above the encoded-input, canvas-width, canvas-height, canvas-pixel, and
+primary-decoded-byte maxima for inspection, still decode, sequence decode,
+immutable-source construction, and lazy materialization. Successful paths
+reuse Pillow case `size_1x1` and compare the same exact metadata and decoded
+bytes. A zero-limit unknown-signature case proves input rejection precedes
+detection; two malformed preflight rows prove inspection errors propagate
+through policy-aware decode. A manifest-described AVIF `ispe` mutation proves
+that an unrepresentable primary transfer length remains a format-qualified
+`Dimensions` failure. Error paths assert the complete typed limit fields and
+retry-safe lazy-cache behavior.
 
 The counts are reproducible from the generated artifact:
 
@@ -140,17 +142,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 40,939 | 40,939 |
-| Branches | 5,864 | 5,864 |
-| Functions | 2,213 | 2,213 |
-| Regions | 65,321 | 65,321 |
+| Lines | 41,012 | 41,012 |
+| Branches | 5,876 | 5,876 |
+| Functions | 2,221 | 2,221 |
+| Regions | 65,414 | 65,414 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `711afbf5-d52d-4254-b54d-e74e1f45744d`
+Coverage MCP run: `9861f534-7b86-43ef-86a1-406d6ec213ad`
 
-Snapshot: `519bacc6-4be5-4a47-9503-ede4686b84c2`
+Snapshot: `f38ad18f-a36c-44a9-bd01-8bc525bb1c88`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -165,7 +167,7 @@ Typed-option error manifest SHA-256:
 `657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb`
 
 Decode-policy manifest SHA-256:
-`ffff62bb320c310760c8d5276819484697c11cd66a9b194f8a323b8f9d631d27`
+`cba48670d83d797cf519cb9e37bf683ba7d9354bf879655e1c2b7000a54fc937`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

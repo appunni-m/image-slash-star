@@ -41,9 +41,9 @@ impl EncodedImage {
     /// # Errors
     ///
     /// Returns [`crate::ImageError::LimitExceeded`] before detection when the
-    /// encoded snapshot is too large, or after inspection when its canvas
-    /// exceeds a configured maximum. Otherwise returns the same errors as
-    /// [`Self::new`].
+    /// encoded snapshot is too large, or after inspection when its primary
+    /// canvas or decoded transfer-byte length exceeds a configured maximum.
+    /// Otherwise returns the same errors as [`Self::new`].
     pub fn new_with_policy(
         bytes: impl Into<Arc<[u8]>>,
         policy: &DecodePolicy,
@@ -108,8 +108,9 @@ impl EncodedImage {
     /// # Errors
     ///
     /// Returns [`crate::ImageError::LimitExceeded`] before cache access when
-    /// the encoded snapshot or retained canvas exceeds a configured maximum.
-    /// Otherwise returns the same errors as [`Self::decode`].
+    /// the encoded snapshot, retained primary canvas, or primary decoded
+    /// transfer-byte length exceeds a configured maximum. Otherwise returns
+    /// the same errors as [`Self::decode`].
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<&Decoded<DecodedImage>> {
         policy.check_encoded_input(&self.inner.bytes, CodecOperation::StillDecode)?;
         policy.check_image_info(&self.inner.info, CodecOperation::StillDecode)?;

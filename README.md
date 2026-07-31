@@ -14,9 +14,10 @@ bytes.
 > **Pre-release status:** version 0.1.0 is not published to crates.io. The
 > compatibility guarantee is limited to committed manifest cases, not every
 > legal file in each format specification. Encoded-input bytes and inspected
-> canvas dimensions/pixels can be bounded, but decoded memory, later
-> pages/frames, metadata, and codec work are not yet fully limited. The current
-> crate should not be treated as hardened for arbitrary hostile inputs.
+> primary-canvas dimensions/pixels/decoded bytes can be bounded, but later
+> pages/frames, total decoded memory, metadata, and codec work are not yet fully
+> limited. The current crate should not be treated as hardened for arbitrary
+> hostile inputs.
 > Breaking API changes may occur before 1.0.
 
 ## Why use it?
@@ -136,6 +137,14 @@ the corresponding still capability. On `wasm32`, AVIF inspection remains
 manifest-bounded, still decode reports the restricted portable subset, and
 encode plus sequence operations report target unavailability.
 
+`ImageFormat::from_name` accepts canonical names and extension aliases
+case-insensitively: JPEG `jpg`/`jpeg`/`jfif`/`jpe`, PNG `png`/`apng`, TIFF
+`tiff`/`tif`, ICO/CUR `ico`/`cur`, and AVIF `avif`/`avifs`. Headerless `.dib`
+remains an explicit-format scope decision, not an automatic BMP alias.
+`mime_type()`, `canonical_extension()`, and `extensions()` expose stable,
+dependency-free format metadata in canonical-first order; `from_path` uses the
+same table without touching the filesystem.
+
 The core model separates:
 
 ```text
@@ -156,6 +165,17 @@ without changing the transfer bytes. TIFF currently records its exact
 `SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
 modes keep their documented transfer layout. Other codecs currently return an
 empty `SourceDescriptor`.
+
+`DecodedSequence::first()` returns the complete `DecodedFrame`, including its
+source and presentation metadata. `first_image()` is available when a caller
+intentionally wants only the first frame's pixels and accepts that metadata
+loss.
+
+Codec/capability vocabulary enums are non-exhaustive, including `ImageFormat`,
+`VerificationScope`, `ImageMode`, and animation presentation enums. Downstream
+`match` expressions must include a fallback so a later format or transfer mode
+does not become an accidental source break. Closed domains such as
+`SourceByteOrder` remain exhaustive.
 
 ### Typed encoder options
 
@@ -191,8 +211,9 @@ string keys. New integrations should construct codec records directly.
 ### Caller-controlled limits
 
 The unlimited entry points remain convenient for trusted inputs.
-`DecodePolicy` provides inclusive maxima for the complete encoded byte slice
-and inspected canvas width, height, and pixel count:
+`DecodePolicy` provides inclusive maxima for the complete encoded byte slice,
+inspected canvas width, height, and pixel count, and the primary image's
+decoded transfer-byte length:
 
 ```rust
 use image_slash_star::{decode_with_policy, DecodePolicy, ImageResult};
@@ -204,7 +225,8 @@ fn decode_at_most_one_mebibyte(
         .with_max_encoded_bytes(1024 * 1024)
         .with_max_width(4096)
         .with_max_height(4096)
-        .with_max_pixels(16_000_000);
+        .with_max_pixels(16_000_000)
+        .with_max_primary_decoded_bytes(64 * 1024 * 1024);
     decode_with_policy(input, &policy)
 }
 ```
@@ -214,18 +236,21 @@ oversized input returns a typed `LimitExceeded` error with the operation,
 `ResourceLimit::EncodedBytes`, configured maximum, and observed length. It has
 no selected format because no format parsing occurred.
 
-Canvas limits use exact `ImageInfo` width, height, and `width × height`. They
-run after format-qualified inspection and before pixel materialization, so
-their errors retain the selected format. Policy-aware direct decode may inspect
-then parse again; unlimited wrappers do not gain that additional pass.
+Canvas limits use exact `ImageInfo` width, height, `width × height`, mode, and
+primary decoded byte length. Packed `L1` rows are byte-aligned; other modes use
+their exact transfer bytes per pixel. They run after format-qualified
+inspection and before primary pixel materialization, so their errors retain
+the selected format. Policy-aware direct decode may inspect then parse again;
+unlimited wrappers do not gain that additional pass.
 
 `inspect_with_policy`, `decode_sequence_with_policy`,
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
 same boundary. A rejected lazy decode is not cached, and an already cached
-decode cannot bypass a later stricter policy. This is not yet a complete
-hostile-input budget: later page/frame dimensions, decoded sample bytes,
-cumulative sequence memory, frame counts, metadata, nesting, codec work,
-allocations, and output remain unbounded.
+decode cannot bypass a later stricter policy. The primary-byte limit does not
+claim to cover later pages/frames or cumulative sequence allocation. This is
+not yet a complete hostile-input budget: those later dimensions and bytes,
+frame counts, metadata, nesting, codec work, other allocations, and encoded
+output remain unbounded.
 
 See [architecture and public contract](docs/architecture.md) for byte layouts,
 validation invariants, lazy source lifecycle, memory behavior, feature
