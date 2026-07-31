@@ -272,22 +272,20 @@ pub(crate) fn decode_sequence_format(
         );
     }
 
+    #[cfg(feature = "tiff")]
+    if format == ImageFormat::Tiff {
+        return into_image_result(
+            tiff::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
+            format,
+        );
+    }
+
     #[cfg(feature = "avif")]
     if format == ImageFormat::Avif {
         return into_image_result(
             avif::decode::decode_sequence(data).map_err(|error| error.context("decode sequence")),
             format,
         );
-    }
-
-    if format == ImageFormat::Tiff {
-        let info = inspect_format(data, format)?;
-        if info.is_animated {
-            return Err(ImageError::Unsupported {
-                format: Some(format),
-                message: "multi-frame sequence decoding is not implemented".to_owned(),
-            });
-        }
     }
 
     decode_format(data, format).map(DecodedSequence::from_image)
@@ -406,6 +404,15 @@ pub(crate) fn encode_sequence_format(
     if format == ImageFormat::Avif {
         return into_image_result(
             avif::encode::encode_sequence(sequence, options)
+                .map_err(|error| error.context("encode sequence")),
+            format,
+        );
+    }
+
+    #[cfg(feature = "tiff")]
+    if format == ImageFormat::Tiff {
+        return into_image_result(
+            tiff::encode::encode_sequence(sequence, options)
                 .map_err(|error| error.context("encode sequence")),
             format,
         );

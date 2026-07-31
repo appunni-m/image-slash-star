@@ -5,7 +5,7 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::EncodeOptions;
 #[cfg(coverage)]
 use crate::types::ColorType;
-use crate::types::{DecodedImage, ImageMode};
+use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode};
 use std::collections::HashMap;
 
 const COMPRESSION_NONE: u16 = 1;
@@ -15,6 +15,17 @@ const COMPRESSION_PACKBITS: u16 = 32_773;
 
 /// Encode an image as a single-strip classic TIFF.
 pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    encode_page(img, opts).map(|page| page.bytes)
+}
+
+struct EncodedPage {
+    bytes: Vec<u8>,
+    ifd_offset: usize,
+    offset_positions: Vec<usize>,
+    next_position: usize,
+}
+
+fn encode_page(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<EncodedPage> {
     img.validate().map_err(CodecError::from_image_error)?;
     let width = img.width as usize;
     let height = img.height as usize;
@@ -154,6 +165,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
         write_entry(&mut output, endian, 256, 4, 1, img.width);
         write_entry(&mut output, endian, 257, 4, 1, img.height);
     }
+    let mut offset_positions = Vec::with_capacity(2);
     if bits_per_sample == 1 {
         // Pillow leaves the default BitsPerSample=1 implicit for bilevel TIFF.
     } else if channels == 1 {
@@ -168,6 +180,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
             u32::from(bits_per_sample) | (u32::from(bits_per_sample) << 16),
         );
     } else {
+        offset_positions.push(output.len().saturating_add(8));
         write_entry(
             &mut output,
             endian,
@@ -179,6 +192,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
     }
     write_short_entry(&mut output, endian, 259, compression);
     write_short_entry(&mut output, endian, 262, photometric);
+    offset_positions.push(output.len().saturating_add(8));
     write_entry(&mut output, endian, 273, 4, 1, bounded_u32(pixel_offset));
     if channels > 1 {
         write_short_entry(&mut output, endian, 277, channels);
@@ -201,6 +215,7 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
         ImageMode::I32 => write_short_entry(&mut output, endian, 339, 2),
         _ => {}
     }
+    let next_position = output.len();
     endian.push_u32(&mut output, 0);
 
     if channels > 2 {
@@ -212,7 +227,134 @@ pub fn encode(img: &DecodedImage, opts: &EncodeOptions) -> CodecResult<Vec<u8>> 
         output.resize(pixel_offset, 0);
         output.extend_from_slice(&encoded);
     }
+    Ok(EncodedPage {
+        bytes: output,
+        ifd_offset,
+        offset_positions,
+        next_position,
+    })
+}
+
+/// Encode ordered TIFF pages without changing any page pixels or dimensions.
+pub fn encode_sequence(sequence: &DecodedSequence, opts: &EncodeOptions) -> CodecResult<Vec<u8>> {
+    validate_sequence_semantics(sequence)?;
+    if sequence.frames.len() == 1 {
+        return encode(&sequence.frames[0].image, opts);
+    }
+
+    let pages = sequence
+        .frames
+        .iter()
+        .map(|frame| encode_page(&frame.image, opts))
+        .collect::<CodecResult<Vec<_>>>()?;
+    let page_lengths = pages
+        .iter()
+        .map(|page| page.bytes.len())
+        .collect::<Vec<_>>();
+    #[cfg(coverage)]
+    let page_lengths = if opts
+        .extra
+        .contains_key("__coverage_force_tiff_sequence_len_overflow")
+    {
+        vec![usize::MAX]
+    } else {
+        page_lengths
+    };
+    let final_len = sequence_output_len(&page_lengths)?;
+    let mut output = Vec::with_capacity(final_len);
+    let mut previous_next_position: Option<usize> = None;
+    for mut page in pages {
+        // `sequence_output_len` proved every page base and relocated offset
+        // fits both usize and classic TIFF's u32 address space.
+        let aligned = output.len().wrapping_add(15) & !15;
+        output.resize(aligned, 0);
+        let base = output.len();
+        if let Some(previous) = previous_next_position {
+            let next_ifd = bounded_u32(base.wrapping_add(page.ifd_offset));
+            output[previous..previous.saturating_add(4)].copy_from_slice(&next_ifd.to_le_bytes());
+        }
+        for &position in &page.offset_positions {
+            let local = u32::from_le_bytes([
+                page.bytes[position],
+                page.bytes[position.saturating_add(1)],
+                page.bytes[position.saturating_add(2)],
+                page.bytes[position.saturating_add(3)],
+            ]) as usize;
+            let relocated = bounded_u32(base.wrapping_add(local));
+            page.bytes[position..position.saturating_add(4)]
+                .copy_from_slice(&relocated.to_le_bytes());
+        }
+        previous_next_position = Some(base.wrapping_add(page.next_position));
+        output.extend_from_slice(&page.bytes);
+    }
+    output.resize(final_len, 0);
     Ok(output)
+}
+
+fn validate_sequence_semantics(sequence: &DecodedSequence) -> CodecResult<()> {
+    if sequence.loop_count.is_some() || sequence.background.is_some() {
+        return Err(CodecError::Unsupported(
+            "TIFF pages cannot retain animation loop or background metadata".to_owned(),
+        ));
+    }
+    let mut width = 0;
+    let mut height = 0;
+    for frame in &sequence.frames {
+        width = width.max(frame.image.width);
+        height = height.max(frame.image.height);
+        if [
+            frame.source.rect.left,
+            frame.source.rect.top,
+            frame.source.rect.width,
+            frame.source.rect.height,
+        ] != [0, 0, frame.image.width, frame.image.height]
+        {
+            return Err(CodecError::Unsupported(
+                "TIFF page rectangle must match its image at the origin".to_owned(),
+            ));
+        }
+        if frame.source.duration.numerator != 0 {
+            return Err(CodecError::Unsupported(
+                "TIFF pages cannot retain animation timing".to_owned(),
+            ));
+        }
+        if frame.source.disposal != FrameDisposal::Unspecified
+            || frame.source.blend != FrameBlend::Unspecified
+            || frame.source.interlaced
+            || frame.source.is_default_image
+        {
+            return Err(CodecError::Unsupported(
+                "TIFF pages cannot retain animation presentation controls".to_owned(),
+            ));
+        }
+    }
+    if [sequence.width, sequence.height] != [width, height] {
+        return Err(CodecError::Unsupported(
+            "TIFF sequence canvas must equal the maximum page extent".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn sequence_output_len(page_lengths: &[usize]) -> CodecResult<usize> {
+    let mut total = 0;
+    for &page_len in page_lengths {
+        total = checked_align_16(total)?;
+        total = total
+            .checked_add(page_len)
+            .ok_or_else(|| CodecError::Dimensions("TIFF sequence length overflows".to_owned()))?;
+    }
+    total = checked_align_16(total)?;
+    u32::try_from(total)
+        .map_err(|_| CodecError::Dimensions("TIFF sequence exceeds classic limits".to_owned()))?;
+    Ok(total)
+}
+
+fn checked_align_16(value: usize) -> CodecResult<usize> {
+    value
+        .checked_add(15)
+        .map(|length| length & !15)
+        .ok_or_else(|| CodecError::Dimensions("TIFF sequence alignment overflows".to_owned()))
 }
 
 fn bounded_u32(value: usize) -> u32 {
@@ -266,6 +408,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&rgb, &opt("compression", "unsupported"));
     let _ = encode(&rgb, &opt("predictor", "unsupported"));
     let _ = encode(&l1, &opt("predictor", "horizontal"));
+    let _ = checked_align_16(usize::MAX);
+    let _ = sequence_output_len(&[usize::MAX, 0]);
+    let _ = sequence_output_len(&[usize::MAX.saturating_sub(15), 16]);
+    #[cfg(not(target_pointer_width = "32"))]
+    let _ = sequence_output_len(&[u32::MAX as usize + 1]);
+    let mut sequence = DecodedSequence::from_image(rgb.clone());
+    sequence.frames.push(sequence.frames[0].clone());
+    let forced_sequence_overflow = opt("__coverage_force_tiff_sequence_len_overflow", "1");
+    let _ = encode_sequence(&sequence, &forced_sequence_overflow);
 
     let mut predicted = opt("compression", "deflate");
     predicted

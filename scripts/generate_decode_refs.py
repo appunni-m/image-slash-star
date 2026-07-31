@@ -320,6 +320,7 @@ def encode_params(fmt, params):
         "encoded_only",
         "sequence_canvas_padding",
         "sequence_frame_offset",
+        "sequence_frame_mode",
         "sequence_duration_ms",
         "sequence_duration_fraction",
         "sequence_disposal",
@@ -487,6 +488,12 @@ def encode_params(fmt, params):
             if value is not None:
                 kwargs[pillow_name] = bytes.fromhex(value)
     elif fmt == "tiff":
+        animated = take("animated")
+        frames = take("frames")
+        if animated is not None:
+            kwargs["_manifest_animated"] = animated
+        if frames is not None:
+            kwargs["_manifest_frames"] = frames
         compression = take("compression")
         if compression is not None:
             kwargs["compression"] = {
@@ -1529,7 +1536,7 @@ def gif_frame_source(image):
 def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
     """Write exact frame pixels where layouts align and all source metadata."""
     frame_count = int(getattr(image, "n_frames", 1))
-    if fmt_name not in {"png", "gif", "webp", "avif"}:
+    if fmt_name not in {"png", "gif", "tiff", "webp", "avif"}:
         row.pop("sequence", None)
         return
 
@@ -1572,6 +1579,34 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
             }
             for duration, timescale in durations
         ]
+    elif fmt_name == "tiff":
+        if frame_count <= 1:
+            row.pop("sequence", None)
+            return
+        page_sizes = []
+        for index in range(frame_count):
+            image.seek(index)
+            page_sizes.append(image.size)
+        canvas_size = [
+            max(size[0] for size in page_sizes),
+            max(size[1] for size in page_sizes),
+        ]
+        background = None
+        sources = [
+            {
+                "source_rect": [0, 0, size[0], size[1]],
+                "duration_num": 0,
+                "duration_den": 1,
+                "duration_origin": "specification_reference",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": False,
+                "is_default_image": False,
+                "pixel_layout": "source_rectangle",
+                "source_origin": "pillow_fixture",
+            }
+            for size in page_sizes
+        ]
     else:
         background = {
             "palette_index": int(image.info.get("background", 0)),
@@ -1607,13 +1642,17 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
             frame["pixel_assertion"] = "not_asserted_source_layout"
         frames.append(frame)
     row["sequence"] = {
-        "canvas_size": list(image.size),
+        "canvas_size": (
+            canvas_size if fmt_name == "tiff" else list(image.size)
+        ),
         "canvas_origin": "pillow_fixture",
         "loop_count": (
             parsed_loop_count if fmt_name in {"png", "webp"} else image.info.get("loop")
         ),
         "loop_origin": (
-            "specification_reference" if fmt_name == "png" else "pillow_fixture"
+            "specification_reference"
+            if fmt_name in {"png", "tiff"}
+            else "pillow_fixture"
         ),
         "background": background,
         "frames": frames,
@@ -2643,6 +2682,7 @@ def generate_decode(manifest, matrix, target_format=None):
                 origins["sequence_source"] = {
                     "png": "specification_reference",
                     "gif": "pillow_fixture",
+                    "tiff": "pillow_fixture",
                     "webp": "specification_reference",
                     "avif": "independent_implementation",
                 }[fmt_name]
@@ -2830,12 +2870,12 @@ def generate_encode(manifest, matrix, target_format=None):
                 if exact_encode_parity_supported(fmt_name, row):
                     ref_name = f"Encode.{fmt_name}_{row['id']}.bin"
                     write_pixel_ref(row, rt, ref_name)
-                    if row["source_frame_count"] > 1 and fmt_name == "webp":
+                    if row["source_frame_count"] > 1 and fmt_name in {"tiff", "webp"}:
                         write_sequence_ref_from_data(
                             row,
                             rt,
                             fmt_name,
-                            f"encoded_{row['id']}.webp",
+                            f"encoded_{row['id']}.{fmt_name}",
                             encoded,
                         )
                     generated += 1

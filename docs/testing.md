@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-07-31 on the working tree based on revision `6f9c002`
+Reviewed: 2026-07-31 on the working tree based on revision `b437123`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -96,14 +96,14 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `6f9c002`, the generated matrix
+For the current working tree based on revision `b437123`, the generated matrix
 reports:
 
 | Metric | Count |
 | --- | ---: |
-| Active cases | 1,374 |
-| Decode/inspect/verify cases | 1,021 |
-| Encode cases | 353 |
+| Active cases | 1,417 |
+| Decode/inspect/verify cases | 1,024 |
+| Encode cases | 393 |
 | Planned or unwired cases | 0 |
 | Formats | 8 |
 
@@ -117,23 +117,23 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 40,120 | 40,120 |
-| Branches | 5,814 | 5,814 |
-| Functions | 2,120 | 2,120 |
-| Regions | 64,304 | 64,304 |
+| Lines | 40,422 | 40,422 |
+| Branches | 5,868 | 5,868 |
+| Functions | 2,143 | 2,143 |
+| Regions | 64,813 | 64,813 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `5b4dcd01-04a0-463f-81a5-659a10db39b0`
+Coverage MCP run: `abb2458f-395d-4129-9fcb-55cdd3c9b08e`
 
-Snapshot: `2f007b85-f7fa-4d6a-b2ea-776ca1f32e17`
+Snapshot: `a66e6892-198a-43a9-aea9-52241c0aa495`
 
 Manifest SHA-256:
-`14d77e2f69ad5ee6e345ce1e90930fdf74a1662908c9f09c5f0d6e2eea22bfbe`
+`bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 
 Generated matrix SHA-256:
-`96e0687d7dcf9c781e2e15df8c6f3f9da0c1ebb2edb5f8366b35a83f8ecb682e`
+`f348aa1322f92798f1eddff681bae698c5312e9cb0aa46e834fcdc9a77a21546`
 
 These measurements prove execution of the retained implementation under that
 suite. They do not extend the compatibility promise beyond the active

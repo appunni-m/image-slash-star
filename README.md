@@ -89,8 +89,8 @@ Default features enable every codec except AVIF.
 | `png` | yes | Rust still/APNG sequence decode and still encode | Build-verified Rust path |
 | `gif` | yes | Rust still/sequence decode and encode | Build-verified Rust path |
 | `bmp` | yes | Rust inspect/decode/encode | Build-verified Rust path |
-| `tiff` | yes | Rust inspect/decode/encode | Build-verified Rust path |
-| `webp` | yes | Rust still/sequence decode and still encode | Build-verified Rust path |
+| `tiff` | yes | Rust still/multipage decode and encode | Build-verified Rust path |
+| `webp` | yes | Rust still/sequence decode and still/keyframe-sequence encode | Build-verified Rust path |
 | `ico` | yes | Rust ICO/CUR inspect/decode and source-sized ICO encode | Build-verified Rust path |
 | `avif` | no | Fixed native inspect/decode/sequence/encode stack | Portable inspect and restricted still decode; sequence decode and encode unsupported |
 
@@ -119,7 +119,7 @@ capabilities and setup.
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
-| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF/native AVIF |
+| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
 
 The core model separates:
@@ -172,8 +172,8 @@ it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
-The generated matrix in this tree contains 1,374 active cases:
-1,021 decode/inspect/verify cases and 353 encode cases, with zero
+The generated matrix in this tree contains 1,417 active cases:
+1,024 decode/inspect/verify cases and 393 encode cases, with zero
 planned or unwired rows. Expected errors are active fixture outcomes.
 
 The accepted Coverage MCP snapshot for that implementation state reports 100%

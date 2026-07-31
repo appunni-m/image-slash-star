@@ -5072,7 +5072,7 @@
       "verification_scope": "header_only",
       "inspect_container_format": "TIFF",
       "inspect_cursor_hotspot": null,
-      "asset_sha256": "82f1c47c0c58f67e00bb966a9bbd097758df70be8fbbd23065de50ed65a50cca",
+      "asset_sha256": "6a7559bf68841a5f5b9f98f19e64205b2033784be3c92a765c224a91da2b81de",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
@@ -5093,34 +5093,27 @@
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
         "operations": "pillow_fixture",
-        "rust_sequence_contract": "defensive_model"
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
         "inspect": "ok",
         "verify": "ok",
         "decode": "ok",
-        "decode_sequence": "error"
+        "decode_sequence": "ok"
       },
-      "error_contracts": {
-        "decode_sequence": {
-          "pillow_type": null,
-          "pillow_message": null,
-          "rust_kind": "unsupported",
-          "rust_format": "TIFF",
-          "rust_message": "non_empty",
-          "origin": "defensive_model"
-        }
-      },
+      "error_contracts": {},
       "ref_bit_depth": 8,
       "ref_bit_depth_origin": "pillow_fixture",
       "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_tiff.bin",
-      "ref_bytes": 49152,
-      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_bytes": 189,
+      "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
       "ref_mode": "Rgb8",
       "ref_size": [
-        128,
-        128
+        9,
+        7
       ],
       "ref_frame_count": 2,
       "ref_is_animated": true,
@@ -5136,9 +5129,223 @@
       "sequence_error_type": null,
       "sequence_error_message": null,
       "sequence_error_kind": null,
-      "rust_expect_sequence_error": true,
-      "rust_sequence_error_kind": "unsupported",
-      "rust_sequence_error_reason": "Multipage TIFF inspection must not silently collapse multiple pages"
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
+      "id": "multi_page_multipage_mixed",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "TIFF",
+      "inspect_cursor_hotspot": null,
+      "asset_sha256": "20553e640bfe8258cee0e99f6e3b8dc9752870bce9bfe5438d7020efa20105ae",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "pillow_fixture",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_mixed_tiff.bin",
+      "ref_bytes": 189,
+      "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        9,
+        7
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          9,
+          7
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_mixed_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              5,
+              3
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_multipage_mixed_tiff_frame_1.bin",
+            "ref_bytes": 15,
+            "ref_mode": "L8",
+            "ref_size": [
+              5,
+              3
+            ],
+            "ref_sha256": "a7306fab40fb2dd5b495dbb50376f7c8ad1944b2f8b84e1d09f941dfac20788e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
     },
     {
       "id": "cyclic_ifd_leniency",
@@ -5252,8 +5459,7 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture",
-        "rust_sequence_contract": "defensive_model"
+        "operations": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -5264,12 +5470,12 @@
       },
       "error_contracts": {
         "decode_sequence": {
-          "pillow_type": null,
-          "pillow_message": null,
-          "rust_kind": "unsupported",
+          "pillow_type": "builtins.TypeError",
+          "pillow_message": "Missing dimensions",
+          "rust_kind": "malformed",
           "rust_format": "TIFF",
           "rust_message": "non_empty",
-          "origin": "defensive_model"
+          "origin": "pillow_fixture"
         }
       },
       "ref_bit_depth": 8,
@@ -5292,13 +5498,13 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": true,
-      "rust_sequence_error_kind": "unsupported",
-      "rust_sequence_error_reason": "Animated TIFF inspection with an incomplete later IFD must not silently collapse to one page"
+      "sequence_status": "error",
+      "sequence_error_type": "builtins.TypeError",
+      "sequence_error_message": "Missing dimensions",
+      "sequence_error_kind": "malformed",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
     },
     {
       "id": "error_bad_ifd",
@@ -5631,6 +5837,105 @@
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
       "asset_sha256": "75a2a13326b2a4a0b2265dbc2d0a91bfc7b540f0b10b5b9abd2a3fc9d7b83016",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_bad_ifd_empty_ifd_chain",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "header_only",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "asset_sha256": "1ce397a187d135876fec3bfb2adeed0a66a8cc8c1ad76d36e6f0ab834f320fc6",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

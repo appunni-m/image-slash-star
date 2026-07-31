@@ -2112,6 +2112,18 @@ formats:
       rust_expect_error: true
       rust_error_kind: parameter
       rust_error_reason: WebP animation loop counts are unsigned 16-bit values
+    - id: enc_error_sequence_quality
+      description: Animated WebP rejects quality above the same 0 through 100 boundary as still output
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': False, 'quality': 101, 'method': 4, 'kmax': 1}
+      expect_error: true
+    - id: enc_error_sequence_frame_mode
+      description: A valid retained sequence with an unsupported frame mode returns a structured error
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_frame_mode': 'L16'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: WebP sequence frames obey the same exact direct-mode contract as still images
     - id: enc_error_sequence_palette_background
       description: WebP rejects a retained palette-index background because ANIM stores RGBA
       source_asset: animated_sequence_rgba_keyframes.webp
@@ -2710,23 +2722,19 @@ formats:
       test_assets:
       - single.tiff
     - id: multi_page
-      description: Multi-page TIFF still decode reads page one, while sequence decode must not silently collapse pages
+      description: Multi-page TIFF still decode reads page one while sequence decode retains every page
       test_assets:
       - multipage.tiff
-      rust_expect_sequence_error: true
-      rust_sequence_error_kind: unsupported
-      rust_sequence_error_reason: Multipage TIFF inspection must not silently collapse multiple pages
+      - multipage_mixed.tiff
     - id: cyclic_ifd_leniency
       description: Pillow stops a self-referential IFD chain after the first unique page
       test_assets:
       - cyclic_ifd.tiff
     - id: truncated_later_ifd_leniency
-      description: Pillow counts a referenced truncated later IFD before ending the chain
+      description: Pillow counts a referenced truncated later IFD but sequence materialization returns its exact later-page error
       test_assets:
       - truncated_second_ifd.tiff
-      rust_expect_sequence_error: true
-      rust_sequence_error_kind: unsupported
-      rust_sequence_error_reason: Animated TIFF inspection with an incomplete later IFD must not silently collapse to one page
+      expect_sequence_error: true
     - id: error_bad_ifd
       description: Corrupt headers, dimensions, tags, and strip bounds
       test_assets:
@@ -2734,6 +2742,7 @@ formats:
       - truncated_signature.tiff
       - truncated_magic.tiff
       - truncated_ifd_offset.tiff
+      - empty_ifd_chain.tiff
       - truncated_ifd_count.tiff
       - truncated_ifd_entry.tiff
       - oob_tag_value_offset.tiff
@@ -2924,6 +2933,89 @@ formats:
     - id: enc_multi_page
       description: Pillow accepts but ignores the non-standard pages option
       params: {'pages': 2}
+    - id: enc_sequence_raw
+      description: Two RGB TIFF pages with uncompressed strips
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none'}
+    - id: enc_sequence_lzw
+      description: Two RGB TIFF pages with LZW-compressed strips
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'lzw'}
+    - id: enc_sequence_deflate
+      description: Two RGB TIFF pages with Deflate-compressed strips
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'deflate'}
+    - id: enc_sequence_packbits
+      description: Two RGB TIFF pages with PackBits-compressed strips
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'packbits'}
+    - id: enc_sequence_mixed_pages
+      description: TIFF retains different dimensions and modes for each page
+      source_asset: multipage_mixed.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none'}
+    - id: enc_error_sequence_canvas
+      description: TIFF cannot retain an empty canvas margin beyond the maximum page extent
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_canvas_padding': [1, 1]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF sequence canvas dimensions are derived from the maximum page extent
+    - id: enc_error_sequence_frame_mode
+      description: An unsupported TIFF page mode returns a structured error
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_frame_mode': 'Rgb16'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: Every TIFF page obeys the same exact direct-mode contract as still encode
+    - id: enc_error_sequence_duration
+      description: TIFF pages cannot retain animation timing
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_duration_ms': 1}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no animation duration field
+    - id: enc_error_sequence_disposal
+      description: TIFF pages cannot retain animation disposal
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_disposal': 'keep'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no animation disposal field
+    - id: enc_error_sequence_blend
+      description: TIFF pages cannot retain animation blending
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_blend': 'source'}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no animation blend field
+    - id: enc_error_sequence_interlace
+      description: TIFF pages cannot retain GIF-style frame interlace state
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_interlaced': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no common animation interlace field
+    - id: enc_error_sequence_default_image
+      description: TIFF pages cannot retain an animation default-image identity
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_default_image': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no default-animation-image field
+    - id: enc_error_sequence_loop
+      description: TIFF pages cannot retain animation looping
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_loop_count': 0}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no common animation loop field
+    - id: enc_error_sequence_background
+      description: TIFF pages cannot retain an animation canvas background
+      source_asset: multipage.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none', 'sequence_background_rgba': [1, 2, 3, 4]}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF page order has no common animation background field
     - id: enc_predictor_none
       description: 
       params: {'predictor': 'none'}
