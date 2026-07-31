@@ -1,6 +1,6 @@
 //! PNG header and palette inspection without IDAT decompression.
 
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, codec_add_end, need_slice};
 use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
 
 const SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -8,11 +8,11 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Inspect PNG metadata up to the first image-data chunk.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
-    if data.get(..8).malformed("truncated PNG signature")? != SIGNATURE {
+    if need_slice(data, 0, 8, "truncated PNG signature")? != SIGNATURE {
         return Err(CodecError::Malformed("invalid PNG signature".to_owned()));
     }
     let (kind, header, mut position) =
-        read_chunk(&data[8..], 8).map_err(|error| error.at(8, "png_chunk"))?;
+        read_chunk(data, 8).map_err(|error| error.at(8, "png_chunk"))?;
     if kind != *b"IHDR" || header.len() != 13 {
         return Err(CodecError::Malformed(
             "PNG must begin with a 13-byte IHDR chunk".to_owned(),
@@ -48,8 +48,8 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut next_sequence = 0u32;
     let mut saw_following_chunk = false;
     while position < data.len() {
-        let (kind, payload, next) = read_chunk(&data[position..], position)
-            .map_err(|error| error.at(position as u64, "png_chunk"))?;
+        let (kind, payload, next) =
+            read_chunk(data, position).map_err(|error| error.at(position as u64, "png_chunk"))?;
         saw_following_chunk = true;
         position = next;
         match &kind {
@@ -111,9 +111,10 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         }
     }
     if !saw_following_chunk {
-        return Err(CodecError::Malformed(
-            "PNG ends immediately after its IHDR chunk".to_owned(),
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: codec_add_end(position, 8, "PNG chunk position overflows")?,
+            message: "PNG ends immediately after its IHDR chunk".to_owned(),
+        });
     }
 
     let source =
@@ -181,19 +182,20 @@ fn consume_sequence(actual: u32, next: &mut u32) -> CodecResult<()> {
     Ok(())
 }
 
-fn read_chunk(chunk: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
-    let prefix = chunk.get(..8).malformed("truncated PNG chunk header")?;
+fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
+    let prefix_end = codec_add_end(position, 8, "PNG chunk position overflows")?;
+    let prefix = need_slice(data, position, prefix_end, "truncated PNG chunk header")?;
     let length = u32::from_be_bytes([prefix[0], prefix[1], prefix[2], prefix[3]]) as usize;
     let mut kind = [0; 4];
     kind.copy_from_slice(&prefix[4..8]);
-    let rest = &chunk[8..];
     #[cfg(target_pointer_width = "64")]
-    let payload_and_crc_len = length.wrapping_add(4);
+    let payload_end = prefix_end.wrapping_add(length).wrapping_add(4);
     #[cfg(not(target_pointer_width = "64"))]
-    let payload_and_crc_len = length.saturating_add(4);
-    let payload_and_crc = rest
-        .get(..payload_and_crc_len)
-        .malformed("truncated PNG chunk payload")?;
+    let payload_end = prefix_end
+        .checked_add(length)
+        .and_then(|end| end.checked_add(4))
+        .ok_or_else(|| CodecError::Malformed("PNG chunk length overflows".to_owned()))?;
+    let payload_and_crc = need_slice(data, prefix_end, payload_end, "truncated PNG chunk payload")?;
     let payload = &payload_and_crc[..length];
     let crc_bytes = &payload_and_crc[length..];
     let expected_crc = u32::from_be_bytes([crc_bytes[0], crc_bytes[1], crc_bytes[2], crc_bytes[3]]);
@@ -202,11 +204,7 @@ fn read_chunk(chunk: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usi
     if kind != *b"IDAT" && crc32(&kind, payload) != expected_crc {
         return Err(CodecError::Malformed("PNG chunk CRC mismatch".to_owned()));
     }
-    let next = position
-        .wrapping_add(8)
-        .wrapping_add(length)
-        .wrapping_add(4);
-    Ok((kind, payload, next))
+    Ok((kind, payload, payload_end))
 }
 
 fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
@@ -240,6 +238,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     no_image_data.extend_from_slice(&chunk(*b"IHDR", &header));
     no_image_data.extend_from_slice(&chunk(*b"IEND", &[]));
     let _ = inspect(&no_image_data);
+    let mut ends_after_ihdr = SIGNATURE.to_vec();
+    ends_after_ihdr.extend_from_slice(&chunk(*b"IHDR", &header));
+    let _ = inspect(&ends_after_ihdr);
+    let mut huge_payload = SIGNATURE.to_vec();
+    huge_payload.extend_from_slice(&0xffff_ffffu32.to_be_bytes());
+    huge_payload.extend_from_slice(b"IHDR");
+    let _ = inspect(&huge_payload);
     let mut sequence = u32::MAX;
     assert!(consume_sequence(u32::MAX, &mut sequence).is_err());
 }

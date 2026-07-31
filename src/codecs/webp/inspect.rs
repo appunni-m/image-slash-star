@@ -1,6 +1,8 @@
 //! WebP RIFF and frame-header inspection without pixel decoding.
 
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{
+    CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice, terminalize,
+};
 use crate::types::{ImageFormat, ImageInfo, ImageMode};
 
 const RIFF_HEADER_SIZE: usize = 12;
@@ -18,13 +20,11 @@ pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
 }
 
 fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
-    let header = data
-        .get(..RIFF_HEADER_SIZE)
-        .malformed("truncated WebP RIFF header")?;
+    let header = need_slice(data, 0, RIFF_HEADER_SIZE, "truncated WebP RIFF header")?;
     if &header[..4] != b"RIFF" || &header[8..12] != b"WEBP" {
         return Err(CodecError::Malformed("invalid WebP signature".to_owned()));
     }
-    let (kind, payload, next) = read_chunk(&data[RIFF_HEADER_SIZE..], RIFF_HEADER_SIZE)?;
+    let (kind, payload, next) = read_chunk(data, RIFF_HEADER_SIZE)?;
     match &kind {
         b"VP8 " => inspect_vp8(payload),
         b"VP8L" => inspect_vp8l(payload),
@@ -75,7 +75,7 @@ fn inspect_extended_basic(
     }
     let mut saw_image = false;
     while position < data.len() {
-        let (kind, payload, next) = read_chunk(&data[position..], position)?;
+        let (kind, payload, next) = read_chunk(data, position)?;
         position = next;
         if kind == *b"VP8 " {
             let info = inspect_vp8(payload)?;
@@ -99,9 +99,10 @@ fn inspect_extended_basic(
         }
     }
     if !saw_image {
-        return Err(CodecError::Malformed(
-            "extended WebP contains no image chunk".to_owned(),
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: codec_add_end(position, 8, "WebP chunk position overflows")?,
+            message: "extended WebP contains no image chunk".to_owned(),
+        });
     }
     Ok(ImageInfo {
         format: ImageFormat::WebP,
@@ -203,7 +204,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     let mut saw_image = false;
     let mut saw_animation_control = false;
     while position < data.len() {
-        let (kind, payload, next) = read_chunk(&data[position..], position)?;
+        let (kind, payload, next) = read_chunk(data, position)?;
         position = next;
         if kind == *b"VP8 " {
             let info = inspect_vp8(payload)?;
@@ -236,14 +237,16 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     }
     if declares_animation {
         if !saw_animation_control || frame_count == 0 {
-            return Err(CodecError::Malformed(
-                "animated WebP lacks animation control or frames".to_owned(),
-            ));
+            return Err(CodecError::NeedMore {
+                minimum: codec_add_end(position, 8, "WebP chunk position overflows")?,
+                message: "animated WebP lacks animation control or frames".to_owned(),
+            });
         }
     } else if !saw_image {
-        return Err(CodecError::Malformed(
-            "extended WebP contains no image chunk".to_owned(),
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: codec_add_end(position, 8, "WebP chunk position overflows")?,
+            message: "extended WebP contains no image chunk".to_owned(),
+        });
     }
     let is_animated = frame_count > 1;
     let source = if has_alpha {
@@ -288,10 +291,10 @@ fn validate_animation_frame(
     }
 
     let nested = &payload[16..];
-    let (mut kind, mut image_payload, next) = read_chunk(nested, 0)?;
+    let (mut kind, mut image_payload, next) = read_chunk(nested, 0).map_err(terminalize)?;
     if kind == *b"ALPH" {
         let rest = &nested[next..];
-        (kind, image_payload, _) = read_chunk(rest, next)?;
+        (kind, image_payload, _) = read_chunk(rest, 0).map_err(terminalize)?;
     }
     match &kind {
         b"VP8 " => {
@@ -322,8 +325,9 @@ fn validate_animation_frame(
     }
 }
 
-fn read_chunk(chunk: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
-    let prefix = chunk.get(..8).malformed("truncated WebP chunk header")?;
+fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
+    let prefix_end = codec_add_end(position, 8, "WebP chunk position overflows")?;
+    let prefix = need_slice(data, position, prefix_end, "truncated WebP chunk header")?;
     let mut kind = [0; 4];
     kind.copy_from_slice(&prefix[..4]);
     let length = u32::from_le_bytes([prefix[4], prefix[5], prefix[6], prefix[7]]) as usize;
@@ -331,12 +335,10 @@ fn read_chunk(chunk: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usi
     let padded_length = length.saturating_add(length & 1);
     #[cfg(not(target_pointer_width = "64"))]
     let padded_length = length.saturating_add(length & 1);
-    let body = chunk[8..]
-        .get(..padded_length)
-        .malformed("truncated WebP chunk payload")?;
+    let body_end = codec_add_end(prefix_end, padded_length, "WebP chunk length overflows")?;
+    let body = need_slice(data, prefix_end, body_end, "truncated WebP chunk payload")?;
     let payload = &body[..length];
-    let next = position.wrapping_add(8).wrapping_add(padded_length);
-    Ok((kind, payload, next))
+    Ok((kind, payload, body_end))
 }
 
 fn enforce_dimension_limit(width: u32, height: u32) -> CodecResult<()> {

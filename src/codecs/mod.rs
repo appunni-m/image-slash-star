@@ -32,7 +32,30 @@ pub(crate) use error::CodecError;
     feature = "ico"
 ))]
 pub(crate) use error::OptionCodecExt;
-pub(crate) use error::{CodecResult, into_image_result};
+#[cfg(any(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "webp",
+    feature = "ico"
+))]
+pub(crate) use error::codec_add_end;
+#[cfg(feature = "bmp")]
+pub(crate) use error::need_from;
+#[cfg(any(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico"
+))]
+pub(crate) use error::need_slice;
+#[cfg(any(feature = "webp", feature = "ico"))]
+pub(crate) use error::terminalize;
+pub(crate) use error::{CodecResult, into_image_result, into_incremental_image_result};
 
 #[cfg(feature = "avif")]
 mod avif;
@@ -232,20 +255,8 @@ pub(crate) fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<I
     )
 }
 
-/// Dispatch header-only inspection to the enabled format implementation.
-pub(crate) fn inspect_basic_format(_data: &[u8], format: ImageFormat) -> ImageResult<ImageInfo> {
-    #[cfg(not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif"
-    )))]
-    ensure_inspection_available(format)?;
-
+/// Invoke the format's header-only inspector below the public dispatcher.
+fn inspect_basic_codec(_data: &[u8], format: ImageFormat) -> error::CodecResult<ImageInfo> {
     let inspected: CodecResult<ImageInfo> = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg::inspect::inspect(_data),
@@ -296,8 +307,50 @@ pub(crate) fn inspect_basic_format(_data: &[u8], format: ImageFormat) -> ImageRe
             "AVIF metadata inspection is unavailable".to_owned(),
         )),
     };
+    inspected
+}
+
+/// Dispatch header-only inspection to the enabled format implementation.
+pub(crate) fn inspect_basic_format(data: &[u8], format: ImageFormat) -> ImageResult<ImageInfo> {
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    )))]
+    ensure_inspection_available(format)?;
+
     into_image_result(
-        inspected.map_err(|error| error.context("inspect basic")),
+        inspect_basic_codec(data, format).map_err(|error| error.context("inspect basic")),
+        format,
+        ImageErrorStage::Inspection,
+    )
+}
+
+/// Dispatch header-only inspection for incremental input: short reads surface
+/// as the non-terminal [`ImageError::NeedMoreData`] status.
+pub(crate) fn inspect_basic_prefix_format(
+    data: &[u8],
+    format: ImageFormat,
+) -> ImageResult<ImageInfo> {
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    )))]
+    ensure_inspection_available(format)?;
+
+    into_incremental_image_result(
+        inspect_basic_codec(data, format).map_err(|error| error.context("inspect basic")),
         format,
         ImageErrorStage::Inspection,
     )

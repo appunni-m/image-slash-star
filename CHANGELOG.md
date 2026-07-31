@@ -7,6 +7,11 @@ All notable changes will be documented in this file. This project follows
 
 ### Added
 
+- Incremental input status for still-receiving callers: `detect_prefix` and
+  `inspect_basic_prefix` return the non-terminal `ImageError::NeedMoreData {
+  minimum }` while the input is an incomplete prefix, with exact minimums for
+  fixed signatures and progress-aware minimums for declared WebP/AVIF
+  extents. Complete-slice APIs keep their terminal classifications unchanged.
 - Manifest-driven Pillow 12.2.0 parity suite with exact decoded-pixel and
   encoded-file comparisons.
 - Feature-gated JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF codec

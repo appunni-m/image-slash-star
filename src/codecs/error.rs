@@ -8,6 +8,10 @@ use crate::types::{ImageError, ImageFormat, ImageResult};
 pub(crate) enum CodecError {
     /// Encoded input violates a container or bitstream contract.
     Malformed(String),
+    /// A container structure is present in the input but extends beyond the
+    /// available bytes; the caller needs at least `minimum` total bytes
+    /// before this operation can continue.
+    NeedMore { minimum: usize, message: String },
     /// Valid input, mode, or options are outside the codec's supported contract.
     Unsupported(String),
     /// Image dimensions are invalid, inconsistent, or unrepresentable.
@@ -78,6 +82,10 @@ impl CodecError {
                 Self::Unsupported(error.to_string())
             }
             ImageError::LimitExceeded { .. } => Self::LimitExceeded(error),
+            ImageError::NeedMoreData { minimum, .. } => Self::NeedMore {
+                minimum: usize::try_from(minimum).unwrap_or(usize::MAX),
+                message: "incremental input required".to_owned(),
+            },
         }
     }
 
@@ -89,6 +97,13 @@ impl CodecError {
     ) -> ImageError {
         match self {
             Self::Malformed(message) => ImageError::Malformed {
+                format,
+                message,
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+            },
+            Self::NeedMore { message, .. } => ImageError::Malformed {
                 format,
                 message,
                 stage: Some(stage),
@@ -149,6 +164,95 @@ impl CodecError {
                     }
                     ImageError::UnknownFormat
                     | ImageError::FeatureDisabled { .. }
+                    | ImageError::LimitExceeded { .. }
+                    | ImageError::NeedMoreData { .. } => {}
+                }
+                converted
+            }
+        }
+    }
+
+    /// Convert to the canonical public error, exposing incremental truncation
+    /// as the non-terminal [`ImageError::NeedMoreData`] status.
+    pub(crate) fn into_incremental_image_error(
+        self,
+        format: ImageFormat,
+        stage: ImageErrorStage,
+    ) -> ImageError {
+        match self {
+            Self::Malformed(message) => ImageError::Malformed {
+                format,
+                message,
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+            },
+            Self::NeedMore { minimum, .. } => ImageError::NeedMoreData {
+                format: Some(format),
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+                minimum: u64::try_from(minimum).unwrap_or(u64::MAX),
+            },
+            Self::Unsupported(message) => ImageError::Unsupported {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+            },
+            Self::Dimensions(message) => ImageError::Dimensions {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+            },
+            Self::Parameter(message) => ImageError::Parameter {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+            },
+            Self::LimitExceeded(error) => error,
+            Self::At {
+                error,
+                offset,
+                identity,
+            } => {
+                let mut converted = error.into_incremental_image_error(format, stage);
+                match &mut converted {
+                    ImageError::Malformed {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::Unsupported {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::Dimensions {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::Parameter {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    }
+                    | ImageError::NeedMoreData {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    } => {
+                        *target = Some(offset);
+                        *target_identity = Some(identity);
+                    }
+                    ImageError::UnknownFormat
+                    | ImageError::FeatureDisabled { .. }
                     | ImageError::LimitExceeded { .. } => {}
                 }
                 converted
@@ -160,6 +264,10 @@ impl CodecError {
     pub(crate) fn context(self, stage: &'static str) -> Self {
         match self {
             Self::Malformed(message) => Self::Malformed(format!("{stage}: {message}")),
+            Self::NeedMore { minimum, message } => Self::NeedMore {
+                minimum,
+                message: format!("{stage}: {message}"),
+            },
             Self::Unsupported(message) => Self::Unsupported(format!("{stage}: {message}")),
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
@@ -194,6 +302,10 @@ pub(crate) trait OptionCodecExt<T> {
     /// Require a value whose absence means malformed encoded input.
     fn malformed(self, message: &'static str) -> CodecResult<T>;
 
+    /// Require a value whose absence means the input ends before the
+    /// requested byte range; the caller needs at least `minimum` total bytes.
+    fn need_more(self, minimum: usize, message: &'static str) -> CodecResult<T>;
+
     /// Require a value whose absence means dimensions are unrepresentable.
     #[cfg(any(feature = "png", feature = "tiff"))]
     fn dimensions(self, message: &'static str) -> CodecResult<T>;
@@ -216,12 +328,121 @@ impl<T> OptionCodecExt<T> for Option<T> {
         }
     }
 
+    fn need_more(self, minimum: usize, message: &'static str) -> CodecResult<T> {
+        match self {
+            Some(value) => Ok(value),
+            None => Err(CodecError::NeedMore {
+                minimum,
+                message: message.to_owned(),
+            }),
+        }
+    }
+
     #[cfg(any(feature = "png", feature = "tiff"))]
     fn dimensions(self, message: &'static str) -> CodecResult<T> {
         match self {
             Some(value) => Ok(value),
             None => Err(CodecError::Dimensions(message.to_owned())),
         }
+    }
+}
+
+/// Read `data[start..end]`, classifying a short input as the incremental
+/// truncation status with the exact total byte minimum.
+#[cfg(any(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico"
+))]
+pub(crate) fn need_slice<'a>(
+    data: &'a [u8],
+    start: usize,
+    end: usize,
+    message: &'static str,
+) -> CodecResult<&'a [u8]> {
+    if start > end {
+        return Err(CodecError::Malformed(message.to_owned()));
+    }
+    data.get(start..end).need_more(end, message)
+}
+
+/// Read the tail `data[start..]`, classifying a start beyond the input as the
+/// incremental truncation status. An exact end is allowed: a zero-length tail
+/// is a valid parse outcome, so the minimum is `start`.
+#[cfg(feature = "bmp")]
+pub(crate) fn need_from<'a>(
+    data: &'a [u8],
+    start: usize,
+    message: &'static str,
+) -> CodecResult<&'a [u8]> {
+    if start > data.len() {
+        return Err(CodecError::NeedMore {
+            minimum: start,
+            message: message.to_owned(),
+        });
+    }
+    Ok(&data[start..])
+}
+
+/// Compute the exclusive end of a slice read.
+///
+/// The 64-bit host path is branch-free: slice lengths cannot approach
+/// `usize::MAX`, so wrapping is unreachable for valid inputs and a wrapped
+/// range is rejected by [`need_slice`] as malformed. Narrow targets use
+/// checked arithmetic because a 32-bit file-derived offset can genuinely
+/// overflow.
+#[cfg(all(
+    any(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "webp",
+        feature = "ico"
+    ),
+    target_pointer_width = "64"
+))]
+pub(crate) fn codec_add_end(base: usize, add: usize, _message: &'static str) -> CodecResult<usize> {
+    Ok(base.wrapping_add(add))
+}
+
+#[cfg(all(
+    any(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "webp",
+        feature = "ico"
+    ),
+    not(target_pointer_width = "64")
+))]
+pub(crate) fn codec_add_end(base: usize, add: usize, message: &'static str) -> CodecResult<usize> {
+    base.checked_add(add)
+        .ok_or_else(|| CodecError::Malformed(message.to_owned()))
+}
+
+/// Convert an incremental truncation status into the terminal malformed
+/// classification. Used where a slice is already bounded by a validated
+/// declared structure, so appending more input cannot repair it.
+#[cfg(any(feature = "webp", feature = "ico"))]
+pub(crate) fn terminalize(error: CodecError) -> CodecError {
+    match error {
+        CodecError::NeedMore { message, .. } => CodecError::Malformed(message),
+        CodecError::At {
+            error,
+            offset,
+            identity,
+        } => CodecError::At {
+            error: Box::new(terminalize(*error)),
+            offset,
+            identity,
+        },
+        other => other,
     }
 }
 
@@ -232,6 +453,15 @@ pub(crate) fn into_image_result<T>(
     stage: ImageErrorStage,
 ) -> ImageResult<T> {
     result.map_err(|error| error.into_image_error(format, stage))
+}
+
+/// Convert a private codec result for the incremental-input surface.
+pub(crate) fn into_incremental_image_result<T>(
+    result: CodecResult<T>,
+    format: ImageFormat,
+    stage: ImageErrorStage,
+) -> ImageResult<T> {
+    result.map_err(|error| error.into_incremental_image_error(format, stage))
 }
 
 #[cfg(coverage)]
@@ -267,6 +497,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
             maximum: 1,
             observed: 2,
         },
+        ImageError::NeedMoreData {
+            format: Some(ImageFormat::Png),
+            stage: Some(ImageErrorStage::Inspection),
+            offset: Some(8),
+            identity: Some("png_chunk"),
+            minimum: 41,
+        },
     ] {
         let _ = CodecError::from_image_error(error);
     }
@@ -295,4 +532,52 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = CodecError::Parameter("at".to_owned())
         .at(12, "png_chunk")
         .into_image_error(ImageFormat::Png, ImageErrorStage::StillEncode);
+    let need_more = CodecError::NeedMore {
+        minimum: 41,
+        message: "truncated PNG chunk payload".to_owned(),
+    };
+    let _ = need_more
+        .clone()
+        .into_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = need_more
+        .clone()
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = need_more
+        .clone()
+        .at(8, "png_chunk")
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = CodecError::Malformed("malformed".to_owned())
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = CodecError::Unsupported("unsupported".to_owned())
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = CodecError::Dimensions("dimensions".to_owned())
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = CodecError::Parameter("parameter".to_owned())
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = limit
+        .clone()
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
+    let _ = CodecError::Malformed("nested".to_owned())
+        .at(4, "webp_chunk")
+        .into_incremental_image_error(ImageFormat::WebP, ImageErrorStage::Inspection);
+    let _ = need_more.context("inspect basic");
+    let _ = need_slice(b"12345", 0, 6, "truncated field");
+    let _ = need_slice(b"12345", 7, 6, "inverted field");
+    let _ = need_from(b"12345", 3, "tail beyond input");
+    let _ = need_from(b"12345", 9, "tail beyond input");
+    let _ = codec_add_end(3, 2, "bounded end");
+    let _ = terminalize(CodecError::NeedMore {
+        minimum: 5,
+        message: "truncated".to_owned(),
+    });
+    let _ = terminalize(
+        CodecError::NeedMore {
+            minimum: 5,
+            message: "truncated".to_owned(),
+        }
+        .at(3, "ico_entry"),
+    );
+    let _ = terminalize(CodecError::Unsupported("kept".to_owned()));
+    let _ = Option::<u8>::None.need_more(3, "truncated byte");
+    let _ = Option::<u8>::Some(1).need_more(3, "truncated byte");
 }
