@@ -1749,6 +1749,15 @@ fn coverage_malformed_leaf_corpus() {
             let _ = parse_track_properties(&payload, &mut Track::default(), &mut Budget::default());
         }
     }
+
+    // The public AVIF path validates the same property with the sample
+    // extractor first. Keep the container parser's bounded extra-byte
+    // rejection covered directly as a separate defensive contract.
+    let extra_nclx = [b'n', b'c', b'l', b'x', 0, 1, 0, 13, 0, 6, 0x80, 0];
+    let _ = parse_property(BoxView {
+        kind: *b"colr",
+        payload: &extra_nclx,
+    });
 }
 
 #[cfg(coverage)]
