@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `8e216604890581ddf9b624cc3b9d43b793f49f33`
+Reviewed: 2026-08-01 against the working tree based on `7aa78f26e9507e0e45a4423037a13f108df6b4b7`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -527,6 +527,10 @@ non-exhaustive so downstream matches need a fallback arm.
 diagnostic that crossed the codec boundary. `ImageError::message()` exposes
 that diagnostic for logs; its prose may become more specific and is not a
 commitment to preserve every internal parser phrase as public API.
+`ImageError::unsupported_reason()` separately reports
+`TargetUnavailable` or `NotImplemented` for capability failures and returns
+`None` when the unsupported result is specific to the input class or retained
+metadata. This is a Rust capability contract, not a Pillow-parity field.
 
 ## Immutable source lifecycle
 

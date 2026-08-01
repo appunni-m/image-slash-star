@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `8e216604890581ddf9b624cc3b9d43b793f49f33`
+Reviewed: 2026-08-01 on the working tree based on revision `7aa78f26e9507e0e45a4423037a13f108df6b4b7`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -129,6 +129,19 @@ return and would mislabel defensive policy as parity evidence. Any coverage
 obtained while these real contracts run is incidental evidence; no
 diagnostic-specific `cfg(coverage)` hook supplies the contract.
 
+The `UnsupportedReason` field follows the same boundary. The
+`unsupported_reasons_are_non_parity_capability_contracts` test asserts
+`TargetUnavailable` and `NotImplemented` as Rust capability reasons, while
+input-class incompatibilities retain `None`. The generated Pillow matrix has
+no portable equivalent field, so these assertions are not parity rows.
+
+`ImageError::OutputWrite` has the same boundary: Pillow does not accept this
+crate's caller-owned `OutputSink`, so a destination rejection cannot be a
+Pillow-parity fixture. The existing
+`output_sinks_receive_the_exact_encoded_bytes` contract test asserts that this
+Rust-only error also has no `UnsupportedReason`; its coverage is incidental to
+the real sink contract, not a coverage-only test.
+
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
 sample bytes remain a documented gap. The parity schema does not compare
@@ -138,7 +151,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `8e216604890581ddf9b624cc3b9d43b793f49f33`, the generated matrix
+For the current working tree based on revision `7aa78f26e9507e0e45a4423037a13f108df6b4b7`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -485,26 +498,26 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,513 | 45,513 |
+| Lines | 45,562 | 45,562 |
 | Branches | 6,434 | 6,434 |
-| Functions | 2,525 | 2,525 |
-| Regions | 71,503 | 71,503 |
+| Functions | 2,526 | 2,526 |
+| Regions | 71,550 | 71,550 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
 `924a922e-4f47-49c7-9367-885e1ca04678`, submitted against
-`8e216604890581ddf9b624cc3b9d43b793f49f33`: 727 checks passed with zero
+`9e37df486410f71868146ef348034782f0fb5658`: 727 checks passed with zero
 failures, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `0994aac0-61f9-457c-b4d6-01d0865692d8`
+Coverage MCP run: `98d5092b-a3dd-42db-9f65-bdf77ce33707`
 
-Snapshot: `c51337e9-5667-4f1a-aeac-09d67190173f`
+Snapshot: `0c010f00-9039-4994-8c32-99cbf7542659`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

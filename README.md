@@ -62,12 +62,14 @@ fn opaque_rgb_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
         return Err(ImageError::Unsupported {
             format: Some(decoded.format),
             message: "expected a PNG source".to_owned(),
+            reason: None,
         });
     }
     if decoded.content.mode != ImageMode::Rgb8 {
         return Err(ImageError::Unsupported {
             format: Some(ImageFormat::Jpeg),
             message: "JPEG example requires opaque RGB8 input".to_owned(),
+            reason: None,
         });
     }
     encode_default(&decoded.content, ImageFormat::Jpeg)
@@ -450,6 +452,10 @@ intentionally remain detail-free.
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
 errors can usually be handled by selecting another compiled capability.
+`ImageError::unsupported_reason()` additionally distinguishes
+`TargetUnavailable` and `NotImplemented` when the failure is a capability
+boundary; it returns `None` for input-class and metadata incompatibilities.
+This Rust-only reason is not Pillow-parity evidence.
 
 Non-fatal recovery is not an error: successful `Decoded<T>` values expose
 `diagnostics` with stable kind, stage, offset, and structure identity fields.
