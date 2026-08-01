@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `c08a64d`
+Reviewed: 2026-08-01 against the working tree based on `a77e0f05faced5e3fcab7544ba1370e7dd502330`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
