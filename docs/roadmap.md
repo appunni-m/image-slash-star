@@ -1165,14 +1165,12 @@ Primary AVIF `clli` content-light-level declarations now follow the same
 source-provenance path through `SourceColor`; maxCLL and maxPALL are retained
 without tone mapping, and the contract test likewise adds no synthetic parity
 row.
-Historical managed feature-matrix runtime evidence comes from run
-`2e7f440a-e63e-4066-ab27-5af837577e6b`, submitted against the earlier revision
-`ebd6bbf4f826c4a532b49a15761c27bfbdd4249e`; it passed 727 tests with zero
+Revision-bound managed feature-matrix runtime evidence comes from run
+`5bc37abb-d7d1-4ebd-be7a-7689f080c256`, submitted against
+`291f21fc613c17aefc131718fcfc68b65f737cd0`; it passed 727 tests with zero
 failures and its terminal log records matching native and `wasm32-wasip1`
-capability tables. A revision-bound rerun for
-`291f21fc613c17aefc131718fcfc68b65f737cd0` is in progress as run
-`5bc37abb-d7d1-4ebd-be7a-7689f080c256`. Aggregate coverage and runtime matrix
-results are implementation evidence, not Pillow-parity coverage.
+capability tables. Aggregate coverage and runtime matrix results are
+implementation evidence, not Pillow-parity coverage.
 
 1. Add metadata retention, remaining decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.
