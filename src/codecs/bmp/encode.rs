@@ -2,10 +2,13 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::BmpEncodeOptions;
+use crate::encode_policy::EncodePolicy;
 use crate::types::{DecodedImage, ImageMode, ImagePalette};
+use crate::{CodecOperation, ImageFormat};
 
 const FILE_HEADER_SIZE: usize = 14;
 const INFO_HEADER_SIZE: u32 = 40;
+const BMP_HEADER_SIZE: usize = FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize;
 const BI_RGB: u32 = 0;
 // Pillow 12.2.0 BmpImagePlugin.py:437-440 defaults to 96 DPI and converts
 // using round(96 * 39.3701), yielding 3,780 pixels per meter on both axes.
@@ -22,29 +25,189 @@ fn row_size(bits_per_pixel: usize, width: usize) -> usize {
 ///
 /// Pillow derives 1/8/24/32-bit output from the source mode and ignores save
 /// options requesting compression, row direction, or alternate DIB headers.
-pub fn encode(img: &DecodedImage, _opts: &BmpEncodeOptions) -> CodecResult<Vec<u8>> {
+pub fn encode(img: &DecodedImage, opts: &BmpEncodeOptions) -> CodecResult<Vec<u8>> {
+    let mut output = Vec::new();
+    let mut writer = |bytes: &[u8]| {
+        output.extend_from_slice(bytes);
+        Ok(())
+    };
+    write_encoded(img, opts, None, None, &mut writer)?;
+    Ok(output)
+}
+
+/// Encode a BMP directly to a caller-owned sink.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &BmpEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> CodecResult<usize> {
+    let mut writer = |bytes: &[u8]| {
+        sink.write_all(bytes)
+            .map_err(|error| CodecError::OutputWrite(error.to_string()))
+    };
+    write_encoded(img, opts, token, Some((policy, operation)), &mut writer)
+}
+
+fn write_encoded(
+    img: &DecodedImage,
+    _opts: &BmpEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+    policy: Option<(EncodePolicy, CodecOperation)>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+) -> CodecResult<usize> {
+    crate::codecs::error::check_cancelled(token)?;
     if !bmp_file_fits(img) {
         return Err(CodecError::Dimensions(
             "BMP dimensions or file size exceed the container limits".to_owned(),
         ));
     }
     img.validate().map_err(CodecError::from_image_error)?;
+
+    let layout = BmpLayout::for_image(img)?;
+    let output_len = layout.output_len()?;
+    if let Some((policy, operation)) = policy {
+        policy
+            .check_output_len(output_len, ImageFormat::Bmp, operation)
+            .map_err(CodecError::from_image_error)?;
+    }
+
+    let mut written = 0usize;
+    let header = bmp_headers(
+        img.width,
+        img.height,
+        layout.depth,
+        layout.colors,
+        layout.pixel_offset,
+        layout.pixel_bytes,
+    );
+    emit(&header, token, writer, &mut written)?;
+
     match img.mode {
-        ImageMode::L1 => Ok(encode_1bit(img.width, img.height, &img.pixels)),
-        ImageMode::P8 | ImageMode::L8 => Ok(encode_l8(
-            img.width,
-            img.height,
-            &img.pixels,
-            (img.mode == ImageMode::P8)
+        ImageMode::L1 => {
+            emit(&[0, 0, 0, 0, 255, 255, 255, 0], token, writer, &mut written)?;
+            write_1bit_rows(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                layout.stride,
+                token,
+                writer,
+                &mut written,
+            )?;
+        }
+        ImageMode::P8 | ImageMode::L8 => {
+            let mut palette_bytes = Vec::with_capacity(layout.palette_bytes);
+            if let Some(palette) = (img.mode == ImageMode::P8)
                 .then_some(img.palette.as_ref())
-                .flatten(),
-        )),
-        ImageMode::Rgb8 => Ok(encode_rgb24(img.width, img.height, &img.pixels)),
-        ImageMode::Rgba8 => Ok(encode_rgb32(img.width, img.height, &img.pixels)),
-        _ => Err(CodecError::Unsupported(format!(
-            "BMP cannot encode mode {:?}",
-            img.mode
-        ))),
+                .flatten()
+            {
+                for rgb in palette.rgb.chunks_exact(3) {
+                    palette_bytes.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
+                }
+            } else {
+                for value in 0..=255u8 {
+                    palette_bytes.extend_from_slice(&[value, value, value, 0]);
+                }
+            }
+            emit(&palette_bytes, token, writer, &mut written)?;
+            write_rows(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                1,
+                layout.stride,
+                &mut |pixel, row| row.push(pixel[0]),
+                token,
+                writer,
+                &mut written,
+            )?;
+        }
+        ImageMode::Rgb8 => {
+            write_rows(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                3,
+                layout.stride,
+                &mut |pixel, row| row.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]),
+                token,
+                writer,
+                &mut written,
+            )?;
+        }
+        ImageMode::Rgba8 => {
+            write_rows(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                4,
+                layout.stride,
+                &mut |pixel, row| row.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]),
+                token,
+                writer,
+                &mut written,
+            )?;
+        }
+        _ => unreachable!("BMP layout rejects unsupported modes"),
+    }
+    debug_assert_eq!(written, output_len);
+    Ok(written)
+}
+
+#[derive(Clone, Copy)]
+struct BmpLayout {
+    depth: u16,
+    colors: u32,
+    palette_bytes: usize,
+    pixel_offset: usize,
+    pixel_bytes: usize,
+    stride: usize,
+}
+
+impl BmpLayout {
+    fn for_image(img: &DecodedImage) -> CodecResult<Self> {
+        let (depth, colors) = match img.mode {
+            ImageMode::L1 => (1u16, 2usize),
+            ImageMode::P8 => (8, img.palette.as_ref().map_or(256usize, ImagePalette::len)),
+            ImageMode::L8 => (8, 256),
+            ImageMode::Rgb8 => (24, 0),
+            ImageMode::Rgba8 => (32, 0),
+            mode => {
+                return Err(CodecError::Unsupported(format!(
+                    "BMP cannot encode mode {mode:?}"
+                )));
+            }
+        };
+        let palette_bytes = colors
+            .checked_mul(4)
+            .ok_or_else(|| CodecError::Dimensions("BMP palette length overflows".to_owned()))?;
+        let stride = row_size(usize::from(depth), img.width as usize);
+        let pixel_bytes = stride
+            .checked_mul(img.height as usize)
+            .ok_or_else(|| CodecError::Dimensions("BMP pixel length overflows".to_owned()))?;
+        let pixel_offset = FILE_HEADER_SIZE
+            .checked_add(INFO_HEADER_SIZE as usize)
+            .and_then(|value| value.checked_add(palette_bytes))
+            .ok_or_else(|| CodecError::Dimensions("BMP pixel offset overflows".to_owned()))?;
+        Ok(Self {
+            depth,
+            colors: u32::try_from(colors)
+                .map_err(|_| CodecError::Dimensions("BMP palette count overflows".to_owned()))?,
+            palette_bytes,
+            pixel_offset,
+            pixel_bytes,
+            stride,
+        })
+    }
+
+    fn output_len(self) -> CodecResult<usize> {
+        BMP_HEADER_SIZE
+            .checked_add(self.palette_bytes)
+            .and_then(|value| value.checked_add(self.pixel_bytes))
+            .ok_or_else(|| CodecError::Dimensions("BMP output length overflows".to_owned()))
     }
 }
 
@@ -82,132 +245,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
 }
 
-fn encode_1bit(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
-    let encoded_width = width;
-    let encoded_height = height;
-    let width = width as usize;
-    let height = height as usize;
-    let packed_width = width.div_ceil(8);
-    let stride = row_size(1, width);
-    let pixel_bytes = stride.saturating_mul(height);
-    let palette_bytes = 8usize;
-    let pixel_offset = FILE_HEADER_SIZE
-        .saturating_add(INFO_HEADER_SIZE as usize)
-        .saturating_add(palette_bytes);
-    let mut output = bmp_headers(
-        encoded_width,
-        encoded_height,
-        1,
-        2,
-        pixel_offset,
-        pixel_bytes,
-    );
-    output.extend_from_slice(&[0, 0, 0, 0, 255, 255, 255, 0]);
-    for output_row in 0..height {
-        let source_row = source_row(output_row, height);
-        let row_start = source_row.saturating_mul(packed_width);
-        output.extend_from_slice(&pixels[row_start..row_start.saturating_add(packed_width)]);
-        output.resize(
-            output
-                .len()
-                .saturating_add(stride.saturating_sub(packed_width)),
-            0,
-        );
-    }
-    output
-}
-
 fn source_row(output_row: usize, height: usize) -> usize {
     height.saturating_sub(output_row).saturating_sub(1)
 }
 
-fn encode_l8(width: u32, height: u32, pixels: &[u8], palette: Option<&ImagePalette>) -> Vec<u8> {
-    let width_usize = width as usize;
-    let height_usize = height as usize;
-    let stride = row_size(8, width_usize);
-    // Pillow 12.2.0 BmpImagePlugin.py:446-452 retains the exact P-mode
-    // palette length and writes it as BGRX. Ordinary L mode gets 256 gray
-    // entries instead.
-    let color_count = palette.map_or(256, ImagePalette::len);
-    let palette_bytes = color_count.saturating_mul(4);
-    let pixel_bytes = stride.saturating_mul(height_usize);
-    let pixel_offset = FILE_HEADER_SIZE
-        .saturating_add(INFO_HEADER_SIZE as usize)
-        .saturating_add(palette_bytes);
-    let mut output = bmp_headers(
-        width,
-        height,
-        8,
-        u32::try_from(color_count).unwrap_or(u32::MAX),
-        pixel_offset,
-        pixel_bytes,
-    );
-    if let Some(palette) = palette {
-        for rgb in palette.rgb.chunks_exact(3) {
-            output.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
-        }
-    } else {
-        for value in 0..=255u8 {
-            output.extend_from_slice(&[value, value, value, 0]);
-        }
-    }
-    write_rows(
-        &mut output,
-        pixels,
-        width_usize,
-        height_usize,
-        1,
-        stride,
-        |pixel, out| {
-            out.push(pixel[0]);
-        },
-    );
-    output
-}
-
-fn encode_rgb24(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
-    let width_usize = width as usize;
-    let height_usize = height as usize;
-    let stride = row_size(24, width_usize);
-    let pixel_bytes = stride.saturating_mul(height_usize);
-    let pixel_offset = FILE_HEADER_SIZE.saturating_add(INFO_HEADER_SIZE as usize);
-    let mut output = bmp_headers(width, height, 24, 0, pixel_offset, pixel_bytes);
-    write_rows(
-        &mut output,
-        pixels,
-        width_usize,
-        height_usize,
-        3,
-        stride,
-        |pixel, out| {
-            out.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
-        },
-    );
-    output
-}
-
-fn encode_rgb32(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
-    let width_usize = width as usize;
-    let height_usize = height as usize;
-    let stride = row_size(32, width_usize);
-    let pixel_bytes = stride.saturating_mul(height_usize);
-    let pixel_offset = FILE_HEADER_SIZE.saturating_add(INFO_HEADER_SIZE as usize);
-    let mut output = bmp_headers(width, height, 32, 0, pixel_offset, pixel_bytes);
-    write_rows(
-        &mut output,
-        pixels,
-        width_usize,
-        height_usize,
-        4,
-        stride,
-        |pixel, out| {
-            out.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
-        },
-    );
-    output
-}
-
-#[allow(clippy::too_many_arguments)]
 fn bmp_headers(
     width: u32,
     height: u32,
@@ -215,55 +256,110 @@ fn bmp_headers(
     colors: u32,
     pixel_offset: usize,
     pixel_bytes: usize,
-) -> Vec<u8> {
+) -> [u8; BMP_HEADER_SIZE] {
     let file_size = pixel_offset.saturating_add(pixel_bytes);
-    let mut output = Vec::with_capacity(file_size);
-    output.extend_from_slice(b"BM");
-    output.extend_from_slice(&(file_size as u64).to_le_bytes()[..4]);
-    output.extend_from_slice(&0u32.to_le_bytes());
-    output.extend_from_slice(&(pixel_offset as u64).to_le_bytes()[..4]);
-    output.extend_from_slice(&INFO_HEADER_SIZE.to_le_bytes());
-    output.extend_from_slice(&width.to_le_bytes());
-    output.extend_from_slice(&height.to_le_bytes());
-    output.extend_from_slice(&1u16.to_le_bytes());
-    output.extend_from_slice(&depth.to_le_bytes());
-    output.extend_from_slice(&BI_RGB.to_le_bytes());
-    output.extend_from_slice(&(pixel_bytes as u64).to_le_bytes()[..4]);
-    output.extend_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
-    output.extend_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
-    output.extend_from_slice(&colors.to_le_bytes());
-    output.extend_from_slice(&colors.to_le_bytes());
-    output.resize(
-        FILE_HEADER_SIZE.saturating_add(INFO_HEADER_SIZE as usize),
-        0,
+    let mut output = [0u8; BMP_HEADER_SIZE];
+    output[..2].copy_from_slice(b"BM");
+    output[2..6].copy_from_slice(&u32::try_from(file_size).unwrap_or(u32::MAX).to_le_bytes());
+    output[10..14].copy_from_slice(
+        &u32::try_from(pixel_offset)
+            .unwrap_or(u32::MAX)
+            .to_le_bytes(),
     );
+    output[14..18].copy_from_slice(&INFO_HEADER_SIZE.to_le_bytes());
+    output[18..22].copy_from_slice(&width.to_le_bytes());
+    output[22..26].copy_from_slice(&height.to_le_bytes());
+    output[26..28].copy_from_slice(&1u16.to_le_bytes());
+    output[28..30].copy_from_slice(&depth.to_le_bytes());
+    output[30..34].copy_from_slice(&BI_RGB.to_le_bytes());
+    output[34..38].copy_from_slice(&u32::try_from(pixel_bytes).unwrap_or(u32::MAX).to_le_bytes());
+    output[38..42].copy_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
+    output[42..46].copy_from_slice(&DEFAULT_PIXELS_PER_METER.to_le_bytes());
+    output[46..50].copy_from_slice(&colors.to_le_bytes());
+    output[50..54].copy_from_slice(&colors.to_le_bytes());
     output
 }
 
+fn write_1bit_rows(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+    stride: usize,
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    let packed_width = width.div_ceil(8);
+    for output_row in 0..height {
+        crate::codecs::error::check_cancelled(token)?;
+        let source = source_row(output_row, height);
+        let start = source
+            .checked_mul(packed_width)
+            .ok_or_else(|| CodecError::Dimensions("BMP row offset overflows".to_owned()))?;
+        let end = start
+            .checked_add(packed_width)
+            .ok_or_else(|| CodecError::Dimensions("BMP row end overflows".to_owned()))?;
+        let source_row = pixels
+            .get(start..end)
+            .ok_or_else(|| CodecError::Dimensions("BMP pixel buffer is too short".to_owned()))?;
+        let mut row = Vec::with_capacity(stride);
+        row.extend_from_slice(source_row);
+        row.resize(stride, 0);
+        emit(&row, token, writer, written)?;
+    }
+    Ok(())
+}
+
+// The row converter keeps the codec's byte layout explicit; these parameters
+// are the independent validated inputs needed by both indexed and true-color
+// row emission.
 #[allow(clippy::too_many_arguments)]
 fn write_rows(
-    output: &mut Vec<u8>,
     pixels: &[u8],
     width: usize,
     height: usize,
     channels: usize,
     stride: usize,
-    mut write_pixel: impl FnMut(&[u8], &mut Vec<u8>),
-) {
-    let source_stride = width.saturating_mul(channels);
-    let encoded_row = width.saturating_mul(channels);
+    convert: &mut dyn FnMut(&[u8], &mut Vec<u8>),
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    let source_stride = width
+        .checked_mul(channels)
+        .ok_or_else(|| CodecError::Dimensions("BMP source row length overflows".to_owned()))?;
     for output_row in 0..height {
-        let source_row = source_row(output_row, height);
-        let start = source_row.saturating_mul(source_stride);
-        let row = &pixels[start..start.saturating_add(source_stride)];
-        for pixel in row.chunks_exact(channels) {
-            write_pixel(pixel, output);
+        crate::codecs::error::check_cancelled(token)?;
+        let source = source_row(output_row, height);
+        let start = source
+            .checked_mul(source_stride)
+            .ok_or_else(|| CodecError::Dimensions("BMP row offset overflows".to_owned()))?;
+        let end = start
+            .checked_add(source_stride)
+            .ok_or_else(|| CodecError::Dimensions("BMP row end overflows".to_owned()))?;
+        let source_row = pixels
+            .get(start..end)
+            .ok_or_else(|| CodecError::Dimensions("BMP pixel buffer is too short".to_owned()))?;
+        let mut row = Vec::with_capacity(stride);
+        for pixel in source_row.chunks_exact(channels) {
+            convert(pixel, &mut row);
         }
-        output.resize(
-            output
-                .len()
-                .saturating_add(stride.saturating_sub(encoded_row)),
-            0,
-        );
+        row.resize(stride, 0);
+        emit(&row, token, writer, written)?;
     }
+    Ok(())
+}
+
+fn emit(
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    writer(bytes)?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("BMP output length overflows".to_owned()))?;
+    Ok(())
 }

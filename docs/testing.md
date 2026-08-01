@@ -145,14 +145,14 @@ the real sink contract, not a coverage-only test.
 `EncodePolicy::max_output_bytes` is another Rust-only boundary. Pillow has no
 caller-controlled maximum-output policy and no equivalent sink contract, so
 `encoded_output_policy_is_a_non_parity_result_contract` is deliberately not a
-parity row. It runs real PNG still and GIF sequence encodes, admits the exact
+parity row. It runs real PNG/BMP still and GIF sequence encodes, admits the exact
 result, rejects a one-byte-smaller result with the typed
 `EncodedOutputBytes` limit, and verifies that policy rejection leaves the sink
 unchanged. The test proves result admission before the first sink write; the
-PNG still path additionally preflights its complete length before structural
-delivery. It does not prove transient allocation limits or recoverable OOM
-behavior. Its aggregate coverage is incidental evidence, not Pillow parity
-coverage, and no coverage-only hook is added.
+PNG and BMP still paths additionally preflight their complete lengths before
+structural delivery. It does not prove transient allocation limits or
+recoverable OOM behavior. Its aggregate coverage is incidental evidence, not
+Pillow parity coverage, and no coverage-only hook is added.
 
 Encode cancellation follows the same evidence boundary. Pillow has no
 `CancellationToken`, no caller-owned `OutputSink`, and no equivalent
@@ -160,10 +160,10 @@ interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
 They check byte identity for uncancelled still and GIF-sequence output, stable
-pre-cancelled errors, successful token-aware sink writes, and a PNG still sink
-that can cancel between structural writes while retaining only the delivered
-prefix. The PNG still path polls while preparing rows and between sink
-segments; GIF, TIFF, WebP, and native AVIF sequence paths poll their
+pre-cancelled errors, successful token-aware sink writes, and PNG/BMP still
+sinks that can cancel between structural writes while retaining only the
+delivered prefix. The PNG and BMP still paths poll while preparing rows and
+between sink segments; GIF, TIFF, WebP, and native AVIF sequence paths poll their
 implemented frame/coalescing/page/finalization checkpoints. This slice does
 not claim universal interior interruption, progress callbacks, work budgets,
 short-write/flush semantics, or rollback cleanup.
@@ -483,11 +483,12 @@ out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
-`encode_sequence_to_sink` over PNG still and GIF sequence fixtures must write
-bytes identical to `encode`/`encode_sequence` with matching lengths for both
-`Vec<u8>` and `&mut Vec<u8>` sinks. PNG still additionally proves multiple
-structural writes, policy preflight before the first write, and cancellation
-between writes; GIF sequence remains a whole-buffer comparison. A
+`encode_sequence_to_sink` over PNG/BMP still and GIF sequence fixtures must
+write bytes identical to `encode`/`encode_sequence` with matching lengths for
+both `Vec<u8>` and `&mut Vec<u8>` sinks. PNG and BMP still additionally prove
+multiple structural writes, policy preflight before the first write, and
+cancellation between writes; GIF sequence and BMP sequence remain
+whole-buffer comparisons. A
 deterministic failing sink must be reported as `ImageError::OutputWrite` with
 the selected format and encode stage. Short writes, flush/finalize failures,
 and rollback cleanup remain future writer evidence, not claims made by this

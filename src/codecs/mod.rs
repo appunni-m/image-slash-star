@@ -4,7 +4,7 @@
 //! Cargo feature pulls in only that codec and its private support code.
 
 use crate::SequenceDecodeBudget;
-#[cfg(feature = "png")]
+#[cfg(any(feature = "bmp", feature = "png"))]
 use crate::capabilities::CodecOperation;
 use crate::encode_options::EncodeOptions;
 use crate::encode_policy::EncodePolicy;
@@ -854,7 +854,7 @@ pub(crate) fn encode_format_with_token(
 
 /// Try the first format-specific structural writer without changing the
 /// whole-buffer fallback used by other codecs.
-#[cfg_attr(not(feature = "png"), allow(unused_variables))]
+#[cfg_attr(not(any(feature = "bmp", feature = "png")), allow(unused_variables))]
 pub(crate) fn encode_format_to_sink_with_token(
     image: &DecodedImage,
     format: ImageFormat,
@@ -863,57 +863,109 @@ pub(crate) fn encode_format_to_sink_with_token(
     token: Option<&crate::CancellationToken>,
     sink: &mut dyn crate::OutputSink,
 ) -> ImageResult<Option<usize>> {
-    if format != ImageFormat::Png {
-        return Ok(None);
-    }
-    #[cfg(not(feature = "png"))]
-    {
-        Err(ImageError::FeatureDisabled {
-            format,
-            feature: "png",
-        })
-    }
-    #[cfg(feature = "png")]
-    {
-        #[cfg(any(
-            not(all(
-                feature = "jpeg",
-                feature = "png",
-                feature = "gif",
-                feature = "bmp",
-                feature = "tiff",
-                feature = "webp",
-                feature = "ico",
-                feature = "avif"
-            )),
-            target_arch = "wasm32"
-        ))]
-        ensure_available(format)?;
-        image
-            .validate()
-            .map_err(|error| error.with_format(format))?;
-        let EncodeOptions::Png(options) = options else {
-            return Err(option_format_mismatch(
+    if format == ImageFormat::Png {
+        #[cfg(not(feature = "png"))]
+        {
+            return Err(ImageError::FeatureDisabled {
                 format,
+                feature: "png",
+            });
+        }
+        #[cfg(feature = "png")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            image
+                .validate()
+                .map_err(|error| error.with_format(format))?;
+            let EncodeOptions::Png(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::StillEncode,
+                ));
+            };
+            let encoded = png::encode::encode_to_sink(
+                image,
                 options,
+                policy,
+                CodecOperation::StillEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode")),
+                format,
                 ImageErrorStage::StillEncode,
-            ));
-        };
-        let encoded = png::encode::encode_to_sink(
-            image,
-            options,
-            policy,
-            CodecOperation::StillEncode,
-            token,
-            sink,
-        );
-        into_image_result(
-            encoded.map_err(|error| error.context("encode")),
-            format,
-            ImageErrorStage::StillEncode,
-        )
-        .map(Some)
+            )
+            .map(Some);
+        }
     }
+
+    if format == ImageFormat::Bmp {
+        #[cfg(not(feature = "bmp"))]
+        {
+            return Err(ImageError::FeatureDisabled {
+                format,
+                feature: "bmp",
+            });
+        }
+        #[cfg(feature = "bmp")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            image
+                .validate()
+                .map_err(|error| error.with_format(format))?;
+            let EncodeOptions::Bmp(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::StillEncode,
+                ));
+            };
+            let encoded = bmp::encode::encode_to_sink(
+                image,
+                options,
+                policy,
+                CodecOperation::StillEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode")),
+                format,
+                ImageErrorStage::StillEncode,
+            )
+            .map(Some);
+        }
+    }
+
+    Ok(None)
 }
 
 /// Try the structural writer for a one-frame PNG sequence.
