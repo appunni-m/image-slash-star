@@ -5404,6 +5404,18 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         assert_eq!(inspect_error.identity(), Some("bmp_field"));
         assert_eq!(inspect_error.offset(), Some(10));
 
+        let mut unsupported_header = vec![0u8; 18];
+        unsupported_header[..2].copy_from_slice(b"BM");
+        unsupported_header[14..18].copy_from_slice(&20u32.to_le_bytes());
+        let header_error = match image_slash_star::inspect_basic(&unsupported_header) {
+            Err(error) => error,
+            Ok(info) => panic!("unsupported BMP DIB header must fail: {info:?}"),
+        };
+        assert_eq!(header_error.kind(), ImageErrorKind::Unsupported);
+        assert_eq!(header_error.stage(), Some(ImageErrorStage::Inspection));
+        assert_eq!(header_error.identity(), Some("bmp_dib_header"));
+        assert_eq!(header_error.offset(), Some(14));
+
         let decode_error = match image_slash_star::decode(truncated_bmp) {
             Err(error) => error,
             Ok(info) => panic!("truncated BMP must fail still decode: {info:?}"),
