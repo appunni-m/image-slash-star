@@ -1930,6 +1930,29 @@ fn coverage_malformed_leaf_corpus() {
     });
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{Property, parse_colr};
+
+    #[test]
+    fn icc_profiles_retain_kind_and_reject_empty() {
+        // Public AVIF inspection validates the sample parser first, so an
+        // empty profile cannot reach this duplicate native parser through a
+        // Pillow parity row. This is the native parser's actual malformed
+        // structure contract, not a coverage-only execution hook.
+        for keyword in [b"prof", b"rICC"] {
+            let payload = [keyword.as_slice(), b"native-icc"].concat();
+            let property = parse_colr(&payload).expect("ICC profile should parse");
+            let Property::IccProfile(profile) = property else {
+                panic!("ICC profile should retain as an ICC property");
+            };
+            assert_eq!(profile.keyword, keyword.to_vec());
+            assert_eq!(profile.data, b"native-icc");
+            assert!(parse_colr(keyword).is_err());
+        }
+    }
+}
+
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     coverage_nested_parser_prefixes();
