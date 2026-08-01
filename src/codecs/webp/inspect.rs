@@ -20,19 +20,25 @@ pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
 }
 
 fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
-    let header = need_slice(data, 0, RIFF_HEADER_SIZE, "truncated WebP RIFF header")?;
+    let header = need_slice(data, 0, RIFF_HEADER_SIZE, "truncated WebP RIFF header")
+        .map_err(|error| error.at(0, "webp_header"))?;
     if &header[..4] != b"RIFF" || &header[8..12] != b"WEBP" {
-        return Err(CodecError::Malformed("invalid WebP signature".to_owned()));
+        return Err(CodecError::Malformed("invalid WebP signature".to_owned()).at(0, "webp_header"));
     }
-    let (kind, payload, next) = read_chunk(data, RIFF_HEADER_SIZE)?;
+    let first_chunk_offset = RIFF_HEADER_SIZE;
+    let (kind, payload, next) = read_chunk(data, first_chunk_offset)?;
     match &kind {
-        b"VP8 " => inspect_vp8(payload),
-        b"VP8L" => inspect_vp8l(payload),
-        b"VP8X" if basic => inspect_extended_basic(data, payload, next),
-        b"VP8X" => inspect_extended(data, payload, next),
-        _ => Err(CodecError::Malformed(
-            "WebP contains no recognized image header".to_owned(),
-        )),
+        b"VP8 " => with_chunk_context(inspect_vp8(payload), first_chunk_offset),
+        b"VP8L" => with_chunk_context(inspect_vp8l(payload), first_chunk_offset),
+        b"VP8X" if basic => with_chunk_context(
+            inspect_extended_basic(data, payload, next),
+            first_chunk_offset,
+        ),
+        b"VP8X" => with_chunk_context(inspect_extended(data, payload, next), first_chunk_offset),
+        _ => Err(
+            CodecError::Malformed("WebP contains no recognized image header".to_owned())
+                .at(first_chunk_offset as u64, "webp_chunk"),
+        ),
     }
 }
 
@@ -76,24 +82,27 @@ fn inspect_extended_basic(
     }
     let mut saw_image = false;
     while position < data.len() {
+        let chunk_offset = position;
         let (kind, payload, next) = read_chunk(data, position)?;
         position = next;
         if kind == *b"VP8 " {
-            let info = inspect_vp8(payload)?;
+            let info = with_chunk_context(inspect_vp8(payload), chunk_offset)?;
             if info.width != width || info.height != height {
                 return Err(CodecError::Malformed(
                     "WebP VP8 dimensions disagree with the canvas".to_owned(),
-                ));
+                )
+                .at(chunk_offset as u64, "webp_chunk"));
             }
             saw_image = true;
             break;
         }
         if kind == *b"VP8L" {
-            let info = inspect_vp8l(payload)?;
+            let info = with_chunk_context(inspect_vp8l(payload), chunk_offset)?;
             if info.width != width || info.height != height {
                 return Err(CodecError::Malformed(
                     "WebP VP8L dimensions disagree with the canvas".to_owned(),
-                ));
+                )
+                .at(chunk_offset as u64, "webp_chunk"));
             }
             saw_image = true;
             break;
@@ -103,7 +112,8 @@ fn inspect_extended_basic(
         return Err(CodecError::NeedMore {
             minimum: codec_add_end(position, 8),
             message: "extended WebP contains no image chunk".to_owned(),
-        });
+        }
+        .at(position as u64, "webp_chunk"));
     }
     Ok(ImageInfo {
         format: ImageFormat::WebP,
@@ -207,23 +217,26 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     let mut saw_image = false;
     let mut saw_animation_control = false;
     while position < data.len() {
+        let chunk_offset = position;
         let (kind, payload, next) = read_chunk(data, position)?;
         position = next;
         if kind == *b"VP8 " {
-            let info = inspect_vp8(payload)?;
+            let info = with_chunk_context(inspect_vp8(payload), chunk_offset)?;
             if info.width != width || info.height != height {
                 return Err(CodecError::Malformed(
                     "WebP VP8 dimensions disagree with the canvas".to_owned(),
-                ));
+                )
+                .at(chunk_offset as u64, "webp_chunk"));
             }
             saw_image = true;
             frame_count = 1;
         } else if kind == *b"VP8L" {
-            let info = inspect_vp8l(payload)?;
+            let info = with_chunk_context(inspect_vp8l(payload), chunk_offset)?;
             if info.width != width || info.height != height {
                 return Err(CodecError::Malformed(
                     "WebP VP8L dimensions disagree with the canvas".to_owned(),
-                ));
+                )
+                .at(chunk_offset as u64, "webp_chunk"));
             }
             saw_image = true;
             frame_count = 1;
@@ -231,10 +244,16 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
             if payload.len() < 6 {
                 return Err(CodecError::Malformed(
                     "invalid WebP animation control chunk".to_owned(),
-                ));
+                )
+                .at(chunk_offset as u64, "webp_chunk"));
             }
             saw_animation_control = true;
-        } else if kind == *b"ANMF" && validate_animation_frame(payload, width, height)? {
+        } else if kind == *b"ANMF"
+            && with_chunk_context(
+                validate_animation_frame(payload, width, height),
+                chunk_offset,
+            )?
+        {
             frame_count = frame_count.wrapping_add(1);
         }
     }
@@ -243,13 +262,15 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
             return Err(CodecError::NeedMore {
                 minimum: codec_add_end(position, 8),
                 message: "animated WebP lacks animation control or frames".to_owned(),
-            });
+            }
+            .at(position as u64, "webp_chunk"));
         }
     } else if !saw_image {
         return Err(CodecError::NeedMore {
             minimum: codec_add_end(position, 8),
             message: "extended WebP contains no image chunk".to_owned(),
-        });
+        }
+        .at(position as u64, "webp_chunk"));
     }
     let is_animated = frame_count > 1;
     let source = if has_alpha {
@@ -331,7 +352,8 @@ fn validate_animation_frame(
 
 fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usize)> {
     let prefix_end = codec_add_end(position, 8);
-    let prefix = need_slice(data, position, prefix_end, "truncated WebP chunk header")?;
+    let prefix = need_slice(data, position, prefix_end, "truncated WebP chunk header")
+        .map_err(|error| error.at(position as u64, "webp_chunk"))?;
     let mut kind = [0; 4];
     kind.copy_from_slice(&prefix[..4]);
     let length = u32::from_le_bytes([prefix[4], prefix[5], prefix[6], prefix[7]]) as usize;
@@ -340,9 +362,20 @@ fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usiz
     #[cfg(not(target_pointer_width = "64"))]
     let padded_length = length.saturating_add(length & 1);
     let body_end = codec_add_end(prefix_end, padded_length);
-    let body = need_slice(data, prefix_end, body_end, "truncated WebP chunk payload")?;
+    let body = need_slice(data, prefix_end, body_end, "truncated WebP chunk payload")
+        .map_err(|error| error.at(position as u64, "webp_chunk"))?;
     let payload = &body[..length];
     Ok((kind, payload, body_end))
+}
+
+fn with_chunk_context<T>(result: CodecResult<T>, offset: usize) -> CodecResult<T> {
+    result.map_err(|error| {
+        if matches!(&error, CodecError::At { .. }) {
+            error
+        } else {
+            error.at(offset as u64, "webp_chunk")
+        }
+    })
 }
 
 fn enforce_dimension_limit(width: u32, height: u32) -> CodecResult<()> {
