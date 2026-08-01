@@ -4,8 +4,8 @@ use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifCleanAperture, AvifColorProperties, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, SourceColor,
+    AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
+    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -321,6 +321,7 @@ enum Property {
     Av1C(ByteSpan),
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
+    ContentLightLevel(AvifContentLightLevel),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
     PixelAspectRatio(AvifPixelAspectRatio),
@@ -571,6 +572,7 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             Ok(Property::Av1C(property.payload))
         }
         kind if kind == *b"colr" => parse_colr(input, property.payload),
+        kind if kind == *b"clli" => parse_clli(input, property.payload),
         kind if kind == *b"irot" => parse_irot(input, property.payload),
         kind if kind == *b"imir" => parse_imir(input, property.payload),
         kind if kind == *b"pasp" => parse_pasp(input, property.payload),
@@ -611,6 +613,15 @@ fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::Color(color))
+}
+
+fn parse_clli(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
+    let mut reader = Reader::new(input, payload);
+    let content_light_level = AvifContentLightLevel::new(reader.u16()?, reader.u16()?);
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::ContentLightLevel(content_light_level))
 }
 
 fn parse_irot(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -915,12 +926,26 @@ impl Meta {
     }
 
     fn source_color(&self) -> SourceColor {
-        self.associated(self.primary_item_id)
-            .find_map(|property| match property {
-                Property::Color(color) => Some(SourceColor::new().with_avif_color(*color)),
-                _ => None,
-            })
-            .unwrap_or_else(SourceColor::new)
+        let mut source_color = SourceColor::new();
+        if let Some(color) =
+            self.associated(self.primary_item_id)
+                .find_map(|property| match property {
+                    Property::Color(color) => Some(*color),
+                    _ => None,
+                })
+        {
+            source_color = source_color.with_avif_color(color);
+        }
+        if let Some(content_light_level) =
+            self.associated(self.primary_item_id)
+                .find_map(|property| match property {
+                    Property::ContentLightLevel(content_light_level) => Some(*content_light_level),
+                    _ => None,
+                })
+        {
+            source_color = source_color.with_avif_content_light_level(content_light_level);
+        }
+        source_color
     }
 
     fn transform(&self) -> ParseResult<Option<AvifTransformProperties>> {
@@ -1618,6 +1643,7 @@ fn parse_sample_description(
                 }
             }
             Property::Color(_)
+            | Property::ContentLightLevel(_)
             | Property::Rotation(_)
             | Property::Mirror(_)
             | Property::PixelAspectRatio(_)
@@ -2269,7 +2295,8 @@ fn coverage_leaf_corpus() {
             let _ = parse_iprp(&input, span, &mut Meta::default(), &mut Budget::default());
             let _ = parse_ipco(&input, span, &mut Meta::default(), &mut Budget::default());
             for kind in [
-                *b"av1C", *b"auxC", *b"irot", *b"imir", *b"pasp", *b"clap", *b"free",
+                *b"av1C", *b"auxC", *b"colr", *b"clli", *b"irot", *b"imir", *b"pasp", *b"clap",
+                *b"free",
             ] {
                 let _ = parse_property(
                     &input,

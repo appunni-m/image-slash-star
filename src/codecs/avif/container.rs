@@ -6,9 +6,9 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifCleanAperture, AvifColorProperties, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, SourceAlpha, SourceColor,
-    SourceDescriptor,
+    AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
+    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
+    SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -186,6 +186,7 @@ enum Property {
     Av1C { depth: u8 },
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
+    ContentLightLevel(AvifContentLightLevel),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
     PixelAspectRatio(AvifPixelAspectRatio),
@@ -618,6 +619,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
         }
         kind if kind == *b"av1C" => parse_av1c(property.payload),
         kind if kind == *b"colr" => parse_colr(property.payload),
+        kind if kind == *b"clli" => parse_clli(property.payload),
         kind if kind == *b"irot" => parse_irot(property.payload),
         kind if kind == *b"imir" => parse_imir(property.payload),
         kind if kind == *b"pasp" => parse_pasp(property.payload),
@@ -655,6 +657,15 @@ fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::Color(color))
+}
+
+fn parse_clli(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    let content_light_level = AvifContentLightLevel::new(reader.u16()?, reader.u16()?);
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::ContentLightLevel(content_light_level))
 }
 
 fn parse_irot(payload: &[u8]) -> ParseResult<Property> {
@@ -884,13 +895,25 @@ impl Meta {
                 _ => None,
             })
             .unwrap_or(8);
-        let source_color = self
+        let mut source_color = SourceColor::new();
+        if let Some(color) = self
             .associated(primary)
             .find_map(|property| match property {
-                Property::Color(color) => Some(SourceColor::new().with_avif_color(*color)),
+                Property::Color(color) => Some(*color),
                 _ => None,
             })
-            .unwrap_or_else(SourceColor::new);
+        {
+            source_color = source_color.with_avif_color(color);
+        }
+        if let Some(content_light_level) =
+            self.associated(primary)
+                .find_map(|property| match property {
+                    Property::ContentLightLevel(content_light_level) => Some(*content_light_level),
+                    _ => None,
+                })
+        {
+            source_color = source_color.with_avif_content_light_level(content_light_level);
+        }
         let source = self.source_descriptor(primary)?;
         Ok(Some(Details {
             width,
@@ -2082,6 +2105,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // invariant executable without misclassifying it as a Pillow parity row.
     let extra_nclx = [b'n', b'c', b'l', b'x', 0, 1, 0, 13, 0, 6, 0x80, 0];
     let _ = parse_colr(&extra_nclx);
+    for payload in [&[0, 1, 0, 2][..], &[0, 1, 0, 2, 0][..], &[0, 1, 0][..]] {
+        let _ = parse_clli(payload);
+    }
     for payload in [
         &[][..],
         b"nclx".as_slice(),
@@ -2126,6 +2152,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 0, 0, 0, 1,
             ][..],
         ),
+        (*b"clli", &[0, 1, 0, 2][..]),
     ] {
         let _ = parse_property(BoxView { kind, payload });
     }

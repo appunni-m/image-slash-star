@@ -2730,8 +2730,8 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 #[test]
 fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifCleanAperture, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-        AvifTransformProperties, SourceDescriptor,
+        AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
+        AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, SourceColor, SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -2871,6 +2871,60 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         .ok_or("orientation AVIF has no irot property")?;
     let baseline = image_slash_star::decode(&bytes)?;
     let expected_pixels = baseline.content.pixels;
+
+    // CLLI is an item property, not a Pillow-observable result. Keep this
+    // witness in the defensive/specification contract rather than adding a
+    // synthetic Pillow parity row or a coverage-only assertion.
+    let clli_payload = [0x01, 0xf4, 0x00, 0x64];
+    let clli = append_associated_property(&bytes, b"clli", &clli_payload, 6)?;
+    let expected_clli = SourceColor::new()
+        .with_avif_color(AvifColorProperties {
+            color_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
+            full_range: true,
+        })
+        .with_avif_content_light_level(AvifContentLightLevel::new(500, 100));
+    assert_eq!(
+        expected_clli.avif_content_light_level(),
+        Some(AvifContentLightLevel::new(500, 100))
+    );
+    let levels = expected_clli
+        .avif_content_light_level()
+        .ok_or("expected CLLI metadata")?;
+    assert_eq!(levels.max_content_light_level(), 500);
+    assert_eq!(levels.max_picture_average_light_level(), 100);
+    let clli_inspected = image_slash_star::inspect(&clli)?;
+    assert_eq!(clli_inspected.source_color, expected_clli, "clli inspect");
+    let clli_decoded = image_slash_star::decode(&clli)?;
+    assert_eq!(
+        clli_decoded.content.source_color, expected_clli,
+        "clli decode"
+    );
+    assert_eq!(clli_decoded.content.pixels, expected_pixels);
+    let clli_sequence = image_slash_star::decode_sequence(&clli)?;
+    assert_eq!(
+        clli_sequence.content.source_color, expected_clli,
+        "clli sequence"
+    );
+
+    let clli_box = box_start(&clli, b"clli")?;
+    let mut empty_clli = Vec::with_capacity(clli.len() - 4);
+    empty_clli.extend_from_slice(&clli[..clli_box + 8]);
+    empty_clli.extend_from_slice(&clli[clli_box + 12..]);
+    for kind in [b"clli", b"ipco", b"iprp", b"meta"] {
+        shrink_box_size(&mut empty_clli, kind, 4)?;
+    }
+    assert_malformed(&empty_clli, "empty clli payload")?;
+
+    let mut extra_clli = Vec::with_capacity(clli.len() + 1);
+    extra_clli.extend_from_slice(&clli[..clli_box + 12]);
+    extra_clli.push(0);
+    extra_clli.extend_from_slice(&clli[clli_box + 12..]);
+    for kind in [b"clli", b"ipco", b"iprp", b"meta"] {
+        grow_box_size(&mut extra_clli, kind, 1)?;
+    }
+    assert_malformed(&extra_clli, "extra clli payload")?;
 
     for (value, rotation) in [
         (0, AvifRotation::Zero),
