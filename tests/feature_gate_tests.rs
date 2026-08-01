@@ -5416,6 +5416,34 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         assert_eq!(header_error.identity(), Some("bmp_dib_header"));
         assert_eq!(header_error.offset(), Some(14));
 
+        let mut unsupported_info_depth = vec![0u8; 50];
+        unsupported_info_depth[..2].copy_from_slice(b"BM");
+        unsupported_info_depth[14..18].copy_from_slice(&40u32.to_le_bytes());
+        unsupported_info_depth[18..22].copy_from_slice(&1i32.to_le_bytes());
+        unsupported_info_depth[22..26].copy_from_slice(&1i32.to_le_bytes());
+        unsupported_info_depth[28..30].copy_from_slice(&3u16.to_le_bytes());
+        let info_depth_error = match image_slash_star::inspect_basic(&unsupported_info_depth) {
+            Err(error) => error,
+            Ok(info) => panic!("unsupported BMP INFO depth must fail: {info:?}"),
+        };
+        assert_eq!(info_depth_error.kind(), ImageErrorKind::Unsupported);
+        assert_eq!(info_depth_error.identity(), Some("bmp_dib_header"));
+        assert_eq!(info_depth_error.offset(), Some(28));
+
+        let mut unsupported_core_depth = vec![0u8; 26];
+        unsupported_core_depth[..2].copy_from_slice(b"BM");
+        unsupported_core_depth[14..18].copy_from_slice(&12u32.to_le_bytes());
+        unsupported_core_depth[18..20].copy_from_slice(&1u16.to_le_bytes());
+        unsupported_core_depth[20..22].copy_from_slice(&1u16.to_le_bytes());
+        unsupported_core_depth[24..26].copy_from_slice(&3u16.to_le_bytes());
+        let core_depth_error = match image_slash_star::inspect_basic(&unsupported_core_depth) {
+            Err(error) => error,
+            Ok(info) => panic!("unsupported BMP core depth must fail: {info:?}"),
+        };
+        assert_eq!(core_depth_error.kind(), ImageErrorKind::Unsupported);
+        assert_eq!(core_depth_error.identity(), Some("bmp_dib_header"));
+        assert_eq!(core_depth_error.offset(), Some(24));
+
         let decode_error = match image_slash_star::decode(truncated_bmp) {
             Err(error) => error,
             Ok(info) => panic!("truncated BMP must fail still decode: {info:?}"),
