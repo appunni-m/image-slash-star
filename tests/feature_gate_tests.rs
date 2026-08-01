@@ -1793,6 +1793,69 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn png_unsupported_compressed_metadata_methods_remain_fatal()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    // Pillow rejects these full-file mutations. This test guards only that
+    // observable fatal boundary: the Rust-only diagnostic field itself is not
+    // added to the Pillow parity matrix, because Pillow has no such field.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+    for (kind, payload) in [
+        (b"zTXt", b"Comment\0\x01not-zlib".as_slice()),
+        (b"iCCP", b"profile\0\x01not-zlib".as_slice()),
+    ] {
+        let chunk = png_chunk(kind, payload);
+        let mut bytes = Vec::with_capacity(base.len() + chunk.len());
+        bytes.extend_from_slice(&base[..idat_offset]);
+        bytes.extend_from_slice(&chunk);
+        bytes.extend_from_slice(&base[idat_offset..]);
+
+        let error = match image_slash_star::decode(&bytes) {
+            Ok(decoded) => {
+                return Err(format!(
+                    "PNG {:?} unsupported compression method was recovered with {:?}",
+                    kind, decoded.diagnostics
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(error.offset(), Some(idat_offset as u64));
+        assert_eq!(error.identity(), Some("png_chunk"));
+
+        let sequence_error = match image_slash_star::decode_sequence(&bytes) {
+            Ok(sequence) => {
+                return Err(format!(
+                    "PNG {:?} unsupported compression method was recovered in sequence with {:?}",
+                    kind, sequence.diagnostics
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            sequence_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed
+        );
+        assert_eq!(sequence_error.format(), Some(ImageFormat::Png));
+        assert_eq!(
+            sequence_error.stage(),
+            Some(ImageErrorStage::SequenceDecode)
+        );
+        assert_eq!(sequence_error.offset(), Some(idat_offset as u64));
+        assert_eq!(sequence_error.identity(), Some("png_chunk"));
+    }
+    Ok(())
+}
+
+#[test]
 fn png_compressed_metadata_shape_contract_preserves_raw_bytes()
 -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::OpaqueMetadata;
