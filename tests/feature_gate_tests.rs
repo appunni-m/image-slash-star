@@ -2816,7 +2816,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         // property plus its ipma association shifts that extent by the same
         // amount as the metadata growth.
         let iloc = box_start(&output, b"iloc")?;
-        let extent_offset = iloc.checked_add(19).ok_or("iloc offset overflowed")?;
+        let extent_offset = iloc.checked_add(22).ok_or("iloc offset overflowed")?;
         let extent_end = extent_offset
             .checked_add(4)
             .ok_or("iloc extent offset end overflowed")?;
@@ -2956,17 +2956,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             .and_then(|transform| transform.pixel_aspect_ratio()),
         Some(AvifPixelAspectRatio::new(4, 3))
     );
-    let pasp_inspected = match image_slash_star::inspect(&pasp) {
-        Ok(inspected) => inspected,
-        Err(error) => {
-            for kind in [b"meta", b"iprp", b"ipco", b"ipma", b"iloc", b"mdat"] {
-                let start = box_start(&pasp, kind)?;
-                let size = u32::from_be_bytes(pasp[start..start + 4].try_into()?);
-                eprintln!("{kind:?} start={start} size={size}");
-            }
-            return Err(error.into());
-        }
-    };
+    let pasp_inspected = image_slash_star::inspect(&pasp)?;
     assert_eq!(pasp_inspected.source, expected_pasp, "pasp inspect");
     let pasp_decoded = image_slash_star::decode(&pasp)?;
     assert_eq!(pasp_decoded.content.source, expected_pasp, "pasp decode");
