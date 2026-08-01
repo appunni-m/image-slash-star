@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `fffd30a9f251fc0ccaf03afbaa6c5348ac429a09`
+Reviewed: 2026-08-01 on the working tree based on revision `0c347fe79c4bae1ae32b811e2504539da9024e67`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -184,7 +184,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `fffd30a9f251fc0ccaf03afbaa6c5348ac429a09`, the generated matrix
+For the current working tree based on revision `0c347fe79c4bae1ae32b811e2504539da9024e67`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -546,10 +546,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 46,099 | 46,099 |
-| Branches | 6,432 | 6,432 |
-| Functions | 2,553 | 2,553 |
-| Regions | 72,193 | 72,193 |
+| Lines | 46,568 | 46,568 |
+| Branches | 6,478 | 6,478 |
+| Functions | 2,587 | 2,587 |
+| Regions | 72,834 | 72,834 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -563,9 +563,9 @@ target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `f2ab4017-e797-4dd7-a328-bd7c5e30023b`
+Coverage MCP run: `185dec7e-e322-4eff-8907-167b6db7a705`
 
-Snapshot: `dea9090a-d017-43ad-8704-028c9872b257`
+Snapshot: `2b51bf94-d27c-42e4-bb40-7bd2d2eb2c7a`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
