@@ -262,10 +262,11 @@ the codec does not interpret, in original order with duplicates and the
 container's safe-to-copy flag (currently PNG unknown ancillary chunks).
 Known PNG metadata chunks (text, EXIF, time, and resolution blocks) are
 retained separately as raw, unparsed `OpaqueMetadata` records; compressed
-payloads are bounded-validated but never exposed inflated. Structurally valid
-but invalidly compressed `zTXt`, `iCCP`, and `iTXt` members are omitted and
+payloads are bounded-validated but never exposed inflated. Pillow-tolerated
+invalidly compressed `zTXt`, `iCCP`, and `iTXt` payloads are omitted and
 produce `DiagnosticKind::InvalidMetadataIgnored`; malformed field shapes stay
-raw metadata.
+raw metadata. Method-only `zTXt`/`iCCP` mutations are outside this recovery
+contract because Pillow rejects them.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
 extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
