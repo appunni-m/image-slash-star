@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `0164e9c3736c42d2fe732965e19e5a1cf3754da3`
+Reviewed: 2026-08-01 on the working tree based on revision `ed3d3241138ba66b32fe280ee246fce9b3759a8a`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -153,6 +153,25 @@ encoder has completed; it does not prove transient allocation limits or
 recoverable OOM behavior. Its aggregate coverage is incidental evidence, not
 Pillow parity coverage, and no coverage-only hook is added.
 
+Encode cancellation follows the same evidence boundary. Pillow has no
+`CancellationToken`, no caller-owned `OutputSink`, and no equivalent
+interruption result, so `encode_cancellation_is_a_non_parity_contract` is an
+ordinary fixture-backed Rust contract rather than a generated parity row. It
+checks byte identity for uncancelled still and GIF-sequence output, stable
+pre-cancelled errors, successful token-aware sink writes, and unchanged sinks
+on cancellation. The public still path observes cancellation before and after
+the whole-buffer codec; GIF, TIFF, WebP, and native AVIF sequence paths poll
+their implemented frame/coalescing/page/finalization checkpoints. This slice
+does not claim cancellation inside a still codec, progress callbacks, work
+budgets, or incremental structural writing.
+
+The codec-local `#[cfg(coverage)]` cancellation drills fire deterministic
+checkpoint counts so the implemented error edges are executed in the managed
+run. They are internal Rust coverage evidence, not Pillow parity rows and not
+a reason to add synthetic entries to `coverage_matrix.json`. Aggregate
+coverage therefore includes parity, ordinary Rust contracts, and permitted
+private state models while their evidence origins remain separate.
+
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
 sample bytes remain a documented gap. The parity schema does not compare
@@ -162,7 +181,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `0164e9c3736c42d2fe732965e19e5a1cf3754da3`, the generated matrix
+For the current working tree based on revision `ed3d3241138ba66b32fe280ee246fce9b3759a8a`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -509,10 +528,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,632 | 45,632 |
+| Lines | 45,936 | 45,936 |
 | Branches | 6,438 | 6,438 |
-| Functions | 2,534 | 2,534 |
-| Regions | 71,627 | 71,627 |
+| Functions | 2,548 | 2,548 |
+| Regions | 72,062 | 72,062 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -526,9 +545,9 @@ target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `3ab008a5-79a5-497c-b066-e6faaf3ce6fe`
+Coverage MCP run: `ac436a0f-491b-473f-98ef-85601de3cefa`
 
-Snapshot: `f7337cea-1d2e-46e4-9f36-c7e0d3e8c559`
+Snapshot: `4fe81642-0759-40f2-a3ff-36df43b2df76`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
