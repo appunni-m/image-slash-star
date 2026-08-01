@@ -2659,10 +2659,27 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 
     // A declared nclx payload with extra bytes is a malformed property in
     // both the inspection parser and the sample extractor.
-    let colr_size = nclx.saturating_sub(8);
-    let mut extra = bytes;
-    let oversized = 20_u32.to_be_bytes();
-    extra[colr_size..colr_size + 4].copy_from_slice(&oversized);
+    let payload_end = nclx
+        .checked_add(11)
+        .ok_or("baseline AVIF nclx payload offset overflowed")?;
+    let mut extra = Vec::with_capacity(bytes.len() + 1);
+    extra.extend_from_slice(&bytes[..payload_end]);
+    extra.push(0);
+    extra.extend_from_slice(&bytes[payload_end..]);
+    let box_start = |kind: &[u8]| -> Result<usize, Box<dyn std::error::Error>> {
+        let type_offset = bytes
+            .windows(4)
+            .position(|window| window == kind)
+            .ok_or_else(|| format!("baseline AVIF has no {kind:?} box"))?;
+        type_offset
+            .checked_sub(4)
+            .ok_or_else(|| format!("baseline AVIF {kind:?} box has no size field").into())
+    };
+    for kind in [&b"colr"[..], &b"ipco"[..], &b"iprp"[..], &b"meta"[..]] {
+        let start = box_start(kind)?;
+        let size = u32::from_be_bytes(bytes[start..start + 4].try_into()?) + 1;
+        extra[start..start + 4].copy_from_slice(&size.to_be_bytes());
+    }
     let error = match image_slash_star::inspect(&extra) {
         Ok(_) => return Err("extra nclx payload must fail inspection".into()),
         Err(error) => error,
