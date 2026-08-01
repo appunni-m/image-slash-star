@@ -324,7 +324,8 @@ fn decode_ifd(
                     message: "TIFF tile payload is out of bounds".to_owned(),
                 });
             };
-            let mut decoded = decode_block(compression, encoded, tile_size)?;
+            let mut decoded = decode_block(compression, encoded, tile_size)
+                .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
             if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
@@ -435,7 +436,8 @@ fn decode_ifd(
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
         let expected = row_bytes.wrapping_mul(strip_rows);
-        let mut decoded = decode_block(compression, encoded, expected)?;
+        let mut decoded = decode_block(compression, encoded, expected)
+            .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
         if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
             reverse_horizontal_predictor(
                 &mut decoded,
