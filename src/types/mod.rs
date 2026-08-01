@@ -151,12 +151,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .is_empty()
     );
     let mastering_display = AvifMasteringDisplayColorVolume::new(
-        68_000, 32_000, 26_500, 69_000, 15_000, 6_000, 31_270, 32_900, 4_000_000, 5,
+        60_000, 32_000, 26_500, 61_000, 15_000, 6_000, 31_270, 32_900, 4_000_000, 5,
     );
-    assert_eq!(mastering_display.red_x(), 68_000);
+    assert_eq!(mastering_display.red_x(), 60_000);
     assert_eq!(mastering_display.red_y(), 32_000);
     assert_eq!(mastering_display.green_x(), 26_500);
-    assert_eq!(mastering_display.green_y(), 69_000);
+    assert_eq!(mastering_display.green_y(), 61_000);
     assert_eq!(mastering_display.blue_x(), 15_000);
     assert_eq!(mastering_display.blue_y(), 6_000);
     assert_eq!(mastering_display.white_point_x(), 31_270);
