@@ -1070,6 +1070,18 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
             Err(ImageError::Cancelled { .. })
         ));
         assert_eq!(sink, vec![0xCC], "cancellation must precede sink writes");
+
+        let token = image_slash_star::CancellationToken::new();
+        let mut sink = vec![0xCC];
+        let written = image_slash_star::encode_to_sink_with_token(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &token,
+            &mut sink,
+        )?;
+        assert_eq!(written, expected.len());
+        assert_eq!(&sink[1..], expected.as_slice());
     }
 
     if cfg!(feature = "gif") {
@@ -1127,6 +1139,18 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
             vec![0xDD],
             "sequence cancellation must precede sink writes"
         );
+
+        let token = image_slash_star::CancellationToken::new();
+        let mut sink = vec![0xDD];
+        let written = image_slash_star::encode_sequence_to_sink_with_token(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &token,
+            &mut sink,
+        )?;
+        assert_eq!(written, expected.len());
+        assert_eq!(&sink[1..], expected.as_slice());
     }
     Ok(())
 }
