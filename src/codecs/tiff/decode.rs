@@ -1236,11 +1236,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(fixture, Some(&token));
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
         let _ = decode_sequence(
             fixture,
             &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Tiff),
             Some(&token),
         );
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
         let _ = decode_page(fixture, 0, Some(&token));
     }
     let _ = metadata_bytes(b"");

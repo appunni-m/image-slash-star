@@ -823,6 +823,66 @@ fn cancellation_token_stops_decode_without_partial_state() -> Result<(), Box<dyn
         let retry = image_slash_star::decode_sequence_with_token(&bytes, &fresh)?;
         assert_eq!(retry.content.frames.len(), legacy.content.frames.len());
     }
+
+    // Still formats use the sequence fallback under the token API too.
+    if cfg!(feature = "jpeg") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/jpeg/1x1.jpg"))?;
+        let token = image_slash_star::CancellationToken::new();
+        let sequence = image_slash_star::decode_sequence_with_token(&bytes, &token)?;
+        assert_eq!(sequence.content.frames.len(), 1);
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::decode_sequence_with_token(&bytes, &cancelled) {
+            Ok(info) => panic!("a cancelled token must stop the fallback sequence: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+    }
+
+    // Token policy variants still apply limits and inspection preflight.
+    if cfg!(feature = "png") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let token = image_slash_star::CancellationToken::new();
+        let limited = image_slash_star::DecodePolicy::default().with_max_encoded_bytes(10);
+        let error =
+            match image_slash_star::decode_sequence_with_token_and_policy(&bytes, &limited, &token)
+            {
+                Ok(info) => panic!("an encoded-byte limit must reject the input: {info:?}"),
+                Err(error) => error,
+            };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+
+        let width = image_slash_star::DecodePolicy::default().with_max_width(1);
+        let decoded = image_slash_star::decode_with_token_and_policy(&bytes, &width, &token)?;
+        assert_eq!(decoded.content.width, 1);
+        let sequence =
+            image_slash_star::decode_sequence_with_token_and_policy(&bytes, &width, &token)?;
+        assert_eq!(sequence.content.frames.len(), 1);
+
+        // Inspection preflight truncation propagates as NeedMoreData.
+        let error =
+            match image_slash_star::decode_with_token_and_policy(&bytes[..40], &width, &token) {
+                Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+                Err(error) => error,
+            };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+
+        // The cumulative sequence-byte budget fails inside the budget charge.
+        let budgeted = image_slash_star::DecodePolicy::default().with_max_sequence_decoded_bytes(1);
+        let error = match image_slash_star::decode_sequence_with_token_and_policy(
+            &bytes, &budgeted, &token,
+        ) {
+            Ok(info) => panic!("the sequence budget must reject the primary frame: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+    }
     Ok(())
 }
 
