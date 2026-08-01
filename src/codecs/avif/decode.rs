@@ -18,6 +18,7 @@ pub fn decode(
     let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
+    let source_color = std::mem::take(&mut extracted.source_color);
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let image = match decode_portable(&validated) {
@@ -27,7 +28,12 @@ pub fn decode(
             decode_native(data)?
         }
     };
-    Ok((image.with_opaque_blocks(retained_boxes), consumed))
+    Ok((
+        image
+            .with_opaque_blocks(retained_boxes)
+            .with_source_color(source_color),
+        consumed,
+    ))
 }
 
 /// Decode every AVIF frame with its Pillow-observable presentation duration.
@@ -40,11 +46,13 @@ pub fn decode_sequence(
     let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
+    let source_color = std::mem::take(&mut extracted.source_color);
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let (mut sequence, consumed) =
         decode_sequence_native(data, &validated, budget, consumed, token)?;
     sequence.opaque_blocks = retained_boxes;
+    sequence.source_color = source_color;
     Ok((sequence, consumed))
 }
 

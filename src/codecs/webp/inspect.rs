@@ -71,6 +71,7 @@ fn inspect_extended_basic(
             frame_count_complete: false,
             cursor_hotspot: None,
             source,
+            source_color: crate::types::SourceColor::new(),
         });
     }
     let mut saw_image = false;
@@ -116,6 +117,7 @@ fn inspect_extended_basic(
         frame_count_complete: true,
         cursor_hotspot: None,
         source,
+        source_color: crate::types::SourceColor::new(),
     })
 }
 
@@ -184,6 +186,7 @@ fn still_info(width: u32, height: u32, mode: ImageMode, has_alpha: bool) -> Code
         frame_count_complete: true,
         cursor_hotspot: None,
         source,
+        source_color: crate::types::SourceColor::new(),
     })
 }
 
@@ -266,6 +269,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         frame_count_complete: true,
         cursor_hotspot: None,
         source,
+        source_color: crate::types::SourceColor::new(),
     })
 }
 

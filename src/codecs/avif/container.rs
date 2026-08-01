@@ -5,7 +5,7 @@
 //! in `docs/avif.md`.
 
 use crate::codecs::{CodecError, CodecResult};
-use crate::types::{ImageFormat, ImageInfo, ImageMode};
+use crate::types::{AvifColorProperties, ImageFormat, ImageInfo, ImageMode, SourceColor};
 
 const MAX_BOXES: usize = 4_096;
 const MAX_RECORDS: usize = 4_096;
@@ -181,6 +181,7 @@ enum Property {
     Pixi { depth: u8 },
     Av1C { depth: u8 },
     AuxC { is_alpha: bool },
+    Color(AvifColorProperties),
     Other,
 }
 
@@ -212,13 +213,14 @@ struct Meta {
     references: Vec<Reference>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Details {
     width: u32,
     height: u32,
     depth: u8,
     has_alpha: bool,
     frame_count: u32,
+    source_color: SourceColor,
 }
 
 #[derive(Default)]
@@ -343,6 +345,7 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         frame_count_complete: true,
         cursor_hotspot: None,
         source,
+        source_color: details.source_color,
     })
 }
 
@@ -610,6 +613,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
             Ok(Property::Pixi { depth })
         }
         kind if kind == *b"av1C" => parse_av1c(property.payload),
+        kind if kind == *b"colr" => parse_colr(property.payload),
         [b'a', b'u', b'x', b'C'] | [b'a', b'u', b'x', b'i'] => {
             let mut reader = Reader::new(property.payload);
             let _ = parse_full_box_version_zero(&mut reader)?;
@@ -620,6 +624,29 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
         }
         _ => Ok(Property::Other),
     }
+}
+
+fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    if reader.four_cc()? != *b"nclx" {
+        return Ok(Property::Other);
+    }
+    let color = AvifColorProperties {
+        color_primaries: reader.u16()?,
+        transfer_characteristics: reader.u16()?,
+        matrix_coefficients: reader.u16()?,
+        full_range: {
+            let flags = reader.u8()?;
+            if flags & 0x7f != 0 {
+                return Err(parse_failure!());
+            }
+            flags & 0x80 != 0
+        },
+    };
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::Color(color))
 }
 
 // libavif 1.4.1 src/read.c:2648-2693.
@@ -777,12 +804,20 @@ impl Meta {
                 _ => None,
             })
             .unwrap_or(8);
+        let source_color = self
+            .associated(primary)
+            .find_map(|property| match property {
+                Property::Color(color) => Some(SourceColor::new().with_avif_color(*color)),
+                _ => None,
+            })
+            .unwrap_or_else(SourceColor::new);
         Ok(Some(Details {
             width,
             height,
             depth,
             has_alpha: self.has_alpha(primary),
             frame_count: 1,
+            source_color,
         }))
     }
 
@@ -1073,6 +1108,7 @@ impl Movie {
             depth: main.depth.unwrap_or(8),
             has_alpha,
             frame_count: main.sample_count,
+            source_color: SourceColor::new(),
         })
     }
 }
@@ -2122,6 +2158,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         depth: 8,
         has_alpha: false,
         frame_count: 1,
+        source_color: SourceColor::new(),
     });
     let _ = image_info(Details {
         width: 1,
@@ -2129,6 +2166,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         depth: 8,
         has_alpha: false,
         frame_count: 1,
+        source_color: SourceColor::new(),
     });
     let _ = image_info(Details {
         width: 1,
@@ -2136,6 +2174,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         depth: 8,
         has_alpha: false,
         frame_count: 0,
+        source_color: SourceColor::new(),
     });
 
     let tkhd0 = coverage_box(*b"tkhd", &coverage_tkhd(0, 1));

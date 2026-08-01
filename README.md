@@ -285,6 +285,12 @@ Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it
 never implies that color conversion was applied to decoded samples.
+AVIF primary items likewise retain `colr`/`nclx` CICP fields through
+`SourceColor` (primaries, transfer characteristics, matrix coefficients, and
+the full-range flag) on inspection and decode. This is source provenance, not
+color conversion; the item-level CICP contract is defensive/specification
+evidence because the Pillow parity oracle does not expose an equivalent
+structured result.
 Default encoding never replays retained blocks implicitly; an explicit replay
 API would have to define collisions with encoder-generated blocks first.
 

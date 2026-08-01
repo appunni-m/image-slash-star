@@ -271,6 +271,15 @@ metadata records and unknown chunks stay opaque. Still, fallback-sequence, and
 APNG sequence decode must agree, unmodified fixtures carry an empty
 descriptor, and encoded output must not replay color chunks.
 
+The AVIF source-color contract is separate from Pillow parity. The bounded
+item parser reads the primary item's `colr`/`nclx` CICP fields into
+`SourceColor`; the contract test asserts inspect, still decode, and fallback
+sequence agreement plus rejection of reserved range-flag bits. Pillow rows
+continue to assert the observable outer result, mode, and pixels, but they do
+not claim to prove item-level CICP because Pillow exposes no equivalent
+structured result. No parity row or coverage-only test is added for this
+source-provenance field.
+
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
 ordered `OpaqueMetadata` records with exact payload bytes, the NETSCAPE loop

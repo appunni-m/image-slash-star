@@ -69,6 +69,7 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         frame_count_complete: complete_chain,
         cursor_hotspot: None,
         source,
+        source_color: crate::types::SourceColor::new(),
     })
 }
 
