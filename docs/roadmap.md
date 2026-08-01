@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `b484fb171aa129729e0c5aec409cda0aac36c281`
+Reviewed: 2026-08-02 on the working tree based on revision `d90ee46030d6b299f2034a220b4ce57681548fbd`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -56,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `b484fb171aa129729e0c5aec409cda0aac36c281`,
+The correction evidence below is the working-tree state based on `d90ee46030d6b299f2034a220b4ce57681548fbd`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -127,8 +127,8 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`5ad8bb03-f105-4dad-ba2b-334fb71be242`, snapshot
-`78718b18-ff5a-4cd8-80c3-60e9f0eafecd`, passed 52 tests with zero failures
+`dd82711a-396e-4243-be63-4450097e357e`, snapshot
+`6f26a724-deae-4d71-ba02-299965427f60`, passed 52 tests with zero failures
 or skips and reports 47,054/47,054 lines, 6,502/6,502 branches,
 2,641/2,641 functions, and 73,398/73,398 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
@@ -729,7 +729,7 @@ union. That has several consequences for this crate.
 | QA-011 | No semver/public API diff runs before release. | Add a public API snapshot once enum/type decisions settle. |
 | QA-012 | Test fixtures prove Pillow 12.2.0 behavior, not every legal file accepted by the format specification. | Maintain a separate format-completeness corpus and classify divergences rather than relabeling them Pillow parity. |
 | QA-013 | `cargo package` could not complete locally during this audit because the sandbox could not reach the registry index; file-list and ignored-test warnings were still captured. | Re-run package verification in networked CI and install/use the produced archive in a clean temporary consumer. |
-| QA-016 | A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage. PNG and BMP still delivery now exercise multiple structural writes, policy preflight, and sink-triggered cancellation; PNG one-frame sequence delivery also remains structural, while BMP sequence remains a whole-buffer fallback. Short/interrupted writes, flush/finalize errors, rollback, and partial-container cleanup at every boundary remain open. | Extend deterministic sinks to every codec boundary and define short-write, flush/finalize, and recoverable cleanup behavior before claiming a universal incremental writer. |
+| QA-016 | A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage for every enabled whole-buffer still codec. PNG and BMP still delivery now exercise multiple structural writes, policy preflight, and sink-triggered cancellation; PNG one-frame sequence delivery also remains structural, while BMP sequence remains a whole-buffer fallback. Short/interrupted writes, flush/finalize errors, rollback, and partial-container cleanup at every boundary remain open. | Extend deterministic sinks to the remaining sequence/structural boundaries and define short-write, flush/finalize, and recoverable cleanup behavior before claiming a universal incremental writer. |
 | QA-019 | Exact encoded-byte determinism is now proven between the ARM64 native host and `wasm32-wasip1` for a fixed encoder/decoder subset; x86-64, 32-bit, and big-endian lanes are still missing. | Run deterministic fixture subsets across the remaining targets and classify unavoidable native-oracle differences explicitly. |
 | QA-020 | Peak stack use and recursion depth are not measured for nested containers, TIFF directory graphs, DEFLATE/Huffman paths, or AV1 syntax. | Add bounded deep-structure fixtures and stack instrumentation before browser/embedded recommendations. |
 | QA-021 | Reverse-mapped/generated fixtures do not all retain generator version, parameters, first-divergence purpose, and minimized-input hash in the manifest. | Extend TST-009 with reproducible generation provenance and a regeneration check. |
@@ -1082,9 +1082,10 @@ frame counting through `inspect_basic` and the `frame_count_complete` flag,
 and a borrowed `EncodedImageView` provides the same operations without copying
 bytes into an owned snapshot. A source-bound `decode_frame` returns exact
 frames with stable per-frame errors, with a genuine per-page TIFF path, and
-encoded output can be delivered to a caller-owned `OutputSink`; whole-buffer
-paths reject before their single write, while the PNG and BMP still structural
-paths can leave an already-delivered prefix if a later segment fails.
+encoded output can be delivered to a caller-owned `OutputSink`; every enabled
+whole-buffer still codec now has a Rust-only destination-rejection witness and
+rejects before its single write, while the PNG and BMP still structural paths
+can leave an already-delivered prefix if a later segment fails.
 Cross-target determinism is machine-checked: the same SHA-256 golden suite
 passes on the ARM64 native host and `wasm32-wasip1`.
 Incremental callers get `detect_prefix` and `inspect_basic_prefix` with exact
@@ -1134,8 +1135,8 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`765be27b-6816-48a4-a044-d93165704033`, submitted against
-`b484fb171aa129729e0c5aec409cda0aac36c281`; it passed 859 checks with zero
+`4506b285-7124-4399-bd3e-b79224063274`, submitted against
+`d90ee46030d6b299f2034a220b4ce57681548fbd`; it passed 859 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.

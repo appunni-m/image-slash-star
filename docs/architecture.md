@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `b484fb171aa129729e0c5aec409cda0aac36c281`
+Reviewed: 2026-08-02 against the working tree based on `d90ee46030d6b299f2034a220b4ce57681548fbd`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -530,8 +530,9 @@ detail-free. Both fields are stable recovery data, never prose.
 
 When `encode_to_sink` or `encode_sequence_to_sink` receives an error from its
 caller-owned `OutputSink`, it normalizes that rejection to
-`ImageError::OutputWrite`. The error retains the selected output format, the
-`StillEncode` or `SequenceEncode` stage, and the sink's diagnostic message;
+`ImageError::OutputWrite`. Every enabled whole-buffer still codec has an
+explicit Rust contract for this normalization. The error retains the selected
+output format, the `StillEncode` or `SequenceEncode` stage, and the sink's diagnostic message;
 input offset and container identity are `None` because the failure is on the
 destination side. This boundary does not define short-write/flush semantics
 or rollback. The whole-buffer sink fallback still delivers one complete
