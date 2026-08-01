@@ -43,10 +43,19 @@ impl EncodePolicy {
         format: ImageFormat,
         operation: CodecOperation,
     ) -> ImageResult<()> {
+        self.check_output_len(bytes.len(), format, operation)
+    }
+
+    pub(crate) fn check_output_len(
+        self,
+        observed_length: usize,
+        format: ImageFormat,
+        operation: CodecOperation,
+    ) -> ImageResult<()> {
         let Some(maximum) = self.max_output_bytes else {
             return Ok(());
         };
-        let observed = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+        let observed = u64::try_from(observed_length).unwrap_or(u64::MAX);
         if observed > maximum {
             return Err(ImageError::LimitExceeded {
                 format: Some(format),

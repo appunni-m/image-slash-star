@@ -3,7 +3,9 @@
 use crate::codecs::compression::deflate::compress_zlib_chunked;
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{PngCompression, PngEncodeOptions};
+use crate::encode_policy::EncodePolicy;
 use crate::types::{ColorType, DecodedImage, ImageMode};
+use crate::{CodecOperation, ImageFormat};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// Encode an 8-bit grayscale, grayscale-alpha, RGB, or RGBA image as PNG.
@@ -12,6 +14,39 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// emits non-interlaced rows. Compression levels select the corresponding
 /// strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &PngEncodeOptions) -> CodecResult<Vec<u8>> {
+    let mut output = Vec::new();
+    let mut writer = |bytes: &[u8]| {
+        output.extend_from_slice(bytes);
+        Ok(())
+    };
+    write_encoded(img, opts, None, None, &mut writer)?;
+    Ok(output)
+}
+
+/// Encode a PNG directly to a caller-owned sink.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &PngEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> CodecResult<usize> {
+    let mut writer = |bytes: &[u8]| {
+        sink.write_all(bytes)
+            .map_err(|error| CodecError::OutputWrite(error.to_string()))
+    };
+    write_encoded(img, opts, token, Some((policy, operation)), &mut writer)
+}
+
+fn write_encoded(
+    img: &DecodedImage,
+    opts: &PngEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+    policy: Option<(EncodePolicy, CodecOperation)>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+) -> CodecResult<usize> {
+    crate::codecs::error::check_cancelled(token)?;
     img.validate().map_err(CodecError::from_image_error)?;
 
     let width = bounded_usize(img.width);
@@ -25,6 +60,7 @@ pub fn encode(img: &DecodedImage, opts: &PngEncodeOptions) -> CodecResult<Vec<u8
         ImageMode::L16 => {
             let mut big_endian = Vec::with_capacity(img.pixels.len());
             for sample in img.pixels.chunks_exact(2) {
+                crate::codecs::error::check_cancelled(token)?;
                 big_endian
                     .extend_from_slice(&u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes());
             }
@@ -58,8 +94,15 @@ pub fn encode(img: &DecodedImage, opts: &PngEncodeOptions) -> CodecResult<Vec<u8
         Filter::Adaptive
     };
     let optimize = opts.optimize.unwrap_or(false);
-    let (filtered, input_chunks) =
-        plain_rows(&pixels, row_bytes, height, filter_bytes, filter, optimize);
+    let (filtered, input_chunks) = plain_rows(
+        &pixels,
+        row_bytes,
+        height,
+        filter_bytes,
+        filter,
+        optimize,
+        token,
+    )?;
     let compression_level = if optimize {
         9
     } else {
@@ -70,31 +113,50 @@ pub fn encode(img: &DecodedImage, opts: &PngEncodeOptions) -> CodecResult<Vec<u8
             PngCompression::Level(level) => level,
         }
     };
+    crate::codecs::error::check_cancelled(token)?;
     let compressed = compress_zlib_chunked(&filtered, compression_level, &input_chunks)?;
+    crate::codecs::error::check_cancelled(token)?;
 
-    let mut header = Vec::with_capacity(13);
-    header.extend_from_slice(&img.width.to_be_bytes());
-    header.extend_from_slice(&img.height.to_be_bytes());
-    header.extend_from_slice(&[depth, png_color, 0, 0, 0]);
+    let mut header = [0u8; 13];
+    header[..4].copy_from_slice(&img.width.to_be_bytes());
+    header[4..8].copy_from_slice(&img.height.to_be_bytes());
+    header[8..].copy_from_slice(&[depth, png_color, 0, 0, 0]);
 
-    let mut output = PNG_SIGNATURE.to_vec();
-    write_bounded_chunk(&mut output, *b"IHDR", &header);
+    #[cfg(coverage)]
+    let header_len = if opts.__coverage_force_output_len_overflow() {
+        usize::MAX - 19
+    } else {
+        header.len()
+    };
+    #[cfg(not(coverage))]
+    let header_len = header.len();
+    let output_len = png_output_len(img, opts, header_len, compressed.len())?;
+    if let Some((policy, operation)) = policy {
+        policy
+            .check_output_len(output_len, ImageFormat::Png, operation)
+            .map_err(CodecError::from_image_error)?;
+    }
+
+    let mut written = 0usize;
+    emit(PNG_SIGNATURE, token, writer, &mut written)?;
+    write_chunk(*b"IHDR", &header, token, writer, &mut written)?;
     if img.mode == ImageMode::P8 {
         if let Some(palette) = img.palette.as_ref() {
-            write_bounded_chunk(&mut output, *b"PLTE", &palette.rgb);
+            write_chunk(*b"PLTE", &palette.rgb, token, writer, &mut written)?;
             if !palette.alpha.is_empty() {
-                write_bounded_chunk(&mut output, *b"tRNS", &palette.alpha);
+                write_chunk(*b"tRNS", &palette.alpha, token, writer, &mut written)?;
             }
         } else {
             // Pillow saves a palette-less P image with its implicit all-black
             // 256-entry palette.
-            write_bounded_chunk(&mut output, *b"PLTE", &[0; 256 * 3]);
+            write_chunk(*b"PLTE", &[0; 256 * 3], token, writer, &mut written)?;
         }
     }
-    write_requested_ancillary_chunks(&mut output, opts);
-    write_idat_chunks(&mut output, &compressed);
-    write_bounded_chunk(&mut output, *b"IEND", &[]);
-    Ok(output)
+    write_requested_ancillary_chunks(opts, token, writer, &mut written)?;
+    write_idat_chunks(&compressed, token, writer, &mut written)?;
+    write_chunk(*b"IEND", &[], token, writer, &mut written)?;
+    debug_assert_eq!(written, output_len);
+    Ok(written)
 }
 
 #[cfg(coverage)]
@@ -117,11 +179,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let l16 = DecodedImage::with_mode(1, 1, 0x1234u16.to_le_bytes().to_vec(), ImageMode::L16);
     let _ = encode(&l16, &PngEncodeOptions::default());
+    let l16_token = crate::CancellationToken::new();
+    l16_token.cancel_after(1);
+    let mut l16_writer = |_: &[u8]| Ok(());
+    let _ = l16_writer(&[]);
+    let _ = write_encoded(
+        &l16,
+        &PngEncodeOptions::default(),
+        Some(&l16_token),
+        None,
+        &mut l16_writer,
+    );
 
     let palette = crate::types::ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0, 255])
         .expect("coverage palette should be valid");
     let indexed = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(palette);
     let _ = encode(&indexed, &PngEncodeOptions::default());
+    let empty_alpha_palette = crate::types::ImagePalette::new(vec![0, 0, 0], Vec::new())
+        .expect("coverage palette with no alpha table should be valid");
+    let indexed_empty_alpha =
+        DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8).with_palette(empty_alpha_palette);
+    let _ = encode(&indexed_empty_alpha, &PngEncodeOptions::default());
     let palette_less_indexed = DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
     let _ = encode(&palette_less_indexed, &PngEncodeOptions::default());
 
@@ -133,6 +211,132 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let ancillary = PngEncodeOptions::__coverage_legacy_ancillary();
     let _ = encode(&rgb, &ancillary);
+    let mut optimized = PngEncodeOptions::default();
+    optimized.optimize = Some(true);
+    let _ = encode(&rgb, &optimized);
+    for compression in [
+        PngCompression::None,
+        PngCompression::Default,
+        PngCompression::Maximum,
+        PngCompression::Level(1),
+    ] {
+        let mut options = PngEncodeOptions::default();
+        options.compression = Some(compression);
+        let _ = encode(&rgb, &options);
+    }
+
+    // These are internal sink/error-edge drills. Pillow has no caller-owned
+    // sink, so they remain aggregate Rust coverage evidence rather than
+    // parity cases.
+    for checks in 0..=10 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut output = Vec::new();
+        let mut writer = |bytes: &[u8]| {
+            output.extend_from_slice(bytes);
+            Ok(())
+        };
+        let _ = write_encoded(
+            &rgb,
+            &PngEncodeOptions::default(),
+            Some(&token),
+            None,
+            &mut writer,
+        );
+    }
+    for fail_at in 0..=24 {
+        let mut calls = 0usize;
+        let mut writer = |bytes: &[u8]| {
+            if calls >= fail_at {
+                return Err(CodecError::OutputWrite("coverage sink rejected".to_owned()));
+            }
+            calls += 1;
+            let _ = bytes;
+            Ok(())
+        };
+        let _ = write_encoded(
+            &rgb,
+            &ancillary,
+            None,
+            Some((EncodePolicy::default(), CodecOperation::StillEncode)),
+            &mut writer,
+        );
+    }
+    for fail_at in 0..=20 {
+        let mut calls = 0usize;
+        let mut writer = |bytes: &[u8]| {
+            if calls >= fail_at {
+                return Err(CodecError::OutputWrite("coverage sink rejected".to_owned()));
+            }
+            calls += 1;
+            let _ = bytes;
+            Ok(())
+        };
+        let _ = write_encoded(
+            &indexed,
+            &PngEncodeOptions::default(),
+            None,
+            None,
+            &mut writer,
+        );
+    }
+    for fail_at in 0..=20 {
+        let mut calls = 0usize;
+        let mut writer = |bytes: &[u8]| {
+            if calls >= fail_at {
+                return Err(CodecError::OutputWrite("coverage sink rejected".to_owned()));
+            }
+            calls += 1;
+            let _ = bytes;
+            Ok(())
+        };
+        let _ = write_encoded(
+            &palette_less_indexed,
+            &PngEncodeOptions::default(),
+            None,
+            None,
+            &mut writer,
+        );
+    }
+    let mut forced_output_len = PngEncodeOptions::default();
+    forced_output_len.__coverage_set_output_len_overflow();
+    let mut forced_writer = |_: &[u8]| Ok(());
+    let _ = forced_writer(&[]);
+    let _ = write_encoded(&rgb, &forced_output_len, None, None, &mut forced_writer);
+
+    // Exercise overflow exits in the exact preflight arithmetic. These are
+    // private defensive states; Pillow cannot provide a caller-controlled
+    // length or sink that reaches them, so they are not parity cases.
+    let default_options = PngEncodeOptions::default();
+    let _ = png_output_len(&rgb, &default_options, usize::MAX - 19, 0);
+    let _ = png_output_len(&indexed, &default_options, usize::MAX - 20, 0);
+    let _ = png_output_len(&indexed, &default_options, usize::MAX - 38, 0);
+    let gamma =
+        PngEncodeOptions::__coverage_legacy_ancillary_with(true, false, false, false, false);
+    let _ = png_output_len(&rgb, &gamma, usize::MAX - 20, 0);
+    let srgb = PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, false, false, false);
+    let _ = png_output_len(&rgb, &srgb, usize::MAX - 36, 0);
+    let physical =
+        PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, true, false, false);
+    let _ = png_output_len(&rgb, &physical, usize::MAX - 49, 0);
+    let text = PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, true, true, false);
+    let text_increment = b"Comment\0pillow-rs".len() + 12;
+    let _ = png_output_len(&rgb, &text, usize::MAX - 70, 0);
+    let time = PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, true, true, true);
+    let _ = png_output_len(
+        &rgb,
+        &time,
+        usize::MAX - (20 + 16 + 13 + 21 + text_increment),
+        0,
+    );
+    let _ = png_output_len(&rgb, &default_options, 13, usize::MAX);
+    let _ = png_output_len(&rgb, &default_options, usize::MAX - 20, 0);
+    let _ = png_output_len(&rgb, &default_options, usize::MAX - 20, 1);
+    let mut total = usize::MAX;
+    let _ = add_chunk_len(&mut total, 0);
+    let mut written = usize::MAX;
+    let mut writer = |_: &[u8]| Ok(());
+    let _ = emit(&[0], None, &mut writer, &mut written);
 
     let row = [10u8, 20, 40, 80];
     let previous = [1u8, 2, 4, 8];
@@ -162,16 +366,18 @@ fn plain_rows(
     filter_bytes: usize,
     filter: Filter,
     optimize: bool,
-) -> (Vec<u8>, Vec<usize>) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<usize>)> {
     let row_len = stride.saturating_add(1);
     let mut output = Vec::with_capacity(row_len.saturating_mul(height));
     let input_chunks = vec![row_len; height];
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
+        crate::codecs::error::check_cancelled(token)?;
         append_filtered_row(&mut output, row, previous, filter_bytes, filter, optimize);
         previous = Some(row);
     }
-    (output, input_chunks)
+    Ok((output, input_chunks))
 }
 
 #[derive(Clone, Copy)]
@@ -307,48 +513,132 @@ fn paeth(left: u8, above: u8, upper_left: u8) -> u8 {
     }
 }
 
-fn write_requested_ancillary_chunks(output: &mut Vec<u8>, opts: &PngEncodeOptions) {
+fn write_requested_ancillary_chunks(
+    opts: &PngEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
     if opts.legacy_gamma() {
-        write_bounded_chunk(output, *b"gAMA", &45_455u32.to_be_bytes());
+        write_chunk(*b"gAMA", &45_455u32.to_be_bytes(), token, writer, written)?;
     }
     if opts.legacy_srgb() {
-        write_bounded_chunk(output, *b"sRGB", &[0]);
+        write_chunk(*b"sRGB", &[0], token, writer, written)?;
     }
     if opts.legacy_physical() {
-        let mut payload = Vec::with_capacity(9);
-        payload.extend_from_slice(&2_835u32.to_be_bytes());
-        payload.extend_from_slice(&2_835u32.to_be_bytes());
-        payload.push(1);
-        write_bounded_chunk(output, *b"pHYs", &payload);
+        let mut payload = [0u8; 9];
+        payload[..4].copy_from_slice(&2_835u32.to_be_bytes());
+        payload[4..8].copy_from_slice(&2_835u32.to_be_bytes());
+        payload[8] = 1;
+        write_chunk(*b"pHYs", &payload, token, writer, written)?;
     }
     if opts.legacy_text_chunks() {
-        write_bounded_chunk(output, *b"tEXt", b"Comment\0pillow-rs");
+        write_chunk(*b"tEXt", b"Comment\0pillow-rs", token, writer, written)?;
     }
     if opts.legacy_time() {
         let payload = [0x07, 0xea, 7, 4, 0, 0, 0]; // 2026-07-04 00:00:00 UTC.
-        write_bounded_chunk(output, *b"tIME", &payload);
+        write_chunk(*b"tIME", &payload, token, writer, written)?;
     }
+    Ok(())
 }
 
-fn write_idat_chunks(output: &mut Vec<u8>, payload: &[u8]) {
+fn write_idat_chunks(
+    payload: &[u8],
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
     let max_chunk_len = bounded_usize(u32::MAX);
 
     for chunk in payload.chunks(max_chunk_len) {
-        append_chunk(output, *b"IDAT", chunk, low_u32(chunk.len()));
+        write_chunk(*b"IDAT", chunk, token, writer, written)?;
     }
+    Ok(())
 }
 
-fn write_bounded_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {
-    // Callers pass fixed metadata chunks or palettes already bounded by
-    // DecodedImage::validate().
-    append_chunk(output, kind, payload, low_u32(payload.len()));
+fn write_chunk(
+    kind: [u8; 4],
+    payload: &[u8],
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    let mut header = [0u8; 8];
+    header[..4].copy_from_slice(&low_u32(payload.len()).to_be_bytes());
+    header[4..].copy_from_slice(&kind);
+    emit(&header, token, writer, written)?;
+    emit(payload, token, writer, written)?;
+    let crc = crc32(&kind, payload).to_be_bytes();
+    emit(&crc, token, writer, written)
 }
 
-fn append_chunk(output: &mut Vec<u8>, kind: [u8; 4], payload: &[u8], length: u32) {
-    output.extend_from_slice(&length.to_be_bytes());
-    output.extend_from_slice(&kind);
-    output.extend_from_slice(payload);
-    output.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
+fn emit(
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    writer(bytes)?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("PNG output length overflows".to_owned()))?;
+    Ok(())
+}
+
+fn png_output_len(
+    img: &DecodedImage,
+    opts: &PngEncodeOptions,
+    header_len: usize,
+    compressed_len: usize,
+) -> CodecResult<usize> {
+    let mut total = PNG_SIGNATURE.len();
+    add_chunk_len(&mut total, header_len)?;
+    if img.mode == ImageMode::P8 {
+        let palette_len = img
+            .palette
+            .as_ref()
+            .map_or(256usize.saturating_mul(3), |palette| palette.rgb.len());
+        add_chunk_len(&mut total, palette_len)?;
+        if let Some(palette) = img.palette.as_ref()
+            && !palette.alpha.is_empty()
+        {
+            add_chunk_len(&mut total, palette.alpha.len())?;
+        }
+    }
+    if opts.legacy_gamma() {
+        add_chunk_len(&mut total, 4)?;
+    }
+    if opts.legacy_srgb() {
+        add_chunk_len(&mut total, 1)?;
+    }
+    if opts.legacy_physical() {
+        add_chunk_len(&mut total, 9)?;
+    }
+    if opts.legacy_text_chunks() {
+        add_chunk_len(&mut total, b"Comment\0pillow-rs".len())?;
+    }
+    if opts.legacy_time() {
+        add_chunk_len(&mut total, 7)?;
+    }
+    let max_chunk_len = bounded_usize(u32::MAX);
+    let idat_chunks = compressed_len.div_ceil(max_chunk_len);
+    let idat_bytes = compressed_len
+        .checked_add(idat_chunks.saturating_mul(12))
+        .ok_or_else(|| CodecError::Dimensions("PNG output length overflows".to_owned()))?;
+    total = total
+        .checked_add(idat_bytes)
+        .ok_or_else(|| CodecError::Dimensions("PNG output length overflows".to_owned()))?;
+    add_chunk_len(&mut total, 0)?;
+    Ok(total)
+}
+
+fn add_chunk_len(total: &mut usize, payload_len: usize) -> CodecResult<()> {
+    *total = total
+        .checked_add(payload_len)
+        .and_then(|value| value.checked_add(12))
+        .ok_or_else(|| CodecError::Dimensions("PNG output length overflows".to_owned()))?;
+    Ok(())
 }
 
 fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {

@@ -917,9 +917,10 @@ pub fn encode_sequence_with_policy(
 /// Encode a still image or animation with cooperative cancellation.
 ///
 /// Sequence-capable codecs poll at retained-frame and finalization
-/// boundaries. Still-image codecs and one-frame fallback encodes currently
-/// observe cancellation only at the public codec boundary; incremental
-/// structural writing remains future work.
+/// boundaries. Still-image codecs and one-frame fallback encodes generally
+/// observe cancellation only at the public codec boundary; PNG still and
+/// one-frame sink encodes additionally poll row preparation and emitted
+/// structural segments.
 ///
 /// # Errors
 ///
@@ -950,13 +951,14 @@ pub fn encode_sequence_with_token_and_policy(
 
 /// Dependency-free destination for encoded output.
 ///
-/// The encoder validates and produces the complete encoded bytes before the
-/// first write, so a failing sink never receives a partial container. Real
-/// incremental writing to structural boundaries remains future work; the
-/// trait exists so callers can own output destinations without coupling to
-/// the crate's internal buffers.
+/// Whole-buffer codecs validate and produce their complete encoded bytes
+/// before the first write. The PNG still path additionally emits its already
+/// validated signature and container structures through separate writes. A
+/// sink failure or cancellation after a write may therefore leave a prefix in
+/// the destination; the trait does not provide rollback or short-write
+/// recovery.
 pub trait OutputSink {
-    /// Append the complete encoded bytes to this sink.
+    /// Append one fully accepted encoded segment to this sink.
     ///
     /// # Errors
     ///
@@ -980,13 +982,14 @@ impl OutputSink for &mut Vec<u8> {
 
 /// Encode a still image into a caller-owned output sink.
 ///
-/// The encoded bytes are produced exactly as by [`encode`] and then written
-/// to the sink in one call.
+/// The encoded bytes are produced exactly as by [`encode`] and delivered to
+/// the sink. Whole-buffer codecs use one write; structural writers may use
+/// multiple writes after their validated working state is ready.
 ///
 /// # Errors
 ///
 /// Returns the same errors as [`encode`], plus an [`ImageError::OutputWrite`]
-/// when the sink rejects the complete encoded buffer.
+/// when the sink rejects an emitted segment.
 pub fn encode_to_sink(
     img: &DecodedImage,
     format: ImageFormat,
@@ -996,13 +999,13 @@ pub fn encode_to_sink(
     encode_to_sink_with_policy(img, format, opts, &EncodePolicy::default(), sink)
 }
 
-/// Encode a still image under an output-result policy and write it to a
-/// caller-owned sink only when the policy admits the complete result.
+/// Encode a still image under an output-result policy and deliver it to a
+/// caller-owned sink only when the complete result is admitted.
 ///
 /// # Errors
 ///
 /// Returns the same errors as [`encode_with_policy`], plus
-/// [`ImageError::OutputWrite`] when the sink rejects the admitted buffer.
+/// [`ImageError::OutputWrite`] when the sink rejects an admitted segment.
 pub fn encode_to_sink_with_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1010,12 +1013,28 @@ pub fn encode_to_sink_with_policy(
     policy: &EncodePolicy,
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
+    encode_to_sink_with_policy_impl(img, format, opts, policy, sink)
+}
+
+fn encode_to_sink_with_policy_impl(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
+    if let Some(written) =
+        codecs::encode_format_to_sink_with_token(img, format, opts, *policy, None, sink)?
+    {
+        return Ok(written);
+    }
     let encoded = encode_with_policy(img, format, opts, policy)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
 }
 
-/// Encode a still image with cooperative cancellation and write it to a
-/// caller-owned sink only when the operation completes.
+/// Encode a still image with cooperative cancellation and deliver it to a
+/// caller-owned sink. Structural writers may stop after an already-written
+/// prefix when the token fires between writes.
 pub fn encode_to_sink_with_token(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1027,7 +1046,7 @@ pub fn encode_to_sink_with_token(
 }
 
 /// Encode a still image with cooperative cancellation and an output-result
-/// policy before writing the admitted result to a caller-owned sink.
+/// policy before delivering the admitted result to a caller-owned sink.
 pub fn encode_to_sink_with_token_and_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1036,6 +1055,22 @@ pub fn encode_to_sink_with_token_and_policy(
     token: &CancellationToken,
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
+    encode_to_sink_with_token_and_policy_impl(img, format, opts, policy, token, sink)
+}
+
+fn encode_to_sink_with_token_and_policy_impl(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
+    if let Some(written) =
+        codecs::encode_format_to_sink_with_token(img, format, opts, *policy, Some(token), sink)?
+    {
+        return Ok(written);
+    }
     let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
 }
@@ -1045,8 +1080,7 @@ pub fn encode_to_sink_with_token_and_policy(
 /// # Errors
 ///
 /// Returns the same errors as [`encode_sequence`], plus an
-/// [`ImageError::OutputWrite`] when the sink rejects the complete encoded
-/// buffer.
+/// [`ImageError::OutputWrite`] when the sink rejects an emitted segment.
 pub fn encode_sequence_to_sink(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1056,13 +1090,14 @@ pub fn encode_sequence_to_sink(
     encode_sequence_to_sink_with_policy(sequence, format, opts, &EncodePolicy::default(), sink)
 }
 
-/// Encode a still image or animation under an output-result policy and write
-/// it to a caller-owned sink only when the policy admits the complete result.
+/// Encode a still image or animation under an output-result policy and
+/// deliver it to a caller-owned sink only when the complete result is
+/// admitted.
 ///
 /// # Errors
 ///
 /// Returns the same errors as [`encode_sequence_with_policy`], plus
-/// [`ImageError::OutputWrite`] when the sink rejects the admitted buffer.
+/// [`ImageError::OutputWrite`] when the sink rejects an admitted segment.
 pub fn encode_sequence_to_sink_with_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1070,12 +1105,28 @@ pub fn encode_sequence_to_sink_with_policy(
     policy: &EncodePolicy,
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
+    encode_sequence_to_sink_with_policy_impl(sequence, format, opts, policy, sink)
+}
+
+fn encode_sequence_to_sink_with_policy_impl(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
+    if let Some(written) =
+        codecs::encode_sequence_to_sink_with_token(sequence, format, opts, *policy, None, sink)?
+    {
+        return Ok(written);
+    }
     let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
 }
 
-/// Encode a still image or animation with cooperative cancellation and write
-/// it to a caller-owned sink only when the operation completes.
+/// Encode a still image or animation with cooperative cancellation and
+/// deliver it to a caller-owned sink. Structural writers may stop after an
+/// already-written prefix when the token fires between writes.
 pub fn encode_sequence_to_sink_with_token(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1094,7 +1145,7 @@ pub fn encode_sequence_to_sink_with_token(
 }
 
 /// Encode a still image or animation with cooperative cancellation and an
-/// output-result policy before writing the admitted result to a sink.
+/// output-result policy before delivering the admitted result to a sink.
 pub fn encode_sequence_to_sink_with_token_and_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1103,6 +1154,27 @@ pub fn encode_sequence_to_sink_with_token_and_policy(
     token: &CancellationToken,
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
+    encode_sequence_to_sink_with_token_and_policy_impl(sequence, format, opts, policy, token, sink)
+}
+
+fn encode_sequence_to_sink_with_token_and_policy_impl(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
+    if let Some(written) = codecs::encode_sequence_to_sink_with_token(
+        sequence,
+        format,
+        opts,
+        *policy,
+        Some(token),
+        sink,
+    )? {
+        return Ok(written);
+    }
     let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
 }

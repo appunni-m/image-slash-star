@@ -204,6 +204,8 @@ pub struct PngEncodeOptions {
     /// cross-codec option.
     pub interlace: Option<bool>,
     legacy_ancillary: PngLegacyAncillary,
+    #[cfg(coverage)]
+    force_output_len_overflow: bool,
 }
 
 #[cfg(feature = "png")]
@@ -230,17 +232,38 @@ impl PngEncodeOptions {
 
     #[cfg(coverage)]
     pub(crate) fn __coverage_legacy_ancillary() -> Self {
+        Self::__coverage_legacy_ancillary_with(true, true, true, true, true)
+    }
+
+    #[cfg(coverage)]
+    pub(crate) fn __coverage_legacy_ancillary_with(
+        gamma: bool,
+        srgb: bool,
+        physical: bool,
+        text_chunks: bool,
+        time: bool,
+    ) -> Self {
         Self {
             compression: Some(PngCompression::None),
             legacy_ancillary: PngLegacyAncillary {
-                gamma: true,
-                srgb: true,
-                physical: true,
-                text_chunks: true,
-                time: true,
+                gamma,
+                srgb,
+                physical,
+                text_chunks,
+                time,
             },
             ..Self::default()
         }
+    }
+
+    #[cfg(coverage)]
+    pub(crate) const fn __coverage_force_output_len_overflow(&self) -> bool {
+        self.force_output_len_overflow
+    }
+
+    #[cfg(coverage)]
+    pub(crate) fn __coverage_set_output_len_overflow(&mut self) {
+        self.force_output_len_overflow = true;
     }
 }
 
