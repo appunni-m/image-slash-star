@@ -33,7 +33,8 @@ pub fn decode(
         return Err(CodecError::NeedMore {
             minimum: ICO_HEADER_SIZE,
             message: "truncated ICO header".to_owned(),
-        });
+        }
+        .at(0, "ico_header"));
     }
 
     let reserved = u16::from_le_bytes([data[0], data[1]]);
@@ -42,19 +43,22 @@ pub fn decode(
 
     // Reserved should be 0; type 1 = ICO, type 2 = CUR
     if reserved != 0 {
-        return Err(CodecError::Malformed(
-            "ICO reserved header field is nonzero".to_owned(),
-        ));
+        return Err(
+            CodecError::Malformed("ICO reserved header field is nonzero".to_owned())
+                .at(0, "ico_header"),
+        );
     }
     if icon_type != 1 && icon_type != 2 {
         return Err(CodecError::Malformed(
             "ICO container type is neither icon nor cursor".to_owned(),
-        ));
+        )
+        .at(2, "ico_header"));
     }
     if count == 0 || count > 255 {
         return Err(CodecError::Malformed(
             "ICO directory count is empty or exceeds Pillow's limit".to_owned(),
-        ));
+        )
+        .at(4, "ico_header"));
     }
 
     // Read all directory entries
@@ -64,7 +68,11 @@ pub fn decode(
         return Err(CodecError::NeedMore {
             minimum: entries_end,
             message: "truncated ICO directory".to_owned(),
-        });
+        }
+        .at(
+            u64::try_from(entries_start).unwrap_or(u64::MAX),
+            "ico_directory",
+        ));
     }
 
     // Find the best entry: prefer 256x256, then largest image
@@ -116,7 +124,8 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         return Err(CodecError::NeedMore {
             minimum: ICO_HEADER_SIZE,
             message: "truncated ICO header".to_owned(),
-        });
+        }
+        .at(0, "ico_header"));
     }
     let count = u64::from(u16::from_le_bytes([data[4], data[5]]));
     Ok(6u64.saturating_add(count.saturating_mul(ICO_DIR_ENTRY_SIZE as u64)))
@@ -155,10 +164,21 @@ fn decode_entry(
     let data_offset = u32::from_le_bytes([entry[12], entry[13], entry[14], entry[15]]) as usize;
 
     // Validate bounds
-    if data_size == 0 || data_offset == 0 {
-        return Err(CodecError::Malformed(
-            "ICO directory entry has an empty size or offset".to_owned(),
-        ));
+    if data_size == 0 {
+        return Err(
+            CodecError::Malformed("ICO directory entry has an empty size".to_owned()).at(
+                u64::try_from(entry_offset.saturating_add(8)).unwrap_or(u64::MAX),
+                "ico_entry",
+            ),
+        );
+    }
+    if data_offset == 0 {
+        return Err(
+            CodecError::Malformed("ICO directory entry has an empty offset".to_owned()).at(
+                u64::try_from(entry_offset.saturating_add(12)).unwrap_or(u64::MAX),
+                "ico_entry",
+            ),
+        );
     }
     let entry_data_start = data_offset;
     let entry_data_end = entry_data_start.saturating_add(data_size);
@@ -168,7 +188,13 @@ fn decode_entry(
         entry_data_start,
         entry_data_end,
         "ICO entry payload is out of bounds",
-    )?;
+    )
+    .map_err(|error| {
+        error.at(
+            u64::try_from(entry_data_start).unwrap_or(u64::MAX),
+            "ico_entry",
+        )
+    })?;
 
     // Check if the entry data is PNG (magic: 0x89 0x50 0x4E 0x47)
     if entry_data.len() >= 8 && entry_data[0..4] == [0x89, 0x50, 0x4E, 0x47] {
@@ -178,12 +204,16 @@ fn decode_entry(
             crate::codecs::png::decode::decode(entry_data, token)
                 .map(|(image, _, _)| image)
                 .map_err(terminalize)
+                .map_err(|error| {
+                    error.at(u64::try_from(data_offset).unwrap_or(u64::MAX), "ico_png")
+                })
         }
         #[cfg(not(feature = "png"))]
         {
-            Err(CodecError::Unsupported(
-                "ICO PNG entry requires the PNG feature".to_owned(),
-            ))
+            Err(
+                CodecError::Unsupported("ICO PNG entry requires the PNG feature".to_owned())
+                    .at(u64::try_from(data_offset).unwrap_or(u64::MAX), "ico_png"),
+            )
         }
     } else {
         // BMP/DIB data inside ICO
@@ -191,9 +221,20 @@ fn decode_entry(
         // but without the standard BMP file header (no "BM" signature).
         // We extract the pixel data manually.
         if cursor {
-            decode_cur_bmp(entry_data, data_size_u32).map_err(terminalize)
+            decode_cur_bmp(entry_data, data_size_u32)
+                .map_err(terminalize)
+                .map_err(|error| {
+                    error.at(
+                        u64::try_from(data_offset).unwrap_or(u64::MAX),
+                        "ico_cur_dib",
+                    )
+                })
         } else {
-            decode_ico_bmp(entry_data, entry).map_err(terminalize)
+            decode_ico_bmp(entry_data, entry)
+                .map_err(terminalize)
+                .map_err(|error| {
+                    error.at(u64::try_from(data_offset).unwrap_or(u64::MAX), "ico_dib")
+                })
         }
     }
 }

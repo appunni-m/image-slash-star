@@ -5464,6 +5464,123 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         assert_eq!(prefix_error.minimum_input(), Some(6));
     }
 
+    if cfg!(feature = "ico") {
+        // ICO parse-site context is a Rust error-detail contract. Pillow's
+        // decode result does not expose stable byte offsets or container
+        // identities, so these witnesses intentionally stay outside the
+        // generated parity matrix.
+        let truncated_ico = b"\0\0\x01\0";
+        let inspect_error = match image_slash_star::inspect_basic(truncated_ico) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated ICO header must fail inspection: {info:?}"),
+        };
+        assert_eq!(inspect_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(inspect_error.stage(), Some(ImageErrorStage::Inspection));
+        assert_eq!(inspect_error.identity(), Some("ico_header"));
+        assert_eq!(inspect_error.offset(), Some(0));
+
+        let inspect_prefix_error = match image_slash_star::inspect_basic_prefix(truncated_ico) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated ICO header must need more data: {info:?}"),
+        };
+        assert_eq!(inspect_prefix_error.kind(), ImageErrorKind::NeedMoreData);
+        assert_eq!(
+            inspect_prefix_error.stage(),
+            Some(ImageErrorStage::Inspection)
+        );
+        assert_eq!(inspect_prefix_error.identity(), Some("ico_header"));
+        assert_eq!(inspect_prefix_error.offset(), Some(0));
+        assert_eq!(inspect_prefix_error.minimum_input(), Some(6));
+
+        let decode_error = match image_slash_star::decode(truncated_ico) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated ICO header must fail still decode: {info:?}"),
+        };
+        assert_eq!(decode_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(decode_error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(decode_error.identity(), Some("ico_header"));
+        assert_eq!(decode_error.offset(), Some(0));
+
+        let decode_prefix_error = match image_slash_star::decode_prefix(truncated_ico) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated ICO header must need more data: {info:?}"),
+        };
+        assert_eq!(decode_prefix_error.kind(), ImageErrorKind::NeedMoreData);
+        assert_eq!(
+            decode_prefix_error.stage(),
+            Some(ImageErrorStage::StillDecode)
+        );
+        assert_eq!(decode_prefix_error.identity(), Some("ico_header"));
+        assert_eq!(decode_prefix_error.offset(), Some(0));
+        assert_eq!(decode_prefix_error.minimum_input(), Some(6));
+
+        let truncated_directory = b"\0\0\x01\0\x01\0";
+        let directory_error = match image_slash_star::inspect_basic(truncated_directory) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated ICO directory must fail inspection: {info:?}"),
+        };
+        assert_eq!(directory_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(directory_error.identity(), Some("ico_directory"));
+        assert_eq!(directory_error.offset(), Some(6));
+
+        let directory_prefix_error =
+            match image_slash_star::inspect_basic_prefix(truncated_directory) {
+                Err(error) => error,
+                Ok(info) => panic!("truncated ICO directory must need more data: {info:?}"),
+            };
+        assert_eq!(directory_prefix_error.kind(), ImageErrorKind::NeedMoreData);
+        assert_eq!(directory_prefix_error.identity(), Some("ico_directory"));
+        assert_eq!(directory_prefix_error.offset(), Some(6));
+        assert_eq!(directory_prefix_error.minimum_input(), Some(22));
+
+        let mut missing_payload = truncated_directory.to_vec();
+        missing_payload.extend_from_slice(&[
+            0, 0, 0, 0, // width, height, palette count, reserved
+            0, 0, // planes
+            0, 0, // bit depth
+            1, 0, 0, 0, // payload length
+            22, 0, 0, 0, // payload offset
+        ]);
+        let payload_error = match image_slash_star::inspect_basic(&missing_payload) {
+            Err(error) => error,
+            Ok(info) => panic!("missing ICO payload must fail inspection: {info:?}"),
+        };
+        assert_eq!(payload_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(payload_error.identity(), Some("ico_entry"));
+        assert_eq!(payload_error.offset(), Some(22));
+
+        let mut unsupported_dib = truncated_directory.to_vec();
+        unsupported_dib.extend_from_slice(&[
+            0, 0, 0, 0, // width, height, palette count, reserved
+            0, 0, // planes
+            3, 0, // bit depth
+            40, 0, 0, 0, // payload length
+            22, 0, 0, 0, // payload offset
+        ]);
+        let mut dib = vec![0u8; 40];
+        dib[..4].copy_from_slice(&40u32.to_le_bytes());
+        dib[4..8].copy_from_slice(&1u32.to_le_bytes());
+        dib[8..12].copy_from_slice(&2u32.to_le_bytes());
+        dib[14..16].copy_from_slice(&3u16.to_le_bytes());
+        unsupported_dib.extend_from_slice(&dib);
+        let dib_inspect_error = match image_slash_star::inspect_basic(&unsupported_dib) {
+            Err(error) => error,
+            Ok(info) => panic!("unsupported ICO DIB depth must fail inspection: {info:?}"),
+        };
+        assert_eq!(dib_inspect_error.kind(), ImageErrorKind::Unsupported);
+        assert_eq!(dib_inspect_error.identity(), Some("ico_dib"));
+        assert_eq!(dib_inspect_error.offset(), Some(22));
+
+        let dib_decode_error = match image_slash_star::decode(&unsupported_dib) {
+            Err(error) => error,
+            Ok(info) => panic!("unsupported ICO DIB depth must fail decode: {info:?}"),
+        };
+        assert_eq!(dib_decode_error.kind(), ImageErrorKind::Unsupported);
+        assert_eq!(dib_decode_error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(dib_decode_error.identity(), Some("ico_dib"));
+        assert_eq!(dib_decode_error.offset(), Some(22));
+    }
+
     let cmyk = DecodedImage::new(1, 1, vec![0; 4], ColorType::Cmyk8);
     let encode_error = match image_slash_star::encode_default(&cmyk, ImageFormat::Png) {
         Err(error) => error,
