@@ -759,7 +759,6 @@ These are discoverability/maintenance findings, not codec defects.
 
 | ID | Finding | Required action |
 | --- | --- | --- |
-| DOC-001 | The repository correctly carries `LICENSE-MIT` and `LICENSE-APACHE`, but generic documentation scanners looking only for `LICENSE` report no root license file. | Decide whether to add a short `LICENSE` index for tool/user discovery; do not replace or obscure the exact legal files. |
 | DOC-002 | The documentation audit reports one unlabeled fence in the retained `third_party/image-webp/README.md`. | If the file is maintained locally, label it; if it is an upstream verbatim artifact, exclude third-party documents from style lint and preserve its checksum/provenance. |
 | DOC-003 | README feature tables describe formats but cannot express operation-, mode-, sequence-, target-, or verification-level restrictions precisely. | Generate/link the capability and direct-mode tables from active fixture/cfg data rather than maintaining another prose matrix. |
 | DOC-004 | README examples are source snippets, not a separately installed clean-consumer test; Cargo package currently excludes the integration targets. | Turn the shortest first-use path into a packaged smoke test and keep its source synchronized with README/rustdoc. |
