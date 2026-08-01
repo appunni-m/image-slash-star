@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `5bfc7437f4cbbdfa4b5831c7ddad0c902a4c50a0`
+Reviewed: 2026-08-02 against the working tree based on `a170e3d125adf8accd85e2cd642b370f24a9767a`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -523,9 +523,10 @@ Where a codec parser can name the failing container structure, it also attaches
 the encoded-input byte offset (`ImageError::offset()`) and a stable structure
 identity (`ImageError::identity()`): PNG chunk boundaries, GIF blocks/images/
 extensions, JPEG markers/segments, TIFF IFDs, WebP chunks on the metadata-scan
-path, AVIF boxes, and BMP header/palette/pixel-span/bitfield/RLE boundaries.
-ICO and WebP decode internals remain detail-free. Both fields are stable
-recovery data, never prose.
+path, AVIF boxes, BMP header/palette/pixel-span/bitfield/RLE boundaries, and
+ICO header/directory/entry-range/embedded PNG/DIB/CUR boundaries. WebP decode
+internals remain detail-free. Both fields are stable recovery data, never
+prose.
 
 When `encode_to_sink` or `encode_sequence_to_sink` receives an error from its
 caller-owned `OutputSink`, it normalizes that rejection to

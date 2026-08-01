@@ -2,7 +2,7 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-02 on the working tree based on revision `5bfc7437f4cbbdfa4b5831c7ddad0c902a4c50a0`
+Reviewed: 2026-08-02 on the working tree based on revision `a170e3d125adf8accd85e2cd642b370f24a9767a`
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
