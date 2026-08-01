@@ -3753,6 +3753,57 @@ fn incremental_decode_policy_variants_apply_limits() -> Result<(), Box<dyn std::
         let sequence = image_slash_star::decode_sequence_prefix_with_policy(&bytes, &policy)?;
         assert_eq!(sequence.content.frames.len(), 1);
 
+        // Detection-level truncation propagates through the policy variant.
+        let error = match image_slash_star::decode_sequence_prefix_with_policy(
+            &bytes[..5],
+            &image_slash_star::DecodePolicy::default(),
+        ) {
+            Ok(info) => panic!("a partial signature must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), None);
+
+        // Inspection-level truncation propagates when the policy requires
+        // image information before sequence materialization.
+        let error =
+            match image_slash_star::decode_sequence_prefix_with_policy(&bytes[..40], &policy) {
+                Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+                Err(error) => error,
+            };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+
+        // A limit the inspected image violates fails the preflight check.
+        let rejecting = image_slash_star::DecodePolicy::default().with_max_width(0);
+        let error = match image_slash_star::decode_prefix_with_policy(&bytes, &rejecting) {
+            Ok(info) => panic!("decode_prefix must reject an exceeding width: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+        let error = match image_slash_star::decode_sequence_prefix_with_policy(&bytes, &rejecting) {
+            Ok(info) => panic!("decode_sequence_prefix must reject an exceeding width: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+
+        // The cumulative sequence-byte budget fails inside the budget charge
+        // after the image-info preflight passes.
+        let budgeted = image_slash_star::DecodePolicy::default().with_max_sequence_decoded_bytes(1);
+        let error = match image_slash_star::decode_sequence_prefix_with_policy(&bytes, &budgeted) {
+            Ok(info) => panic!("the sequence budget must reject the primary frame: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+
         // Complete-input sequence decode exercises the success mapping of the
         // sequence prefix API and agrees with the legacy sequence result.
         let prefix_sequence = image_slash_star::decode_sequence_prefix(&bytes)?;
