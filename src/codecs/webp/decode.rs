@@ -4,7 +4,7 @@
 //! animated frames, metadata (ICC/EXIF/XMP), and tiling.
 
 use crate::SequenceDecodeBudget;
-use crate::codecs::{CodecError, CodecResult};
+use crate::codecs::{CodecError, CodecResult, need_slice};
 use crate::types::{
     AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
     FrameDisposal, FrameDuration, FrameRect, ImageMode, SourceColor,
@@ -19,14 +19,17 @@ use super::native::{DecodingError, LoopCount};
 pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let cursor = Cursor::new(data);
 
-    let mut decoder = super::native::WebPDecoder::new(cursor).map_err(decode_error)?;
+    let mut decoder =
+        super::native::WebPDecoder::new(cursor).map_err(|error| decode_error(error, data.len()))?;
     let consumed = riff_consumed(data);
     let (width, height) = decoder.dimensions();
     let has_alpha = decoder.has_alpha();
 
     let buf_size = decoder.output_buffer_size();
     let mut pixels = vec![0u8; buf_size];
-    decoder.read_image(&mut pixels).map_err(decode_error)?;
+    decoder
+        .read_image(&mut pixels)
+        .map_err(|error| decode_error(error, data.len()))?;
 
     let color = if has_alpha {
         ColorType::Rgba8
@@ -53,7 +56,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
 /// Validate the RIFF container and encoded frame headers without decoding pixels.
 pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
     super::native::WebPDecoder::new(Cursor::new(data))
-        .map_err(decode_error)
+        .map_err(|error| decode_error(error, data.len()))
         .map(|_| ())
 }
 
@@ -63,7 +66,8 @@ pub fn decode_sequence(
     budget: &mut SequenceDecodeBudget,
 ) -> CodecResult<(DecodedSequence, usize)> {
     let cursor = Cursor::new(data);
-    let mut decoder = super::native::WebPDecoder::new(cursor).map_err(decode_error)?;
+    let mut decoder =
+        super::native::WebPDecoder::new(cursor).map_err(|error| decode_error(error, data.len()))?;
     let consumed = riff_consumed(data);
     if !decoder.is_animated() {
         let (mut image, consumed) = decode(data)?;
@@ -98,7 +102,9 @@ pub fn decode_sequence(
                 .map_err(CodecError::LimitExceeded)?;
         }
         let mut pixels = vec![0; buffer_size];
-        let frame = decoder.read_frame(&mut pixels).map_err(decode_error)?;
+        let frame = decoder
+            .read_frame(&mut pixels)
+            .map_err(|error| decode_error(error, data.len()))?;
         let source_descriptor = if decoder.has_alpha() {
             crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
         } else {
@@ -161,26 +167,30 @@ fn riff_consumed(data: &[u8]) -> usize {
 /// Measure the encoded metadata extent: the RIFF-declared container minus the
 /// top-level image chunk payloads (`VP8 `, `VP8L`, and `ALPH`).
 pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
-    if data.get(..4) != Some(b"RIFF") || data.get(8..12) != Some(b"WEBP") {
+    if need_slice(data, 0, 4, "invalid WebP RIFF signature")? != b"RIFF"
+        || need_slice(data, 8, 12, "invalid WebP RIFF signature")? != b"WEBP"
+    {
         return Err(CodecError::Malformed(
             "invalid WebP RIFF signature".to_owned(),
         ));
     }
     let consumed = riff_consumed(data);
     if consumed > data.len() {
-        return Err(CodecError::Malformed(
-            "WebP RIFF size exceeds the input length".to_owned(),
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: consumed,
+            message: "WebP RIFF size exceeds the input length".to_owned(),
+        });
     }
     let mut position = 12usize;
     let mut pixel = 0u64;
     while position < consumed {
         let remaining = consumed.saturating_sub(position);
         if remaining < 8 {
-            return Err(
-                CodecError::Malformed("truncated WebP chunk header".to_owned())
-                    .at(position as u64, "webp_chunk"),
-            );
+            return Err(CodecError::NeedMore {
+                minimum: position.saturating_add(8),
+                message: "truncated WebP chunk header".to_owned(),
+            }
+            .at(position as u64, "webp_chunk"));
         }
         let kind = [
             data[position],
@@ -218,8 +228,14 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     Ok(metadata)
 }
 
-fn decode_error(error: DecodingError) -> CodecError {
-    CodecError::Malformed(format!("WebP decoder failure: {error:?}"))
+fn decode_error(error: DecodingError, input_len: usize) -> CodecError {
+    match error {
+        DecodingError::IoError => CodecError::NeedMore {
+            minimum: input_len.saturating_add(1),
+            message: "WebP decoder failure: IoError".to_owned(),
+        },
+        other => CodecError::Malformed(format!("WebP decoder failure: {other:?}")),
+    }
 }
 
 #[cfg(coverage)]
