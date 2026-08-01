@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `7aa78f26e9507e0e45a4423037a13f108df6b4b7`
+Reviewed: 2026-08-01 on the working tree based on revision `0164e9c3736c42d2fe732965e19e5a1cf3754da3`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -56,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `7aa78f26e9507e0e45a4423037a13f108df6b4b7`,
+The correction evidence below is the working-tree state based on `0164e9c3736c42d2fe732965e19e5a1cf3754da3`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -189,6 +189,7 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-066 | Primary AVIF `mdcv` mastering-display color-volume properties now flow through both bounded AVIF parsers into `SourceColor`. The exact 16-bit red/green/blue and white-point coordinates plus unsigned 32-bit maximum/minimum luminance fields are retained in the descriptor's canonical RGB accessor order; no tone mapping or pixel conversion is applied, and duplicate primary associations are rejected. | `avif_item_properties_match_the_non_parity_contract` associates a deliberately distinguishable 24-byte `mdcv` witness, checks the wire-order mapping on inspect/still/sequence results and unchanged pixels, and rejects truncated, overlong, and duplicate properties. This is defensive-model/specification evidence; Pillow exposes no equivalent structured item-property result, so the parity matrix and row count remain unchanged. |
 | COR-067 | `ImageError::OutputWrite` now gives caller-owned sink failures a stable recovery category at the `encode_to_sink` and `encode_sequence_to_sink` boundary. The result retains the selected output format, `StillEncode` or `SequenceEncode` stage, and sink diagnostic, while input offset and container identity remain absent; structural streaming, short writes, and partial-container cleanup remain open under API-017/QA-016. | `output_sinks_receive_the_exact_encoded_bytes` asserts exact bytes and lengths for successful sinks plus the `OutputWrite` kind, format, stage, diagnostic, and absent input context for deterministic still and sequence sink failures. This is an ordinary Rust API contract, not Pillow-parity evidence. |
 | COR-068 | `ImageError::Unsupported` now optionally retains `UnsupportedReason::TargetUnavailable` or `UnsupportedReason::NotImplemented`, exposed through `unsupported_reason()`. AVIF WASM sequence decode/encode failures identify target unavailability, unsupported multi-frame JPEG/BMP/ICO/PNG fallback identifies an unimplemented operation, and input-class incompatibilities remain reason-free. | `unsupported_reasons_are_non_parity_capability_contracts` asserts the Rust-only reason field, and the feature/target manifest checks AVIF WASM reason values. This is capability-contract evidence, not Pillow parity. |
+| COR-069 | `EncodePolicy::max_output_bytes` now provides an inclusive encode-side result-admission limit for still and sequence output, including the caller-owned sink wrappers. The complete codec result must fit before return or the first sink write; rejection is a typed `LimitExceeded` with `ResourceLimit::EncodedOutputBytes`, and rejected sink calls leave their destination untouched. This closes the public result boundary only: whole-buffer codecs still allocate before the check, so transient allocation accounting, incremental structural writing, and recoverable OOM behavior remain open under API-023/017 and QA-016/030. | `encoded_output_policy_is_a_non_parity_result_contract` runs real PNG and GIF fixtures, checks exact admission and one-byte-below rejection, and verifies no sink write on policy failure. Pillow has no caller-controlled output policy or equivalent sink, so this is ordinary Rust defensive/specification evidence and does not add a parity row. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -201,10 +202,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`2b0bc5bd-dc9a-4585-a132-3bc53549f046`, snapshot
-`9fbb8205-9d7e-463e-89f9-ef91cd4420e1`, passed with zero failures or
-skips and reports 45,494/45,494 lines, 6,434/6,434 branches,
-2,524/2,524 functions, and 71,480/71,480 regions.
+`3ab008a5-79a5-497c-b066-e6faaf3ce6fe`, snapshot
+`f7337cea-1d2e-46e4-9f36-c7e0d3e8c559`, passed with zero failures or
+skips and reports 45,632/45,632 lines, 6,438/6,438 branches,
+2,534/2,534 functions, and 71,627/71,627 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -293,10 +294,10 @@ public reusable conversion layer would violate project scope.
 | API-018 | Input model | The incremental input contract now covers detection, basic inspection, still decode, and sequence decode (`decode_prefix`/`decode_sequence_prefix`, COR-059) with exact or progress-aware `NeedMoreData { minimum }`; streaming decompression that produces partial pixels before the container completes remains future work. | Keep the same status semantics for any future streaming iterator/reader surface. |
 | API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Primary AVIF CICP/`clli`/`mdcv` color properties, `prof`/`rICC` ICC profiles, and `irot`/`imir`/`pasp`/`clap` item properties are retained in typed source descriptors; AVIF text, resolution, EXIF/XMP, auxiliary-item, and other item-level metadata are not yet retained by `ImageInfo`/`DecodedImage`, so decode→encode drops them there. | Extend the planned opaque metadata model to remaining AVIF item metadata and color properties; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
-| API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. Every current decoder work dimension is bounded by that resource set (documented per codec in the architecture reference). Encoded-output allocation remains outside this decode policy; lenient-versus-strict parsing and requested output mode are result-shaping policy belonging with the API-033 family. | Extend the resource contract one independently enforceable allocation/work dimension at a time, including an explicit encoded-output policy. Preserve the unlimited convenience wrappers, reject before bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
+| API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. `EncodePolicy::max_output_bytes` now caps the complete encoded result after whole-buffer codec work and before return or sink write. Every current decoder work dimension is bounded by the decode resource set; transient encoder allocations remain outside both public policies. Lenient-versus-strict parsing and requested output mode are result-shaping policy belonging with the API-033 family. | Extend the resource contract one independently enforceable allocation/work dimension at a time, including transient encoded-output accounting or structural writing. Preserve the unlimited convenience wrappers, reject before any future bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator or cache policy. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration and cache policy. Keep eager `decode_sequence` as a convenience collector. |
-| API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures; BMP/ICO/WebP-decode parse internals remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
+| API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` resource, maximum, and observed result length. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures; BMP/ICO/WebP-decode parse internals remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. AVIF chroma-position and non-primary item color properties, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve opaque profiles and exact container fields per format. Never imply that retaining color or transform metadata means pixel conversion was applied. |
 | API-036 | Work control | Cooperative cancellation now exists for still and sequence decode (`CancellationToken` + token-aware APIs, COR-060) with deterministic cleanup at structural checkpoints; encode cancellation and progress callbacks remain future work. | Extend the same token contract to long encodes and any future streaming surface. |
@@ -811,7 +812,7 @@ union. That has several consequences for this crate.
 | QA-022 | WASM compile success provides no browser evidence for boundary copies, memory growth, exceptions, worker use, or real artifact size. | Run a small Playwright/WebDriver-free JS harness in a pinned browser runtime and Node for every published artifact target. |
 | QA-023 | Emitted bytes are primarily re-opened through Pillow, which can share libjpeg/libwebp/libtiff/libavif implementations with the oracle path. | Decode representative outputs with an independent implementation or browser and record that evidence separately from Pillow parity. |
 | QA-024 | Round-trip tests do not publish a uniform rule separating lossless exact samples, lossy decoded tolerances, and deterministic encoded bytes. | Add an assertion policy per format/mode/option row and reject ambiguous generic “round trip passed” claims. |
-| QA-026 | Decode output-size limits and cumulative sequence limits now have boundary, cache-state, and retry tests under API-023. Cancellation and work-budget exhaustion still need interruption tests under API-036; basic sink rejection now has `OutputWrite` cause coverage, while short/interrupted output behavior remains under API-017/QA-016. | Add the API-036 interruption tests and the API-017/QA-016 structural-writer cleanup cases; preserve the output-write cause across every destination failure. |
+| QA-026 | Decode output-size limits and cumulative sequence limits now have boundary, cache-state, and retry tests under API-023. `EncodePolicy` now has exact-result, one-byte-below, and no-sink-write coverage, but cancellation and work-budget exhaustion still need interruption tests under API-036; short/interrupted output behavior remains under API-017/QA-016. | Add the API-036 interruption tests and the API-017/QA-016 structural-writer cleanup cases; preserve both the output-write cause and output-policy no-write guarantee across every destination failure. |
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
 | QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. | Maintain a compact property-to-fixture map per codec so every claimed syntax/state has a named minimal witness. |
 | QA-030 | No benchmark checks output allocation count, retained encoded+decoded cache memory, sequence amplification, or caller-buffer reuse. | Add allocation/peak-memory measurements alongside time and artifact size; never optimize from source line count. |
@@ -1061,7 +1062,7 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-068, including exact WebP mode
+Completed first: COR-001 through COR-069, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
@@ -1076,7 +1077,9 @@ current feature/target dispatch. Encode options are target-qualified typed
 records with a strict, manifest-tested legacy-pair migration boundary. The
 shared decode policy now bounds pre-detection encoded-input bytes, inspected
 canvas width, height, pixels, decoded transfer bytes, later frame/page bytes,
-cumulative sequence bytes, and retained metadata extents. Encoded-output
+cumulative sequence bytes, and retained metadata extents. `EncodePolicy` now
+admits only complete encoded results at or below an inclusive output cap and
+keeps rejected results out of caller-owned sinks. Transient encoded-output
 allocation remains an explicit open resource boundary under API-023/030.
 `ImageFormat` now exposes
 case-insensitive Pillow-recognized extension aliases plus stable MIME,
@@ -1104,9 +1107,10 @@ errors stay explicitly stage-free. `DecodePolicy` now also bounds the encoded
 metadata extent before any inspection or pixel work, with per-format scanners
 that exclude primary pixel payload bytes and a SHA-pinned measurement
 manifest. Every current decoder work dimension is documented as bounded by the
-typed resource set; encoded-output allocation remains outside `DecodePolicy`,
-and strictness/output-mode are recorded as result-shaping policy belonging to
-the API-033 family rather than new decode resource limits.
+typed resource set; `EncodePolicy` bounds complete result admission but not the
+transient allocation performed by whole-buffer encoders. Strictness/output-
+mode are recorded as result-shaping policy belonging to the API-033 family
+rather than new decode resource limits.
 Codec-dispatched failures now name their parse site with a byte offset and
 container-structure identity on top of the operation stage. The
 revision-bound claim tuple is now machine-checked by a committed ledger and CI
@@ -1190,7 +1194,8 @@ and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps,
-   keeping encoded-output allocation as a distinct open resource boundary.
+   keeping transient encoded-output allocation and structural writing as
+   distinct open resource boundaries.
 2. Complete the remaining AVIF item-metadata and color-item retention under
    API-019/034/040.
 3. Extend the source-bound per-frame, strip, tile, and sequence paths under
@@ -1242,12 +1247,14 @@ transfer bytes, the inspected frame/page count, every later frame/page's
 decoded bytes, the cumulative retained sequence bytes, and the encoded
 metadata extent are implemented through `DecodePolicy`, and every current
 decoder work dimension is bounded by that set (see the architecture
-reference). Encoded-output allocation remains outside `DecodePolicy` and is
-the next named resource-limit boundary. Complete the remaining typed limits
-before recommending the crate for arbitrary hostile inputs. They need to cover
-at least:
-
-- output allocation.
+reference). `EncodePolicy::max_output_bytes` now bounds complete encoded
+result admission before return or sink write. Because whole-buffer encoders
+allocate before that check, transient encoded-output allocation and
+incremental structural writing remain the next resource/I/O boundary. Complete
+those remaining guarantees before recommending the crate for arbitrary hostile
+inputs. Any new limit must remain distinguishable from malformed input and be
+covered by complete fixtures where observable through Pillow, or clearly
+labeled model-only defensive cases otherwise.
 
 Limit failures must be distinguishable from malformed input and must be covered
 by complete fixtures where observable through Pillow, or clearly labeled

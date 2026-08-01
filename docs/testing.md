@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `7aa78f26e9507e0e45a4423037a13f108df6b4b7`
+Reviewed: 2026-08-01 on the working tree based on revision `0164e9c3736c42d2fe732965e19e5a1cf3754da3`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -142,6 +142,17 @@ Pillow-parity fixture. The existing
 Rust-only error also has no `UnsupportedReason`; its coverage is incidental to
 the real sink contract, not a coverage-only test.
 
+`EncodePolicy::max_output_bytes` is another Rust-only boundary. Pillow has no
+caller-controlled maximum-output policy and no equivalent sink contract, so
+`encoded_output_policy_is_a_non_parity_result_contract` is deliberately not a
+parity row. It runs real PNG still and GIF sequence encodes, admits the exact
+result, rejects a one-byte-smaller result with the typed
+`EncodedOutputBytes` limit, and verifies that policy rejection leaves the sink
+unchanged. The test proves result admission after the current whole-buffer
+encoder has completed; it does not prove transient allocation limits or
+recoverable OOM behavior. Its aggregate coverage is incidental evidence, not
+Pillow parity coverage, and no coverage-only hook is added.
+
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
 sample bytes remain a documented gap. The parity schema does not compare
@@ -151,7 +162,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `7aa78f26e9507e0e45a4423037a13f108df6b4b7`, the generated matrix
+For the current working tree based on revision `0164e9c3736c42d2fe732965e19e5a1cf3754da3`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -498,10 +509,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,562 | 45,562 |
-| Branches | 6,434 | 6,434 |
-| Functions | 2,526 | 2,526 |
-| Regions | 71,550 | 71,550 |
+| Lines | 45,632 | 45,632 |
+| Branches | 6,438 | 6,438 |
+| Functions | 2,534 | 2,534 |
+| Regions | 71,627 | 71,627 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -515,9 +526,9 @@ target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `98d5092b-a3dd-42db-9f65-bdf77ce33707`
+Coverage MCP run: `3ab008a5-79a5-497c-b066-e6faaf3ce6fe`
 
-Snapshot: `0c010f00-9039-4994-8c32-99cbf7542659`
+Snapshot: `f7337cea-1d2e-46e4-9f36-c7e0d3e8c559`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

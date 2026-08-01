@@ -149,8 +149,10 @@ capabilities and setup.
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
+| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and return a typed `EncodedOutputBytes` limit failure when the complete result is too large |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
 | `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; sink rejection is reported as `ImageError::OutputWrite` without partial writes |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
@@ -398,12 +400,23 @@ by the primary-canvas limits.
 that is not primary pixel payload data — measured by a per-format container
 scan before inspection or pixel work on all five policy paths.
 
+`EncodePolicy::max_output_bytes` is the encode-side result-admission limit. It
+is inclusive and applies to still and sequence encodes, including their sink
+wrappers: the complete codec result must fit before it is returned or written,
+or the operation returns `LimitExceeded` with
+`ResourceLimit::EncodedOutputBytes`. The current encoders still build their
+complete `Vec<u8>` first, so this policy prevents an oversized result from
+crossing the public return/sink boundary but does not cap transient internal
+allocations, provide recoverable OOM behavior, or make encoding incremental.
+Those remain separate roadmap work.
+
 `inspect_with_policy`, `decode_sequence_with_policy`,
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
 same boundary. A rejected lazy decode is not cached, and an already cached
 decode cannot bypass a later stricter policy. This is not yet a complete
-hostile-input budget: encoded output and internal allocation behavior remain
-outside the policy, and no recoverable allocation-failure contract exists.
+hostile-input budget: transient encoded-output and other internal allocation
+behavior remain outside the policy, and no recoverable allocation-failure
+contract exists.
 
 See [architecture and public contract](docs/architecture.md) for byte layouts,
 validation invariants, lazy source lifecycle, memory behavior, feature
