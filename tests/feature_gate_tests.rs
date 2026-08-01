@@ -4012,6 +4012,9 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
         assert_eq!(error.format(), Some(ImageFormat::Png));
         assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        // Output-destination failures are Rust-only contract errors, not
+        // Pillow-parity rows, and therefore never carry an UnsupportedReason.
+        assert_eq!(error.unsupported_reason(), None);
         assert_eq!(error.offset(), None);
         assert_eq!(error.identity(), None);
         assert_eq!(error.minimum_input(), None);
