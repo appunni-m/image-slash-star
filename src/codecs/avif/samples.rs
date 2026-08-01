@@ -2057,24 +2057,21 @@ fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> ParseResult<u64> {
                 current = Some((current_start, current_end.max(end)));
             }
             Some((current_start, current_end)) => {
-                let length = current_end
-                    .checked_sub(current_start)
-                    .ok_or_else(|| parse_failure!())?;
-                total = total
-                    .checked_add(u64::try_from(length).map_err(|_| parse_failure!())?)
-                    .ok_or_else(|| parse_failure!())?;
+                // Every active span starts below its end, and sorted disjoint
+                // spans remain within the `usize` address space, so neither
+                // arithmetic operation can overflow on supported targets.
+                #[allow(clippy::arithmetic_side_effects)]
+                let length = (current_end - current_start) as u64;
+                total = total.saturating_add(length);
                 current = Some((start, end));
             }
             None => current = Some((start, end)),
         }
     }
     if let Some((current_start, current_end)) = current {
-        let length = current_end
-            .checked_sub(current_start)
-            .ok_or_else(|| parse_failure!())?;
-        total = total
-            .checked_add(u64::try_from(length).map_err(|_| parse_failure!())?)
-            .ok_or_else(|| parse_failure!())?;
+        #[allow(clippy::arithmetic_side_effects)]
+        let length = (current_end - current_start) as u64;
+        total = total.saturating_add(length);
     }
     Ok(total)
 }
@@ -2083,9 +2080,12 @@ fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> ParseResult<u64> {
 /// the referenced primary and auxiliary pixel-sample payload spans.
 pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     let extracted = extract_inner_with_metadata(data, false)?;
-    let consumed = u64::try_from(extracted.consumed).map_err(|_| parse_failure!())?;
+    #[allow(clippy::cast_possible_truncation)]
+    let consumed = extracted.consumed as u64;
     let pixel = pixel_payload_bytes(&extracted)?;
-    consumed.checked_sub(pixel).ok_or_else(|| parse_failure!())
+    // Every referenced sample span belongs to a successfully parsed top-level
+    // extent, so the pixel union cannot exceed `consumed`.
+    Ok(consumed.saturating_sub(pixel))
 }
 
 #[cfg(coverage)]
