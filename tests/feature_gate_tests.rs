@@ -3765,7 +3765,12 @@ fn incremental_decode_policy_variants_apply_limits() -> Result<(), Box<dyn std::
         assert_eq!(error.format(), None);
 
         // Inspection-level truncation propagates when the policy requires
-        // image information before sequence materialization.
+        // image information before still or sequence materialization.
+        let error = match image_slash_star::decode_prefix_with_policy(&bytes[..40], &policy) {
+            Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
         let error =
             match image_slash_star::decode_sequence_prefix_with_policy(&bytes[..40], &policy) {
                 Ok(info) => panic!("a truncated header must need more data: {info:?}"),
