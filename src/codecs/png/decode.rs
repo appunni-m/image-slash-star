@@ -170,6 +170,22 @@ fn record_invalid_compressed_metadata(
     Ok(true)
 }
 
+fn record_idat_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
+    // Pillow accepts the image through `load()` but reports this CRC from
+    // `verify()`. Decode intentionally defers IDAT CRC failure to that
+    // verification boundary, so successful decode records the recovery
+    // without changing the Pillow-parity result.
+    if chunk.kind == *b"IDAT" && !chunk.crc_valid {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunk.offset),
+            identity: Some("png_IDAT_crc"),
+        });
+    }
+}
+
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
     match value {
         0 => Some(crate::types::SrgbIntent::Perceptual),
@@ -270,6 +286,7 @@ pub fn decode(
     for chunk in &mut chunks {
         crate::codecs::error::check_cancelled(token)?;
         let chunk = chunk?;
+        record_idat_crc_diagnostic(&chunk, &mut diagnostics);
         match &chunk.kind {
             b"IDAT" => {
                 saw_idat = true;
@@ -593,6 +610,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
 
     for chunk in &mut chunks {
         let chunk = chunk?;
+        record_idat_crc_diagnostic(&chunk, &mut diagnostics);
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
                 palette_rgb = Some(chunk.data.to_vec());
@@ -1464,7 +1482,7 @@ fn chunk_payload_with_crc<'a>(
     start: usize,
     length: usize,
     verify_crc: bool,
-) -> CodecResult<(&'a [u8], usize)> {
+) -> CodecResult<(&'a [u8], usize, bool)> {
     let end = start
         .checked_add(length)
         .dimensions("PNG chunk byte range overflows")?;
@@ -1477,8 +1495,9 @@ fn chunk_payload_with_crc<'a>(
         expected_bytes[2],
         expected_bytes[3],
     ]);
-    if !verify_crc || crc32(kind, payload) == expected {
-        Ok((payload, crc_end))
+    let crc_valid = crc32(kind, payload) == expected;
+    if !verify_crc || crc_valid {
+        Ok((payload, crc_end, crc_valid))
     } else {
         Err(CodecError::Malformed(
             "PNG chunk CRC does not match".to_owned(),
@@ -1490,6 +1509,7 @@ struct Chunk<'a> {
     kind: [u8; 4],
     data: &'a [u8],
     offset: u64,
+    crc_valid: bool,
 }
 
 struct Chunks<'a> {
@@ -1548,13 +1568,14 @@ impl<'a> Iterator for Chunks<'a> {
             // Pillow validates construction-critical chunk CRCs while opening
             // the file, but defers IDAT CRC validation to `verify()`.
             let verify_crc = self.verify_crc || kind != *b"IDAT";
-            let (payload, crc_end) =
+            let (payload, crc_end, crc_valid) =
                 chunk_payload_with_crc(self.data, &kind, start, length, verify_crc)?;
             self.position = crc_end;
             Ok(Chunk {
                 kind,
                 data: payload,
                 offset: chunk_start,
+                crc_valid,
             })
         })();
         if result.is_err() {
