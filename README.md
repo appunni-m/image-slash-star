@@ -481,8 +481,9 @@ cleanup semantics remain future incremental-writer work.
 Where the parser can name the failing container structure, codec-dispatched
 errors also report the encoded-input byte offset (`ImageError::offset()`) and
 a stable structure identity (`ImageError::identity()`, for example
-`png_chunk`, `jpeg_marker`, or `tiff_ifd`). BMP, ICO, and WebP decode internals
-intentionally remain detail-free.
+`png_chunk`, `jpeg_marker`, or `tiff_ifd`). BMP header, palette, pixel-span,
+bitfield, and RLE failures additionally expose stable BMP identities; ICO and
+WebP decode internals intentionally remain detail-free.
 
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
