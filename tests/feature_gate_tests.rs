@@ -6355,6 +6355,49 @@ fn incremental_decode_tracks_truncation_progress_per_format()
 }
 
 #[test]
+fn tiff_compressed_payload_failures_retain_parse_context() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "tiff") {
+        return Ok(());
+    }
+    // The fixture's StripOffsets tag names byte 122 as the malformed Deflate
+    // payload. This is a Rust-owned parse-site contract, so the offset and
+    // identity are not added to the Pillow parity matrix.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bytes = fs::read(root.join("tests/fixtures/input/images/tiff/deflate_bad_adler.tiff"))?;
+
+    let still_error = match image_slash_star::decode(&bytes) {
+        Ok(decoded) => panic!("malformed TIFF Deflate must fail still decode: {decoded:?}"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        still_error.kind(),
+        image_slash_star::ImageErrorKind::Malformed
+    );
+    assert_eq!(still_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(still_error.stage(), Some(ImageErrorStage::StillDecode));
+    assert_eq!(still_error.offset(), Some(122));
+    assert_eq!(still_error.identity(), Some("tiff_strip"));
+
+    let sequence_error = match image_slash_star::decode_sequence(&bytes) {
+        Ok(sequence) => panic!("malformed TIFF Deflate must fail sequence decode: {sequence:?}"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        sequence_error.kind(),
+        image_slash_star::ImageErrorKind::Malformed
+    );
+    assert_eq!(sequence_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceDecode)
+    );
+    assert_eq!(sequence_error.offset(), Some(122));
+    assert_eq!(sequence_error.identity(), Some("tiff_strip"));
+    Ok(())
+}
+
+#[test]
 fn incremental_decode_attaches_structured_context() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     if cfg!(feature = "png") {
