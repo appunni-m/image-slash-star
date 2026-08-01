@@ -697,6 +697,136 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 }
 
 #[test]
+fn cancellation_token_stops_decode_without_partial_state() -> Result<(), Box<dyn std::error::Error>>
+{
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(ImageFormat, bool, &str)] = &[
+        (
+            ImageFormat::Png,
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+        ),
+        (
+            ImageFormat::Gif,
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+        ),
+        (
+            ImageFormat::Bmp,
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+        ),
+        (
+            ImageFormat::Tiff,
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/8bit.tiff",
+        ),
+        (
+            ImageFormat::Jpeg,
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+        ),
+        (
+            ImageFormat::WebP,
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+        ),
+        (
+            ImageFormat::Ico,
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+        ),
+        (
+            ImageFormat::Avif,
+            cfg!(feature = "avif"),
+            "tests/fixtures/input/images/avif/baseline.avif",
+        ),
+    ];
+    for (format, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        // Targets without a full decode path for this format (for example
+        // portable WASM AVIF) keep their Unsupported classification.
+        if image_slash_star::decode(&bytes).is_err() {
+            continue;
+        }
+        // A never-cancelled token leaves the result byte-identical to legacy.
+        let token = image_slash_star::CancellationToken::new();
+        let decoded = image_slash_star::decode_with_token(&bytes, &token)?;
+        let legacy = image_slash_star::decode(&bytes)?;
+        assert_eq!(decoded.format, legacy.format, "{path} format");
+        assert_eq!(
+            decoded.content.pixels, legacy.content.pixels,
+            "{path} pixels"
+        );
+
+        // A pre-cancelled token stops at the first checkpoint without
+        // publishing partial state.
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::decode_with_token(&bytes, &cancelled) {
+            Ok(info) => panic!("a cancelled token must stop {path}: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(*format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(error.minimum_input(), None);
+
+        // Clones observe the same cancellation state.
+        let shared = image_slash_star::CancellationToken::new();
+        let clone = shared.clone();
+        shared.cancel();
+        assert!(clone.is_cancelled());
+
+        // Truncated input still reports the non-terminal status.
+        let error = match image_slash_star::decode_with_token(&bytes[..5], &token) {
+            Ok(info) => panic!("a partial signature must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+
+        // Policy limits still apply before codec work.
+        let limited = image_slash_star::DecodePolicy::default().with_max_encoded_bytes(10);
+        let error = match image_slash_star::decode_with_token_and_policy(&bytes, &limited, &token) {
+            Ok(info) => panic!("an encoded-byte limit must reject the input: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+    }
+
+    // Sequence decode cancellation carries the sequence stage for formats
+    // with a real sequence path, and never returns a partial frame list.
+    if cfg!(feature = "gif") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
+        let token = image_slash_star::CancellationToken::new();
+        let sequence = image_slash_star::decode_sequence_with_token(&bytes, &token)?;
+        let legacy = image_slash_star::decode_sequence(&bytes)?;
+        assert_eq!(sequence.content.frames.len(), legacy.content.frames.len());
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::decode_sequence_with_token(&bytes, &cancelled) {
+            Ok(info) => panic!("a cancelled token must stop the sequence: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::Gif));
+        assert_eq!(error.stage(), Some(ImageErrorStage::SequenceDecode));
+        // A fresh token decodes the same input completely, proving the
+        // cancelled attempt never corrupted reusable state.
+        let fresh = image_slash_star::CancellationToken::new();
+        let retry = image_slash_star::decode_sequence_with_token(&bytes, &fresh)?;
+        assert_eq!(retry.content.frames.len(), legacy.content.frames.len());
+    }
+    Ok(())
+}
+
+#[test]
 fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut cases: Vec<(&str, bool, &str, SequenceKind)> = vec![

@@ -189,6 +189,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
             identity: None,
             minimum: 2,
         },
+        ImageError::Cancelled {
+            format: Some(ImageFormat::Png),
+            stage: Some(ImageErrorStage::StillDecode),
+        },
+        ImageError::Cancelled {
+            format: None,
+            stage: None,
+        },
     ];
     for error in errors {
         let _ = error.kind();

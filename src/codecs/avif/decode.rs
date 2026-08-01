@@ -10,7 +10,11 @@ use crate::types::{
 };
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
@@ -18,7 +22,10 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let image = match decode_portable(&validated) {
         Some(image) => image,
-        None => decode_native(data)?,
+        None => {
+            crate::codecs::error::check_cancelled(token)?;
+            decode_native(data)?
+        }
     };
     Ok((image.with_opaque_blocks(retained_boxes), consumed))
 }
@@ -27,13 +34,16 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    let (mut sequence, consumed) = decode_sequence_native(data, &validated, budget, consumed)?;
+    let (mut sequence, consumed) =
+        decode_sequence_native(data, &validated, budget, consumed, token)?;
     sequence.opaque_blocks = retained_boxes;
     Ok((sequence, consumed))
 }
@@ -254,11 +264,13 @@ fn decode_sequence_native(
     validated: &super::av1::ValidatedAv1,
     budget: &mut SequenceDecodeBudget,
     consumed: usize,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let _ = validated.portable_still.as_ref();
     let mut decoder = super::native::Decoder::new(data)?;
     let info = decoder.info();
-    decoded_sequence(info, budget, consumed, &mut |frame_index| {
+    decoded_sequence(info, budget, consumed, token, &mut |frame_index| {
         decoder.decode_frame(frame_index)
     })
 }
@@ -282,8 +294,10 @@ fn decoded_sequence(
     info: super::native::DecodeInfo,
     budget: &mut SequenceDecodeBudget,
     consumed: usize,
+    token: Option<&crate::CancellationToken>,
     decode_frame: &mut dyn FnMut(u32) -> CodecResult<(Vec<u8>, super::native::FrameTiming)>,
 ) -> CodecResult<(DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let mut frames = Vec::with_capacity(info.frame_count as usize);
     let mode = if info.has_alpha {
         ImageMode::Rgba8
@@ -291,6 +305,7 @@ fn decoded_sequence(
         ImageMode::Rgb8
     };
     for frame_index in 0..info.frame_count {
+        crate::codecs::error::check_cancelled(token)?;
         if frame_index != 0 {
             budget
                 .reserve_later_frame(mode, info.width, info.height)
@@ -335,7 +350,9 @@ fn decode_sequence_native(
     validated: &super::av1::ValidatedAv1,
     _budget: &mut SequenceDecodeBudget,
     _consumed: usize,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let _ = validated.portable_still.as_ref();
     Err(CodecError::Unsupported(
         "AVIF sequence decoding requires the native AVIF stack".to_owned(),
@@ -380,6 +397,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode_sequence(
         b"not an AVIF container",
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
+        None,
     );
     let validated = ValidatedAv1 {
         portable_still: None,
@@ -446,6 +464,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &validated,
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
         0,
+        None,
     );
 
     let info = DecodeInfo {
@@ -472,12 +491,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         )),
     );
     let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Avif);
-    let _ = decoded_sequence(info, &mut budget, 0, &mut |_| {
+    let _ = decoded_sequence(info, &mut budget, 0, None, &mut |_| {
         Err(CodecError::Malformed(
             "coverage native frame failure".to_owned(),
         ))
     });
-    let _ = decoded_sequence(info, &mut budget, 0, &mut |_| {
+    let _ = decoded_sequence(info, &mut budget, 0, None, &mut |_| {
         Ok((
             vec![0; 3],
             FrameTiming {
@@ -485,7 +504,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             },
         ))
     });
-    let _ = decoded_sequence(info, &mut budget, 0, &mut |_| {
+    let _ = decoded_sequence(info, &mut budget, 0, None, &mut |_| {
         Ok((
             vec![0; 3],
             FrameTiming {
@@ -493,4 +512,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
             },
         ))
     });
+    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    for checks in 0..=6 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(baseline, Some(&token));
+        let _ = decode(animated, Some(&token));
+        let _ = decode_sequence(
+            animated,
+            &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
+            Some(&token),
+        );
+    }
 }

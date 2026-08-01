@@ -76,6 +76,8 @@ pub enum ImageErrorKind {
     Parameter,
     /// A caller-configured resource maximum was exceeded.
     LimitExceeded,
+    /// The operation was cooperatively cancelled by a caller token.
+    Cancelled,
     /// More encoded input is required before the operation can continue.
     ///
     /// This is the non-terminal incremental-input status: callers should
@@ -191,6 +193,18 @@ pub enum ImageError {
         /// before retrying.
         minimum: u64,
     },
+    /// The operation stopped at a cooperative checkpoint because the
+    /// caller's [`crate::CancellationToken`] was cancelled.
+    ///
+    /// No partial result is published: token-aware operations either return
+    /// their complete validated result or this error. Retrying after
+    /// cancelling is pointless; create a fresh token for a new operation.
+    Cancelled {
+        /// Detected or selected format, when the operation reached a codec.
+        format: Option<ImageFormat>,
+        /// Public operation that was cancelled.
+        stage: Option<ImageErrorStage>,
+    },
 }
 
 impl ImageError {
@@ -206,6 +220,7 @@ impl ImageError {
             Self::Parameter { .. } => ImageErrorKind::Parameter,
             Self::LimitExceeded { .. } => ImageErrorKind::LimitExceeded,
             Self::NeedMoreData { .. } => ImageErrorKind::NeedMoreData,
+            Self::Cancelled { .. } => ImageErrorKind::Cancelled,
         }
     }
 
@@ -223,6 +238,7 @@ impl ImageError {
             | Self::Parameter { format, .. } => *format,
             Self::LimitExceeded { format, .. } => *format,
             Self::NeedMoreData { format, .. } => *format,
+            Self::Cancelled { format, .. } => *format,
         }
     }
 
@@ -236,7 +252,8 @@ impl ImageError {
             Self::UnknownFormat
             | Self::FeatureDisabled { .. }
             | Self::LimitExceeded { .. }
-            | Self::NeedMoreData { .. } => None,
+            | Self::NeedMoreData { .. }
+            | Self::Cancelled { .. } => None,
             Self::Malformed { message, .. }
             | Self::Unsupported { message, .. }
             | Self::Dimensions { message, .. }
@@ -272,7 +289,8 @@ impl ImageError {
             | Self::Unsupported { stage, .. }
             | Self::Dimensions { stage, .. }
             | Self::Parameter { stage, .. }
-            | Self::NeedMoreData { stage, .. } => *stage,
+            | Self::NeedMoreData { stage, .. }
+            | Self::Cancelled { stage, .. } => *stage,
             Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
         }
     }
@@ -287,7 +305,10 @@ impl ImageError {
             | Self::Dimensions { offset, .. }
             | Self::Parameter { offset, .. }
             | Self::NeedMoreData { offset, .. } => *offset,
-            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+            Self::UnknownFormat
+            | Self::FeatureDisabled { .. }
+            | Self::LimitExceeded { .. }
+            | Self::Cancelled { .. } => None,
         }
     }
 
@@ -301,7 +322,10 @@ impl ImageError {
             | Self::Dimensions { identity, .. }
             | Self::Parameter { identity, .. }
             | Self::NeedMoreData { identity, .. } => *identity,
-            Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+            Self::UnknownFormat
+            | Self::FeatureDisabled { .. }
+            | Self::LimitExceeded { .. }
+            | Self::Cancelled { .. } => None,
         }
     }
 
@@ -321,7 +345,8 @@ impl ImageError {
             | Self::Unsupported { .. }
             | Self::Dimensions { .. }
             | Self::Parameter { .. }
-            | Self::LimitExceeded { .. } => None,
+            | Self::LimitExceeded { .. }
+            | Self::Cancelled { .. } => None,
         }
     }
 
@@ -411,6 +436,10 @@ impl fmt::Display for ImageError {
                     write!(f, "need at least {minimum} bytes of {format:?} input")
                 }
                 None => write!(f, "need at least {minimum} bytes of input"),
+            },
+            ImageError::Cancelled { format, .. } => match format {
+                Some(format) => write!(f, "cancelled {format:?} operation"),
+                None => write!(f, "cancelled operation"),
             },
         }
     }

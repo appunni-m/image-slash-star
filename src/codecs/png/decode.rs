@@ -145,9 +145,13 @@ fn retain_color_chunk(
 }
 
 /// Decode the first image represented by a PNG or APNG stream.
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
     // Pillow's load path accepts bad IDAT CRCs after lazy construction has
     // validated all construction-critical chunks.
+    crate::codecs::error::check_cancelled(token)?;
     let mut chunks = Chunks::new(data, false)?;
     let header = read_header(&mut chunks)?;
 
@@ -162,6 +166,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let mut source_color = SourceColor::new();
     let mut saw_iend = false;
     for chunk in &mut chunks {
+        crate::codecs::error::check_cancelled(token)?;
         let chunk = chunk?;
         match &chunk.kind {
             b"IDAT" => {
@@ -298,9 +303,11 @@ struct ParsedApng {
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let Some((parsed, consumed)) = parse_apng(data)? else {
-        let (mut image, consumed) = decode(data)?;
+        let (mut image, consumed) = decode(data, token)?;
         let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
         let metadata = std::mem::take(&mut image.metadata);
         let source_color = std::mem::take(&mut image.source_color);
@@ -369,6 +376,7 @@ pub fn decode_sequence(
     };
 
     for (animation_index, encoded) in compressed_frames.into_iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
         if !output_frames.is_empty() {
             budget
                 .reserve_later_frame(canvas_mode, header.width, header.height)
@@ -1454,9 +1462,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         data.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
     }
 
-    let _ = decode(b"");
-    let _ = decode(&png_chunk(*b"NOPE", &[0; 13]));
-    let _ = decode(&png_chunk(*b"IHDR", &[0; 12]));
+    let _ = decode(b"", None);
+    let _ = decode(&png_chunk(*b"NOPE", &[0; 13]), None);
+    let _ = decode(&png_chunk(*b"IHDR", &[0; 12]), None);
     let mut valid_header = [0u8; 13];
     valid_header[3] = 1;
     valid_header[7] = 1;
@@ -1464,24 +1472,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     valid_header[9] = 0;
     // A structurally incomplete PNG (no IDAT, no IEND) is incremental
     // truncation; the same bytes with an IEND are terminal malformed.
-    let _ = decode(&png_chunk(*b"IHDR", &valid_header));
+    let _ = decode(&png_chunk(*b"IHDR", &valid_header), None);
     let mut no_image_data = png_chunk(*b"IHDR", &valid_header);
     append_chunk(&mut no_image_data, *b"IEND", &[]);
-    let _ = decode(&no_image_data);
+    let _ = decode(&no_image_data, None);
     // A complete IDAT chunk carrying a truncated zlib stream is incremental
     // while IEND is missing, and terminal once the container is complete.
     let mut truncated_stream = png_chunk(*b"IHDR", &valid_header);
     append_chunk(&mut truncated_stream, *b"IDAT", &[0x78, 0x9c, 0x63]);
-    let _ = decode(&truncated_stream);
+    let _ = decode(&truncated_stream, None);
     append_chunk(&mut truncated_stream, *b"IEND", &[]);
-    let _ = decode(&truncated_stream);
+    let _ = decode(&truncated_stream, None);
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(&png_chunk(*b"NOPE", &[0; 13]));
     let _ = metadata_bytes(&png_chunk(*b"IHDR", &[0; 12]));
     let mut truncated_chunk = PNG_SIGNATURE.to_vec();
     truncated_chunk.extend_from_slice(b"\x00\x00\x00\x01NOPE");
     let _ = metadata_bytes(&truncated_chunk);
-    let _ = decode(&truncated_chunk);
+    let _ = decode(&truncated_chunk, None);
     let mut fd_chunk = PNG_SIGNATURE.to_vec();
     append_chunk(&mut fd_chunk, *b"IHDR", &[0; 13]);
     append_chunk(&mut fd_chunk, *b"fdAT", &[0, 0, 0, 0, 1, 2, 3]);
@@ -1500,7 +1508,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         header[9] = 0;
         header[11] = filter;
         header[12] = interlace;
-        let _ = decode(&png_chunk(*b"IHDR", &header));
+        let _ = decode(&png_chunk(*b"IHDR", &header), None);
     }
     assert!(png_layout(7, 8).is_err());
     let _ = verify(b"");
@@ -1543,7 +1551,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     append_chunk(&mut trailing_palette, *b"PLTE", &[0, 0, 0]);
     append_chunk(&mut trailing_palette, *b"tRNS", &[]);
     append_chunk(&mut trailing_palette, *b"IEND", &[]);
-    assert!(decode(&trailing_palette).is_ok());
+    assert!(decode(&trailing_palette, None).is_ok());
     assert!(parse_apng(&trailing_palette).is_ok_and(|parsed| parsed.is_none()));
 
     let mut orphan_frame_data = PNG_SIGNATURE.to_vec();
@@ -1552,4 +1560,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     append_chunk(&mut orphan_frame_data, *b"fdAT", &[0, 0, 0, 0, 0x78]);
     append_chunk(&mut orphan_frame_data, *b"IEND", &[]);
     assert!(parse_apng(&orphan_frame_data).is_err());
+
+    // Every cancellation checkpoint in the decode paths is reachable with a
+    // token that fires after a fixed number of polls.
+    let apng = include_bytes!("../../../tests/fixtures/input/images/png/apng_animated.png");
+    let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Png);
+    for checks in 0..=4 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(&trailing_palette, Some(&token));
+        let _ = decode_sequence(apng, &mut budget, Some(&token));
+    }
 }

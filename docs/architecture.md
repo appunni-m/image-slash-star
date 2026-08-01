@@ -200,8 +200,11 @@ translation cannot be bypassed.
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: header facts when provable, `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
 | `decode_prefix`, `decode_prefix_with_policy` | Incremental still decode with the non-terminal `NeedMoreData { minimum }` status |
+| `decode_with_token`, `decode_with_token_and_policy` | Still decode that polls a `CancellationToken` at structural checkpoints |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
 | `decode_sequence_prefix`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
+| `decode_sequence_with_token`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame/page cancellation |
+| `CancellationToken` | Dependency-free cooperative cancellation: `Rc<Cell>` state shared by clones, `cancel()` fires every clone, single-threaded by design |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
@@ -248,6 +251,15 @@ structure (GIF LZW sub-block streams, TIFF strip payloads, JPEG entropy
 zero-padding) keep their terminal classification because appending file bytes
 cannot repair them. Policy limits are re-evaluated on every retry against the
 current input length.
+
+Cooperative cancellation polls a caller token at structural checkpoints:
+dispatch entry, PNG chunk boundaries, GIF block and frame boundaries, TIFF
+page and strip/tile boundaries, JPEG scan/segment boundaries, WebP frame
+boundaries, BMP RLE commands, ICO directory entries, and AVIF frames. A fired
+token returns `ImageError::Cancelled` with the format and operation stage and
+never publishes partial results; codec state is per-call, so a fresh token
+can retry the same input. The token is `Rc<Cell>` based and neither `Send`
+nor `Sync`, matching the single-threaded execution model.
 
 Capability discovery mirrors this dispatch without parsing input.
 `Capability::ManifestBounded` means the operation can be attempted within the

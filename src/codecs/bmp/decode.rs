@@ -166,7 +166,9 @@ fn decode_rle(
     height: usize,
     rle4: bool,
     stream_offset: usize,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     // Pillow 12.2.0 BmpRleDecoder builds one linear index stream. In
     // particular, its RLE4 absolute mode reads floor(pixel_count / 2) bytes,
     // so an unpaired final nibble is deliberately omitted and later row
@@ -177,6 +179,7 @@ fn decode_rle(
     let mut position = 0usize;
 
     while output.len() < destination_length {
+        crate::codecs::error::check_cancelled(token)?;
         let count = usize::from(if let Some(&byte) = data.get(position) {
             byte
         } else {
@@ -298,7 +301,11 @@ fn decode_rle(
 
 // Palette bytes are constructed below in complete RGB triples.
 #[allow(clippy::expect_used)]
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, Option<usize>)> {
+    crate::codecs::error::check_cancelled(token)?;
     let mut r = Cursor::new(data);
 
     // --- BITMAPFILEHEADER (14 bytes) ---
@@ -474,6 +481,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
                 height_usize,
                 false,
                 data_offset as usize,
+                token,
             )?,
             width_usize,
             top_down,
@@ -491,6 +499,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
                 height_usize,
                 true,
                 data_offset as usize,
+                token,
             )?,
             width_usize,
             top_down,
@@ -747,9 +756,17 @@ fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode(b"").is_err());
-    assert!(decode(b"BM").is_err());
-    assert!(decode(b"not a bitmap").is_err());
+    assert!(decode(b"", None).is_err());
+    assert!(decode(b"BM", None).is_err());
+    assert!(decode(b"not a bitmap", None).is_err());
+    let rle8 = include_bytes!("../../../tests/fixtures/input/images/bmp/rle8.bmp");
+    let rle4 = include_bytes!("../../../tests/fixtures/input/images/bmp/rle4.bmp");
+    for checks in 0..=5 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(rle8, Some(&token));
+        let _ = decode(rle4, Some(&token));
+    }
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(b"X");
     let _ = metadata_bytes(b"XX");
