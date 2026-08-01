@@ -1183,8 +1183,8 @@ the same path through `SourceColor` and are checked by the same defensive
 contract. AVIF EXIF/XMP, chroma sample position, and non-primary/auxiliary
 metadata remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`924a922e-4f47-49c7-9367-885e1ca04678`, submitted against
-`9e37df486410f71868146ef348034782f0fb5658`; it passed 727 checks with zero
+`5b40f679-4746-46a6-a49a-0212e9e13e91`, submitted against
+`9e37df486410f71868146ef348034782f0fb5658`; it passed 749 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
