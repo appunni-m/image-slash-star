@@ -9,6 +9,7 @@ use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
     DecodedImage, DecodedSequence, DiagnosticKind, EncodeOptions, EncodedImage, ImageDiagnostic,
     ImageError, ImageErrorStage, ImageFormat, ImageMode, SequenceKind, SourceColor,
+    UnsupportedReason,
 };
 
 mod support;
@@ -444,6 +445,7 @@ fn extension_aliases_and_mime_queries_match_the_public_contract() {
             format: None,
             message: "unknown extension: dib".to_owned(),
             stage: None,
+            reason: None,
             offset: None,
             identity: None,
         })
@@ -626,6 +628,7 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 format: Some(format),
                 message: "AVIF input is outside the portable WASM decode subset".to_owned(),
                 stage: Some(ImageErrorStage::StillDecode),
+                reason: None,
                 offset: None,
                 identity: None,
             };
@@ -634,6 +637,7 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 message: "decode sequence: AVIF sequence decoding requires the native AVIF stack"
                     .to_owned(),
                 stage: Some(ImageErrorStage::SequenceDecode),
+                reason: Some(UnsupportedReason::TargetUnavailable),
                 offset: None,
                 identity: None,
             };
@@ -641,6 +645,7 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 format: Some(format),
                 message: "encode: AVIF encoding requires the native extra module".to_owned(),
                 stage: Some(ImageErrorStage::StillEncode),
+                reason: Some(UnsupportedReason::TargetUnavailable),
                 offset: None,
                 identity: None,
             };
@@ -649,6 +654,7 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 message: "encode sequence: AVIF encoding requires the native extra module"
                     .to_owned(),
                 stage: Some(ImageErrorStage::SequenceEncode),
+                reason: Some(UnsupportedReason::TargetUnavailable),
                 offset: None,
                 identity: None,
             };
@@ -3941,6 +3947,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 format: None,
                 message: "sink rejected the write".to_owned(),
                 stage: None,
+                reason: None,
                 offset: None,
                 identity: None,
             })
@@ -4109,6 +4116,58 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(
             error.message(),
             Some("unsupported: sink rejected the write")
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn unsupported_reasons_are_non_parity_capability_contracts()
+-> Result<(), Box<dyn std::error::Error>> {
+    // These reason fields classify the Rust API's capability boundary. Pillow
+    // exposes neither this field nor a portable equivalent, so this test is
+    // intentionally outside the generated parity matrix.
+    let input_class = ImageError::Unsupported {
+        format: Some(ImageFormat::Png),
+        message: "retained sequence metadata".to_owned(),
+        stage: Some(ImageErrorStage::SequenceEncode),
+        reason: None,
+        offset: None,
+        identity: None,
+    };
+    assert_eq!(input_class.unsupported_reason(), None);
+
+    for reason in [
+        UnsupportedReason::TargetUnavailable,
+        UnsupportedReason::NotImplemented,
+    ] {
+        let error = ImageError::Unsupported {
+            format: Some(ImageFormat::Avif),
+            message: "capability boundary".to_owned(),
+            stage: Some(ImageErrorStage::StillEncode),
+            reason: Some(reason),
+            offset: None,
+            identity: None,
+        };
+        assert_eq!(error.unsupported_reason(), Some(reason));
+    }
+
+    if cfg!(feature = "jpeg") {
+        let image = DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+        let mut sequence = DecodedSequence::from_image(image);
+        sequence.frames.push(sequence.frames[0].clone());
+        sequence.kind = SequenceKind::TimedAnimation;
+        let error = match image_slash_star::encode_sequence(
+            &sequence,
+            ImageFormat::Jpeg,
+            &EncodeOptions::for_format(ImageFormat::Jpeg),
+        ) {
+            Ok(_) => return Err("JPEG unexpectedly encoded multiple frames".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.unsupported_reason(),
+            Some(UnsupportedReason::NotImplemented)
         );
     }
     Ok(())

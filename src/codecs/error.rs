@@ -1,7 +1,7 @@
 //! Private codec failures retained until format dispatch selects a public error.
 
 use crate::types::ImageErrorStage;
-use crate::types::{ImageError, ImageFormat, ImageResult};
+use crate::types::{ImageError, ImageFormat, ImageResult, UnsupportedReason};
 
 /// Operational failure produced below the public format dispatcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,6 +14,8 @@ pub(crate) enum CodecError {
     NeedMore { minimum: usize, message: String },
     /// Valid input, mode, or options are outside the codec's supported contract.
     Unsupported(String),
+    /// The operation is unavailable on the current compilation target.
+    TargetUnavailable(String),
     /// Image dimensions are invalid, inconsistent, or unrepresentable.
     Dimensions(String),
     /// A caller-supplied image property or encoding option is invalid.
@@ -78,6 +80,11 @@ impl CodecError {
     pub(crate) fn from_image_error(error: ImageError) -> Self {
         match error {
             ImageError::Malformed { message, .. } => Self::Malformed(message),
+            ImageError::Unsupported {
+                message,
+                reason: Some(UnsupportedReason::TargetUnavailable),
+                ..
+            } => Self::TargetUnavailable(message),
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
             ImageError::Dimensions { message, .. } => Self::Dimensions(message),
             ImageError::Parameter { message, .. } => Self::Parameter(message),
@@ -122,6 +129,15 @@ impl CodecError {
                 format: Some(format),
                 message,
                 stage: Some(stage),
+                reason: None,
+                offset: None,
+                identity: None,
+            },
+            Self::TargetUnavailable(message) => ImageError::Unsupported {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+                reason: Some(UnsupportedReason::TargetUnavailable),
                 offset: None,
                 identity: None,
             },
@@ -212,6 +228,15 @@ impl CodecError {
                 format: Some(format),
                 message,
                 stage: Some(stage),
+                reason: None,
+                offset: None,
+                identity: None,
+            },
+            Self::TargetUnavailable(message) => ImageError::Unsupported {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+                reason: Some(UnsupportedReason::TargetUnavailable),
                 offset: None,
                 identity: None,
             },
@@ -285,6 +310,9 @@ impl CodecError {
                 message: format!("{stage}: {message}"),
             },
             Self::Unsupported(message) => Self::Unsupported(format!("{stage}: {message}")),
+            Self::TargetUnavailable(message) => {
+                Self::TargetUnavailable(format!("{stage}: {message}"))
+            }
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
             Self::LimitExceeded(error) => Self::LimitExceeded(error),
@@ -489,7 +517,7 @@ pub(crate) fn into_incremental_image_result<T>(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use crate::{CodecOperation, ResourceLimit};
+    use crate::{CodecOperation, ResourceLimit, UnsupportedReason};
 
     for error in [
         ImageError::Malformed {
@@ -503,6 +531,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: Some(ImageFormat::Png),
             message: "unsupported".to_owned(),
             stage: Some(ImageErrorStage::StillEncode),
+            reason: None,
             offset: None,
             identity: None,
         },
@@ -534,6 +563,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ] {
         let _ = CodecError::from_image_error(error);
     }
+    let _ = CodecError::from_image_error(ImageError::Unsupported {
+        format: Some(ImageFormat::Avif),
+        message: "target".to_owned(),
+        stage: Some(ImageErrorStage::StillEncode),
+        reason: Some(UnsupportedReason::TargetUnavailable),
+        offset: None,
+        identity: None,
+    });
     let limit = CodecError::LimitExceeded(ImageError::LimitExceeded {
         format: Some(ImageFormat::Png),
         operation: CodecOperation::SequenceDecode,
@@ -553,6 +590,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = CodecError::Unsupported("at".to_owned())
         .at(12, "webp_chunk")
         .into_image_error(ImageFormat::WebP, ImageErrorStage::StillDecode);
+    let _ = CodecError::TargetUnavailable("target".to_owned())
+        .clone()
+        .into_image_error(ImageFormat::Avif, ImageErrorStage::StillEncode);
+    let _ = CodecError::TargetUnavailable("target".to_owned())
+        .into_incremental_image_error(ImageFormat::Avif, ImageErrorStage::SequenceEncode);
+    let _ = CodecError::TargetUnavailable("target".to_owned()).context("encode");
     let _ = CodecError::Dimensions("at".to_owned())
         .at(12, "tiff_ifd")
         .into_image_error(ImageFormat::Tiff, ImageErrorStage::StillDecode);

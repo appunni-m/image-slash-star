@@ -182,6 +182,7 @@ impl<'a> EncodedImageView<'a> {
                     self.format.as_str(),
                 ),
                 stage: Some(ImageErrorStage::Verification),
+                reason: Some(crate::UnsupportedReason::NotImplemented),
                 offset: None,
                 identity: None,
             });
@@ -358,6 +359,7 @@ impl EncodedImage {
                     self.format().as_str(),
                 ),
                 stage: Some(ImageErrorStage::Verification),
+                reason: Some(crate::UnsupportedReason::NotImplemented),
                 offset: None,
                 identity: None,
             });

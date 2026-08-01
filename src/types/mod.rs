@@ -4,7 +4,9 @@ mod color_type;
 mod error;
 
 pub use self::color_type::ColorType;
-pub use self::error::{ImageError, ImageErrorKind, ImageErrorStage, ImageResult, ResourceLimit};
+pub use self::error::{
+    ImageError, ImageErrorKind, ImageErrorStage, ImageResult, ResourceLimit, UnsupportedReason,
+};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
@@ -231,6 +233,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: Some(ImageFormat::Png),
             message: "coverage".to_owned(),
             stage: Some(ImageErrorStage::StillEncode),
+            reason: None,
             offset: None,
             identity: None,
         },
@@ -238,6 +241,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: None,
             message: "coverage".to_owned(),
             stage: None,
+            reason: None,
             offset: None,
             identity: None,
         },
@@ -1728,6 +1732,7 @@ impl ImageFormat {
             format: None,
             message: format!("unknown extension: {}", ext.to_ascii_lowercase()),
             stage: None,
+            reason: None,
             offset: None,
             identity: None,
         })

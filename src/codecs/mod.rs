@@ -903,6 +903,7 @@ pub(crate) fn encode_sequence_format(
             format: Some(format),
             message: "format cannot encode multiple retained frames".to_owned(),
             stage: Some(ImageErrorStage::SequenceEncode),
+            reason: Some(crate::UnsupportedReason::NotImplemented),
             offset: None,
             identity: None,
         });
@@ -913,6 +914,7 @@ pub(crate) fn encode_sequence_format(
             format: Some(format),
             message: "still-image format cannot represent retained sequence metadata".to_owned(),
             stage: Some(ImageErrorStage::SequenceEncode),
+            reason: None,
             offset: None,
             identity: None,
         });
