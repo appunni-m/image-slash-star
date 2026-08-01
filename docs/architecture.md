@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `00451646c1cc1d74cad8946ca3d9ba66b1316217`
+Reviewed: 2026-08-01 against the working tree based on `627153f108b3410715305cf75bda5935761ee5c1`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -83,11 +83,12 @@ activation point; ordinary ICO uses `None`.
 `ImageInfo::source` and `DecodedImage::source` carry an extensible
 `SourceDescriptor`. TIFF records the exact `II`/`MM` container declaration as
 `SourceByteOrder::Little` or `SourceByteOrder::Big` on inspection and on every
-decoded page. AVIF item `irot`/`imir`/`pasp` properties are retained as
-`AvifTransformProperties` on the primary item without rotating, mirroring, or
-rescaling decoded samples. Other codecs currently return an empty descriptor. A source
-descriptor is structural provenance, not opaque ICC/EXIF/XMP metadata and not
-an instruction to reinterpret every normalized pixel buffer.
+decoded page. AVIF item `irot`/`imir`/`pasp`/`clap` properties are retained as
+`AvifTransformProperties` on the primary item without rotating, mirroring,
+rescaling, or cropping decoded samples. Other codecs currently return an empty
+descriptor. A source descriptor is structural provenance, not opaque
+ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
+pixel buffer.
 
 `DecodedSequence::first()` returns the complete first `DecodedFrame`.
 `first_image()` is a deliberately lossy convenience that drops the frame's
@@ -194,9 +195,10 @@ contract test is defensive/specification evidence. AVIF `irot` and `imir`
 properties are likewise retained in `SourceDescriptor`; their legal values are
 validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
-vertical spacing values, but no pixel rescaling is applied. `clap`, non-`nclx`
-profiles, track-only/auxiliary item properties, and AVIF ICC/EXIF/XMP remain
-outside the current model.
+vertical spacing values, and `clap` retains its positive width/height
+fractions plus signed offsets. No pixel rescaling or cropping is applied.
+Non-`nclx` profiles, track-only/auxiliary item properties, and AVIF
+ICC/EXIF/XMP remain outside the current model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

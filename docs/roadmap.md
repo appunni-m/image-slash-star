@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `00451646c1cc1d74cad8946ca3d9ba66b1316217`
+Reviewed: 2026-08-01 on the working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -54,7 +54,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `00451646c1cc1d74cad8946ca3d9ba66b1316217`,
+The correction evidence below is the working-tree state based on `627153f108b3410715305cf75bda5935761ee5c1`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -191,10 +191,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`1a735222-b186-46c1-9e4e-6ae7612ab066`, snapshot
-`45f3c687-9680-4088-be29-dab45879a18f`, passed with zero failures or
-skips and reports 44,995/44,995 lines, 6,352/6,352 branches,
-2,484/2,484 functions, and 70,811/70,811 regions.
+`babcab83-4d9a-424d-b446-31bcb55a41f6`, snapshot
+`27dad99b-32eb-4d42-8993-5e202e01b091`, passed with zero failures or
+skips and reports 45,210/45,210 lines, 6,390/6,390 branches,
+2,497/2,497 functions, and 71,077/71,077 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -281,14 +281,14 @@ public reusable conversion layer would violate project scope.
 | API-014 | Memory behavior | Lazy materialization retains the complete encoded snapshot and decoded raster forever; clones share both, but there is no eviction. Repeated `verify` reparses independently. | Document peak memory now; benchmark before adding optional cache release or cached verification. |
 | API-017 | Output model | Encoders produce complete `Vec<u8>` output; the dependency-free `OutputSink` contract (`encode_to_sink`/`encode_sequence_to_sink`) exists, but encoders do not yet write incrementally to structural boundaries. | Implement the planned incremental writer without filesystem ownership or dependencies. Keep `Vec` convenience wrappers. |
 | API-018 | Input model | The incremental input contract now covers detection, basic inspection, still decode, and sequence decode (`decode_prefix`/`decode_sequence_prefix`, COR-059) with exact or progress-aware `NeedMoreData { minimum }`; streaming decompression that produces partial pixels before the container completes remains future work. | Keep the same status semantics for any future streaming iterator/reader surface. |
-| API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Primary AVIF CICP, `irot`, `imir`, and `pasp` item properties are retained in typed source descriptors; AVIF orientation, text, resolution, `clap`, ICC/EXIF/XMP, auxiliary-item, and other item-level metadata are not yet retained by `ImageInfo`/`DecodedImage`, so decode→encode drops them there. | Extend the planned opaque metadata model to AVIF item metadata and remaining color properties; parsed semantics are optional and format-specific. |
+| API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Primary AVIF CICP and `irot`/`imir`/`pasp`/`clap` item properties are retained in typed source descriptors; AVIF text, resolution, ICC/EXIF/XMP, auxiliary-item, and other item-level metadata are not yet retained by `ImageInfo`/`DecodedImage`, so decode→encode drops them there. | Extend the planned opaque metadata model to remaining AVIF item metadata and color properties; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
 | API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. Every current codec work dimension is bounded by that resource set (documented per codec in the architecture reference). The remaining named items are result-shaping policy rather than resources: lenient-versus-strict parsing and requested output mode belong with the API-033 family. | Extend this same policy one independently enforceable resource at a time. Preserve the unlimited convenience wrappers, reject before the bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator or cache policy. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration and cache policy. Keep eager `decode_sequence` as a convenience collector. |
 | API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. They still lack cancellation and output-write cause, and target/availability `Unsupported` plus BMP/ICO/WebP-decode internals remain intentionally detail-free. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed and boundary fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
-| API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP fields (primaries, transfer, matrix, range), and primary AVIF `irot`/`imir`/`pasp` declarations are retained. AVIF ICC and remaining item color properties, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve opaque profiles and exact container fields per format. Never imply that retaining color or transform metadata means pixel conversion was applied. |
+| API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP fields (primaries, transfer, matrix, range), and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. AVIF ICC and remaining item color properties, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve opaque profiles and exact container fields per format. Never imply that retaining color or transform metadata means pixel conversion was applied. |
 | API-036 | Work control | Cooperative cancellation now exists for still and sequence decode (`CancellationToken` + token-aware APIs, COR-060) with deterministic cleanup at structural checkpoints; encode cancellation and progress callbacks remain future work. | Extend the same token contract to long encodes and any future streaming surface. |
 | API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set or supplied a trusted format hint. This matters for partial data and downstream policy. | Let a decode policy carry an optional format hint/allow-list while retaining signature validation and feature-independent `detect_format`. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
@@ -710,7 +710,6 @@ Minute gaps:
 | AVF-007 | `avif` on native and WASM is one Cargo feature with materially different operations. | Capability discovery and runtime WASM gates must make the difference machine-readable until eliminated. |
 | AVF-008 | Portable transfer is 8-bit normalized output; 10/12-bit samples, monochrome, planar YUV, and high-depth alpha cannot be retained directly. | Add exact source descriptors and one transfer layout at a time after portable AV1 correctness. |
 | AVF-009 | Primary-item CICP primaries/transfer/matrix and range now retain through `SourceColor`; chroma sample position, mastering display, content-light metadata, and non-primary item color properties remain absent from the common model. | Preserve the remaining exact item/property fields without applying tone or color transforms. |
-| AVF-010 | `irot`, `imir`, and `pasp` are retained as typed primary-item source metadata. `clap` remains unrepresented because it carries crop geometry. | Preserve `clap` and document that the crate does not rotate, crop, or resample pixels. |
 | AVF-011 | Grids, layered/progressive images, derived items, sample transforms, and alternative item relationships have no representation. | Classify each as decoded still, auxiliary structure, or explicit `Unsupported` with libavif fixtures and bounded graph traversal. |
 | AVF-012 | Gain maps, auxiliary depth/alpha, thumbnails, and supplementary images cannot be enumerated or associated with the primary image. | Add a generic auxiliary-image relationship only after a fixture-backed use case; never flatten it silently into RGBA. |
 | AVF-013 | Sequence timing uses integer milliseconds and cannot retain exact timescale/duration, repetition, edit lists, or sample timing. | Replace timing through API-009 before claiming exact animated AVIF container parity. |
@@ -1155,10 +1154,10 @@ input; their Rust-only fields are tested through a separate defensive-model
 manifest rather than the Pillow parity matrix. Primary AVIF CICP declarations
 are likewise retained as source provenance through the bounded item parser; the
 dedicated contract test is defensive/specification evidence and does not add a
-synthetic parity row. Primary AVIF `irot`/`imir`/`pasp` declarations now follow the
-same source-provenance path; their legal values are validated without changing
+synthetic parity row. Primary AVIF `irot`/`imir`/`pasp`/`clap` declarations now
+follow the same source-provenance path; their legal values are validated without changing
 decoded pixels, and their contract test likewise adds no synthetic parity row.
-The managed feature-matrix runtime run `f6054909-6f00-450d-a9c8-08f5aaf36692`
+The managed feature-matrix runtime run `2e7f440a-e63e-4066-ab27-5af837577e6b`
 passed 727 tests with zero failures; its terminal log records matching native
 and `wasm32-wasip1` capability tables. Aggregate coverage and this runtime
 matrix are implementation evidence, not Pillow-parity coverage.

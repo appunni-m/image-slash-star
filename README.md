@@ -232,11 +232,11 @@ are validated before encoding.
 `ImageInfo::source` and `DecodedImage::source` retain structural source facts
 without changing the transfer bytes. TIFF currently records its exact
 `SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
-modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`
-and `pasp` properties are retained through
+modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`,
+`pasp`, and `clap` properties are retained through
 `SourceDescriptor::avif_transform()` as source provenance; decoded pixels are
-never rotated, mirrored, or rescaled. Codecs without a retained structural
-fact currently return an empty descriptor.
+never rotated, mirrored, rescaled, or cropped. Codecs without a retained
+structural fact currently return an empty descriptor.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller

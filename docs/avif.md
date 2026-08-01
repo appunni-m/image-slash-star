@@ -2,7 +2,7 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-01 on the working tree based on revision `00451646c1cc1d74cad8946ca3d9ba66b1316217`
+Reviewed: 2026-08-01 on the working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
@@ -121,14 +121,15 @@ than Pillow parity evidence, because Pillow's observable result has no
 equivalent item-level CICP field. Non-`nclx` profiles, track-only and auxiliary
 item properties, and AVIF ICC/EXIF/XMP remain future metadata slices.
 
-The primary item's `irot`, `imir`, and `pasp` properties are retained in
-`SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
+The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
+in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
 accepts the four legal counter-clockwise quarter-turn values, `imir` accepts
 the top/bottom or left/right axis, and `pasp` retains its positive horizontal
-and vertical spacing values through `AvifPixelAspectRatio`. These declarations
-are source provenance only: decoded pixels are never rotated, mirrored, or
-rescaled. `clap`, along with item-level ICC/EXIF/XMP and auxiliary
-relationships, remains open.
+and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
+positive width/height fractions and signed horizontal/vertical offsets through
+`AvifCleanAperture`. These declarations are source provenance only: decoded
+pixels are never rotated, mirrored, rescaled, or cropped. Item-level
+ICC/EXIF/XMP and auxiliary relationships remain open.
 
 ## Native FFI boundary
 
