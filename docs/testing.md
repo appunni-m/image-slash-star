@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `0c347fe79c4bae1ae32b811e2504539da9024e67`
+Reviewed: 2026-08-02 on the working tree based on revision `417b4d26934816e0284c5cee4fb67327cc0893d7`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -174,6 +174,10 @@ run. They are internal Rust coverage evidence, not Pillow parity rows and not
 a reason to add synthetic entries to `coverage_matrix.json`. Aggregate
 coverage therefore includes parity, ordinary Rust contracts, and permitted
 private state models while their evidence origins remain separate.
+The BMP encoder's private coverage model is limited to post-validation row,
+sink-checkpoint, cancellation, and overflow guardrails that a valid Pillow
+image cannot select; its real palette-rejection and pre-cancelled sink cases
+remain in the ordinary Rust contract test above.
 
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
@@ -184,7 +188,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `0c347fe79c4bae1ae32b811e2504539da9024e67`, the generated matrix
+For the current working tree based on revision `417b4d26934816e0284c5cee4fb67327cc0893d7`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -493,6 +497,9 @@ deterministic failing sink must be reported as `ImageError::OutputWrite` with
 the selected format and encode stage. Short writes, flush/finalize failures,
 and rollback cleanup remain future writer evidence, not claims made by this
 contract.
+The same contract exercises invalid-input errors through the generic JPEG
+whole-buffer fallback, with no sink write; those cases are Rust API/error
+evidence and are not added to the Pillow parity matrix.
 
 The cross-target determinism contract is machine-checked: a
 `determinism_tests` target computes SHA-256 over exact encoder output and
@@ -547,10 +554,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 46,568 | 46,568 |
-| Branches | 6,478 | 6,478 |
-| Functions | 2,587 | 2,587 |
-| Regions | 72,834 | 72,834 |
+| Lines | 46,788 | 46,788 |
+| Branches | 6,486 | 6,486 |
+| Functions | 2,606 | 2,606 |
+| Regions | 73,043 | 73,043 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -564,9 +571,9 @@ target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `185dec7e-e322-4eff-8907-167b6db7a705`
+Coverage MCP run: `a3ff585f-c4e5-4827-9d30-c6962ce2162b`
 
-Snapshot: `2b51bf94-d27c-42e4-bb40-7bd2d2eb2c7a`
+Snapshot: `10af331a-5981-412d-9eb0-34d505a47da4`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
