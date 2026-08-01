@@ -765,6 +765,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(rle8, Some(&token));
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
         let _ = decode(rle4, Some(&token));
     }
     let _ = metadata_bytes(b"");

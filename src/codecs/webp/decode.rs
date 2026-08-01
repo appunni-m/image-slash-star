@@ -265,6 +265,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(still, Some(&token));
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
         let _ = decode_sequence(
             animated,
             &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),

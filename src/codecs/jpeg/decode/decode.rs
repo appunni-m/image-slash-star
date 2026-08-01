@@ -573,6 +573,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(baseline, Some(&token));
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
         let _ = decode(progressive, Some(&token));
     }
 }
