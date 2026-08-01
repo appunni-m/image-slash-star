@@ -1721,6 +1721,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode_lzw(&pack_lzw_9(&[65]), 1);
     let _ = decode_lzw(&pack_lzw_9(&[65, 66, 257]), 2);
     let lzw_a = pack_lzw_9(&[65]);
+    for checks in 0..=6 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(
+            &tiny_tiled_layout_tiff(
+                1,
+                1,
+                8,
+                1,
+                1,
+                1,
+                COMPRESSION_LZW as u16,
+                &[&lzw_a],
+                Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+            ),
+            Some(&token),
+        );
+    }
     let _ = decode(
         &tiny_strip_tiff(
             1,
