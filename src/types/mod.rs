@@ -107,6 +107,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(AvifTransformProperties::new().is_empty());
     assert!(SourceDescriptor::new().is_empty());
 
+    for position in [
+        AvifChromaSamplePosition::Unknown,
+        AvifChromaSamplePosition::Vertical,
+        AvifChromaSamplePosition::Colocated,
+        AvifChromaSamplePosition::Reserved,
+    ] {
+        assert_eq!(
+            AvifChromaSamplePosition::from_code(position.code()),
+            position
+        );
+    }
+    assert_eq!(
+        AvifChromaSamplePosition::from_code(u8::MAX),
+        AvifChromaSamplePosition::Reserved
+    );
+
     // Exercise every short-circuit path of the source-color emptiness check
     // with descriptors that set exactly one field.
     assert!(
@@ -145,6 +161,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 matrix_coefficients: 6,
                 full_range: true,
             })
+            .is_empty()
+    );
+    assert!(
+        !SourceColor::new()
+            .with_avif_chroma_sample_position(AvifChromaSamplePosition::Unknown)
             .is_empty()
     );
     assert!(
@@ -1034,6 +1055,7 @@ pub struct SourceColor {
     chromaticities: Option<SourceChromaticities>,
     icc_profile: Option<RawIccProfile>,
     avif_color: Option<AvifColorProperties>,
+    avif_chroma_sample_position: Option<AvifChromaSamplePosition>,
     avif_content_light_level: Option<AvifContentLightLevel>,
     avif_mastering_display_color_volume: Option<AvifMasteringDisplayColorVolume>,
 }
@@ -1052,6 +1074,47 @@ pub struct AvifColorProperties {
     pub matrix_coefficients: u16,
     /// Whether the CICP declaration sets the full-range flag.
     pub full_range: bool,
+}
+
+/// Chroma sample position declared by an AVIF `av1C` record.
+///
+/// This records the source declaration only. It does not change the decoded
+/// transfer samples or request chroma resampling.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AvifChromaSamplePosition {
+    /// The chroma sample position is unknown or unspecified (AV1 code 0).
+    Unknown,
+    /// Chroma samples are vertically aligned (AV1 code 1).
+    Vertical,
+    /// Chroma samples are colocated with luma (AV1 code 2).
+    Colocated,
+    /// The AV1 reserved code was retained without reinterpretation (code 3).
+    Reserved,
+}
+
+impl AvifChromaSamplePosition {
+    /// Convert the two-bit AV1 declaration to its typed source descriptor.
+    #[must_use]
+    pub const fn from_code(code: u8) -> Self {
+        match code & 0x03 {
+            0 => Self::Unknown,
+            1 => Self::Vertical,
+            2 => Self::Colocated,
+            _ => Self::Reserved,
+        }
+    }
+
+    /// Return the exact two-bit AV1 declaration.
+    #[must_use]
+    pub const fn code(self) -> u8 {
+        match self {
+            Self::Unknown => 0,
+            Self::Vertical => 1,
+            Self::Colocated => 2,
+            Self::Reserved => 3,
+        }
+    }
 }
 
 /// Content light-level information declared by an AVIF `clli` property.
@@ -1449,6 +1512,7 @@ impl SourceColor {
             chromaticities: None,
             icc_profile: None,
             avif_color: None,
+            avif_chroma_sample_position: None,
             avif_content_light_level: None,
             avif_mastering_display_color_volume: None,
         }
@@ -1519,6 +1583,22 @@ impl SourceColor {
         self.avif_color
     }
 
+    /// Record the AV1 chroma sample position declared by an AVIF item.
+    #[must_use]
+    pub const fn with_avif_chroma_sample_position(
+        mut self,
+        position: AvifChromaSamplePosition,
+    ) -> Self {
+        self.avif_chroma_sample_position = Some(position);
+        self
+    }
+
+    /// Return the retained AVIF chroma sample position, when present.
+    #[must_use]
+    pub const fn avif_chroma_sample_position(&self) -> Option<AvifChromaSamplePosition> {
+        self.avif_chroma_sample_position
+    }
+
     /// Record the content-light-level information declared by an AVIF item.
     #[must_use]
     pub const fn with_avif_content_light_level(
@@ -1562,6 +1642,7 @@ impl SourceColor {
             && self.chromaticities.is_none()
             && self.icc_profile.is_none()
             && self.avif_color.is_none()
+            && self.avif_chroma_sample_position.is_none()
             && self.avif_content_light_level.is_none()
             && self.avif_mastering_display_color_volume.is_none()
     }

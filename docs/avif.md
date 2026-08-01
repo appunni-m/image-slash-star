@@ -114,11 +114,12 @@ decode subset" at the `StillDecode` stage. When an AVIF item declares an
 alpha auxiliary item, `SourceDescriptor::alpha()` reports `Straight`
 (unassociated), matching the AVIF alpha contract.
 
-The primary item's `colr`/`nclx` CICP declaration, `clli` content-light-level
+The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
+`clli` content-light-level
 property, `mdcv` mastering-display color volume, and `colr`/`prof` or `rICC` ICC
 profile are retained as source provenance in `SourceColor` on inspection, still
 decode, and the still-sequence fallback. The record contains color primaries,
-transfer characteristics, matrix coefficients, the full-range flag, maxCLL,
+chroma sample position, transfer characteristics, matrix coefficients, the full-range flag, maxCLL,
 maxPALL, exact mastering-display coordinates/luminance fields, and the exact
 ICC profile kind and bytes; it never applies color conversion or tone mapping.
 This is a bounded specification/defensive-model contract rather than Pillow
@@ -129,8 +130,8 @@ Recognized `Exif` items and `mime` items with content type exactly
 `application/rdf+xml` now follow the same raw-retention boundary as the decoded
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
-Non-ICC item profiles, chroma sample position, track-only and auxiliary item
-properties, and other non-primary item relationships remain future slices.
+Non-ICC item profiles, track-only and auxiliary item properties, and other
+non-primary item relationships remain future slices.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
 in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`

@@ -2755,19 +2755,21 @@ fn avif_boxes_match_the_container_contract() -> Result<(), Box<dyn std::error::E
 #[test]
 fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>>
 {
-    use image_slash_star::{AvifColorProperties, SourceColor};
+    use image_slash_star::{AvifChromaSamplePosition, AvifColorProperties, SourceColor};
 
     if cfg!(target_arch = "wasm32") || !cfg!(feature = "avif") {
         return Ok(());
     }
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let bytes = fs::read(root.join("tests/fixtures/input/images/avif/baseline.avif"))?;
-    let expected = SourceColor::new().with_avif_color(AvifColorProperties {
-        color_primaries: 1,
-        transfer_characteristics: 13,
-        matrix_coefficients: 6,
-        full_range: true,
-    });
+    let expected = SourceColor::new()
+        .with_avif_color(AvifColorProperties {
+            color_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
+            full_range: true,
+        })
+        .with_avif_chroma_sample_position(AvifChromaSamplePosition::Unknown);
     assert_eq!(
         expected.avif_color(),
         Some(AvifColorProperties {
@@ -2776,6 +2778,10 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
             matrix_coefficients: 6,
             full_range: true,
         })
+    );
+    assert_eq!(
+        expected.avif_chroma_sample_position(),
+        Some(AvifChromaSamplePosition::Unknown)
     );
 
     // This is defensive/specification evidence for an item property. Pillow
@@ -2875,7 +2881,7 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 #[test]
 fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
+        AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
         AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
         AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor, SourceDescriptor,
     };
@@ -3031,6 +3037,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             matrix_coefficients: 6,
             full_range: true,
         })
+        .with_avif_chroma_sample_position(AvifChromaSamplePosition::Unknown)
         .with_icc_profile(RawIccProfile {
             keyword: b"prof".to_vec(),
             data: b"pillow-rs-icc".to_vec(),
@@ -3073,6 +3080,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             matrix_coefficients: 6,
             full_range: true,
         })
+        .with_avif_chroma_sample_position(AvifChromaSamplePosition::Unknown)
         .with_icc_profile(RawIccProfile {
             keyword: b"rICC".to_vec(),
             data: b"pillow-rs-icc".to_vec(),
@@ -3106,6 +3114,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             matrix_coefficients: 6,
             full_range: true,
         })
+        .with_avif_chroma_sample_position(AvifChromaSamplePosition::Unknown)
         .with_avif_content_light_level(AvifContentLightLevel::new(500, 100));
     assert_eq!(
         expected_clli.avif_content_light_level(),
@@ -3154,6 +3163,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             matrix_coefficients: 6,
             full_range: true,
         })
+        .with_avif_chroma_sample_position(AvifChromaSamplePosition::Unknown)
         .with_avif_mastering_display_color_volume(expected_mdcv_value);
     assert_eq!(
         expected_mdcv.avif_mastering_display_color_volume(),
