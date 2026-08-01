@@ -1,6 +1,7 @@
 //! RFC 1950 zlib wrapper and RFC 1951 DEFLATE implementation.
 
 use super::{CompressionResult, malformed, parameter};
+use crate::codecs::error::CodecError;
 
 pub(super) const LENGTH_BASE: [usize; 29] = [
     3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131,
@@ -256,9 +257,12 @@ enum DecodeStatus {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn decompress_zlib_with_limit(data: &[u8], max_output: usize) -> CompressionResult<Vec<u8>> {
     if data.len() < 6 {
-        return Err(malformed(
-            "zlib stream is shorter than its header and trailer",
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: 6,
+            message:
+                "invalid compressed stream: zlib stream is shorter than its header and trailer"
+                    .to_owned(),
+        });
     }
     let cmf = data[0];
     let flg = data[1];
@@ -690,7 +694,10 @@ impl<'a> BitReader<'a> {
         // which can overflow on 32-bit WASM for otherwise valid large slices.
         let required_bytes = bit_offset.saturating_add(usize::from(width)).div_ceil(8);
         if self.data.len().saturating_sub(byte_position) < required_bytes {
-            return Err(malformed("DEFLATE bit read exceeds the input"));
+            return Err(CodecError::NeedMore {
+                minimum: self.data.len().saturating_add(1),
+                message: "invalid compressed stream: DEFLATE bit read exceeds the input".to_owned(),
+            });
         }
         let mut value = 0u32;
         for shift in 0..width {
