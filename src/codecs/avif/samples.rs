@@ -1029,18 +1029,16 @@ impl Meta {
         {
             source_color = source_color.with_avif_color(color);
         }
-        let mut chroma_sample_position = None;
-        for property in self.associated(self.primary_item_id) {
+        if let Some(span) = self.associated(self.primary_item_id).find_map(|property| {
             if let Property::Av1C(span) = property {
-                if chroma_sample_position.is_some() {
-                    return Err(parse_failure!());
-                }
-                let bytes = span.bytes(input)?;
-                let flags = *bytes.get(2).ok_or_else(|| parse_failure!())?;
-                chroma_sample_position = Some(AvifChromaSamplePosition::from_code(flags & 3));
+                Some(*span)
+            } else {
+                None
             }
-        }
-        if let Some(chroma_sample_position) = chroma_sample_position {
+        }) {
+            let bytes = span.bytes(input)?;
+            let flags = *bytes.get(2).ok_or_else(|| parse_failure!())?;
+            let chroma_sample_position = AvifChromaSamplePosition::from_code(flags & 3);
             source_color = source_color.with_avif_chroma_sample_position(chroma_sample_position);
         }
         if let Some(profile) =
