@@ -88,6 +88,7 @@ mod cancel;
 pub mod capabilities;
 mod codecs;
 pub mod decode_policy;
+mod diagnostic;
 pub mod encode_options;
 pub mod source;
 pub mod types;
@@ -99,6 +100,7 @@ pub use capabilities::{
 };
 pub(crate) use decode_policy::SequenceDecodeBudget;
 pub use decode_policy::{DecodeLimits, DecodePolicy};
+pub use diagnostic::{DiagnosticKind, ImageDiagnostic};
 pub use encode_options::*;
 pub use source::{EncodedImage, EncodedImageView};
 pub use types::*;
@@ -369,6 +371,28 @@ pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
     decode_with_policy(data, &DecodePolicy::default())
 }
 
+fn finish_decoded<T>(
+    format: ImageFormat,
+    content: T,
+    consumed_bytes: Option<usize>,
+    input_len: usize,
+    stage: ImageErrorStage,
+    mut diagnostics: Vec<ImageDiagnostic>,
+) -> Decoded<T> {
+    if let Some(consumed) = consumed_bytes
+        && consumed < input_len
+    {
+        diagnostics.push(ImageDiagnostic {
+            kind: DiagnosticKind::TrailingDataIgnored,
+            format,
+            stage: Some(stage),
+            offset: Some(consumed as u64),
+            identity: Some("trailing_input"),
+        });
+    }
+    Decoded::new(format, content, consumed_bytes).with_diagnostics(diagnostics)
+}
+
 /// Decode with an explicit caller-controlled policy.
 ///
 /// The encoded-input byte limit is checked before format detection. Configured
@@ -392,8 +416,16 @@ pub fn decode_with_policy(
         let info = codecs::inspect_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
-    codecs::decode_format(data, format)
-        .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
+    codecs::decode_format(data, format).map(|(image, consumed_bytes, diagnostics)| {
+        finish_decoded(
+            format,
+            image,
+            consumed_bytes,
+            data.len(),
+            ImageErrorStage::StillDecode,
+            diagnostics,
+        )
+    })
 }
 
 /// Incremental still decode for callers that are still receiving input.
@@ -441,8 +473,16 @@ pub fn decode_prefix_with_policy(
         let info = codecs::inspect_basic_prefix_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
-    codecs::decode_prefix_format(data, format)
-        .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
+    codecs::decode_prefix_format(data, format).map(|(image, consumed_bytes, diagnostics)| {
+        finish_decoded(
+            format,
+            image,
+            consumed_bytes,
+            data.len(),
+            ImageErrorStage::StillDecode,
+            diagnostics,
+        )
+    })
 }
 
 /// Decode a still image with cooperative cancellation.
@@ -484,8 +524,16 @@ pub fn decode_with_token_and_policy(
         let info = codecs::inspect_basic_prefix_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
-    codecs::decode_token_format(data, format, token)
-        .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
+    codecs::decode_token_format(data, format, token).map(|(image, consumed_bytes, diagnostics)| {
+        finish_decoded(
+            format,
+            image,
+            consumed_bytes,
+            data.len(),
+            ImageErrorStage::StillDecode,
+            diagnostics,
+        )
+    })
 }
 
 /// Decode a still image into an exact-size caller-provided destination.
@@ -562,8 +610,18 @@ pub fn decode_sequence_with_policy(
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
         budget.charge_primary(&info)?;
     }
-    codecs::decode_sequence_format(data, format, &mut budget)
-        .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
+    codecs::decode_sequence_format(data, format, &mut budget).map(
+        |(sequence, consumed_bytes, diagnostics)| {
+            finish_decoded(
+                format,
+                sequence,
+                consumed_bytes,
+                data.len(),
+                ImageErrorStage::SequenceDecode,
+                diagnostics,
+            )
+        },
+    )
 }
 
 /// Incremental sequence decode for callers that are still receiving input.
@@ -600,8 +658,18 @@ pub fn decode_sequence_prefix_with_policy(
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
         budget.charge_primary(&info)?;
     }
-    codecs::decode_sequence_prefix_format(data, format, &mut budget)
-        .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
+    codecs::decode_sequence_prefix_format(data, format, &mut budget).map(
+        |(sequence, consumed_bytes, diagnostics)| {
+            finish_decoded(
+                format,
+                sequence,
+                consumed_bytes,
+                data.len(),
+                ImageErrorStage::SequenceDecode,
+                diagnostics,
+            )
+        },
+    )
 }
 
 /// Decode every retained frame with cooperative cancellation.
@@ -644,8 +712,18 @@ pub fn decode_sequence_with_token_and_policy(
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
         budget.charge_primary(&info)?;
     }
-    codecs::decode_sequence_token_format(data, format, &mut budget, token)
-        .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
+    codecs::decode_sequence_token_format(data, format, &mut budget, token).map(
+        |(sequence, consumed_bytes, diagnostics)| {
+            finish_decoded(
+                format,
+                sequence,
+                consumed_bytes,
+                data.len(),
+                ImageErrorStage::SequenceDecode,
+                diagnostics,
+            )
+        },
+    )
 }
 
 /// Inspect encoded image headers without decoding compressed pixel payloads.

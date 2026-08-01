@@ -22,9 +22,11 @@ Use these sources in order:
    legacy-pair migration boundary for typed encoder options.
 5. `tests/fixtures/decode_policy_manifest.json` defines caller-controlled
    policy boundaries that Pillow does not expose.
-6. `tests/fixtures/outputs/` contains exact expected metadata, pixels, frames,
+6. `tests/fixtures/diagnostic_manifest.json` defines non-fatal diagnostic
+   fields whose stable Rust representation has no Pillow result field.
+7. `tests/fixtures/outputs/` contains exact expected metadata, pixels, frames,
    entropy traces, and encoded files.
-7. The Rust integration harnesses execute those contracts.
+8. The Rust integration harnesses execute those contracts.
 
 Implementation comments and prose do not override the generated fixture
 contract.
@@ -76,7 +78,7 @@ Depending on the manifest row, the harness compares:
 - success or error outcome;
 - exact Pillow exception type/message where the oracle raises an exception;
 - separate stable Rust error kind, selected format, diagnostic-presence policy,
-  and evidence origin;
+  and evidence origin for fatal outcomes;
 - encoded storage bit depth and the origin class of that assertion;
 - structural source byte order for successful TIFF inspection, still decode,
   and every retained TIFF page, plus the origin class of each assertion;
@@ -95,6 +97,22 @@ failure.
 
 Approximate similarity, hashes without byte comparison, and file-size-only
 assertions are not parity evidence.
+
+### Pillow parity versus non-fatal diagnostics
+
+The generated Pillow parity matrix has no `diagnostics` field: Pillow exposes
+the decoded result and, for failures, an exception, but not a portable
+structured warning/recovery record. Its rows therefore prove the observable
+outer result—success or error, pixels, metadata, frames, and encoded bytes—only
+where Pillow exposes that result. The separate
+`tests/fixtures/diagnostic_manifest.json` is labeled `defensive_model`; it
+asserts the Rust-only `DiagnosticKind`, operation stage, byte offset, and
+stable structure identity. Its `pillow_outcome: "ok"` and unchanged pixels are
+supporting fixture evidence, not proof that Pillow returned an equivalent
+diagnostic. The accepted cases are a non-standard GIF graphic-control size,
+invalid compressed PNG `zTXt`/`iCCP`/`iTXt`, and the existing trailing-input
+policy. No coverage-only unit or `cfg(coverage)` test is used to manufacture
+these paths: real fixtures and the defensive manifest drive them.
 
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
@@ -197,11 +215,13 @@ registered with Coverage MCP as `feature-matrix-runtime-tables`.
 The trailing-input manifest pins the per-format trailing policy: three payloads
 appended to a valid asset of every format must produce identical still pixels,
 identical sequence frames, and identical inspection results, with
-`consumed_bytes` unchanged. JPEG, PNG, GIF, WebP, TIFF, and AVIF report the
+`consumed_bytes` unchanged and a `TrailingDataIgnored` diagnostic naming the
+first ignored byte on formats with a defined extent. JPEG, PNG, GIF, WebP,
+TIFF, and AVIF report the
 container-defined extent; BMP and ICO report `None`. Pillow 12.2.0 accepts all
 three payloads for every format (fixture evidence), while the consumed values
-and policy labels are `defensive_model` evidence. The manifest is SHA-256
-pinned and exercised only in each format's enabled feature lane.
+and diagnostic fields are `defensive_model` evidence. The manifest is
+SHA-256-pinned and exercised only in each format's enabled feature lane.
 
 The verification-strength contract is table-driven rather than manifest rows:
 for every format, the enabled feature lane loads the smallest Pillow-verified
@@ -237,9 +257,12 @@ rejects the same input before retention can bypass the policy extent.
 The metadata-record contract is table-driven as well: known PNG metadata
 chunks (tEXt/zTXt/iCCP/eXIf) inserted into a minimal PNG must appear as raw,
 unparsed `OpaqueMetadata` records in original order while unknown chunks stay
-in `opaque_blocks`; compressed payloads are asserted byte-for-byte without
-inflation. Still, fallback-sequence, and APNG sequence decode must agree, and
-default encoding must not replay any metadata chunk.
+in `opaque_blocks`; valid compressed payloads are bounded-validated and then
+asserted byte-for-byte without exposing inflated text/profile bytes. Separate
+diagnostic-manifest rows prove that invalid compressed `zTXt`/`iCCP`/`iTXt`
+members are ignored with usable pixels and a stable diagnostic instead of
+being retained as metadata. Still, fallback-sequence, and APNG sequence
+decode must agree, and default encoding must not replay any metadata chunk.
 
 The source-color contract is table-driven: well-formed PNG sRGB/gAMA/cHRM/iCCP
 chunks are parsed into `SourceColor` (intent, gamma, chromaticities, raw

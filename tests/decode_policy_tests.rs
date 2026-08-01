@@ -1056,6 +1056,13 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
             other => panic!("{}: unknown expected format `{other}`", format.name),
         };
         let expected_consumed = format.consumed_bytes.map(usize::try_from).transpose()?;
+        let expected_still_diagnostics = expected_consumed.map(|consumed| img::ImageDiagnostic {
+            kind: img::DiagnosticKind::TrailingDataIgnored,
+            format: expected_format,
+            stage: Some(img::ImageErrorStage::StillDecode),
+            offset: Some(consumed as u64),
+            identity: Some("trailing_input"),
+        });
 
         let bytes = fs::read(root.join(&format.asset_path))?;
         let base_image = img::decode(&bytes)?;
@@ -1081,6 +1088,13 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
             }
             let image = img::decode(&trailing)?;
             assert_eq!(
+                image.diagnostics,
+                expected_still_diagnostics.into_iter().collect::<Vec<_>>(),
+                "{}/{} still diagnostics",
+                format.name,
+                payload.name
+            );
+            assert_eq!(
                 image.content.pixels, base_image.content.pixels,
                 "{}/{} still pixels",
                 format.name, payload.name
@@ -1091,6 +1105,21 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
                 format.name, payload.name
             );
             let sequence = img::decode_sequence(&trailing)?;
+            let expected_sequence_diagnostics = expected_consumed
+                .map(|consumed| img::ImageDiagnostic {
+                    kind: img::DiagnosticKind::TrailingDataIgnored,
+                    format: expected_format,
+                    stage: Some(img::ImageErrorStage::SequenceDecode),
+                    offset: Some(consumed as u64),
+                    identity: Some("trailing_input"),
+                })
+                .into_iter()
+                .collect::<Vec<_>>();
+            assert_eq!(
+                sequence.diagnostics, expected_sequence_diagnostics,
+                "{}/{} sequence diagnostics",
+                format.name, payload.name
+            );
             assert_eq!(
                 sequence.content.frames, base_sequence.content.frames,
                 "{}/{} sequence frames",

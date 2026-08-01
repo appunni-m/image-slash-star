@@ -34,6 +34,7 @@ HASHED_FILES = {
     "malformed_ledger": "tests/fixtures/malformed_ledger.json",
     "capability_tables": "tests/fixtures/capability_tables.json",
     "incremental_input": "tests/fixtures/incremental_input_manifest.json",
+    "diagnostic": "tests/fixtures/diagnostic_manifest.json",
 }
 
 DOCS = [

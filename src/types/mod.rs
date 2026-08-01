@@ -660,6 +660,13 @@ pub struct Decoded<T> {
     /// treat the complete input as the source; it does not mean trailing
     /// bytes were rejected.
     pub consumed_bytes: Option<usize>,
+    /// Non-fatal recoverable conditions observed while decoding.
+    ///
+    /// Empty unless the decoder tolerated a manifest-proven recoverable
+    /// condition (for example ignored trailing bytes, a non-standard GIF
+    /// graphic-control size, or invalid compressed PNG metadata accepted by
+    /// the fixture contract). Diagnostics never change the decoded result.
+    pub diagnostics: Vec<crate::ImageDiagnostic>,
 }
 
 /// Header metadata obtained without materializing compressed pixel payloads.
@@ -1004,13 +1011,22 @@ impl<T> Decoded<T> {
             format,
             content,
             consumed_bytes,
+            diagnostics: Vec::new(),
         }
+    }
+
+    /// Attach the non-fatal diagnostics observed while decoding.
+    #[must_use]
+    pub fn with_diagnostics(mut self, diagnostics: Vec<crate::ImageDiagnostic>) -> Self {
+        self.diagnostics = diagnostics;
+        self
     }
 
     /// Borrow the decoded content without discarding its source format.
     #[must_use]
-    pub const fn as_ref(&self) -> Decoded<&T> {
+    pub fn as_ref(&self) -> Decoded<&T> {
         Decoded::new(self.format, &self.content, self.consumed_bytes)
+            .with_diagnostics(self.diagnostics.clone())
     }
 
     /// Consume the envelope and return only its decoded content.

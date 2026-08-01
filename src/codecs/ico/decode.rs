@@ -176,7 +176,7 @@ fn decode_entry(
         #[cfg(feature = "png")]
         {
             crate::codecs::png::decode::decode(entry_data, token)
-                .map(|(image, _)| image)
+                .map(|(image, _, _)| image)
                 .map_err(terminalize)
         }
         #[cfg(not(feature = "png"))]
