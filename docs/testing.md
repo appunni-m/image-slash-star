@@ -302,13 +302,18 @@ The incremental-input contract is machine-checked for all eight formats:
 progress-aware `NeedMoreData { minimum }` for incomplete prefixes, and return
 terminal `UnknownFormat` for bytes that can never match; `inspect_basic_prefix`
 must return the same header facts as `inspect_basic` as soon as they are
-provable. The feature-gate suite sweeps every byte boundary of one valid
-fixture per format and asserts that each retry minimum exceeds the current
-prefix, that retrying with `minimum` bytes makes progress, and that the
-complete-slice APIs never expose the non-terminal status: legacy detection
-reports `UnknownFormat` for incomplete signatures and legacy inspection maps
-codec-level truncation back to `Malformed` with unchanged messages. Terminal
-results must never be retried.
+provable. The evidence is a committed defensive-model manifest
+(`tests/fixtures/incremental_input_manifest.json`, hashed in the claim
+ledger) pinning every detection edge case with its exact minimum or terminal
+classification, per-format signature and need-more spot checks with exact
+minimums, and the documented legacy divergence for a size-one AVIF `ftyp`
+box that the Pillow predicate still recognizes. The feature-gate suite also
+sweeps every byte boundary of one valid fixture per format and asserts that
+each retry minimum exceeds the current prefix, that retrying with `minimum`
+bytes makes progress, and that the complete-slice APIs never expose the
+non-terminal status: legacy detection reports `UnknownFormat` for incomplete
+signatures and legacy inspection maps codec-level truncation back to
+`Malformed` with unchanged messages. Terminal results must never be retried.
 
 The borrowed-view contract is table-driven: `EncodedImageView` over
 PNG/GIF/WebP/TIFF fixtures must match the free functions exactly for inspect,

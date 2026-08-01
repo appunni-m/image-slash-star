@@ -136,6 +136,93 @@ impl FromJson for EncodeOptionAcceptanceRow {
     }
 }
 
+struct IncrementalInputManifest {
+    format_version: u32,
+    assertion_origin: String,
+    detection_cases: Vec<DetectionCase>,
+    inspection_fixtures: Vec<InspectionFixture>,
+}
+
+struct DetectionCase {
+    id: String,
+    input_hex: String,
+    expect: String,
+    minimum: Option<u64>,
+    format: Option<String>,
+    legacy_parity: Option<bool>,
+}
+
+struct InspectionFixture {
+    id: String,
+    format: String,
+    asset_path: String,
+    signature_prefix: u64,
+    signature_minimum: u64,
+    need_more_prefix: u64,
+    need_more_minimum: u64,
+    basic_prefix: Option<u64>,
+    basic_frame_count_complete: Option<bool>,
+}
+
+impl FromJson for IncrementalInputManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            detection_cases: object.take("detection_cases")?,
+            inspection_fixtures: object.take("inspection_fixtures")?,
+        })
+    }
+}
+
+impl FromJson for DetectionCase {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            input_hex: object.take("input_hex")?,
+            expect: object.take("expect")?,
+            minimum: object.take("minimum")?,
+            format: object.take("format")?,
+            legacy_parity: object.take("legacy_parity")?,
+        })
+    }
+}
+
+impl FromJson for InspectionFixture {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            format: object.take("format")?,
+            asset_path: object.take("asset_path")?,
+            signature_prefix: object.take("signature_prefix")?,
+            signature_minimum: object.take("signature_minimum")?,
+            need_more_prefix: object.take("need_more_prefix")?,
+            need_more_minimum: object.take("need_more_minimum")?,
+            basic_prefix: object.take("basic_prefix")?,
+            basic_frame_count_complete: object.take("basic_frame_count_complete")?,
+        })
+    }
+}
+
+fn hex_bytes(hex: &str) -> Vec<u8> {
+    assert!(
+        hex.len().is_multiple_of(2),
+        "manifest hex must have an even length"
+    );
+    hex.as_bytes()
+        .chunks_exact(2)
+        .map(|pair| {
+            let pair = std::str::from_utf8(pair)
+                .unwrap_or_else(|error| panic!("invalid hex encoding: {error}"));
+            u8::from_str_radix(pair, 16)
+                .unwrap_or_else(|error| panic!("invalid hex digit {pair:?}: {error}"))
+        })
+        .collect()
+}
+
 fn format(name: &str) -> (ImageFormat, &'static str, bool) {
     match name {
         "jpeg" => (ImageFormat::Jpeg, "jpeg", cfg!(feature = "jpeg")),
@@ -2999,105 +3086,177 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
 #[test]
 fn incremental_detection_reports_exact_minimums_and_terminal_results()
 -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::{ImageError, ImageErrorKind};
+    // The committed defensive-model manifest pins every detection edge case:
+    // exact minimums, terminal unknowns, and legacy complete-slice parity.
+    use image_slash_star::{ImageError, ImageErrorKind, ImageErrorStage};
 
-    type DetectionExpectation = Option<Result<ImageFormat, u64>>;
-
-    // None means terminal UnknownFormat; Some(Ok) means a complete signature;
-    // Some(Err(minimum)) means an incomplete prefix needing `minimum` total
-    // bytes. Near-miss AVIF values remain need-more until the box size,
-    // fourcc, and (for mif1/msf1) complete compatible-brand list decide.
-    let cases: &[(&[u8], DetectionExpectation)] = &[
-        (b"", Some(Err(2))),
-        (b"\xff", Some(Err(3))),
-        (b"\xff\xd8", Some(Err(3))),
-        (b"\xff\xd8\xff", Some(Ok(ImageFormat::Jpeg))),
-        (b"\x89PNG\r\n\x1a", Some(Err(8))),
-        (b"\x89PNG\r\n\x1a\n", Some(Ok(ImageFormat::Png))),
-        (b"GIF8", Some(Err(6))),
-        (b"GIF87a", Some(Ok(ImageFormat::Gif))),
-        (b"GIF89a", Some(Ok(ImageFormat::Gif))),
-        (b"GIF88", Some(Err(12))),
-        (b"B", Some(Err(2))),
-        (b"BM", Some(Ok(ImageFormat::Bmp))),
-        (b"R", Some(Err(4))),
-        (b"RIFF", Some(Err(8))),
-        (b"RIFF\0\0\0\0", Some(Err(12))),
-        (b"RIFF\0\0\0\0WEB", Some(Err(12))),
-        (b"RIFF\0\0\0\0WEBP", Some(Err(16))),
-        (b"RIFF\0\0\0\0WEBPVP8 ", Some(Ok(ImageFormat::WebP))),
-        (b"RIFF\0\0\0\0WAVE", None),
-        (b"RIFF\0\0\0\0WEBPNONE", None),
-        (b"MM", Some(Err(4))),
-        (b"MM\0\x2a", Some(Ok(ImageFormat::Tiff))),
-        (b"II\x2a\0", Some(Ok(ImageFormat::Tiff))),
-        (b"MM\x2a\0", Some(Ok(ImageFormat::Tiff))),
-        (b"II\0\x2a", Some(Ok(ImageFormat::Tiff))),
-        (b"MM\0\x2b", Some(Ok(ImageFormat::Tiff))),
-        (b"II\x2b\0", Some(Ok(ImageFormat::Tiff))),
-        (b"II\x2a", Some(Err(4))),
-        (b"MM\0\0", Some(Err(12))),
-        (b"\0\0", Some(Err(4))),
-        (b"\0\0\x01", Some(Err(4))),
-        (b"\0\0\x01\0", Some(Ok(ImageFormat::Ico))),
-        (b"\0\0\x02\0", Some(Ok(ImageFormat::Ico))),
-        (b"\0\0\0\x01", None),
-        (b"\0\0\0\x08XXXX", Some(Err(12))),
-        (b"\0\0\0\x08ftypXXXX", None),
-        (b"\0\0\0\x08ftypavif", Some(Ok(ImageFormat::Avif))),
-        (b"\0\0\0\x0cftyp", Some(Err(12))),
-        (b"\0\0\0\x14ftypmif1", Some(Err(20))),
-        (
-            b"\0\0\0\x18ftypmif1AAAAavifXXXX",
-            Some(Ok(ImageFormat::Avif)),
-        ),
-        (b"\0\0\0\x15ftypmif1", None),
-        (b"\0\0\0\0", None),
-        (b"\0\0\0\x01ftypavif", None),
-        (b"XXXX", Some(Err(12))),
-    ];
-
-    for (input, expected) in cases {
-        let actual = image_slash_star::detect_prefix(input);
-        match (&actual, expected) {
-            (Ok(format), Some(Ok(expected_format))) => {
-                assert_eq!(format, expected_format, "input {input:?}");
-            }
-            (Err(ImageError::NeedMoreData { minimum, .. }), Some(Err(expected_minimum))) => {
-                assert_eq!(minimum, expected_minimum, "input {input:?}");
-                let error = match &actual {
-                    Ok(format) => {
-                        panic!("detection must fail with NeedMoreData for {input:?}: {format:?}")
-                    }
-                    Err(error) => error,
-                };
-                assert_eq!(error.kind(), ImageErrorKind::NeedMoreData);
-                assert_eq!(error.minimum_input(), Some(*expected_minimum));
-                assert_eq!(error.format(), None);
-                assert_eq!(error.stage(), None);
-            }
-            (Err(ImageError::UnknownFormat), None) => {
-                let error = match &actual {
-                    Ok(format) => {
-                        panic!("detection must fail with UnknownFormat for {input:?}: {format:?}")
-                    }
-                    Err(error) => error,
-                };
-                assert_eq!(error.minimum_input(), None, "input {input:?}");
-            }
-            (actual, expected) => {
-                panic!("input {input:?}: expected {expected:?}, got {actual:?}");
-            }
-        }
-        // The complete-slice API never exposes the non-terminal status: it
-        // keeps reporting UnknownFormat for incomplete signatures.
-        let legacy = image_slash_star::detect_format(input);
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest: IncrementalInputManifest = json::from_str(&fs::read_to_string(
+        root.join("tests/fixtures/incremental_input_manifest.json"),
+    )?)?;
+    assert_eq!(manifest.format_version, 1);
+    assert_eq!(manifest.assertion_origin, "defensive_model");
+    let mut ids = HashSet::new();
+    for case in &manifest.detection_cases {
         assert!(
-            !matches!(legacy, Err(ImageError::NeedMoreData { .. })),
-            "legacy detection must not return NeedMoreData for {input:?}"
+            ids.insert(case.id.clone()),
+            "duplicate detection case {}",
+            case.id
         );
-        if let Some(Ok(expected_format)) = expected {
-            assert_eq!(legacy, Ok(*expected_format));
+        let input = hex_bytes(&case.input_hex);
+        let actual = image_slash_star::detect_prefix(&input);
+        match case.expect.as_str() {
+            "identified" => {
+                let (expected_format, _, _) = format(
+                    case.format
+                        .as_deref()
+                        .unwrap_or_else(|| panic!("identified case {} needs a format", case.id)),
+                );
+                assert_eq!(actual, Ok(expected_format), "detection case {}", case.id);
+                assert_eq!(
+                    image_slash_star::detect_format(&input),
+                    Ok(expected_format),
+                    "legacy detection case {}",
+                    case.id
+                );
+            }
+            "need_more" => {
+                let error = match actual {
+                    Ok(found) => panic!(
+                        "detection case {} must need more data, got {found:?}",
+                        case.id
+                    ),
+                    Err(error) => error,
+                };
+                assert_eq!(
+                    error.kind(),
+                    ImageErrorKind::NeedMoreData,
+                    "case {}",
+                    case.id
+                );
+                assert_eq!(error.minimum_input(), case.minimum, "case {}", case.id);
+                assert_eq!(error.format(), None, "case {}", case.id);
+                assert_eq!(error.stage(), None, "case {}", case.id);
+                assert_eq!(
+                    image_slash_star::detect_format(&input),
+                    Err(ImageError::UnknownFormat),
+                    "legacy detection must stay terminal for {}",
+                    case.id
+                );
+            }
+            "unknown" => {
+                assert_eq!(
+                    actual,
+                    Err(ImageError::UnknownFormat),
+                    "detection case {}",
+                    case.id
+                );
+                if case.legacy_parity.unwrap_or(true) {
+                    assert_eq!(
+                        image_slash_star::detect_format(&input),
+                        Err(ImageError::UnknownFormat),
+                        "legacy detection case {}",
+                        case.id
+                    );
+                }
+            }
+            expect => panic!("unknown manifest expectation {expect:?} for {}", case.id),
+        }
+    }
+
+    for fixture in &manifest.inspection_fixtures {
+        let (expected_format, _, enabled) = format(&fixture.format);
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(&fixture.asset_path))?;
+        let full = image_slash_star::inspect_basic_prefix(&bytes)
+            .unwrap_or_else(|error| panic!("fixture {} must inspect fully: {error}", fixture.id));
+        assert_eq!(
+            full,
+            image_slash_star::inspect_basic(&bytes)?,
+            "fixture {} full result",
+            fixture.id
+        );
+
+        let signature_prefix = usize::try_from(fixture.signature_prefix)?;
+        let error = match image_slash_star::inspect_basic_prefix(&bytes[..signature_prefix]) {
+            Ok(info) => panic!(
+                "fixture {} signature prefix must need more data: {info:?}",
+                fixture.id
+            ),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            ImageErrorKind::NeedMoreData,
+            "fixture {}",
+            fixture.id
+        );
+        assert_eq!(
+            error.minimum_input(),
+            Some(fixture.signature_minimum),
+            "fixture {}",
+            fixture.id
+        );
+        assert_eq!(error.format(), None, "fixture {}", fixture.id);
+        assert_eq!(error.stage(), None, "fixture {}", fixture.id);
+
+        let need_more_prefix = usize::try_from(fixture.need_more_prefix)?;
+        let error = match image_slash_star::inspect_basic_prefix(&bytes[..need_more_prefix]) {
+            Ok(info) => panic!(
+                "fixture {} need-more prefix must need more data: {info:?}",
+                fixture.id
+            ),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            ImageErrorKind::NeedMoreData,
+            "fixture {}",
+            fixture.id
+        );
+        assert_eq!(
+            error.minimum_input(),
+            Some(fixture.need_more_minimum),
+            "fixture {}",
+            fixture.id
+        );
+        assert_eq!(
+            error.format(),
+            Some(expected_format),
+            "fixture {}",
+            fixture.id
+        );
+        assert_eq!(
+            error.stage(),
+            Some(ImageErrorStage::Inspection),
+            "fixture {}",
+            fixture.id
+        );
+        let legacy = match image_slash_star::inspect_basic(&bytes[..need_more_prefix]) {
+            Ok(info) => panic!(
+                "legacy must reject the need-more prefix for {}: {info:?}",
+                fixture.id
+            ),
+            Err(error) => error,
+        };
+        assert_eq!(
+            legacy.kind(),
+            ImageErrorKind::Malformed,
+            "fixture {}",
+            fixture.id
+        );
+
+        if let Some(basic_prefix) = fixture.basic_prefix {
+            let info =
+                image_slash_star::inspect_basic_prefix(&bytes[..usize::try_from(basic_prefix)?])?;
+            assert_eq!(
+                info.frame_count_complete,
+                fixture.basic_frame_count_complete.unwrap_or(true),
+                "fixture {} basic completeness",
+                fixture.id
+            );
         }
     }
     Ok(())
