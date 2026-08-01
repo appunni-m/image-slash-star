@@ -133,7 +133,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // Pillow cannot supply a caller token, so these deterministic cancellation
     // edges belong to the Rust-only internal checkpoint coverage hook rather
     // than the Pillow parity matrix.
-    for checks in [0, 1, 6] {
+    for checks in [0, 1, 5, 6] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_sequence_with_token(&sequence, &GifEncodeOptions::default(), Some(&token));
