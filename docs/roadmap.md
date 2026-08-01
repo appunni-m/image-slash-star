@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`
+Reviewed: 2026-08-01 on the working tree based on revision `291f21fc613c17aefc131718fcfc68b65f737cd0`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -54,7 +54,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `627153f108b3410715305cf75bda5935761ee5c1`,
+The correction evidence below is the working-tree state based on `291f21fc613c17aefc131718fcfc68b65f737cd0`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -195,10 +195,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`babcab83-4d9a-424d-b446-31bcb55a41f6`, snapshot
-`27dad99b-32eb-4d42-8993-5e202e01b091`, passed with zero failures or
-skips and reports 45,210/45,210 lines, 6,390/6,390 branches,
-2,497/2,497 functions, and 71,077/71,077 regions.
+`881147c6-3247-4849-bf20-9e4aa4c4ffce`, snapshot
+`8f91ff19-4a27-4aa5-928e-28785dee7ef4`, passed with zero failures or
+skips and reports 45,289/45,289 lines, 6,408/6,408 branches,
+2,506/2,506 functions, and 71,191/71,191 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -1165,10 +1165,14 @@ Primary AVIF `clli` content-light-level declarations now follow the same
 source-provenance path through `SourceColor`; maxCLL and maxPALL are retained
 without tone mapping, and the contract test likewise adds no synthetic parity
 row.
-The managed feature-matrix runtime run `2e7f440a-e63e-4066-ab27-5af837577e6b`
-passed 727 tests with zero failures; its terminal log records matching native
-and `wasm32-wasip1` capability tables. Aggregate coverage and this runtime
-matrix are implementation evidence, not Pillow-parity coverage.
+Historical managed feature-matrix runtime evidence comes from run
+`2e7f440a-e63e-4066-ab27-5af837577e6b`, submitted against the earlier revision
+`ebd6bbf4f826c4a532b49a15761c27bfbdd4249e`; it passed 727 tests with zero
+failures and its terminal log records matching native and `wasm32-wasip1`
+capability tables. A revision-bound rerun for
+`291f21fc613c17aefc131718fcfc68b65f737cd0` is in progress as run
+`5bc37abb-d7d1-4ebd-be7a-7689f080c256`. Aggregate coverage and runtime matrix
+results are implementation evidence, not Pillow-parity coverage.
 
 1. Add metadata retention, remaining decode limits, incremental I/O, target runtime
    execution, fuzzing, and benchmarks in the existing roadmap order.

@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`
+Reviewed: 2026-08-01 on the working tree based on revision `291f21fc613c17aefc131718fcfc68b65f737cd0`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -132,7 +132,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`, the generated matrix
+For the current working tree based on revision `291f21fc613c17aefc131718fcfc68b65f737cd0`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -459,24 +459,27 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,210 | 45,210 |
-| Branches | 6,390 | 6,390 |
-| Functions | 2,497 | 2,497 |
-| Regions | 71,077 | 71,077 |
+| Lines | 45,289 | 45,289 |
+| Branches | 6,408 | 6,408 |
+| Functions | 2,506 | 2,506 |
+| Regions | 71,191 | 71,191 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Separate managed runtime evidence comes from feature-matrix run
-`2e7f440a-e63e-4066-ab27-5af837577e6b`: 727 native and `wasm32-wasip1` runtime
-tests passed with zero failures, and its terminal capability-table record says
-the native and WASI lanes agree. This is target/runtime evidence; it does not
-turn aggregate coverage, defensive/specification contracts, or Rust-only
-diagnostic tests into Pillow-parity coverage.
+Historical managed runtime evidence comes from feature-matrix run
+`2e7f440a-e63e-4066-ab27-5af837577e6b`, submitted against the earlier revision
+`ebd6bbf4f826c4a532b49a15761c27bfbdd4249e`: 727 native and `wasm32-wasip1`
+runtime tests passed with zero failures, and its terminal capability-table
+record says the native and WASI lanes agree. A revision-bound rerun for
+`291f21fc613c17aefc131718fcfc68b65f737cd0` is in progress as run
+`5bc37abb-d7d1-4ebd-be7a-7689f080c256`. This is target/runtime evidence; it
+does not turn aggregate coverage, defensive/specification contracts, or
+Rust-only diagnostic tests into Pillow-parity coverage.
 
-Coverage MCP run: `babcab83-4d9a-424d-b446-31bcb55a41f6`
+Coverage MCP run: `881147c6-3247-4849-bf20-9e4aa4c4ffce`
 
-Snapshot: `27dad99b-32eb-4d42-8993-5e202e01b091`
+Snapshot: `8f91ff19-4a27-4aa5-928e-28785dee7ef4`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
