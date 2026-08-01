@@ -135,7 +135,9 @@ capabilities and setup.
 | `inspect_basic(&[u8])` | Read header facts without counting every frame/page; `frame_count_complete` reports whether the count is known |
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: return header facts as soon as the detected format can prove them, or report `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
+| `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
+| `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
@@ -170,6 +172,13 @@ result is terminal: an incomplete signature that can never match is
 `UnknownFormat`, and a recognized-but-truncated container remains `Malformed`
 on the complete-slice APIs. The incremental surface never turns a terminal
 result into an implicit retry loop.
+The incremental contract now extends to decoding: `decode_prefix` and
+`decode_sequence_prefix` (plus their policy variants) return the decoded
+result once the input is complete and `NeedMoreData { minimum }` while
+container structures or pixel payloads are still incomplete. Minimums are
+exact when the container declares the missing extent (PNG chunks, BMP/ICO
+pixel spans, TIFF strip/tile spans, WebP RIFF payloads, AVIF boxes) and
+progress-aware otherwise.
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return

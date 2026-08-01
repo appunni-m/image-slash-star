@@ -12,6 +12,11 @@ All notable changes will be documented in this file. This project follows
   minimum }` while the input is an incomplete prefix, with exact minimums for
   fixed signatures and progress-aware minimums for declared WebP/AVIF
   extents. Complete-slice APIs keep their terminal classifications unchanged.
+- Incremental still and sequence decode: `decode_prefix`,
+  `decode_sequence_prefix`, and their policy variants return
+  `NeedMoreData { minimum }` while container structures or pixel payloads are
+  still incomplete, with exact minimums for declared extents and
+  progress-aware minimums elsewhere.
 - Manifest-driven Pillow 12.2.0 parity suite with exact decoded-pixel and
   encoded-file comparisons.
 - Feature-gated JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF codec

@@ -60,7 +60,9 @@
       "signature_prefix": 5,
       "signature_minimum": 8,
       "need_more_prefix": 40,
-      "need_more_minimum": 41
+      "need_more_minimum": 41,
+      "decode_need_more_prefix": 33,
+      "decode_need_more_minimum": 41
     },
     {
       "id": "gif_1x1",
@@ -71,7 +73,9 @@
       "need_more_prefix": 28,
       "need_more_minimum": 29,
       "basic_prefix": 30,
-      "basic_frame_count_complete": false
+      "basic_frame_count_complete": false,
+      "decode_need_more_prefix": 28,
+      "decode_need_more_minimum": 29
     },
     {
       "id": "bmp_1x1",
@@ -80,7 +84,9 @@
       "signature_prefix": 1,
       "signature_minimum": 2,
       "need_more_prefix": 50,
-      "need_more_minimum": 54
+      "need_more_minimum": 54,
+      "decode_need_more_prefix": 50,
+      "decode_need_more_minimum": 54
     },
     {
       "id": "tiff_8bit",
@@ -89,7 +95,9 @@
       "signature_prefix": 2,
       "signature_minimum": 4,
       "need_more_prefix": 118,
-      "need_more_minimum": 122
+      "need_more_minimum": 122,
+      "decode_need_more_prefix": 122,
+      "decode_need_more_minimum": 16506
     },
     {
       "id": "jpeg_1x1",
@@ -98,7 +106,9 @@
       "signature_prefix": 2,
       "signature_minimum": 3,
       "need_more_prefix": 214,
-      "need_more_minimum": 393
+      "need_more_minimum": 393,
+      "decode_need_more_prefix": 214,
+      "decode_need_more_minimum": 215
     },
     {
       "id": "webp_16x16",
@@ -107,7 +117,9 @@
       "signature_prefix": 10,
       "signature_minimum": 12,
       "need_more_prefix": 20,
-      "need_more_minimum": 64
+      "need_more_minimum": 64,
+      "decode_need_more_prefix": 20,
+      "decode_need_more_minimum": 21
     },
     {
       "id": "ico_16x16",
@@ -116,7 +128,9 @@
       "signature_prefix": 3,
       "signature_minimum": 4,
       "need_more_prefix": 22,
-      "need_more_minimum": 839
+      "need_more_minimum": 839,
+      "decode_need_more_prefix": 22,
+      "decode_need_more_minimum": 839
     },
     {
       "id": "avif_baseline",
@@ -125,7 +139,9 @@
       "signature_prefix": 6,
       "signature_minimum": 12,
       "need_more_prefix": 32,
-      "need_more_minimum": 40
+      "need_more_minimum": 40,
+      "decode_need_more_prefix": 40,
+      "decode_need_more_minimum": 274
     }
   ]
 }

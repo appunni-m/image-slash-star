@@ -199,7 +199,9 @@ translation cannot be bypassed.
 | `inspect_basic(&[u8])` | Read the same header facts without deep frame counting; `frame_count_complete` distinguishes known from unknown counts |
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: header facts when provable, `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
+| `decode_prefix`, `decode_prefix_with_policy` | Incremental still decode with the non-terminal `NeedMoreData { minimum }` status |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
+| `decode_sequence_prefix`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
@@ -234,6 +236,18 @@ PNG, ANMF sub-chunks, nested AVIF boxes) also stay terminal, because appending
 more file bytes cannot repair them. Legacy complete-slice APIs are unchanged:
 they map every internal truncation back to `Malformed` with the same message,
 so manifest parity and error stages are preserved.
+
+Decoding uses the same classification. `decode_prefix` and
+`decode_sequence_prefix` run the identical codec paths as `decode` and
+`decode_sequence` but expose internal truncation as `NeedMoreData`: exact
+minimums when the container declares the missing extent (PNG chunks, BMP/ICO
+pixel spans, TIFF strip/tile spans, WebP RIFF payloads, AVIF boxes) and
+progress-aware minimums otherwise (JPEG marker/scan reads, GIF sub-blocks,
+WebP native reads). Compressed payloads bounded by a complete declared
+structure (GIF LZW sub-block streams, TIFF strip payloads, JPEG entropy
+zero-padding) keep their terminal classification because appending file bytes
+cannot repair them. Policy limits are re-evaluated on every retry against the
+current input length.
 
 Capability discovery mirrors this dispatch without parsing input.
 `Capability::ManifestBounded` means the operation can be attempted within the

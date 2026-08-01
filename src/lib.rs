@@ -394,6 +394,55 @@ pub fn decode_with_policy(
         .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
 }
 
+/// Incremental still decode for callers that are still receiving input.
+///
+/// This is the partial-input counterpart of [`decode`]. Detection, inspection,
+/// and codec parsing distinguish "the input ends before a structure is
+/// complete" from "the data is malformed", and expose the former as the
+/// non-terminal [`ImageError::NeedMoreData`] with a total byte `minimum`.
+/// Retry only after appending enough bytes to reach
+/// [`ImageError::minimum_input`]; every other result is terminal.
+///
+/// The minimum is exact when the container declares the missing extent (PNG
+/// chunks, BMP/ICO pixel spans, TIFF strip/tile spans, WebP RIFF payloads,
+/// AVIF boxes) and progress-aware otherwise (at least one more byte or
+/// container header is required before the parser can continue).
+///
+/// # Errors
+///
+/// Returns the same terminal errors as [`decode`] (unknown signature,
+/// disabled feature, malformed payload, invalid decoded buffer), plus the
+/// non-terminal [`ImageError::NeedMoreData`] for incomplete input.
+pub fn decode_prefix(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
+    decode_prefix_with_policy(data, &DecodePolicy::default())
+}
+
+/// [`decode_prefix`] with an explicit caller-controlled policy.
+///
+/// The policy limits apply to the current input length on every retry; a
+/// prefix shorter than a configured encoded-byte maximum passes the
+/// pre-detection check and the limit is re-evaluated as more bytes arrive.
+///
+/// # Errors
+///
+/// Returns the same errors as [`decode_prefix`], plus
+/// [`ImageError::LimitExceeded`] for the current input length or inspected
+/// primary canvas.
+pub fn decode_prefix_with_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedImage>> {
+    policy.check_encoded_input(data, CodecOperation::StillDecode)?;
+    let format = detect_prefix(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
+    if policy.requires_image_info() {
+        let info = codecs::inspect_basic_prefix_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::StillDecode)?;
+    }
+    codecs::decode_prefix_format(data, format)
+        .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
+}
+
 /// Decode a still image into an exact-size caller-provided destination.
 ///
 /// The destination must contain exactly [`ImageInfo::decoded_bytes`] bytes
@@ -469,6 +518,44 @@ pub fn decode_sequence_with_policy(
         budget.charge_primary(&info)?;
     }
     codecs::decode_sequence_format(data, format, &mut budget)
+        .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
+}
+
+/// Incremental sequence decode for callers that are still receiving input.
+///
+/// This is the partial-input counterpart of [`decode_sequence`], with the
+/// same non-terminal [`ImageError::NeedMoreData`] semantics and retry rules
+/// as [`decode_prefix`].
+///
+/// # Errors
+///
+/// Returns the same terminal errors as [`decode_sequence`], plus the
+/// non-terminal [`ImageError::NeedMoreData`] for incomplete input.
+pub fn decode_sequence_prefix(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
+    decode_sequence_prefix_with_policy(data, &DecodePolicy::default())
+}
+
+/// [`decode_sequence_prefix`] with an explicit caller-controlled policy.
+///
+/// # Errors
+///
+/// Returns the same errors as [`decode_sequence_prefix`], plus
+/// [`ImageError::LimitExceeded`] for the current input length, inspected
+/// frame count, or decoded-byte budget.
+pub fn decode_sequence_prefix_with_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedSequence>> {
+    policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
+    let format = detect_prefix(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
+    let mut budget = policy.sequence_budget(format);
+    if policy.requires_image_info() {
+        let info = codecs::inspect_basic_prefix_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
+        budget.charge_primary(&info)?;
+    }
+    codecs::decode_sequence_prefix_format(data, format, &mut budget)
         .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
 }
 

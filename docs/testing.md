@@ -315,6 +315,15 @@ non-terminal status: legacy detection reports `UnknownFormat` for incomplete
 signatures and legacy inspection maps codec-level truncation back to
 `Malformed` with unchanged messages. Terminal results must never be retried.
 
+The incremental-decode contract extends the same sweep to `decode_prefix` and
+`decode_sequence_prefix`: every byte boundary of one valid fixture per format
+must either decode identically to the legacy API or return
+`NeedMoreData { minimum }` whose retry makes progress while legacy `decode`
+keeps its terminal classification, and policy variants must re-evaluate
+limits on the current prefix. The manifest pins per-format decode spot checks
+with exact minimums (PNG chunk header, GIF sub-block, BMP header field, TIFF
+strip span, JPEG marker read, WebP native read, ICO entry span, AVIF box).
+
 The borrowed-view contract is table-driven: `EncodedImageView` over
 PNG/GIF/WebP/TIFF fixtures must match the free functions exactly for inspect,
 still and sequence decode, policy variants, verification scope behavior,
