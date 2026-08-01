@@ -21,6 +21,9 @@ pub(crate) enum CodecError {
     /// A caller-configured resource maximum was exceeded; the structured
     /// [`ImageError::LimitExceeded`] value is retained verbatim.
     LimitExceeded(ImageError),
+    /// The operation stopped at a cooperative checkpoint because the
+    /// caller's cancellation token fired.
+    Cancelled,
     /// A codec failure wrapped with the encoded-input byte offset and stable
     /// container-structure identity of its parse site.
     #[cfg_attr(
@@ -86,6 +89,7 @@ impl CodecError {
                 minimum: usize::try_from(minimum).unwrap_or(usize::MAX),
                 message: "incremental input required".to_owned(),
             },
+            ImageError::Cancelled { .. } => Self::Cancelled,
         }
     }
 
@@ -109,6 +113,10 @@ impl CodecError {
                 stage: Some(stage),
                 offset: None,
                 identity: None,
+            },
+            Self::Cancelled => ImageError::Cancelled {
+                format: Some(format),
+                stage: Some(stage),
             },
             Self::Unsupported(message) => ImageError::Unsupported {
                 format: Some(format),
@@ -165,7 +173,8 @@ impl CodecError {
                     ImageError::UnknownFormat
                     | ImageError::FeatureDisabled { .. }
                     | ImageError::LimitExceeded { .. }
-                    | ImageError::NeedMoreData { .. } => {}
+                    | ImageError::NeedMoreData { .. }
+                    | ImageError::Cancelled { .. } => {}
                 }
                 converted
             }
@@ -193,6 +202,10 @@ impl CodecError {
                 offset: None,
                 identity: None,
                 minimum: u64::try_from(minimum).unwrap_or(u64::MAX),
+            },
+            Self::Cancelled => ImageError::Cancelled {
+                format: Some(format),
+                stage: Some(stage),
             },
             Self::Unsupported(message) => ImageError::Unsupported {
                 format: Some(format),
@@ -253,7 +266,8 @@ impl CodecError {
                     }
                     ImageError::UnknownFormat
                     | ImageError::FeatureDisabled { .. }
-                    | ImageError::LimitExceeded { .. } => {}
+                    | ImageError::LimitExceeded { .. }
+                    | ImageError::Cancelled { .. } => {}
                 }
                 converted
             }
@@ -272,6 +286,7 @@ impl CodecError {
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
             Self::LimitExceeded(error) => Self::LimitExceeded(error),
+            Self::Cancelled => Self::Cancelled,
             Self::At {
                 error,
                 offset,
@@ -282,6 +297,17 @@ impl CodecError {
                 identity,
             },
         }
+    }
+}
+
+/// Poll a caller-supplied cancellation token at a structural checkpoint.
+///
+/// `None` (the legacy path) never cancels. The codec format and stage are
+/// attached when the token fires so the public error is actionable.
+pub(crate) fn check_cancelled(token: Option<&crate::CancellationToken>) -> CodecResult<()> {
+    match token {
+        Some(token) if token.is_cancelled() => Err(CodecError::Cancelled),
+        Some(_) | None => Ok(()),
     }
 }
 
@@ -499,6 +525,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             identity: Some("png_chunk"),
             minimum: 41,
         },
+        ImageError::Cancelled {
+            format: Some(ImageFormat::Png),
+            stage: Some(ImageErrorStage::StillDecode),
+        },
     ] {
         let _ = CodecError::from_image_error(error);
     }
@@ -555,6 +585,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = CodecError::Malformed("nested".to_owned())
         .at(4, "webp_chunk")
         .into_incremental_image_error(ImageFormat::WebP, ImageErrorStage::Inspection);
+    let _ = CodecError::Cancelled.into_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
+    let _ = CodecError::Cancelled
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
     let _ = CodecError::Unsupported("nested".to_owned())
         .at(4, "webp_chunk")
         .into_incremental_image_error(ImageFormat::WebP, ImageErrorStage::Inspection);
@@ -588,4 +621,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = terminalize(CodecError::Unsupported("kept".to_owned()));
     let _ = Option::<u8>::None.need_more(3, "truncated byte");
     let _ = Option::<u8>::Some(1).need_more(3, "truncated byte");
+    let cancelled = crate::CancellationToken::new();
+    let _ = check_cancelled(None);
+    let _ = check_cancelled(Some(&cancelled));
+    cancelled.cancel();
+    let _ = check_cancelled(Some(&cancelled));
+    let staged = crate::CancellationToken::new();
+    staged.cancel_after(1);
+    let _ = check_cancelled(Some(&staged));
+    let _ = check_cancelled(Some(&staged));
 }

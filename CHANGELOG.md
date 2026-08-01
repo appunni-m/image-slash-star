@@ -17,6 +17,11 @@ All notable changes will be documented in this file. This project follows
   `NeedMoreData { minimum }` while container structures or pixel payloads are
   still incomplete, with exact minimums for declared extents and
   progress-aware minimums elsewhere.
+- Cooperative cancellation: a dependency-free `CancellationToken`
+  (`new`, `cancel`, `is_cancelled`, shared clones) plus
+  `decode_with_token`, `decode_sequence_with_token`, and their policy
+  variants poll at structural checkpoints and stop with
+  `ImageError::Cancelled` without publishing partial state.
 - Manifest-driven Pillow 12.2.0 parity suite with exact decoded-pixel and
   encoded-file comparisons.
 - Feature-gated JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF codec

@@ -17,9 +17,13 @@ const COMPRESSION_PACKBITS: usize = 32_773;
 const COMPRESSION_ADOBE_DEFLATE: usize = 32_946;
 
 /// Decode the first IFD of a classic little- or big-endian TIFF stream.
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let (endian, ifd_offset) = parse_header(data)?;
-    decode_ifd(data, ifd_offset, endian, None)
+    decode_ifd(data, ifd_offset, endian, None, token)
         .map(|(image, _, directory_end)| (image, directory_end))
 }
 
@@ -27,14 +31,20 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
 ///
 /// Only the selected IFD's pixels are decompressed, so later pages are not
 /// materialized. The returned consumed extent is that page's directory end.
-pub(crate) fn decode_page(data: &[u8], page_index: u32) -> CodecResult<(DecodedImage, usize)> {
+pub(crate) fn decode_page(
+    data: &[u8],
+    page_index: u32,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let (endian, first_offset) = parse_header(data)?;
     let mut offset = first_offset;
     let mut seen = Vec::new();
     let mut index = 0u32;
     while offset != 0 && !seen.contains(&offset) {
+        crate::codecs::error::check_cancelled(token)?;
         seen.push(offset);
-        let (image, next_offset, directory_end) = decode_ifd(data, offset, endian, None)?;
+        let (image, next_offset, directory_end) = decode_ifd(data, offset, endian, None, token)?;
         if index == page_index {
             return Ok((image, directory_end));
         }
@@ -50,7 +60,9 @@ pub(crate) fn decode_page(data: &[u8], page_index: u32) -> CodecResult<(DecodedI
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let (endian, first_offset) = parse_header(data)?;
     let mut offset = first_offset;
     let mut seen = Vec::new();
@@ -59,6 +71,7 @@ pub fn decode_sequence(
     let mut height = 0;
     let mut consumed = 0;
     while offset != 0 && !seen.contains(&offset) {
+        crate::codecs::error::check_cancelled(token)?;
         seen.push(offset);
         let (image, next_offset, directory_end) = decode_ifd(
             data,
@@ -69,6 +82,7 @@ pub fn decode_sequence(
             } else {
                 Some(&mut *budget)
             },
+            token,
         )?;
         consumed = directory_end;
         width = width.max(image.width);
@@ -156,7 +170,9 @@ fn decode_ifd(
     ifd_offset: usize,
     endian: Endian,
     budget: Option<&mut SequenceDecodeBudget>,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedImage, usize, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let mut directory = Directory::parse(data, ifd_offset, endian)
         .map_err(|error| error.at(ifd_offset as u64, "tiff_ifd"))?;
     let next_offset = directory.next_offset();
@@ -293,6 +309,7 @@ fn decode_ifd(
         };
         let mut pixels = vec![0; expected_total];
         for (tile_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
+            crate::codecs::error::check_cancelled(token)?;
             #[cfg(target_pointer_width = "32")]
             let encoded_end = offset
                 .checked_add(byte_count)
@@ -400,6 +417,7 @@ fn decode_ifd(
     let mut pixels = Vec::with_capacity(expected_total);
 
     for (strip_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
         #[cfg(target_pointer_width = "32")]
         let encoded_end = offset
             .checked_add(byte_count)
@@ -1186,16 +1204,16 @@ impl<'a> Directory<'a> {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode_page(b"", 0).is_err());
-    assert!(decode_page(b"II", 0).is_err());
+    assert!(decode_page(b"", 0, None).is_err());
+    assert!(decode_page(b"II", 0, None).is_err());
     let mut bad_page =
         include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
     bad_page[106..110].copy_from_slice(&2000u32.to_le_bytes());
-    assert!(decode_page(&bad_page, 1).is_err());
+    assert!(decode_page(&bad_page, 1, None).is_err());
     let mut cyclic_page =
         include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
     cyclic_page[106..110].copy_from_slice(&8u32.to_le_bytes());
-    assert!(decode_page(&cyclic_page, 1).is_err());
+    assert!(decode_page(&cyclic_page, 1, None).is_err());
 
     // No committed TIFF fixture declares associated (premultiplied) alpha;
     // exercise every tag-338 mapping arm so the semantic space stays covered.
@@ -1210,9 +1228,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(source_alpha_from_extra_samples(&[0]), None);
     assert_eq!(source_alpha_from_extra_samples(&[]), None);
 
-    assert!(decode(b"").is_err());
-    assert!(decode(b"II").is_err());
-    assert!(decode(b"ZZ\0\0\0\0\0\0").is_err());
+    assert!(decode(b"", None).is_err());
+    assert!(decode(b"II", None).is_err());
+    assert!(decode(b"ZZ\0\0\0\0\0\0", None).is_err());
+    let fixture = include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff");
+    for checks in 0..=6 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(fixture, Some(&token));
+        let _ = decode_sequence(
+            fixture,
+            &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Tiff),
+            Some(&token),
+        );
+        let _ = decode_page(fixture, 0, Some(&token));
+    }
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(b"II");
     let _ = metadata_bytes(b"II\x2a\0\0\0\0\0\0");
@@ -1553,108 +1583,105 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out
     }
 
-    let _ = decode(b"II\0\0\x08\0\0\0");
-    let _ = decode(b"II*\0");
-    let _ = decode(b"MM\0*\0\0\0\x08\0\0\0\0");
-    let _ = decode(&tiny_tiff(0, [0, 0, 0, 0], 1, 1, 1, 1, 1));
-    let _ = decode(&tiny_tiff(3, u32::MAX.to_le_bytes(), 1, 1, 1, 1, 1));
-    let _ = decode(&tiny_tiff(2, [8, 0, 16, 0], 1, 1, 1, 1, 1));
-    let _ = decode(&tiny_tiff(1, [0, 1, 0, 0], 1, 1, 1, 1, 1));
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 0, 1, 1, 1));
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 0, 1, 1));
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 2, 1));
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 2));
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 3));
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 6, 1, 1, 1, 1));
-    let _ = decode(&tiny_tiff(1, [16, 0, 0, 0], 6, 3, 1, 1, 1));
-    let _ = decode(&tiny_strip_tiff(0, 1, 8, 1, 1, 1, 1, Some(&[1]), &[&[0]]));
-    let _ = decode(&tiny_strip_tiff(1, 1, 8, 99, 1, 1, 1, Some(&[1]), &[&[0]]));
-    let _ = decode(&tiny_tiled_tiff(8, false, true, 1, 1, 1, 1, &[0]));
-    let _ = decode(&tiny_tiled_tiff(8, true, false, 1, 1, 1, 1, &[0]));
-    let _ = decode(&tiny_tiled_tiff(8, true, true, 0, 1, 1, 1, &[0]));
-    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 0, 1, 1, &[0]));
-    let _ = decode(&tiny_tiled_tiff(1, true, true, 1, 1, 1, 1, &[0]));
-    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 1, 2, 1, &[0]));
+    let _ = decode(b"II\0\0\x08\0\0\0", None);
+    let _ = decode(b"II*\0", None);
+    let _ = decode(b"MM\0*\0\0\0\x08\0\0\0\0", None);
+    let _ = decode(&tiny_tiff(0, [0, 0, 0, 0], 1, 1, 1, 1, 1), None);
+    let _ = decode(&tiny_tiff(3, u32::MAX.to_le_bytes(), 1, 1, 1, 1, 1), None);
+    let _ = decode(&tiny_tiff(2, [8, 0, 16, 0], 1, 1, 1, 1, 1), None);
+    let _ = decode(&tiny_tiff(1, [0, 1, 0, 0], 1, 1, 1, 1, 1), None);
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 0, 1, 1, 1), None);
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 0, 1, 1), None);
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 2, 1), None);
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 2), None);
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 3), None);
+    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 6, 1, 1, 1, 1), None);
+    let _ = decode(&tiny_tiff(1, [16, 0, 0, 0], 6, 3, 1, 1, 1), None);
+    let _ = decode(
+        &tiny_strip_tiff(0, 1, 8, 1, 1, 1, 1, Some(&[1]), &[&[0]]),
+        None,
+    );
+    let _ = decode(
+        &tiny_strip_tiff(1, 1, 8, 99, 1, 1, 1, Some(&[1]), &[&[0]]),
+        None,
+    );
+    let _ = decode(&tiny_tiled_tiff(8, false, true, 1, 1, 1, 1, &[0]), None);
+    let _ = decode(&tiny_tiled_tiff(8, true, false, 1, 1, 1, 1, &[0]), None);
+    let _ = decode(&tiny_tiled_tiff(8, true, true, 0, 1, 1, 1, &[0]), None);
+    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 0, 1, 1, &[0]), None);
+    let _ = decode(&tiny_tiled_tiff(1, true, true, 1, 1, 1, 1, &[0]), None);
+    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 1, 2, 1, &[0]), None);
 
-    let _ = decode(&tiny_strip_tiff(1, 1, 8, 1, 1, 1, 0, Some(&[]), &[]));
-    let _ = decode(&tiny_strip_tiff(1, 1, 8, 1, 1, 1, 1, Some(&[1]), &[]));
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        1,
-        8,
-        1,
-        1,
-        1,
-        2,
-        Some(&[1, 1]),
-        &[&[0], &[1]],
-    ));
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        1,
-        8,
-        COMPRESSION_PACKBITS as u16,
-        1,
-        1,
-        1,
+    let _ = decode(&tiny_strip_tiff(1, 1, 8, 1, 1, 1, 0, Some(&[]), &[]), None);
+    let _ = decode(&tiny_strip_tiff(1, 1, 8, 1, 1, 1, 1, Some(&[1]), &[]), None);
+    let _ = decode(
+        &tiny_strip_tiff(1, 1, 8, 1, 1, 1, 2, Some(&[1, 1]), &[&[0], &[1]]),
         None,
-        &[&[0, 7]],
-    ));
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        2,
-        8,
-        COMPRESSION_PACKBITS as u16,
-        1,
-        1,
-        2,
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            8,
+            COMPRESSION_PACKBITS as u16,
+            1,
+            1,
+            1,
+            None,
+            &[&[0, 7]],
+        ),
         None,
-        &[&[0, 7], &[0, 8]],
-    ));
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        2,
-        8,
-        COMPRESSION_PACKBITS as u16,
-        1,
-        1,
-        2,
-        Some(&[2]),
-        &[&[0, 7], &[0, 8]],
-    ));
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        1,
-        8,
-        COMPRESSION_PACKBITS as u16,
-        1,
-        1,
-        1,
-        Some(&[4]),
-        &[&[0, 7]],
-    ));
-    let _ = decode(&tiny_tiled_layout_tiff(
-        2,
-        1,
-        8,
-        1,
-        1,
-        1,
-        1,
-        &[&[0]],
-        Some(&[1]),
-    ));
-    let _ = decode(&tiny_tiled_layout_tiff(
-        2,
-        2,
-        8,
-        1,
-        1,
-        1,
-        1,
-        &[&[1], &[2], &[3], &[4]],
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            2,
+            8,
+            COMPRESSION_PACKBITS as u16,
+            1,
+            1,
+            2,
+            None,
+            &[&[0, 7], &[0, 8]],
+        ),
         None,
-    ));
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            2,
+            8,
+            COMPRESSION_PACKBITS as u16,
+            1,
+            1,
+            2,
+            Some(&[2]),
+            &[&[0, 7], &[0, 8]],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            8,
+            COMPRESSION_PACKBITS as u16,
+            1,
+            1,
+            1,
+            Some(&[4]),
+            &[&[0, 7]],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_layout_tiff(2, 1, 8, 1, 1, 1, 1, &[&[0]], Some(&[1])),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_layout_tiff(2, 2, 8, 1, 1, 1, 1, &[&[1], &[2], &[3], &[4]], None),
+        None,
+    );
 
     let _ = decode_packbits(&[], 0);
     let _ = decode_packbits(&[0], 0);
@@ -1690,83 +1717,104 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode_lzw(&pack_lzw_9(&[65]), 1);
     let _ = decode_lzw(&pack_lzw_9(&[65, 66, 257]), 2);
     let lzw_a = pack_lzw_9(&[65]);
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        1,
-        8,
-        COMPRESSION_LZW as u16,
-        2,
-        1,
-        1,
-        Some(&[u32::try_from(lzw_a.len()).unwrap()]),
-        &[&lzw_a],
-    ));
-    let _ = decode(&tiny_tiled_tiff(
-        24,
-        true,
-        true,
-        1,
-        1,
-        2,
-        COMPRESSION_LZW as u16,
-        &pack_lzw_9(&[65, 66, 67]),
-    ));
-    let _ = decode(&tiny_tiled_layout_tiff(
-        1,
-        1,
-        8,
-        1,
-        1,
-        2,
-        COMPRESSION_LZW as u16,
-        &[&lzw_a],
-        Some(&[u32::try_from(lzw_a.len()).unwrap()]),
-    ));
-    let _ = decode(&tiny_tiled_layout_tiff(
-        1,
-        2,
-        8,
-        1,
-        1,
-        1,
-        COMPRESSION_LZW as u16,
-        &[&lzw_a, &lzw_a],
-        Some(&[u32::try_from(lzw_a.len()).unwrap()]),
-    ));
-    let _ = decode(&tiny_tiled_layout_tiff(
-        1,
-        1,
-        8,
-        1,
-        1,
-        1,
-        COMPRESSION_LZW as u16,
-        &[&lzw_a],
-        Some(&[u32::try_from(lzw_a.len() + 1).unwrap()]),
-    ));
-    let _ = decode(&tiny_tiled_layout_tiff(
-        1,
-        1,
-        8,
-        1,
-        1,
-        1,
-        COMPRESSION_LZW as u16,
-        &[&[0]],
-        Some(&[1]),
-    ));
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            8,
+            COMPRESSION_LZW as u16,
+            2,
+            1,
+            1,
+            Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+            &[&lzw_a],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            24,
+            true,
+            true,
+            1,
+            1,
+            2,
+            COMPRESSION_LZW as u16,
+            &pack_lzw_9(&[65, 66, 67]),
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_layout_tiff(
+            1,
+            1,
+            8,
+            1,
+            1,
+            2,
+            COMPRESSION_LZW as u16,
+            &[&lzw_a],
+            Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_layout_tiff(
+            1,
+            2,
+            8,
+            1,
+            1,
+            1,
+            COMPRESSION_LZW as u16,
+            &[&lzw_a, &lzw_a],
+            Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_layout_tiff(
+            1,
+            1,
+            8,
+            1,
+            1,
+            1,
+            COMPRESSION_LZW as u16,
+            &[&lzw_a],
+            Some(&[u32::try_from(lzw_a.len() + 1).unwrap()]),
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_layout_tiff(
+            1,
+            1,
+            8,
+            1,
+            1,
+            1,
+            COMPRESSION_LZW as u16,
+            &[&[0]],
+            Some(&[1]),
+        ),
+        None,
+    );
     let lzw_rgb = pack_lzw_9(&[65, 66, 67, 257]);
-    let _ = decode(&tiny_strip_tiff(
-        1,
-        1,
-        24,
-        COMPRESSION_LZW as u16,
-        2,
-        1,
-        1,
-        Some(&[u32::try_from(lzw_rgb.len()).unwrap()]),
-        &[&lzw_rgb],
-    ));
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            24,
+            COMPRESSION_LZW as u16,
+            2,
+            1,
+            1,
+            Some(&[u32::try_from(lzw_rgb.len()).unwrap()]),
+            &[&lzw_rgb],
+        ),
+        None,
+    );
 
     let mut one_bit_reader = MsbBits::new(&[0x80]);
     let _ = one_bit_reader.read(1);

@@ -136,8 +136,10 @@ capabilities and setup.
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: return header facts as soon as the detected format can prove them, or report `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
 | `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
+| `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
+| `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
@@ -179,6 +181,10 @@ container structures or pixel payloads are still incomplete. Minimums are
 exact when the container declares the missing extent (PNG chunks, BMP/ICO
 pixel spans, TIFF strip/tile spans, WebP RIFF payloads, AVIF boxes) and
 progress-aware otherwise.
+`CancellationToken` adds cooperative cancellation: clones share state,
+`cancel()` fires every clone, and token-aware decodes poll at chunk, frame,
+page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
+without publishing partial state. Legacy decode APIs never cancel.
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return

@@ -586,7 +586,12 @@ fn smooth_dc_only_block(
 }
 
 // Progressive scan parsing validates tables and uses a zero-padding bit reader.
-pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> CodecResult<DecodedImage> {
+pub(super) fn progressive_reconstruct(
+    info: &JpegInfo,
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
+    crate::codecs::error::check_cancelled(token)?;
     let mcu_width = u32::from(info.max_h_samp).saturating_mul(8);
     let mcu_height = u32::from(info.max_v_samp).saturating_mul(8);
     let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
@@ -644,6 +649,7 @@ pub(super) fn progressive_reconstruct(info: &JpegInfo, data: &[u8]) -> CodecResu
     // h_samp*v_samp blocks per component per MCU.  Failing to distinguish
     // these scrambles block order for subsampled components (e.g. 4:2:0 chroma).
     for scan in info.scans.iter() {
+        crate::codecs::error::check_cancelled(token)?;
         let segs = extract_entropy_segments(data, scan.entropy_start, scan.entropy_end);
         if segs.segments.is_empty() {
             continue;
@@ -1239,7 +1245,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         adobe_transform: None,
         metadata: Vec::new(),
     };
-    let _ = progressive_reconstruct(&info, &[0, 0, 0xFF, 0xD0, 0]);
+    let _ = progressive_reconstruct(&info, &[0, 0, 0xFF, 0xD0, 0], None);
 
     let failing_scan = |ss, se, ah, al| ScanInfo {
         components: vec![scan_component],
@@ -1272,9 +1278,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         adobe_transform: None,
         metadata: Vec::new(),
     };
-    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(0, 0, 0, 0)]), &[0]);
-    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 0, 0)]), &[0]);
-    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 1, 0)]), &[0]);
+    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(0, 0, 0, 0)]), &[0], None);
+    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 0, 0)]), &[0], None);
+    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 1, 0)]), &[0], None);
     let missing_dc_scan = ScanInfo {
         components: vec![scan_component],
         entropy_start: 0,
@@ -1303,9 +1309,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ah: 1,
         ..missing_ac_first_scan.clone()
     };
-    let _ = progressive_reconstruct(&failing_info(vec![missing_dc_scan]), &[0]);
-    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_first_scan]), &[0]);
-    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_refine_scan]), &[0]);
+    let _ = progressive_reconstruct(&failing_info(vec![missing_dc_scan]), &[0], None);
+    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_first_scan]), &[0], None);
+    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_refine_scan]), &[0], None);
 
     let cmyk_components = (0..4)
         .map(|id| FrameComponent {
@@ -1334,10 +1340,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         adobe_transform: None,
         metadata: Vec::new(),
     };
-    let _ = progressive_reconstruct(&cmyk_info, &[]);
+    let _ = progressive_reconstruct(&cmyk_info, &[], None);
     let cmyk_info = JpegInfo {
         adobe_transform: Some(0),
         ..cmyk_info
     };
-    let _ = progressive_reconstruct(&cmyk_info, &[]);
+    let _ = progressive_reconstruct(&cmyk_info, &[], None);
 }

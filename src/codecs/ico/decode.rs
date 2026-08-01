@@ -23,7 +23,11 @@ const ICO_DIR_ENTRY_SIZE: usize = 16;
 /// Decode an ICO image from raw bytes.
 ///
 /// Returns the best icon entry or a classified container/payload failure.
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, Option<usize>)> {
+    crate::codecs::error::check_cancelled(token)?;
     // ICO header: reserved(2) + type(2) + count(2)
     if data.len() < ICO_HEADER_SIZE {
         return Err(CodecError::NeedMore {
@@ -68,6 +72,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     let mut best_score: u32 = 0;
 
     for i in 0..count {
+        crate::codecs::error::check_cancelled(token)?;
         let entry_offset = entries_start.saturating_add(i.saturating_mul(ICO_DIR_ENTRY_SIZE));
         let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
 
@@ -86,7 +91,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
 
     // Decode the best entry and retain the two CUR hotspot fields that occupy
     // the ICO plane/bit-depth positions.
-    let image = decode_entry(data, best_idx, icon_type == 2)?;
+    let image = decode_entry(data, best_idx, icon_type == 2, token)?;
     if icon_type == 2 {
         let entry_offset =
             ICO_HEADER_SIZE.saturating_add(best_idx.saturating_mul(ICO_DIR_ENTRY_SIZE));
@@ -118,9 +123,15 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 }
 
 /// Decode a single ICO directory entry by index.
-fn decode_entry(data: &[u8], index: usize, cursor: bool) -> CodecResult<DecodedImage> {
+fn decode_entry(
+    data: &[u8],
+    index: usize,
+    cursor: bool,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
+    crate::codecs::error::check_cancelled(token)?;
     let entry_offset = ICO_HEADER_SIZE.saturating_add(index.saturating_mul(ICO_DIR_ENTRY_SIZE));
-    // `decode()` validates the complete directory and selects `index` from
+    // `decode(, None)` validates the complete directory and selects `index` from
     // `0..count`, so this private slice is bounded before dispatch.
     let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
 
@@ -164,7 +175,7 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> CodecResult<DecodedI
         // Decode as PNG
         #[cfg(feature = "png")]
         {
-            crate::codecs::png::decode::decode(entry_data)
+            crate::codecs::png::decode::decode(entry_data, token)
                 .map(|(image, _)| image)
                 .map_err(terminalize)
         }
@@ -231,7 +242,7 @@ fn decode_cur_bmp(data: &[u8], declared_len: u32) -> CodecResult<DecodedImage> {
     // `data.len() >= header_size >= 40`, so the synthetic BMP is always at
     // least 54 bytes (`14 + data.len()`), and the height field is present.
     bmp[22..26].copy_from_slice(&actual_height.to_le_bytes());
-    crate::codecs::bmp::decode::decode(&bmp).map(|(image, _)| image)
+    crate::codecs::bmp::decode::decode(&bmp, None).map(|(image, _)| image)
 }
 
 pub(super) fn cur_bmp_prefix(
@@ -681,10 +692,10 @@ fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode(b"").is_err());
-    assert!(decode(&[1, 0, 1, 0, 1, 0]).is_err());
-    assert!(decode(&[0, 0, 0, 0, 1, 0]).is_err());
-    assert!(decode(&[0, 0, 1, 0, 0, 0]).is_err());
+    assert!(decode(b"", None).is_err());
+    assert!(decode(&[1, 0, 1, 0, 1, 0], None).is_err());
+    assert!(decode(&[0, 0, 0, 0, 1, 0], None).is_err());
+    assert!(decode(&[0, 0, 1, 0, 0, 0], None).is_err());
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(&[0, 0, 1, 0, 2, 0]);
 
@@ -692,7 +703,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     too_many.extend_from_slice(&0u16.to_le_bytes());
     too_many.extend_from_slice(&1u16.to_le_bytes());
     too_many.extend_from_slice(&256u16.to_le_bytes());
-    assert!(decode(&too_many).is_err());
+    assert!(decode(&too_many, None).is_err());
 
     let mut two_entries = Vec::new();
     two_entries.extend_from_slice(&0u16.to_le_bytes());
@@ -709,17 +720,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
     two_entries.extend_from_slice(&1u32.to_le_bytes());
     two_entries.extend_from_slice(&38u32.to_le_bytes());
     two_entries.push(0);
-    assert!(decode(&two_entries).is_err());
+    assert!(decode(&two_entries, None).is_err());
+    let fixture = include_bytes!("../../../tests/fixtures/input/images/ico/16x16.ico");
+    for checks in 0..=4 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(fixture, Some(&token));
+    }
 
     let mut zero_size = two_entries.clone();
     zero_size[14..18].copy_from_slice(&0u32.to_le_bytes());
-    assert!(decode_entry(&zero_size, 0, false).is_err());
+    assert!(decode_entry(&zero_size, 0, false, None).is_err());
     let mut zero_offset = two_entries.clone();
     zero_offset[18..22].copy_from_slice(&0u32.to_le_bytes());
-    assert!(decode_entry(&zero_offset, 0, false).is_err());
+    assert!(decode_entry(&zero_offset, 0, false, None).is_err());
 
     let short_payload = &two_entries[..39];
-    assert!(decode_entry(short_payload, 0, false).is_err());
+    assert!(decode_entry(short_payload, 0, false, None).is_err());
     assert!(decode_cur_bmp(&[], 0).is_err());
     assert!(decode_cur_bmp(&[39, 0, 0, 0], 4).is_err());
     assert!(decode_cur_bmp(&[40, 0, 0, 0], 4).is_err());

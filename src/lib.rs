@@ -84,6 +84,7 @@
 // Retained as the project's one explicitly approved byte-layout utility.
 use bytemuck as _;
 
+mod cancel;
 pub mod capabilities;
 mod codecs;
 pub mod decode_policy;
@@ -91,6 +92,7 @@ pub mod encode_options;
 pub mod source;
 pub mod types;
 
+pub use cancel::CancellationToken;
 pub use capabilities::{
     CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
     CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
@@ -443,6 +445,49 @@ pub fn decode_prefix_with_policy(
         .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
 }
 
+/// Decode a still image with cooperative cancellation.
+///
+/// The [`CancellationToken`] is polled at structural checkpoints (chunk
+/// boundaries, per-entry selection, pixel-payload work) and the operation
+/// stops with [`ImageError::Cancelled`] without publishing partial state.
+/// Truncated input reports the same non-terminal
+/// [`ImageError::NeedMoreData`] status as [`decode_prefix`].
+///
+/// # Errors
+///
+/// Returns the same terminal errors as [`decode`], plus
+/// [`ImageError::NeedMoreData`] for incomplete input and
+/// [`ImageError::Cancelled`] when the token fires.
+pub fn decode_with_token(
+    data: &[u8],
+    token: &CancellationToken,
+) -> ImageResult<Decoded<DecodedImage>> {
+    decode_with_token_and_policy(data, &DecodePolicy::default(), token)
+}
+
+/// [`decode_with_token`] with an explicit caller-controlled policy.
+///
+/// # Errors
+///
+/// Returns the same errors as [`decode_with_token`], plus
+/// [`ImageError::LimitExceeded`] for the current input length or inspected
+/// primary canvas.
+pub fn decode_with_token_and_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+    token: &CancellationToken,
+) -> ImageResult<Decoded<DecodedImage>> {
+    policy.check_encoded_input(data, CodecOperation::StillDecode)?;
+    let format = detect_prefix(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
+    if policy.requires_image_info() {
+        let info = codecs::inspect_basic_prefix_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::StillDecode)?;
+    }
+    codecs::decode_token_format(data, format, token)
+        .map(|(image, consumed_bytes)| Decoded::new(format, image, consumed_bytes))
+}
+
 /// Decode a still image into an exact-size caller-provided destination.
 ///
 /// The destination must contain exactly [`ImageInfo::decoded_bytes`] bytes
@@ -556,6 +601,50 @@ pub fn decode_sequence_prefix_with_policy(
         budget.charge_primary(&info)?;
     }
     codecs::decode_sequence_prefix_format(data, format, &mut budget)
+        .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
+}
+
+/// Decode every retained frame with cooperative cancellation.
+///
+/// The [`CancellationToken`] is polled at frame/page boundaries and the
+/// operation stops with [`ImageError::Cancelled`] without publishing partial
+/// state. Truncated input reports the same non-terminal
+/// [`ImageError::NeedMoreData`] status as [`decode_sequence_prefix`].
+///
+/// # Errors
+///
+/// Returns the same terminal errors as [`decode_sequence`], plus
+/// [`ImageError::NeedMoreData`] for incomplete input and
+/// [`ImageError::Cancelled`] when the token fires.
+pub fn decode_sequence_with_token(
+    data: &[u8],
+    token: &CancellationToken,
+) -> ImageResult<Decoded<DecodedSequence>> {
+    decode_sequence_with_token_and_policy(data, &DecodePolicy::default(), token)
+}
+
+/// [`decode_sequence_with_token`] with an explicit caller-controlled policy.
+///
+/// # Errors
+///
+/// Returns the same errors as [`decode_sequence_with_token`], plus
+/// [`ImageError::LimitExceeded`] for the current input length, inspected
+/// frame count, or decoded-byte budget.
+pub fn decode_sequence_with_token_and_policy(
+    data: &[u8],
+    policy: &DecodePolicy,
+    token: &CancellationToken,
+) -> ImageResult<Decoded<DecodedSequence>> {
+    policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
+    let format = detect_prefix(data)?;
+    policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
+    let mut budget = policy.sequence_budget(format);
+    if policy.requires_image_info() {
+        let info = codecs::inspect_basic_prefix_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
+        budget.charge_primary(&info)?;
+    }
+    codecs::decode_sequence_token_format(data, format, &mut budget, token)
         .map(|(sequence, consumed_bytes)| Decoded::new(format, sequence, consumed_bytes))
 }
 

@@ -70,7 +70,12 @@ pub(super) fn decode_block(
 
 // ── Image Reconstruction (baseline) ───────────────────────────────────────
 
-pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> CodecResult<DecodedImage> {
+pub(super) fn reconstruct_image(
+    info: &JpegInfo,
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
+    crate::codecs::error::check_cancelled(token)?;
     let mcu_width = u32::from(info.max_h_samp).saturating_mul(8);
     let mcu_height = u32::from(info.max_v_samp).saturating_mul(8);
     let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
@@ -126,6 +131,7 @@ pub(super) fn reconstruct_image(info: &JpegInfo, data: &[u8]) -> CodecResult<Dec
     };
 
     while let Some(&(seg_start, seg_end)) = segment_iter.next() {
+        crate::codecs::error::check_cancelled(token)?;
         let mut br = BitReader::new(data, seg_start, seg_end);
         let mcu_offset = seg_idx.saturating_mul(mcus_per_seg);
 
@@ -438,16 +444,21 @@ pub(super) struct EntropySegments {
 /// - Grayscale (1 component) and YCbCr (3 components)
 /// - Restart markers (DRI)
 /// - Progressive: DC first, DC refine, AC first, AC refine scans
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let info = parse_jpeg(data)?;
 
     debug_assert!(!info.scan_components.is_empty());
 
     let consumed = info.eoi_pos.saturating_add(2);
+    crate::codecs::error::check_cancelled(token)?;
     let mut image = if info.progressive {
-        progressive_reconstruct(&info, data)
+        progressive_reconstruct(&info, data, token)
     } else {
-        reconstruct_image(&info, data)
+        reconstruct_image(&info, data, token)
     }?;
     image = image.with_metadata(info.metadata);
     Ok((image, consumed))
@@ -554,5 +565,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         adobe_transform: None,
         metadata: Vec::new(),
     };
-    let _ = reconstruct_image(&info, &[0, 0, 0xFF, 0xD0, 0]);
+    let _ = reconstruct_image(&info, &[0, 0, 0xFF, 0xD0, 0], None);
+    let baseline = include_bytes!("../../../../tests/fixtures/input/images/jpeg/1x1.jpg");
+    let progressive =
+        include_bytes!("../../../../tests/fixtures/input/images/jpeg/progressive.jpg");
+    for checks in 0..=7 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(baseline, Some(&token));
+        let _ = decode(progressive, Some(&token));
+    }
 }

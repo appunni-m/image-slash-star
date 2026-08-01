@@ -18,10 +18,14 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
 /// Decode the first image frame in a GIF87a or GIF89a stream.
 ///
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
     let (mut sequence, consumed) = decode_sequence(
         data,
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Gif),
+        token,
     )?;
     // `decode_sequence` rejects a GIF without an image descriptor before
     // constructing its return value, so the first frame is a local invariant.
@@ -35,7 +39,9 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let mut input = Input::new(data);
     let signature = input.read_bytes(6)?;
     if signature != b"GIF87a" && signature != b"GIF89a" {
@@ -61,6 +67,7 @@ pub fn decode_sequence(
     let mut opaque_blocks = Vec::new();
 
     loop {
+        crate::codecs::error::check_cancelled(token)?;
         let block_offset = input.position() as u64;
         match input
             .read_u8()
@@ -515,14 +522,19 @@ fn append_code(
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Gif);
-    assert!(decode_sequence(b"", &mut budget).is_err());
-    assert!(decode_sequence(b"not gif", &mut budget).is_err());
-    assert!(decode_sequence(b"GIF89a", &mut budget).is_err());
-    assert!(decode_sequence(b"GIF89a\x01\0\x01\0\0\0\0\x7f", &mut budget).is_err());
+    assert!(decode_sequence(b"", &mut budget, None).is_err());
+    assert!(decode_sequence(b"not gif", &mut budget, None).is_err());
+    assert!(decode_sequence(b"GIF89a", &mut budget, None).is_err());
+    assert!(decode_sequence(b"GIF89a\x01\0\x01\0\0\0\0\x7f", &mut budget, None).is_err());
     // Two 1x1 palette-less frames prove the later-frame L8 budget branch.
     let no_palette_two_frame =
         b"GIF89a\x01\0\x01\0\0\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x3b";
-    assert!(decode_sequence(no_palette_two_frame, &mut budget).is_ok());
+    assert!(decode_sequence(no_palette_two_frame, &mut budget, None).is_ok());
+    for checks in 0..=3 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(no_palette_two_frame, Some(&token));
+    }
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(b"not gif");
     let _ = metadata_bytes(b"GIF89a");

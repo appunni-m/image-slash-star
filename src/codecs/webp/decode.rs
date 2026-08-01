@@ -16,7 +16,11 @@ use super::native::{DecodingError, LoopCount};
 /// Decode a WebP image from raw bytes.
 ///
 /// Returns a classified failure if the WebP container or frame cannot decode.
-pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
+pub fn decode(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedImage, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let cursor = Cursor::new(data);
 
     let mut decoder =
@@ -27,6 +31,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
 
     let buf_size = decoder.output_buffer_size();
     let mut pixels = vec![0u8; buf_size];
+    crate::codecs::error::check_cancelled(token)?;
     decoder
         .read_image(&mut pixels)
         .map_err(|error| decode_error(error, data.len()))?;
@@ -64,13 +69,15 @@ pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedSequence, usize)> {
+    crate::codecs::error::check_cancelled(token)?;
     let cursor = Cursor::new(data);
     let mut decoder =
         super::native::WebPDecoder::new(cursor).map_err(|error| decode_error(error, data.len()))?;
     let consumed = riff_consumed(data);
     if !decoder.is_animated() {
-        let (mut image, consumed) = decode(data)?;
+        let (mut image, consumed) = decode(data, token)?;
         let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
         let metadata = std::mem::take(&mut image.metadata);
         let source_color = std::mem::take(&mut image.source_color);
@@ -96,6 +103,7 @@ pub fn decode_sequence(
         ImageMode::Rgb8
     };
     for frame_index in 0..frame_count {
+        crate::codecs::error::check_cancelled(token)?;
         if frame_index != 0 {
             budget
                 .reserve_later_frame(mode, width, height)
@@ -245,11 +253,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(b"RIFF");
     let _ = metadata_bytes(b"RIFF\0\0\0\0WEB");
-    let _ = decode(b"not a webp stream");
+    let _ = decode(b"not a webp stream", None);
     let _ = decode_sequence(
         b"not a webp stream",
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
+        None,
     );
+    let still = include_bytes!("../../../tests/fixtures/input/images/webp/16x16.webp");
+    let animated = include_bytes!("../../../tests/fixtures/input/images/webp/animated.webp");
+    for checks in 0..=4 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(still, Some(&token));
+        let _ = decode_sequence(
+            animated,
+            &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
+            Some(&token),
+        );
+    }
     let _ = metadata_bytes(b"not webp");
     let _ = metadata_bytes(b"RIFF\x08\0\0\0WEBX");
     let _ = metadata_bytes(b"RIFF\xff\xff\xff\xffWEBP");

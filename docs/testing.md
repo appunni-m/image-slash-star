@@ -324,6 +324,16 @@ limits on the current prefix. The manifest pins per-format decode spot checks
 with exact minimums (PNG chunk header, GIF sub-block, BMP header field, TIFF
 strip span, JPEG marker read, WebP native read, ICO entry span, AVIF box).
 
+The cancellation contract is machine-checked for all eight formats: a
+never-cancelled token must produce byte-identical results to the legacy APIs,
+a pre-cancelled token must stop with `ImageError::Cancelled` carrying the
+format and operation stage without publishing partial state, clones must
+share cancellation state, truncated input must still report
+`NeedMoreData { minimum }`, and policy limits must still reject before codec
+work. A multi-frame GIF retry with a fresh token proves cancelled attempts
+never corrupt reusable state. The coverage drills additionally fire the token
+after a fixed number of polls so every structural checkpoint is exercised.
+
 The borrowed-view contract is table-driven: `EncodedImageView` over
 PNG/GIF/WebP/TIFF fixtures must match the free functions exactly for inspect,
 still and sequence decode, policy variants, verification scope behavior,
