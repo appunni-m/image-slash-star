@@ -81,7 +81,7 @@ fn encode_images(
     _durations: &[FrameDuration],
     _options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
-    Err(CodecError::Unsupported(
+    Err(CodecError::TargetUnavailable(
         "AVIF encoding requires the native extra module".to_owned(),
     ))
 }
@@ -185,7 +185,7 @@ fn encode_image_refs(
     _durations: &[FrameDuration],
     _options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
-    Err(CodecError::Unsupported(
+    Err(CodecError::TargetUnavailable(
         "AVIF encoding requires the native extra module".to_owned(),
     ))
 }

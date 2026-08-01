@@ -377,7 +377,7 @@ fn decode_sequence_native(
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let _ = validated.portable_still.as_ref();
-    Err(CodecError::Unsupported(
+    Err(CodecError::TargetUnavailable(
         "AVIF sequence decoding requires the native AVIF stack".to_owned(),
     ))
 }

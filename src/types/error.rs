@@ -54,6 +54,17 @@ pub enum ResourceLimit {
     MetadataBytes,
 }
 
+/// Stable reason retained when an unsupported operation is unavailable for a
+/// capability-level reason.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum UnsupportedReason {
+    /// The operation cannot run on the current compilation target.
+    TargetUnavailable,
+    /// The enabled codec or API surface does not implement the operation.
+    NotImplemented,
+}
+
 /// Stable category of an [`ImageError`].
 ///
 /// Error messages provide useful diagnostics but may become more specific over
@@ -125,6 +136,9 @@ pub enum ImageError {
         message: String,
         /// Public operation that produced the failure.
         stage: Option<ImageErrorStage>,
+        /// Stable capability reason, when the unsupported result is caused by
+        /// target availability or an unimplemented operation.
+        reason: Option<UnsupportedReason>,
         /// Byte offset in the encoded input where the failing container
         /// structure begins, when the codec parser can name it.
         offset: Option<u64>,
@@ -311,6 +325,24 @@ impl ImageError {
             | Self::Cancelled { stage, .. }
             | Self::OutputWrite { stage, .. } => *stage,
             Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
+        }
+    }
+
+    /// Return the stable capability reason for an unsupported operation, when
+    /// the failure is caused by target availability or an unimplemented API.
+    #[must_use]
+    pub const fn unsupported_reason(&self) -> Option<UnsupportedReason> {
+        match self {
+            Self::Unsupported { reason, .. } => *reason,
+            Self::UnknownFormat
+            | Self::FeatureDisabled { .. }
+            | Self::Malformed { .. }
+            | Self::Dimensions { .. }
+            | Self::Parameter { .. }
+            | Self::LimitExceeded { .. }
+            | Self::NeedMoreData { .. }
+            | Self::Cancelled { .. }
+            | Self::OutputWrite { .. } => None,
         }
     }
 

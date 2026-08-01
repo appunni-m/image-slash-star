@@ -30,6 +30,7 @@
 //!             format: Some(decoded.format),
 //!             message: "expected a PNG source".to_owned(),
 //!             stage: None,
+//!             reason: None,
 //!             offset: None,
 //!             identity: None,
 //!         });
@@ -39,6 +40,7 @@
 //!             format: Some(ImageFormat::Jpeg),
 //!             message: "JPEG example requires opaque RGB8 input".to_owned(),
 //!             stage: None,
+//!             reason: None,
 //!             offset: None,
 //!             identity: None,
 //!         });
