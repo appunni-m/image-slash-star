@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `7aa78f26e9507e0e45a4423037a13f108df6b4b7`
+Reviewed: 2026-08-01 against the working tree based on `0164e9c3736c42d2fe732965e19e5a1cf3754da3`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -248,8 +248,10 @@ translation cannot be bypassed.
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
+| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and return typed `ResourceLimit::EncodedOutputBytes` failures |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer reaches a caller-owned sink |
 | `encode_to_sink`, `encode_sequence_to_sink` | Encode the complete validated bytes into a caller-owned `OutputSink`; sink rejection is normalized to `ImageError::OutputWrite`, while incremental structural writing remains future work |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
@@ -333,7 +335,8 @@ selected format. The error also carries the exact `CodecOperation`,
 decode performs an inspection preflight before the codec's decode parse;
 unlimited wrappers avoid this extra pass. These are primary-canvas limits, not
 bounds on later TIFF pages or animation frames, source rectangles, cumulative
-sequence memory, metadata, codec work, other allocations, or encoded output.
+sequence memory, metadata, codec work, other allocations, or transient encoded
+output allocation. `EncodePolicy` is the separate encode-side result policy.
 
 `max_frames` is an inclusive limit on the exact inspected frame/page count.
 Inspection, sequence decode, and immutable-source construction reject a source
@@ -367,6 +370,15 @@ and AVIF box scan minus `mdat` payloads). The scan runs after detection and
 before any inspection preflight on all five policy paths, so an oversized
 metadata extent is rejected before codec work begins; malformed containers
 propagate their structured codec error from the scan.
+
+`EncodePolicy::max_output_bytes` is an inclusive admission check on the
+complete encoded `Vec<u8>`. Still and sequence encodes apply it before return;
+the policy-aware sink wrappers apply it before the first sink write. An
+oversized result returns `ImageError::LimitExceeded` with
+`ResourceLimit::EncodedOutputBytes`, and the sink remains untouched. Because
+the current codecs construct the complete buffer before this check, it is not
+a transient-allocation or recoverable-OOM guarantee. Incremental structural
+writing and internal allocation accounting remain open work.
 
 ### Codec work is bounded by the resource set
 
@@ -408,10 +420,11 @@ small assets so no enormous fixture is ever allocated.
 Codec-internal `Vec` allocations remain infallible and the crate deliberately
 does not use `try_reserve` or recoverable out-of-memory errors: Rust's default
 allocation abort is the documented OOM behavior, and the release gate for
-hostile input is the checked preflight above rather than allocation-error
-recovery. This is the retained QA-015 decision: near-limit arithmetic is
-fixture-proven without enormous allocations, and no public API promises a
-recoverable allocation failure.
+hostile decode input is the checked preflight above rather than
+allocation-error recovery. `EncodePolicy` rejects an oversized completed
+result, but it does not change that allocation policy. This is the retained
+QA-015 decision: near-limit arithmetic is fixture-proven without enormous
+allocations, and no public API promises a recoverable allocation failure.
 
 ## Decoded sample layouts
 
@@ -640,11 +653,13 @@ The public API is whole-buffer based:
 
 `DecodePolicy` already bounds encoded input, the inspected primary canvas and
 transfer bytes, the inspected frame/page count, later-frame and cumulative
-sequence bytes, and the encoded metadata extent. The current crate should
-still not be described as hardened for arbitrary hostile inputs: encoded-output
-allocation remains outside the policy, codec-internal allocations remain
-infallible, and no recoverable out-of-memory contract is promised. Resource
-limits and this remaining gap are tracked in the [roadmap](roadmap.md).
+sequence bytes, and the encoded metadata extent. `EncodePolicy` additionally
+rejects a complete encoded result above its caller-selected maximum before a
+return or sink write. The current crate should still not be described as
+hardened for arbitrary hostile inputs: whole-buffer encoders allocate before
+that result check, codec-internal allocations remain infallible, and no
+recoverable out-of-memory contract is promised. Resource limits and this
+remaining gap are tracked in the [roadmap](roadmap.md).
 
 ## Retained and removed scope
 
