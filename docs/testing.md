@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `2fcfa5853f8fa9b0036d8bf8d819e9a7dd01ad1e`
+Reviewed: 2026-08-01 on the working tree based on revision `00451646c1cc1d74cad8946ca3d9ba66b1316217`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -132,7 +132,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `2fcfa5853f8fa9b0036d8bf8d819e9a7dd01ad1e`, the generated matrix
+For the current working tree based on revision `00451646c1cc1d74cad8946ca3d9ba66b1316217`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -458,17 +458,24 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 44,881 | 44,881 |
-| Branches | 6,330 | 6,330 |
-| Functions | 2,477 | 2,477 |
-| Regions | 70,677 | 70,677 |
+| Lines | 44,995 | 44,995 |
+| Branches | 6,352 | 6,352 |
+| Functions | 2,484 | 2,484 |
+| Regions | 70,811 | 70,811 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `09d4bab4-4eb4-4a15-9ce0-ab3a270f985b`
+Separate managed runtime evidence comes from feature-matrix run
+`f6054909-6f00-450d-a9c8-08f5aaf36692`: 727 native and `wasm32-wasip1` runtime
+tests passed with zero failures, and its terminal capability-table record says
+the native and WASI lanes agree. This is target/runtime evidence; it does not
+turn aggregate coverage, defensive/specification contracts, or Rust-only
+diagnostic tests into Pillow-parity coverage.
 
-Snapshot: `0b523a15-2f77-4bec-ae9f-655cd9772124`
+Coverage MCP run: `1a735222-b186-46c1-9e4e-6ae7612ab066`
+
+Snapshot: `45f3c687-9680-4088-be29-dab45879a18f`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
