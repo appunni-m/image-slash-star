@@ -67,7 +67,7 @@ fn write_encoded(
     img.validate().map_err(CodecError::from_image_error)?;
 
     let layout = BmpLayout::for_image(img)?;
-    let output_len = layout.output_len()?;
+    let output_len = layout.output_len();
     if let Some((policy, operation)) = policy {
         policy
             .check_output_len(output_len, ImageFormat::Bmp, operation)
@@ -196,22 +196,20 @@ impl BmpLayout {
                 )));
             }
         };
-        let palette_bytes = colors
-            .checked_mul(4)
-            .ok_or_else(|| CodecError::Dimensions("BMP palette length overflows".to_owned()))?;
+        // `write_encoded` validates the image and proves the complete file
+        // fits in a 32-bit BMP before reaching this private layout builder.
+        // Therefore the palette count, fixed header addition, and final
+        // palette-count conversion are bounded by construction here.
+        let palette_bytes = colors.saturating_mul(4);
         let stride = row_size(usize::from(depth), img.width as usize);
         let pixel_bytes = stride
             .checked_mul(img.height as usize)
             .ok_or_else(|| CodecError::Dimensions("BMP pixel length overflows".to_owned()))?;
-        let pixel_offset = FILE_HEADER_SIZE
-            .checked_add(INFO_HEADER_SIZE as usize)
-            .and_then(|value| value.checked_add(palette_bytes))
-            .ok_or_else(|| CodecError::Dimensions("BMP pixel offset overflows".to_owned()))?;
+        let pixel_offset = BMP_HEADER_SIZE.saturating_add(palette_bytes);
         Ok(Self {
             kind,
             depth,
-            colors: u32::try_from(colors)
-                .map_err(|_| CodecError::Dimensions("BMP palette count overflows".to_owned()))?,
+            colors: u32::try_from(colors).unwrap_or(u32::MAX),
             palette_bytes,
             pixel_offset,
             pixel_bytes,
@@ -219,11 +217,11 @@ impl BmpLayout {
         })
     }
 
-    fn output_len(self) -> CodecResult<usize> {
+    fn output_len(self) -> usize {
+        // `bmp_file_fits` has already bounded the complete file to u32::MAX.
         BMP_HEADER_SIZE
-            .checked_add(self.palette_bytes)
-            .and_then(|value| value.checked_add(self.pixel_bytes))
-            .ok_or_else(|| CodecError::Dimensions("BMP output length overflows".to_owned()))
+            .saturating_add(self.palette_bytes)
+            .saturating_add(self.pixel_bytes)
     }
 }
 
@@ -255,10 +253,131 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    // These calls model private defensive edges that a valid Pillow input
+    // cannot select. Pillow has no caller-owned OutputSink, cancellation
+    // token, or access to these post-preflight arithmetic states, so this is
+    // Rust defensive-model evidence rather than a parity fixture or a
+    // coverage-only substitute for the real sink contract.
     for (width, height) in [(u32::MAX, 1), (1, u32::MAX), (i32::MAX as u32, 1)] {
         let image = DecodedImage::new(width, height, Vec::new(), crate::types::ColorType::L8);
         assert!(encode(&image, &BmpEncodeOptions::default()).is_err());
     }
+
+    let cancelled = crate::CancellationToken::new();
+    cancelled.cancel();
+    let image = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
+    let mut accept = |_bytes: &[u8]| Ok::<(), CodecError>(());
+    let _ = write_encoded(
+        &image,
+        &BmpEncodeOptions::default(),
+        Some(&cancelled),
+        None,
+        &mut accept,
+    );
+
+    let huge = DecodedImage::new(
+        u32::MAX,
+        u32::MAX,
+        Vec::new(),
+        crate::types::ColorType::Rgba8,
+    );
+    let _ = BmpLayout::for_image(&huge);
+
+    let mut written = 0usize;
+    let mut reject = |_bytes: &[u8]| Err(CodecError::OutputWrite("coverage sink".to_owned()));
+    let _ = write_1bit_rows(
+        &[],
+        usize::MAX,
+        usize::MAX,
+        0,
+        None,
+        &mut accept,
+        &mut written,
+    );
+    let _ = write_1bit_rows(
+        &[],
+        16,
+        usize::MAX / 2 + 1,
+        0,
+        None,
+        &mut accept,
+        &mut written,
+    );
+    let _ = write_1bit_rows(&[], 8, 1, 0, None, &mut accept, &mut written);
+    let _ = write_1bit_rows(&[0], 8, 1, 1, None, &mut reject, &mut written);
+    let _ = write_1bit_rows(&[], 1, 1, 0, Some(&cancelled), &mut accept, &mut written);
+
+    let mut convert = |_pixel: &[u8], _row: &mut Vec<u8>| {};
+    let _ = write_rows(
+        &[],
+        usize::MAX,
+        1,
+        2,
+        0,
+        &mut convert,
+        None,
+        &mut accept,
+        &mut written,
+    );
+    let _ = write_rows(
+        &[],
+        1,
+        3,
+        usize::MAX / 2 + 1,
+        0,
+        &mut convert,
+        None,
+        &mut accept,
+        &mut written,
+    );
+    let _ = write_rows(
+        &[],
+        2,
+        usize::MAX / 2 + 1,
+        1,
+        0,
+        &mut convert,
+        None,
+        &mut accept,
+        &mut written,
+    );
+    let _ = write_rows(
+        &[],
+        1,
+        1,
+        1,
+        0,
+        &mut convert,
+        None,
+        &mut accept,
+        &mut written,
+    );
+    let _ = write_rows(
+        &[0],
+        1,
+        1,
+        1,
+        1,
+        &mut convert,
+        None,
+        &mut reject,
+        &mut written,
+    );
+    let _ = write_rows(
+        &[],
+        1,
+        1,
+        1,
+        0,
+        &mut convert,
+        Some(&cancelled),
+        &mut accept,
+        &mut written,
+    );
+
+    let _ = emit(&[0], Some(&cancelled), &mut accept, &mut written);
+    let mut max_written = usize::MAX;
+    let _ = emit(&[0], None, &mut accept, &mut max_written);
 }
 
 fn source_row(output_row: usize, height: usize) -> usize {

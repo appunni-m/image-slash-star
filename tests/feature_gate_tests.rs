@@ -4673,8 +4673,10 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 Ok(())
             };
             let l1 = image_slash_star::DecodedImage::with_mode(8, 1, vec![0], ImageMode::L1);
+            assert_bmp_later_failure(&l1, 2)?;
             assert_bmp_later_failure(&l1, 3)?;
             let l8 = image_slash_star::DecodedImage::new(1, 1, vec![0], ColorType::L8);
+            assert_bmp_later_failure(&l8, 2)?;
             assert_bmp_later_failure(&l8, 3)?;
             let palette_less_indexed =
                 image_slash_star::DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
@@ -4715,6 +4717,41 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             );
             assert_eq!(cancelling_bmp.writes, 1);
             assert_eq!(cancelling_bmp.bytes, &expected_bmp[..54]);
+
+            // A pre-cancelled BMP still stops before its first structural
+            // write. This is a Rust-only interruption contract; Pillow has
+            // no equivalent token or caller-owned sink.
+            let pre_cancelled_bmp_token = image_slash_star::CancellationToken::new();
+            pre_cancelled_bmp_token.cancel();
+            let mut pre_cancelled_bmp = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let pre_cancelled_bmp_error = match image_slash_star::encode_to_sink_with_token(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &bmp_options,
+                &pre_cancelled_bmp_token,
+                &mut pre_cancelled_bmp,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("pre-cancelled BMP unexpectedly wrote {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                pre_cancelled_bmp_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(pre_cancelled_bmp_error.format(), Some(ImageFormat::Bmp));
+            assert_eq!(
+                pre_cancelled_bmp_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(pre_cancelled_bmp.writes, 0);
+            assert!(pre_cancelled_bmp.bytes.is_empty());
 
             let too_small = EncodePolicy::default()
                 .with_max_output_bytes(u64::try_from(expected_bmp.len() - 1)?);
@@ -4839,6 +4876,62 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             );
             assert_eq!(jpeg_token_sink.bytes, jpeg_expected);
             assert_eq!(jpeg_token_sink.writes, 1);
+
+            // The generic whole-buffer fallback must also preserve invalid
+            // still-input errors before touching its sink. These are
+            // Rust-owned API/error contracts, not Pillow parity rows.
+            let invalid_jpeg =
+                image_slash_star::DecodedImage::new(1, 1, Vec::new(), ColorType::Rgb8);
+            let mut invalid_jpeg_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let invalid_jpeg_error = match image_slash_star::encode_to_sink(
+                &invalid_jpeg,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &mut invalid_jpeg_sink,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("invalid JPEG fallback unexpectedly wrote {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                invalid_jpeg_error.kind(),
+                image_slash_star::ImageErrorKind::Dimensions
+            );
+            assert_eq!(invalid_jpeg_sink.writes, 0);
+            assert!(invalid_jpeg_sink.bytes.is_empty());
+
+            let invalid_jpeg_token = image_slash_star::CancellationToken::new();
+            let mut invalid_jpeg_token_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let invalid_jpeg_token_error = match image_slash_star::encode_to_sink_with_token(
+                &invalid_jpeg,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &invalid_jpeg_token,
+                &mut invalid_jpeg_token_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "invalid token JPEG fallback unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                invalid_jpeg_token_error.kind(),
+                image_slash_star::ImageErrorKind::Dimensions
+            );
+            assert_eq!(invalid_jpeg_token_sink.writes, 0);
+            assert!(invalid_jpeg_token_sink.bytes.is_empty());
         }
     }
 
