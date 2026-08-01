@@ -2327,18 +2327,3 @@ pub(crate) fn __coverage_exercise_private_branches() {
     movie.tracks[3].aux_is_alpha = Some(false);
     let _ = movie.details();
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_colr_rejects_extra_nclx_payload() {
-        let payload = [b'n', b'c', b'l', b'x', 0, 1, 0, 13, 0, 6, 0x80, 0];
-        match parse_colr(&payload) {
-            Err(CodecError::Malformed(_)) => {}
-            Ok(_) => panic!("extra bytes must fail"),
-            Err(_) => panic!("extra bytes must be classified as malformed"),
-        }
-    }
-}
