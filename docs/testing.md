@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`
+Reviewed: 2026-08-01 on the working tree based on revision `2996ef451e254c4935aea511c93a3f26f6a2eab9`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -129,12 +129,12 @@ GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
 sample bytes remain a documented gap. The parity schema does not compare
 auxiliary retained metadata such as EXIF, XMP, text, or orientation. Primary
-AVIF ICC is covered by the separate defensive/specification contract below,
-not by a synthetic parity row.
+AVIF ICC and `mdcv` mastering-display metadata are covered by the separate
+defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`, the generated matrix
+For the current working tree based on revision `2996ef451e254c4935aea511c93a3f26f6a2eab9`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -301,6 +301,14 @@ Pillow-generated encoded metadata output only as a source witness, then
 asserts inspect, still decode, fallback-sequence, pixel-preservation, and
 malformed-profile behavior as separate defensive/specification evidence. No
 row is added to `coverage_matrix.json`.
+
+The contract also associates a deliberately distinguishable 24-byte primary
+`mdcv` property and asserts the exact green/blue/red wire-order mapping into
+the public red/green/blue descriptor, the mastering luminance fields, inspect/
+decode/fallback-sequence agreement, unchanged pixels, and rejection of
+truncated, overlong, or duplicate properties. This is the same
+defensive/specification lane: Pillow has no structured item-level `mdcv` result,
+so no parity row or coverage-only test is added.
 
 The AVIF item-property contract is separate from Pillow parity. A committed
 AVIF orientation output supplies `irot`; the test mutates all four legal
@@ -469,25 +477,25 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,326 | 45,326 |
-| Branches | 6,422 | 6,422 |
-| Functions | 2,508 | 2,508 |
-| Regions | 71,245 | 71,245 |
+| Lines | 45,494 | 45,494 |
+| Branches | 6,438 | 6,438 |
+| Functions | 2,524 | 2,524 |
+| Regions | 71,482 | 71,482 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`bc3906d3-464f-45a2-8e87-81a4006c435d`, submitted against
-`3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`: 727 native and `wasm32-wasip1`
+`c7a887e9-a5ed-45ae-b80d-967f54c07161`, submitted against
+`2996ef451e254c4935aea511c93a3f26f6a2eab9`: 727 native and `wasm32-wasip1`
 runtime tests passed with zero failures, and its terminal capability-table
 record says the native and WASI lanes agree. This is target/runtime evidence;
 it does not turn aggregate coverage, defensive/specification contracts, or
 Rust-only diagnostic tests into Pillow-parity coverage.
 
-Coverage MCP run: `08e9d9d3-3abe-4c49-9395-ae5fdd7b8f30`
+Coverage MCP run: `1a3e22b0-b054-46fd-929d-70c18151819e`
 
-Snapshot: `d035f6e8-a042-4741-a043-06ff548e2d5b`
+Snapshot: `8a3684a1-a383-4526-98a2-5323f3500b18`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
