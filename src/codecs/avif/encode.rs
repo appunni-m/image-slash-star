@@ -31,6 +31,17 @@ pub fn encode_sequence(
     sequence: &DecodedSequence,
     options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
+    encode_sequence_with_token(sequence, options, None)
+}
+
+/// Encode an AVIF sequence while polling an optional cancellation token at
+/// frame and native-container finalization boundaries.
+pub fn encode_sequence_with_token(
+    sequence: &DecodedSequence,
+    options: &AvifEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     sequence.validate().map_err(CodecError::from_image_error)?;
     for frame in &sequence.frames {
         if frame.source.rect.left != 0
@@ -62,7 +73,7 @@ pub fn encode_sequence(
         .iter()
         .map(|frame| frame.source.duration)
         .collect::<Vec<_>>();
-    encode_image_refs(&images, &durations, options)
+    encode_image_refs(&images, &durations, options, token)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -72,7 +83,7 @@ fn encode_images(
     options: &AvifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
     let references = images.iter().collect::<Vec<_>>();
-    encode_image_refs(&references, durations, options)
+    encode_image_refs(&references, durations, options, None)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -91,7 +102,9 @@ fn encode_image_refs(
     images: &[&DecodedImage],
     durations: &[FrameDuration],
     options: &AvifEncodeOptions,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let first = *images
         .first()
         .ok_or_else(|| CodecError::Dimensions("AVIF sequence has no frames".to_owned()))?;
@@ -121,7 +134,7 @@ fn encode_image_refs(
     // Pillow's AVIF save surface quantizes source timing to milliseconds even
     // when the decoded AVIF track retained a more precise rational duration.
     let encoder = create_encoder(first, &parsed, 1_000)?;
-    encode_frames(encoder, images, &frame_durations, images.len() == 1)
+    encode_frames(encoder, images, &frame_durations, images.len() == 1, token)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -160,8 +173,10 @@ fn encode_frames(
     images: &[&DecodedImage],
     durations: &[u64],
     single: bool,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     for (image, &duration) in images.iter().zip(durations) {
+        crate::codecs::error::check_cancelled(token)?;
         let prepared = prepare_pixels(image)?;
         encoder
             .add_frame(
@@ -173,7 +188,9 @@ fn encode_frames(
                 single,
             )
             .map_err(|error| error.context("encode AVIF frame"))?;
+        crate::codecs::error::check_cancelled(token)?;
     }
+    crate::codecs::error::check_cancelled(token)?;
     encoder
         .finish()
         .map_err(|error| error.context("finalize AVIF encoder"))
@@ -184,6 +201,7 @@ fn encode_image_refs(
     _images: &[&DecodedImage],
     _durations: &[FrameDuration],
     _options: &AvifEncodeOptions,
+    _token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     Err(CodecError::TargetUnavailable(
         "AVIF encoding requires the native extra module".to_owned(),

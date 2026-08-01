@@ -740,10 +740,25 @@ pub(crate) fn decode_frame_format(
 
 /// Dispatch encoding to the enabled format implementation.
 pub(crate) fn encode_format(
+    image: &DecodedImage,
+    format: ImageFormat,
+    options: &EncodeOptions,
+) -> ImageResult<Vec<u8>> {
+    encode_format_with_token(image, format, options, None)
+}
+
+/// Dispatch encoding with an optional cooperative cancellation token.
+pub(crate) fn encode_format_with_token(
     _image: &DecodedImage,
     format: ImageFormat,
     _options: &EncodeOptions,
+    token: Option<&crate::CancellationToken>,
 ) -> ImageResult<Vec<u8>> {
+    into_image_result(
+        error::check_cancelled(token),
+        format,
+        ImageErrorStage::StillEncode,
+    )?;
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -805,11 +820,17 @@ pub(crate) fn encode_format(
                 ));
             }
         };
-        into_image_result(
+        let encoded = into_image_result(
             encoded.map_err(|error| error.context("encode")),
             format,
             ImageErrorStage::StillEncode,
-        )
+        )?;
+        into_image_result(
+            error::check_cancelled(token),
+            format,
+            ImageErrorStage::StillEncode,
+        )?;
+        Ok(encoded)
     }
     #[cfg(not(any(
         feature = "jpeg",
@@ -834,6 +855,21 @@ pub(crate) fn encode_sequence_format(
     format: ImageFormat,
     options: &EncodeOptions,
 ) -> ImageResult<Vec<u8>> {
+    encode_sequence_format_with_token(sequence, format, options, None)
+}
+
+/// Dispatch sequence encoding with an optional cooperative cancellation token.
+pub(crate) fn encode_sequence_format_with_token(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    options: &EncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> ImageResult<Vec<u8>> {
+    into_image_result(
+        error::check_cancelled(token),
+        format,
+        ImageErrorStage::SequenceEncode,
+    )?;
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -854,36 +890,56 @@ pub(crate) fn encode_sequence_format(
     match (format, options) {
         #[cfg(feature = "gif")]
         (ImageFormat::Gif, EncodeOptions::Gif(options)) => {
+            let encoded = match token {
+                Some(token) => {
+                    gif::encode::encode_sequence_with_token(sequence, options, Some(token))
+                }
+                None => gif::encode::encode_sequence(sequence, options),
+            };
             return into_image_result(
-                gif::encode::encode_sequence(sequence, options)
-                    .map_err(|error| error.context("encode sequence")),
+                encoded.map_err(|error| error.context("encode sequence")),
                 format,
                 ImageErrorStage::SequenceEncode,
             );
         }
         #[cfg(feature = "avif")]
         (ImageFormat::Avif, EncodeOptions::Avif(options)) => {
+            let encoded = match token {
+                Some(token) => {
+                    avif::encode::encode_sequence_with_token(sequence, options, Some(token))
+                }
+                None => avif::encode::encode_sequence(sequence, options),
+            };
             return into_image_result(
-                avif::encode::encode_sequence(sequence, options)
-                    .map_err(|error| error.context("encode sequence")),
+                encoded.map_err(|error| error.context("encode sequence")),
                 format,
                 ImageErrorStage::SequenceEncode,
             );
         }
         #[cfg(feature = "tiff")]
         (ImageFormat::Tiff, EncodeOptions::Tiff(options)) => {
+            let encoded = match token {
+                Some(token) => {
+                    tiff::encode::encode_sequence_with_token(sequence, options, Some(token))
+                }
+                None => tiff::encode::encode_sequence(sequence, options),
+            };
             return into_image_result(
-                tiff::encode::encode_sequence(sequence, options)
-                    .map_err(|error| error.context("encode sequence")),
+                encoded.map_err(|error| error.context("encode sequence")),
                 format,
                 ImageErrorStage::SequenceEncode,
             );
         }
         #[cfg(feature = "webp")]
         (ImageFormat::WebP, EncodeOptions::WebP(options)) if sequence.frames.len() > 1 => {
+            let encoded = match token {
+                Some(token) => {
+                    webp::encode::encode_sequence_with_token(sequence, options, Some(token))
+                }
+                None => webp::encode::encode_sequence(sequence, options),
+            };
             return into_image_result(
-                webp::encode::encode_sequence(sequence, options)
-                    .map_err(|error| error.context("encode sequence")),
+                encoded.map_err(|error| error.context("encode sequence")),
                 format,
                 ImageErrorStage::SequenceEncode,
             );
@@ -919,7 +975,7 @@ pub(crate) fn encode_sequence_format(
             identity: None,
         });
     }
-    encode_format(&frame.image, format, options)
+    encode_format_with_token(&frame.image, format, options, token)
 }
 
 fn option_format_mismatch(

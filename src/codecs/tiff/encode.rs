@@ -227,16 +227,29 @@ pub fn encode_sequence(
     sequence: &DecodedSequence,
     opts: &TiffEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
+    encode_sequence_with_token(sequence, opts, None)
+}
+
+/// Encode ordered TIFF pages while polling an optional cancellation token at
+/// page and output-relocation boundaries.
+pub fn encode_sequence_with_token(
+    sequence: &DecodedSequence,
+    opts: &TiffEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     validate_sequence_semantics(sequence)?;
     if sequence.frames.len() == 1 {
-        return encode(&sequence.frames[0].image, opts);
+        let encoded = encode(&sequence.frames[0].image, opts)?;
+        crate::codecs::error::check_cancelled(token)?;
+        return Ok(encoded);
     }
 
-    let pages = sequence
-        .frames
-        .iter()
-        .map(|frame| encode_page(&frame.image, opts))
-        .collect::<CodecResult<Vec<_>>>()?;
+    let mut pages = Vec::with_capacity(sequence.frames.len());
+    for frame in &sequence.frames {
+        crate::codecs::error::check_cancelled(token)?;
+        pages.push(encode_page(&frame.image, opts)?);
+    }
     let page_lengths = pages
         .iter()
         .map(|page| page.bytes.len())
@@ -251,6 +264,7 @@ pub fn encode_sequence(
     let mut output = Vec::with_capacity(final_len);
     let mut previous_next_position: Option<usize> = None;
     for mut page in pages {
+        crate::codecs::error::check_cancelled(token)?;
         // `sequence_output_len` proved every page base and relocated offset
         // fits both usize and classic TIFF's u32 address space.
         let aligned = output.len().wrapping_add(15) & !15;
@@ -273,6 +287,7 @@ pub fn encode_sequence(
         }
         previous_next_position = Some(base.wrapping_add(page.next_position));
         output.extend_from_slice(&page.bytes);
+        crate::codecs::error::check_cancelled(token)?;
     }
     output.resize(final_len, 0);
     Ok(output)

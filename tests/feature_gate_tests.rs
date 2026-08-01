@@ -1017,6 +1017,121 @@ fn cancellation_token_stops_decode_without_partial_state() -> Result<(), Box<dyn
 }
 
 #[test]
+fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
+    // Pillow has no caller-controlled cancellation token or OutputSink. These
+    // assertions cover the Rust operation boundary and must not become parity
+    // rows. Whole-buffer still codecs can only observe the token at dispatch;
+    // sequence codecs additionally poll at frame and finalization boundaries.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    if cfg!(feature = "png") {
+        let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::Png);
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+        let token = image_slash_star::CancellationToken::new();
+        assert_eq!(
+            image_slash_star::encode_with_token_and_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &image_slash_star::EncodePolicy::default(),
+                &token,
+            )?,
+            expected,
+            "an uncancelled still encode remains byte-identical"
+        );
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::encode_with_token(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &cancelled,
+        ) {
+            Ok(bytes) => {
+                return Err(format!("cancelled PNG encode returned {} bytes", bytes.len()).into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+
+        let mut sink = vec![0xCC];
+        assert!(matches!(
+            image_slash_star::encode_to_sink_with_token(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &cancelled,
+                &mut sink,
+            ),
+            Err(ImageError::Cancelled { .. })
+        ));
+        assert_eq!(sink, vec![0xCC], "cancellation must precede sink writes");
+    }
+
+    if cfg!(feature = "gif") {
+        let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
+        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
+        let options = EncodeOptions::for_format(ImageFormat::Gif);
+        let expected = image_slash_star::encode_sequence(&sequence, ImageFormat::Gif, &options)?;
+        let token = image_slash_star::CancellationToken::new();
+        assert_eq!(
+            image_slash_star::encode_sequence_with_token(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &token,
+            )?,
+            expected,
+            "an uncancelled sequence encode remains byte-identical"
+        );
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::encode_sequence_with_token_and_policy(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &image_slash_star::EncodePolicy::default(),
+            &cancelled,
+        ) {
+            Ok(bytes) => {
+                return Err(format!(
+                    "cancelled GIF sequence encode returned {} bytes",
+                    bytes.len()
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::Gif));
+        assert_eq!(error.stage(), Some(ImageErrorStage::SequenceEncode));
+
+        let mut sink = vec![0xDD];
+        assert!(matches!(
+            image_slash_star::encode_sequence_to_sink_with_token(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &cancelled,
+                &mut sink,
+            ),
+            Err(ImageError::Cancelled { .. })
+        ));
+        assert_eq!(
+            sink,
+            vec![0xDD],
+            "sequence cancellation must precede sink writes"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut cases: Vec<(&str, bool, &str, SequenceKind)> = vec![

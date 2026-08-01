@@ -36,6 +36,17 @@ pub fn encode_sequence(
     sequence: &DecodedSequence,
     opts: &WebPEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
+    encode_sequence_with_token(sequence, opts, None)
+}
+
+/// Encode WebP animation keyframes while polling an optional cancellation
+/// token at frame and container-assembly boundaries.
+pub fn encode_sequence_with_token(
+    sequence: &DecodedSequence,
+    opts: &WebPEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     validate_options(opts)?;
     validate_sequence_options(opts)?;
     let loop_count = match sequence.loop_count {
@@ -57,6 +68,7 @@ pub fn encode_sequence(
     let mut encoded_frames = Vec::with_capacity(sequence.frames.len());
     let mut has_alpha = false;
     for frame in &sequence.frames {
+        crate::codecs::error::check_cancelled(token)?;
         validate_keyframe(sequence, frame)?;
         let duration = duration_milliseconds(frame.source.duration)?;
         let (encoded, alpha) = encode_pixels(&frame.image, opts)?;
@@ -67,6 +79,7 @@ pub fn encode_sequence(
             &encoded[12..]
         };
         encoded_frames.push((duration, chunks.to_vec()));
+        crate::codecs::error::check_cancelled(token)?;
     }
 
     let mut output = Vec::new();
@@ -84,6 +97,7 @@ pub fn encode_sequence(
     write_chunk(&mut output, b"ANIM", &animation);
 
     for (duration, chunks) in encoded_frames {
+        crate::codecs::error::check_cancelled(token)?;
         let mut payload = vec![0; 6];
         payload.extend_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
         payload.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
@@ -93,6 +107,7 @@ pub fn encode_sequence(
         write_chunk(&mut output, b"ANMF", &payload);
     }
 
+    crate::codecs::error::check_cancelled(token)?;
     let output_len = output.len();
     finish_riff(output, output_len)
 }

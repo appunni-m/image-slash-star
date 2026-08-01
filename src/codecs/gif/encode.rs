@@ -638,6 +638,17 @@ pub fn encode_sequence(
     sequence: &DecodedSequence,
     opts: &GifEncodeOptions,
 ) -> CodecResult<Vec<u8>> {
+    encode_sequence_with_token(sequence, opts, None)
+}
+
+/// Encode a GIF sequence while polling an optional cancellation token at
+/// frame/coalescing and output-assembly boundaries.
+pub fn encode_sequence_with_token(
+    sequence: &DecodedSequence,
+    opts: &GifEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     sequence.validate().map_err(CodecError::from_image_error)?;
     for frame in &sequence.frames {
         if frame.source.is_default_image {
@@ -675,8 +686,20 @@ pub fn encode_sequence(
         loop_count,
         transparency_override: opts.transparency,
     };
-    let frames = coalesce_identical_frames(sequence, requested_frames, settings.disposal_override)?;
-    write_gif(sequence, &frames, settings)
+    let frames = match token {
+        Some(token) => coalesce_identical_frames_with_token(
+            sequence,
+            requested_frames,
+            settings.disposal_override,
+            Some(token),
+        )?,
+        None => coalesce_identical_frames(sequence, requested_frames, settings.disposal_override)?,
+    };
+    crate::codecs::error::check_cancelled(token)?;
+    match token {
+        Some(token) => write_gif_with_token(sequence, &frames, settings, Some(token)),
+        None => write_gif(sequence, &frames, settings),
+    }
 }
 
 // Frame coalescing validates output history and palette shape immediately
@@ -687,6 +710,17 @@ fn coalesce_identical_frames(
     requested_frames: usize,
     disposal_override: Option<u8>,
 ) -> CodecResult<Vec<crate::types::DecodedFrame>> {
+    coalesce_identical_frames_with_token(sequence, requested_frames, disposal_override, None)
+}
+
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+fn coalesce_identical_frames_with_token(
+    sequence: &DecodedSequence,
+    requested_frames: usize,
+    disposal_override: Option<u8>,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<crate::types::DecodedFrame>> {
+    crate::codecs::error::check_cancelled(token)?;
     if requested_frames == 1 {
         return Ok(vec![gif_output_frame(sequence, &sequence.frames[0])]);
     }
@@ -712,6 +746,7 @@ fn coalesce_identical_frames(
     let mut output = Vec::<crate::types::DecodedFrame>::new();
 
     for frame in sequence.frames.iter().take(requested_frames) {
+        crate::codecs::error::check_cancelled(token)?;
         let previous_disposal = match previous_frame {
             Some(previous) if previous.pixel_layout == FramePixelLayout::SourceRectangle => {
                 Some(effective_disposal(previous, disposal_override)?)
@@ -801,6 +836,7 @@ fn coalesce_identical_frames(
             previous_render = Some(canvas.clone());
         }
         previous_frame = Some(frame);
+        crate::codecs::error::check_cancelled(token)?;
     }
     Ok(output)
 }
@@ -1168,6 +1204,16 @@ fn write_gif(
     frames: &[crate::types::DecodedFrame],
     settings: GifSettings,
 ) -> CodecResult<Vec<u8>> {
+    write_gif_with_token(sequence, frames, settings, None)
+}
+
+fn write_gif_with_token(
+    sequence: &DecodedSequence,
+    frames: &[crate::types::DecodedFrame],
+    settings: GifSettings,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let width = u16::try_from(sequence.width)
         .map_err(|_| CodecError::Dimensions("GIF width exceeds format limits".to_owned()))?;
     let height = u16::try_from(sequence.height)
@@ -1175,10 +1221,11 @@ fn write_gif(
     let first_frame = frames
         .first()
         .ok_or_else(|| CodecError::Dimensions("GIF sequence has no frames".to_owned()))?;
-    let prepared_frames = frames
-        .iter()
-        .map(|frame| prepare_image(&frame.image))
-        .collect::<CodecResult<Vec<_>>>()?;
+    let mut prepared_frames = Vec::with_capacity(frames.len());
+    for frame in frames {
+        crate::codecs::error::check_cancelled(token)?;
+        prepared_frames.push(prepare_image(&frame.image)?);
+    }
     // `first_frame` above proves the prepared vector has the same nonzero
     // length as `frames`.
     let mut first = prepared_frames[0].clone();
@@ -1230,6 +1277,7 @@ fn write_gif(
     let mut previous_quantized_rgb = None::<Vec<u8>>;
     let mut previous_disposal = None::<u8>;
     for (frame_index, (frame, prepared)) in frames.iter().zip(&prepared_frames).enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
         let mut prepared = if frame_index == 0 {
             first.clone()
         } else {
@@ -1329,6 +1377,7 @@ fn write_gif(
         let compressed = encode_lzw(&encoded_indices, minimum_code_size);
         output.push(minimum_code_size);
         write_sub_blocks(&mut output, &compressed);
+        crate::codecs::error::check_cancelled(token)?;
     }
     output.push(GIF_TRAILER);
     Ok(output)
