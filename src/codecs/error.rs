@@ -81,9 +81,9 @@ impl CodecError {
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
             ImageError::Dimensions { message, .. } => Self::Dimensions(message),
             ImageError::Parameter { message, .. } => Self::Parameter(message),
-            ImageError::UnknownFormat | ImageError::FeatureDisabled { .. } => {
-                Self::Unsupported(error.to_string())
-            }
+            ImageError::UnknownFormat
+            | ImageError::FeatureDisabled { .. }
+            | ImageError::OutputWrite { .. } => Self::Unsupported(error.to_string()),
             ImageError::LimitExceeded { .. } => Self::LimitExceeded(error),
             ImageError::NeedMoreData { minimum, .. } => Self::NeedMore {
                 minimum: usize::try_from(minimum).unwrap_or(usize::MAX),
@@ -174,7 +174,8 @@ impl CodecError {
                     | ImageError::FeatureDisabled { .. }
                     | ImageError::LimitExceeded { .. }
                     | ImageError::NeedMoreData { .. }
-                    | ImageError::Cancelled { .. } => {}
+                    | ImageError::Cancelled { .. }
+                    | ImageError::OutputWrite { .. } => {}
                 }
                 converted
             }
@@ -267,7 +268,8 @@ impl CodecError {
                     ImageError::UnknownFormat
                     | ImageError::FeatureDisabled { .. }
                     | ImageError::LimitExceeded { .. }
-                    | ImageError::Cancelled { .. } => {}
+                    | ImageError::Cancelled { .. }
+                    | ImageError::OutputWrite { .. } => {}
                 }
                 converted
             }
