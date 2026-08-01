@@ -133,12 +133,32 @@ fn invalid_compressed_metadata_identity(kind: [u8; 4], data: &[u8]) -> Option<&'
     }
 }
 
+fn unsupported_compressed_metadata_method(kind: [u8; 4], data: &[u8]) -> Option<&'static str> {
+    let identity = match &kind {
+        b"zTXt" => "png_zTXt",
+        b"iCCP" => "png_iCCP",
+        _ => return None,
+    };
+    let keyword_end = next_nul(data, 0)?;
+    if keyword_end == 0 {
+        return None;
+    }
+    let method = *data.get(keyword_end.saturating_add(1))?;
+    (method != 0).then_some(identity)
+}
+
 fn record_invalid_compressed_metadata(
     chunk: &Chunk<'_>,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
-) -> bool {
+) -> CodecResult<bool> {
+    if let Some(identity) = unsupported_compressed_metadata_method(chunk.kind, chunk.data) {
+        return Err(CodecError::Malformed(format!(
+            "PNG {identity} compression method is unsupported"
+        ))
+        .at(chunk.offset, "png_chunk"));
+    }
     let Some(identity) = invalid_compressed_metadata_identity(chunk.kind, chunk.data) else {
-        return false;
+        return Ok(false);
     };
     diagnostics.push(crate::ImageDiagnostic {
         kind: crate::DiagnosticKind::InvalidMetadataIgnored,
@@ -147,7 +167,7 @@ fn record_invalid_compressed_metadata(
         offset: Some(chunk.offset),
         identity: Some(identity),
     });
-    true
+    Ok(true)
 }
 
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
@@ -282,12 +302,12 @@ pub fn decode(
                 break;
             }
             _ if retained_color_chunk(&chunk.kind) => {
-                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics)? {
                     retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
                 }
             }
             _ if retained_metadata_chunk(&chunk.kind) => {
-                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics)? {
                     metadata.push(metadata_record(chunk.kind, chunk.data));
                 }
             }
@@ -643,12 +663,12 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             }
             b"IEND" => break,
             _ if retained_color_chunk(&chunk.kind) => {
-                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics)? {
                     retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
                 }
             }
             _ if retained_metadata_chunk(&chunk.kind) => {
-                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics)? {
                     metadata.push(metadata_record(chunk.kind, chunk.data));
                 }
             }
