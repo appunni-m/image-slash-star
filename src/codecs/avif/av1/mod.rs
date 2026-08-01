@@ -450,6 +450,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             sequence: None,
             consumed: 0,
             retained_boxes: Vec::new(),
+            source_color: crate::types::SourceColor::new(),
         })
         .is_ok()
     );
@@ -472,6 +473,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             sequence: None,
             consumed: 0,
             retained_boxes: Vec::new(),
+            source_color: crate::types::SourceColor::new(),
         })
         .is_err()
     );
@@ -506,6 +508,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         input: &input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        source_color: crate::types::SourceColor::new(),
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![valid_sample(), valid_sample()],
@@ -525,6 +528,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             sequence: None,
             consumed: 0,
             retained_boxes: Vec::new(),
+            source_color: crate::types::SourceColor::new(),
         })
         .is_err()
     );
@@ -539,6 +543,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }),
             consumed: 0,
             retained_boxes: Vec::new(),
+            source_color: crate::types::SourceColor::new(),
         })
         .is_err()
     );
@@ -553,6 +558,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }),
             consumed: 0,
             retained_boxes: Vec::new(),
+            source_color: crate::types::SourceColor::new(),
         })
         .is_err()
     );
