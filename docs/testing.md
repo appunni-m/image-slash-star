@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `ed3d3241138ba66b32fe280ee246fce9b3759a8a`
+Reviewed: 2026-08-01 on the working tree based on revision `fffd30a9f251fc0ccaf03afbaa6c5348ac429a09`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -176,12 +176,12 @@ GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
 sample bytes remain a documented gap. The parity schema does not compare
 auxiliary retained metadata such as EXIF, XMP, text, or orientation. Primary
-AVIF ICC and `mdcv` mastering-display metadata are covered by the separate
+AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `ed3d3241138ba66b32fe280ee246fce9b3759a8a`, the generated matrix
+For the current working tree based on revision `fffd30a9f251fc0ccaf03afbaa6c5348ac429a09`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -247,7 +247,9 @@ primary-canvas precedence rows across inspection, still decode, sequence
 decode, source construction, and lazy decode, plus a malformed-scan
 propagation row. The metadata rule counts every encoded byte that is not
 primary pixel payload data, and the scanner must agree with the independently
-measured manifest values.
+measured manifest values. In AVIF this includes recognized EXIF/XMP item
+payloads stored in `mdat`; only sample spans referenced by the primary or
+auxiliary planes are excluded.
 
 The work-budget analysis in the architecture reference maps every current
 codec work dimension to the resource that bounds it (encoded bytes, canvas and
@@ -357,6 +359,17 @@ decode/fallback-sequence agreement, unchanged pixels, and rejection of
 truncated, overlong, or duplicate properties. This is the same
 defensive/specification lane: Pillow has no structured item-level `mdcv` result,
 so no parity row or coverage-only test is added.
+
+The same AVIF contract retains recognized `Exif` item payloads and MIME XMP
+items whose content type is exactly `application/rdf+xml` as ordered raw
+`OpaqueMetadata` records on still and sequence decode. The committed
+`Encode.avif_enc_metadata.bin` output is used as a source witness because
+Pillow exposes no equivalent structured decoded metadata field; it is not a
+parity fixture and no `coverage_matrix.json` row is added. The EXIF bytes are
+asserted exactly as stored, including the AVIF TIFF-header offset prefix. The
+private `cfg(coverage)` drills for missing locations, empty/invalid extents,
+capacity overflow, and pixel-span accounting are aggregate Rust coverage
+evidence only; they do not suppress or inflate Pillow parity coverage.
 
 The AVIF item-property contract is separate from Pillow parity. A committed
 AVIF orientation output supplies `irot`; the test mutates all four legal
@@ -528,10 +541,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,936 | 45,936 |
-| Branches | 6,438 | 6,438 |
-| Functions | 2,548 | 2,548 |
-| Regions | 72,062 | 72,062 |
+| Lines | 46,099 | 46,099 |
+| Branches | 6,432 | 6,432 |
+| Functions | 2,553 | 2,553 |
+| Regions | 72,193 | 72,193 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -545,9 +558,9 @@ target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `ac436a0f-491b-473f-98ef-85601de3cefa`
+Coverage MCP run: `f2ab4017-e797-4dd7-a328-bd7c5e30023b`
 
-Snapshot: `4fe81642-0759-40f2-a3ff-36df43b2df76`
+Snapshot: `dea9090a-d017-43ad-8704-028c9872b257`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `ed3d3241138ba66b32fe280ee246fce9b3759a8a`
+Reviewed: 2026-08-01 against the working tree based on `fffd30a9f251fc0ccaf03afbaa6c5348ac429a09`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -188,6 +188,13 @@ bytes as data, in scan order, under the documented BMFF convention (no
 safe-to-copy bit; unknown boxes are ignorable). Interpreted boxes (ftyp/meta/
 moov/mdat) stay out, truncated trailing boxes are ignored exactly as before,
 and default encoding never replays retained boxes.
+Recognized `Exif` item types and `mime` items with content type exactly
+`application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on
+still and sequence decode, with kinds `Exif` and `XMP `. The raw EXIF record
+includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
+orientation application, or implicit encode replay is performed. Non-primary,
+auxiliary, unknown-item-property, and other item-relationship semantics remain
+outside this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `clli`
 content-light-level property, `mdcv` mastering-display color volume, and
 `colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
@@ -206,7 +213,8 @@ declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
 Non-ICC profiles, chroma sample position, track-only/auxiliary item properties,
-and AVIF EXIF/XMP remain outside the current model.
+and non-primary/auxiliary metadata relationships remain outside the current
+model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
@@ -369,7 +377,8 @@ scan (PNG chunk scan minus `IDAT`/`fdAT` data, GIF block scan minus image
 sub-block payloads, JPEG marker scan minus entropy spans, WebP RIFF scan minus
 top-level `VP8 `/`VP8L`/`ALPH` payloads, TIFF IFD walk minus strip/tile payload
 bytes, BMP bytes before the declared pixel offset, ICO header plus directory,
-and AVIF box scan minus `mdat` payloads). The scan runs after detection and
+and AVIF box/item scan minus sample spans referenced by the primary or
+auxiliary planes, including metadata item payloads stored in `mdat`). The scan runs after detection and
 before any inspection preflight on all five policy paths, so an oversized
 metadata extent is rejected before codec work begins; malformed containers
 propagate their structured codec error from the scan.
@@ -409,7 +418,7 @@ resources above, so no codec work can grow independently of output size:
 | WebP | RIFF chunk walk | `max_metadata_bytes` |
 | WebP | VP8/VP8L/ALPH decompression | `max_pixels`/`max_primary_decoded_bytes` |
 | ICO | directory walk and entry decode | `max_metadata_bytes` + `max_pixels`/`max_primary_decoded_bytes` |
-| AVIF | top-level box walk | `max_metadata_bytes` |
+| AVIF | top-level box/item walk minus referenced sample spans | `max_metadata_bytes` |
 | AVIF | AV1 tile/block reconstruction | `max_encoded_bytes` + canvas limits (portable classes have fixed extents) |
 
 The boundary manifests exercise each resource at below/at/above and
