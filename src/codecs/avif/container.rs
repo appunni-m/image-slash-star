@@ -686,21 +686,24 @@ fn parse_clli(payload: &[u8]) -> ParseResult<Property> {
 fn parse_mdcv(payload: &[u8]) -> ParseResult<Property> {
     // Public AVIF inspection validates the same property through the bounded
     // sample parser before this independent native projection is reached, so
-    // the payload has already been proven to contain exactly 24 bytes.
-    let mut reader = Reader::new(payload);
+    // the payload has already been proven to contain exactly 24 bytes. Read
+    // the fixed-width fields directly so the redundant native error paths do
+    // not masquerade as independently reachable public parser behavior.
     // ISO/IEC 14496-12 stores the three primaries in G, B, R order. Keep the
     // public descriptor in the conventional R, G, B order while retaining
     // each encoded 16-bit coordinate exactly.
-    let green_x = reader.u16()?;
-    let green_y = reader.u16()?;
-    let blue_x = reader.u16()?;
-    let blue_y = reader.u16()?;
-    let red_x = reader.u16()?;
-    let red_y = reader.u16()?;
-    let white_point_x = reader.u16()?;
-    let white_point_y = reader.u16()?;
-    let max_display_mastering_luminance = reader.u32()?;
-    let min_display_mastering_luminance = reader.u32()?;
+    let green_x = u16::from_be_bytes([payload[0], payload[1]]);
+    let green_y = u16::from_be_bytes([payload[2], payload[3]]);
+    let blue_x = u16::from_be_bytes([payload[4], payload[5]]);
+    let blue_y = u16::from_be_bytes([payload[6], payload[7]]);
+    let red_x = u16::from_be_bytes([payload[8], payload[9]]);
+    let red_y = u16::from_be_bytes([payload[10], payload[11]]);
+    let white_point_x = u16::from_be_bytes([payload[12], payload[13]]);
+    let white_point_y = u16::from_be_bytes([payload[14], payload[15]]);
+    let max_display_mastering_luminance =
+        u32::from_be_bytes([payload[16], payload[17], payload[18], payload[19]]);
+    let min_display_mastering_luminance =
+        u32::from_be_bytes([payload[20], payload[21], payload[22], payload[23]]);
     Ok(Property::MasteringDisplayColorVolume(
         AvifMasteringDisplayColorVolume::new(
             red_x,
