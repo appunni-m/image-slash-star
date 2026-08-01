@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `0164e9c3736c42d2fe732965e19e5a1cf3754da3`
+Reviewed: 2026-08-01 against the working tree based on `ed3d3241138ba66b32fe280ee246fce9b3759a8a`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -249,10 +249,13 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and return typed `ResourceLimit::EncodedOutputBytes` failures |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before dispatch and after the complete codec result |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer reaches a caller-owned sink |
 | `encode_to_sink`, `encode_sequence_to_sink` | Encode the complete validated bytes into a caller-owned `OutputSink`; sink rejection is normalized to `ImageError::OutputWrite`, while incremental structural writing remains future work |
+| `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Token-aware complete-buffer encoding followed by one sink write after successful completion |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
@@ -379,6 +382,14 @@ oversized result returns `ImageError::LimitExceeded` with
 the current codecs construct the complete buffer before this check, it is not
 a transient-allocation or recoverable-OOM guarantee. Incremental structural
 writing and internal allocation accounting remain open work.
+
+Token-aware encode variants are a separate cooperative work-control boundary.
+Still encodes check the token before dispatch and after the whole-buffer codec
+returns. GIF, TIFF, WebP, and native AVIF sequence encoders additionally poll
+at their retained-frame, coalescing/page, and finalization checkpoints; the
+token-aware sink variants write only after the complete operation succeeds.
+Interior cancellation of a still codec, progress callbacks, work-budget
+exhaustion, and incremental structural writing remain open.
 
 ### Codec work is bounded by the resource set
 
@@ -531,7 +542,7 @@ non-exhaustive so downstream matches need a fallback arm.
 | `Parameter` | An encoder option, palette, mode combination, or other parameter is invalid | Correct the named input |
 | `LimitExceeded` | A caller-configured resource maximum was exceeded | Reduce the input or raise the selected policy maximum |
 | `NeedMoreData` | An incremental prefix is incomplete and names the minimum total input length for retry | Append input to reach `minimum_input()` and retry |
-| `Cancelled` | A token-aware decode stopped at a cooperative checkpoint | Start a fresh operation with a new token |
+| `Cancelled` | A token-aware decode or encode stopped at a cooperative checkpoint | Start a fresh operation with a new token |
 | `OutputWrite` | A caller-owned encoded-output destination rejected the complete buffer | Inspect the diagnostic, repair or replace the destination, and retry the encode |
 
 `ImageError::kind()` is the stable recovery category and

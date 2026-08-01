@@ -150,10 +150,13 @@ capabilities and setup.
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and return a typed `EncodedOutputBytes` limit failure when the complete result is too large |
+| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation at the public codec boundary |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
 | `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; sink rejection is reported as `ImageError::OutputWrite` without partial writes |
+| `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Combine token-aware encoding with a caller-owned sink; the sink is written only after successful completion |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
@@ -193,7 +196,12 @@ progress-aware otherwise.
 `CancellationToken` adds cooperative cancellation: clones share state,
 `cancel()` fires every clone, and token-aware decodes poll at chunk, frame,
 page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
-without publishing partial state. Legacy decode APIs never cancel.
+without publishing partial state. Token-aware encode APIs check before and
+after whole-buffer still codecs; GIF, TIFF, WebP, and native AVIF sequence
+paths also poll at their frame/coalescing/page/finalization boundaries. A
+still codec cannot be interrupted inside its codec call yet, and progress
+callbacks, work-budget exhaustion, and incremental structural writing remain
+separate roadmap work. Legacy APIs never cancel.
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return
@@ -441,7 +449,7 @@ Every canonical fallible API returns `ImageResult<T>`.
 | `Parameter` | An option, palette, mode combination, or other parameter is invalid |
 | `LimitExceeded` | A caller-configured resource maximum was exceeded |
 | `NeedMoreData` | An incremental prefix is incomplete and reports the minimum total input length for retry |
-| `Cancelled` | A token-aware decode stopped at a cooperative checkpoint |
+| `Cancelled` | A token-aware decode or encode stopped at a cooperative checkpoint |
 | `OutputWrite` | A caller-owned encoded-output destination rejected the complete buffer |
 
 Codec-dispatched failures additionally report the public operation that
