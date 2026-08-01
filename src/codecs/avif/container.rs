@@ -296,10 +296,10 @@ fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
     }
 
     let Some(meta) = meta.as_ref() else {
-        return Err(parse_failure!());
+        return Err(parse_need_more!(reader.offset.saturating_add(8)));
     };
     if brands.has_avis && movie.is_none() {
-        return Err(parse_failure!());
+        return Err(parse_need_more!(reader.offset.saturating_add(8)));
     }
 
     let meta_details = meta.details()?;

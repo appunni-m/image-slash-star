@@ -1669,7 +1669,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         }
     }
     if (brands.has_avif && meta.is_none()) || (brands.has_avis && movie.is_none()) {
-        return Err(parse_failure!());
+        return Err(parse_need_more!(reader.offset.saturating_add(8)));
     }
     let still = meta.as_ref().map(still_payload).transpose()?;
     let sequence = movie
