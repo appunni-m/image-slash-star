@@ -162,6 +162,8 @@ struct InspectionFixture {
     need_more_minimum: u64,
     basic_prefix: Option<u64>,
     basic_frame_count_complete: Option<bool>,
+    decode_need_more_prefix: Option<u64>,
+    decode_need_more_minimum: Option<u64>,
 }
 
 impl FromJson for IncrementalInputManifest {
@@ -203,6 +205,8 @@ impl FromJson for InspectionFixture {
             need_more_minimum: object.take("need_more_minimum")?,
             basic_prefix: object.take("basic_prefix")?,
             basic_frame_count_complete: object.take("basic_frame_count_complete")?,
+            decode_need_more_prefix: object.take("decode_need_more_prefix")?,
+            decode_need_more_minimum: object.take("decode_need_more_minimum")?,
         })
     }
 }
@@ -3258,6 +3262,60 @@ fn incremental_detection_reports_exact_minimums_and_terminal_results()
                 fixture.id
             );
         }
+
+        if let (Some(decode_prefix), Some(decode_minimum)) = (
+            fixture.decode_need_more_prefix,
+            fixture.decode_need_more_minimum,
+        ) {
+            if image_slash_star::decode(&bytes).is_err() {
+                continue;
+            }
+            let error =
+                match image_slash_star::decode_prefix(&bytes[..usize::try_from(decode_prefix)?]) {
+                    Ok(info) => panic!(
+                        "fixture {} decode need-more prefix must need more data: {info:?}",
+                        fixture.id
+                    ),
+                    Err(error) => error,
+                };
+            assert_eq!(
+                error.kind(),
+                ImageErrorKind::NeedMoreData,
+                "fixture {}",
+                fixture.id
+            );
+            assert_eq!(
+                error.minimum_input(),
+                Some(decode_minimum),
+                "fixture {}",
+                fixture.id
+            );
+            assert_eq!(
+                error.format(),
+                Some(expected_format),
+                "fixture {}",
+                fixture.id
+            );
+            assert_eq!(
+                error.stage(),
+                Some(ImageErrorStage::StillDecode),
+                "fixture {}",
+                fixture.id
+            );
+            let legacy = match image_slash_star::decode(&bytes[..usize::try_from(decode_prefix)?]) {
+                Ok(info) => panic!(
+                    "legacy must reject the decode need-more prefix for {}: {info:?}",
+                    fixture.id
+                ),
+                Err(error) => error,
+            };
+            assert_eq!(
+                legacy.kind(),
+                ImageErrorKind::Malformed,
+                "fixture {}",
+                fixture.id
+            );
+        }
     }
     Ok(())
 }
@@ -3449,6 +3507,194 @@ fn incremental_basic_inspection_tracks_truncation_progress_per_format()
             "{path} must exercise at least one need-more boundary"
         );
         assert!(saw_ok, "{path} must succeed on the complete input");
+    }
+    Ok(())
+}
+
+#[test]
+fn incremental_decode_tracks_truncation_progress_per_format()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::ImageError;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(ImageFormat, bool, &str)] = &[
+        (
+            ImageFormat::Png,
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+        ),
+        (
+            ImageFormat::Gif,
+            cfg!(feature = "gif"),
+            "tests/fixtures/input/images/gif/1x1.gif",
+        ),
+        (
+            ImageFormat::Bmp,
+            cfg!(feature = "bmp"),
+            "tests/fixtures/input/images/bmp/1x1.bmp",
+        ),
+        (
+            ImageFormat::Tiff,
+            cfg!(feature = "tiff"),
+            "tests/fixtures/input/images/tiff/8bit.tiff",
+        ),
+        (
+            ImageFormat::Jpeg,
+            cfg!(feature = "jpeg"),
+            "tests/fixtures/input/images/jpeg/1x1.jpg",
+        ),
+        (
+            ImageFormat::WebP,
+            cfg!(feature = "webp"),
+            "tests/fixtures/input/images/webp/16x16.webp",
+        ),
+        (
+            ImageFormat::Ico,
+            cfg!(feature = "ico"),
+            "tests/fixtures/input/images/ico/16x16.ico",
+        ),
+        (
+            ImageFormat::Avif,
+            cfg!(feature = "avif"),
+            "tests/fixtures/input/images/avif/baseline.avif",
+        ),
+    ];
+    for (_, enabled, path) in cases {
+        if !enabled {
+            continue;
+        }
+        let bytes = fs::read(root.join(path))?;
+        // Targets without a full decode path for this format (for example
+        // portable WASM AVIF) keep their Unsupported classification; the
+        // incremental decode contract is exercised where decode is available.
+        if image_slash_star::decode(&bytes).is_err() {
+            continue;
+        }
+        let full = image_slash_star::decode_prefix(&bytes)?;
+        let legacy_full = image_slash_star::decode(&bytes)?;
+        assert_eq!(full.format, legacy_full.format, "{path} format");
+        assert_eq!(
+            full.content.pixels, legacy_full.content.pixels,
+            "{path} pixels"
+        );
+        assert_eq!(
+            full.consumed_bytes, legacy_full.consumed_bytes,
+            "{path} consumed"
+        );
+
+        let mut saw_need_more = false;
+        let mut saw_ok = false;
+        for end in 0..=bytes.len() {
+            let prefix = &bytes[..end];
+            match image_slash_star::decode_prefix(prefix) {
+                Ok(decoded) => {
+                    saw_ok = true;
+                    let legacy = image_slash_star::decode(prefix).unwrap_or_else(|error| {
+                        panic!("legacy decode must agree on {path} prefix {end}: {error}")
+                    });
+                    assert_eq!(decoded.format, legacy.format, "{path} prefix {end} format");
+                    assert_eq!(
+                        decoded.content.pixels, legacy.content.pixels,
+                        "{path} prefix {end} pixels"
+                    );
+                }
+                Err(ImageError::NeedMoreData {
+                    format, minimum, ..
+                }) => {
+                    saw_need_more = true;
+                    let minimum = usize::try_from(minimum).unwrap_or(usize::MAX);
+                    let legacy = match image_slash_star::decode(prefix) {
+                        Ok(info) => panic!("legacy must reject {path} prefix {end}: {info:?}"),
+                        Err(error) => error,
+                    };
+                    assert_eq!(
+                        legacy.kind(),
+                        if format.is_some() {
+                            image_slash_star::ImageErrorKind::Malformed
+                        } else {
+                            image_slash_star::ImageErrorKind::UnknownFormat
+                        },
+                        "legacy classification must match for {path} prefix {end}"
+                    );
+                    assert!(
+                        minimum > prefix.len(),
+                        "minimum must exceed the prefix for {path} at {end}"
+                    );
+                    assert!(
+                        minimum <= bytes.len(),
+                        "minimum for a valid fixture must not exceed the file for {path} at {end}"
+                    );
+                    if minimum > prefix.len() {
+                        let next = image_slash_star::decode_prefix(&bytes[..minimum]);
+                        let advanced = match next {
+                            Ok(_) => true,
+                            Err(ImageError::NeedMoreData {
+                                minimum: next_minimum,
+                                ..
+                            }) => usize::try_from(next_minimum).unwrap_or(usize::MAX) > minimum,
+                            Err(_) => true,
+                        };
+                        assert!(
+                            advanced,
+                            "retrying with minimum must progress for {path} at {end}"
+                        );
+                    }
+                }
+                Err(other) => {
+                    let legacy = match image_slash_star::decode(prefix) {
+                        Ok(info) => panic!("legacy must reject {path} prefix {end}: {info:?}"),
+                        Err(error) => error,
+                    };
+                    assert_eq!(
+                        legacy.kind(),
+                        other.kind(),
+                        "terminal kinds must match for {path} prefix {end}"
+                    );
+                }
+            }
+        }
+        assert!(
+            saw_need_more,
+            "{path} must exercise at least one need-more boundary"
+        );
+        assert!(saw_ok, "{path} must succeed on the complete input");
+    }
+    Ok(())
+}
+
+#[test]
+fn incremental_decode_attaches_structured_context() -> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    if cfg!(feature = "png") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        // A partial signature is a detection-level status with no format yet.
+        let error = match image_slash_star::decode_prefix(&bytes[..5]) {
+            Ok(info) => panic!("a partial signature must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), None);
+        assert_eq!(error.stage(), None);
+        assert_eq!(error.minimum_input(), Some(8));
+
+        // A codec-level truncation carries format and still-decode stage.
+        let error = match image_slash_star::decode_prefix(&bytes[..40]) {
+            Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillDecode));
+        assert!(error.minimum_input().is_some());
+
+        let error = match image_slash_star::decode_sequence_prefix(&bytes[..40]) {
+            Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::SequenceDecode));
+        assert!(error.minimum_input().is_some());
     }
     Ok(())
 }

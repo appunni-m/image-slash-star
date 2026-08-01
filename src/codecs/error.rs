@@ -293,7 +293,6 @@ pub(crate) type CodecResult<T> = Result<T, CodecError>;
     feature = "jpeg",
     feature = "png",
     feature = "gif",
-    feature = "bmp",
     feature = "tiff",
     feature = "webp",
     feature = "ico"
@@ -304,6 +303,7 @@ pub(crate) trait OptionCodecExt<T> {
 
     /// Require a value whose absence means the input ends before the
     /// requested byte range; the caller needs at least `minimum` total bytes.
+    #[cfg(feature = "gif")]
     fn need_more(self, minimum: usize, message: &'static str) -> CodecResult<T>;
 
     /// Require a value whose absence means dimensions are unrepresentable.
@@ -315,7 +315,6 @@ pub(crate) trait OptionCodecExt<T> {
     feature = "jpeg",
     feature = "png",
     feature = "gif",
-    feature = "bmp",
     feature = "tiff",
     feature = "webp",
     feature = "ico"
@@ -328,6 +327,7 @@ impl<T> OptionCodecExt<T> for Option<T> {
         }
     }
 
+    #[cfg(feature = "gif")]
     fn need_more(self, minimum: usize, message: &'static str) -> CodecResult<T> {
         match self {
             Some(value) => Ok(value),
@@ -367,7 +367,13 @@ pub(crate) fn need_slice<'a>(
     if start > end {
         return Err(CodecError::Malformed(message.to_owned()));
     }
-    data.get(start..end).need_more(end, message)
+    match data.get(start..end) {
+        Some(value) => Ok(value),
+        None => Err(CodecError::NeedMore {
+            minimum: end,
+            message: message.to_owned(),
+        }),
+    }
 }
 
 /// Read the tail `data[start..]`, classifying a start beyond the input as the
