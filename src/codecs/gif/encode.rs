@@ -130,18 +130,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
         metadata: Vec::new(),
         source_color: crate::types::SourceColor::new(),
     };
-    // Pillow cannot supply a caller token, so this deterministic cancellation
-    // edge belongs to the Rust-only internal checkpoint coverage hook rather
+    // Pillow cannot supply a caller token, so these deterministic cancellation
+    // edges belong to the Rust-only internal checkpoint coverage hook rather
     // than the Pillow parity matrix.
-    let coalesce_cancel = crate::CancellationToken::new();
-    coalesce_cancel.cancel_after(1);
-    let _ = encode_sequence_with_token(
-        &sequence,
-        &GifEncodeOptions::default(),
-        Some(&coalesce_cancel),
-    );
+    for checks in [0, 6] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_sequence_with_token(&sequence, &GifEncodeOptions::default(), Some(&token));
+    }
+    for checks in [1, 5] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = coalesce_identical_frames_with_token(&sequence, 2, None, Some(&token));
+    }
     let coalesced =
         coalesce_identical_frames(&sequence, 2, None).expect("coverage RGB frames coalesce");
+    for checks in [0, 1, 3, 4] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = write_gif_with_token(
+            &sequence,
+            &coalesced,
+            GifSettings {
+                interlaced: None,
+                local_color_table: false,
+                disposal_override: None,
+                loop_count: None,
+                transparency_override: None,
+            },
+            Some(&token),
+        );
+    }
     let _ = write_gif(
         &sequence,
         &coalesced,

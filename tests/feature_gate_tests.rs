@@ -4324,6 +4324,21 @@ fn encoded_output_policy_is_a_non_parity_result_contract() -> Result<(), Box<dyn
             })
         ));
         assert_eq!(sink, vec![0xAA], "policy failure must precede sink writes");
+
+        let token = image_slash_star::CancellationToken::new();
+        assert!(matches!(
+            image_slash_star::encode_with_token_and_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &below,
+                &token,
+            ),
+            Err(ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            })
+        ));
     }
 
     if cfg!(feature = "gif") {
@@ -4376,6 +4391,21 @@ fn encoded_output_policy_is_a_non_parity_result_contract() -> Result<(), Box<dyn
             vec![0xBB],
             "sequence policy failure must precede sink writes"
         );
+
+        let token = image_slash_star::CancellationToken::new();
+        assert!(matches!(
+            image_slash_star::encode_sequence_with_token_and_policy(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &below,
+                &token,
+            ),
+            Err(ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            })
+        ));
     }
     Ok(())
 }
