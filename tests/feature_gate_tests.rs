@@ -862,6 +862,52 @@ fn cancellation_token_stops_decode_without_partial_state() -> Result<(), Box<dyn
             image_slash_star::decode_sequence_with_token_and_policy(&bytes, &width, &token)?;
         assert_eq!(sequence.content.frames.len(), 1);
 
+        // Metadata and violating-width limits reject through the token
+        // policy variants on both still and sequence paths.
+        let metadata = image_slash_star::DecodePolicy::default().with_max_metadata_bytes(10);
+        let error = match image_slash_star::decode_with_token_and_policy(&bytes, &metadata, &token)
+        {
+            Ok(info) => panic!("decode token policy must reject the metadata limit: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+        let error = match image_slash_star::decode_sequence_with_token_and_policy(
+            &bytes, &metadata, &token,
+        ) {
+            Ok(info) => panic!("sequence token policy must reject the metadata limit: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+
+        let rejecting = image_slash_star::DecodePolicy::default().with_max_width(0);
+        let error = match image_slash_star::decode_with_token_and_policy(&bytes, &rejecting, &token)
+        {
+            Ok(info) => panic!("decode token policy must reject an exceeding width: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+        let error = match image_slash_star::decode_sequence_with_token_and_policy(
+            &bytes, &rejecting, &token,
+        ) {
+            Ok(info) => {
+                panic!("sequence token policy must reject an exceeding width: {info:?}")
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+
         // Inspection preflight truncation propagates as NeedMoreData.
         let error =
             match image_slash_star::decode_with_token_and_policy(&bytes[..40], &width, &token) {
@@ -869,6 +915,28 @@ fn cancellation_token_stops_decode_without_partial_state() -> Result<(), Box<dyn
                 Err(error) => error,
             };
         assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        let error = match image_slash_star::decode_sequence_with_token_and_policy(
+            &bytes[..40],
+            &width,
+            &token,
+        ) {
+            Ok(info) => panic!("a truncated header must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+
+        // Detection-level truncation propagates through the sequence policy
+        // variant before any codec work.
+        let error = match image_slash_star::decode_sequence_with_token_and_policy(
+            &bytes[..5],
+            &image_slash_star::DecodePolicy::default(),
+            &token,
+        ) {
+            Ok(info) => panic!("a partial signature must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), None);
 
         // The cumulative sequence-byte budget fails inside the budget charge.
         let budgeted = image_slash_star::DecodePolicy::default().with_max_sequence_decoded_bytes(1);
