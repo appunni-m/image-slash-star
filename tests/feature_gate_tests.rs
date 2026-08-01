@@ -4089,7 +4089,7 @@ fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn s
 
 #[test]
 fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::{EncodeOptions, ImageFormat, OutputSink};
+    use image_slash_star::{EncodeOptions, EncodePolicy, ImageFormat, OutputSink};
 
     struct FailingSink;
     impl OutputSink for FailingSink {
@@ -4533,9 +4533,10 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         );
 
         if cfg!(feature = "bmp") {
-            // BMP remains on the whole-buffer fallback. Keep this separate
-            // from the PNG structural-writer assertions so the two delivery
-            // contracts cannot be mistaken for parity coverage.
+            // BMP still encoding now emits its validated header, palette, and
+            // rows structurally. This is a Rust-only output-delivery
+            // contract: Pillow has no caller-owned sink, so the parity matrix
+            // remains unchanged.
             let bmp_options = EncodeOptions::for_format(ImageFormat::Bmp);
             let expected_bmp =
                 image_slash_star::encode(&decoded.content, ImageFormat::Bmp, &bmp_options)?;
@@ -4553,7 +4554,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 expected_bmp.len()
             );
             assert_eq!(bmp_sink.bytes, expected_bmp);
-            assert_eq!(bmp_sink.writes, 1);
+            assert!(bmp_sink.writes > 1);
 
             let bmp_token = image_slash_star::CancellationToken::new();
             let mut bmp_token_sink = RecordingSink {
@@ -4571,7 +4572,90 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 expected_bmp.len()
             );
             assert_eq!(bmp_token_sink.bytes, expected_bmp);
-            assert_eq!(bmp_token_sink.writes, 1);
+            assert!(bmp_token_sink.writes > 1);
+
+            let mut failing_bmp = FailingSink;
+            let failing_bmp_error = match image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &bmp_options,
+                &mut failing_bmp,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("failing BMP sink unexpectedly wrote {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                failing_bmp_error.kind(),
+                image_slash_star::ImageErrorKind::OutputWrite
+            );
+            assert_eq!(failing_bmp_error.format(), Some(ImageFormat::Bmp));
+            assert_eq!(
+                failing_bmp_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+
+            let cancelling_bmp_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_bmp = CancellingSink {
+                bytes: Vec::new(),
+                token: cancelling_bmp_token.clone(),
+                writes: 0,
+            };
+            let cancelling_bmp_error = match image_slash_star::encode_to_sink_with_token(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &bmp_options,
+                &cancelling_bmp_token,
+                &mut cancelling_bmp,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "BMP sink-triggered cancellation unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                cancelling_bmp_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(cancelling_bmp_error.format(), Some(ImageFormat::Bmp));
+            assert_eq!(
+                cancelling_bmp_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(cancelling_bmp.writes, 1);
+            assert_eq!(cancelling_bmp.bytes, &expected_bmp[..54]);
+
+            let too_small = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(expected_bmp.len() - 1)?);
+            let mut limited_bmp = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let limited_bmp_error = match image_slash_star::encode_to_sink_with_policy(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &bmp_options,
+                &too_small,
+                &mut limited_bmp,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("BMP output policy unexpectedly admitted {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                limited_bmp_error.kind(),
+                image_slash_star::ImageErrorKind::LimitExceeded
+            );
+            assert_eq!(limited_bmp.writes, 0);
 
             let bmp_sequence =
                 image_slash_star::DecodedSequence::from_image(decoded.content.clone());
@@ -4590,6 +4674,8 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 expected_bmp.len()
             );
             assert_eq!(bmp_sequence_sink.bytes, expected_bmp);
+            // Sequence BMP still uses the existing whole-buffer fallback;
+            // structural sequence writing is a separate roadmap item.
             assert_eq!(bmp_sequence_sink.writes, 1);
 
             let mut invalid_bmp_sink = RecordingSink {
@@ -4604,7 +4690,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                     &mut invalid_bmp_sink,
                 )
                 .is_err(),
-                "invalid BMP fallback input must fail before the sink"
+                "invalid BMP still input must fail before the sink"
             );
             assert_eq!(invalid_bmp_sink.writes, 0);
 
@@ -4622,7 +4708,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                     &mut invalid_bmp_token_sink,
                 )
                 .is_err(),
-                "invalid token BMP fallback input must fail before the sink"
+                "invalid token BMP still input must fail before the sink"
             );
             assert_eq!(invalid_bmp_token_sink.writes, 0);
         }

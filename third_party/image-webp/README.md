@@ -43,7 +43,7 @@ necessary in the future to improve performance, but we will always strive to
 minimize the use of unsafe code and ensure that it is well-tested and
 documented.
 
-```
+```text
 $ cargo geiger
 
 Metric output format: x/y

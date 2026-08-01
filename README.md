@@ -155,7 +155,7 @@ capabilities and setup.
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; sink rejection is reported as `ImageError::OutputWrite`; PNG still output currently crosses structural write boundaries |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; sink rejection is reported as `ImageError::OutputWrite`; PNG and BMP still output cross structural write boundaries |
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Combine token-aware encoding with a caller-owned sink; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
@@ -197,9 +197,9 @@ progress-aware otherwise.
 `cancel()` fires every clone, and token-aware decodes poll at chunk, frame,
 page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
 without publishing partial state. Token-aware encode APIs check before and
-after whole-buffer still codecs; PNG still sink encoding also polls while
-preparing rows and between emitted segments, while GIF, TIFF, WebP, and native
-AVIF sequence paths poll at their frame/coalescing/page/finalization
+after whole-buffer still codecs; PNG and BMP still sink encoding also poll
+while preparing rows and between emitted segments, while GIF, TIFF, WebP, and
+native AVIF sequence paths poll at their frame/coalescing/page/finalization
 boundaries. A structural sink cancellation may leave its delivered prefix;
 progress callbacks, work-budget exhaustion, and universal structural writing
 remain separate roadmap work. Legacy APIs never cancel.
@@ -422,11 +422,12 @@ is inclusive and applies to still and sequence encodes, including their sink
 wrappers: the complete encoded length must fit before it is returned or the
 first sink write, or the operation returns `LimitExceeded` with
 `ResourceLimit::EncodedOutputBytes`. Whole-buffer codecs still build their
-complete `Vec<u8>` first. The PNG still sink path preflights its complete
-length, then emits validated container structures without assembling a second
-final `Vec<u8>`; its filtered rows and compressed payload remain transient
-working allocations. Neither path yet provides a transient-allocation cap,
-recoverable OOM behavior, or universal incremental encoding.
+complete `Vec<u8>` first. The PNG and BMP still sink paths preflight their
+complete lengths, then emit validated container structures without assembling a
+second final `Vec<u8>`; PNG's filtered rows and compressed payload remain
+transient working allocations, while BMP prepares bounded palette/row segments.
+Neither path yet provides a transient-allocation cap, recoverable OOM behavior,
+or universal incremental encoding.
 
 `inspect_with_policy`, `decode_sequence_with_policy`,
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
@@ -471,9 +472,9 @@ contracts (`LimitExceeded` already carries the typed operation). Sink failures
 from `encode_to_sink` and `encode_sequence_to_sink` carry the selected output
 format and encode stage through `OutputWrite`; their offset and identity are
 `None` because the failure is on the destination side. Whole-buffer codecs
-still write one complete validated buffer, while the PNG still path writes
-validated structural segments. Short-write, flush, and structural cleanup
-semantics remain future incremental-writer work.
+still write one complete validated buffer, while the PNG and BMP still paths
+write validated structural segments. Short-write, flush, and structural
+cleanup semantics remain future incremental-writer work.
 
 Where the parser can name the failing container structure, codec-dispatched
 errors also report the encoded-input byte offset (`ImageError::offset()`) and
