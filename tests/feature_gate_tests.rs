@@ -2992,7 +2992,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     let duplicate_pasp = append_associated_property(&pasp, b"pasp", &pasp_payload, 7)?;
     assert_malformed(&duplicate_pasp, "duplicate pasp association")?;
 
-    let mut invalid_pasp = pasp;
+    let mut invalid_pasp = pasp.clone();
     invalid_pasp[pasp_box + 8..pasp_box + 12].fill(0);
     assert_malformed(&invalid_pasp, "zero pasp spacing")?;
 
