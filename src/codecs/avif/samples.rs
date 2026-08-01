@@ -3438,11 +3438,11 @@ fn coverage_structural_states() {
     let mut extracted_metadata_missing_location =
         include_bytes!("../../../tests/fixtures/outputs/encoded/Encode.avif_enc_metadata.bin")
             .to_vec();
-    // The second `infe` item id occupies this byte in the committed witness;
+    // The second `infe` item id occupies these bytes in the committed witness;
     // leaving its `iloc` entry unchanged makes extraction reject the metadata
     // item at the public retention boundary.
-    extracted_metadata_missing_location[0xcd] = 9;
-    let _ = extract_inner(&extracted_metadata_missing_location);
+    extracted_metadata_missing_location[0xca] = 9;
+    assert!(extract_inner(&extracted_metadata_missing_location).is_err());
     let empty_metadata_location = Meta {
         items: vec![Item {
             id: 9,
