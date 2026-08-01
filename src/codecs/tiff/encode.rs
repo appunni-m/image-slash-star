@@ -421,6 +421,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = sequence_output_len(&[u32::MAX as usize + 1]);
     let mut sequence = DecodedSequence::from_image(rgb.clone());
     sequence.frames.push(sequence.frames[0].clone());
+    // CancellationToken is a Rust-only checkpoint contract; Pillow cannot
+    // drive these page and relocation interruption edges.
+    let single_sequence = DecodedSequence::from_image(rgb.clone());
+    for checks in [0, 1] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_sequence_with_token(
+            &single_sequence,
+            &TiffEncodeOptions::default(),
+            Some(&token),
+        );
+    }
+    for checks in [1, 3, 4] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_sequence_with_token(&sequence, &TiffEncodeOptions::default(), Some(&token));
+    }
     let mut forced_sequence_overflow = TiffEncodeOptions::default();
     forced_sequence_overflow.set_force_sequence_len_overflow();
     let _ = encode_sequence(&sequence, &forced_sequence_overflow);

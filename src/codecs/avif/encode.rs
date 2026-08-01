@@ -445,6 +445,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let one = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let two = DecodedImage::new(2, 1, vec![0, 0], ColorType::L8);
     let tall = DecodedImage::new(1, 2, vec![0, 0], ColorType::L8);
+    // Pillow cannot supply a caller token. These native-only calls exercise
+    // each AVIF sequence/frame/finalization cancellation checkpoint without
+    // adding a synthetic Pillow parity row.
+    let still_sequence = DecodedSequence::from_image(one.clone());
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ =
+        encode_sequence_with_token(&still_sequence, &AvifEncodeOptions::default(), Some(&token));
+    for checks in [0, 1, 2, 3] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_image_refs(
+            &[&one],
+            &[FrameDuration::ZERO],
+            &AvifEncodeOptions::default(),
+            Some(&token),
+        );
+    }
     let _ = encode_image_refs(&[], &[], &AvifEncodeOptions::default(), None);
     let _ = encode_image_refs(&[&one], &[], &AvifEncodeOptions::default(), None);
     let _ = encode_image_refs(

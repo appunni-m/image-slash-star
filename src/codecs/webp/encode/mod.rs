@@ -510,4 +510,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let unsupported = DecodedImage::new(1, 1, vec![0; 8], crate::types::ColorType::Rgb32F);
     let _ = encode(&unsupported, &opts);
     let _ = encode(&unsupported, &WebPEncodeOptions::default());
+
+    // Pillow has no caller-controlled token. Keep these checkpoint exercises
+    // in the Rust-only private coverage hook rather than the parity matrix.
+    let mut sequence = DecodedSequence::from_image(DecodedImage::new(
+        1,
+        1,
+        vec![0, 0, 0],
+        crate::types::ColorType::Rgb8,
+    ));
+    sequence.frames.push(sequence.frames[0].clone());
+    sequence.kind = crate::types::SequenceKind::TimedAnimation;
+    for checks in [0, 1, 2, 5, 7] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_sequence_with_token(&sequence, &WebPEncodeOptions::default(), Some(&token));
+    }
 }
