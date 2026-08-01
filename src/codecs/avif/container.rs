@@ -6,7 +6,7 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifColorProperties, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifCleanAperture, AvifColorProperties, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
     AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, SourceAlpha, SourceColor,
     SourceDescriptor,
 };
@@ -189,6 +189,7 @@ enum Property {
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
     PixelAspectRatio(AvifPixelAspectRatio),
+    CleanAperture(AvifCleanAperture),
     Other,
 }
 
@@ -620,6 +621,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
         kind if kind == *b"irot" => parse_irot(property.payload),
         kind if kind == *b"imir" => parse_imir(property.payload),
         kind if kind == *b"pasp" => parse_pasp(property.payload),
+        kind if kind == *b"clap" => parse_clap(property.payload),
         [b'a', b'u', b'x', b'C'] | [b'a', b'u', b'x', b'i'] => {
             let mut reader = Reader::new(property.payload);
             let _ = parse_full_box_version_zero(&mut reader)?;
@@ -692,6 +694,38 @@ fn parse_pasp(payload: &[u8]) -> ParseResult<Property> {
     }
     Ok(Property::PixelAspectRatio(AvifPixelAspectRatio::new(
         h_spacing, v_spacing,
+    )))
+}
+
+fn parse_clap(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    let width_numerator = reader.u32()?;
+    let width_denominator = reader.u32()?;
+    let height_numerator = reader.u32()?;
+    let height_denominator = reader.u32()?;
+    let horizontal_offset_numerator = i32::from_be_bytes(reader.u32()?.to_be_bytes());
+    let horizontal_offset_denominator = reader.u32()?;
+    let vertical_offset_numerator = i32::from_be_bytes(reader.u32()?.to_be_bytes());
+    let vertical_offset_denominator = reader.u32()?;
+    if width_numerator == 0
+        || width_denominator == 0
+        || height_numerator == 0
+        || height_denominator == 0
+        || horizontal_offset_denominator == 0
+        || vertical_offset_denominator == 0
+        || !reader.is_empty()
+    {
+        return Err(parse_failure!());
+    }
+    Ok(Property::CleanAperture(AvifCleanAperture::new(
+        width_numerator,
+        width_denominator,
+        height_numerator,
+        height_denominator,
+        horizontal_offset_numerator,
+        horizontal_offset_denominator,
+        vertical_offset_numerator,
+        vertical_offset_denominator,
     )))
 }
 
@@ -895,6 +929,12 @@ impl Meta {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_pixel_aspect_ratio(*ratio);
+                }
+                Property::CleanAperture(clean_aperture) => {
+                    if transform.clean_aperture().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_clean_aperture(*clean_aperture);
                 }
                 _ => {}
             }
@@ -1806,7 +1846,7 @@ fn coverage_malformed_leaf_corpus() {
             let _ = parse_infe(&payload);
             let _ = parse_iprp(&payload, &mut Meta::default(), &mut Budget::default());
             let _ = parse_ipco(&payload, &mut Meta::default(), &mut Budget::default());
-            for kind in [*b"ispe", *b"pixi", *b"av1C", *b"auxC"] {
+            for kind in [*b"ispe", *b"pixi", *b"av1C", *b"auxC", *b"clap"] {
                 let _ = parse_property(BoxView {
                     kind,
                     payload: &payload,
@@ -2079,12 +2119,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         (*b"pasp", &[0, 0, 0, 0, 0, 0, 0, 3][..]),
         (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 0][..]),
         (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 3, 0][..]),
+        (
+            *b"clap",
+            &[
+                0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+                0, 0, 0, 1,
+            ][..],
+        ),
     ] {
         let _ = parse_property(BoxView { kind, payload });
     }
     let _ = std::hint::black_box(parse_irot(&[]));
     let _ = std::hint::black_box(parse_imir(&[]));
     let _ = std::hint::black_box(parse_pasp(&[]));
+    let _ = std::hint::black_box(parse_clap(&[]));
     let duplicate_rotation = Meta {
         properties: vec![
             Property::Rotation(AvifRotation::Zero),
@@ -2121,6 +2169,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_pixel_aspect_ratio.source_descriptor(1);
+    let duplicate_clean_aperture = Meta {
+        properties: vec![
+            Property::CleanAperture(AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1)),
+            Property::CleanAperture(AvifCleanAperture::new(4, 1, 3, 1, 0, 1, 0, 1)),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_clean_aperture.source_descriptor(1);
     let duplicate_details = Meta {
         primary_item_id: Some(1),
         items: vec![Item {

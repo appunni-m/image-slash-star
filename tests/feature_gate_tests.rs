@@ -2730,8 +2730,8 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 #[test]
 fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties,
-        SourceDescriptor,
+        AvifCleanAperture, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+        AvifTransformProperties, SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -2971,6 +2971,76 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         expected_pixels
     );
 
+    let mut clap_payload = Vec::with_capacity(32);
+    clap_payload.extend_from_slice(&baseline.content.height.to_be_bytes());
+    clap_payload.extend_from_slice(&1_u32.to_be_bytes());
+    clap_payload.extend_from_slice(&baseline.content.width.to_be_bytes());
+    clap_payload.extend_from_slice(&1_u32.to_be_bytes());
+    clap_payload.extend_from_slice(&0_i32.to_be_bytes());
+    clap_payload.extend_from_slice(&1_u32.to_be_bytes());
+    clap_payload.extend_from_slice(&0_i32.to_be_bytes());
+    clap_payload.extend_from_slice(&1_u32.to_be_bytes());
+    let clap = append_associated_property(&bytes, b"clap", &clap_payload, 6)?;
+    let expected_clap = SourceDescriptor::new().with_avif_transform(
+        AvifTransformProperties::new()
+            .with_rotation(AvifRotation::CounterClockwise270)
+            .with_clean_aperture(AvifCleanAperture::new(
+                baseline.content.height,
+                1,
+                baseline.content.width,
+                1,
+                0,
+                1,
+                0,
+                1,
+            )),
+    );
+    assert_eq!(
+        expected_clap
+            .avif_transform()
+            .and_then(|transform| transform.clean_aperture()),
+        Some(AvifCleanAperture::new(
+            baseline.content.height,
+            1,
+            baseline.content.width,
+            1,
+            0,
+            1,
+            0,
+            1,
+        ))
+    );
+    let clap_inspected = image_slash_star::inspect(&clap)?;
+    assert_eq!(clap_inspected.source, expected_clap, "clap inspect");
+    let clap_decoded = image_slash_star::decode(&clap)?;
+    assert_eq!(clap_decoded.content.source, expected_clap, "clap decode");
+    assert_eq!(clap_decoded.content.pixels, expected_pixels);
+    let clap_sequence = image_slash_star::decode_sequence(&clap)?;
+    assert_eq!(
+        clap_sequence.content.frames[0].image.source, expected_clap,
+        "clap sequence"
+    );
+    assert_eq!(
+        clap_sequence.content.frames[0].image.pixels,
+        expected_pixels
+    );
+
+    let signed_clap_payload = [
+        0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 2, 0, 0,
+        0, 1, 0, 0, 0, 2,
+    ];
+    let signed_clap = append_associated_property(&bytes, b"clap", &signed_clap_payload, 6)?;
+    let expected_signed_clap = SourceDescriptor::new().with_avif_transform(
+        AvifTransformProperties::new()
+            .with_rotation(AvifRotation::CounterClockwise270)
+            .with_clean_aperture(AvifCleanAperture::new(2, 1, 3, 1, -1, 2, 1, 2)),
+    );
+    assert_eq!(
+        image_slash_star::inspect(&signed_clap)?.source,
+        expected_signed_clap,
+        "signed clap inspect"
+    );
+
     let pasp_box = box_start(&pasp, b"pasp")?;
     let mut empty_pasp = Vec::with_capacity(pasp.len() - 1);
     empty_pasp.extend_from_slice(&pasp[..pasp_box + 8]);
@@ -2999,6 +3069,40 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     let mut invalid_v_pasp = pasp;
     invalid_v_pasp[pasp_box + 12..pasp_box + 16].fill(0);
     assert_malformed(&invalid_v_pasp, "zero pasp vertical spacing")?;
+
+    let clap_box = box_start(&clap, b"clap")?;
+    let mut empty_clap = Vec::with_capacity(clap.len() - 1);
+    empty_clap.extend_from_slice(&clap[..clap_box + 8]);
+    empty_clap.extend_from_slice(&clap[clap_box + 9..]);
+    for kind in [b"clap", b"ipco", b"iprp", b"meta"] {
+        shrink_box_size(&mut empty_clap, kind, 1)?;
+    }
+    assert_malformed(&empty_clap, "truncated clap payload")?;
+
+    let mut extra_clap = Vec::with_capacity(clap.len() + 1);
+    extra_clap.extend_from_slice(&clap[..clap_box + 40]);
+    extra_clap.push(0);
+    extra_clap.extend_from_slice(&clap[clap_box + 40..]);
+    for kind in [b"clap", b"ipco", b"iprp", b"meta"] {
+        grow_box_size(&mut extra_clap, kind, 1)?;
+    }
+    assert_malformed(&extra_clap, "extra clap payload")?;
+
+    let duplicate_clap = append_associated_property(&clap, b"clap", &clap_payload, 7)?;
+    assert_malformed(&duplicate_clap, "duplicate clap association")?;
+
+    for (offset, label) in [
+        (8, "zero clap width numerator"),
+        (12, "zero clap width denominator"),
+        (16, "zero clap height numerator"),
+        (20, "zero clap height denominator"),
+        (28, "zero clap horizontal offset denominator"),
+        (36, "zero clap vertical offset denominator"),
+    ] {
+        let mut invalid_clap = clap.clone();
+        invalid_clap[clap_box + offset..clap_box + offset + 4].fill(0);
+        assert_malformed(&invalid_clap, label)?;
+    }
 
     // Empty and overlong payloads are malformed even when the first byte is a
     // legal value. The size changes keep each witness at the same container

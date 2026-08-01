@@ -61,7 +61,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         AvifTransformProperties::new()
             .with_rotation(AvifRotation::CounterClockwise90)
             .with_mirror(AvifMirrorAxis::LeftRight)
-            .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3)),
+            .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3))
+            .with_clean_aperture(AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1)),
     );
     assert_eq!(
         transform_only.avif_transform(),
@@ -70,6 +71,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 .with_rotation(AvifRotation::CounterClockwise90)
                 .with_mirror(AvifMirrorAxis::LeftRight)
                 .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3))
+                .with_clean_aperture(AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1,))
         )
     );
     assert!(!transform_only.is_empty());
@@ -84,6 +86,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(
         !AvifTransformProperties::new()
             .with_pixel_aspect_ratio(pixel_aspect_ratio)
+            .is_empty()
+    );
+    let clean_aperture = AvifCleanAperture::new(2, 1, 3, 1, -1, 2, 1, 2);
+    assert_eq!(clean_aperture.width_numerator(), 2);
+    assert_eq!(clean_aperture.width_denominator(), 1);
+    assert_eq!(clean_aperture.height_numerator(), 3);
+    assert_eq!(clean_aperture.height_denominator(), 1);
+    assert_eq!(clean_aperture.horizontal_offset_numerator(), -1);
+    assert_eq!(clean_aperture.horizontal_offset_denominator(), 2);
+    assert_eq!(clean_aperture.vertical_offset_numerator(), 1);
+    assert_eq!(clean_aperture.vertical_offset_denominator(), 2);
+    assert!(
+        !AvifTransformProperties::new()
+            .with_clean_aperture(clean_aperture)
             .is_empty()
     );
     assert!(AvifTransformProperties::new().is_empty());
@@ -1037,6 +1053,100 @@ pub struct AvifPixelAspectRatio {
     v_spacing: u32,
 }
 
+/// Fractional clean-aperture geometry declared by an AVIF `clap` property.
+///
+/// The width and height numerators and all denominators are represented as
+/// unsigned values because they are strictly positive in a valid declaration.
+/// Offset numerators use the signed ISO interpretation of the stored 32-bit
+/// value and may be positive, zero, or negative. This type records source
+/// provenance; the crate does not crop or resample decoded pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AvifCleanAperture {
+    width_numerator: u32,
+    width_denominator: u32,
+    height_numerator: u32,
+    height_denominator: u32,
+    horizontal_offset_numerator: i32,
+    horizontal_offset_denominator: u32,
+    vertical_offset_numerator: i32,
+    vertical_offset_denominator: u32,
+}
+
+impl AvifCleanAperture {
+    /// Create a clean-aperture declaration from its encoded fractions.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(
+        width_numerator: u32,
+        width_denominator: u32,
+        height_numerator: u32,
+        height_denominator: u32,
+        horizontal_offset_numerator: i32,
+        horizontal_offset_denominator: u32,
+        vertical_offset_numerator: i32,
+        vertical_offset_denominator: u32,
+    ) -> Self {
+        Self {
+            width_numerator,
+            width_denominator,
+            height_numerator,
+            height_denominator,
+            horizontal_offset_numerator,
+            horizontal_offset_denominator,
+            vertical_offset_numerator,
+            vertical_offset_denominator,
+        }
+    }
+
+    /// Return the clean-aperture width numerator.
+    #[must_use]
+    pub const fn width_numerator(&self) -> u32 {
+        self.width_numerator
+    }
+
+    /// Return the clean-aperture width denominator.
+    #[must_use]
+    pub const fn width_denominator(&self) -> u32 {
+        self.width_denominator
+    }
+
+    /// Return the clean-aperture height numerator.
+    #[must_use]
+    pub const fn height_numerator(&self) -> u32 {
+        self.height_numerator
+    }
+
+    /// Return the clean-aperture height denominator.
+    #[must_use]
+    pub const fn height_denominator(&self) -> u32 {
+        self.height_denominator
+    }
+
+    /// Return the signed horizontal offset numerator.
+    #[must_use]
+    pub const fn horizontal_offset_numerator(&self) -> i32 {
+        self.horizontal_offset_numerator
+    }
+
+    /// Return the horizontal offset denominator.
+    #[must_use]
+    pub const fn horizontal_offset_denominator(&self) -> u32 {
+        self.horizontal_offset_denominator
+    }
+
+    /// Return the signed vertical offset numerator.
+    #[must_use]
+    pub const fn vertical_offset_numerator(&self) -> i32 {
+        self.vertical_offset_numerator
+    }
+
+    /// Return the vertical offset denominator.
+    #[must_use]
+    pub const fn vertical_offset_denominator(&self) -> u32 {
+        self.vertical_offset_denominator
+    }
+}
+
 impl AvifPixelAspectRatio {
     /// Create a pixel aspect-ratio declaration from its positive spacings.
     #[must_use]
@@ -1062,16 +1172,17 @@ impl AvifPixelAspectRatio {
 
 /// AVIF item presentation properties retained without applying them to decoded pixels.
 ///
-/// The current model covers the `irot`, `imir`, and `pasp` properties. `clap`
-/// remains separate future metadata because it requires fractional dimensions
-/// and crop semantics. An absent field means that property was not associated
-/// with the primary image item; a present zero rotation remains distinguishable
-/// from an absent `irot` property.
+/// The current model covers the `irot`, `imir`, `pasp`, and `clap` properties.
+/// All four are source declarations: no rotation, mirroring, rescaling, or
+/// cropping is applied to decoded pixels. An absent field means that property
+/// was not associated with the primary image item; a present zero rotation
+/// remains distinguishable from an absent `irot` property.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct AvifTransformProperties {
     rotation: Option<AvifRotation>,
     mirror: Option<AvifMirrorAxis>,
     pixel_aspect_ratio: Option<AvifPixelAspectRatio>,
+    clean_aperture: Option<AvifCleanAperture>,
 }
 
 impl AvifTransformProperties {
@@ -1082,6 +1193,7 @@ impl AvifTransformProperties {
             rotation: None,
             mirror: None,
             pixel_aspect_ratio: None,
+            clean_aperture: None,
         }
     }
 
@@ -1124,10 +1236,26 @@ impl AvifTransformProperties {
         self.pixel_aspect_ratio
     }
 
+    /// Record an AVIF `clap` clean-aperture property.
+    #[must_use]
+    pub const fn with_clean_aperture(mut self, clean_aperture: AvifCleanAperture) -> Self {
+        self.clean_aperture = Some(clean_aperture);
+        self
+    }
+
+    /// Return the retained AVIF `clap` property, when present.
+    #[must_use]
+    pub const fn clean_aperture(&self) -> Option<AvifCleanAperture> {
+        self.clean_aperture
+    }
+
     /// Whether no AVIF transform property was retained.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.rotation.is_none() && self.mirror.is_none() && self.pixel_aspect_ratio.is_none()
+        self.rotation.is_none()
+            && self.mirror.is_none()
+            && self.pixel_aspect_ratio.is_none()
+            && self.clean_aperture.is_none()
     }
 }
 
