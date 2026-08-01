@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `417b4d26934816e0284c5cee4fb67327cc0893d7`
+Reviewed: 2026-08-02 on the working tree based on revision `c0b1a2c8147d041574a04df2ab7e6a6a3e8de5c7`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -188,7 +188,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `417b4d26934816e0284c5cee4fb67327cc0893d7`, the generated matrix
+For the current working tree based on revision `c0b1a2c8147d041574a04df2ab7e6a6a3e8de5c7`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -555,26 +555,26 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 46,788 | 46,788 |
-| Branches | 6,486 | 6,486 |
-| Functions | 2,606 | 2,606 |
-| Regions | 73,043 | 73,043 |
+| Lines | 46,865 | 46,865 |
+| Branches | 6,494 | 6,494 |
+| Functions | 2,613 | 2,613 |
+| Regions | 73,121 | 73,121 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`5b40f679-4746-46a6-a49a-0212e9e13e91`, submitted against
-`9e37df486410f71868146ef348034782f0fb5658`: 749 checks passed with zero
+`b384f2be-5e33-4e82-b6d7-55fa90ab91b5`, submitted against
+`c0b1a2c8147d041574a04df2ab7e6a6a3e8de5c7`: 793 checks passed with zero
 failures, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `a3ff585f-c4e5-4827-9d30-c6962ce2162b`
+Coverage MCP run: `932d3090-a87f-4719-92bd-3d2962d4d354`
 
-Snapshot: `10af331a-5981-412d-9eb0-34d505a47da4`
+Snapshot: `db4bd861-82b7-4261-8a93-78ec87096fb5`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
