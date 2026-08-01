@@ -30,9 +30,12 @@ fn bounded_usize(value: u64) -> usize {
 fn read_u16_le(r: &mut Cursor<&[u8]>) -> CodecResult<u16> {
     let start = r.position();
     let mut b = [0u8; 2];
-    r.read_exact(&mut b).map_err(|_| CodecError::NeedMore {
-        minimum: bounded_usize(start.saturating_add(2)),
-        message: "truncated BMP 16-bit field".to_owned(),
+    r.read_exact(&mut b).map_err(|_| {
+        CodecError::NeedMore {
+            minimum: bounded_usize(start.saturating_add(2)),
+            message: "truncated BMP 16-bit field".to_owned(),
+        }
+        .at(start, "bmp_field")
     })?;
     Ok(u16::from_le_bytes(b))
 }
@@ -40,9 +43,12 @@ fn read_u16_le(r: &mut Cursor<&[u8]>) -> CodecResult<u16> {
 fn read_u32_le(r: &mut Cursor<&[u8]>) -> CodecResult<u32> {
     let start = r.position();
     let mut b = [0u8; 4];
-    r.read_exact(&mut b).map_err(|_| CodecError::NeedMore {
-        minimum: bounded_usize(start.saturating_add(4)),
-        message: "truncated BMP 32-bit field".to_owned(),
+    r.read_exact(&mut b).map_err(|_| {
+        CodecError::NeedMore {
+            minimum: bounded_usize(start.saturating_add(4)),
+            message: "truncated BMP 32-bit field".to_owned(),
+        }
+        .at(start, "bmp_field")
     })?;
     Ok(u32::from_le_bytes(b))
 }
@@ -50,9 +56,12 @@ fn read_u32_le(r: &mut Cursor<&[u8]>) -> CodecResult<u32> {
 fn read_i32_le(r: &mut Cursor<&[u8]>) -> CodecResult<i32> {
     let start = r.position();
     let mut b = [0u8; 4];
-    r.read_exact(&mut b).map_err(|_| CodecError::NeedMore {
-        minimum: bounded_usize(start.saturating_add(4)),
-        message: "truncated BMP signed field".to_owned(),
+    r.read_exact(&mut b).map_err(|_| {
+        CodecError::NeedMore {
+            minimum: bounded_usize(start.saturating_add(4)),
+            message: "truncated BMP signed field".to_owned(),
+        }
+        .at(start, "bmp_field")
     })?;
     Ok(i32::from_le_bytes(b))
 }
@@ -126,11 +135,13 @@ fn read_palette(
     for _ in 0..count {
         let start = r.position();
         let mut entry = [0u8; 4];
-        r.read_exact(&mut entry[..entry_bytes])
-            .map_err(|_| CodecError::NeedMore {
+        r.read_exact(&mut entry[..entry_bytes]).map_err(|_| {
+            CodecError::NeedMore {
                 minimum: bounded_usize(start.saturating_add(entry_bytes as u64)),
                 message: "truncated BMP palette".to_owned(),
-            })?;
+            }
+            .at(start, "bmp_palette")
+        })?;
         pal.push(entry);
     }
     Ok(pal)
@@ -311,14 +322,18 @@ pub fn decode(
     // --- BITMAPFILEHEADER (14 bytes) ---
     let magic_start = r.position();
     let mut magic = [0u8; 2];
-    r.read_exact(&mut magic).map_err(|_| CodecError::NeedMore {
-        minimum: bounded_usize(magic_start.saturating_add(2)),
-        message: "truncated BMP file signature".to_owned(),
+    r.read_exact(&mut magic).map_err(|_| {
+        CodecError::NeedMore {
+            minimum: bounded_usize(magic_start.saturating_add(2)),
+            message: "truncated BMP file signature".to_owned(),
+        }
+        .at(magic_start, "bmp_signature")
     })?;
     if &magic != b"BM" {
-        return Err(CodecError::Malformed(
-            "invalid BMP file signature".to_owned(),
-        ));
+        return Err(
+            CodecError::Malformed("invalid BMP file signature".to_owned())
+                .at(magic_start, "bmp_signature"),
+        );
     }
     let _file_size = read_u32_le(&mut r)?; // bytes 2-5
     r.set_position(r.position().saturating_add(4)); // bytes 6-9 (reserved)
@@ -350,7 +365,8 @@ pub fn decode(
         } else {
             return Err(CodecError::Unsupported(format!(
                 "unsupported BMP DIB header size {header_size}"
-            )));
+            ))
+            .at(14, "bmp_dib_header"));
         };
 
     // After the standard 40-byte fields, the cursor is at position 14 + 40 = 54.
@@ -360,21 +376,25 @@ pub fn decode(
     let top_down = height < 0;
     let h = height.unsigned_abs();
     if width <= 0 {
-        return Err(CodecError::Malformed(
-            "BMP width must be positive".to_owned(),
-        ));
+        return Err(
+            CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
+        );
     }
     let w = width.cast_unsigned();
     if h == 0 || w > 16_384 || h > 16_384 {
         return Err(CodecError::Malformed(
             "BMP dimensions are empty or exceed the supported bounds".to_owned(),
-        ));
+        )
+        .at(18, "bmp_dib_header"));
     }
-    let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)?;
+    let bit_depth_offset = if header_size == 12 { 24 } else { 28 };
+    let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)
+        .map_err(|error| error.at(bit_depth_offset, "bmp_dib_header"))?;
     if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
         return Err(CodecError::Malformed(
             "BMP RLE compression requires indexed pixels".to_owned(),
-        ));
+        )
+        .at(30, "bmp_dib_header"));
     }
 
     // --- BI_BITFIELDS masks ---
@@ -415,9 +435,10 @@ pub fn decode(
         }
     };
     if compression == 3 && (rm == 0 || gm == 0 || bm == 0) {
-        return Err(CodecError::Unsupported(
-            "unsupported BMP bitfields layout".to_owned(),
-        ));
+        return Err(
+            CodecError::Unsupported("unsupported BMP bitfields layout".to_owned())
+                .at(54, "bmp_bitfields"),
+        );
     }
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
@@ -435,6 +456,7 @@ pub fn decode(
         0
     };
 
+    let palette_start = r.position();
     let palette = if pal_count > 0 {
         read_palette(&mut r, pal_count, palette_entry_bytes)?
     } else {
@@ -454,7 +476,8 @@ pub fn decode(
     if bit_depth == BmpBitDepth::Four && palette_is_grayscale {
         return Err(CodecError::Malformed(
             "Pillow rejects four-bit BMP grayscale palettes".to_owned(),
-        ));
+        )
+        .at(r.position(), "bmp_palette"));
     }
 
     // --- Seek to pixel data ---
@@ -482,7 +505,8 @@ pub fn decode(
                 false,
                 data_offset as usize,
                 token,
-            )?,
+            )
+            .map_err(|error| error.at(u64::from(data_offset), "bmp_rle"))?,
             width_usize,
             top_down,
         )
@@ -500,7 +524,8 @@ pub fn decode(
                 true,
                 data_offset as usize,
                 token,
-            )?,
+            )
+            .map_err(|error| error.at(u64::from(data_offset), "bmp_rle"))?,
             width_usize,
             top_down,
         )
@@ -509,9 +534,12 @@ pub fn decode(
         let stride = row_size(bit_depth.bits_per_pixel(), w);
         let mut raw = vec![0u8; stride.saturating_mul(height_usize)];
         let start = r.position();
-        r.read_exact(&mut raw).map_err(|_| CodecError::NeedMore {
-            minimum: bounded_usize(start.saturating_add(raw.len() as u64)),
-            message: "truncated BMP pixel data".to_owned(),
+        r.read_exact(&mut raw).map_err(|_| {
+            CodecError::NeedMore {
+                minimum: bounded_usize(start.saturating_add(raw.len() as u64)),
+                message: "truncated BMP pixel data".to_owned(),
+            }
+            .at(start, "bmp_pixels")
         })?;
 
         match bit_depth {
@@ -713,6 +741,7 @@ pub fn decode(
         }
         image = image.with_palette(ImagePalette::new(rgb, Vec::new()).map_err(|_| {
             CodecError::Malformed("BMP indexed palette contains more than 256 entries".to_owned())
+                .at(palette_start, "bmp_palette")
         })?);
     }
     // BMP does not define an unambiguous total extent: the declared file size
@@ -723,13 +752,15 @@ pub fn decode(
 /// Measure the encoded metadata extent: every byte before the pixel-data
 /// offset declared by the file header.
 pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
-    let magic = need_slice(data, 0, 2, "truncated BMP file signature")?;
+    let magic = need_slice(data, 0, 2, "truncated BMP file signature")
+        .map_err(|error| error.at(0, "bmp_signature"))?;
     if magic != b"BM" {
-        return Err(CodecError::Malformed(
-            "invalid BMP file signature".to_owned(),
-        ));
+        return Err(
+            CodecError::Malformed("invalid BMP file signature".to_owned()).at(0, "bmp_signature"),
+        );
     }
-    let offset = need_slice(data, 10, 14, "truncated BMP file signature")?;
+    let offset = need_slice(data, 10, 14, "truncated BMP file signature")
+        .map_err(|error| error.at(10, "bmp_field"))?;
     Ok(u64::from(u32::from_le_bytes([
         offset[0], offset[1], offset[2], offset[3],
     ])))

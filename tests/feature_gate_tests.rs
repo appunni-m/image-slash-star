@@ -5390,6 +5390,40 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     assert_eq!(verify_error.identity(), Some("png_chunk"));
     assert!(verify_error.offset().is_some());
 
+    if cfg!(feature = "bmp") {
+        // BMP parse-site context is a Rust error-detail contract. Pillow has
+        // no portable offset/identity result to compare, so this witness is
+        // intentionally outside the generated parity matrix.
+        let truncated_bmp = b"BM";
+        let inspect_error = match image_slash_star::inspect_basic(truncated_bmp) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated BMP must fail basic inspection: {info:?}"),
+        };
+        assert_eq!(inspect_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(inspect_error.stage(), Some(ImageErrorStage::Inspection));
+        assert_eq!(inspect_error.identity(), Some("bmp_field"));
+        assert_eq!(inspect_error.offset(), Some(10));
+
+        let decode_error = match image_slash_star::decode(truncated_bmp) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated BMP must fail still decode: {info:?}"),
+        };
+        assert_eq!(decode_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(decode_error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(decode_error.identity(), Some("bmp_field"));
+        assert_eq!(decode_error.offset(), Some(2));
+
+        let prefix_error = match image_slash_star::decode_prefix(truncated_bmp) {
+            Err(error) => error,
+            Ok(info) => panic!("truncated BMP prefix must need more data: {info:?}"),
+        };
+        assert_eq!(prefix_error.kind(), ImageErrorKind::NeedMoreData);
+        assert_eq!(prefix_error.stage(), Some(ImageErrorStage::StillDecode));
+        assert_eq!(prefix_error.identity(), Some("bmp_field"));
+        assert_eq!(prefix_error.offset(), Some(2));
+        assert_eq!(prefix_error.minimum_input(), Some(6));
+    }
+
     let cmyk = DecodedImage::new(1, 1, vec![0; 4], ColorType::Cmyk8);
     let encode_error = match image_slash_star::encode_default(&cmyk, ImageFormat::Png) {
         Err(error) => error,
