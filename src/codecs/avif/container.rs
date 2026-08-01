@@ -8,7 +8,7 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
     AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
-    SourceAlpha, SourceColor, SourceDescriptor,
+    RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -179,13 +179,14 @@ struct Brands {
     has_avis: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum Property {
     Ispe { width: u32, height: u32 },
     Pixi { depth: u8 },
     Av1C { depth: u8 },
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
+    IccProfile(RawIccProfile),
     ContentLightLevel(AvifContentLightLevel),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
@@ -638,8 +639,20 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
 
 fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
     let mut reader = Reader::new(payload);
-    if reader.four_cc()? != *b"nclx" {
-        return Ok(Property::Other);
+    let color_type = reader.four_cc()?;
+    match color_type {
+        kind if kind == *b"rICC" || kind == *b"prof" => {
+            let data = reader.take_remaining();
+            if data.is_empty() {
+                return Err(parse_failure!());
+            }
+            return Ok(Property::IccProfile(RawIccProfile {
+                keyword: color_type.to_vec(),
+                data: data.to_vec(),
+            }));
+        }
+        kind if kind != *b"nclx" => return Ok(Property::Other),
+        _ => {}
     }
     let color = AvifColorProperties {
         color_primaries: reader.u16()?,
@@ -904,6 +917,15 @@ impl Meta {
             })
         {
             source_color = source_color.with_avif_color(color);
+        }
+        if let Some(profile) = self
+            .associated(primary)
+            .find_map(|property| match property {
+                Property::IccProfile(profile) => Some(profile.clone()),
+                _ => None,
+            })
+        {
+            source_color = source_color.with_icc_profile(profile);
         }
         if let Some(content_light_level) =
             self.associated(primary)

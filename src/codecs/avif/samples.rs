@@ -5,7 +5,7 @@ use std::num::NonZeroU32;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
-    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, SourceColor,
+    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -316,11 +316,12 @@ struct Item {
     kind: FourCc,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum Property {
     Av1C(ByteSpan),
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
+    IccProfile(RawIccProfile),
     ContentLightLevel(AvifContentLightLevel),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
@@ -594,8 +595,22 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
 
 fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     let mut reader = Reader::new(input, payload);
-    if reader.four_cc()? != *b"nclx" {
-        return Ok(Property::Other);
+    let color_type = reader.four_cc()?;
+    match color_type {
+        kind if kind == *b"rICC" || kind == *b"prof" => {
+            let length = reader.end.saturating_sub(reader.offset);
+            let profile = reader.take_span(length)?;
+            let data = profile.bytes(input)?;
+            if data.is_empty() {
+                return Err(parse_failure!());
+            }
+            return Ok(Property::IccProfile(RawIccProfile {
+                keyword: color_type.to_vec(),
+                data: data.to_vec(),
+            }));
+        }
+        kind if kind != *b"nclx" => return Ok(Property::Other),
+        _ => {}
     }
     let color = AvifColorProperties {
         color_primaries: reader.u16()?,
@@ -935,6 +950,15 @@ impl Meta {
                 })
         {
             source_color = source_color.with_avif_color(color);
+        }
+        if let Some(profile) =
+            self.associated(self.primary_item_id)
+                .find_map(|property| match property {
+                    Property::IccProfile(profile) => Some(profile.clone()),
+                    _ => None,
+                })
+        {
+            source_color = source_color.with_icc_profile(profile);
         }
         if let Some(content_light_level) =
             self.associated(self.primary_item_id)
@@ -1643,6 +1667,7 @@ fn parse_sample_description(
                 }
             }
             Property::Color(_)
+            | Property::IccProfile(_)
             | Property::ContentLightLevel(_)
             | Property::Rotation(_)
             | Property::Mirror(_)
