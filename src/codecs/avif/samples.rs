@@ -3686,6 +3686,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     coverage_metadata_mutations(grid, 1_467);
     coverage_metadata_mutations(animated, 1_023);
     coverage_metadata_mutations(high_bit, 2_022);
+    let pasp_zero_vertical = [0, 0, 0, 4, 0, 0, 0, 0];
+    let _ = parse_pasp(
+        &pasp_zero_vertical,
+        ByteSpan {
+            start: 0,
+            end: pasp_zero_vertical.len(),
+        },
+    );
 
     let duplicate_rotation = Meta {
         primary_item_id: 1,

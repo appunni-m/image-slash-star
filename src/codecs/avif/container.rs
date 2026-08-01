@@ -2076,6 +2076,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         (*b"imir", &[0, 0][..]),
         (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 3][..]),
         (*b"pasp", &[0, 0, 0, 0, 0, 0, 0, 3][..]),
+        (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 0][..]),
         (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 3, 0][..]),
     ] {
         let _ = parse_property(BoxView { kind, payload });
