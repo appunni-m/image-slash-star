@@ -2056,6 +2056,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ] {
         let _ = parse_property(BoxView { kind, payload });
     }
+    let duplicate_rotation = Meta {
+        properties: vec![
+            Property::Rotation(AvifRotation::Zero),
+            Property::Rotation(AvifRotation::CounterClockwise90),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_rotation.source_descriptor(1);
+    let duplicate_mirror = Meta {
+        properties: vec![
+            Property::Mirror(AvifMirrorAxis::TopBottom),
+            Property::Mirror(AvifMirrorAxis::LeftRight),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_mirror.source_descriptor(1);
     for (kind, urn) in [
         (*b"auxi", ALPHA_URN_HEVC),
         (*b"auxC", b"not-alpha".as_slice()),
