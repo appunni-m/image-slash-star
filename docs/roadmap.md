@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `0c347fe79c4bae1ae32b811e2504539da9024e67`
+Reviewed: 2026-08-02 on the working tree based on revision `417b4d26934816e0284c5cee4fb67327cc0893d7`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -56,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `0c347fe79c4bae1ae32b811e2504539da9024e67`,
+The correction evidence below is the working-tree state based on `417b4d26934816e0284c5cee4fb67327cc0893d7`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -126,11 +126,11 @@ testing contract, rustdoc, committed fixtures, and claim ledger. New confirmed
 defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
-The final all-feature Coverage MCP run
-`185dec7e-e322-4eff-8907-167b6db7a705`, snapshot
-`2b51bf94-d27c-42e4-bb40-7bd2d2eb2c7a`, passed 49 tests with zero failures
-or skips and reports 46,568/46,568 lines, 6,478/6,478 branches,
-2,587/2,587 functions, and 72,834/72,834 regions.
+The current all-feature Coverage MCP run
+`a3ff585f-c4e5-4827-9d30-c6962ce2162b`, snapshot
+`10af331a-5981-412d-9eb0-34d505a47da4`, passed 49 tests with zero failures
+or skips and reports 46,788/46,788 lines, 6,486/6,486 branches,
+2,606/2,606 functions, and 73,043/73,043 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
