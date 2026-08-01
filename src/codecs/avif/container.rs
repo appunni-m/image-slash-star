@@ -1943,6 +1943,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
             payload: &payload,
         });
     }
+    // Public AVIF inspection validates the sample parser before reaching this
+    // independent container parser. Keep the duplicate bounded-parser
+    // invariant executable without misclassifying it as a Pillow parity row.
+    let extra_nclx = [b'n', b'c', b'l', b'x', 0, 1, 0, 13, 0, 6, 0x80, 0];
+    assert!(matches!(
+        parse_colr(&extra_nclx),
+        Err(CodecError::Malformed(_))
+    ));
     let _ = parse_property(BoxView {
         kind: *b"av1C",
         payload: &[0, 0, 0, 0],
