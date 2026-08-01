@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `a54d245a42b5488d92e959ce4f90ab82d7de3f25`
+Reviewed: 2026-08-01 against the working tree based on `8e216604890581ddf9b624cc3b9d43b793f49f33`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -250,7 +250,7 @@ translation cannot be bypassed.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode the complete validated bytes into a caller-owned `OutputSink`; incremental structural writing remains future work |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode the complete validated bytes into a caller-owned `OutputSink`; sink rejection is normalized to `ImageError::OutputWrite`, while incremental structural writing remains future work |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
@@ -489,6 +489,14 @@ extensions, JPEG markers/segments, TIFF IFDs, WebP chunks on the metadata-scan
 path, and AVIF boxes. BMP, ICO, and WebP decode internals intentionally remain
 detail-free. Both fields are stable recovery data, never prose.
 
+When `encode_to_sink` or `encode_sequence_to_sink` receives an error from its
+caller-owned `OutputSink`, it normalizes that rejection to
+`ImageError::OutputWrite`. The error retains the selected output format, the
+`StillEncode` or `SequenceEncode` stage, and the sink's diagnostic message;
+input offset and container identity are `None` because the failure is on the
+destination side. This boundary does not make the current whole-buffer sink
+incremental or define short-write/flush semantics.
+
 Non-fatal recovery is separate from `ImageError`: successful decode returns
 `Decoded<T>::diagnostics`, while fatal parser failures remain `ImageError`.
 The Rust diagnostic fields are a defensive/specification contract, not a
@@ -508,6 +516,10 @@ non-exhaustive so downstream matches need a fallback arm.
 | `Unsupported` | The format is valid enough to identify, but the requested operation/class is unavailable | Choose another target, option, or implementation |
 | `Dimensions` | Dimensions, frame bounds, or sample length are invalid | Correct or constrain the caller-supplied data |
 | `Parameter` | An encoder option, palette, mode combination, or other parameter is invalid | Correct the named input |
+| `LimitExceeded` | A caller-configured resource maximum was exceeded | Reduce the input or raise the selected policy maximum |
+| `NeedMoreData` | An incremental prefix is incomplete and names the minimum total input length for retry | Append input to reach `minimum_input()` and retry |
+| `Cancelled` | A token-aware decode stopped at a cooperative checkpoint | Start a fresh operation with a new token |
+| `OutputWrite` | A caller-owned encoded-output destination rejected the complete buffer | Inspect the diagnostic, repair or replace the destination, and retry the encode |
 
 `ImageError::kind()` is the stable recovery category and
 `ImageError::format()` identifies the selected codec when one exists.

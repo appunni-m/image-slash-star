@@ -149,7 +149,7 @@ capabilities and setup.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; failing sinks propagate without partial writes |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; sink rejection is reported as `ImageError::OutputWrite` without partial writes |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
@@ -425,13 +425,21 @@ Every canonical fallible API returns `ImageResult<T>`.
 | `Dimensions` | Dimensions, frame bounds, or sample length are invalid |
 | `Parameter` | An option, palette, mode combination, or other parameter is invalid |
 | `LimitExceeded` | A caller-configured resource maximum was exceeded |
+| `NeedMoreData` | An incremental prefix is incomplete and reports the minimum total input length for retry |
+| `Cancelled` | A token-aware decode stopped at a cooperative checkpoint |
+| `OutputWrite` | A caller-owned encoded-output destination rejected the complete buffer |
 
 Codec-dispatched failures additionally report the public operation that
 produced them through `ImageError::stage()` (`Inspection`, `StillDecode`,
 `StillEncode`, `SequenceDecode`, `SequenceEncode`, or `Verification`).
 Caller-built validation and option-construction errors remain stage-free;
 `UnknownFormat`, `FeatureDisabled`, and `LimitExceeded` keep their existing
-contracts (`LimitExceeded` already carries the typed operation).
+contracts (`LimitExceeded` already carries the typed operation). Sink failures
+from `encode_to_sink` and `encode_sequence_to_sink` carry the selected output
+format and encode stage through `OutputWrite`; their offset and identity are
+`None` because the failure is on the destination side. The current sink writes
+one complete validated buffer; short-write, flush, and structural cleanup
+semantics remain future incremental-writer work.
 
 Where the parser can name the failing container structure, codec-dispatched
 errors also report the encoded-input byte offset (`ImageError::offset()`) and
@@ -450,7 +458,7 @@ because Pillow has no equivalent structured warning field.
 
 Use `error.kind()` for stable recovery policy and `error.format()` for the
 selected input/output format when one is known. `error.message()` returns
-retained high-level codec/parameter diagnostics; `LimitExceeded` instead
+retained high-level codec/parameter/destination diagnostics; `LimitExceeded` instead
 exposes typed fields directly and has no prose message. In particular,
 `Dimensions` and `Parameter` retain both optional format and diagnostic
 context; callers do not need to parse `Display` output. Diagnostic prose may
