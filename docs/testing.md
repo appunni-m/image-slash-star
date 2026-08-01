@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `0ff9d7a4988438c7c3e33ce091d8950f95173b83`
+Reviewed: 2026-08-02 on the working tree based on revision `b484fb171aa129729e0c5aec409cda0aac36c281`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -128,6 +128,13 @@ the same separation to a malformed Deflate strip: its still and sequence
 assertions retain the fixture's byte offset `122` and `tiff_strip` identity as
 Rust error-detail evidence, without adding those fields to Pillow parity.
 
+The `tiff_capability_and_destination_failures_are_structured` contract extends
+that boundary to the existing unknown-compression fixture (offset `140`,
+`tiff_strip`), a valid `La16` caller mode that TIFF cannot encode, and rejecting
+still/sequence `OutputSink` destinations. The compression context, unsupported
+mode, and destination results are Rust-only structured contracts; they do not
+add fields or caller-owned encoder state to the Pillow parity matrix.
+
 The test boundary is deliberate. `diagnostic_manifest_matches_the_non_parity_contract`
 in `tests/feature_gate_tests.rs` and
 `trailing_input_policy_manifest_matches_the_public_contract` in
@@ -199,7 +206,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `0ff9d7a4988438c7c3e33ce091d8950f95173b83`, the generated matrix
+For the current working tree based on revision `b484fb171aa129729e0c5aec409cda0aac36c281`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -578,17 +585,17 @@ The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`ef523211-91ec-4447-8146-1695d1c03b75`, submitted against
-`0ff9d7a4988438c7c3e33ce091d8950f95173b83`: 837 checks passed with zero
+`765be27b-6816-48a4-a044-d93165704033`, submitted against
+`b484fb171aa129729e0c5aec409cda0aac36c281`: 859 checks passed with zero
 failures, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `a6ffde35-9d5e-4a4f-8e1c-43e84c458572`
+Coverage MCP run: `5ad8bb03-f105-4dad-ba2b-334fb71be242`
 
-Snapshot: `19068e59-293d-451e-aea6-ec4500387e1c`
+Snapshot: `78718b18-ff5a-4cd8-80c3-60e9f0eafecd`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

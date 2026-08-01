@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `0ff9d7a4988438c7c3e33ce091d8950f95173b83`
+Reviewed: 2026-08-02 on the working tree based on revision `b484fb171aa129729e0c5aec409cda0aac36c281`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -56,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `0ff9d7a4988438c7c3e33ce091d8950f95173b83`,
+The correction evidence below is the working-tree state based on `b484fb171aa129729e0c5aec409cda0aac36c281`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -127,8 +127,8 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`a6ffde35-9d5e-4a4f-8e1c-43e84c458572`, snapshot
-`19068e59-293d-451e-aea6-ec4500387e1c`, passed 51 tests with zero failures
+`5ad8bb03-f105-4dad-ba2b-334fb71be242`, snapshot
+`78718b18-ff5a-4cd8-80c3-60e9f0eafecd`, passed 52 tests with zero failures
 or skips and reports 47,054/47,054 lines, 6,502/6,502 branches,
 2,641/2,641 functions, and 73,398/73,398 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
@@ -502,7 +502,6 @@ Minute gaps:
 | TIF-016 | Strip/tile decode cannot stream into a caller buffer, and encoding cannot incrementally write strips or tiles. | Add bounded chunk APIs after API-024/025; never require full multipage materialization. |
 | TIF-017 | IFD cycles/depth, tag counts, strip/tile counts, offset arrays, decompressed bytes, and predictor work have no caller policy. | Add typed TIFF sublimits and minimized cycle/overflow/exhaustion fixtures. |
 | TIF-018 | Sparse 64-bit offsets, BigTIFF count/offset boundaries, and host `usize` conversion are not exercised across 32-bit/WASM targets. | Use generated sparse/structural inputs and target-specific checked arithmetic tests without committing huge files. |
-| TIF-019 | Unsupported compression, unavailable encode method, and output-write failure are not yet independently fixture-bound structured states; malformed compressed strip/tile payloads now retain `tiff_strip`/`tiff_tile` parse context through API-030. | Fixture the remaining compression, capability, and destination boundaries independently. |
 | TIF-020 | Photometric support is not catalogued for WhiteIsZero, BlackIsZero, RGB, Palette, Transparency Mask, Separated, YCbCr, CIELAB/ICCLAB/ITULAB, LogL/LogLuv, and CFA classes. | Generate a source photometric capability table; do not coerce unknown extra channels into RGBA. |
 | TIF-021 | Compression identity is broader than “compressed”: CCITT variants/options, old/new JPEG, LZW, Deflate/Adobe Deflate, PackBits, PixarLog, SGILog, LZMA, Zstd, LERC, WebP, and vendor values need separate decode/encode capabilities. | Give every observed compression a stable capability code and prevent feature-gated delegated codecs from being inferred accidentally. |
 | TIF-022 | The common metadata model cannot retain TIFF field type and count. BYTE/ASCII/SHORT/LONG/RATIONAL, signed variants, FLOAT/DOUBLE, IFD, LONG8/SLONG8/IFD8, inline values, and offset values can carry byte-distinct but numerically similar data. | Add a typed raw tag record with source byte order, exact count, and exact bytes. |
@@ -1135,8 +1134,8 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`ef523211-91ec-4447-8146-1695d1c03b75`, submitted against
-`0ff9d7a4988438c7c3e33ce091d8950f95173b83`; it passed 837 checks with zero
+`765be27b-6816-48a4-a044-d93165704033`, submitted against
+`b484fb171aa129729e0c5aec409cda0aac36c281`; it passed 859 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
