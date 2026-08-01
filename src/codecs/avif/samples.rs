@@ -348,7 +348,11 @@ struct ItemLocation {
 
 #[derive(Default)]
 struct Meta {
-    primary_item_id: Option<u32>,
+    // parse_meta requires a valid pitm box before returning, so a parsed
+    // metadata set always has a nonzero primary item identifier. Keeping that
+    // invariant in the representation avoids manufacturing a fallback item
+    // id in source-color extraction.
+    primary_item_id: u32,
     items: Vec<Item>,
     properties: Vec<Property>,
     associations: Vec<Association>,
@@ -385,7 +389,7 @@ fn parse_meta(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
                     return Err(parse_failure!());
                 }
                 pitm_seen = true;
-                meta.primary_item_id = Some(parse_pitm(input, child.payload)?);
+                meta.primary_item_id = parse_pitm(input, child.payload)?;
             }
             kind if kind == *b"iinf" => {
                 if iinf_seen {
@@ -828,8 +832,7 @@ impl Meta {
     }
 
     fn source_color(&self) -> SourceColor {
-        let primary = self.primary_item_id.unwrap_or_default();
-        self.associated(primary)
+        self.associated(self.primary_item_id)
             .find_map(|property| match property {
                 Property::Color(color) => Some(SourceColor::new().with_avif_color(*color)),
                 _ => None,
@@ -1002,7 +1005,7 @@ fn item_ids(meta: &Meta, item_id: u32) -> ParseResult<Vec<u32>> {
 }
 
 fn still_payload(meta: &Meta) -> ParseResult<StillPayload> {
-    let primary = meta.primary_item_id.ok_or_else(|| parse_failure!())?;
+    let primary = meta.primary_item_id;
     let color_ids = item_ids(meta, primary)?;
     let color = EncodedPlane {
         samples: color_ids
@@ -3176,7 +3179,7 @@ fn coverage_structural_states() {
     let _ = duplicate_alpha_meta.alpha_targeting(1);
     let _ = still_payload(&Meta::default());
     let duplicate_direct_alpha = Meta {
-        primary_item_id: Some(1),
+        primary_item_id: 1,
         items: vec![
             Item {
                 id: 1,
@@ -3230,7 +3233,7 @@ fn coverage_structural_states() {
     };
     let _ = still_payload(&duplicate_direct_alpha);
     let duplicate_child_alpha = Meta {
-        primary_item_id: Some(1),
+        primary_item_id: 1,
         items: vec![
             Item {
                 id: 1,
