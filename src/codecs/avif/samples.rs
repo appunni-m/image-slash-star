@@ -3,7 +3,9 @@
 use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
-use crate::types::{AvifColorProperties, SourceColor};
+use crate::types::{
+    AvifColorProperties, AvifMirrorAxis, AvifRotation, AvifTransformProperties, SourceColor,
+};
 
 const MAX_BOXES: usize = 4_096;
 const MAX_RECORDS: usize = 4_096;
@@ -318,6 +320,8 @@ enum Property {
     Av1C(ByteSpan),
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
+    Rotation(AvifRotation),
+    Mirror(AvifMirrorAxis),
     Other,
 }
 
@@ -564,6 +568,8 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             Ok(Property::Av1C(property.payload))
         }
         kind if kind == *b"colr" => parse_colr(input, property.payload),
+        kind if kind == *b"irot" => parse_irot(input, property.payload),
+        kind if kind == *b"imir" => parse_imir(input, property.payload),
         [b'a', b'u', b'x', b'C'] | [b'a', b'u', b'x', b'i'] => {
             let mut reader = Reader::new(input, property.payload);
             let (version, _) = parse_full_box(&mut reader)?;
@@ -600,6 +606,34 @@ fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::Color(color))
+}
+
+fn parse_irot(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
+    let mut reader = Reader::new(input, payload);
+    let rotation = match reader.u8()? {
+        0 => AvifRotation::Zero,
+        1 => AvifRotation::CounterClockwise90,
+        2 => AvifRotation::CounterClockwise180,
+        3 => AvifRotation::CounterClockwise270,
+        _ => return Err(parse_failure!()),
+    };
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::Rotation(rotation))
+}
+
+fn parse_imir(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
+    let mut reader = Reader::new(input, payload);
+    let mirror = match reader.u8()? {
+        0 => AvifMirrorAxis::TopBottom,
+        1 => AvifMirrorAxis::LeftRight,
+        _ => return Err(parse_failure!()),
+    };
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::Mirror(mirror))
 }
 
 fn parse_ipma(
@@ -840,6 +874,28 @@ impl Meta {
             .unwrap_or_else(SourceColor::new)
     }
 
+    fn transform(&self) -> ParseResult<Option<AvifTransformProperties>> {
+        let mut transform = AvifTransformProperties::new();
+        for property in self.associated(self.primary_item_id) {
+            match property {
+                Property::Rotation(rotation) => {
+                    if transform.rotation().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_rotation(*rotation);
+                }
+                Property::Mirror(mirror) => {
+                    if transform.mirror().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_mirror(*mirror);
+                }
+                _ => {}
+            }
+        }
+        Ok((!transform.is_empty()).then_some(transform))
+    }
+
     fn av1c(&self, item_id: u32) -> ParseResult<ByteSpan> {
         let mut configs = self.associated(item_id).filter_map(|property| {
             if let Property::Av1C(span) = property {
@@ -911,6 +967,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) consumed: usize,
     pub(super) retained_boxes: Vec<crate::types::OpaqueBlock>,
     pub(super) source_color: SourceColor,
+    pub(super) transform: Option<AvifTransformProperties>,
 }
 
 impl ExtractedAvif<'_> {
@@ -1499,7 +1556,7 @@ fn parse_sample_description(
                     return Err(parse_failure!());
                 }
             }
-            Property::Color(_) => {}
+            Property::Color(_) | Property::Rotation(_) | Property::Mirror(_) => {}
             Property::Other => {}
         }
     }
@@ -1720,6 +1777,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
     let source_color = meta
         .as_ref()
         .map_or_else(SourceColor::new, Meta::source_color);
+    let transform = meta.as_ref().map_or_else(|| Ok(None), Meta::transform)?;
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -1728,6 +1786,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         consumed,
         retained_boxes,
         source_color,
+        transform,
     })
 }
 
@@ -2144,7 +2203,7 @@ fn coverage_leaf_corpus() {
             let _ = parse_infe(&input, span);
             let _ = parse_iprp(&input, span, &mut Meta::default(), &mut Budget::default());
             let _ = parse_ipco(&input, span, &mut Meta::default(), &mut Budget::default());
-            for kind in [*b"av1C", *b"auxC", *b"free"] {
+            for kind in [*b"av1C", *b"auxC", *b"irot", *b"imir", *b"free"] {
                 let _ = parse_property(
                     &input,
                     BoxSpan {
@@ -3359,6 +3418,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
     };
     let _ = empty.validate();
     let invalid_plane = EncodedPlane {
@@ -3407,6 +3467,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: Vec::new(),
@@ -3421,6 +3482,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![EncodedSample {
@@ -3442,6 +3504,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
                 samples: vec![EncodedSample {
@@ -3476,6 +3539,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3496,6 +3560,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3511,6 +3576,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {
@@ -3533,6 +3599,7 @@ fn coverage_structural_states() {
         consumed: 0,
         retained_boxes: Vec::new(),
         source_color: SourceColor::new(),
+        transform: None,
         still: None,
         sequence: Some(SequencePayload {
             color: EncodedPlane {

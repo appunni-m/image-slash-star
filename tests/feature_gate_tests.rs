@@ -1517,6 +1517,11 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
     Ok(())
 }
 
+// This is intentionally separate from the generated Pillow parity matrix.
+// Pillow exposes no structured warning/recovery field for these successful
+// decodes, so the expected kind, stage, offset, and identity are Rust
+// defensive-model policy rather than oracle output. Keep this as a normal
+// fixture-backed behavior contract, not a coverage-only diagnostic hook.
 #[test]
 fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -2719,6 +2724,99 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
         };
         assert_eq!(error.identity(), Some("avif_box"));
     }
+    Ok(())
+}
+
+#[test]
+fn avif_item_transforms_match_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{
+        AvifMirrorAxis, AvifRotation, AvifTransformProperties, SourceDescriptor,
+    };
+
+    if cfg!(target_arch = "wasm32") || !cfg!(feature = "avif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bytes =
+        fs::read(root.join("tests/fixtures/outputs/encoded/Encode.avif_enc_orientation.bin"))?;
+    let irot = bytes
+        .windows(4)
+        .position(|window| window == b"irot")
+        .ok_or("orientation AVIF has no irot property")?;
+    let baseline = image_slash_star::decode(&bytes)?;
+    let expected_pixels = baseline.content.pixels;
+
+    for (value, rotation) in [
+        (0, AvifRotation::Zero),
+        (1, AvifRotation::CounterClockwise90),
+        (2, AvifRotation::CounterClockwise180),
+        (3, AvifRotation::CounterClockwise270),
+    ] {
+        let mut variant = bytes.clone();
+        variant[irot + 4] = value;
+        let expected = SourceDescriptor::new()
+            .with_avif_transform(AvifTransformProperties::new().with_rotation(rotation));
+        let inspected = image_slash_star::inspect(&variant)?;
+        assert_eq!(inspected.source, expected, "irot inspect value {value}");
+        let decoded = image_slash_star::decode(&variant)?;
+        assert_eq!(
+            decoded.content.source, expected,
+            "irot decode value {value}"
+        );
+        assert_eq!(decoded.content.pixels, expected_pixels);
+        let sequence = image_slash_star::decode_sequence(&variant)?;
+        assert_eq!(
+            sequence.content.frames[0].image.source, expected,
+            "irot sequence value {value}"
+        );
+        assert_eq!(sequence.content.frames[0].image.pixels, expected_pixels);
+    }
+
+    let mut mirrored = bytes.clone();
+    mirrored[irot..irot + 4].copy_from_slice(b"imir");
+    mirrored[irot + 4] = 1;
+    let expected_mirror = SourceDescriptor::new()
+        .with_avif_transform(AvifTransformProperties::new().with_mirror(AvifMirrorAxis::LeftRight));
+    assert_eq!(
+        image_slash_star::inspect(&mirrored)?.source,
+        expected_mirror,
+        "imir inspect"
+    );
+    let mirrored_decoded = image_slash_star::decode(&mirrored)?;
+    assert_eq!(mirrored_decoded.content.source, expected_mirror);
+    assert_eq!(mirrored_decoded.content.pixels, expected_pixels);
+    let mirrored_sequence = image_slash_star::decode_sequence(&mirrored)?;
+    assert_eq!(
+        mirrored_sequence.content.frames[0].image.source, expected_mirror,
+        "imir sequence"
+    );
+
+    let mut invalid_rotation = bytes;
+    invalid_rotation[irot + 4] = 4;
+    let error = match image_slash_star::inspect(&invalid_rotation) {
+        Ok(_) => return Err("invalid irot was accepted".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+    assert_eq!(error.identity(), Some("avif_box"));
+    let error = match image_slash_star::decode(&invalid_rotation) {
+        Ok(_) => return Err("invalid irot decode was accepted".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+
+    let mut invalid_mirror = mirrored;
+    invalid_mirror[irot + 4] = 2;
+    let error = match image_slash_star::inspect(&invalid_mirror) {
+        Ok(_) => return Err("invalid imir was accepted".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+    let error = match image_slash_star::decode(&invalid_mirror) {
+        Ok(_) => return Err("invalid imir decode was accepted".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
     Ok(())
 }
 

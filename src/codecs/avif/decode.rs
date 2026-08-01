@@ -19,6 +19,7 @@ pub fn decode(
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let source_color = std::mem::take(&mut extracted.source_color);
+    let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let image = match decode_portable(&validated) {
@@ -27,6 +28,13 @@ pub fn decode(
             crate::codecs::error::check_cancelled(token)?;
             decode_native(data)?
         }
+    };
+    let image = match transform {
+        Some(transform) => {
+            let source = image.source.clone().with_avif_transform(transform);
+            image.with_source_descriptor(source)
+        }
+        None => image,
     };
     Ok((
         image
@@ -47,10 +55,17 @@ pub fn decode_sequence(
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let source_color = std::mem::take(&mut extracted.source_color);
+    let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let (mut sequence, consumed) =
         decode_sequence_native(data, &validated, budget, consumed, token)?;
+    if let Some(transform) = transform {
+        for frame in &mut sequence.frames {
+            let source = frame.image.source.clone().with_avif_transform(transform);
+            frame.image.source = source;
+        }
+    }
     sequence.opaque_blocks = retained_boxes;
     sequence.source_color = source_color;
     Ok((sequence, consumed))
