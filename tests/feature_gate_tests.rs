@@ -2810,6 +2810,21 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         grow_box_size(&mut output, b"ipma", 1)?;
         grow_box_size(&mut output, b"iprp", iprp_delta)?;
         grow_box_size(&mut output, b"meta", iprp_delta)?;
+
+        // This committed fixture uses iloc version 0 with one 32-bit file
+        // extent and places mdat immediately after meta. The inserted
+        // property plus its ipma association shifts that extent by the same
+        // amount as the metadata growth.
+        let iloc = box_start(&output, b"iloc")?;
+        let extent_offset = iloc.checked_add(19).ok_or("iloc offset overflowed")?;
+        let extent_end = extent_offset
+            .checked_add(4)
+            .ok_or("iloc extent offset end overflowed")?;
+        let old_offset = u32::from_be_bytes(output[extent_offset..extent_end].try_into()?);
+        let new_offset = old_offset
+            .checked_add(iprp_delta)
+            .ok_or("iloc extent offset overflowed")?;
+        output[extent_offset..extent_end].copy_from_slice(&new_offset.to_be_bytes());
         Ok(output)
     }
 
@@ -2941,7 +2956,17 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             .and_then(|transform| transform.pixel_aspect_ratio()),
         Some(AvifPixelAspectRatio::new(4, 3))
     );
-    let pasp_inspected = image_slash_star::inspect(&pasp)?;
+    let pasp_inspected = match image_slash_star::inspect(&pasp) {
+        Ok(inspected) => inspected,
+        Err(error) => {
+            for kind in [b"meta", b"iprp", b"ipco", b"ipma", b"iloc", b"mdat"] {
+                let start = box_start(&pasp, kind)?;
+                let size = u32::from_be_bytes(pasp[start..start + 4].try_into()?);
+                eprintln!("{kind:?} start={start} size={size}");
+            }
+            return Err(error.into());
+        }
+    };
     assert_eq!(pasp_inspected.source, expected_pasp, "pasp inspect");
     let pasp_decoded = image_slash_star::decode(&pasp)?;
     assert_eq!(pasp_decoded.content.source, expected_pasp, "pasp decode");
