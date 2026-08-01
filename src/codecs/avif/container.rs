@@ -2133,6 +2133,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = std::hint::black_box(parse_imir(&[]));
     let _ = std::hint::black_box(parse_pasp(&[]));
     let _ = std::hint::black_box(parse_clap(&[]));
+    let clap_payload = [
+        0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+        0, 1,
+    ];
+    for offset in [0, 4, 8, 12, 20, 28] {
+        let mut invalid = clap_payload;
+        invalid[offset..offset + 4].fill(0);
+        let _ = parse_clap(&invalid);
+    }
+    let mut overlong_clap = [0_u8; 33];
+    overlong_clap[..clap_payload.len()].copy_from_slice(&clap_payload);
+    let _ = parse_clap(&overlong_clap);
     let duplicate_rotation = Meta {
         properties: vec![
             Property::Rotation(AvifRotation::Zero),
