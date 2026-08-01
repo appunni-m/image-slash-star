@@ -85,8 +85,8 @@ fn write_encoded(
     );
     emit(&header, token, writer, &mut written)?;
 
-    match img.mode {
-        ImageMode::L1 => {
+    match layout.kind {
+        BmpKind::L1 => {
             emit(&[0, 0, 0, 0, 255, 255, 255, 0], token, writer, &mut written)?;
             write_1bit_rows(
                 &img.pixels,
@@ -98,14 +98,17 @@ fn write_encoded(
                 &mut written,
             )?;
         }
-        ImageMode::P8 | ImageMode::L8 => {
+        BmpKind::Indexed => {
             let mut palette_bytes = Vec::with_capacity(layout.palette_bytes);
-            if let Some(palette) = (img.mode == ImageMode::P8)
-                .then_some(img.palette.as_ref())
-                .flatten()
-            {
-                for rgb in palette.rgb.chunks_exact(3) {
-                    palette_bytes.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
+            if img.mode == ImageMode::P8 {
+                if let Some(palette) = img.palette.as_ref() {
+                    for rgb in palette.rgb.chunks_exact(3) {
+                        palette_bytes.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
+                    }
+                } else {
+                    for value in 0..=255u8 {
+                        palette_bytes.extend_from_slice(&[value, value, value, 0]);
+                    }
                 }
             } else {
                 for value in 0..=255u8 {
@@ -125,7 +128,7 @@ fn write_encoded(
                 &mut written,
             )?;
         }
-        ImageMode::Rgb8 => {
+        BmpKind::Rgb24 => {
             write_rows(
                 &img.pixels,
                 img.width as usize,
@@ -138,7 +141,7 @@ fn write_encoded(
                 &mut written,
             )?;
         }
-        ImageMode::Rgba8 => {
+        BmpKind::Rgba32 => {
             write_rows(
                 &img.pixels,
                 img.width as usize,
@@ -151,7 +154,6 @@ fn write_encoded(
                 &mut written,
             )?;
         }
-        _ => unreachable!("BMP layout rejects unsupported modes"),
     }
     debug_assert_eq!(written, output_len);
     Ok(written)
@@ -159,6 +161,7 @@ fn write_encoded(
 
 #[derive(Clone, Copy)]
 struct BmpLayout {
+    kind: BmpKind,
     depth: u16,
     colors: u32,
     palette_bytes: usize,
@@ -167,14 +170,26 @@ struct BmpLayout {
     stride: usize,
 }
 
+#[derive(Clone, Copy)]
+enum BmpKind {
+    L1,
+    Indexed,
+    Rgb24,
+    Rgba32,
+}
+
 impl BmpLayout {
     fn for_image(img: &DecodedImage) -> CodecResult<Self> {
-        let (depth, colors) = match img.mode {
-            ImageMode::L1 => (1u16, 2usize),
-            ImageMode::P8 => (8, img.palette.as_ref().map_or(256usize, ImagePalette::len)),
-            ImageMode::L8 => (8, 256),
-            ImageMode::Rgb8 => (24, 0),
-            ImageMode::Rgba8 => (32, 0),
+        let (kind, depth, colors) = match img.mode {
+            ImageMode::L1 => (BmpKind::L1, 1u16, 2usize),
+            ImageMode::P8 => (
+                BmpKind::Indexed,
+                8,
+                img.palette.as_ref().map_or(256usize, ImagePalette::len),
+            ),
+            ImageMode::L8 => (BmpKind::Indexed, 8, 256),
+            ImageMode::Rgb8 => (BmpKind::Rgb24, 24, 0),
+            ImageMode::Rgba8 => (BmpKind::Rgba32, 32, 0),
             mode => {
                 return Err(CodecError::Unsupported(format!(
                     "BMP cannot encode mode {mode:?}"
@@ -193,6 +208,7 @@ impl BmpLayout {
             .and_then(|value| value.checked_add(palette_bytes))
             .ok_or_else(|| CodecError::Dimensions("BMP pixel offset overflows".to_owned()))?;
         Ok(Self {
+            kind,
             depth,
             colors: u32::try_from(colors)
                 .map_err(|_| CodecError::Dimensions("BMP palette count overflows".to_owned()))?,

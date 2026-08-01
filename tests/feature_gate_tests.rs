@@ -4105,6 +4105,28 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    struct FailingAfterWrites {
+        fail_at: usize,
+        writes: usize,
+    }
+
+    impl OutputSink for FailingAfterWrites {
+        fn write_all(&mut self, _bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.writes >= self.fail_at {
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "sink rejected a later write".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            Ok(())
+        }
+    }
+
     struct RecordingSink {
         bytes: Vec<u8>,
         writes: usize,
@@ -4598,6 +4620,66 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 Some(ImageErrorStage::StillEncode)
             );
 
+            let mismatch_options = EncodeOptions::for_format(ImageFormat::Gif);
+            let mut mismatch_bmp_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let mismatch_bmp_error = match image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &mismatch_options,
+                &mut mismatch_bmp_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "BMP accepted mismatched options and wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                mismatch_bmp_error.kind(),
+                image_slash_star::ImageErrorKind::Parameter
+            );
+            assert_eq!(mismatch_bmp_sink.writes, 0);
+
+            // Later-segment destination failures exercise the real
+            // OutputWrite contract for each BMP payload shape. These are
+            // Rust-only sink cases; Pillow parity has no sink equivalent.
+            let assert_bmp_later_failure = |image: &image_slash_star::DecodedImage,
+                                            fail_at: usize|
+             -> Result<(), Box<dyn std::error::Error>> {
+                let mut sink = FailingAfterWrites { fail_at, writes: 0 };
+                let error = match image_slash_star::encode_to_sink(
+                    image,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &mut sink,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                                "BMP later-write failure unexpectedly wrote {length} bytes in {} writes",
+                                sink.writes
+                            )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+                assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+                assert_eq!(error.format(), Some(ImageFormat::Bmp));
+                assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+                Ok(())
+            };
+            let l1 = image_slash_star::DecodedImage::with_mode(8, 1, vec![0], ImageMode::L1);
+            assert_bmp_later_failure(&l1, 3)?;
+            let l8 = image_slash_star::DecodedImage::new(1, 1, vec![0], ColorType::L8);
+            assert_bmp_later_failure(&l8, 3)?;
+            let rgba =
+                image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0, 255], ColorType::Rgba8);
+            assert_bmp_later_failure(&rgba, 2)?;
+
             let cancelling_bmp_token = image_slash_star::CancellationToken::new();
             let mut cancelling_bmp = CancellingSink {
                 bytes: Vec::new(),
@@ -4711,6 +4793,49 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 "invalid token BMP still input must fail before the sink"
             );
             assert_eq!(invalid_bmp_token_sink.writes, 0);
+        }
+
+        if cfg!(feature = "jpeg") {
+            // Exercise the generic whole-buffer sink fallback so the
+            // structural-writer dispatch remains explicit and complete.
+            let jpeg_image =
+                image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+            let jpeg_options = EncodeOptions::for_format(ImageFormat::Jpeg);
+            let jpeg_expected =
+                image_slash_star::encode(&jpeg_image, ImageFormat::Jpeg, &jpeg_options)?;
+            let mut jpeg_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink(
+                    &jpeg_image,
+                    ImageFormat::Jpeg,
+                    &jpeg_options,
+                    &mut jpeg_sink,
+                )?,
+                jpeg_expected.len()
+            );
+            assert_eq!(jpeg_sink.bytes, jpeg_expected);
+            assert_eq!(jpeg_sink.writes, 1);
+
+            let jpeg_token = image_slash_star::CancellationToken::new();
+            let mut jpeg_token_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink_with_token(
+                    &jpeg_image,
+                    ImageFormat::Jpeg,
+                    &jpeg_options,
+                    &jpeg_token,
+                    &mut jpeg_token_sink,
+                )?,
+                jpeg_expected.len()
+            );
+            assert_eq!(jpeg_token_sink.bytes, jpeg_expected);
+            assert_eq!(jpeg_token_sink.writes, 1);
         }
     }
 
