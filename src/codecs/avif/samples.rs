@@ -1036,7 +1036,9 @@ impl Meta {
                 None
             }
         }) {
-            let bytes = span.bytes(input)?;
+            // The span was created from a bounded property payload, so it is
+            // still within `input` after container validation.
+            let bytes = &input[span.start..span.end];
             // `parse_property` has already consumed all four `av1C` bytes
             // before storing this span, so the flags byte is bounded here.
             let flags = bytes[2];
