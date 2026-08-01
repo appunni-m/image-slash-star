@@ -183,6 +183,14 @@ bytes as data, in scan order, under the documented BMFF convention (no
 safe-to-copy bit; unknown boxes are ignorable). Interpreted boxes (ftyp/meta/
 moov/mdat) stay out, truncated trailing boxes are ignored exactly as before,
 and default encoding never replays retained boxes.
+The primary AVIF item's `colr`/`nclx` CICP declaration is retained in
+`SourceColor` on `ImageInfo`, decoded still images, and still-sequence
+fallbacks: primaries, transfer characteristics, matrix coefficients, and the
+full-range flag. It records source provenance and never performs color
+conversion. This field is not part of the Pillow parity matrix; the committed
+contract test is defensive/specification evidence. Non-`nclx` profiles,
+track-only/auxiliary item properties, and AVIF ICC/EXIF/XMP remain outside the
+current model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

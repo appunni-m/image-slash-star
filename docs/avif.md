@@ -112,6 +112,15 @@ decode subset" at the `StillDecode` stage. When an AVIF item declares an
 alpha auxiliary item, `SourceDescriptor::alpha()` reports `Straight`
 (unassociated), matching the AVIF alpha contract.
 
+The primary item's `colr`/`nclx` CICP declaration is retained as source
+provenance in `SourceColor` on inspection, still decode, and the still-sequence
+fallback. The record contains color primaries, transfer characteristics,
+matrix coefficients, and the full-range flag; it never applies a color
+conversion. This is a bounded specification/defensive-model contract rather
+than Pillow parity evidence, because Pillow's observable result has no
+equivalent item-level CICP field. Non-`nclx` profiles, track-only and auxiliary
+item properties, and AVIF ICC/EXIF/XMP remain future metadata slices.
+
 ## Native FFI boundary
 
 `src/codecs/avif/native.rs` is the only Rust module allowed to use unsafe code.

@@ -2603,6 +2603,54 @@ fn avif_boxes_match_the_container_contract() -> Result<(), Box<dyn std::error::E
 }
 
 #[test]
+fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>>
+{
+    use image_slash_star::{AvifColorProperties, SourceColor};
+
+    if cfg!(target_arch = "wasm32") || !cfg!(feature = "avif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bytes = fs::read(root.join("tests/fixtures/input/images/avif/baseline.avif"))?;
+    let expected = SourceColor::new().with_avif_color(AvifColorProperties {
+        color_primaries: 1,
+        transfer_characteristics: 13,
+        matrix_coefficients: 6,
+        full_range: true,
+    });
+
+    // This is defensive/specification evidence for an item property. Pillow
+    // parity rows still assert pixels and mode, but do not expose this
+    // structured CICP declaration as an oracle result.
+    let inspected = image_slash_star::inspect(&bytes)?;
+    assert_eq!(inspected.source_color, expected, "AVIF inspect");
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(decoded.content.source_color, expected, "AVIF still decode");
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.content.source_color, expected,
+        "AVIF sequence fallback"
+    );
+    assert_eq!(decoded.content.source_color, inspected.source_color);
+
+    // Reserved nclx flag bits are a structural error, not a Pillow parity
+    // outcome. The bounded parser must reject them before pixel decoding.
+    let nclx = bytes
+        .windows(4)
+        .position(|window| window == b"nclx")
+        .ok_or("baseline AVIF has no nclx property")?;
+    let mut invalid = bytes;
+    invalid[nclx + 10] |= 1;
+    let error = match image_slash_star::inspect(&invalid) {
+        Ok(_) => return Err("reserved nclx bits must fail".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+    assert_eq!(error.identity(), Some("avif_box"));
+    Ok(())
+}
+
+#[test]
 fn destination_buffers_match_the_output_size_contract() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut cases: Vec<(&str, bool, &str, ImageMode)> = vec![

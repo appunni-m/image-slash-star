@@ -534,6 +534,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frame_count_complete: true,
         cursor_hotspot: None,
         source: SourceDescriptor::new(),
+        source_color: crate::types::SourceColor::new(),
     };
     let policy = DecodePolicy::default().with_max_frames(0);
     // Operations outside the decode-policy call sites cannot observe a frame
@@ -568,6 +569,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         frame_count_complete: true,
         cursor_hotspot: None,
         source: SourceDescriptor::new(),
+        source_color: crate::types::SourceColor::new(),
     };
     let _ = overflow_budget.charge_primary(&overflow_info);
     let _ = overflow_budget.reserve_later_frame(ImageMode::Rgb8, u32::MAX, u32::MAX);

@@ -89,6 +89,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
             })
             .is_empty()
     );
+    assert!(
+        !SourceColor::new()
+            .with_avif_color(AvifColorProperties {
+                color_primaries: 1,
+                transfer_characteristics: 13,
+                matrix_coefficients: 6,
+                full_range: true,
+            })
+            .is_empty()
+    );
 
     // The preflight overflow arm of the transfer layout is exercised with the
     // largest representable canvas and 16 bytes per pixel.
@@ -698,6 +708,8 @@ pub struct ImageInfo {
     pub cursor_hotspot: Option<CursorHotspot>,
     /// Structural facts retained from the encoded source.
     pub source: SourceDescriptor,
+    /// Source color metadata retained from the encoded container.
+    pub source_color: SourceColor,
 }
 
 impl ImageInfo {
@@ -927,6 +939,23 @@ pub struct SourceColor {
     gamma: Option<u32>,
     chromaticities: Option<SourceChromaticities>,
     icc_profile: Option<RawIccProfile>,
+    avif_color: Option<AvifColorProperties>,
+}
+
+/// CICP color properties declared by an AVIF item.
+///
+/// These fields record the source declaration only. They do not imply that
+/// decoded samples were converted into the declared color space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifColorProperties {
+    /// ISO/IEC 23001-8 color primaries code.
+    pub color_primaries: u16,
+    /// ISO/IEC 23001-8 transfer characteristics code.
+    pub transfer_characteristics: u16,
+    /// ISO/IEC 23001-8 matrix coefficients code.
+    pub matrix_coefficients: u16,
+    /// Whether the CICP declaration sets the full-range flag.
+    pub full_range: bool,
 }
 
 impl SourceColor {
@@ -938,6 +967,7 @@ impl SourceColor {
             gamma: None,
             chromaticities: None,
             icc_profile: None,
+            avif_color: None,
         }
     }
 
@@ -993,6 +1023,19 @@ impl SourceColor {
         self.icc_profile.as_ref()
     }
 
+    /// Record the CICP color properties declared by an AVIF item.
+    #[must_use]
+    pub const fn with_avif_color(mut self, color: AvifColorProperties) -> Self {
+        self.avif_color = Some(color);
+        self
+    }
+
+    /// Return the AVIF CICP color properties, when retained.
+    #[must_use]
+    pub const fn avif_color(&self) -> Option<AvifColorProperties> {
+        self.avif_color
+    }
+
     /// Whether this descriptor retains no source color facts.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
@@ -1000,6 +1043,7 @@ impl SourceColor {
             && self.gamma.is_none()
             && self.chromaticities.is_none()
             && self.icc_profile.is_none()
+            && self.avif_color.is_none()
     }
 }
 
