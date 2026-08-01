@@ -411,7 +411,7 @@ pub(crate) fn codec_add_end(base: usize, add: usize) -> usize {
     }
     #[cfg(not(target_pointer_width = "64"))]
     {
-        base.checked_add(add).unwrap_or(usize::MAX)
+        base.saturating_add(add)
     }
 }
 
