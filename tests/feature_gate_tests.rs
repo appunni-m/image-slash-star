@@ -3018,13 +3018,23 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     );
 
     let mdcv_box = box_start(&mdcv, b"mdcv")?;
-    let mut truncated_mdcv = Vec::with_capacity(mdcv.len() - 1);
-    truncated_mdcv.extend_from_slice(&mdcv[..mdcv_box + 8 + 23]);
-    truncated_mdcv.extend_from_slice(&mdcv[mdcv_box + 8 + 24..]);
-    for kind in [b"mdcv", b"ipco", b"iprp", b"meta"] {
-        shrink_box_size(&mut truncated_mdcv, kind, 1)?;
+    // Exercise each fixed-width reader boundary in both bounded parsers with
+    // real malformed-property witnesses, rather than adding a coverage-only
+    // hook. The final 23-byte case is retained as the one-byte truncation
+    // contract; the earlier boundaries reach each preceding field failure.
+    for retained in [0, 2, 4, 6, 8, 10, 12, 14, 16, 20, 23] {
+        let removed = 24 - retained;
+        let mut truncated_mdcv = Vec::with_capacity(mdcv.len() - removed);
+        truncated_mdcv.extend_from_slice(&mdcv[..mdcv_box + 8 + retained]);
+        truncated_mdcv.extend_from_slice(&mdcv[mdcv_box + 8 + 24..]);
+        for kind in [b"mdcv", b"ipco", b"iprp", b"meta"] {
+            shrink_box_size(&mut truncated_mdcv, kind, u32::try_from(removed)?)?;
+        }
+        assert_malformed(
+            &truncated_mdcv,
+            &format!("truncated mdcv payload at {retained} bytes"),
+        )?;
     }
-    assert_malformed(&truncated_mdcv, "truncated mdcv payload")?;
 
     let mut extra_mdcv = Vec::with_capacity(mdcv.len() + 1);
     extra_mdcv.extend_from_slice(&mdcv[..mdcv_box + 8 + 24]);
