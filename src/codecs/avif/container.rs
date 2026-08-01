@@ -1869,7 +1869,7 @@ fn coverage_malformed_leaf_corpus() {
             let _ = parse_infe(&payload);
             let _ = parse_iprp(&payload, &mut Meta::default(), &mut Budget::default());
             let _ = parse_ipco(&payload, &mut Meta::default(), &mut Budget::default());
-            for kind in [*b"ispe", *b"pixi", *b"av1C", *b"auxC", *b"clap"] {
+            for kind in [*b"ispe", *b"pixi", *b"av1C", *b"auxC", *b"clap", *b"clli"] {
                 let _ = parse_property(BoxView {
                     kind,
                     payload: &payload,
