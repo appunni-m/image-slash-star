@@ -445,8 +445,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let one = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let two = DecodedImage::new(2, 1, vec![0, 0], ColorType::L8);
     let tall = DecodedImage::new(1, 2, vec![0, 0], ColorType::L8);
-    let _ = encode_image_refs(&[], &[], &AvifEncodeOptions::default());
-    let _ = encode_image_refs(&[&one], &[], &AvifEncodeOptions::default());
+    let _ = encode_image_refs(&[], &[], &AvifEncodeOptions::default(), None);
+    let _ = encode_image_refs(&[&one], &[], &AvifEncodeOptions::default(), None);
     let _ = encode_image_refs(
         &[&one],
         &[FrameDuration {
@@ -454,16 +454,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
             denominator: 0,
         }],
         &AvifEncodeOptions::default(),
+        None,
     );
     let _ = encode_image_refs(
         &[&one, &two],
         &[FrameDuration::ZERO; 2],
         &AvifEncodeOptions::default(),
+        None,
     );
     let _ = encode_image_refs(
         &[&one, &tall],
         &[FrameDuration::ZERO; 2],
         &AvifEncodeOptions::default(),
+        None,
     );
     let invalid_sequence = DecodedSequence {
         width: 1,
@@ -484,6 +487,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &[&zero_width],
         &[FrameDuration::ZERO],
         &AvifEncodeOptions::default(),
+        None,
     );
 
     let offset_sequence = DecodedSequence {
@@ -568,11 +572,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let parsed = ParsedOptions::new(&AvifEncodeOptions::default()).unwrap();
     let encoder = create_encoder(&one, &parsed, 1).unwrap();
-    let _ = encode_frames(encoder, &[&unsupported], &[0], true);
+    let _ = encode_frames(encoder, &[&unsupported], &[0], true, None);
     let encoder = create_encoder(&one, &parsed, 1).unwrap();
-    let _ = encode_frames(encoder, &[&two], &[0], true);
+    let _ = encode_frames(encoder, &[&two], &[0], true, None);
     let encoder = create_encoder(&one, &parsed, 1).unwrap();
-    let _ = encode_frames(encoder, &[], &[], false);
+    let _ = encode_frames(encoder, &[], &[], false, None);
 
     let mut advanced = AvifEncodeOptions {
         codec: Some(AvifCodec::Aom),
