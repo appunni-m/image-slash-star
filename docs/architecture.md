@@ -186,11 +186,12 @@ bytes as data, in scan order, under the documented BMFF convention (no
 safe-to-copy bit; unknown boxes are ignorable). Interpreted boxes (ftyp/meta/
 moov/mdat) stay out, truncated trailing boxes are ignored exactly as before,
 and default encoding never replays retained boxes.
-The primary AVIF item's `colr`/`nclx` CICP declaration is retained in
-`SourceColor` on `ImageInfo`, decoded still images, and still-sequence
-fallbacks: primaries, transfer characteristics, matrix coefficients, and the
-full-range flag. It records source provenance and never performs color
-conversion. This field is not part of the Pillow parity matrix; the committed
+The primary AVIF item's `colr`/`nclx` CICP declaration and `clli`
+content-light-level property are retained in `SourceColor` on `ImageInfo`,
+decoded still images, and still-sequence fallbacks: primaries, transfer
+characteristics, matrix coefficients, the full-range flag, maxCLL, and maxPALL.
+They record source provenance and never perform color conversion or tone
+mapping. These fields are not part of the Pillow parity matrix; the committed
 contract test is defensive/specification evidence. AVIF `irot` and `imir`
 properties are likewise retained in `SourceDescriptor`; their legal values are
 validated, but no rotation or mirroring is applied. The primary item's `pasp`

@@ -145,6 +145,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
             })
             .is_empty()
     );
+    assert!(
+        !SourceColor::new()
+            .with_avif_content_light_level(AvifContentLightLevel::new(1_000, 500))
+            .is_empty()
+    );
 
     // The preflight overflow arm of the transfer layout is exercised with the
     // largest representable canvas and 16 bytes per pixel.
@@ -1004,6 +1009,7 @@ pub struct SourceColor {
     chromaticities: Option<SourceChromaticities>,
     icc_profile: Option<RawIccProfile>,
     avif_color: Option<AvifColorProperties>,
+    avif_content_light_level: Option<AvifContentLightLevel>,
 }
 
 /// CICP color properties declared by an AVIF item.
@@ -1020,6 +1026,40 @@ pub struct AvifColorProperties {
     pub matrix_coefficients: u16,
     /// Whether the CICP declaration sets the full-range flag.
     pub full_range: bool,
+}
+
+/// Content light-level information declared by an AVIF `clli` property.
+///
+/// The values are source metadata in candelas per square metre. They are
+/// retained exactly as declared and do not cause tone mapping or any other
+/// transformation of decoded samples.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AvifContentLightLevel {
+    max_content_light_level: u16,
+    max_picture_average_light_level: u16,
+}
+
+impl AvifContentLightLevel {
+    /// Create content-light-level information from the encoded `clli` fields.
+    #[must_use]
+    pub const fn new(max_content_light_level: u16, max_picture_average_light_level: u16) -> Self {
+        Self {
+            max_content_light_level,
+            max_picture_average_light_level,
+        }
+    }
+
+    /// Return the maximum content light level (maxCLL).
+    #[must_use]
+    pub const fn max_content_light_level(&self) -> u16 {
+        self.max_content_light_level
+    }
+
+    /// Return the maximum picture-average light level (maxPALL).
+    #[must_use]
+    pub const fn max_picture_average_light_level(&self) -> u16 {
+        self.max_picture_average_light_level
+    }
 }
 
 /// Counter-clockwise quarter-turn declared by an AVIF `irot` property.
@@ -1269,6 +1309,7 @@ impl SourceColor {
             chromaticities: None,
             icc_profile: None,
             avif_color: None,
+            avif_content_light_level: None,
         }
     }
 
@@ -1337,6 +1378,22 @@ impl SourceColor {
         self.avif_color
     }
 
+    /// Record the content-light-level information declared by an AVIF item.
+    #[must_use]
+    pub const fn with_avif_content_light_level(
+        mut self,
+        content_light_level: AvifContentLightLevel,
+    ) -> Self {
+        self.avif_content_light_level = Some(content_light_level);
+        self
+    }
+
+    /// Return the AVIF content-light-level information, when retained.
+    #[must_use]
+    pub const fn avif_content_light_level(&self) -> Option<AvifContentLightLevel> {
+        self.avif_content_light_level
+    }
+
     /// Whether this descriptor retains no source color facts.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
@@ -1345,6 +1402,7 @@ impl SourceColor {
             && self.chromaticities.is_none()
             && self.icc_profile.is_none()
             && self.avif_color.is_none()
+            && self.avif_content_light_level.is_none()
     }
 }
 

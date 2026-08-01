@@ -283,14 +283,14 @@ APNG sequence decode must agree, unmodified fixtures carry an empty
 descriptor, and encoded output must not replay color chunks.
 
 The AVIF source-color contract is separate from Pillow parity. The bounded
-item parser reads the primary item's `colr`/`nclx` CICP fields into
-`SourceColor`; the contract test asserts inspect, still decode, and fallback
-sequence agreement plus rejection of reserved range-flag bits, extra payloads,
-and truncated fields. Pillow rows continue to assert the observable outer
-result, mode, and pixels, but they do not claim to prove item-level CICP because
-Pillow exposes no equivalent structured result. No parity row is added for this
-source-provenance field; malformed parser cases remain defensive-model
-evidence.
+item parser reads the primary item's `colr`/`nclx` CICP and `clli`
+content-light-level fields into `SourceColor`; the contract test asserts
+inspect, still decode, and fallback-sequence agreement plus rejection of
+reserved range-flag bits, extra payloads, and truncated fields. Pillow rows
+continue to assert the observable outer result, mode, and pixels, but they do
+not claim to prove item-level AVIF color metadata because Pillow exposes no
+equivalent structured result. No parity row is added for this source-
+provenance field; malformed parser cases remain defensive-model evidence.
 
 The AVIF item-property contract is separate from Pillow parity. A committed
 AVIF orientation output supplies `irot`; the test mutates all four legal

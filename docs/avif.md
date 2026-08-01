@@ -112,14 +112,16 @@ decode subset" at the `StillDecode` stage. When an AVIF item declares an
 alpha auxiliary item, `SourceDescriptor::alpha()` reports `Straight`
 (unassociated), matching the AVIF alpha contract.
 
-The primary item's `colr`/`nclx` CICP declaration is retained as source
-provenance in `SourceColor` on inspection, still decode, and the still-sequence
-fallback. The record contains color primaries, transfer characteristics,
-matrix coefficients, and the full-range flag; it never applies a color
-conversion. This is a bounded specification/defensive-model contract rather
-than Pillow parity evidence, because Pillow's observable result has no
-equivalent item-level CICP field. Non-`nclx` profiles, track-only and auxiliary
-item properties, and AVIF ICC/EXIF/XMP remain future metadata slices.
+The primary item's `colr`/`nclx` CICP declaration and `clli` content-light-level
+property are retained as source provenance in `SourceColor` on inspection,
+still decode, and the still-sequence fallback. The record contains color
+primaries, transfer characteristics, matrix coefficients, the full-range flag,
+maxCLL, and maxPALL; it never applies color conversion or tone mapping. This
+is a bounded specification/defensive-model contract rather than Pillow parity
+evidence, because Pillow's observable result has no equivalent item-level
+structured color field. Non-`nclx` profiles, mastering-display/chroma-position
+fields, track-only and auxiliary item properties, and AVIF ICC/EXIF/XMP remain
+future metadata slices.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
 in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
