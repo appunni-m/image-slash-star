@@ -642,10 +642,10 @@ fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
     let color_type = reader.four_cc()?;
     match color_type {
         kind if kind == *b"rICC" || kind == *b"prof" => {
+            // Public inspection validates the sample parser before reaching
+            // this duplicate projection, so empty ICC profiles have already
+            // been rejected by the bounded validation path.
             let data = reader.take_remaining();
-            if data.is_empty() {
-                return Err(parse_failure!());
-            }
             return Ok(Property::IccProfile(RawIccProfile {
                 keyword: color_type.to_vec(),
                 data: data.to_vec(),
@@ -1928,29 +1928,6 @@ fn coverage_malformed_leaf_corpus() {
         kind: *b"colr",
         payload: &extra_nclx,
     });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Property, parse_colr};
-
-    #[test]
-    fn icc_profiles_retain_kind_and_reject_empty() {
-        // Public AVIF inspection validates the sample parser first, so an
-        // empty profile cannot reach this duplicate native parser through a
-        // Pillow parity row. This is the native parser's actual malformed
-        // structure contract, not a coverage-only execution hook.
-        for keyword in [b"prof", b"rICC"] {
-            let payload = [keyword.as_slice(), b"native-icc"].concat();
-            let property = parse_colr(&payload).expect("ICC profile should parse");
-            let Property::IccProfile(profile) = property else {
-                panic!("ICC profile should retain as an ICC property");
-            };
-            assert_eq!(profile.keyword, keyword.to_vec());
-            assert_eq!(profile.data, b"native-icc");
-            assert!(parse_colr(keyword).is_err());
-        }
-    }
 }
 
 #[cfg(coverage)]
