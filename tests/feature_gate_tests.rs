@@ -6398,6 +6398,117 @@ fn tiff_compressed_payload_failures_retain_parse_context() -> Result<(), Box<dyn
 }
 
 #[test]
+fn tiff_capability_and_destination_failures_are_structured()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "tiff") {
+        return Ok(());
+    }
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let unknown_compression =
+        fs::read(root.join("tests/fixtures/input/images/tiff/unknown_compression.tiff"))?;
+    // The unknown-compression input already has a Pillow error row. This
+    // assertion adds only the Rust parse-site contract; it is not a new
+    // Pillow-parity matrix row.
+    let compression_error = match image_slash_star::decode(&unknown_compression) {
+        Ok(decoded) => panic!("unknown TIFF compression unexpectedly decoded: {decoded:?}"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        compression_error.kind(),
+        image_slash_star::ImageErrorKind::Malformed
+    );
+    assert_eq!(compression_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(
+        compression_error.stage(),
+        Some(ImageErrorStage::StillDecode)
+    );
+    assert_eq!(compression_error.offset(), Some(140));
+    assert_eq!(compression_error.identity(), Some("tiff_strip"));
+
+    // TIFF's current encoder contract rejects a valid public mode it cannot
+    // represent. This is a Rust capability boundary, not a Pillow parity
+    // row, because the parity matrix has no caller-owned DecodedImage mode.
+    let unsupported_mode = DecodedImage::new(1, 1, vec![0; 4], ColorType::La16);
+    let encode_error = match image_slash_star::encode(
+        &unsupported_mode,
+        ImageFormat::Tiff,
+        &EncodeOptions::for_format(ImageFormat::Tiff),
+    ) {
+        Ok(bytes) => panic!(
+            "TIFF unexpectedly encoded unsupported La16 mode ({} bytes)",
+            bytes.len()
+        ),
+        Err(error) => error,
+    };
+    assert_eq!(
+        encode_error.kind(),
+        image_slash_star::ImageErrorKind::Unsupported
+    );
+    assert_eq!(encode_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(encode_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(encode_error.unsupported_reason(), None);
+
+    struct RejectingTiffSink;
+    impl image_slash_star::OutputSink for RejectingTiffSink {
+        fn write_all(&mut self, _bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            Err(ImageError::Unsupported {
+                format: None,
+                message: "TIFF destination rejected".to_owned(),
+                stage: None,
+                reason: None,
+                offset: None,
+                identity: None,
+            })
+        }
+    }
+
+    let decoded = image_slash_star::decode(&fs::read(
+        root.join("tests/fixtures/input/images/tiff/8bit.tiff"),
+    )?)?;
+    let mut still_sink = RejectingTiffSink;
+    let sink_error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Tiff,
+        &EncodeOptions::for_format(ImageFormat::Tiff),
+        &mut still_sink,
+    ) {
+        Ok(length) => panic!("rejecting TIFF sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        sink_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(sink_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(sink_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(sink_error.unsupported_reason(), None);
+
+    let sequence = DecodedSequence::from_image(decoded.content.clone());
+    let mut sequence_sink = RejectingTiffSink;
+    let sequence_error = match image_slash_star::encode_sequence_to_sink(
+        &sequence,
+        ImageFormat::Tiff,
+        &EncodeOptions::for_format(ImageFormat::Tiff),
+        &mut sequence_sink,
+    ) {
+        Ok(length) => panic!("rejecting TIFF sequence sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        sequence_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(sequence_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    assert_eq!(sequence_error.unsupported_reason(), None);
+    Ok(())
+}
+
+#[test]
 fn incremental_decode_attaches_structured_context() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     if cfg!(feature = "png") {
