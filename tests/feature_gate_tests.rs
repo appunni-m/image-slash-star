@@ -3991,17 +3991,39 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(borrowed, expected, "borrowed sink bytes");
 
         let mut failing = FailingSink;
-        assert!(
-            matches!(
-                image_slash_star::encode_to_sink(
-                    &decoded.content,
-                    ImageFormat::Png,
-                    &options,
-                    &mut failing
-                ),
-                Err(ImageError::Unsupported { .. })
-            ),
-            "failing sink error must propagate"
+        let error = match image_slash_star::encode_to_sink(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &mut failing,
+        ) {
+            Ok(length) => {
+                return Err(format!("failing sink unexpectedly wrote {length} bytes").into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(error.offset(), None);
+        assert_eq!(error.identity(), None);
+        assert_eq!(error.minimum_input(), None);
+        assert_eq!(
+            error.message(),
+            Some("unsupported: sink rejected the write")
+        );
+        assert_eq!(
+            error.to_string(),
+            "failed to write Png output: unsupported: sink rejected the write"
+        );
+        let unselected = ImageError::OutputWrite {
+            format: None,
+            message: "unselected destination".to_owned(),
+            stage: None,
+        };
+        assert_eq!(
+            unselected.to_string(),
+            "failed to write encoded output: unselected destination"
         );
 
         // Invalid still input exercises the encoder error path before the sink.
@@ -4066,17 +4088,27 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             "invalid sequence must fail before the sink"
         );
         let mut failing = FailingSink;
-        assert!(
-            matches!(
-                image_slash_star::encode_sequence_to_sink(
-                    &sequence,
-                    ImageFormat::Gif,
-                    &options,
-                    &mut failing
-                ),
-                Err(ImageError::Unsupported { .. })
-            ),
-            "failing sequence sink error must propagate"
+        let error = match image_slash_star::encode_sequence_to_sink(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &mut failing,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("failing sequence sink unexpectedly wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(ImageFormat::Gif));
+        assert_eq!(error.stage(), Some(ImageErrorStage::SequenceEncode));
+        assert_eq!(error.offset(), None);
+        assert_eq!(error.identity(), None);
+        assert_eq!(
+            error.message(),
+            Some("unsupported: sink rejected the write")
         );
     }
     Ok(())

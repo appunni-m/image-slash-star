@@ -866,8 +866,8 @@ impl OutputSink for &mut Vec<u8> {
 ///
 /// # Errors
 ///
-/// Returns the same errors as [`encode`], plus any error returned by the
-/// sink's [`OutputSink::write_all`].
+/// Returns the same errors as [`encode`], plus an [`ImageError::OutputWrite`]
+/// when the sink rejects the complete encoded buffer.
 pub fn encode_to_sink(
     img: &DecodedImage,
     format: ImageFormat,
@@ -875,15 +875,16 @@ pub fn encode_to_sink(
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
     let encoded = encode(img, format, opts)?;
-    write_sink_all(sink, &encoded)
+    write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
 }
 
 /// Encode a still image or animation into a caller-owned output sink.
 ///
 /// # Errors
 ///
-/// Returns the same errors as [`encode_sequence`], plus any error returned by
-/// the sink's [`OutputSink::write_all`].
+/// Returns the same errors as [`encode_sequence`], plus an
+/// [`ImageError::OutputWrite`] when the sink rejects the complete encoded
+/// buffer.
 pub fn encode_sequence_to_sink(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -891,13 +892,23 @@ pub fn encode_sequence_to_sink(
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
     let encoded = encode_sequence(sequence, format, opts)?;
-    write_sink_all(sink, &encoded)
+    write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
 }
 
 /// Write complete encoded bytes through a trait object so the sink error path
 /// has exactly one non-generic coverage instantiation.
-fn write_sink_all(sink: &mut dyn OutputSink, bytes: &[u8]) -> ImageResult<usize> {
-    sink.write_all(bytes)?;
+fn write_sink_all(
+    sink: &mut dyn OutputSink,
+    bytes: &[u8],
+    format: ImageFormat,
+    stage: ImageErrorStage,
+) -> ImageResult<usize> {
+    sink.write_all(bytes)
+        .map_err(|error| ImageError::OutputWrite {
+            format: Some(format),
+            message: error.to_string(),
+            stage: Some(stage),
+        })?;
     Ok(bytes.len())
 }
 

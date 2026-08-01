@@ -78,6 +78,8 @@ pub enum ImageErrorKind {
     LimitExceeded,
     /// The operation was cooperatively cancelled by a caller token.
     Cancelled,
+    /// A caller-owned encoded-output destination rejected a write.
+    OutputWrite,
     /// More encoded input is required before the operation can continue.
     ///
     /// This is the non-terminal incremental-input status: callers should
@@ -205,6 +207,19 @@ pub enum ImageError {
         /// Public operation that was cancelled.
         stage: Option<ImageErrorStage>,
     },
+    /// A caller-owned encoded-output destination rejected the encoded bytes.
+    ///
+    /// The destination error is normalized at the `encode_to_sink` boundary so
+    /// callers can distinguish output failure from codec validation without
+    /// depending on a sink's private error vocabulary.
+    OutputWrite {
+        /// Selected output format.
+        format: Option<ImageFormat>,
+        /// High-level destination diagnostic suitable for logs.
+        message: String,
+        /// Public encode operation that attempted the write.
+        stage: Option<ImageErrorStage>,
+    },
 }
 
 impl ImageError {
@@ -221,6 +236,7 @@ impl ImageError {
             Self::LimitExceeded { .. } => ImageErrorKind::LimitExceeded,
             Self::NeedMoreData { .. } => ImageErrorKind::NeedMoreData,
             Self::Cancelled { .. } => ImageErrorKind::Cancelled,
+            Self::OutputWrite { .. } => ImageErrorKind::OutputWrite,
         }
     }
 
@@ -239,6 +255,7 @@ impl ImageError {
             Self::LimitExceeded { format, .. } => *format,
             Self::NeedMoreData { format, .. } => *format,
             Self::Cancelled { format, .. } => *format,
+            Self::OutputWrite { format, .. } => *format,
         }
     }
 
@@ -257,7 +274,8 @@ impl ImageError {
             Self::Malformed { message, .. }
             | Self::Unsupported { message, .. }
             | Self::Dimensions { message, .. }
-            | Self::Parameter { message, .. } => Some(message),
+            | Self::Parameter { message, .. }
+            | Self::OutputWrite { message, .. } => Some(message),
         }
     }
 
@@ -290,7 +308,8 @@ impl ImageError {
             | Self::Dimensions { stage, .. }
             | Self::Parameter { stage, .. }
             | Self::NeedMoreData { stage, .. }
-            | Self::Cancelled { stage, .. } => *stage,
+            | Self::Cancelled { stage, .. }
+            | Self::OutputWrite { stage, .. } => *stage,
             Self::UnknownFormat | Self::FeatureDisabled { .. } | Self::LimitExceeded { .. } => None,
         }
     }
@@ -308,7 +327,8 @@ impl ImageError {
             Self::UnknownFormat
             | Self::FeatureDisabled { .. }
             | Self::LimitExceeded { .. }
-            | Self::Cancelled { .. } => None,
+            | Self::Cancelled { .. }
+            | Self::OutputWrite { .. } => None,
         }
     }
 
@@ -325,7 +345,8 @@ impl ImageError {
             Self::UnknownFormat
             | Self::FeatureDisabled { .. }
             | Self::LimitExceeded { .. }
-            | Self::Cancelled { .. } => None,
+            | Self::Cancelled { .. }
+            | Self::OutputWrite { .. } => None,
         }
     }
 
@@ -346,7 +367,8 @@ impl ImageError {
             | Self::Dimensions { .. }
             | Self::Parameter { .. }
             | Self::LimitExceeded { .. }
-            | Self::Cancelled { .. } => None,
+            | Self::Cancelled { .. }
+            | Self::OutputWrite { .. } => None,
         }
     }
 
@@ -440,6 +462,12 @@ impl fmt::Display for ImageError {
             ImageError::Cancelled { format, .. } => match format {
                 Some(format) => write!(f, "cancelled {format:?} operation"),
                 None => write!(f, "cancelled operation"),
+            },
+            ImageError::OutputWrite {
+                format, message, ..
+            } => match format {
+                Some(format) => write!(f, "failed to write {format:?} output: {message}"),
+                None => write!(f, "failed to write encoded output: {message}"),
             },
         }
     }
