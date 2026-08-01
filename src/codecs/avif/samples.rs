@@ -1037,7 +1037,9 @@ impl Meta {
             }
         }) {
             let bytes = span.bytes(input)?;
-            let flags = *bytes.get(2).ok_or_else(|| parse_failure!())?;
+            // `parse_property` has already consumed all four `av1C` bytes
+            // before storing this span, so the flags byte is bounded here.
+            let flags = bytes[2];
             let chroma_sample_position = AvifChromaSamplePosition::from_code(flags & 3);
             source_color = source_color.with_avif_chroma_sample_position(chroma_sample_position);
         }
