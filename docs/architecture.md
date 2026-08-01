@@ -195,14 +195,15 @@ includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
 orientation application, or implicit encode replay is performed. Non-primary,
 auxiliary, unknown-item-property, and other item-relationship semantics remain
 outside this model.
-The primary AVIF item's `colr`/`nclx` CICP declaration, `clli`
-content-light-level property, `mdcv` mastering-display color volume, and
-`colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
+The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
+position, `clli` content-light-level property, `mdcv` mastering-display color
+volume, and `colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
 `ImageInfo`, decoded still images, and still-sequence fallbacks: primaries,
-transfer characteristics, matrix coefficients, the full-range flag, maxCLL,
-maxPALL, exact mastering-display coordinates/luminance fields, and the exact
-ICC profile kind and bytes. They record source provenance and never perform
-color conversion or tone mapping. These fields are not part of the Pillow
+chroma sample position, transfer characteristics, matrix coefficients, the
+full-range flag, maxCLL, maxPALL, exact mastering-display coordinates/luminance
+fields, and the exact ICC profile kind and bytes. They record source provenance
+and never perform color conversion, chroma resampling, or tone mapping. These
+fields are not part of the Pillow
 parity matrix; the committed contract test is defensive/specification evidence
 and uses a Pillow-generated encoded metadata output only as a source witness for
 ICC.
@@ -212,9 +213,8 @@ validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Non-ICC profiles, chroma sample position, track-only/auxiliary item properties,
-and non-primary/auxiliary metadata relationships remain outside the current
-model.
+Non-ICC profiles, track-only/auxiliary item properties, and non-primary/
+auxiliary metadata relationships remain outside the current model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

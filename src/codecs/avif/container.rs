@@ -6,9 +6,10 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMasteringDisplayColorVolume,
-    AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat,
-    ImageInfo, ImageMode, RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
+    AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
+    SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -181,10 +182,20 @@ struct Brands {
 
 #[derive(Clone)]
 enum Property {
-    Ispe { width: u32, height: u32 },
-    Pixi { depth: u8 },
-    Av1C { depth: u8 },
-    AuxC { is_alpha: bool },
+    Ispe {
+        width: u32,
+        height: u32,
+    },
+    Pixi {
+        depth: u8,
+    },
+    Av1C {
+        depth: u8,
+        chroma_sample_position: AvifChromaSamplePosition,
+    },
+    AuxC {
+        is_alpha: bool,
+    },
     Color(AvifColorProperties),
     IccProfile(RawIccProfile),
     ContentLightLevel(AvifContentLightLevel),
@@ -800,6 +811,7 @@ fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     }
     let _ = reader.u8()?;
     let flags = reader.u8()?;
+    let chroma_sample_position = AvifChromaSamplePosition::from_code(flags & 3);
     let _ = reader.u8()?;
     let high_bit_depth = flags & 0x40 != 0;
     let twelve_bit = flags & 0x20 != 0;
@@ -813,7 +825,10 @@ fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     } else {
         8
     };
-    Ok(Property::Av1C { depth })
+    Ok(Property::Av1C {
+        depth,
+        chroma_sample_position,
+    })
 }
 
 fn is_alpha_urn(urn: &[u8]) -> bool {
@@ -943,7 +958,11 @@ impl Meta {
         let depth = self
             .associated(primary)
             .find_map(|property| match property {
-                Property::Pixi { depth } | Property::Av1C { depth } => Some(*depth),
+                Property::Pixi { depth }
+                | Property::Av1C {
+                    depth,
+                    chroma_sample_position: _,
+                } => Some(*depth),
                 _ => None,
             })
             .unwrap_or(8);
@@ -956,6 +975,18 @@ impl Meta {
             })
         {
             source_color = source_color.with_avif_color(color);
+        }
+        if let Some(chroma_sample_position) =
+            self.associated(primary)
+                .find_map(|property| match property {
+                    Property::Av1C {
+                        chroma_sample_position,
+                        ..
+                    } => Some(*chroma_sample_position),
+                    _ => None,
+                })
+        {
+            source_color = source_color.with_avif_chroma_sample_position(chroma_sample_position);
         }
         if let Some(profile) = self
             .associated(primary)
@@ -1288,7 +1319,7 @@ fn parse_track_properties(
     let mut reader = Reader::new(payload);
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match parse_property(child)? {
-            Property::Av1C { depth } => {
+            Property::Av1C { depth, .. } => {
                 if track.depth.is_some_and(|existing| existing != depth) {
                     return Err(parse_failure!());
                 }
@@ -1900,7 +1931,10 @@ fn coverage_nested_parser_prefixes() {
                 width: 2,
                 height: 3,
             },
-            Property::Av1C { depth: 10 },
+            Property::Av1C {
+                depth: 10,
+                chroma_sample_position: AvifChromaSamplePosition::Unknown,
+            },
         ],
         associations: vec![
             Association {

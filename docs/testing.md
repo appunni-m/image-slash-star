@@ -342,8 +342,9 @@ APNG sequence decode must agree, unmodified fixtures carry an empty
 descriptor, and encoded output must not replay color chunks.
 
 The AVIF source-color contract is separate from Pillow parity. The bounded
-item parser reads the primary item's `colr`/`nclx` CICP and `clli`
-content-light-level fields into `SourceColor`; the contract test asserts
+item parser reads the primary item's `colr`/`nclx` CICP, `av1C` chroma sample
+position, and `clli` content-light-level fields into `SourceColor`; the
+contract test asserts
 inspect, still decode, and fallback-sequence agreement plus rejection of
 reserved range-flag bits, extra payloads, and truncated fields. Pillow rows
 continue to assert the observable outer result, mode, and pixels, but they do

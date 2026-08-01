@@ -4,9 +4,9 @@ use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMasteringDisplayColorVolume,
-    AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, OpaqueMetadata,
-    RawIccProfile, SourceColor,
+    AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1018,7 +1018,7 @@ impl Meta {
             .any(|property| matches!(property, Property::AuxC { is_alpha: true }))
     }
 
-    fn source_color(&self) -> ParseResult<SourceColor> {
+    fn source_color(&self, input: &[u8]) -> ParseResult<SourceColor> {
         let mut source_color = SourceColor::new();
         if let Some(color) =
             self.associated(self.primary_item_id)
@@ -1028,6 +1028,20 @@ impl Meta {
                 })
         {
             source_color = source_color.with_avif_color(color);
+        }
+        let mut chroma_sample_position = None;
+        for property in self.associated(self.primary_item_id) {
+            if let Property::Av1C(span) = property {
+                if chroma_sample_position.is_some() {
+                    return Err(parse_failure!());
+                }
+                let bytes = span.bytes(input)?;
+                let flags = *bytes.get(2).ok_or_else(|| parse_failure!())?;
+                chroma_sample_position = Some(AvifChromaSamplePosition::from_code(flags & 3));
+            }
+        }
+        if let Some(chroma_sample_position) = chroma_sample_position {
+            source_color = source_color.with_avif_chroma_sample_position(chroma_sample_position);
         }
         if let Some(profile) =
             self.associated(self.primary_item_id)
@@ -1991,7 +2005,7 @@ fn extract_inner_with_metadata(
         .transpose()?;
     let source_color = meta
         .as_ref()
-        .map(Meta::source_color)
+        .map(|meta| meta.source_color(input))
         .transpose()?
         .unwrap_or_default();
     let metadata = if retain_metadata {
