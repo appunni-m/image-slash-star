@@ -4676,6 +4676,9 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             assert_bmp_later_failure(&l1, 3)?;
             let l8 = image_slash_star::DecodedImage::new(1, 1, vec![0], ColorType::L8);
             assert_bmp_later_failure(&l8, 3)?;
+            let palette_less_indexed =
+                image_slash_star::DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
+            assert_bmp_later_failure(&palette_less_indexed, 3)?;
             let rgba =
                 image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0, 255], ColorType::Rgba8);
             assert_bmp_later_failure(&rgba, 2)?;
