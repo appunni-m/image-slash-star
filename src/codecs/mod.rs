@@ -10,6 +10,19 @@ use crate::types::{
     ImageFormat, ImageInfo, ImageResult,
 };
 
+fn set_diagnostic_stage(
+    diagnostics: Vec<crate::ImageDiagnostic>,
+    stage: ImageErrorStage,
+) -> Vec<crate::ImageDiagnostic> {
+    diagnostics
+        .into_iter()
+        .map(|mut diagnostic| {
+            diagnostic.stage = Some(stage);
+            diagnostic
+        })
+        .collect()
+}
+
 mod error;
 #[cfg(any(
     feature = "jpeg",
@@ -76,82 +89,80 @@ mod webp;
 #[cfg(any(feature = "png", feature = "tiff"))]
 mod compression;
 
+type DecodedWithDiagnostics<T> = (T, Option<usize>, Vec<crate::ImageDiagnostic>);
+type CodecDecodedResult<T> = CodecResult<DecodedWithDiagnostics<T>>;
+type ImageDecodedResult<T> = ImageResult<DecodedWithDiagnostics<T>>;
+
 fn decode_codec(
     _data: &[u8],
     format: ImageFormat,
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(DecodedImage, Option<usize>)> {
+) -> CodecDecodedResult<DecodedImage> {
     error::check_cancelled(token)?;
-    let decoded: CodecResult<(DecodedImage, Option<usize>)> = match format {
-        #[cfg(feature = "jpeg")]
-        ImageFormat::Jpeg => {
-            jpeg::decode::decode(_data, token).map(|(image, consumed)| (image, Some(consumed)))
-        }
-        #[cfg(not(feature = "jpeg"))]
-        ImageFormat::Jpeg => Err(error::CodecError::Malformed(
-            "JPEG feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "png")]
-        ImageFormat::Png => {
-            png::decode::decode(_data, token).map(|(image, consumed)| (image, Some(consumed)))
-        }
-        #[cfg(not(feature = "png"))]
-        ImageFormat::Png => Err(error::CodecError::Malformed(
-            "PNG feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "gif")]
-        ImageFormat::Gif => {
-            gif::decode::decode(_data, token).map(|(image, consumed)| (image, Some(consumed)))
-        }
-        #[cfg(not(feature = "gif"))]
-        ImageFormat::Gif => Err(error::CodecError::Malformed(
-            "GIF feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "bmp")]
-        ImageFormat::Bmp => bmp::decode::decode(_data, token),
-        #[cfg(not(feature = "bmp"))]
-        ImageFormat::Bmp => Err(error::CodecError::Malformed(
-            "BMP feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "tiff")]
-        ImageFormat::Tiff => {
-            tiff::decode::decode(_data, token).map(|(image, consumed)| (image, Some(consumed)))
-        }
-        #[cfg(not(feature = "tiff"))]
-        ImageFormat::Tiff => Err(error::CodecError::Malformed(
-            "TIFF feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "webp")]
-        ImageFormat::WebP => {
-            webp::decode::decode(_data, token).map(|(image, consumed)| (image, Some(consumed)))
-        }
-        #[cfg(not(feature = "webp"))]
-        ImageFormat::WebP => Err(error::CodecError::Malformed(
-            "WebP feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "ico")]
-        ImageFormat::Ico => ico::decode::decode(_data, token),
-        #[cfg(not(feature = "ico"))]
-        ImageFormat::Ico => Err(error::CodecError::Malformed(
-            "ICO feature is disabled".to_owned(),
-        )),
-        #[cfg(feature = "avif")]
-        ImageFormat::Avif => {
-            avif::decode::decode(_data, token).map(|(image, consumed)| (image, Some(consumed)))
-        }
-        #[cfg(not(feature = "avif"))]
-        ImageFormat::Avif => Err(error::CodecError::Malformed(
-            "AVIF feature is disabled".to_owned(),
-        )),
-    };
+    let decoded: CodecDecodedResult<DecodedImage> =
+        match format {
+            #[cfg(feature = "jpeg")]
+            ImageFormat::Jpeg => jpeg::decode::decode(_data, token)
+                .map(|(image, consumed)| (image, Some(consumed), Vec::new())),
+            #[cfg(not(feature = "jpeg"))]
+            ImageFormat::Jpeg => Err(error::CodecError::Malformed(
+                "JPEG feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "png")]
+            ImageFormat::Png => png::decode::decode(_data, token)
+                .map(|(image, consumed, diagnostics)| (image, Some(consumed), diagnostics)),
+            #[cfg(not(feature = "png"))]
+            ImageFormat::Png => Err(error::CodecError::Malformed(
+                "PNG feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "gif")]
+            ImageFormat::Gif => gif::decode::decode(_data, token)
+                .map(|(image, consumed, diagnostics)| (image, Some(consumed), diagnostics)),
+            #[cfg(not(feature = "gif"))]
+            ImageFormat::Gif => Err(error::CodecError::Malformed(
+                "GIF feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "bmp")]
+            ImageFormat::Bmp => bmp::decode::decode(_data, token)
+                .map(|(image, consumed)| (image, consumed, Vec::new())),
+            #[cfg(not(feature = "bmp"))]
+            ImageFormat::Bmp => Err(error::CodecError::Malformed(
+                "BMP feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "tiff")]
+            ImageFormat::Tiff => tiff::decode::decode(_data, token)
+                .map(|(image, consumed)| (image, Some(consumed), Vec::new())),
+            #[cfg(not(feature = "tiff"))]
+            ImageFormat::Tiff => Err(error::CodecError::Malformed(
+                "TIFF feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "webp")]
+            ImageFormat::WebP => webp::decode::decode(_data, token)
+                .map(|(image, consumed)| (image, Some(consumed), Vec::new())),
+            #[cfg(not(feature = "webp"))]
+            ImageFormat::WebP => Err(error::CodecError::Malformed(
+                "WebP feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "ico")]
+            ImageFormat::Ico => ico::decode::decode(_data, token)
+                .map(|(image, consumed)| (image, consumed, Vec::new())),
+            #[cfg(not(feature = "ico"))]
+            ImageFormat::Ico => Err(error::CodecError::Malformed(
+                "ICO feature is disabled".to_owned(),
+            )),
+            #[cfg(feature = "avif")]
+            ImageFormat::Avif => avif::decode::decode(_data, token)
+                .map(|(image, consumed)| (image, Some(consumed), Vec::new())),
+            #[cfg(not(feature = "avif"))]
+            ImageFormat::Avif => Err(error::CodecError::Malformed(
+                "AVIF feature is disabled".to_owned(),
+            )),
+        };
     decoded
 }
 
 /// Dispatch decoding to the enabled format implementation.
-pub(crate) fn decode_format(
-    data: &[u8],
-    format: ImageFormat,
-) -> ImageResult<(DecodedImage, Option<usize>)> {
+pub(crate) fn decode_format(data: &[u8], format: ImageFormat) -> ImageDecodedResult<DecodedImage> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
         let (image, consumed) = into_image_result(
@@ -159,7 +170,7 @@ pub(crate) fn decode_format(
             format,
             ImageErrorStage::StillDecode,
         )?;
-        return validate_decoded_image(image).map(|image| (image, Some(consumed)));
+        return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
     }
 
     #[cfg(any(
@@ -176,7 +187,7 @@ pub(crate) fn decode_format(
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    let (image, consumed) = match decode_codec(data, format, None) {
+    let (image, consumed, diagnostics) = match decode_codec(data, format, None) {
         Ok(decoded) => decoded,
         Err(error) => {
             return Err(error
@@ -184,7 +195,13 @@ pub(crate) fn decode_format(
                 .into_image_error(format, ImageErrorStage::StillDecode));
         }
     };
-    validate_decoded_image(image).map(|image| (image, consumed))
+    validate_decoded_image(image).map(|image| {
+        (
+            image,
+            consumed,
+            set_diagnostic_stage(diagnostics, ImageErrorStage::StillDecode),
+        )
+    })
 }
 
 /// Dispatch still decode for the incremental-input surface: codec-level
@@ -192,7 +209,7 @@ pub(crate) fn decode_format(
 pub(crate) fn decode_prefix_format(
     data: &[u8],
     format: ImageFormat,
-) -> ImageResult<(DecodedImage, Option<usize>)> {
+) -> ImageDecodedResult<DecodedImage> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
         let (image, consumed) = into_incremental_image_result(
@@ -200,7 +217,7 @@ pub(crate) fn decode_prefix_format(
             format,
             ImageErrorStage::StillDecode,
         )?;
-        return validate_decoded_image(image).map(|image| (image, Some(consumed)));
+        return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
     }
 
     #[cfg(any(
@@ -217,7 +234,7 @@ pub(crate) fn decode_prefix_format(
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    let (image, consumed) = match decode_codec(data, format, None) {
+    let (image, consumed, diagnostics) = match decode_codec(data, format, None) {
         Ok(decoded) => decoded,
         Err(error) => {
             return Err(error
@@ -225,7 +242,13 @@ pub(crate) fn decode_prefix_format(
                 .into_incremental_image_error(format, ImageErrorStage::StillDecode));
         }
     };
-    validate_decoded_image(image).map(|image| (image, consumed))
+    validate_decoded_image(image).map(|image| {
+        (
+            image,
+            consumed,
+            set_diagnostic_stage(diagnostics, ImageErrorStage::StillDecode),
+        )
+    })
 }
 
 /// Dispatch still decode with a caller-supplied cooperative cancellation
@@ -234,7 +257,7 @@ pub(crate) fn decode_token_format(
     data: &[u8],
     format: ImageFormat,
     token: &crate::CancellationToken,
-) -> ImageResult<(DecodedImage, Option<usize>)> {
+) -> ImageDecodedResult<DecodedImage> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
         let (image, consumed) = into_incremental_image_result(
@@ -242,7 +265,7 @@ pub(crate) fn decode_token_format(
             format,
             ImageErrorStage::StillDecode,
         )?;
-        return validate_decoded_image(image).map(|image| (image, Some(consumed)));
+        return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
     }
 
     #[cfg(any(
@@ -259,7 +282,7 @@ pub(crate) fn decode_token_format(
         target_arch = "wasm32"
     ))]
     ensure_available(format)?;
-    let (image, consumed) = match decode_codec(data, format, Some(token)) {
+    let (image, consumed, diagnostics) = match decode_codec(data, format, Some(token)) {
         Ok(decoded) => decoded,
         Err(error) => {
             return Err(error
@@ -267,7 +290,13 @@ pub(crate) fn decode_token_format(
                 .into_incremental_image_error(format, ImageErrorStage::StillDecode));
         }
     };
-    validate_decoded_image(image).map(|image| (image, consumed))
+    validate_decoded_image(image).map(|image| {
+        (
+            image,
+            consumed,
+            set_diagnostic_stage(diagnostics, ImageErrorStage::StillDecode),
+        )
+    })
 }
 
 fn validate_decoded_image(image: DecodedImage) -> ImageResult<DecodedImage> {
@@ -495,7 +524,7 @@ fn decode_sequence_codec(
     format: ImageFormat,
     budget: &mut SequenceDecodeBudget,
     token: Option<&crate::CancellationToken>,
-) -> Option<CodecResult<(DecodedSequence, Option<usize>)>> {
+) -> Option<CodecDecodedResult<DecodedSequence>> {
     if let Err(error) = error::check_cancelled(token) {
         return Some(Err(error));
     }
@@ -503,7 +532,7 @@ fn decode_sequence_codec(
     if format == ImageFormat::Gif {
         return Some(
             gif::decode::decode_sequence(data, budget, token)
-                .map(|(sequence, consumed)| (sequence, Some(consumed))),
+                .map(|(sequence, consumed, diagnostics)| (sequence, Some(consumed), diagnostics)),
         );
     }
 
@@ -511,7 +540,7 @@ fn decode_sequence_codec(
     if format == ImageFormat::Png {
         return Some(
             png::decode::decode_sequence(data, budget, token)
-                .map(|(sequence, consumed)| (sequence, Some(consumed))),
+                .map(|(sequence, consumed, diagnostics)| (sequence, Some(consumed), diagnostics)),
         );
     }
 
@@ -519,7 +548,7 @@ fn decode_sequence_codec(
     if format == ImageFormat::WebP {
         return Some(
             webp::decode::decode_sequence(data, budget, token)
-                .map(|(sequence, consumed)| (sequence, Some(consumed))),
+                .map(|(sequence, consumed)| (sequence, Some(consumed), Vec::new())),
         );
     }
 
@@ -527,7 +556,7 @@ fn decode_sequence_codec(
     if format == ImageFormat::Tiff {
         return Some(
             tiff::decode::decode_sequence(data, budget, token)
-                .map(|(sequence, consumed)| (sequence, Some(consumed))),
+                .map(|(sequence, consumed)| (sequence, Some(consumed), Vec::new())),
         );
     }
 
@@ -535,7 +564,7 @@ fn decode_sequence_codec(
     if format == ImageFormat::Avif {
         return Some(
             avif::decode::decode_sequence(data, budget, token)
-                .map(|(sequence, consumed)| (sequence, Some(consumed))),
+                .map(|(sequence, consumed)| (sequence, Some(consumed), Vec::new())),
         );
     }
 
@@ -545,7 +574,8 @@ fn decode_sequence_codec(
 fn still_to_sequence(
     mut image: DecodedImage,
     consumed: Option<usize>,
-) -> (DecodedSequence, Option<usize>) {
+    diagnostics: Vec<crate::ImageDiagnostic>,
+) -> DecodedWithDiagnostics<DecodedSequence> {
     let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
     let metadata = std::mem::take(&mut image.metadata);
     let source_color = std::mem::take(&mut image.source_color);
@@ -553,7 +583,7 @@ fn still_to_sequence(
     sequence.opaque_blocks = opaque_blocks;
     sequence.metadata = metadata;
     sequence.source_color = source_color;
-    (sequence, consumed)
+    (sequence, consumed, diagnostics)
 }
 
 /// Dispatch decoding while retaining every frame and its presentation data.
@@ -561,7 +591,7 @@ pub(crate) fn decode_sequence_format(
     data: &[u8],
     format: ImageFormat,
     budget: &mut SequenceDecodeBudget,
-) -> ImageResult<(DecodedSequence, Option<usize>)> {
+) -> ImageDecodedResult<DecodedSequence> {
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -581,9 +611,17 @@ pub(crate) fn decode_sequence_format(
             decoded.map_err(|error| error.context("decode sequence")),
             format,
             ImageErrorStage::SequenceDecode,
-        );
+        )
+        .map(|(sequence, consumed, diagnostics)| {
+            (
+                sequence,
+                consumed,
+                set_diagnostic_stage(diagnostics, ImageErrorStage::SequenceDecode),
+            )
+        });
     }
-    decode_format(data, format).map(|(image, consumed)| still_to_sequence(image, consumed))
+    decode_format(data, format)
+        .map(|(image, consumed, diagnostics)| still_to_sequence(image, consumed, diagnostics))
 }
 
 /// Dispatch sequence decode for the incremental-input surface.
@@ -591,7 +629,7 @@ pub(crate) fn decode_sequence_prefix_format(
     data: &[u8],
     format: ImageFormat,
     budget: &mut SequenceDecodeBudget,
-) -> ImageResult<(DecodedSequence, Option<usize>)> {
+) -> ImageDecodedResult<DecodedSequence> {
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -611,9 +649,17 @@ pub(crate) fn decode_sequence_prefix_format(
             decoded.map_err(|error| error.context("decode sequence")),
             format,
             ImageErrorStage::SequenceDecode,
-        );
+        )
+        .map(|(sequence, consumed, diagnostics)| {
+            (
+                sequence,
+                consumed,
+                set_diagnostic_stage(diagnostics, ImageErrorStage::SequenceDecode),
+            )
+        });
     }
-    decode_prefix_format(data, format).map(|(image, consumed)| still_to_sequence(image, consumed))
+    decode_prefix_format(data, format)
+        .map(|(image, consumed, diagnostics)| still_to_sequence(image, consumed, diagnostics))
 }
 
 /// Dispatch sequence decode with a caller-supplied cancellation token.
@@ -622,7 +668,7 @@ pub(crate) fn decode_sequence_token_format(
     format: ImageFormat,
     budget: &mut SequenceDecodeBudget,
     token: &crate::CancellationToken,
-) -> ImageResult<(DecodedSequence, Option<usize>)> {
+) -> ImageDecodedResult<DecodedSequence> {
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -642,10 +688,17 @@ pub(crate) fn decode_sequence_token_format(
             decoded.map_err(|error| error.context("decode sequence")),
             format,
             ImageErrorStage::SequenceDecode,
-        );
+        )
+        .map(|(sequence, consumed, diagnostics)| {
+            (
+                sequence,
+                consumed,
+                set_diagnostic_stage(diagnostics, ImageErrorStage::SequenceDecode),
+            )
+        });
     }
     decode_token_format(data, format, token)
-        .map(|(image, consumed)| still_to_sequence(image, consumed))
+        .map(|(image, consumed, diagnostics)| still_to_sequence(image, consumed, diagnostics))
 }
 
 /// Dispatch one-frame decode to the enabled format implementation.

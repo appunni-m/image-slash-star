@@ -7,8 +7,8 @@ use std::path::Path;
 use bytemuck as _;
 use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
-    DecodedImage, DecodedSequence, EncodeOptions, EncodedImage, ImageError, ImageErrorStage,
-    ImageFormat, ImageMode, SequenceKind, SourceColor,
+    DecodedImage, DecodedSequence, DiagnosticKind, EncodeOptions, EncodedImage, ImageDiagnostic,
+    ImageError, ImageErrorStage, ImageFormat, ImageMode, SequenceKind, SourceColor,
 };
 
 mod support;
@@ -31,6 +31,29 @@ struct DecodeRow {
     ref_mode: Option<String>,
     ref_size: Option<[u32; 2]>,
     verify_status: Option<String>,
+}
+
+struct DiagnosticManifest {
+    format_version: u32,
+    assertion_origin: String,
+    pillow_version: String,
+    cases: Vec<DiagnosticCase>,
+}
+
+struct DiagnosticCase {
+    id: String,
+    feature: String,
+    format: String,
+    asset_path: String,
+    mutation: String,
+    chunk_kind: String,
+    chunk_payload: Vec<u64>,
+    operation: String,
+    diagnostic_kind: String,
+    stage: String,
+    offset: u64,
+    identity: String,
+    pillow_outcome: String,
 }
 
 struct EncodeOptionErrorManifest {
@@ -87,6 +110,39 @@ impl FromJson for DecodeRow {
             ref_mode: object.take("ref_mode")?,
             ref_size: object.take("ref_size")?,
             verify_status: object.take("verify_status")?,
+        })
+    }
+}
+
+impl FromJson for DiagnosticManifest {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            format_version: object.take("format_version")?,
+            assertion_origin: object.take("assertion_origin")?,
+            pillow_version: object.take("pillow_version")?,
+            cases: object.take("cases")?,
+        })
+    }
+}
+
+impl FromJson for DiagnosticCase {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            feature: object.take("feature")?,
+            format: object.take("format")?,
+            asset_path: object.take("asset_path")?,
+            mutation: object.take("mutation")?,
+            chunk_kind: object.take("chunk_kind")?,
+            chunk_payload: object.take("chunk_payload")?,
+            operation: object.take("operation")?,
+            diagnostic_kind: object.take("diagnostic_kind")?,
+            stage: object.take("stage")?,
+            offset: object.take("offset")?,
+            identity: object.take("identity")?,
+            pillow_outcome: object.take("pillow_outcome")?,
         })
     }
 }
@@ -1325,11 +1381,21 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
     let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
 
     // Known metadata chunks are retained as raw, unparsed metadata records
-    // (compressed payloads are never inflated), while unknown ancillary
-    // chunks stay in the opaque-block list.
+    // (valid compressed payloads are validated but never exposed inflated),
+    // while unknown ancillary chunks stay in the opaque-block list.
     let text = png_chunk(b"tEXt", b"Comment\0hello world");
-    let ztext = png_chunk(b"zTXt", b"Author\0\0raw-compressed-bytes");
-    let iccp = png_chunk(b"iCCP", b"profile\0\0raw-profile-bytes");
+    let ztext_payload =
+        b"Author\0\0\x78\x9c\x2b\x4a\x2c\xd7\x4d\xce\xcf\x2d\x28\x4a\x2d\x2e\x4e\x4d\xd1\x4d\xaa\x2c\x49\x2d\x06\x00\x53\x72\x08\x01";
+    let ztext = png_chunk(b"zTXt", ztext_payload);
+    let malformed_ztext_payload = b"\0\0raw";
+    let malformed_ztext = png_chunk(b"zTXt", malformed_ztext_payload);
+    let uncompressed_itxt_payload = b"Comment\0\0\0\0\0text";
+    let uncompressed_itxt = png_chunk(b"iTXt", uncompressed_itxt_payload);
+    let malformed_itxt_payload = b"\0\x01\0\0\0not-zlib";
+    let malformed_itxt = png_chunk(b"iTXt", malformed_itxt_payload);
+    let iccp_payload =
+        b"profile\0\0\x78\x9c\x2b\x4a\x2c\xd7\x2d\x28\xca\x4f\xcb\xcc\x49\xd5\x4d\xaa\x2c\x49\x2d\x06\x00\x3c\x34\x06\xbd";
+    let iccp = png_chunk(b"iCCP", iccp_payload);
     let exif = png_chunk(b"eXIf", b"raw-exif-bytes");
     let unknown = png_chunk(b"prVt", b"unknown-payload");
     let idat_offset = png_chunk_offset(&base, b"IDAT")?;
@@ -1337,6 +1403,9 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
     let mut bytes = Vec::new();
     bytes.extend_from_slice(&base[..idat_offset]);
     bytes.extend_from_slice(&text);
+    bytes.extend_from_slice(&malformed_ztext);
+    bytes.extend_from_slice(&uncompressed_itxt);
+    bytes.extend_from_slice(&malformed_itxt);
     bytes.extend_from_slice(&unknown);
     bytes.extend_from_slice(&ztext);
     bytes.extend_from_slice(&base[idat_offset..iend_offset]);
@@ -1351,7 +1420,19 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
         },
         OpaqueMetadata {
             kind: b"zTXt".to_vec(),
-            data: b"Author\0\0raw-compressed-bytes".to_vec(),
+            data: malformed_ztext_payload.to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"iTXt".to_vec(),
+            data: uncompressed_itxt_payload.to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"iTXt".to_vec(),
+            data: malformed_itxt_payload.to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"zTXt".to_vec(),
+            data: ztext_payload.to_vec(),
         },
         OpaqueMetadata {
             kind: b"eXIf".to_vec(),
@@ -1377,7 +1458,7 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
         decoded.content.source_color.icc_profile(),
         Some(&RawIccProfile {
             keyword: b"profile".to_vec(),
-            data: b"\0raw-profile-bytes".to_vec(),
+            data: iccp_payload[8..].to_vec(),
         }),
         "iCCP classifies as source color metadata"
     );
@@ -1426,13 +1507,177 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
     let apng_sequence = image_slash_star::decode_sequence(&apng)?;
     assert_eq!(
         apng_sequence.content.metadata,
-        vec![expected_metadata[0].clone(), expected_metadata[2].clone()],
+        vec![expected_metadata[0].clone(), expected_metadata[5].clone()],
         "APNG metadata"
     );
     assert_eq!(
         apng_sequence.content.opaque_blocks, expected_blocks,
         "APNG blocks"
     );
+    Ok(())
+}
+
+#[test]
+fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest: DiagnosticManifest = json::from_str(&fs::read_to_string(
+        root.join("tests/fixtures/diagnostic_manifest.json"),
+    )?)?;
+    assert_eq!(manifest.format_version, 1);
+    assert_eq!(manifest.assertion_origin, "defensive_model");
+    assert_eq!(manifest.pillow_version, "12.2.0");
+
+    for case in manifest.cases {
+        let enabled = match case.feature.as_str() {
+            "gif" => cfg!(feature = "gif"),
+            "png" => cfg!(feature = "png"),
+            other => panic!("{}: unknown feature `{other}`", case.id),
+        };
+        if !enabled {
+            continue;
+        }
+        assert_eq!(case.pillow_outcome, "ok", "{}", case.id);
+        let expected_format = match case.format.as_str() {
+            "gif" => ImageFormat::Gif,
+            "png" => ImageFormat::Png,
+            other => panic!("{}: unknown format `{other}`", case.id),
+        };
+        let expected_kind = match case.diagnostic_kind.as_str() {
+            "recovered_structure" => DiagnosticKind::RecoveredStructure,
+            "invalid_metadata_ignored" => DiagnosticKind::InvalidMetadataIgnored,
+            other => panic!("{}: unknown diagnostic kind `{other}`", case.id),
+        };
+        let expected_stage = match case.stage.as_str() {
+            "still_decode" => ImageErrorStage::StillDecode,
+            "sequence_decode" => ImageErrorStage::SequenceDecode,
+            other => panic!("{}: unknown diagnostic stage `{other}`", case.id),
+        };
+        let expected_identity = match case.identity.as_str() {
+            "gif_graphic_control" => "gif_graphic_control",
+            "png_zTXt" => "png_zTXt",
+            "png_iCCP" => "png_iCCP",
+            "png_iTXt" => "png_iTXt",
+            other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
+        };
+        let base = fs::read(root.join(&case.asset_path))?;
+        let bytes = match case.mutation.as_str() {
+            "none" => base.clone(),
+            "png_before_idat" => {
+                let kind: [u8; 4] = case
+                    .chunk_kind
+                    .as_bytes()
+                    .try_into()
+                    .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
+                let payload = case
+                    .chunk_payload
+                    .iter()
+                    .copied()
+                    .map(u8::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+                let mut mutated = Vec::with_capacity(base.len() + payload.len() + 12);
+                mutated.extend_from_slice(&base[..idat_offset]);
+                mutated.extend_from_slice(&png_chunk(&kind, &payload));
+                mutated.extend_from_slice(&base[idat_offset..]);
+                mutated
+            }
+            other => panic!("{}: unknown mutation `{other}`", case.id),
+        };
+
+        let expected = ImageDiagnostic {
+            kind: expected_kind,
+            format: expected_format,
+            stage: Some(expected_stage),
+            offset: Some(case.offset),
+            identity: Some(expected_identity),
+        };
+        match case.operation.as_str() {
+            "decode" => {
+                let base_decoded = image_slash_star::decode(&base)?;
+                let decoded = image_slash_star::decode(&bytes)?;
+                assert_eq!(decoded.format, expected_format, "{} format", case.id);
+                assert_eq!(
+                    decoded.content.pixels, base_decoded.content.pixels,
+                    "{} pixels",
+                    case.id
+                );
+                assert_eq!(
+                    decoded.diagnostics,
+                    vec![expected],
+                    "{} diagnostic",
+                    case.id
+                );
+                if expected_format == ImageFormat::Png {
+                    assert!(decoded.content.metadata.is_empty(), "{} metadata", case.id);
+                    assert!(decoded.content.source_color.is_empty(), "{} color", case.id);
+                }
+            }
+            "decode_sequence" => {
+                let base_sequence = image_slash_star::decode_sequence(&base)?;
+                let sequence = image_slash_star::decode_sequence(&bytes)?;
+                assert_eq!(sequence.format, expected_format, "{} format", case.id);
+                assert_eq!(
+                    sequence.content.frames, base_sequence.content.frames,
+                    "{} frames",
+                    case.id
+                );
+                assert_eq!(
+                    sequence.diagnostics,
+                    vec![expected],
+                    "{} diagnostic",
+                    case.id
+                );
+                if expected_format == ImageFormat::Png {
+                    assert!(sequence.content.metadata.is_empty(), "{} metadata", case.id);
+                    assert!(
+                        sequence.content.source_color.is_empty(),
+                        "{} color",
+                        case.id
+                    );
+                }
+            }
+            other => panic!("{}: unknown operation `{other}`", case.id),
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn png_compressed_metadata_shape_contract_preserves_raw_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::OpaqueMetadata;
+
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let cases: [(&[u8; 4], &[u8]); 8] = [
+        (b"zTXt", b"no-nul"),
+        (b"zTXt", b"Comment\0"),
+        (b"iCCP", b"profile\0"),
+        (b"iTXt", b"no-nul"),
+        (b"iTXt", b"Comment\0"),
+        (b"iTXt", b"Comment\0\x01"),
+        (b"iTXt", b"Comment\0\x01\0"),
+        (b"iTXt", b"Comment\0\x01\0lang\0"),
+    ];
+    let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+    let mut bytes = base[..idat_offset].to_vec();
+    let mut expected = Vec::new();
+    for (kind, payload) in cases {
+        bytes.extend_from_slice(&png_chunk(kind, payload));
+        expected.push(OpaqueMetadata {
+            kind: kind.to_vec(),
+            data: payload.to_vec(),
+        });
+    }
+    bytes.extend_from_slice(&base[idat_offset..]);
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(decoded.content.metadata, expected);
+    assert!(decoded.content.source_color.is_empty());
+    assert!(decoded.diagnostics.is_empty());
     Ok(())
 }
 
@@ -1461,11 +1706,16 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     let chroma_chunk = png_chunk(b"cHRM", &chroma);
     let duplicate_chroma = png_chunk(b"cHRM", &chroma);
     let malformed_chroma = png_chunk(b"cHRM", &[0, 0, 0]);
-    let iccp = png_chunk(b"iCCP", b"profile\0\0raw-profile-bytes");
+    let iccp_payload =
+        b"profile\0\0\x78\x9c\x2b\x4a\x2c\xd7\x2d\x28\xca\x4f\xcb\xcc\x49\xd5\x4d\xaa\x2c\x49\x2d\x06\x00\x3c\x34\x06\xbd";
+    let iccp = png_chunk(b"iCCP", iccp_payload);
     let iccp_no_nul = png_chunk(b"iCCP", b"nonul");
     let iccp_nul_first = png_chunk(b"iCCP", b"\0raw");
     let iccp_no_profile = png_chunk(b"iCCP", b"a\0");
-    let duplicate_iccp = png_chunk(b"iCCP", b"other\0\0raw");
+    let duplicate_iccp = png_chunk(
+        b"iCCP",
+        b"other\0\0\x78\x9c\x2b\x4a\x2c\xd7\x2d\x28\xca\x4f\xcb\xcc\x49\xd5\x4d\xaa\x2c\x49\x2d\x06\x00\x3c\x34\x06\xbd",
+    );
     let text = png_chunk(b"tEXt", b"Comment\0hello");
     let unknown = png_chunk(b"prVt", b"unknown-payload");
     let idat_offset = png_chunk_offset(&base, b"IDAT")?;
@@ -1508,7 +1758,7 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         })
         .with_icc_profile(RawIccProfile {
             keyword: b"profile".to_vec(),
-            data: b"\0raw-profile-bytes".to_vec(),
+            data: iccp_payload[8..].to_vec(),
         });
     let expected_metadata = vec![
         OpaqueMetadata {
@@ -1553,7 +1803,7 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         },
         OpaqueMetadata {
             kind: b"iCCP".to_vec(),
-            data: b"other\0\0raw".to_vec(),
+            data: b"other\0\0\x78\x9c\x2b\x4a\x2c\xd7\x2d\x28\xca\x4f\xcb\xcc\x49\xd5\x4d\xaa\x2c\x49\x2d\x06\x00\x3c\x34\x06\xbd".to_vec(),
         },
     ];
     let expected_blocks = vec![OpaqueBlock {

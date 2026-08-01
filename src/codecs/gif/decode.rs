@@ -21,8 +21,8 @@ const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 pub fn decode(
     data: &[u8],
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(DecodedImage, usize)> {
-    let (mut sequence, consumed) = decode_sequence(
+) -> CodecResult<(DecodedImage, usize, Vec<crate::ImageDiagnostic>)> {
+    let (mut sequence, consumed, diagnostics) = decode_sequence(
         data,
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Gif),
         token,
@@ -32,7 +32,7 @@ pub fn decode(
     let mut image = sequence.frames.remove(0).image;
     image.metadata = std::mem::take(&mut sequence.metadata);
     image.opaque_blocks = std::mem::take(&mut sequence.opaque_blocks);
-    Ok((image, consumed))
+    Ok((image, consumed, diagnostics))
 }
 
 /// Decode every image descriptor and its presentation metadata.
@@ -40,7 +40,7 @@ pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(DecodedSequence, usize)> {
+) -> CodecResult<(DecodedSequence, usize, Vec<crate::ImageDiagnostic>)> {
     crate::codecs::error::check_cancelled(token)?;
     let mut input = Input::new(data);
     let signature = input.read_bytes(6)?;
@@ -65,6 +65,7 @@ pub fn decode_sequence(
     let mut recovering_from_bad_gce = false;
     let mut metadata = Vec::new();
     let mut opaque_blocks = Vec::new();
+    let mut diagnostics = Vec::new();
 
     loop {
         crate::codecs::error::check_cancelled(token)?;
@@ -77,7 +78,18 @@ pub fn decode_sequence(
                 let label = input.read_u8()?;
                 let payload_start = input.position();
                 if label == 0xf9 {
-                    (graphic_control, recovering_from_bad_gce) = read_graphic_control(&mut input)?;
+                    let (control, recovering, nonstandard_size) = read_graphic_control(&mut input)?;
+                    graphic_control = control;
+                    recovering_from_bad_gce = recovering;
+                    if nonstandard_size {
+                        diagnostics.push(crate::ImageDiagnostic {
+                            kind: crate::DiagnosticKind::RecoveredStructure,
+                            format: crate::ImageFormat::Gif,
+                            stage: None,
+                            offset: Some(block_offset),
+                            identity: Some("gif_graphic_control"),
+                        });
+                    }
                 } else if label == 0xff {
                     let identifier_len = usize::from(input.read_u8()?);
                     let identifier = input.read_bytes(identifier_len)?;
@@ -180,7 +192,7 @@ pub fn decode_sequence(
         metadata,
         source_color: SourceColor::new(),
     };
-    Ok((sequence, consumed))
+    Ok((sequence, consumed, diagnostics))
 }
 
 #[derive(Clone, Copy)]
@@ -200,8 +212,8 @@ impl Default for GraphicControl {
     }
 }
 
-fn read_graphic_control(input: &mut Input<'_>) -> CodecResult<(GraphicControl, bool)> {
-    let _declared_size = input.read_u8()?;
+fn read_graphic_control(input: &mut Input<'_>) -> CodecResult<(GraphicControl, bool, bool)> {
+    let declared_size = input.read_u8()?;
     let packed = input.read_u8()?;
     let delay_cs = input.read_u16()?;
     let index = input.read_u8()?;
@@ -229,6 +241,7 @@ fn read_graphic_control(input: &mut Input<'_>) -> CodecResult<(GraphicControl, b
             disposal,
         },
         recovering,
+        declared_size != 4,
     ))
 }
 

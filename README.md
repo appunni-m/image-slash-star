@@ -140,6 +140,7 @@ capabilities and setup.
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
+| `Decoded<T>::diagnostics` | Stable non-fatal recovery records returned beside successful decode |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
@@ -161,8 +162,11 @@ extent when the container defines one unambiguously (JPEG after EOI, PNG after
 IEND, GIF after the trailer, WebP's RIFF size, TIFF's final IFD, and AVIF's
 last top-level box). BMP and ICO report `None` because they declare no total
 extent. Decoders ignore well-formed trailing bytes after that extent and never
-let them change the decoded result; the trailing-input manifest pins this
-behavior for all eight formats against Pillow 12.2.0.
+let them change the decoded result. Successful envelopes for formats with a
+defined extent also report `DiagnosticKind::TrailingDataIgnored` with the
+first ignored byte's offset. The trailing-input manifest pins the unchanged
+Pillow-observable result, while the consumed extent and diagnostic fields are
+the separate defensive-model contract for all eight formats.
 
 Incremental callers that are still receiving encoded input use `detect_prefix`
 and `inspect_basic_prefix`. Both return `ImageError::NeedMoreData { minimum }`
@@ -254,7 +258,10 @@ the codec does not interpret, in original order with duplicates and the
 container's safe-to-copy flag (currently PNG unknown ancillary chunks).
 Known PNG metadata chunks (text, EXIF, time, and resolution blocks) are
 retained separately as raw, unparsed `OpaqueMetadata` records; compressed
-payloads are never inflated.
+payloads are bounded-validated but never exposed inflated. Structurally valid
+but invalidly compressed `zTXt`, `iCCP`, and `iTXt` members are omitted and
+produce `DiagnosticKind::InvalidMetadataIgnored`; malformed field shapes stay
+raw metadata.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
 extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
@@ -423,6 +430,11 @@ intentionally remain detail-free.
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
 errors can usually be handled by selecting another compiled capability.
+
+Non-fatal recovery is not an error: successful `Decoded<T>` values expose
+`diagnostics` with stable kind, stage, offset, and structure identity fields.
+The diagnostic fixture contract is intentionally separate from Pillow parity,
+because Pillow has no equivalent structured warning field.
 
 Use `error.kind()` for stable recovery policy and `error.format()` for the
 selected input/output format when one is known. `error.message()` returns

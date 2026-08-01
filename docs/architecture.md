@@ -53,7 +53,8 @@ encoded bytes
     │
     ├─ decode() ──────────────────────► Decoded<DecodedImage>
     │                                      ├─ source ImageFormat
-    │                                      └─ ImageMode + ColorType + pixels
+    │                                      ├─ ImageMode + ColorType + pixels
+    │                                      └─ non-fatal diagnostics
     │
     └─ decode_sequence() ─────────────► Decoded<DecodedSequence>
 
@@ -98,6 +99,15 @@ sequence: `TimedAnimation` (GIF, APNG, animated WebP, and AVIF), `UntimedPages`
 sequence). TIFF pages keep exact zero durations and are never described as
 timed animation.
 
+`Decoded<T>::diagnostics` is a dependency-free list of stable non-fatal
+records returned beside successful still or sequence decode. Each
+`ImageDiagnostic` carries a `DiagnosticKind`, format, operation stage, encoded
+byte offset, and container-structure identity; prose is intentionally absent.
+The current manifest-proven kinds are ignored trailing data, accepted
+non-standard GIF graphic-control size, and ignored invalid compressed PNG
+ancillary metadata. A diagnostic reports a recoverable condition; it does not
+change pixels or turn Pillow's result into a new parity field.
+
 `SourceDescriptor::alpha()` records the alpha association declared by the
 encoded source: straight (PNG, WebP, AVIF, TIFF `ExtraSamples` 2),
 premultiplied (TIFF `ExtraSamples` 1), binary mask (GIF transparency), or the
@@ -116,16 +126,20 @@ retain unknown blocks. Retained blocks count toward the caller-set
 
 Known PNG metadata chunks (tEXt/zTXt/iTXt/eXIf/tIME/pHYs/bKGD/hIST/sBIT) are
 retained in a separate ordered `metadata` list of raw, unparsed
-`OpaqueMetadata` records; compressed payloads are never inflated, so no
-decompression limit is needed before retention. Semantic parsing of text and
-ICC payloads remains future work under explicit limits.
+`OpaqueMetadata` records. Valid compressed members are checked with the
+dependency-free DEFLATE path under a fixed 1 MiB validation output bound, but
+their inflated contents are never exposed. Structurally recognizable invalid
+`zTXt`, `iTXt`, and `iCCP` members are omitted and produce an
+`InvalidMetadataIgnored` diagnostic; malformed field shapes retain their raw
+bytes. The encoded metadata extent remains bounded by `max_metadata_bytes`.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
 chromaticity values, and the raw iCCP profile (keyword plus method/profile
-payload, never inflated). The first well-formed occurrence of each chunk is
-parsed; duplicates and malformed payloads fall back to raw metadata records.
-Retaining color metadata never implies that color conversion was applied.
+payload, never exposed inflated). The first well-formed occurrence of each
+chunk is parsed; duplicates and malformed payloads fall back to raw metadata
+records. Retaining color metadata never implies that color conversion was
+applied.
 
 For GIF, comment (0xFE), plain-text (0x01), and non-NETSCAPE application
 (0xFF) extensions are retained as ordered `OpaqueMetadata` records with the
@@ -338,6 +352,7 @@ resources above, so no codec work can grow independently of output size:
 | Codec | Work dimension | Bounding resource |
 | --- | --- | --- |
 | PNG | chunk scan and count | `max_encoded_bytes` + `max_metadata_bytes` |
+| PNG | compressed ancillary validation | fixed 1 MiB inflated-prefix bound |
 | PNG | IDAT/fdAT inflation and scanline filtering | `max_pixels`/`max_primary_decoded_bytes` (inflated length equals canvas bytes) |
 | GIF | LZW decompression and deinterlace | `max_pixels`/`max_primary_decoded_bytes`/`max_frame_decoded_bytes` |
 | GIF | extension and block walk | `max_encoded_bytes` + `max_metadata_bytes` |
@@ -391,6 +406,10 @@ total extent, so they report `None` and the complete input remains the source.
 AVIF container validation tolerates an unparseable tail only after a complete
 still or sequence structure has been parsed, matching Pillow 12.2.0/libavif;
 truncated or conflicting structure remains `Malformed`.
+When a defined extent is shorter than the supplied input, the successful
+`Decoded<T>` envelope also carries `DiagnosticKind::TrailingDataIgnored` with
+the first ignored byte's offset. Containers without an unambiguous extent
+(`BMP` and `ICO`) do not emit this diagnostic.
 
 | Mode | Layout |
 | --- | --- |
@@ -445,6 +464,14 @@ identity (`ImageError::identity()`): PNG chunk boundaries, GIF blocks/images/
 extensions, JPEG markers/segments, TIFF IFDs, WebP chunks on the metadata-scan
 path, and AVIF boxes. BMP, ICO, and WebP decode internals intentionally remain
 detail-free. Both fields are stable recovery data, never prose.
+
+Non-fatal recovery is separate from `ImageError`: successful decode returns
+`Decoded<T>::diagnostics`, while fatal parser failures remain `ImageError`.
+The Rust diagnostic fields are a defensive/specification contract, not a
+Pillow-parity field. The committed diagnostic manifest proves the stable
+kind/stage/offset/identity values for accepted GIF recovery, invalid
+compressed PNG ancillary members, and trailing input; Pillow success and
+unchanged pixels are recorded as supporting fixture evidence.
 
 All canonical fallible operations return `ImageResult<T>`. `ImageError` is
 non-exhaustive so downstream matches need a fallback arm.

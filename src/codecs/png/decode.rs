@@ -10,6 +10,7 @@ use crate::types::{
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
+const MAX_COMPRESSED_METADATA_OUTPUT: usize = 1 << 20;
 const ADAM7: [(usize, usize, usize, usize); 7] = [
     (0, 0, 8, 8),
     (4, 0, 8, 8),
@@ -67,6 +68,86 @@ fn metadata_record(kind: [u8; 4], data: &[u8]) -> crate::types::OpaqueMetadata {
         kind: kind.to_vec(),
         data: data.to_vec(),
     }
+}
+
+fn next_nul(data: &[u8], start: usize) -> Option<usize> {
+    data.get(start..)
+        .unwrap_or_default()
+        .iter()
+        .position(|&byte| byte == 0)
+        .map(|offset| start.saturating_add(offset))
+}
+
+/// Return the stable identity for compressed ancillary metadata that has a
+/// structurally recognizable field but cannot be inflated within the bounded
+/// metadata validation budget. Malformed field shapes remain raw metadata;
+/// this decision only covers the Pillow-observable "usable pixels, metadata
+/// lost" cases.
+fn invalid_compressed_metadata_identity(kind: [u8; 4], data: &[u8]) -> Option<&'static str> {
+    match &kind {
+        b"zTXt" => {
+            let keyword_end = next_nul(data, 0)?;
+            if keyword_end == 0 {
+                return None;
+            }
+            let method = *data.get(keyword_end.saturating_add(1))?;
+            let compressed = data
+                .get(keyword_end.saturating_add(2)..)
+                .unwrap_or_default();
+            (method != 0
+                || decompress_zlib_prefix(compressed, MAX_COMPRESSED_METADATA_OUTPUT).is_err())
+            .then_some("png_zTXt")
+        }
+        b"iCCP" => {
+            let keyword_end = next_nul(data, 0)?;
+            if keyword_end == 0 {
+                return None;
+            }
+            let method = *data.get(keyword_end.saturating_add(1))?;
+            let compressed = data
+                .get(keyword_end.saturating_add(2)..)
+                .unwrap_or_default();
+            (method != 0
+                || decompress_zlib_prefix(compressed, MAX_COMPRESSED_METADATA_OUTPUT).is_err())
+            .then_some("png_iCCP")
+        }
+        b"iTXt" => {
+            let keyword_end = next_nul(data, 0)?;
+            if keyword_end == 0 {
+                return None;
+            }
+            let compressed_flag = *data.get(keyword_end.saturating_add(1))?;
+            let method = *data.get(keyword_end.saturating_add(2))?;
+            if compressed_flag != 1 {
+                return None;
+            }
+            let language_end = next_nul(data, keyword_end.saturating_add(3))?;
+            let translated_end = next_nul(data, language_end.saturating_add(1))?;
+            let text = data
+                .get(translated_end.saturating_add(1)..)
+                .unwrap_or_default();
+            (method != 0 || decompress_zlib_prefix(text, MAX_COMPRESSED_METADATA_OUTPUT).is_err())
+                .then_some("png_iTXt")
+        }
+        _ => None,
+    }
+}
+
+fn record_invalid_compressed_metadata(
+    chunk: &Chunk<'_>,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) -> bool {
+    let Some(identity) = invalid_compressed_metadata_identity(chunk.kind, chunk.data) else {
+        return false;
+    };
+    diagnostics.push(crate::ImageDiagnostic {
+        kind: crate::DiagnosticKind::InvalidMetadataIgnored,
+        format: crate::ImageFormat::Png,
+        stage: None,
+        offset: Some(chunk.offset),
+        identity: Some(identity),
+    });
+    true
 }
 
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
@@ -148,7 +229,7 @@ fn retain_color_chunk(
 pub fn decode(
     data: &[u8],
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(DecodedImage, usize)> {
+) -> CodecResult<(DecodedImage, usize, Vec<crate::ImageDiagnostic>)> {
     // Pillow's load path accepts bad IDAT CRCs after lazy construction has
     // validated all construction-critical chunks.
     crate::codecs::error::check_cancelled(token)?;
@@ -165,6 +246,7 @@ pub fn decode(
     let mut metadata = Vec::new();
     let mut source_color = SourceColor::new();
     let mut saw_iend = false;
+    let mut diagnostics = Vec::new();
     for chunk in &mut chunks {
         crate::codecs::error::check_cancelled(token)?;
         let chunk = chunk?;
@@ -200,10 +282,14 @@ pub fn decode(
                 break;
             }
             _ if retained_color_chunk(&chunk.kind) => {
-                retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                    retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+                }
             }
             _ if retained_metadata_chunk(&chunk.kind) => {
-                metadata.push(metadata_record(chunk.kind, chunk.data));
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                    metadata.push(metadata_record(chunk.kind, chunk.data));
+                }
             }
             _ if retained_opaque_chunk(&chunk.kind) => {
                 opaque_blocks.push(opaque_block(chunk.kind, chunk.data));
@@ -242,7 +328,7 @@ pub fn decode(
     .with_opaque_blocks(opaque_blocks)
     .with_metadata(metadata)
     .with_source_color(source_color);
-    Ok((image, chunks.position))
+    Ok((image, chunks.position, diagnostics))
 }
 
 fn decode_image_data(
@@ -297,6 +383,7 @@ struct ParsedApng {
     opaque_blocks: Vec<crate::types::OpaqueBlock>,
     metadata: Vec<crate::types::OpaqueMetadata>,
     source_color: SourceColor,
+    diagnostics: Vec<crate::ImageDiagnostic>,
 }
 
 /// Decode every APNG presentation while retaining exact source controls.
@@ -304,10 +391,10 @@ pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(DecodedSequence, usize)> {
+) -> CodecResult<(DecodedSequence, usize, Vec<crate::ImageDiagnostic>)> {
     crate::codecs::error::check_cancelled(token)?;
     let Some((parsed, consumed)) = parse_apng(data)? else {
-        let (mut image, consumed) = decode(data, token)?;
+        let (mut image, consumed, diagnostics) = decode(data, token)?;
         let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
         let metadata = std::mem::take(&mut image.metadata);
         let source_color = std::mem::take(&mut image.source_color);
@@ -315,7 +402,7 @@ pub fn decode_sequence(
         sequence.opaque_blocks = opaque_blocks;
         sequence.metadata = metadata;
         sequence.source_color = source_color;
-        return Ok((sequence, consumed));
+        return Ok((sequence, consumed, diagnostics));
     };
 
     let ParsedApng {
@@ -329,6 +416,7 @@ pub fn decode_sequence(
         opaque_blocks,
         metadata,
         source_color,
+        diagnostics,
     } = parsed;
     let mut output_frames = Vec::new();
     let mut canvas = None;
@@ -433,6 +521,7 @@ pub fn decode_sequence(
             source_color,
         },
         consumed,
+        diagnostics,
     ))
 }
 
@@ -480,6 +569,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut opaque_blocks = Vec::new();
     let mut metadata = Vec::new();
     let mut source_color = SourceColor::new();
+    let mut diagnostics = Vec::new();
 
     for chunk in &mut chunks {
         let chunk = chunk?;
@@ -553,10 +643,14 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             }
             b"IEND" => break,
             _ if retained_color_chunk(&chunk.kind) => {
-                retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                    retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+                }
             }
             _ if retained_metadata_chunk(&chunk.kind) => {
-                metadata.push(metadata_record(chunk.kind, chunk.data));
+                if !record_invalid_compressed_metadata(&chunk, &mut diagnostics) {
+                    metadata.push(metadata_record(chunk.kind, chunk.data));
+                }
             }
             _ if retained_opaque_chunk(&chunk.kind) => {
                 opaque_blocks.push(opaque_block(chunk.kind, chunk.data));
@@ -598,6 +692,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             opaque_blocks,
             metadata,
             source_color,
+            diagnostics,
         },
         chunks.position,
     )))
@@ -1374,6 +1469,7 @@ fn chunk_payload_with_crc<'a>(
 struct Chunk<'a> {
     kind: [u8; 4],
     data: &'a [u8],
+    offset: u64,
 }
 
 struct Chunks<'a> {
@@ -1438,6 +1534,7 @@ impl<'a> Iterator for Chunks<'a> {
             Ok(Chunk {
                 kind,
                 data: payload,
+                offset: chunk_start,
             })
         })();
         if result.is_err() {
