@@ -2728,10 +2728,119 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 }
 
 #[test]
-fn avif_item_transforms_match_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+fn avif_item_transforms_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
         AvifMirrorAxis, AvifRotation, AvifTransformProperties, SourceDescriptor,
     };
+
+    // These helpers construct malformed/duplicate item-property witnesses
+    // for the parser contract. Pillow parity does not expose structured AVIF
+    // item properties, so none of these cases belongs in coverage_matrix.json.
+    fn box_start(data: &[u8], kind: &[u8; 4]) -> Result<usize, Box<dyn std::error::Error>> {
+        let type_offset = data
+            .windows(4)
+            .position(|window| window == kind)
+            .ok_or_else(|| format!("AVIF fixture has no {kind:?} box"))?;
+        type_offset
+            .checked_sub(4)
+            .ok_or_else(|| format!("AVIF {kind:?} box has no size field").into())
+    }
+
+    fn grow_box_size(
+        data: &mut [u8],
+        kind: &[u8; 4],
+        amount: u32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let start = box_start(data, kind)?;
+        let size = u32::from_be_bytes(data[start..start + 4].try_into()?)
+            .checked_add(amount)
+            .ok_or("AVIF box size overflowed")?;
+        data[start..start + 4].copy_from_slice(&size.to_be_bytes());
+        Ok(())
+    }
+
+    fn shrink_box_size(
+        data: &mut [u8],
+        kind: &[u8; 4],
+        amount: u32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let start = box_start(data, kind)?;
+        let size = u32::from_be_bytes(data[start..start + 4].try_into()?)
+            .checked_sub(amount)
+            .ok_or("AVIF box size underflowed")?;
+        data[start..start + 4].copy_from_slice(&size.to_be_bytes());
+        Ok(())
+    }
+
+    fn append_associated_property(
+        input: &[u8],
+        kind: &[u8; 4],
+        value: u8,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let ipco = box_start(input, b"ipco")?;
+        let ipco_size = usize::try_from(u32::from_be_bytes(input[ipco..ipco + 4].try_into()?))?;
+        let property = avif_box(kind, &[value]);
+        let ipco_end = ipco.checked_add(ipco_size).ok_or("ipco end overflowed")?;
+        let mut output = Vec::with_capacity(input.len() + property.len() + 1);
+        output.extend_from_slice(&input[..ipco_end]);
+        output.extend_from_slice(&property);
+        output.extend_from_slice(&input[ipco_end..]);
+
+        let ipma = box_start(&output, b"ipma")?;
+        let ipma_size = usize::try_from(u32::from_be_bytes(output[ipma..ipma + 4].try_into()?))?;
+        let association_count = ipma
+            .checked_add(18)
+            .ok_or("ipma association count offset overflowed")?;
+        let count = output
+            .get_mut(association_count)
+            .ok_or("ipma association count is missing")?;
+        *count = count
+            .checked_add(1)
+            .ok_or("ipma association count overflowed")?;
+        let ipma_end = ipma.checked_add(ipma_size).ok_or("ipma end overflowed")?;
+        output.insert(ipma_end, 6);
+
+        let property_size = u32::try_from(property.len())?;
+        let iprp_delta = property_size
+            .checked_add(1)
+            .ok_or("iprp delta overflowed")?;
+        grow_box_size(&mut output, b"ipco", property_size)?;
+        grow_box_size(&mut output, b"ipma", 1)?;
+        grow_box_size(&mut output, b"iprp", iprp_delta)?;
+        grow_box_size(&mut output, b"meta", iprp_delta)?;
+        Ok(output)
+    }
+
+    fn assert_malformed(data: &[u8], label: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let inspected = match image_slash_star::inspect(data) {
+            Ok(_) => return Err(format!("{label}: malformed AVIF was inspected").into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            inspected.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "{label}: inspect"
+        );
+        let decoded = match image_slash_star::decode(data) {
+            Ok(_) => return Err(format!("{label}: malformed AVIF was decoded").into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            decoded.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "{label}: decode"
+        );
+        let sequence = match image_slash_star::decode_sequence(data) {
+            Ok(_) => return Err(format!("{label}: malformed AVIF became a sequence").into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            sequence.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "{label}: sequence"
+        );
+        Ok(())
+    }
 
     if cfg!(target_arch = "wasm32") || !cfg!(feature = "avif") {
         return Ok(());
@@ -2756,6 +2865,15 @@ fn avif_item_transforms_match_the_container_contract() -> Result<(), Box<dyn std
         variant[irot + 4] = value;
         let expected = SourceDescriptor::new()
             .with_avif_transform(AvifTransformProperties::new().with_rotation(rotation));
+        assert_eq!(
+            expected.avif_transform().and_then(|value| value.rotation()),
+            Some(rotation)
+        );
+        assert_eq!(
+            expected.avif_transform().and_then(|value| value.mirror()),
+            None
+        );
+        assert!(!expected.is_empty());
         let inspected = image_slash_star::inspect(&variant)?;
         assert_eq!(inspected.source, expected, "irot inspect value {value}");
         let decoded = image_slash_star::decode(&variant)?;
@@ -2774,22 +2892,82 @@ fn avif_item_transforms_match_the_container_contract() -> Result<(), Box<dyn std
 
     let mut mirrored = bytes.clone();
     mirrored[irot..irot + 4].copy_from_slice(b"imir");
-    mirrored[irot + 4] = 1;
-    let expected_mirror = SourceDescriptor::new()
-        .with_avif_transform(AvifTransformProperties::new().with_mirror(AvifMirrorAxis::LeftRight));
-    assert_eq!(
-        image_slash_star::inspect(&mirrored)?.source,
-        expected_mirror,
-        "imir inspect"
-    );
-    let mirrored_decoded = image_slash_star::decode(&mirrored)?;
-    assert_eq!(mirrored_decoded.content.source, expected_mirror);
-    assert_eq!(mirrored_decoded.content.pixels, expected_pixels);
-    let mirrored_sequence = image_slash_star::decode_sequence(&mirrored)?;
-    assert_eq!(
-        mirrored_sequence.content.frames[0].image.source, expected_mirror,
-        "imir sequence"
-    );
+    for (value, mirror) in [
+        (0, AvifMirrorAxis::TopBottom),
+        (1, AvifMirrorAxis::LeftRight),
+    ] {
+        mirrored[irot + 4] = value;
+        let expected_mirror = SourceDescriptor::new()
+            .with_avif_transform(AvifTransformProperties::new().with_mirror(mirror));
+        assert_eq!(
+            expected_mirror
+                .avif_transform()
+                .and_then(|transform| transform.mirror()),
+            Some(mirror)
+        );
+        assert_eq!(
+            expected_mirror
+                .avif_transform()
+                .and_then(|transform| transform.rotation()),
+            None
+        );
+        let inspected = image_slash_star::inspect(&mirrored)?;
+        assert_eq!(
+            inspected.source, expected_mirror,
+            "imir inspect value {value}"
+        );
+        let mirrored_decoded = image_slash_star::decode(&mirrored)?;
+        assert_eq!(mirrored_decoded.content.source, expected_mirror);
+        assert_eq!(mirrored_decoded.content.pixels, expected_pixels);
+        let mirrored_sequence = image_slash_star::decode_sequence(&mirrored)?;
+        assert_eq!(
+            mirrored_sequence.content.frames[0].image.source, expected_mirror,
+            "imir sequence value {value}"
+        );
+    }
+
+    // Empty and overlong payloads are malformed even when the first byte is a
+    // legal value. The size changes keep each witness at the same container
+    // boundary, so the parser reaches the property-specific check.
+    let mut empty_rotation = Vec::with_capacity(bytes.len() - 1);
+    empty_rotation.extend_from_slice(&bytes[..irot + 4]);
+    empty_rotation.extend_from_slice(&bytes[irot + 5..]);
+    for kind in [b"irot", b"ipco", b"iprp", b"meta"] {
+        shrink_box_size(&mut empty_rotation, kind, 1)?;
+    }
+    assert_malformed(&empty_rotation, "empty irot payload")?;
+
+    let mut empty_mirror = Vec::with_capacity(mirrored.len() - 1);
+    empty_mirror.extend_from_slice(&mirrored[..irot + 4]);
+    empty_mirror.extend_from_slice(&mirrored[irot + 5..]);
+    for kind in [b"imir", b"ipco", b"iprp", b"meta"] {
+        shrink_box_size(&mut empty_mirror, kind, 1)?;
+    }
+    assert_malformed(&empty_mirror, "empty imir payload")?;
+
+    let mut extra_rotation = Vec::with_capacity(bytes.len() + 1);
+    extra_rotation.extend_from_slice(&bytes[..irot + 5]);
+    extra_rotation.push(0);
+    extra_rotation.extend_from_slice(&bytes[irot + 5..]);
+    for kind in [b"irot", b"ipco", b"iprp", b"meta"] {
+        grow_box_size(&mut extra_rotation, kind, 1)?;
+    }
+    assert_malformed(&extra_rotation, "extra irot payload")?;
+
+    let mut extra_mirror = Vec::with_capacity(mirrored.len() + 1);
+    extra_mirror.extend_from_slice(&mirrored[..irot + 5]);
+    extra_mirror.push(0);
+    extra_mirror.extend_from_slice(&mirrored[irot + 5..]);
+    for kind in [b"imir", b"ipco", b"iprp", b"meta"] {
+        grow_box_size(&mut extra_mirror, kind, 1)?;
+    }
+    assert_malformed(&extra_mirror, "extra imir payload")?;
+
+    let duplicate_rotation = append_associated_property(&bytes, b"irot", 1)?;
+    assert_malformed(&duplicate_rotation, "duplicate irot association")?;
+
+    let duplicate_mirror = append_associated_property(&mirrored, b"imir", 1)?;
+    assert_malformed(&duplicate_mirror, "duplicate imir association")?;
 
     let mut invalid_rotation = bytes;
     invalid_rotation[irot + 4] = 4;
