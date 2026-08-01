@@ -57,6 +57,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(!descriptor.is_empty());
     let alpha_only = SourceDescriptor::new().with_alpha(SourceAlpha::Auxiliary);
     assert!(!alpha_only.is_empty());
+    let transform_only = SourceDescriptor::new().with_avif_transform(
+        AvifTransformProperties::new()
+            .with_rotation(AvifRotation::CounterClockwise90)
+            .with_mirror(AvifMirrorAxis::LeftRight),
+    );
+    assert!(!transform_only.is_empty());
     assert!(SourceDescriptor::new().is_empty());
 
     // Exercise every short-circuit path of the source-color emptiness check
@@ -805,6 +811,7 @@ pub enum SourceAlpha {
 pub struct SourceDescriptor {
     byte_order: Option<SourceByteOrder>,
     alpha: Option<SourceAlpha>,
+    avif_transform: Option<AvifTransformProperties>,
 }
 
 impl SourceDescriptor {
@@ -815,6 +822,7 @@ impl SourceDescriptor {
         Self {
             byte_order: None,
             alpha: None,
+            avif_transform: None,
         }
     }
 
@@ -845,10 +853,26 @@ impl SourceDescriptor {
         self.alpha
     }
 
+    /// Record the AVIF item transforms declared by the encoded source.
+    ///
+    /// These properties describe source presentation metadata only. Decoded
+    /// transfer samples remain unrotated and unmirrored.
+    #[must_use]
+    pub const fn with_avif_transform(mut self, transform: AvifTransformProperties) -> Self {
+        self.avif_transform = Some(transform);
+        self
+    }
+
+    /// Return the AVIF item transforms declared by the encoded source.
+    #[must_use]
+    pub const fn avif_transform(&self) -> Option<AvifTransformProperties> {
+        self.avif_transform
+    }
+
     /// Whether this source has no retained structural facts.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.byte_order.is_none() && self.alpha.is_none()
+        self.byte_order.is_none() && self.alpha.is_none() && self.avif_transform.is_none()
     }
 }
 
@@ -956,6 +980,86 @@ pub struct AvifColorProperties {
     pub matrix_coefficients: u16,
     /// Whether the CICP declaration sets the full-range flag.
     pub full_range: bool,
+}
+
+/// Counter-clockwise quarter-turn declared by an AVIF `irot` property.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum AvifRotation {
+    /// No rotation.
+    Zero,
+    /// Rotate 90 degrees counter-clockwise.
+    CounterClockwise90,
+    /// Rotate 180 degrees counter-clockwise.
+    CounterClockwise180,
+    /// Rotate 270 degrees counter-clockwise.
+    CounterClockwise270,
+}
+
+/// Axis declared by an AVIF `imir` property.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum AvifMirrorAxis {
+    /// Exchange the top and bottom parts of the image.
+    TopBottom,
+    /// Exchange the left and right parts of the image.
+    LeftRight,
+}
+
+/// AVIF item transforms retained without applying them to decoded pixels.
+///
+/// The current model covers the `irot` and `imir` properties. `pasp` and
+/// `clap` remain separate future metadata because they require fractional
+/// dimensions and crop semantics. An absent field means that property was not
+/// associated with the primary image item; a present zero rotation remains
+/// distinguishable from an absent `irot` property.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AvifTransformProperties {
+    rotation: Option<AvifRotation>,
+    mirror: Option<AvifMirrorAxis>,
+}
+
+impl AvifTransformProperties {
+    /// Create an empty AVIF transform descriptor.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            rotation: None,
+            mirror: None,
+        }
+    }
+
+    /// Record an AVIF `irot` rotation property.
+    #[must_use]
+    pub const fn with_rotation(mut self, rotation: AvifRotation) -> Self {
+        self.rotation = Some(rotation);
+        self
+    }
+
+    /// Return the retained AVIF `irot` property, when present.
+    #[must_use]
+    pub const fn rotation(&self) -> Option<AvifRotation> {
+        self.rotation
+    }
+
+    /// Record an AVIF `imir` mirror property.
+    #[must_use]
+    pub const fn with_mirror(mut self, mirror: AvifMirrorAxis) -> Self {
+        self.mirror = Some(mirror);
+        self
+    }
+
+    /// Return the retained AVIF `imir` property, when present.
+    #[must_use]
+    pub const fn mirror(&self) -> Option<AvifMirrorAxis> {
+        self.mirror
+    }
+
+    /// Whether no AVIF transform property was retained.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.rotation.is_none() && self.mirror.is_none()
+    }
 }
 
 impl SourceColor {

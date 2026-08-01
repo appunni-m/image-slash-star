@@ -114,6 +114,17 @@ invalid compressed PNG `zTXt`/`iCCP`/`iTXt`, and the existing trailing-input
 policy. No coverage-only unit or `cfg(coverage)` test is used to manufacture
 these paths: real fixtures and the defensive manifest drive them.
 
+The test boundary is deliberate. `diagnostic_manifest_matches_the_non_parity_contract`
+in `tests/feature_gate_tests.rs` and
+`trailing_input_policy_manifest_matches_the_public_contract` in
+`tests/decode_policy_tests.rs` are ordinary fixture-backed Rust behavior
+contracts, not generated parity rows. They can assert the Rust-only fields
+because they also check the unchanged Pillow-observable result. Adding those
+expected fields to `coverage_matrix.json` would invent oracle data that Pillow
+does not return and would mislabel defensive policy as parity evidence. Any
+coverage obtained while these real contracts run is incidental evidence; no
+diagnostic-specific `cfg(coverage)` hook supplies the contract.
+
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
 sample bytes remain a documented gap. The schema does not yet compare
@@ -280,6 +291,14 @@ result, mode, and pixels, but they do not claim to prove item-level CICP because
 Pillow exposes no equivalent structured result. No parity row is added for this
 source-provenance field; malformed parser cases remain defensive-model
 evidence.
+
+The AVIF item-transform contract is separate from Pillow parity. A committed
+AVIF orientation output supplies `irot`; the test mutates all four legal
+rotation values and both `imir` axes, then asserts inspect, still decode, and
+fallback-sequence source descriptors agree while pixel bytes remain unchanged.
+Reserved values and malformed property payloads are rejected by both bounded
+parsers. The test is specification/defensive-model evidence because Pillow's
+observable result does not expose item transform properties.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as

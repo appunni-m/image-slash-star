@@ -5,7 +5,10 @@
 //! in `docs/avif.md`.
 
 use crate::codecs::{CodecError, CodecResult};
-use crate::types::{AvifColorProperties, ImageFormat, ImageInfo, ImageMode, SourceColor};
+use crate::types::{
+    AvifColorProperties, AvifMirrorAxis, AvifRotation, AvifTransformProperties, ImageFormat,
+    ImageInfo, ImageMode, SourceAlpha, SourceColor, SourceDescriptor,
+};
 
 const MAX_BOXES: usize = 4_096;
 const MAX_RECORDS: usize = 4_096;
@@ -182,6 +185,8 @@ enum Property {
     Av1C { depth: u8 },
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
+    Rotation(AvifRotation),
+    Mirror(AvifMirrorAxis),
     Other,
 }
 
@@ -220,6 +225,7 @@ struct Details {
     depth: u8,
     has_alpha: bool,
     frame_count: u32,
+    source: SourceDescriptor,
     source_color: SourceColor,
 }
 
@@ -324,11 +330,6 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         return Err(parse_failure!());
     }
 
-    let source = if details.has_alpha {
-        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
-    } else {
-        crate::types::SourceDescriptor::new()
-    };
     Ok(ImageInfo {
         format: ImageFormat::Avif,
         width: details.width,
@@ -344,7 +345,7 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         frame_count: Some(details.frame_count),
         frame_count_complete: true,
         cursor_hotspot: None,
-        source,
+        source: details.source,
         source_color: details.source_color,
     })
 }
@@ -614,6 +615,8 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
         }
         kind if kind == *b"av1C" => parse_av1c(property.payload),
         kind if kind == *b"colr" => parse_colr(property.payload),
+        kind if kind == *b"irot" => parse_irot(property.payload),
+        kind if kind == *b"imir" => parse_imir(property.payload),
         [b'a', b'u', b'x', b'C'] | [b'a', b'u', b'x', b'i'] => {
             let mut reader = Reader::new(property.payload);
             let _ = parse_full_box_version_zero(&mut reader)?;
@@ -647,6 +650,34 @@ fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::Color(color))
+}
+
+fn parse_irot(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    let rotation = match reader.u8()? {
+        0 => AvifRotation::Zero,
+        1 => AvifRotation::CounterClockwise90,
+        2 => AvifRotation::CounterClockwise180,
+        3 => AvifRotation::CounterClockwise270,
+        _ => return Err(parse_failure!()),
+    };
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::Rotation(rotation))
+}
+
+fn parse_imir(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    let mirror = match reader.u8()? {
+        0 => AvifMirrorAxis::TopBottom,
+        1 => AvifMirrorAxis::LeftRight,
+        _ => return Err(parse_failure!()),
+    };
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::Mirror(mirror))
 }
 
 // libavif 1.4.1 src/read.c:2648-2693.
@@ -811,14 +842,46 @@ impl Meta {
                 _ => None,
             })
             .unwrap_or_else(SourceColor::new);
+        let source = self.source_descriptor(primary)?;
         Ok(Some(Details {
             width,
             height,
             depth,
             has_alpha: self.has_alpha(primary),
             frame_count: 1,
+            source,
             source_color,
         }))
+    }
+
+    fn source_descriptor(&self, primary: u32) -> ParseResult<SourceDescriptor> {
+        let mut source = if self.has_alpha(primary) {
+            SourceDescriptor::new().with_alpha(SourceAlpha::Straight)
+        } else {
+            SourceDescriptor::new()
+        };
+        let mut transform = AvifTransformProperties::new();
+        for property in self.associated(primary) {
+            match property {
+                Property::Rotation(rotation) => {
+                    if transform.rotation().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_rotation(*rotation);
+                }
+                Property::Mirror(mirror) => {
+                    if transform.mirror().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_mirror(*mirror);
+                }
+                _ => {}
+            }
+        }
+        if !transform.is_empty() {
+            source = source.with_avif_transform(transform);
+        }
+        Ok(source)
     }
 
     fn associated(&self, item_id: u32) -> impl Iterator<Item = &Property> {
@@ -1108,6 +1171,7 @@ impl Movie {
             depth: main.depth.unwrap_or(8),
             has_alpha,
             frame_count: main.sample_count,
+            source: SourceDescriptor::new(),
             source_color: SourceColor::new(),
         })
     }
@@ -1978,6 +2042,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         kind: *b"av1C",
         payload: &[0x81, 0, 0x40, 0],
     });
+    for (kind, payload) in [
+        (*b"irot", &[0][..]),
+        (*b"irot", &[1][..]),
+        (*b"irot", &[2][..]),
+        (*b"irot", &[3][..]),
+        (*b"irot", &[4][..]),
+        (*b"irot", &[0, 0][..]),
+        (*b"imir", &[0][..]),
+        (*b"imir", &[1][..]),
+        (*b"imir", &[2][..]),
+        (*b"imir", &[0, 0][..]),
+    ] {
+        let _ = parse_property(BoxView { kind, payload });
+    }
     for (kind, urn) in [
         (*b"auxi", ALPHA_URN_HEVC),
         (*b"auxC", b"not-alpha".as_slice()),
@@ -2181,6 +2259,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         depth: 8,
         has_alpha: false,
         frame_count: 1,
+        source: SourceDescriptor::new(),
         source_color: SourceColor::new(),
     });
     let _ = image_info(Details {
@@ -2189,6 +2268,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         depth: 8,
         has_alpha: false,
         frame_count: 1,
+        source: SourceDescriptor::new(),
         source_color: SourceColor::new(),
     });
     let _ = image_info(Details {
@@ -2197,6 +2277,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         depth: 8,
         has_alpha: false,
         frame_count: 0,
+        source: SourceDescriptor::new(),
         source_color: SourceColor::new(),
     });
 

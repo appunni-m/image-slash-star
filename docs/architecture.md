@@ -83,7 +83,9 @@ activation point; ordinary ICO uses `None`.
 `ImageInfo::source` and `DecodedImage::source` carry an extensible
 `SourceDescriptor`. TIFF records the exact `II`/`MM` container declaration as
 `SourceByteOrder::Little` or `SourceByteOrder::Big` on inspection and on every
-decoded page. Other codecs currently return an empty descriptor. A source
+decoded page. AVIF item `irot`/`imir` properties are retained as
+`AvifTransformProperties` on the primary item without rotating or mirroring
+decoded samples. Other codecs currently return an empty descriptor. A source
 descriptor is structural provenance, not opaque ICC/EXIF/XMP metadata and not
 an instruction to reinterpret every normalized pixel buffer.
 
@@ -189,8 +191,11 @@ fallbacks: primaries, transfer characteristics, matrix coefficients, and the
 full-range flag. It records source provenance and never performs color
 conversion. This field is not part of the Pillow parity matrix; the committed
 contract test is defensive/specification evidence. Non-`nclx` profiles,
-track-only/auxiliary item properties, and AVIF ICC/EXIF/XMP remain outside the
-current model.
+contract test is defensive/specification evidence. AVIF `irot` and `imir`
+properties are likewise retained in `SourceDescriptor`; their legal values
+are validated, but no rotation or mirroring is applied. `pasp`, `clap`,
+non-`nclx` profiles, track-only/auxiliary item properties, and AVIF ICC/EXIF/
+XMP remain outside the current model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

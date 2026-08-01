@@ -121,6 +121,14 @@ than Pillow parity evidence, because Pillow's observable result has no
 equivalent item-level CICP field. Non-`nclx` profiles, track-only and auxiliary
 item properties, and AVIF ICC/EXIF/XMP remain future metadata slices.
 
+The primary item's `irot` and `imir` properties are retained in
+`SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
+accepts the four legal counter-clockwise quarter-turn values and `imir`
+accepts the top/bottom or left/right axis. These declarations are source
+provenance only: decoded pixels are never rotated or mirrored. `pasp` and
+`clap`, along with item-level ICC/EXIF/XMP and auxiliary relationships, remain
+open.
+
 ## Native FFI boundary
 
 `src/codecs/avif/native.rs` is the only Rust module allowed to use unsafe code.
