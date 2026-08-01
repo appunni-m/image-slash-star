@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `2996ef451e254c4935aea511c93a3f26f6a2eab9`
+Reviewed: 2026-08-01 on the working tree based on revision `a54d245a42b5488d92e959ce4f90ab82d7de3f25`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -110,19 +110,23 @@ asserts the Rust-only `DiagnosticKind`, operation stage, byte offset, and
 stable structure identity. Its `pillow_outcome: "ok"` and unchanged pixels are
 supporting fixture evidence, not proof that Pillow returned an equivalent
 diagnostic. The accepted cases are a non-standard GIF graphic-control size,
-invalid compressed PNG `zTXt`/`iCCP`/`iTXt`, and the existing trailing-input
-policy. No coverage-only unit or `cfg(coverage)` test is used to manufacture
-these paths: real fixtures and the defensive manifest drive them.
+Pillow-tolerated invalid compressed payloads in PNG `zTXt`/`iCCP`/`iTXt`, and
+the existing trailing-input policy. Unsupported compression methods in PNG
+`zTXt`/`iCCP` are not accepted recoveries: Pillow rejects those files, so they
+remain outside this contract. No coverage-only unit or `cfg(coverage)` test is
+used to manufacture these paths: real fixtures and the defensive manifest
+drive them.
 
 The test boundary is deliberate. `diagnostic_manifest_matches_the_non_parity_contract`
 in `tests/feature_gate_tests.rs` and
 `trailing_input_policy_manifest_matches_the_public_contract` in
 `tests/decode_policy_tests.rs` are ordinary fixture-backed Rust behavior
-contracts, not generated parity rows. They can assert the Rust-only fields
-because they also check the unchanged Pillow-observable result. Adding those
-expected fields to `coverage_matrix.json` would invent oracle data that Pillow
-does not return and would mislabel defensive policy as parity evidence. Any
-coverage obtained while these real contracts run is incidental evidence; no
+contracts, not generated parity rows. They assert the Rust-only fields while
+comparing the mutated result with the unmutated fixture baseline; the baseline
+asset's Pillow result is separate supporting evidence. Adding those expected
+fields to `coverage_matrix.json` would invent oracle data that Pillow does not
+return and would mislabel defensive policy as parity evidence. Any coverage
+obtained while these real contracts run is incidental evidence; no
 diagnostic-specific `cfg(coverage)` hook supplies the contract.
 
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
@@ -134,7 +138,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `2996ef451e254c4935aea511c93a3f26f6a2eab9`, the generated matrix
+For the current working tree based on revision `a54d245a42b5488d92e959ce4f90ab82d7de3f25`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -272,10 +276,11 @@ chunks (tEXt/zTXt/iCCP/eXIf) inserted into a minimal PNG must appear as raw,
 unparsed `OpaqueMetadata` records in original order while unknown chunks stay
 in `opaque_blocks`; valid compressed payloads are bounded-validated and then
 asserted byte-for-byte without exposing inflated text/profile bytes. Separate
-diagnostic-manifest rows prove that invalid compressed `zTXt`/`iCCP`/`iTXt`
-members are ignored with usable pixels and a stable diagnostic instead of
-being retained as metadata. Still, fallback-sequence, and APNG sequence
-decode must agree, and default encoding must not replay any metadata chunk.
+diagnostic-manifest rows prove that Pillow-tolerated invalid compressed
+`zTXt`/`iCCP`/`iTXt` payloads are ignored with usable pixels and a stable
+diagnostic instead of being retained as metadata. Still, fallback-sequence,
+and APNG sequence decode must agree, and default encoding must not replay any
+metadata chunk.
 
 The source-color contract is table-driven: well-formed PNG sRGB/gAMA/cHRM/iCCP
 chunks are parsed into `SourceColor` (intent, gamma, chromaticities, raw
@@ -478,24 +483,24 @@ The accepted Coverage MCP result for the same implementation state is:
 | Metric | Covered | Total |
 | --- | ---: | ---: |
 | Lines | 45,494 | 45,494 |
-| Branches | 6,438 | 6,438 |
+| Branches | 6,434 | 6,434 |
 | Functions | 2,524 | 2,524 |
-| Regions | 71,482 | 71,482 |
+| Regions | 71,480 | 71,480 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`c7a887e9-a5ed-45ae-b80d-967f54c07161`, submitted against
-`2996ef451e254c4935aea511c93a3f26f6a2eab9`: 727 native and `wasm32-wasip1`
-runtime tests passed with zero failures, and its terminal capability-table
-record says the native and WASI lanes agree. This is target/runtime evidence;
+`14d6de24-681f-477e-bd15-08bc4e58097e`, submitted against
+`a54d245a42b5488d92e959ce4f90ab82d7de3f25`: 727 checks passed with zero
+failures, and its terminal capability-table record says the native and
+`wasm32-wasip1` lanes agree. This is target/runtime evidence;
 it does not turn aggregate coverage, defensive/specification contracts, or
 Rust-only diagnostic tests into Pillow-parity coverage.
 
-Coverage MCP run: `1a3e22b0-b054-46fd-929d-70c18151819e`
+Coverage MCP run: `2b0bc5bd-dc9a-4585-a132-3bc53549f046`
 
-Snapshot: `8a3684a1-a383-4526-98a2-5323f3500b18`
+Snapshot: `9fbb8205-9d7e-463e-89f9-ef91cd4420e1`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -525,7 +530,7 @@ Metadata-policy manifest SHA-256:
 `5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
 
 Diagnostic manifest SHA-256:
-`9bcd7618f47b4abcaa1d64f04e65cafbfcb4a3655005f7148c81b9e4c8f0eae8`
+`d56f8710d8bb57bb7e6ffb8f440656d53f808fab15d88efeb28b2a2f99cf5ce0`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

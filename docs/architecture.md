@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `2996ef451e254c4935aea511c93a3f26f6a2eab9`
+Reviewed: 2026-08-01 against the working tree based on `a54d245a42b5488d92e959ce4f90ab82d7de3f25`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -131,10 +131,12 @@ Known PNG metadata chunks (tEXt/zTXt/iTXt/eXIf/tIME/pHYs/bKGD/hIST/sBIT) are
 retained in a separate ordered `metadata` list of raw, unparsed
 `OpaqueMetadata` records. Valid compressed members are checked with the
 dependency-free DEFLATE path under a fixed 1 MiB validation output bound, but
-their inflated contents are never exposed. Structurally recognizable invalid
-`zTXt`, `iTXt`, and `iCCP` members are omitted and produce an
-`InvalidMetadataIgnored` diagnostic; malformed field shapes retain their raw
-bytes. The encoded metadata extent remains bounded by `max_metadata_bytes`.
+their inflated contents are never exposed. Pillow-tolerated invalid compressed
+payloads in structurally recognizable `zTXt`, `iTXt`, and `iCCP` members are
+omitted and produce an `InvalidMetadataIgnored` diagnostic; malformed field
+shapes retain their raw bytes. Method-only `zTXt`/`iCCP` mutations are outside
+this recovery contract because Pillow rejects them. The encoded metadata extent
+remains bounded by `max_metadata_bytes`.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
