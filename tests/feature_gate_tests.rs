@@ -2907,7 +2907,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     );
 
     let profile_box = box_start(&metadata, b"prof")?;
-    let mut ricc = metadata.clone();
+    let mut ricc = metadata;
     ricc[profile_box + 4..profile_box + 8].copy_from_slice(b"rICC");
     let expected_ricc = SourceColor::new()
         .with_avif_color(AvifColorProperties {
