@@ -299,9 +299,14 @@ fn decode_ifd(
                 .dimensions("TIFF tile byte range overflows")?;
             #[cfg(not(target_pointer_width = "32"))]
             let encoded_end = offset.saturating_add(byte_count);
-            let encoded = data
-                .get(offset..encoded_end)
-                .malformed("TIFF tile payload is out of bounds")?;
+            let encoded = if encoded_end <= data.len() {
+                &data[offset..encoded_end]
+            } else {
+                return Err(CodecError::NeedMore {
+                    minimum: encoded_end,
+                    message: "TIFF tile payload is out of bounds".to_owned(),
+                });
+            };
             let mut decoded = decode_block(compression, encoded, tile_size)?;
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
@@ -401,9 +406,14 @@ fn decode_ifd(
             .dimensions("TIFF strip byte range overflows")?;
         #[cfg(not(target_pointer_width = "32"))]
         let encoded_end = offset.saturating_add(byte_count);
-        let encoded = data
-            .get(offset..encoded_end)
-            .malformed("TIFF strip payload is out of bounds")?;
+        let encoded = if encoded_end <= data.len() {
+            &data[offset..encoded_end]
+        } else {
+            return Err(CodecError::NeedMore {
+                minimum: encoded_end,
+                message: "TIFF strip payload is out of bounds".to_owned(),
+            });
+        };
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
         let expected = row_bytes.wrapping_mul(strip_rows);
