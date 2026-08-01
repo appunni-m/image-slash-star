@@ -837,6 +837,41 @@ pub fn encode_with_policy(
     Ok(encoded)
 }
 
+/// Encode a decoded still image with cooperative cancellation.
+///
+/// The token is checked before codec dispatch and after the whole-buffer codec
+/// returns. Still encoders cannot yet poll during their codec-internal work;
+/// the sequence API additionally checks at retained-frame boundaries.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode`], plus [`ImageError::Cancelled`] when
+/// the token is already cancelled or fires at an implemented checkpoint.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    token: &CancellationToken,
+) -> ImageResult<Vec<u8>> {
+    encode_with_token_and_policy(img, format, opts, &EncodePolicy::default(), token)
+}
+
+/// [`encode_with_token`] with an explicit output-result policy.
+///
+/// The policy check runs only after cancellation has been checked by the
+/// codec boundary, so a cancelled operation never returns an oversized result.
+pub fn encode_with_token_and_policy(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+) -> ImageResult<Vec<u8>> {
+    let encoded = codecs::encode_format_with_token(img, format, opts, Some(token))?;
+    policy.check_output(&encoded, format, CodecOperation::StillEncode)?;
+    Ok(encoded)
+}
+
 /// Encode a still image or animation while retaining every source frame.
 ///
 /// Multi-frame output is currently supported for GIF, TIFF, WebP, and native
@@ -875,6 +910,40 @@ pub fn encode_sequence_with_policy(
     policy: &EncodePolicy,
 ) -> ImageResult<Vec<u8>> {
     let encoded = codecs::encode_sequence_format(sequence, format, opts)?;
+    policy.check_output(&encoded, format, CodecOperation::SequenceEncode)?;
+    Ok(encoded)
+}
+
+/// Encode a still image or animation with cooperative cancellation.
+///
+/// Sequence-capable codecs poll at retained-frame and finalization
+/// boundaries. Still-image codecs and one-frame fallback encodes currently
+/// observe cancellation only at the public codec boundary; incremental
+/// structural writing remains future work.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence`], plus
+/// [`ImageError::Cancelled`] when the token is cancelled at an implemented
+/// checkpoint.
+pub fn encode_sequence_with_token(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    token: &CancellationToken,
+) -> ImageResult<Vec<u8>> {
+    encode_sequence_with_token_and_policy(sequence, format, opts, &EncodePolicy::default(), token)
+}
+
+/// [`encode_sequence_with_token`] with an explicit output-result policy.
+pub fn encode_sequence_with_token_and_policy(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+) -> ImageResult<Vec<u8>> {
+    let encoded = codecs::encode_sequence_format_with_token(sequence, format, opts, Some(token))?;
     policy.check_output(&encoded, format, CodecOperation::SequenceEncode)?;
     Ok(encoded)
 }
@@ -945,6 +1014,32 @@ pub fn encode_to_sink_with_policy(
     write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
 }
 
+/// Encode a still image with cooperative cancellation and write it to a
+/// caller-owned sink only when the operation completes.
+pub fn encode_to_sink_with_token(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    token: &CancellationToken,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    encode_to_sink_with_token_and_policy(img, format, opts, &EncodePolicy::default(), token, sink)
+}
+
+/// Encode a still image with cooperative cancellation and an output-result
+/// policy before writing the admitted result to a caller-owned sink.
+pub fn encode_to_sink_with_token_and_policy(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
+    write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
+}
+
 /// Encode a still image or animation into a caller-owned output sink.
 ///
 /// # Errors
@@ -976,6 +1071,39 @@ pub fn encode_sequence_to_sink_with_policy(
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
     let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
+    write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
+}
+
+/// Encode a still image or animation with cooperative cancellation and write
+/// it to a caller-owned sink only when the operation completes.
+pub fn encode_sequence_to_sink_with_token(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    token: &CancellationToken,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    encode_sequence_to_sink_with_token_and_policy(
+        sequence,
+        format,
+        opts,
+        &EncodePolicy::default(),
+        token,
+        sink,
+    )
+}
+
+/// Encode a still image or animation with cooperative cancellation and an
+/// output-result policy before writing the admitted result to a sink.
+pub fn encode_sequence_to_sink_with_token_and_policy(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
 }
 
