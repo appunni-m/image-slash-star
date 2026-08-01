@@ -4,7 +4,10 @@
 //! Cargo feature pulls in only that codec and its private support code.
 
 use crate::SequenceDecodeBudget;
+#[cfg(feature = "png")]
+use crate::capabilities::CodecOperation;
 use crate::encode_options::EncodeOptions;
+use crate::encode_policy::EncodePolicy;
 use crate::types::{
     DecodedFrame, DecodedImage, DecodedSequence, FrameDisposal, ImageError, ImageErrorStage,
     ImageFormat, ImageInfo, ImageResult,
@@ -847,6 +850,155 @@ pub(crate) fn encode_format_with_token(
         _options,
         ImageErrorStage::StillEncode,
     ))
+}
+
+/// Try the first format-specific structural writer without changing the
+/// whole-buffer fallback used by other codecs.
+#[cfg_attr(not(feature = "png"), allow(unused_variables))]
+pub(crate) fn encode_format_to_sink_with_token(
+    image: &DecodedImage,
+    format: ImageFormat,
+    options: &EncodeOptions,
+    policy: EncodePolicy,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> ImageResult<Option<usize>> {
+    if format != ImageFormat::Png {
+        return Ok(None);
+    }
+    #[cfg(not(feature = "png"))]
+    {
+        Err(ImageError::FeatureDisabled {
+            format,
+            feature: "png",
+        })
+    }
+    #[cfg(feature = "png")]
+    {
+        #[cfg(any(
+            not(all(
+                feature = "jpeg",
+                feature = "png",
+                feature = "gif",
+                feature = "bmp",
+                feature = "tiff",
+                feature = "webp",
+                feature = "ico",
+                feature = "avif"
+            )),
+            target_arch = "wasm32"
+        ))]
+        ensure_available(format)?;
+        image
+            .validate()
+            .map_err(|error| error.with_format(format))?;
+        let EncodeOptions::Png(options) = options else {
+            return Err(option_format_mismatch(
+                format,
+                options,
+                ImageErrorStage::StillEncode,
+            ));
+        };
+        let encoded = png::encode::encode_to_sink(
+            image,
+            options,
+            policy,
+            CodecOperation::StillEncode,
+            token,
+            sink,
+        );
+        into_image_result(
+            encoded.map_err(|error| error.context("encode")),
+            format,
+            ImageErrorStage::StillEncode,
+        )
+        .map(Some)
+    }
+}
+
+/// Try the structural writer for a one-frame PNG sequence.
+#[cfg_attr(not(feature = "png"), allow(unused_variables))]
+pub(crate) fn encode_sequence_to_sink_with_token(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    options: &EncodeOptions,
+    policy: EncodePolicy,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> ImageResult<Option<usize>> {
+    if format != ImageFormat::Png {
+        return Ok(None);
+    }
+    #[cfg(not(feature = "png"))]
+    {
+        Err(ImageError::FeatureDisabled {
+            format,
+            feature: "png",
+        })
+    }
+    #[cfg(feature = "png")]
+    {
+        #[cfg(any(
+            not(all(
+                feature = "jpeg",
+                feature = "png",
+                feature = "gif",
+                feature = "bmp",
+                feature = "tiff",
+                feature = "webp",
+                feature = "ico",
+                feature = "avif"
+            )),
+            target_arch = "wasm32"
+        ))]
+        ensure_available(format)?;
+        sequence
+            .validate()
+            .map_err(|error| error.with_format(format))?;
+        let EncodeOptions::Png(options) = options else {
+            return Err(option_format_mismatch(
+                format,
+                options,
+                ImageErrorStage::SequenceEncode,
+            ));
+        };
+        if sequence.frames.len() != 1 {
+            return Err(ImageError::Unsupported {
+                format: Some(format),
+                message: "format cannot encode multiple retained frames".to_owned(),
+                stage: Some(ImageErrorStage::SequenceEncode),
+                reason: Some(crate::UnsupportedReason::NotImplemented),
+                offset: None,
+                identity: None,
+            });
+        }
+        let frame = &sequence.frames[0];
+        if !has_plain_still_semantics(sequence, frame) {
+            return Err(ImageError::Unsupported {
+                format: Some(format),
+                message: "still-image format cannot represent retained sequence metadata"
+                    .to_owned(),
+                stage: Some(ImageErrorStage::SequenceEncode),
+                reason: None,
+                offset: None,
+                identity: None,
+            });
+        }
+        let encoded = png::encode::encode_to_sink(
+            &frame.image,
+            options,
+            policy,
+            CodecOperation::SequenceEncode,
+            token,
+            sink,
+        );
+        into_image_result(
+            encoded.map_err(|error| error.context("encode sequence")),
+            format,
+            ImageErrorStage::SequenceEncode,
+        )
+        .map(Some)
+    }
 }
 
 /// Dispatch encoding without collapsing an animation to its first frame.

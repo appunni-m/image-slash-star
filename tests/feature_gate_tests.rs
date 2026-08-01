@@ -4105,6 +4105,36 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    struct RecordingSink {
+        bytes: Vec<u8>,
+        writes: usize,
+    }
+
+    impl OutputSink for RecordingSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+    }
+
+    struct CancellingSink {
+        bytes: Vec<u8>,
+        token: image_slash_star::CancellationToken,
+        writes: usize,
+    }
+
+    impl OutputSink for CancellingSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            self.bytes.extend_from_slice(bytes);
+            if self.writes == 1 {
+                self.token.cancel();
+            }
+            Ok(())
+        }
+    }
+
     // Exercise both standard-library sink impls directly, because the generic
     // encode functions only ever select the `&mut Vec<u8>` implementation.
     let mut direct = Vec::new();
@@ -4147,6 +4177,302 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             "borrowed sink length"
         );
         assert_eq!(borrowed, expected, "borrowed sink bytes");
+
+        // The PNG still writer emits the validated container in structural
+        // pieces. This is a Rust-only output-delivery contract: Pillow has no
+        // caller-owned sink and the parity matrix remains unchanged.
+        let mut structural = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &mut structural,
+            )?,
+            expected.len()
+        );
+        assert!(
+            structural.writes > 1,
+            "PNG output must cross write boundaries"
+        );
+        assert_eq!(structural.bytes, expected);
+        assert_eq!(&structural.bytes[..8], b"\x89PNG\r\n\x1a\n");
+        assert_eq!(&structural.bytes[8..12], &13u32.to_be_bytes());
+        assert_eq!(&structural.bytes[12..16], b"IHDR");
+
+        // A sink can cancel between structural writes. The already-delivered
+        // prefix is intentionally observable; cleanup/rollback remains a
+        // future destination contract rather than an unproved guarantee.
+        let token = image_slash_star::CancellationToken::new();
+        let mut cancelling = CancellingSink {
+            bytes: Vec::new(),
+            token: token.clone(),
+            writes: 0,
+        };
+        let error = match image_slash_star::encode_to_sink_with_token(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &token,
+            &mut cancelling,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "sink-triggered cancellation unexpectedly wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::Png));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(cancelling.writes, 1);
+        assert_eq!(cancelling.bytes, b"\x89PNG\r\n\x1a\n");
+
+        let sequence = image_slash_star::DecodedSequence::from_image(decoded.content.clone());
+        let sequence_expected =
+            image_slash_star::encode_sequence(&sequence, ImageFormat::Png, &options)?;
+        let mut sequence_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_sequence_to_sink(
+                &sequence,
+                ImageFormat::Png,
+                &options,
+                &mut sequence_sink,
+            )?,
+            sequence_expected.len()
+        );
+        assert_eq!(sequence_sink.bytes, sequence_expected);
+        assert!(sequence_sink.writes > 1);
+
+        let sequence_token = image_slash_star::CancellationToken::new();
+        let mut token_sequence_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_sequence_to_sink_with_token(
+                &sequence,
+                ImageFormat::Png,
+                &options,
+                &sequence_token,
+                &mut token_sequence_sink,
+            )?,
+            sequence_expected.len()
+        );
+        assert_eq!(token_sequence_sink.bytes, sequence_expected);
+        assert!(token_sequence_sink.writes > 1);
+
+        let mismatch_options = EncodeOptions::for_format(ImageFormat::Gif);
+        let mut mismatch_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let mismatch_error = match image_slash_star::encode_to_sink(
+            &decoded.content,
+            ImageFormat::Png,
+            &mismatch_options,
+            &mut mismatch_sink,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("PNG accepted mismatched options and wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            mismatch_error.kind(),
+            image_slash_star::ImageErrorKind::Parameter
+        );
+        assert_eq!(mismatch_error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(mismatch_sink.writes, 0);
+        assert!(mismatch_sink.bytes.is_empty());
+
+        let mut sequence_mismatch_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let sequence_mismatch_error = match image_slash_star::encode_sequence_to_sink(
+            &sequence,
+            ImageFormat::Png,
+            &mismatch_options,
+            &mut sequence_mismatch_sink,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "PNG sequence accepted mismatched options and wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            sequence_mismatch_error.kind(),
+            image_slash_star::ImageErrorKind::Parameter
+        );
+        assert_eq!(
+            sequence_mismatch_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(sequence_mismatch_sink.writes, 0);
+
+        let mut multiple = sequence.clone();
+        multiple.frames.push(multiple.frames[0].clone());
+        multiple.kind = image_slash_star::SequenceKind::TimedAnimation;
+        let mut multiple_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let multiple_error = match image_slash_star::encode_sequence_to_sink(
+            &multiple,
+            ImageFormat::Png,
+            &options,
+            &mut multiple_sink,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "PNG accepted multiple retained frames and wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            multiple_error.kind(),
+            image_slash_star::ImageErrorKind::Unsupported
+        );
+        assert_eq!(
+            multiple_error.unsupported_reason(),
+            Some(UnsupportedReason::NotImplemented)
+        );
+        assert_eq!(
+            multiple_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(multiple_sink.writes, 0);
+
+        let mut retained_metadata = sequence.clone();
+        retained_metadata.loop_count = Some(1);
+        let mut metadata_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let metadata_error = match image_slash_star::encode_sequence_to_sink(
+            &retained_metadata,
+            ImageFormat::Png,
+            &options,
+            &mut metadata_sink,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "PNG accepted retained sequence metadata and wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            metadata_error.kind(),
+            image_slash_star::ImageErrorKind::Unsupported
+        );
+        assert_eq!(metadata_error.unsupported_reason(), None);
+        assert_eq!(
+            metadata_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(metadata_sink.writes, 0);
+
+        let invalid_sequence = image_slash_star::DecodedSequence {
+            width: 0,
+            height: 1,
+            frames: Vec::new(),
+            loop_count: None,
+            background: None,
+            kind: image_slash_star::SequenceKind::SingleFrame,
+            opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
+            source_color: SourceColor::new(),
+        };
+        let mut invalid_sequence_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let invalid_sequence_error = match image_slash_star::encode_sequence_to_sink(
+            &invalid_sequence,
+            ImageFormat::Png,
+            &options,
+            &mut invalid_sequence_sink,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("PNG accepted an invalid sequence and wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            invalid_sequence_error.kind(),
+            image_slash_star::ImageErrorKind::Dimensions
+        );
+        assert_eq!(invalid_sequence_error.stage(), None);
+        assert_eq!(invalid_sequence_sink.writes, 0);
+
+        let mut sequence_failing = FailingSink;
+        let sequence_failing_error = match image_slash_star::encode_sequence_to_sink(
+            &sequence,
+            ImageFormat::Png,
+            &options,
+            &mut sequence_failing,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("failing PNG sequence sink unexpectedly wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            sequence_failing_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(
+            sequence_failing_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+
+        let mut token_sequence_failing = FailingSink;
+        let token_sequence_failing_error =
+            match image_slash_star::encode_sequence_to_sink_with_token(
+                &sequence,
+                ImageFormat::Png,
+                &options,
+                &sequence_token,
+                &mut token_sequence_failing,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "failing token PNG sequence sink unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+        assert_eq!(
+            token_sequence_failing_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(
+            token_sequence_failing_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
 
         let mut failing = FailingSink;
         let error = match image_slash_star::encode_to_sink(
@@ -4205,6 +4531,101 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             .is_err(),
             "invalid still input must fail before the sink"
         );
+
+        if cfg!(feature = "bmp") {
+            // BMP remains on the whole-buffer fallback. Keep this separate
+            // from the PNG structural-writer assertions so the two delivery
+            // contracts cannot be mistaken for parity coverage.
+            let bmp_options = EncodeOptions::for_format(ImageFormat::Bmp);
+            let expected_bmp =
+                image_slash_star::encode(&decoded.content, ImageFormat::Bmp, &bmp_options)?;
+            let mut bmp_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink(
+                    &decoded.content,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &mut bmp_sink,
+                )?,
+                expected_bmp.len()
+            );
+            assert_eq!(bmp_sink.bytes, expected_bmp);
+            assert_eq!(bmp_sink.writes, 1);
+
+            let bmp_token = image_slash_star::CancellationToken::new();
+            let mut bmp_token_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink_with_token(
+                    &decoded.content,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &bmp_token,
+                    &mut bmp_token_sink,
+                )?,
+                expected_bmp.len()
+            );
+            assert_eq!(bmp_token_sink.bytes, expected_bmp);
+            assert_eq!(bmp_token_sink.writes, 1);
+
+            let bmp_sequence =
+                image_slash_star::DecodedSequence::from_image(decoded.content.clone());
+            let mut bmp_sequence_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_sequence_to_sink_with_token(
+                    &bmp_sequence,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &bmp_token,
+                    &mut bmp_sequence_sink,
+                )?,
+                expected_bmp.len()
+            );
+            assert_eq!(bmp_sequence_sink.bytes, expected_bmp);
+            assert_eq!(bmp_sequence_sink.writes, 1);
+
+            let mut invalid_bmp_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert!(
+                image_slash_star::encode_to_sink(
+                    &invalid,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &mut invalid_bmp_sink,
+                )
+                .is_err(),
+                "invalid BMP fallback input must fail before the sink"
+            );
+            assert_eq!(invalid_bmp_sink.writes, 0);
+
+            let invalid_bmp_token = image_slash_star::CancellationToken::new();
+            let mut invalid_bmp_token_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert!(
+                image_slash_star::encode_to_sink_with_token(
+                    &invalid,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &invalid_bmp_token,
+                    &mut invalid_bmp_token_sink,
+                )
+                .is_err(),
+                "invalid token BMP fallback input must fail before the sink"
+            );
+            assert_eq!(invalid_bmp_token_sink.writes, 0);
+        }
     }
 
     if cfg!(feature = "gif") {

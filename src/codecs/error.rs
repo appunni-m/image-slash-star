@@ -26,6 +26,8 @@ pub(crate) enum CodecError {
     /// The operation stopped at a cooperative checkpoint because the
     /// caller's cancellation token fired.
     Cancelled,
+    /// A caller-owned output sink rejected one structural write.
+    OutputWrite(String),
     /// A codec failure wrapped with the encoded-input byte offset and stable
     /// container-structure identity of its parse site.
     #[cfg_attr(
@@ -88,9 +90,10 @@ impl CodecError {
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
             ImageError::Dimensions { message, .. } => Self::Dimensions(message),
             ImageError::Parameter { message, .. } => Self::Parameter(message),
-            ImageError::UnknownFormat
-            | ImageError::FeatureDisabled { .. }
-            | ImageError::OutputWrite { .. } => Self::Unsupported(error.to_string()),
+            ImageError::UnknownFormat | ImageError::FeatureDisabled { .. } => {
+                Self::Unsupported(error.to_string())
+            }
+            ImageError::OutputWrite { message, .. } => Self::OutputWrite(message),
             ImageError::LimitExceeded { .. } => Self::LimitExceeded(error),
             ImageError::NeedMoreData { minimum, .. } => Self::NeedMore {
                 minimum: usize::try_from(minimum).unwrap_or(usize::MAX),
@@ -123,6 +126,11 @@ impl CodecError {
             },
             Self::Cancelled => ImageError::Cancelled {
                 format: Some(format),
+                stage: Some(stage),
+            },
+            Self::OutputWrite(message) => ImageError::OutputWrite {
+                format: Some(format),
+                message,
                 stage: Some(stage),
             },
             Self::Unsupported(message) => ImageError::Unsupported {
@@ -224,6 +232,11 @@ impl CodecError {
                 format: Some(format),
                 stage: Some(stage),
             },
+            Self::OutputWrite(message) => ImageError::OutputWrite {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+            },
             Self::Unsupported(message) => ImageError::Unsupported {
                 format: Some(format),
                 message,
@@ -317,6 +330,7 @@ impl CodecError {
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
             Self::LimitExceeded(error) => Self::LimitExceeded(error),
             Self::Cancelled => Self::Cancelled,
+            Self::OutputWrite(message) => Self::OutputWrite(message),
             Self::At {
                 error,
                 offset,
@@ -560,6 +574,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
             format: Some(ImageFormat::Png),
             stage: Some(ImageErrorStage::StillDecode),
         },
+        ImageError::OutputWrite {
+            format: Some(ImageFormat::Png),
+            message: "sink rejected".to_owned(),
+            stage: Some(ImageErrorStage::StillEncode),
+        },
     ] {
         let _ = CodecError::from_image_error(error);
     }
@@ -633,6 +652,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = CodecError::Cancelled.into_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
     let _ = CodecError::Cancelled
         .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::StillDecode);
+    let _ = CodecError::OutputWrite("sink rejected".to_owned())
+        .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::SequenceEncode);
     let _ = CodecError::Unsupported("nested".to_owned())
         .at(4, "webp_chunk")
         .into_incremental_image_error(ImageFormat::WebP, ImageErrorStage::Inspection);
