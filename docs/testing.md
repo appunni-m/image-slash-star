@@ -467,14 +467,12 @@ The accepted Coverage MCP result for the same implementation state is:
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Historical managed runtime evidence comes from feature-matrix run
-`2e7f440a-e63e-4066-ab27-5af837577e6b`, submitted against the earlier revision
-`ebd6bbf4f826c4a532b49a15761c27bfbdd4249e`: 727 native and `wasm32-wasip1`
+Revision-bound managed runtime evidence comes from feature-matrix run
+`5bc37abb-d7d1-4ebd-be7a-7689f080c256`, submitted against
+`291f21fc613c17aefc131718fcfc68b65f737cd0`: 727 native and `wasm32-wasip1`
 runtime tests passed with zero failures, and its terminal capability-table
-record says the native and WASI lanes agree. A revision-bound rerun for
-`291f21fc613c17aefc131718fcfc68b65f737cd0` is in progress as run
-`5bc37abb-d7d1-4ebd-be7a-7689f080c256`. This is target/runtime evidence; it
-does not turn aggregate coverage, defensive/specification contracts, or
+record says the native and WASI lanes agree. This is target/runtime evidence;
+it does not turn aggregate coverage, defensive/specification contracts, or
 Rust-only diagnostic tests into Pillow-parity coverage.
 
 Coverage MCP run: `881147c6-3247-4849-bf20-9e4aa4c4ffce`
