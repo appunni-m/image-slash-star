@@ -598,9 +598,10 @@ fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     let color_type = reader.four_cc()?;
     match color_type {
         kind if kind == *b"rICC" || kind == *b"prof" => {
-            let length = reader.end.saturating_sub(reader.offset);
-            let profile = reader.take_span(length)?;
-            let data = profile.bytes(input)?;
+            // `payload` is a validated box span and `four_cc` has already
+            // consumed four bytes inside it, so the remaining span is
+            // bounded by construction and cannot fail another checked read.
+            let data = &input[reader.offset..reader.end];
             if data.is_empty() {
                 return Err(parse_failure!());
             }
