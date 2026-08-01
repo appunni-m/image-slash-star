@@ -2996,6 +2996,10 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     invalid_pasp[pasp_box + 8..pasp_box + 12].fill(0);
     assert_malformed(&invalid_pasp, "zero pasp spacing")?;
 
+    let mut invalid_v_pasp = pasp;
+    invalid_v_pasp[pasp_box + 12..pasp_box + 16].fill(0);
+    assert_malformed(&invalid_v_pasp, "zero pasp vertical spacing")?;
+
     // Empty and overlong payloads are malformed even when the first byte is a
     // legal value. The size changes keep each witness at the same container
     // boundary, so the parser reaches the property-specific check.
