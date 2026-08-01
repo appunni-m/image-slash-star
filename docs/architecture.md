@@ -370,7 +370,7 @@ The boundary manifests exercise each resource at below/at/above and
 feature that introduces a work dimension outside this set must add a typed
 limit before acceptance. Caller-visible policy options that shape results
 (lenient-versus-strict parsing, requested output mode) are result policy, not
-resource limits, and belong with the API-029/033 family.
+resource limits, and belong with the API-033 family.
 
 ### Allocation and arithmetic policy
 
