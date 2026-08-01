@@ -1260,6 +1260,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
 
     let luma = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
+    // Still codecs are currently whole-buffer operations.  The coverage-only
+    // hook makes the post-codec public-boundary cancellation checkpoint
+    // deterministic; Pillow has no equivalent caller token to exercise this
+    // Rust-only path.
+    let post_codec_cancel = crate::CancellationToken::new();
+    post_codec_cancel.cancel_after(1);
+    let _ = encode_format_with_token(
+        &luma,
+        ImageFormat::Png,
+        &EncodeOptions::for_format(ImageFormat::Png),
+        Some(&post_codec_cancel),
+    );
+
     let two_frame_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -1300,6 +1313,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &two_frame_sequence,
         ImageFormat::Png,
         &EncodeOptions::for_format(ImageFormat::Png),
+    );
+
+    // These are Rust-only token-dispatch checks.  CancellationToken and the
+    // caller-owned output contract are not represented by Pillow parity rows.
+    #[cfg(feature = "gif")]
+    let _ = encode_sequence_format_with_token(
+        &two_frame_sequence,
+        ImageFormat::Gif,
+        &EncodeOptions::for_format(ImageFormat::Gif),
+        Some(&crate::CancellationToken::new()),
+    );
+    #[cfg(all(feature = "avif", not(target_arch = "wasm32")))]
+    let _ = encode_sequence_format_with_token(
+        &two_frame_sequence,
+        ImageFormat::Avif,
+        &EncodeOptions::for_format(ImageFormat::Avif),
+        Some(&crate::CancellationToken::new()),
+    );
+    #[cfg(feature = "tiff")]
+    let _ = encode_sequence_format_with_token(
+        &two_frame_sequence,
+        ImageFormat::Tiff,
+        &EncodeOptions::for_format(ImageFormat::Tiff),
+        Some(&crate::CancellationToken::new()),
+    );
+    #[cfg(feature = "webp")]
+    let _ = encode_sequence_format_with_token(
+        &two_frame_sequence,
+        ImageFormat::WebP,
+        &EncodeOptions::for_format(ImageFormat::WebP),
+        Some(&crate::CancellationToken::new()),
     );
 
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);
