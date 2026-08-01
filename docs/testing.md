@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `b484fb171aa129729e0c5aec409cda0aac36c281`
+Reviewed: 2026-08-02 on the working tree based on revision `d90ee46030d6b299f2034a220b4ce57681548fbd`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -135,6 +135,14 @@ still/sequence `OutputSink` destinations. The compression context, unsupported
 mode, and destination results are Rust-only structured contracts; they do not
 add fields or caller-owned encoder state to the Pillow parity matrix.
 
+The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
+generic whole-buffer fallback for every enabled JPEG, GIF, TIFF, WebP, ICO, and
+native AVIF still encoder. Each real public call must normalize a rejecting
+destination to `OutputWrite` with the selected format and `StillEncode` stage,
+without an input offset, container identity, or `UnsupportedReason`. These are
+Rust-only destination contracts: Pillow has no caller-owned sink, so the cases
+are not parity rows and any aggregate coverage from them is incidental evidence.
+
 The test boundary is deliberate. `diagnostic_manifest_matches_the_non_parity_contract`
 in `tests/feature_gate_tests.rs` and
 `trailing_input_policy_manifest_matches_the_public_contract` in
@@ -206,7 +214,7 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `b484fb171aa129729e0c5aec409cda0aac36c281`, the generated matrix
+For the current working tree based on revision `d90ee46030d6b299f2034a220b4ce57681548fbd`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -585,17 +593,17 @@ The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`765be27b-6816-48a4-a044-d93165704033`, submitted against
-`b484fb171aa129729e0c5aec409cda0aac36c281`: 859 checks passed with zero
+`4506b285-7124-4399-bd3e-b79224063274`, submitted against
+`d90ee46030d6b299f2034a220b4ce57681548fbd`: 859 checks passed with zero
 failures, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `5ad8bb03-f105-4dad-ba2b-334fb71be242`
+Coverage MCP run: `dd82711a-396e-4243-be63-4450097e357e`
 
-Snapshot: `78718b18-ff5a-4cd8-80c3-60e9f0eafecd`
+Snapshot: `6f26a724-deae-4d71-ba02-299965427f60`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
