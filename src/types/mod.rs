@@ -62,7 +62,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .with_rotation(AvifRotation::CounterClockwise90)
             .with_mirror(AvifMirrorAxis::LeftRight),
     );
+    assert_eq!(
+        transform_only.avif_transform(),
+        Some(
+            AvifTransformProperties::new()
+                .with_rotation(AvifRotation::CounterClockwise90)
+                .with_mirror(AvifMirrorAxis::LeftRight)
+        )
+    );
     assert!(!transform_only.is_empty());
+    assert!(
+        !AvifTransformProperties::new()
+            .with_rotation(AvifRotation::Zero)
+            .is_empty()
+    );
+    assert!(AvifTransformProperties::new().is_empty());
     assert!(SourceDescriptor::new().is_empty());
 
     // Exercise every short-circuit path of the source-color emptiness check

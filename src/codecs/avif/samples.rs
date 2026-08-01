@@ -3662,4 +3662,43 @@ pub(crate) fn __coverage_exercise_private_branches() {
     coverage_metadata_mutations(grid, 1_467);
     coverage_metadata_mutations(animated, 1_023);
     coverage_metadata_mutations(high_bit, 2_022);
+
+    let duplicate_rotation = Meta {
+        primary_item_id: 1,
+        properties: vec![
+            Property::Rotation(crate::types::AvifRotation::Zero),
+            Property::Rotation(crate::types::AvifRotation::CounterClockwise90),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_rotation.transform();
+    let duplicate_mirror = Meta {
+        primary_item_id: 1,
+        properties: vec![
+            Property::Mirror(crate::types::AvifMirrorAxis::TopBottom),
+            Property::Mirror(crate::types::AvifMirrorAxis::LeftRight),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_mirror.transform();
 }
