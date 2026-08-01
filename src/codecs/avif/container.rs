@@ -6,9 +6,9 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
-    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
-    RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
+    AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMasteringDisplayColorVolume,
+    AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat,
+    ImageInfo, ImageMode, RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -188,6 +188,7 @@ enum Property {
     Color(AvifColorProperties),
     IccProfile(RawIccProfile),
     ContentLightLevel(AvifContentLightLevel),
+    MasteringDisplayColorVolume(AvifMasteringDisplayColorVolume),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
     PixelAspectRatio(AvifPixelAspectRatio),
@@ -621,6 +622,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
         kind if kind == *b"av1C" => parse_av1c(property.payload),
         kind if kind == *b"colr" => parse_colr(property.payload),
         kind if kind == *b"clli" => parse_clli(property.payload),
+        kind if kind == *b"mdcv" => parse_mdcv(property.payload),
         kind if kind == *b"irot" => parse_irot(property.payload),
         kind if kind == *b"imir" => parse_imir(property.payload),
         kind if kind == *b"pasp" => parse_pasp(property.payload),
@@ -679,6 +681,40 @@ fn parse_clli(payload: &[u8]) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::ContentLightLevel(content_light_level))
+}
+
+fn parse_mdcv(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    // ISO/IEC 14496-12 stores the three primaries in G, B, R order. Keep the
+    // public descriptor in the conventional R, G, B order while retaining
+    // each encoded 16-bit coordinate exactly.
+    let green_x = reader.u16()?;
+    let green_y = reader.u16()?;
+    let blue_x = reader.u16()?;
+    let blue_y = reader.u16()?;
+    let red_x = reader.u16()?;
+    let red_y = reader.u16()?;
+    let white_point_x = reader.u16()?;
+    let white_point_y = reader.u16()?;
+    let max_display_mastering_luminance = reader.u32()?;
+    let min_display_mastering_luminance = reader.u32()?;
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::MasteringDisplayColorVolume(
+        AvifMasteringDisplayColorVolume::new(
+            red_x,
+            red_y,
+            green_x,
+            green_y,
+            blue_x,
+            blue_y,
+            white_point_x,
+            white_point_y,
+            max_display_mastering_luminance,
+            min_display_mastering_luminance,
+        ),
+    ))
 }
 
 fn parse_irot(payload: &[u8]) -> ParseResult<Property> {
@@ -935,6 +971,18 @@ impl Meta {
                 })
         {
             source_color = source_color.with_avif_content_light_level(content_light_level);
+        }
+        let mut mastering_display_color_volume = None;
+        for property in self.associated(primary) {
+            if let Property::MasteringDisplayColorVolume(value) = property
+                && mastering_display_color_volume.replace(*value).is_some()
+            {
+                return Err(parse_failure!());
+            }
+        }
+        if let Some(mastering_display_color_volume) = mastering_display_color_volume {
+            source_color = source_color
+                .with_avif_mastering_display_color_volume(mastering_display_color_volume);
         }
         let source = self.source_descriptor(primary)?;
         Ok(Some(Details {

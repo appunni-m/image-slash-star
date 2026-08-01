@@ -150,6 +150,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .with_avif_content_light_level(AvifContentLightLevel::new(1_000, 500))
             .is_empty()
     );
+    let mastering_display = AvifMasteringDisplayColorVolume::new(
+        68_000, 32_000, 26_500, 69_000, 15_000, 6_000, 31_270, 32_900, 4_000_000, 5,
+    );
+    assert_eq!(mastering_display.red_x(), 68_000);
+    assert_eq!(mastering_display.red_y(), 32_000);
+    assert_eq!(mastering_display.green_x(), 26_500);
+    assert_eq!(mastering_display.green_y(), 69_000);
+    assert_eq!(mastering_display.blue_x(), 15_000);
+    assert_eq!(mastering_display.blue_y(), 6_000);
+    assert_eq!(mastering_display.white_point_x(), 31_270);
+    assert_eq!(mastering_display.white_point_y(), 32_900);
+    assert_eq!(
+        mastering_display.max_display_mastering_luminance(),
+        4_000_000
+    );
+    assert_eq!(mastering_display.min_display_mastering_luminance(), 5);
+    assert!(
+        !SourceColor::new()
+            .with_avif_mastering_display_color_volume(mastering_display)
+            .is_empty()
+    );
 
     // The preflight overflow arm of the transfer layout is exercised with the
     // largest representable canvas and 16 bytes per pixel.
@@ -1010,6 +1031,7 @@ pub struct SourceColor {
     icc_profile: Option<RawIccProfile>,
     avif_color: Option<AvifColorProperties>,
     avif_content_light_level: Option<AvifContentLightLevel>,
+    avif_mastering_display_color_volume: Option<AvifMasteringDisplayColorVolume>,
 }
 
 /// CICP color properties declared by an AVIF item.
@@ -1059,6 +1081,120 @@ impl AvifContentLightLevel {
     #[must_use]
     pub const fn max_picture_average_light_level(&self) -> u16 {
         self.max_picture_average_light_level
+    }
+}
+
+/// Mastering-display color-volume information declared by an AVIF `mdcv`
+/// property.
+///
+/// The ISO-BMFF wire order is green, blue, then red; this public descriptor
+/// exposes the same exact 16-bit coordinates in the more useful red, green,
+/// blue order. The luminance values are retained as the encoded unsigned
+/// 32-bit fields and do not cause tone mapping or any other transformation of
+/// decoded samples.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AvifMasteringDisplayColorVolume {
+    red_x: u16,
+    red_y: u16,
+    green_x: u16,
+    green_y: u16,
+    blue_x: u16,
+    blue_y: u16,
+    white_point_x: u16,
+    white_point_y: u16,
+    max_display_mastering_luminance: u32,
+    min_display_mastering_luminance: u32,
+}
+
+impl AvifMasteringDisplayColorVolume {
+    /// Create a mastering-display color-volume declaration from its encoded
+    /// coordinates and luminance values.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(
+        red_x: u16,
+        red_y: u16,
+        green_x: u16,
+        green_y: u16,
+        blue_x: u16,
+        blue_y: u16,
+        white_point_x: u16,
+        white_point_y: u16,
+        max_display_mastering_luminance: u32,
+        min_display_mastering_luminance: u32,
+    ) -> Self {
+        Self {
+            red_x,
+            red_y,
+            green_x,
+            green_y,
+            blue_x,
+            blue_y,
+            white_point_x,
+            white_point_y,
+            max_display_mastering_luminance,
+            min_display_mastering_luminance,
+        }
+    }
+
+    /// Return the red-primary x coordinate.
+    #[must_use]
+    pub const fn red_x(&self) -> u16 {
+        self.red_x
+    }
+
+    /// Return the red-primary y coordinate.
+    #[must_use]
+    pub const fn red_y(&self) -> u16 {
+        self.red_y
+    }
+
+    /// Return the green-primary x coordinate.
+    #[must_use]
+    pub const fn green_x(&self) -> u16 {
+        self.green_x
+    }
+
+    /// Return the green-primary y coordinate.
+    #[must_use]
+    pub const fn green_y(&self) -> u16 {
+        self.green_y
+    }
+
+    /// Return the blue-primary x coordinate.
+    #[must_use]
+    pub const fn blue_x(&self) -> u16 {
+        self.blue_x
+    }
+
+    /// Return the blue-primary y coordinate.
+    #[must_use]
+    pub const fn blue_y(&self) -> u16 {
+        self.blue_y
+    }
+
+    /// Return the white-point x coordinate.
+    #[must_use]
+    pub const fn white_point_x(&self) -> u16 {
+        self.white_point_x
+    }
+
+    /// Return the white-point y coordinate.
+    #[must_use]
+    pub const fn white_point_y(&self) -> u16 {
+        self.white_point_y
+    }
+
+    /// Return the maximum display-mastering luminance field.
+    #[must_use]
+    pub const fn max_display_mastering_luminance(&self) -> u32 {
+        self.max_display_mastering_luminance
+    }
+
+    /// Return the minimum display-mastering luminance field.
+    #[must_use]
+    pub const fn min_display_mastering_luminance(&self) -> u32 {
+        self.min_display_mastering_luminance
     }
 }
 
@@ -1310,6 +1446,7 @@ impl SourceColor {
             icc_profile: None,
             avif_color: None,
             avif_content_light_level: None,
+            avif_mastering_display_color_volume: None,
         }
     }
 
@@ -1394,6 +1531,25 @@ impl SourceColor {
         self.avif_content_light_level
     }
 
+    /// Record the AVIF mastering-display color-volume declaration.
+    #[must_use]
+    pub const fn with_avif_mastering_display_color_volume(
+        mut self,
+        mastering_display_color_volume: AvifMasteringDisplayColorVolume,
+    ) -> Self {
+        self.avif_mastering_display_color_volume = Some(mastering_display_color_volume);
+        self
+    }
+
+    /// Return the AVIF mastering-display color-volume declaration, when
+    /// retained.
+    #[must_use]
+    pub const fn avif_mastering_display_color_volume(
+        &self,
+    ) -> Option<AvifMasteringDisplayColorVolume> {
+        self.avif_mastering_display_color_volume
+    }
+
     /// Whether this descriptor retains no source color facts.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
@@ -1403,6 +1559,7 @@ impl SourceColor {
             && self.icc_profile.is_none()
             && self.avif_color.is_none()
             && self.avif_content_light_level.is_none()
+            && self.avif_mastering_display_color_volume.is_none()
     }
 }
 
