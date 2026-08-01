@@ -2731,7 +2731,8 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
         AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
-        AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, SourceColor, SourceDescriptor,
+        AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, RawIccProfile, SourceColor,
+        SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -2871,6 +2872,70 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         .ok_or("orientation AVIF has no irot property")?;
     let baseline = image_slash_star::decode(&bytes)?;
     let expected_pixels = baseline.content.pixels;
+
+    // ICC in AVIF is a `colr` item property, not a Pillow-observable decoded
+    // field. Use the committed Pillow-generated metadata output as the source
+    // witness, but keep the structured assertion in this defensive/specification
+    // contract rather than adding a parity-matrix row.
+    let metadata =
+        fs::read(root.join("tests/fixtures/outputs/encoded/Encode.avif_enc_metadata.bin"))?;
+    let expected_icc = SourceColor::new()
+        .with_avif_color(AvifColorProperties {
+            color_primaries: 2,
+            transfer_characteristics: 2,
+            matrix_coefficients: 6,
+            full_range: true,
+        })
+        .with_icc_profile(RawIccProfile {
+            keyword: b"prof".to_vec(),
+            data: b"pillow-rs-icc".to_vec(),
+        });
+    let metadata_inspected = image_slash_star::inspect(&metadata)?;
+    assert_eq!(
+        metadata_inspected.source_color, expected_icc,
+        "AVIF ICC inspect"
+    );
+    let metadata_decoded = image_slash_star::decode(&metadata)?;
+    assert_eq!(
+        metadata_decoded.content.source_color, expected_icc,
+        "AVIF ICC decode"
+    );
+    let metadata_sequence = image_slash_star::decode_sequence(&metadata)?;
+    assert_eq!(
+        metadata_sequence.content.source_color, expected_icc,
+        "AVIF ICC sequence fallback"
+    );
+
+    let profile_box = box_start(&metadata, b"prof")?;
+    let mut ricc = metadata.clone();
+    ricc[profile_box + 4..profile_box + 8].copy_from_slice(b"rICC");
+    let expected_ricc = SourceColor::new()
+        .with_avif_color(AvifColorProperties {
+            color_primaries: 2,
+            transfer_characteristics: 2,
+            matrix_coefficients: 6,
+            full_range: true,
+        })
+        .with_icc_profile(RawIccProfile {
+            keyword: b"rICC".to_vec(),
+            data: b"pillow-rs-icc".to_vec(),
+        });
+    let ricc_inspected = image_slash_star::inspect(&ricc)?;
+    assert_eq!(ricc_inspected.source_color, expected_ricc, "rICC inspect");
+    let ricc_decoded = image_slash_star::decode(&ricc)?;
+    assert_eq!(
+        ricc_decoded.content.source_color, expected_ricc,
+        "rICC decode"
+    );
+    assert_eq!(ricc_decoded.content.pixels, metadata_decoded.content.pixels);
+    let ricc_sequence = image_slash_star::decode_sequence(&ricc)?;
+    assert_eq!(
+        ricc_sequence.content.source_color, expected_ricc,
+        "rICC sequence fallback"
+    );
+
+    let empty_icc = append_associated_property(&bytes, b"colr", b"prof", 6)?;
+    assert_malformed(&empty_icc, "empty AVIF ICC profile")?;
 
     // CLLI is an item property, not a Pillow-observable result. Keep this
     // witness in the defensive/specification contract rather than adding a
