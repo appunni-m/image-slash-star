@@ -828,9 +828,7 @@ impl Meta {
     }
 
     fn source_color(&self) -> SourceColor {
-        let Some(primary) = self.primary_item_id else {
-            return SourceColor::new();
-        };
+        let primary = self.primary_item_id.unwrap_or_default();
         self.associated(primary)
             .find_map(|property| match property {
                 Property::Color(color) => Some(SourceColor::new().with_avif_color(*color)),

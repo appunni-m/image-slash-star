@@ -2618,6 +2618,15 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
         matrix_coefficients: 6,
         full_range: true,
     });
+    assert_eq!(
+        expected.avif_color(),
+        Some(AvifColorProperties {
+            color_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
+            full_range: true,
+        })
+    );
 
     // This is defensive/specification evidence for an item property. Pillow
     // parity rows still assert pixels and mode, but do not expose this
@@ -2639,7 +2648,7 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
         .windows(4)
         .position(|window| window == b"nclx")
         .ok_or("baseline AVIF has no nclx property")?;
-    let mut invalid = bytes;
+    let mut invalid = bytes.clone();
     invalid[nclx + 10] |= 1;
     let error = match image_slash_star::inspect(&invalid) {
         Ok(_) => return Err("reserved nclx bits must fail".into()),
@@ -2647,6 +2656,23 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
     };
     assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
     assert_eq!(error.identity(), Some("avif_box"));
+
+    // A declared nclx payload with extra bytes is a malformed property in
+    // both the inspection parser and the sample extractor.
+    let colr_size = nclx.saturating_sub(8);
+    let mut extra = bytes;
+    let oversized = 20_u32.to_be_bytes();
+    extra[colr_size..colr_size + 4].copy_from_slice(&oversized);
+    let error = match image_slash_star::inspect(&extra) {
+        Ok(_) => return Err("extra nclx payload must fail inspection".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+    let error = match image_slash_star::decode(&extra) {
+        Ok(_) => return Err("extra nclx payload must fail decode".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
     Ok(())
 }
 
