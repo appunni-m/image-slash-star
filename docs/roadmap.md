@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `8e216604890581ddf9b624cc3b9d43b793f49f33`
+Reviewed: 2026-08-01 on the working tree based on revision `7aa78f26e9507e0e45a4423037a13f108df6b4b7`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -42,6 +42,8 @@ The following decisions are already implemented and are not roadmap work:
 - immutable encoded snapshots and shared lazy decode results;
 - runtime capability discovery that distinguishes feature, target, and
   operation availability;
+- stable `UnsupportedReason` values that align target-unavailable and
+  not-implemented operation failures with capability discovery;
 - one Cargo feature per format, with ICO forwarding PNG and BMP;
 - exact fixture-backed errors and byte outputs;
 - no general image-processing layer; and
@@ -54,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `8e216604890581ddf9b624cc3b9d43b793f49f33`,
+The correction evidence below is the working-tree state based on `7aa78f26e9507e0e45a4423037a13f108df6b4b7`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -186,6 +188,7 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-065 | Primary AVIF `colr` ICC profiles using `prof` or `rICC` now flow through bounded inspection and sample parsing into `SourceColor`, retaining the exact four-byte profile kind and profile bytes without color conversion. Empty profiles are rejected as malformed. | `avif_item_properties_match_the_non_parity_contract` uses the committed Pillow-generated encoded metadata output as a source witness, exercises both profile kinds, checks inspect/still/sequence agreement, pixel preservation, and empty-profile rejection. This is defensive-model/specification evidence; the existing Pillow parity matrix and its row count remain unchanged. |
 | COR-066 | Primary AVIF `mdcv` mastering-display color-volume properties now flow through both bounded AVIF parsers into `SourceColor`. The exact 16-bit red/green/blue and white-point coordinates plus unsigned 32-bit maximum/minimum luminance fields are retained in the descriptor's canonical RGB accessor order; no tone mapping or pixel conversion is applied, and duplicate primary associations are rejected. | `avif_item_properties_match_the_non_parity_contract` associates a deliberately distinguishable 24-byte `mdcv` witness, checks the wire-order mapping on inspect/still/sequence results and unchanged pixels, and rejects truncated, overlong, and duplicate properties. This is defensive-model/specification evidence; Pillow exposes no equivalent structured item-property result, so the parity matrix and row count remain unchanged. |
 | COR-067 | `ImageError::OutputWrite` now gives caller-owned sink failures a stable recovery category at the `encode_to_sink` and `encode_sequence_to_sink` boundary. The result retains the selected output format, `StillEncode` or `SequenceEncode` stage, and sink diagnostic, while input offset and container identity remain absent; structural streaming, short writes, and partial-container cleanup remain open under API-017/QA-016. | `output_sinks_receive_the_exact_encoded_bytes` asserts exact bytes and lengths for successful sinks plus the `OutputWrite` kind, format, stage, diagnostic, and absent input context for deterministic still and sequence sink failures. This is an ordinary Rust API contract, not Pillow-parity evidence. |
+| COR-068 | `ImageError::Unsupported` now optionally retains `UnsupportedReason::TargetUnavailable` or `UnsupportedReason::NotImplemented`, exposed through `unsupported_reason()`. AVIF WASM sequence decode/encode failures identify target unavailability, unsupported multi-frame JPEG/BMP/ICO/PNG fallback identifies an unimplemented operation, and input-class incompatibilities remain reason-free. | `unsupported_reasons_are_non_parity_capability_contracts` asserts the Rust-only reason field, and the feature/target manifest checks AVIF WASM reason values. This is capability-contract evidence, not Pillow parity. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -293,7 +296,7 @@ public reusable conversion layer would violate project scope.
 | API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. Every current decoder work dimension is bounded by that resource set (documented per codec in the architecture reference). Encoded-output allocation remains outside this decode policy; lenient-versus-strict parsing and requested output mode are result-shaping policy belonging with the API-033 family. | Extend the resource contract one independently enforceable allocation/work dimension at a time, including an explicit encoded-output policy. Preserve the unlimited convenience wrappers, reject before bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator or cache policy. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration and cache policy. Keep eager `decode_sequence` as a convenience collector. |
-| API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection now has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; cancellation and target/availability `Unsupported` detail plus BMP/ICO/WebP-decode internals remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, and output-destination fixtures. |
+| API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures; BMP/ICO/WebP-decode parse internals remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. AVIF chroma-position and non-primary item color properties, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve opaque profiles and exact container fields per format. Never imply that retaining color or transform metadata means pixel conversion was applied. |
 | API-036 | Work control | Cooperative cancellation now exists for still and sequence decode (`CancellationToken` + token-aware APIs, COR-060) with deterministic cleanup at structural checkpoints; encode cancellation and progress callbacks remain future work. | Extend the same token contract to long encodes and any future streaming surface. |
@@ -310,7 +313,6 @@ public reusable conversion layer would violate project scope.
 | API-052 | Reserved presentation values | A format-neutral `Reserved(u8)` disposal or blend value does not identify the governing format or whether round-trip replay is legal. The same numeric code has no universal meaning across GIF, APNG, and WebP. | Retain a format-qualified raw code beside normalized known semantics; unknown values must not be silently replayed into another target. |
 | API-053 | Rendered-frame state | `RenderedCanvas` says the pixel extent but not whether the returned canvas is before blend, after blend, or after disposal, nor which prior frame state was used. That distinction affects frame extraction, seeking, cache reuse, and re-encoding. | Define the exact presentation instant in rustdoc and fixtures. Expose raw source rectangles separately when exact container reconstruction needs them. |
 | API-054 | Mixed-frame contract | `DecodedSequence` has no canvas sample mode or palette namespace. Frames may carry different modes and local palettes, while a GIF background index refers to a global table rather than an arbitrary frame palette. | Define allowed mixed-mode sequences and give palette-index backgrounds an explicit palette owner before generic sequence encoding expands. |
-| API-055 | Availability reason | Runtime capability queries now distinguish feature-disabled, target-unavailable, operation-not-implemented, and restricted portable AVIF. Attempted operations still collapse portable-subset rejection, operation/source/configuration unavailability, and other cases into `Unsupported`. | Add stable reason and stage fields to `ImageError` that agree with capability discovery; keep diagnostic prose non-stable. |
 
 ### Codec-by-codec capability backlog
 
@@ -1059,7 +1061,7 @@ evidence, and Coverage MCP result before opening the next slice.
 This order turns each discovery into a failing fixture before implementation
 and avoids broad rewrites.
 
-Completed first: COR-001 through COR-066, including exact WebP mode
+Completed first: COR-001 through COR-068, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,
 lossless one-frame sequence fallback, public-mode validation, and common
 decode/sequence error parity, exact sequence evidence, and bounded AVIF brand
@@ -1114,7 +1116,9 @@ native host and `wasm32-wasip1`, executed under Node's WASI preview1 in CI,
 and checked against a committed fixture; the exact feature-matrix command is
 registered with Coverage MCP. AVIF WASM operations now report staged
 codec-level `Unsupported` errors that match capability discovery instead of a
-stale operation-free gate. `DecodedSequence` now carries an explicit
+stale operation-free gate, and target-unavailable AVIF sequence/encode
+failures expose that reason through `unsupported_reason()`. `DecodedSequence`
+now carries an explicit
 `SequenceKind` so TIFF pages are never conflated with timed animation, and
 `SourceDescriptor` records the container-declared alpha association
 (`SourceAlpha`) without changing the normalized unassociated transfer layout.
@@ -1180,7 +1184,7 @@ contract. AVIF EXIF/XMP, chroma sample position, and non-primary/auxiliary
 metadata remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
 `924a922e-4f47-49c7-9367-885e1ca04678`, submitted against
-`8e216604890581ddf9b624cc3b9d43b793f49f33`; it passed 727 checks with zero
+`9e37df486410f71868146ef348034782f0fb5658`; it passed 727 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
