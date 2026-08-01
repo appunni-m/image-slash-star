@@ -3425,6 +3425,71 @@ fn coverage_structural_states() {
         ..Meta::default()
     };
     let _ = duplicate_config_meta.av1c(1);
+
+    let missing_metadata_location = Meta {
+        items: vec![Item {
+            id: 9,
+            kind: *b"Exif",
+            metadata_kind: Some(*b"Exif"),
+        }],
+        ..Meta::default()
+    };
+    let _ = missing_metadata_location.metadata(&[]);
+    let empty_metadata_location = Meta {
+        items: vec![Item {
+            id: 9,
+            kind: *b"Exif",
+            metadata_kind: Some(*b"Exif"),
+        }],
+        locations: vec![ItemLocation {
+            item_id: 9,
+            source: ExtentSource::File,
+            extents: Vec::new(),
+        }],
+        ..Meta::default()
+    };
+    let _ = empty_metadata_location.metadata(&[]);
+
+    let coverage_plane = |spans: &[(usize, usize)]| EncodedPlane {
+        samples: vec![EncodedSample {
+            spans: spans
+                .iter()
+                .map(|&(start, end)| ByteSpan { start, end })
+                .collect(),
+            config: config_span,
+            sync: true,
+            duration: 1,
+        }],
+    };
+    let empty_payload = ExtractedAvif {
+        input: &[],
+        still: None,
+        sequence: None,
+        consumed: 0,
+        retained_boxes: Vec::new(),
+        metadata: Vec::new(),
+        source_color: SourceColor::new(),
+        transform: None,
+    };
+    assert_eq!(pixel_payload_bytes(&empty_payload), Ok(0));
+    let mixed_payload = ExtractedAvif {
+        input: &[],
+        still: Some(StillPayload {
+            color: coverage_plane(&[(0, 0), (1, 3), (2, 5), (5, 6), (8, 10)]),
+            alpha: Some(coverage_plane(&[(12, 13)])),
+        }),
+        sequence: Some(SequencePayload {
+            color: coverage_plane(&[(14, 16)]),
+            alpha: Some(coverage_plane(&[(16, 18)])),
+            timescale: NonZeroU32::new(1).unwrap(),
+        }),
+        consumed: 0,
+        retained_boxes: Vec::new(),
+        metadata: Vec::new(),
+        source_color: SourceColor::new(),
+        transform: None,
+    };
+    assert_eq!(pixel_payload_bytes(&mixed_payload), Ok(12));
     let duplicate_alpha_meta = Meta {
         properties: vec![
             Property::AuxC { is_alpha: true },
