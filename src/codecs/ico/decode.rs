@@ -11,7 +11,7 @@
 //!
 //! Reference: <https://en.wikipedia.org/wiki/ICO_(file_format)>
 
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt, need_slice, terminalize};
 use crate::types::{ColorType, CursorHotspot, DecodedImage};
 
 /// ICO header size: 6 bytes
@@ -26,7 +26,10 @@ const ICO_DIR_ENTRY_SIZE: usize = 16;
 pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     // ICO header: reserved(2) + type(2) + count(2)
     if data.len() < ICO_HEADER_SIZE {
-        return Err(CodecError::Malformed("truncated ICO header".to_owned()));
+        return Err(CodecError::NeedMore {
+            minimum: ICO_HEADER_SIZE,
+            message: "truncated ICO header".to_owned(),
+        });
     }
 
     let reserved = u16::from_le_bytes([data[0], data[1]]);
@@ -54,7 +57,10 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
     let entries_start = ICO_HEADER_SIZE;
     let entries_end = entries_start.saturating_add(count.saturating_mul(ICO_DIR_ENTRY_SIZE));
     if data.len() < entries_end {
-        return Err(CodecError::Malformed("truncated ICO directory".to_owned()));
+        return Err(CodecError::NeedMore {
+            minimum: entries_end,
+            message: "truncated ICO directory".to_owned(),
+        });
     }
 
     // Find the best entry: prefer 256x256, then largest image
@@ -102,7 +108,10 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, Option<usize>)> {
 /// entry directory. Entry payload bytes are pixel data by this contract.
 pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     if data.len() < ICO_HEADER_SIZE {
-        return Err(CodecError::Malformed("truncated ICO header".to_owned()));
+        return Err(CodecError::NeedMore {
+            minimum: ICO_HEADER_SIZE,
+            message: "truncated ICO header".to_owned(),
+        });
     }
     let count = u64::from(u16::from_le_bytes([data[4], data[5]]));
     Ok(6u64.saturating_add(count.saturating_mul(ICO_DIR_ENTRY_SIZE as u64)))
@@ -143,16 +152,21 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> CodecResult<DecodedI
     let entry_data_start = data_offset;
     let entry_data_end = entry_data_start.saturating_add(data_size);
 
-    let entry_data = data
-        .get(entry_data_start..entry_data_end)
-        .malformed("ICO entry payload is out of bounds")?;
+    let entry_data = need_slice(
+        data,
+        entry_data_start,
+        entry_data_end,
+        "ICO entry payload is out of bounds",
+    )?;
 
     // Check if the entry data is PNG (magic: 0x89 0x50 0x4E 0x47)
     if entry_data.len() >= 8 && entry_data[0..4] == [0x89, 0x50, 0x4E, 0x47] {
         // Decode as PNG
         #[cfg(feature = "png")]
         {
-            crate::codecs::png::decode::decode(entry_data).map(|(image, _)| image)
+            crate::codecs::png::decode::decode(entry_data)
+                .map(|(image, _)| image)
+                .map_err(terminalize)
         }
         #[cfg(not(feature = "png"))]
         {
@@ -166,9 +180,9 @@ fn decode_entry(data: &[u8], index: usize, cursor: bool) -> CodecResult<DecodedI
         // but without the standard BMP file header (no "BM" signature).
         // We extract the pixel data manually.
         if cursor {
-            decode_cur_bmp(entry_data, data_size_u32)
+            decode_cur_bmp(entry_data, data_size_u32).map_err(terminalize)
         } else {
-            decode_ico_bmp(entry_data, entry)
+            decode_ico_bmp(entry_data, entry).map_err(terminalize)
         }
     }
 }
