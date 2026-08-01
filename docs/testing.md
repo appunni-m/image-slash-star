@@ -507,8 +507,8 @@ The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`924a922e-4f47-49c7-9367-885e1ca04678`, submitted against
-`9e37df486410f71868146ef348034782f0fb5658`: 727 checks passed with zero
+`5b40f679-4746-46a6-a49a-0212e9e13e91`, submitted against
+`9e37df486410f71868146ef348034782f0fb5658`: 749 checks passed with zero
 failures, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
