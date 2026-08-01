@@ -2,7 +2,7 @@
 
 use crate::SequenceDecodeBudget;
 use crate::codecs::compression::deflate::decompress_zlib_prefix;
-use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
+use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FrameDuration, FrameRect, ImageMode, ImagePalette, SourceColor,
@@ -160,6 +160,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
     let mut opaque_blocks = Vec::new();
     let mut metadata = Vec::new();
     let mut source_color = SourceColor::new();
+    let mut saw_iend = false;
     for chunk in &mut chunks {
         let chunk = chunk?;
         match &chunk.kind {
@@ -190,6 +191,7 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
                 consume_sequence(read_u32(chunk.data, 0), &mut next_sequence)?;
             }
             b"IEND" => {
+                saw_iend = true;
                 break;
             }
             _ if retained_color_chunk(&chunk.kind) => {
@@ -205,9 +207,15 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         }
     }
     if compressed.is_empty() {
-        return Err(CodecError::Malformed(
-            "PNG contains no image data".to_owned(),
-        ));
+        if saw_iend {
+            return Err(CodecError::Malformed(
+                "PNG contains no image data".to_owned(),
+            ));
+        }
+        return Err(CodecError::NeedMore {
+            minimum: codec_add_end(chunks.position, 8),
+            message: "PNG contains no image data".to_owned(),
+        });
     }
 
     let image = decode_image_data(
@@ -217,7 +225,15 @@ pub fn decode(data: &[u8]) -> CodecResult<(DecodedImage, usize)> {
         &compressed,
         palette_rgb,
         palette_alpha,
-    )?
+    )
+    .map_err(|error| match error {
+        CodecError::NeedMore { message, .. } if saw_iend => CodecError::Malformed(message),
+        CodecError::NeedMore { message, .. } => CodecError::NeedMore {
+            minimum: codec_add_end(chunks.position, 8),
+            message,
+        },
+        other => other,
+    })?
     .with_opaque_blocks(opaque_blocks)
     .with_metadata(metadata)
     .with_source_color(source_color);
@@ -865,10 +881,15 @@ impl PngHeader {
 }
 
 fn read_header(chunks: &mut Chunks<'_>) -> CodecResult<PngHeader> {
-    let header = chunks
-        .next()
-        .transpose()?
-        .malformed("PNG is missing its IHDR chunk")?;
+    let header = match chunks.next().transpose()? {
+        Some(header) => header,
+        None => {
+            return Err(CodecError::NeedMore {
+                minimum: codec_add_end(chunks.position, 8),
+                message: "PNG is missing its IHDR chunk".to_owned(),
+            });
+        }
+    };
     if header.kind != *b"IHDR" || header.data.len() != 13 {
         return Err(CodecError::Malformed(
             "PNG IHDR chunk has an invalid type or length".to_owned(),
@@ -1324,13 +1345,9 @@ fn chunk_payload_with_crc<'a>(
     let end = start
         .checked_add(length)
         .dimensions("PNG chunk byte range overflows")?;
-    let payload = data
-        .get(start..end)
-        .malformed("PNG chunk payload is truncated")?;
+    let payload = need_slice(data, start, end, "PNG chunk payload is truncated")?;
     let crc_end = end.saturating_add(4);
-    let expected_bytes = data
-        .get(end..crc_end)
-        .malformed("PNG chunk CRC is truncated")?;
+    let expected_bytes = need_slice(data, end, crc_end, "PNG chunk CRC is truncated")?;
     let expected = u32::from_be_bytes([
         expected_bytes[0],
         expected_bytes[1],
@@ -1384,20 +1401,24 @@ impl<'a> Iterator for Chunks<'a> {
         }
         let chunk_start = self.position as u64;
         let result = (|| -> CodecResult<Chunk<'a>> {
-            let length_bytes = self
-                .data
-                .get(self.position..self.position.saturating_add(4))
-                .malformed("PNG chunk length is truncated")?;
+            let length_bytes = need_slice(
+                self.data,
+                self.position,
+                codec_add_end(self.position, 4),
+                "PNG chunk length is truncated",
+            )?;
             let length = u32::from_be_bytes([
                 length_bytes[0],
                 length_bytes[1],
                 length_bytes[2],
                 length_bytes[3],
             ]) as usize;
-            let kind_bytes = self
-                .data
-                .get(self.position.saturating_add(4)..self.position.saturating_add(8))
-                .malformed("PNG chunk type is truncated")?;
+            let kind_bytes = need_slice(
+                self.data,
+                codec_add_end(self.position, 4),
+                codec_add_end(self.position, 8),
+                "PNG chunk type is truncated",
+            )?;
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
             let start = self.position.saturating_add(8);
             // Pillow validates construction-critical chunk CRCs while opening
@@ -1436,12 +1457,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode(b"");
     let _ = decode(&png_chunk(*b"NOPE", &[0; 13]));
     let _ = decode(&png_chunk(*b"IHDR", &[0; 12]));
+    let mut valid_header = [0u8; 13];
+    valid_header[3] = 1;
+    valid_header[7] = 1;
+    valid_header[8] = 8;
+    valid_header[9] = 0;
+    // A structurally incomplete PNG (no IDAT, no IEND) is incremental
+    // truncation; the same bytes with an IEND are terminal malformed.
+    let _ = decode(&png_chunk(*b"IHDR", &valid_header));
+    let mut no_image_data = png_chunk(*b"IHDR", &valid_header);
+    append_chunk(&mut no_image_data, *b"IEND", &[]);
+    let _ = decode(&no_image_data);
+    // A complete IDAT chunk carrying a truncated zlib stream is incremental
+    // while IEND is missing, and terminal once the container is complete.
+    let mut truncated_stream = png_chunk(*b"IHDR", &valid_header);
+    append_chunk(&mut truncated_stream, *b"IDAT", &[0x78, 0x9c, 0x63]);
+    let _ = decode(&truncated_stream);
+    append_chunk(&mut truncated_stream, *b"IEND", &[]);
+    let _ = decode(&truncated_stream);
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(&png_chunk(*b"NOPE", &[0; 13]));
     let _ = metadata_bytes(&png_chunk(*b"IHDR", &[0; 12]));
     let mut truncated_chunk = PNG_SIGNATURE.to_vec();
     truncated_chunk.extend_from_slice(b"\x00\x00\x00\x01NOPE");
     let _ = metadata_bytes(&truncated_chunk);
+    let _ = decode(&truncated_chunk);
     let mut fd_chunk = PNG_SIGNATURE.to_vec();
     append_chunk(&mut fd_chunk, *b"IHDR", &[0; 13]);
     append_chunk(&mut fd_chunk, *b"fdAT", &[0, 0, 0, 0, 1, 2, 3]);
