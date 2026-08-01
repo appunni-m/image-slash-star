@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `9054a0869066abb90375536dc2997a663e44b753`
+Reviewed: 2026-08-02 on the working tree based on revision `22ec7e286f239b1b6284961c3e039db74b50778b`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -56,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `9054a0869066abb90375536dc2997a663e44b753`,
+The correction evidence below is the working-tree state based on `22ec7e286f239b1b6284961c3e039db74b50778b`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -127,10 +127,10 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`bd54e70b-6cc6-4c6d-8f41-bb1eeb17c779`, snapshot
-`571f677f-ca9b-4df7-bdea-f718fc7d2007`, passed 49 tests with zero failures
-or skips and reports 47,032/47,032 lines, 6,498/6,498 branches,
-2,638/2,638 functions, and 73,353/73,353 regions.
+`2eeec5a6-a147-495a-925d-ea529ec64829`, snapshot
+`f4439ea2-c8aa-4f94-928b-e6766b56da64`, passed 50 tests with zero failures
+or skips and reports 47,050/47,050 lines, 6,502/6,502 branches,
+2,639/2,639 functions, and 73,390/73,390 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -1105,7 +1105,10 @@ writers remain open.
 Successful decodes now carry stable non-fatal diagnostics for accepted
 recoveries, invalid compressed PNG ancillary metadata, and ignored trailing
 input; their Rust-only fields are tested through a separate defensive-model
-manifest rather than the Pillow parity matrix. Primary AVIF CICP declarations
+manifest rather than the Pillow parity matrix. Unsupported valid-shape non-zero
+PNG `zTXt`/`iCCP` compression methods remain fatal with `png_chunk` context;
+that Pillow-observable boundary is asserted separately without a synthetic
+diagnostic field. Primary AVIF CICP declarations
 are likewise retained as source provenance through the bounded item parser; the
 dedicated contract test is defensive/specification evidence and does not add a
 synthetic parity row. Primary AVIF `irot`/`imir`/`pasp`/`clap` declarations now
@@ -1132,8 +1135,8 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`0f131ff2-81f9-4f87-80a5-76d7a3a5c6b2`, submitted against
-`9054a0869066abb90375536dc2997a663e44b753`; it passed 793 checks with zero
+`2cb76588-e16a-4ae3-afa9-0c29fc964bbe`, submitted against
+`22ec7e286f239b1b6284961c3e039db74b50778b`; it passed 815 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
