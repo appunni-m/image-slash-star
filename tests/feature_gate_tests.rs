@@ -5073,6 +5073,42 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             Some("unsupported: sink rejected the write")
         );
     }
+
+    // Every remaining enabled whole-buffer codec uses the same generic
+    // destination boundary. This is a Rust-only OutputWrite contract:
+    // Pillow has no caller-owned sink, so these cases must not become parity
+    // rows or alter the oracle-based coverage count.
+    let sink_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+    for (format, enabled) in [
+        (ImageFormat::Jpeg, cfg!(feature = "jpeg")),
+        (ImageFormat::Gif, cfg!(feature = "gif")),
+        (ImageFormat::Tiff, cfg!(feature = "tiff")),
+        (ImageFormat::WebP, cfg!(feature = "webp")),
+        (ImageFormat::Ico, cfg!(feature = "ico")),
+        (ImageFormat::Avif, cfg!(feature = "avif")),
+    ] {
+        if !enabled || (format == ImageFormat::Avif && cfg!(target_arch = "wasm32")) {
+            continue;
+        }
+        let options = EncodeOptions::for_format(format);
+        let mut failing = FailingSink;
+        let error =
+            match image_slash_star::encode_to_sink(&sink_image, format, &options, &mut failing) {
+                Ok(length) => {
+                    return Err(format!(
+                        "failing {format} whole-buffer sink unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(error.unsupported_reason(), None);
+        assert_eq!(error.offset(), None);
+        assert_eq!(error.identity(), None);
+    }
     Ok(())
 }
 
