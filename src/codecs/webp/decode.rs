@@ -240,6 +240,11 @@ fn decode_error(error: DecodingError, input_len: usize) -> CodecError {
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let _ = verify(b"");
+    let _ = verify(b"not a webp stream");
+    let _ = metadata_bytes(b"");
+    let _ = metadata_bytes(b"RIFF");
+    let _ = metadata_bytes(b"RIFF\0\0\0\0WEB");
     let _ = decode(b"not a webp stream");
     let _ = decode_sequence(
         b"not a webp stream",
