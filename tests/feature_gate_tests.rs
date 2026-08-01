@@ -2972,22 +2972,22 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     );
 
     let mut clap_payload = Vec::with_capacity(32);
-    clap_payload.extend_from_slice(&baseline.content.height.to_be_bytes());
-    clap_payload.extend_from_slice(&1_u32.to_be_bytes());
     clap_payload.extend_from_slice(&baseline.content.width.to_be_bytes());
     clap_payload.extend_from_slice(&1_u32.to_be_bytes());
-    clap_payload.extend_from_slice(&0_i32.to_be_bytes());
+    clap_payload.extend_from_slice(&baseline.content.height.to_be_bytes());
     clap_payload.extend_from_slice(&1_u32.to_be_bytes());
     clap_payload.extend_from_slice(&0_i32.to_be_bytes());
     clap_payload.extend_from_slice(&1_u32.to_be_bytes());
-    let clap = append_associated_property(&bytes, b"clap", &clap_payload, 6)?;
+    clap_payload.extend_from_slice(&0_i32.to_be_bytes());
+    clap_payload.extend_from_slice(&1_u32.to_be_bytes());
+    let clap = append_associated_property(&bytes, b"clap", &clap_payload, 0x86)?;
     let expected_clap = SourceDescriptor::new().with_avif_transform(
         AvifTransformProperties::new()
             .with_rotation(AvifRotation::CounterClockwise270)
             .with_clean_aperture(AvifCleanAperture::new(
-                baseline.content.height,
-                1,
                 baseline.content.width,
+                1,
+                baseline.content.height,
                 1,
                 0,
                 1,
@@ -3000,9 +3000,9 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
             .avif_transform()
             .and_then(|transform| transform.clean_aperture()),
         Some(AvifCleanAperture::new(
-            baseline.content.height,
-            1,
             baseline.content.width,
+            1,
+            baseline.content.height,
             1,
             0,
             1,
@@ -3029,7 +3029,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 2, 0, 0,
         0, 1, 0, 0, 0, 2,
     ];
-    let signed_clap = append_associated_property(&bytes, b"clap", &signed_clap_payload, 6)?;
+    let signed_clap = append_associated_property(&bytes, b"clap", &signed_clap_payload, 0x86)?;
     let expected_signed_clap = SourceDescriptor::new().with_avif_transform(
         AvifTransformProperties::new()
             .with_rotation(AvifRotation::CounterClockwise270)
@@ -3088,7 +3088,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     }
     assert_malformed(&extra_clap, "extra clap payload")?;
 
-    let duplicate_clap = append_associated_property(&clap, b"clap", &clap_payload, 7)?;
+    let duplicate_clap = append_associated_property(&clap, b"clap", &clap_payload, 0x87)?;
     assert_malformed(&duplicate_clap, "duplicate clap association")?;
 
     for (offset, label) in [
