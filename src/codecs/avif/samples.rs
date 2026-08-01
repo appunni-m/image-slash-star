@@ -2026,7 +2026,7 @@ pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
     Ok(extracted)
 }
 
-fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> ParseResult<u64> {
+fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> u64 {
     let mut spans = Vec::new();
     let mut add_plane = |plane: &EncodedPlane| {
         for sample in &plane.samples {
@@ -2073,7 +2073,7 @@ fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> ParseResult<u64> {
         let length = (current_end - current_start) as u64;
         total = total.saturating_add(length);
     }
-    Ok(total)
+    total
 }
 
 /// Measure the encoded metadata extent: the parsed top-level BMFF bytes minus
@@ -2082,7 +2082,7 @@ pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     let extracted = extract_inner_with_metadata(data, false)?;
     #[allow(clippy::cast_possible_truncation)]
     let consumed = extracted.consumed as u64;
-    let pixel = pixel_payload_bytes(&extracted)?;
+    let pixel = pixel_payload_bytes(&extracted);
     // Every referenced sample span belongs to a successfully parsed top-level
     // extent, so the pixel union cannot exceed `consumed`.
     Ok(consumed.saturating_sub(pixel))
@@ -3435,6 +3435,14 @@ fn coverage_structural_states() {
         ..Meta::default()
     };
     let _ = missing_metadata_location.metadata(&[]);
+    let mut extracted_metadata_missing_location =
+        include_bytes!("../../../tests/fixtures/outputs/encoded/Encode.avif_enc_metadata.bin")
+            .to_vec();
+    // The second `infe` item id occupies this byte in the committed witness;
+    // leaving its `iloc` entry unchanged makes extraction reject the metadata
+    // item at the public retention boundary.
+    extracted_metadata_missing_location[0xcd] = 9;
+    let _ = extract_inner(&extracted_metadata_missing_location);
     let empty_metadata_location = Meta {
         items: vec![Item {
             id: 9,
@@ -3469,6 +3477,20 @@ fn coverage_structural_states() {
         ..Meta::default()
     };
     let _ = overflowing_metadata_capacity.metadata(&[]);
+    let invalid_metadata_extent = Meta {
+        items: vec![Item {
+            id: 9,
+            kind: *b"Exif",
+            metadata_kind: Some(*b"Exif"),
+        }],
+        locations: vec![ItemLocation {
+            item_id: 9,
+            source: ExtentSource::File,
+            extents: vec![ByteSpan { start: 0, end: 1 }],
+        }],
+        ..Meta::default()
+    };
+    let _ = invalid_metadata_extent.metadata(&[]);
 
     let coverage_plane = |spans: &[(usize, usize)]| EncodedPlane {
         samples: vec![EncodedSample {
@@ -3491,7 +3513,7 @@ fn coverage_structural_states() {
         source_color: SourceColor::new(),
         transform: None,
     };
-    assert_eq!(pixel_payload_bytes(&empty_payload), Ok(0));
+    assert_eq!(pixel_payload_bytes(&empty_payload), 0);
     let mixed_payload = ExtractedAvif {
         input: &[],
         still: Some(StillPayload {
@@ -3509,7 +3531,7 @@ fn coverage_structural_states() {
         source_color: SourceColor::new(),
         transform: None,
     };
-    assert_eq!(pixel_payload_bytes(&mixed_payload), Ok(12));
+    assert_eq!(pixel_payload_bytes(&mixed_payload), 12);
     let duplicate_alpha_meta = Meta {
         properties: vec![
             Property::AuxC { is_alpha: true },
