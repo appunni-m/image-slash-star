@@ -1941,10 +1941,11 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         .as_ref()
         .map(|movie| sequence_payload(movie, input))
         .transpose()?;
-    let source_color = match meta.as_ref() {
-        Some(meta) => meta.source_color()?,
-        None => SourceColor::new(),
-    };
+    let source_color = meta
+        .as_ref()
+        .map(Meta::source_color)
+        .transpose()?
+        .unwrap_or_default();
     let transform = meta.as_ref().map(Meta::transform).transpose()?.flatten();
     let _ = brands.major;
     Ok(ExtractedAvif {
