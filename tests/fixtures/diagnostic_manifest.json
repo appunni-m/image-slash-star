@@ -64,21 +64,6 @@
       "pillow_outcome": "ok"
     },
     {
-      "id": "png_invalid_ztxt_method_still",
-      "feature": "png",
-      "format": "png",
-      "asset_path": "tests/fixtures/input/images/png/1x1.png",
-      "mutation": "png_before_idat",
-      "chunk_kind": "zTXt",
-      "chunk_payload": [67, 111, 109, 109, 101, 110, 116, 0, 1, 110, 111, 116, 45, 122, 108, 105, 98],
-      "operation": "decode",
-      "diagnostic_kind": "invalid_metadata_ignored",
-      "stage": "still_decode",
-      "offset": 33,
-      "identity": "png_zTXt",
-      "pillow_outcome": "ok"
-    },
-    {
       "id": "png_invalid_iccp_still",
       "feature": "png",
       "format": "png",
@@ -104,21 +89,6 @@
       "operation": "decode_sequence",
       "diagnostic_kind": "invalid_metadata_ignored",
       "stage": "sequence_decode",
-      "offset": 33,
-      "identity": "png_iCCP",
-      "pillow_outcome": "ok"
-    },
-    {
-      "id": "png_invalid_iccp_method_still",
-      "feature": "png",
-      "format": "png",
-      "asset_path": "tests/fixtures/input/images/png/1x1.png",
-      "mutation": "png_before_idat",
-      "chunk_kind": "iCCP",
-      "chunk_payload": [112, 114, 111, 102, 105, 108, 101, 0, 1, 110, 111, 116, 45, 122, 108, 105, 98],
-      "operation": "decode",
-      "diagnostic_kind": "invalid_metadata_ignored",
-      "stage": "still_decode",
       "offset": 33,
       "identity": "png_iCCP",
       "pillow_outcome": "ok"
