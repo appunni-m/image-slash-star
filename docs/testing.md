@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `a77e0f05faced5e3fcab7544ba1370e7dd502330`
+Reviewed: 2026-08-01 on the working tree based on revision `00d3e167edd289f43d4b7a3b868f12569d72c410`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -121,7 +121,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `a77e0f05faced5e3fcab7544ba1370e7dd502330`, the generated matrix
+For the current working tree based on revision `00d3e167edd289f43d4b7a3b868f12569d72c410`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -274,11 +274,12 @@ descriptor, and encoded output must not replay color chunks.
 The AVIF source-color contract is separate from Pillow parity. The bounded
 item parser reads the primary item's `colr`/`nclx` CICP fields into
 `SourceColor`; the contract test asserts inspect, still decode, and fallback
-sequence agreement plus rejection of reserved range-flag bits. Pillow rows
-continue to assert the observable outer result, mode, and pixels, but they do
-not claim to prove item-level CICP because Pillow exposes no equivalent
-structured result. No parity row or coverage-only test is added for this
-source-provenance field.
+sequence agreement plus rejection of reserved range-flag bits, extra payloads,
+and truncated fields. Pillow rows continue to assert the observable outer
+result, mode, and pixels, but they do not claim to prove item-level CICP because
+Pillow exposes no equivalent structured result. No parity row is added for this
+source-provenance field; malformed parser cases remain defensive-model
+evidence.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
@@ -437,17 +438,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 44,434 | 44,434 |
-| Branches | 6,280 | 6,280 |
-| Functions | 2,457 | 2,457 |
-| Regions | 70,169 | 70,169 |
+| Lines | 44,563 | 44,563 |
+| Branches | 6,298 | 6,298 |
+| Functions | 2,463 | 2,463 |
+| Regions | 70,331 | 70,331 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `85bc6ecf-3863-4208-94d7-c0a60949246d`
+Coverage MCP run: `ddee4d33-50ea-4109-bf6e-ed8064e3ef25`
 
-Snapshot: `b91a2749-2fbd-4b9e-a847-05788e24b022`
+Snapshot: `f8aee673-e001-41fd-b4f3-bb2e65bc6246`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
