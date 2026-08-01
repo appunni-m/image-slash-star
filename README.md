@@ -13,11 +13,12 @@ bytes.
 
 > **Pre-release status:** version 0.1.0 is not published to crates.io. The
 > compatibility guarantee is limited to committed manifest cases, not every
-> legal file in each format specification. Encoded-input bytes and inspected
+> legal file in each format specification. Encoded-input bytes, inspected
 > primary-canvas dimensions/pixels/decoded bytes, the inspected frame count,
-> every later frame/page's decoded bytes, and cumulative sequence bytes can be
-> bounded, but metadata, container nesting, and codec work are not yet fully
-> limited. The current crate should not be treated as hardened for arbitrary
+> every later frame/page's decoded bytes, cumulative sequence bytes, and the
+> encoded metadata extent can be bounded. Encoded-output and internal
+> allocations remain outside the policy, with no recoverable out-of-memory
+> contract; the current crate should not be treated as hardened for arbitrary
 > hostile inputs.
 > Breaking API changes may occur before 1.0.
 
@@ -232,9 +233,10 @@ are validated before encoding.
 without changing the transfer bytes. TIFF currently records its exact
 `SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
 modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`
-properties are retained through `SourceDescriptor::avif_transform()` as
-source provenance; decoded pixels are never rotated or mirrored. Codecs
-without a retained structural fact currently return an empty descriptor.
+and `pasp` properties are retained through
+`SourceDescriptor::avif_transform()` as source provenance; decoded pixels are
+never rotated, mirrored, or rescaled. Codecs without a retained structural
+fact currently return an empty descriptor.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller
@@ -396,8 +398,8 @@ scan before inspection or pixel work on all five policy paths.
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
 same boundary. A rejected lazy decode is not cached, and an already cached
 decode cannot bypass a later stricter policy. This is not yet a complete
-hostile-input budget: metadata, container nesting, codec work, other
-allocations, and encoded output remain unbounded.
+hostile-input budget: encoded output and internal allocation behavior remain
+outside the policy, and no recoverable allocation-failure contract exists.
 
 See [architecture and public contract](docs/architecture.md) for byte layouts,
 validation invariants, lazy source lifecycle, memory behavior, feature

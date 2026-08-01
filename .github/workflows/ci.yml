@@ -92,7 +92,7 @@ jobs:
         run: |
           echo "IMAGE_SLASH_STAR_AVIF_LIB_DIR=$RUNNER_TEMP/avif-oracle/lib" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/avif-oracle/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-      - name: Run exact parity coverage
+      - name: Run aggregate all-feature coverage
         run: >-
           cargo +nightly llvm-cov --all-features --branch --json
           --output-path coverage.json --no-fail-fast

@@ -4,7 +4,8 @@ use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifColorProperties, AvifMirrorAxis, AvifRotation, AvifTransformProperties, SourceColor,
+    AvifColorProperties, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -322,6 +323,7 @@ enum Property {
     Color(AvifColorProperties),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
+    PixelAspectRatio(AvifPixelAspectRatio),
     Other,
 }
 
@@ -570,6 +572,7 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
         kind if kind == *b"colr" => parse_colr(input, property.payload),
         kind if kind == *b"irot" => parse_irot(input, property.payload),
         kind if kind == *b"imir" => parse_imir(input, property.payload),
+        kind if kind == *b"pasp" => parse_pasp(input, property.payload),
         [b'a', b'u', b'x', b'C'] | [b'a', b'u', b'x', b'i'] => {
             let mut reader = Reader::new(input, property.payload);
             let (version, _) = parse_full_box(&mut reader)?;
@@ -634,6 +637,18 @@ fn parse_imir(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::Mirror(mirror))
+}
+
+fn parse_pasp(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
+    let mut reader = Reader::new(input, payload);
+    let h_spacing = reader.u32()?;
+    let v_spacing = reader.u32()?;
+    if h_spacing == 0 || v_spacing == 0 || !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::PixelAspectRatio(AvifPixelAspectRatio::new(
+        h_spacing, v_spacing,
+    )))
 }
 
 fn parse_ipma(
@@ -889,6 +904,12 @@ impl Meta {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_mirror(*mirror);
+                }
+                Property::PixelAspectRatio(ratio) => {
+                    if transform.pixel_aspect_ratio().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_pixel_aspect_ratio(*ratio);
                 }
                 _ => {}
             }
@@ -1556,7 +1577,10 @@ fn parse_sample_description(
                     return Err(parse_failure!());
                 }
             }
-            Property::Color(_) | Property::Rotation(_) | Property::Mirror(_) => {}
+            Property::Color(_)
+            | Property::Rotation(_)
+            | Property::Mirror(_)
+            | Property::PixelAspectRatio(_) => {}
             Property::Other => {}
         }
     }
@@ -2203,7 +2227,7 @@ fn coverage_leaf_corpus() {
             let _ = parse_infe(&input, span);
             let _ = parse_iprp(&input, span, &mut Meta::default(), &mut Budget::default());
             let _ = parse_ipco(&input, span, &mut Meta::default(), &mut Budget::default());
-            for kind in [*b"av1C", *b"auxC", *b"irot", *b"imir", *b"free"] {
+            for kind in [*b"av1C", *b"auxC", *b"irot", *b"imir", *b"pasp", *b"free"] {
                 let _ = parse_property(
                     &input,
                     BoxSpan {
@@ -3682,6 +3706,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_rotation.transform();
+    let duplicate_pixel_aspect_ratio = Meta {
+        primary_item_id: 1,
+        properties: vec![
+            Property::PixelAspectRatio(AvifPixelAspectRatio::new(4, 3)),
+            Property::PixelAspectRatio(AvifPixelAspectRatio::new(16, 9)),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_pixel_aspect_ratio.transform();
     let duplicate_mirror = Meta {
         primary_item_id: 1,
         properties: vec![

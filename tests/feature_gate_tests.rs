@@ -2728,9 +2728,10 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 }
 
 #[test]
-fn avif_item_transforms_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
+fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifMirrorAxis, AvifRotation, AvifTransformProperties, SourceDescriptor,
+        AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties,
+        SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -2775,11 +2776,12 @@ fn avif_item_transforms_match_the_non_parity_contract() -> Result<(), Box<dyn st
     fn append_associated_property(
         input: &[u8],
         kind: &[u8; 4],
-        value: u8,
+        payload: &[u8],
+        property_index: u8,
     ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let ipco = box_start(input, b"ipco")?;
         let ipco_size = usize::try_from(u32::from_be_bytes(input[ipco..ipco + 4].try_into()?))?;
-        let property = avif_box(kind, &[value]);
+        let property = avif_box(kind, payload);
         let ipco_end = ipco.checked_add(ipco_size).ok_or("ipco end overflowed")?;
         let mut output = Vec::with_capacity(input.len() + property.len() + 1);
         output.extend_from_slice(&input[..ipco_end]);
@@ -2798,7 +2800,7 @@ fn avif_item_transforms_match_the_non_parity_contract() -> Result<(), Box<dyn st
             .checked_add(1)
             .ok_or("ipma association count overflowed")?;
         let ipma_end = ipma.checked_add(ipma_size).ok_or("ipma end overflowed")?;
-        output.insert(ipma_end, 6);
+        output.insert(ipma_end, property_index);
 
         let property_size = u32::try_from(property.len())?;
         let iprp_delta = property_size
@@ -2926,6 +2928,59 @@ fn avif_item_transforms_match_the_non_parity_contract() -> Result<(), Box<dyn st
         );
     }
 
+    let pasp_payload = [0, 0, 0, 4, 0, 0, 0, 3];
+    let pasp = append_associated_property(&bytes, b"pasp", &pasp_payload, 6)?;
+    let expected_pasp = SourceDescriptor::new().with_avif_transform(
+        AvifTransformProperties::new()
+            .with_rotation(AvifRotation::CounterClockwise270)
+            .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3)),
+    );
+    assert_eq!(
+        expected_pasp
+            .avif_transform()
+            .and_then(|transform| transform.pixel_aspect_ratio()),
+        Some(AvifPixelAspectRatio::new(4, 3))
+    );
+    let pasp_inspected = image_slash_star::inspect(&pasp)?;
+    assert_eq!(pasp_inspected.source, expected_pasp, "pasp inspect");
+    let pasp_decoded = image_slash_star::decode(&pasp)?;
+    assert_eq!(pasp_decoded.content.source, expected_pasp, "pasp decode");
+    assert_eq!(pasp_decoded.content.pixels, expected_pixels);
+    let pasp_sequence = image_slash_star::decode_sequence(&pasp)?;
+    assert_eq!(
+        pasp_sequence.content.frames[0].image.source, expected_pasp,
+        "pasp sequence"
+    );
+    assert_eq!(
+        pasp_sequence.content.frames[0].image.pixels,
+        expected_pixels
+    );
+
+    let pasp_box = box_start(&pasp, b"pasp")?;
+    let mut empty_pasp = Vec::with_capacity(pasp.len() - 1);
+    empty_pasp.extend_from_slice(&pasp[..pasp_box + 8]);
+    empty_pasp.extend_from_slice(&pasp[pasp_box + 9..]);
+    for kind in [b"pasp", b"ipco", b"iprp", b"meta"] {
+        shrink_box_size(&mut empty_pasp, kind, 1)?;
+    }
+    assert_malformed(&empty_pasp, "empty pasp payload")?;
+
+    let mut extra_pasp = Vec::with_capacity(pasp.len() + 1);
+    extra_pasp.extend_from_slice(&pasp[..pasp_box + 16]);
+    extra_pasp.push(0);
+    extra_pasp.extend_from_slice(&pasp[pasp_box + 16..]);
+    for kind in [b"pasp", b"ipco", b"iprp", b"meta"] {
+        grow_box_size(&mut extra_pasp, kind, 1)?;
+    }
+    assert_malformed(&extra_pasp, "extra pasp payload")?;
+
+    let duplicate_pasp = append_associated_property(&pasp, b"pasp", &pasp_payload, 7)?;
+    assert_malformed(&duplicate_pasp, "duplicate pasp association")?;
+
+    let mut invalid_pasp = pasp;
+    invalid_pasp[pasp_box + 8..pasp_box + 12].fill(0);
+    assert_malformed(&invalid_pasp, "zero pasp spacing")?;
+
     // Empty and overlong payloads are malformed even when the first byte is a
     // legal value. The size changes keep each witness at the same container
     // boundary, so the parser reaches the property-specific check.
@@ -2963,10 +3018,10 @@ fn avif_item_transforms_match_the_non_parity_contract() -> Result<(), Box<dyn st
     }
     assert_malformed(&extra_mirror, "extra imir payload")?;
 
-    let duplicate_rotation = append_associated_property(&bytes, b"irot", 1)?;
+    let duplicate_rotation = append_associated_property(&bytes, b"irot", &[1], 6)?;
     assert_malformed(&duplicate_rotation, "duplicate irot association")?;
 
-    let duplicate_mirror = append_associated_property(&mirrored, b"imir", 1)?;
+    let duplicate_mirror = append_associated_property(&mirrored, b"imir", &[1], 6)?;
     assert_malformed(&duplicate_mirror, "duplicate imir association")?;
 
     let mut invalid_rotation = bytes;

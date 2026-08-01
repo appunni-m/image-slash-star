@@ -6,8 +6,9 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifColorProperties, AvifMirrorAxis, AvifRotation, AvifTransformProperties, ImageFormat,
-    ImageInfo, ImageMode, SourceAlpha, SourceColor, SourceDescriptor,
+    AvifColorProperties, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, SourceAlpha, SourceColor,
+    SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -187,6 +188,7 @@ enum Property {
     Color(AvifColorProperties),
     Rotation(AvifRotation),
     Mirror(AvifMirrorAxis),
+    PixelAspectRatio(AvifPixelAspectRatio),
     Other,
 }
 
@@ -617,6 +619,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
         kind if kind == *b"colr" => parse_colr(property.payload),
         kind if kind == *b"irot" => parse_irot(property.payload),
         kind if kind == *b"imir" => parse_imir(property.payload),
+        kind if kind == *b"pasp" => parse_pasp(property.payload),
         [b'a', b'u', b'x', b'C'] | [b'a', b'u', b'x', b'i'] => {
             let mut reader = Reader::new(property.payload);
             let _ = parse_full_box_version_zero(&mut reader)?;
@@ -678,6 +681,18 @@ fn parse_imir(payload: &[u8]) -> ParseResult<Property> {
         return Err(parse_failure!());
     }
     Ok(Property::Mirror(mirror))
+}
+
+fn parse_pasp(payload: &[u8]) -> ParseResult<Property> {
+    let mut reader = Reader::new(payload);
+    let h_spacing = reader.u32()?;
+    let v_spacing = reader.u32()?;
+    if h_spacing == 0 || v_spacing == 0 || !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(Property::PixelAspectRatio(AvifPixelAspectRatio::new(
+        h_spacing, v_spacing,
+    )))
 }
 
 // libavif 1.4.1 src/read.c:2648-2693.
@@ -874,6 +889,12 @@ impl Meta {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_mirror(*mirror);
+                }
+                Property::PixelAspectRatio(ratio) => {
+                    if transform.pixel_aspect_ratio().is_some() {
+                        return Err(parse_failure!());
+                    }
+                    transform = transform.with_pixel_aspect_ratio(*ratio);
                 }
                 _ => {}
             }
@@ -2053,11 +2074,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         (*b"imir", &[1][..]),
         (*b"imir", &[2][..]),
         (*b"imir", &[0, 0][..]),
+        (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 3][..]),
+        (*b"pasp", &[0, 0, 0, 0, 0, 0, 0, 3][..]),
+        (*b"pasp", &[0, 0, 0, 4, 0, 0, 0, 3, 0][..]),
     ] {
         let _ = parse_property(BoxView { kind, payload });
     }
     let _ = std::hint::black_box(parse_irot(&[]));
     let _ = std::hint::black_box(parse_imir(&[]));
+    let _ = std::hint::black_box(parse_pasp(&[]));
     let duplicate_rotation = Meta {
         properties: vec![
             Property::Rotation(AvifRotation::Zero),
@@ -2076,6 +2101,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_rotation.source_descriptor(1);
+    let duplicate_pixel_aspect_ratio = Meta {
+        properties: vec![
+            Property::PixelAspectRatio(AvifPixelAspectRatio::new(4, 3)),
+            Property::PixelAspectRatio(AvifPixelAspectRatio::new(16, 9)),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_pixel_aspect_ratio.source_descriptor(1);
     let duplicate_details = Meta {
         primary_item_id: Some(1),
         items: vec![Item {

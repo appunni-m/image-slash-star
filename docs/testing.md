@@ -292,13 +292,14 @@ Pillow exposes no equivalent structured result. No parity row is added for this
 source-provenance field; malformed parser cases remain defensive-model
 evidence.
 
-The AVIF item-transform contract is separate from Pillow parity. A committed
+The AVIF item-property contract is separate from Pillow parity. A committed
 AVIF orientation output supplies `irot`; the test mutates all four legal
-rotation values and both `imir` axes, then asserts inspect, still decode, and
-fallback-sequence source descriptors agree while pixel bytes remain unchanged.
-Reserved values and malformed property payloads are rejected by both bounded
+rotation values, both `imir` axes, and an associated `pasp` property, then
+asserts inspect, still decode, and fallback-sequence source descriptors agree
+while pixel bytes remain unchanged. Reserved values, zero spacings, duplicate
+associations, and malformed property payloads are rejected by both bounded
 parsers. The test is specification/defensive-model evidence because Pillow's
-observable result does not expose item transform properties.
+observable result does not expose item properties or structured provenance.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
@@ -586,6 +587,25 @@ cargo test --locked --all-features --test coverage_matrix_tests
 Native all-feature execution requires the exact AVIF stack described in
 [AVIF support](avif.md).
 
+### Evidence surfaces and coverage accounting
+
+The repository keeps semantic parity evidence separate from Rust-only
+defensive contracts. The distinction matters because an aggregate coverage
+report answers "which implementation paths executed?"; it does not answer
+"which paths matched Pillow?".
+
+| Evidence surface | Authoritative inputs and command | Proves | Does not prove |
+| --- | --- | --- | --- |
+| Pillow parity | `tests/fixtures/coverage_matrix.json`; `coverage_matrix_tests` (registered as `pillow-byte-pixel-parity`) | Pillow-observable success/error results, pixels, metadata, frames, and deterministic encoded bytes for the active rows | Rust-only diagnostics, policy decisions, or parser states Pillow cannot expose |
+| Defensive/specification contracts | `diagnostic_manifest.json`, decode/sequence policy manifests, feature-gate and other table-driven contract tests | Stable Rust fields and behavior that are required even when Pillow has no equivalent result field; unchanged Pillow output is supporting fixture evidence where available | A Pillow warning/diagnostic that the oracle never returned |
+| Aggregate coverage | CI/Coverage MCP `cargo llvm-cov --all-features --branch --json` over the complete test suite | Execution coverage across parity tests, defensive contracts, and permitted private `cfg(coverage)` state models | Parity completeness, semantic correctness, security, or production readiness |
+
+The aggregate line, branch, function, and region totals must therefore never
+be described as "Pillow parity coverage". A defensive contract may contribute
+executed lines to the aggregate report without becoming a generated parity
+row, and a private coverage model may exercise an unreachable state without
+being user-facing behavior.
+
 ### Feature and target matrix
 
 The feature script checks:
@@ -619,7 +639,11 @@ Repository agents must run coverage only through Coverage MCP and request line,
 branch, function, and region metrics. CI independently runs `cargo llvm-cov`
 and `scripts/verify_llvm_coverage.py`.
 
-Public behavior should reach coverage through a complete manifest fixture.
+Pillow-observable behavior should reach semantic acceptance through a complete
+parity manifest fixture. Rust-only behavior should reach acceptance through an
+explicit defensive or specification fixture. Both kinds of tests may execute
+under the aggregate coverage command, but their evidence origins remain
+separate.
 `cfg(coverage)` hooks are reserved for private state machines, defensive
 overflow paths, or generated states that cannot be represented by a valid
 Pillow input.

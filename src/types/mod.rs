@@ -60,7 +60,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let transform_only = SourceDescriptor::new().with_avif_transform(
         AvifTransformProperties::new()
             .with_rotation(AvifRotation::CounterClockwise90)
-            .with_mirror(AvifMirrorAxis::LeftRight),
+            .with_mirror(AvifMirrorAxis::LeftRight)
+            .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3)),
     );
     assert_eq!(
         transform_only.avif_transform(),
@@ -68,12 +69,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
             AvifTransformProperties::new()
                 .with_rotation(AvifRotation::CounterClockwise90)
                 .with_mirror(AvifMirrorAxis::LeftRight)
+                .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3))
         )
     );
     assert!(!transform_only.is_empty());
     assert!(
         !AvifTransformProperties::new()
             .with_rotation(AvifRotation::Zero)
+            .is_empty()
+    );
+    let pixel_aspect_ratio = AvifPixelAspectRatio::new(4, 3);
+    assert_eq!(pixel_aspect_ratio.h_spacing(), 4);
+    assert_eq!(pixel_aspect_ratio.v_spacing(), 3);
+    assert!(
+        !AvifTransformProperties::new()
+            .with_pixel_aspect_ratio(pixel_aspect_ratio)
             .is_empty()
     );
     assert!(AvifTransformProperties::new().is_empty());
@@ -1020,17 +1030,48 @@ pub enum AvifMirrorAxis {
     LeftRight,
 }
 
-/// AVIF item transforms retained without applying them to decoded pixels.
+/// Relative width and height of an AVIF pixel declared by a `pasp` property.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct AvifPixelAspectRatio {
+    h_spacing: u32,
+    v_spacing: u32,
+}
+
+impl AvifPixelAspectRatio {
+    /// Create a pixel aspect-ratio declaration from its positive spacings.
+    #[must_use]
+    pub const fn new(h_spacing: u32, v_spacing: u32) -> Self {
+        Self {
+            h_spacing,
+            v_spacing,
+        }
+    }
+
+    /// Return the horizontal spacing from the source declaration.
+    #[must_use]
+    pub const fn h_spacing(&self) -> u32 {
+        self.h_spacing
+    }
+
+    /// Return the vertical spacing from the source declaration.
+    #[must_use]
+    pub const fn v_spacing(&self) -> u32 {
+        self.v_spacing
+    }
+}
+
+/// AVIF item presentation properties retained without applying them to decoded pixels.
 ///
-/// The current model covers the `irot` and `imir` properties. `pasp` and
-/// `clap` remain separate future metadata because they require fractional
-/// dimensions and crop semantics. An absent field means that property was not
-/// associated with the primary image item; a present zero rotation remains
-/// distinguishable from an absent `irot` property.
+/// The current model covers the `irot`, `imir`, and `pasp` properties. `clap`
+/// remains separate future metadata because it requires fractional dimensions
+/// and crop semantics. An absent field means that property was not associated
+/// with the primary image item; a present zero rotation remains distinguishable
+/// from an absent `irot` property.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct AvifTransformProperties {
     rotation: Option<AvifRotation>,
     mirror: Option<AvifMirrorAxis>,
+    pixel_aspect_ratio: Option<AvifPixelAspectRatio>,
 }
 
 impl AvifTransformProperties {
@@ -1040,6 +1081,7 @@ impl AvifTransformProperties {
         Self {
             rotation: None,
             mirror: None,
+            pixel_aspect_ratio: None,
         }
     }
 
@@ -1069,10 +1111,23 @@ impl AvifTransformProperties {
         self.mirror
     }
 
+    /// Record an AVIF `pasp` pixel aspect-ratio property.
+    #[must_use]
+    pub const fn with_pixel_aspect_ratio(mut self, ratio: AvifPixelAspectRatio) -> Self {
+        self.pixel_aspect_ratio = Some(ratio);
+        self
+    }
+
+    /// Return the retained AVIF `pasp` property, when present.
+    #[must_use]
+    pub const fn pixel_aspect_ratio(&self) -> Option<AvifPixelAspectRatio> {
+        self.pixel_aspect_ratio
+    }
+
     /// Whether no AVIF transform property was retained.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.rotation.is_none() && self.mirror.is_none()
+        self.rotation.is_none() && self.mirror.is_none() && self.pixel_aspect_ratio.is_none()
     }
 }
 
