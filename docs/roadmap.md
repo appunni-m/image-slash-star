@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `22ec7e286f239b1b6284961c3e039db74b50778b`
+Reviewed: 2026-08-02 on the working tree based on revision `0ff9d7a4988438c7c3e33ce091d8950f95173b83`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -56,7 +56,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `22ec7e286f239b1b6284961c3e039db74b50778b`,
+The correction evidence below is the working-tree state based on `0ff9d7a4988438c7c3e33ce091d8950f95173b83`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -127,10 +127,10 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`2eeec5a6-a147-495a-925d-ea529ec64829`, snapshot
-`f4439ea2-c8aa-4f94-928b-e6766b56da64`, passed 50 tests with zero failures
-or skips and reports 47,050/47,050 lines, 6,502/6,502 branches,
-2,639/2,639 functions, and 73,390/73,390 regions.
+`a6ffde35-9d5e-4a4f-8e1c-43e84c458572`, snapshot
+`19068e59-293d-451e-aea6-ec4500387e1c`, passed 51 tests with zero failures
+or skips and reports 47,054/47,054 lines, 6,502/6,502 branches,
+2,641/2,641 functions, and 73,398/73,398 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -222,7 +222,7 @@ public reusable conversion layer would violate project scope.
 | API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. `EncodePolicy::max_output_bytes` caps the complete encoded result after whole-buffer codec work and before return or sink write; PNG and BMP still sink delivery additionally compute and check their complete lengths before their first structural writes. Every current decoder work dimension is bounded by the decode resource set; transient encoder allocations and non-PNG/BMP sink assembly remain outside both public policies. Lenient-versus-strict parsing and requested output mode are result-shaping policy belonging with the API-033 family. | Extend the resource contract one independently enforceable allocation/work dimension at a time, including transient encoded-output accounting, structural writing, and work budgets. Preserve the unlimited convenience wrappers, reject before any future bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator or cache policy. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration and cache policy. Keep eager `decode_sequence` as a convenience collector. |
-| API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` resource, maximum, and observed result length. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures. BMP header, palette, pixel-span, bitfield, and RLE parse failures now retain stable context, and ICO header, directory, entry-range, and embedded PNG/DIB/CUR failures now retain stable ICO context; WebP inspection/container-chunk failures now retain stable WebP context, while WebP bitstream decode internals remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
+| API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` resource, maximum, and observed result length. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures. BMP header, palette, pixel-span, bitfield, and RLE parse failures now retain stable context, ICO header, directory, entry-range, and embedded PNG/DIB/CUR failures now retain stable ICO context, TIFF compressed strip/tile payload failures now retain `tiff_strip`/`tiff_tile` context, and WebP inspection/container-chunk failures now retain stable WebP context; WebP bitstream decode internals remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms. Non-primary/auxiliary item color properties, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
 | API-036 | Work control | Cooperative cancellation now exists for still and sequence decode and for a partial encode surface: whole-buffer still encodes observe the public boundary, PNG and BMP still encoding poll row preparation and sink segments, and GIF/TIFF/WebP/native-AVIF sequence encoders poll implemented frame/coalescing/page/finalization checkpoints. A structural sink cancellation may leave the delivered prefix. Progress callbacks, work-budget exhaustion, and interior interruption for the remaining still codecs remain future work. | Extend polling into long still codecs and structural writers, then define progress/work-budget semantics and destination rollback without claiming that boundary cancellation is universal interior interruption. |
@@ -502,7 +502,7 @@ Minute gaps:
 | TIF-016 | Strip/tile decode cannot stream into a caller buffer, and encoding cannot incrementally write strips or tiles. | Add bounded chunk APIs after API-024/025; never require full multipage materialization. |
 | TIF-017 | IFD cycles/depth, tag counts, strip/tile counts, offset arrays, decompressed bytes, and predictor work have no caller policy. | Add typed TIFF sublimits and minimized cycle/overflow/exhaustion fixtures. |
 | TIF-018 | Sparse 64-bit offsets, BigTIFF count/offset boundaries, and host `usize` conversion are not exercised across 32-bit/WASM targets. | Use generated sparse/structural inputs and target-specific checked arithmetic tests without committing huge files. |
-| TIF-019 | Unsupported compression, malformed compressed data, unavailable encode method, and output-write failure are not separate structured states. | Extend error context through API-030 and fixture each compression boundary independently. |
+| TIF-019 | Unsupported compression, unavailable encode method, and output-write failure are not yet independently fixture-bound structured states; malformed compressed strip/tile payloads now retain `tiff_strip`/`tiff_tile` parse context through API-030. | Fixture the remaining compression, capability, and destination boundaries independently. |
 | TIF-020 | Photometric support is not catalogued for WhiteIsZero, BlackIsZero, RGB, Palette, Transparency Mask, Separated, YCbCr, CIELAB/ICCLAB/ITULAB, LogL/LogLuv, and CFA classes. | Generate a source photometric capability table; do not coerce unknown extra channels into RGBA. |
 | TIF-021 | Compression identity is broader than “compressed”: CCITT variants/options, old/new JPEG, LZW, Deflate/Adobe Deflate, PackBits, PixarLog, SGILog, LZMA, Zstd, LERC, WebP, and vendor values need separate decode/encode capabilities. | Give every observed compression a stable capability code and prevent feature-gated delegated codecs from being inferred accidentally. |
 | TIF-022 | The common metadata model cannot retain TIFF field type and count. BYTE/ASCII/SHORT/LONG/RATIONAL, signed variants, FLOAT/DOUBLE, IFD, LONG8/SLONG8/IFD8, inline values, and offset values can carry byte-distinct but numerically similar data. | Add a typed raw tag record with source byte order, exact count, and exact bytes. |
@@ -1135,8 +1135,8 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`2cb76588-e16a-4ae3-afa9-0c29fc964bbe`, submitted against
-`22ec7e286f239b1b6284961c3e039db74b50778b`; it passed 815 checks with zero
+`ef523211-91ec-4447-8146-1695d1c03b75`, submitted against
+`0ff9d7a4988438c7c3e33ce091d8950f95173b83`; it passed 837 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
