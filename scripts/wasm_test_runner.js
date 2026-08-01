@@ -20,6 +20,10 @@ const wasi = new WASI({
   args: [binary, ...process.argv.slice(3)],
   env: { ...process.env },
   preopens: { '/': '/' },
+  // Node's preview1 `proc_exit` throws by default, which makes `start()`
+  // swallow the Rust test harness exit code. `returnOnExit` makes `start()`
+  // return that code so a failing WASM lane fails the feature-matrix gate.
+  returnOnExit: true,
 });
 
 WebAssembly.instantiate(fs.readFileSync(binary), {
@@ -27,8 +31,8 @@ WebAssembly.instantiate(fs.readFileSync(binary), {
 })
   .then(({ instance }) => {
     try {
-      wasi.start(instance);
-      process.exit(0);
+      const exit_code = wasi.start(instance);
+      process.exit(typeof exit_code === 'number' ? exit_code : 0);
     } catch (error) {
       if (typeof error.code === 'number') {
         process.exit(error.code);
