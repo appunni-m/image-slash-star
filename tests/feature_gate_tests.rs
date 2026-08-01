@@ -5581,6 +5581,38 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         assert_eq!(dib_decode_error.offset(), Some(22));
     }
 
+    if cfg!(feature = "webp") {
+        // WebP inspection parse-site context is a Rust defensive contract.
+        // Pillow parity does not expose byte offsets or stable container
+        // identities, so these assertions are not generated parity rows.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let empty_payload =
+            fs::read(root.join("tests/fixtures/input/images/webp/vp8_empty_payload.webp"))?;
+        let chunk_error = match image_slash_star::inspect_basic(&empty_payload) {
+            Err(error) => error,
+            Ok(info) => panic!("empty WebP VP8 payload must fail inspection: {info:?}"),
+        };
+        assert_eq!(chunk_error.kind(), ImageErrorKind::Malformed);
+        assert_eq!(chunk_error.stage(), Some(ImageErrorStage::Inspection));
+        assert_eq!(chunk_error.identity(), Some("webp_chunk"));
+        assert_eq!(chunk_error.offset(), Some(12));
+
+        let extended = fs::read(
+            root.join("tests/fixtures/input/images/webp/extended_missing_image_chunk.webp"),
+        )?;
+        let prefix_error = match image_slash_star::inspect_basic_prefix(&extended) {
+            Err(error) => error,
+            Ok(info) => {
+                panic!("extended WebP without an image chunk must need more data: {info:?}")
+            }
+        };
+        assert_eq!(prefix_error.kind(), ImageErrorKind::NeedMoreData);
+        assert_eq!(prefix_error.stage(), Some(ImageErrorStage::Inspection));
+        assert_eq!(prefix_error.identity(), Some("webp_chunk"));
+        assert!(prefix_error.offset().is_some());
+        assert!(prefix_error.minimum_input().is_some());
+    }
+
     let cmyk = DecodedImage::new(1, 1, vec![0; 4], ColorType::Cmyk8);
     let encode_error = match image_slash_star::encode_default(&cmyk, ImageFormat::Png) {
         Err(error) => error,
